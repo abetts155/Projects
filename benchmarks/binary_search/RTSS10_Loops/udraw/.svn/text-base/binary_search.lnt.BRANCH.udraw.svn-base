@@ -1,0 +1,48 @@
+[
+l("v15",n("tVertex",[a("OBJECT", "15"),a("INFO", "Level = 0"),],[
+e("tEdge",[a("_DIR", "none"),],r("v16")),
+
+e("tEdge",[a("_DIR", "none"),],r("v4")),
+
+e("tEdge",[a("_DIR", "none"),],r("v11")),
+
+e("tEdge",[a("_DIR", "none"),],r("v12")),
+
+e("tEdge",[a("_DIR", "none"),],r("v13")),
+
+e("tEdge",[a("_DIR", "none"),],r("v14")),
+])),
+l("v4",n("tVertex",[a("OBJECT", "4"),a("INFO", "Level = 1"),],[])),
+l("v5",n("tVertex",[a("OBJECT", "5"),a("INFO", "Level = 2"),],[])),
+l("v6",n("tVertex",[a("OBJECT", "6"),a("INFO", "Level = 2"),],[])),
+l("v7",n("tVertex",[a("OBJECT", "7"),a("INFO", "Level = 2"),],[])),
+l("v8",n("tVertex",[a("OBJECT", "8"),a("INFO", "Level = 2"),],[])),
+l("v9",n("tVertex",[a("OBJECT", "9"),a("INFO", "Level = 2"),],[])),
+l("v10",n("tVertex",[a("OBJECT", "10"),a("INFO", "Level = 2"),],[])),
+l("v11",n("tVertex",[a("OBJECT", "11"),a("INFO", "Level = 1"),],[])),
+l("v1",n("tVertex",[a("OBJECT", "1"),a("INFO", "Level = 2"),],[])),
+l("v2",n("tVertex",[a("OBJECT", "2"),a("INFO", "Level = 2"),],[])),
+l("v3",n("tVertex",[a("OBJECT", "3"),a("INFO", "Level = 2"),],[])),
+l("v12",n("tVertex",[a("OBJECT", "12"),a("INFO", "Level = 1"),],[
+e("tEdge",[a("_DIR", "none"),],r("v1")),
+
+e("tEdge",[a("_DIR", "none"),],r("v2")),
+
+e("tEdge",[a("_DIR", "none"),],r("v3")),
+
+e("tEdge",[a("_DIR", "none"),],r("v5")),
+
+e("tEdge",[a("_DIR", "none"),],r("v6")),
+
+e("tEdge",[a("_DIR", "none"),],r("v7")),
+
+e("tEdge",[a("_DIR", "none"),],r("v8")),
+
+e("tEdge",[a("_DIR", "none"),],r("v9")),
+
+e("tEdge",[a("_DIR", "none"),],r("v10")),
+])),
+l("v13",n("tVertex",[a("OBJECT", "13"),a("INFO", "Level = 1"),],[])),
+l("v14",n("tVertex",[a("OBJECT", "14"),a("INFO", "Level = 1"),],[])),
+l("v16",n("tVertex",[a("OBJECT", "16"),a("INFO", "Level = 1"),],[])),
+]

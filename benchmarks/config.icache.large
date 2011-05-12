@@ -1,0 +1,10 @@
+-fetch:ifqsize 1
+-issue:width 1
+-issue:inorder
+-issue:wrongpath false
+-commit:width 1
+-bpred perfect
+-cache:dl1 none
+-cache:dl2 none 
+-cache:il1 il1:256:32:2:l #32KB
+-cache:il2 none

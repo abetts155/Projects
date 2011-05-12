@@ -1,0 +1,10 @@
+-fetch:ifqsize 1
+-issue:width 1
+-issue:inorder
+-issue:wrongpath false
+-commit:width 1
+-bpred perfect
+-cache:dl1 dl1:2:32:2:l #Only 128 bytes
+-cache:dl2 none 
+-cache:il1 dl1:2:32:2:l #Only 128 bytes 
+-cache:il2 none

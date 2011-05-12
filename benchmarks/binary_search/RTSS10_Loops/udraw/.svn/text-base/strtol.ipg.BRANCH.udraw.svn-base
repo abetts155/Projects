@@ -1,0 +1,130 @@
+[
+l("v29",n("tVertex",[a("_GO", "circle"),a("COLOR", "black"),a("INFO", "Entry (id =29)"),],[
+e("tEdge",[a("INFO", "[]"),a("OBJECT", "e10"),],r("v28")),
+])),
+l("v1",n("tVertex",[a("_GO", "circle"),a("OBJECT", "1"),a("INFO", "Ipoint ID = 0x400848 (4196424)"),],[
+e("tEdge",[a("INFO", "[70]"),a("OBJECT", "e13"),],r("v2")),
+])),
+l("v2",n("tVertex",[a("_GO", "circle"),a("OBJECT", "2"),a("INFO", "Ipoint ID = 0x400850 (4196432)"),],[
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[71]\nEntry for 4"),a("OBJECT", "e14"),],r("v4")),
+
+e("tEdge",[a("INFO", "[71]"),a("OBJECT", "e15"),],r("v3")),
+])),
+l("v3",n("tVertex",[a("_GO", "circle"),a("OBJECT", "3"),a("INFO", "Ipoint ID = 0x4008c8 (4196552)"),],[
+e("tEdge",[a("INFO", "[73, 74]"),a("OBJECT", "e17"),],r("v6")),
+
+e("tEdge",[a("INFO", "[73, 74, 75]"),a("OBJECT", "e19"),],r("v7")),
+
+e("tEdge",[a("INFO", "[73]"),a("OBJECT", "e42"),],r("v5")),
+])),
+l("v4",n("tVertex",[a("_GO", "circle"),a("OBJECT", "4"),a("INFO", "Ipoint ID = 0x400890 (4196496)"),],[
+e("tEdge",[a("EDGEPATTERN", "single;solid;3;1"),a("INFO", "[72]\nIteration edge for [4]"),a("OBJECT", "e1"),],r("v4")),
+
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[72]\nExit for 4"),a("OBJECT", "e16"),],r("v3")),
+])),
+l("v5",n("tVertex",[a("_GO", "circle"),a("OBJECT", "5"),a("INFO", "Ipoint ID = 0x400c28 (4197416)"),],[
+e("tEdge",[a("INFO", "[118, 117]"),a("OBJECT", "e44"),],r("v27")),
+])),
+l("v6",n("tVertex",[a("_GO", "circle"),a("OBJECT", "6"),a("INFO", "Ipoint ID = 0x400900 (4196608)"),],[
+e("tEdge",[a("INFO", "[76]"),a("OBJECT", "e18"),],r("v8")),
+
+e("tEdge",[a("INFO", "[76, 77]"),a("OBJECT", "e20"),],r("v7")),
+])),
+l("v7",n("tVertex",[a("_GO", "circle"),a("OBJECT", "7"),a("INFO", "Ipoint ID = 0x400930 (4196656)"),],[
+e("tEdge",[a("INFO", "[81, 80, 82, 79]"),a("OBJECT", "e22"),],r("v9")),
+])),
+l("v8",n("tVertex",[a("_GO", "circle"),a("OBJECT", "8"),a("INFO", "Ipoint ID = 0x400928 (4196648)"),],[
+e("tEdge",[a("INFO", "[78]"),a("OBJECT", "e21"),],r("v7")),
+])),
+l("v9",n("tVertex",[a("_GO", "circle"),a("OBJECT", "9"),a("INFO", "Ipoint ID = 0x400998 (4196760)"),],[
+e("tEdge",[a("INFO", "[85, 84, 83]"),a("OBJECT", "e23"),],r("v12")),
+
+e("tEdge",[a("INFO", "[84, 83]"),a("OBJECT", "e24"),],r("v11")),
+
+e("tEdge",[a("INFO", "[85, 84, 86, 83]"),a("OBJECT", "e25"),],r("v10")),
+])),
+l("v10",n("tVertex",[a("_GO", "circle"),a("OBJECT", "10"),a("INFO", "Ipoint ID = 0x400a20 (4196896)"),],[
+e("tEdge",[a("INFO", "[89, 90]"),a("OBJECT", "e28"),],r("v13")),
+])),
+l("v11",n("tVertex",[a("_GO", "circle"),a("OBJECT", "11"),a("INFO", "Ipoint ID = 0x400a18 (4196888)"),],[
+e("tEdge",[a("INFO", "[88]"),a("OBJECT", "e27"),],r("v10")),
+])),
+l("v12",n("tVertex",[a("_GO", "circle"),a("OBJECT", "12"),a("INFO", "Ipoint ID = 0x400a08 (4196872)"),],[
+e("tEdge",[a("INFO", "[87]"),a("OBJECT", "e26"),],r("v10")),
+])),
+l("v13",n("tVertex",[a("_GO", "circle"),a("OBJECT", "13"),a("INFO", "Ipoint ID = 0x400a40 (4196928)"),],[
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[92, 91]\nEntry for 20"),a("OBJECT", "e29"),],r("v20")),
+
+e("tEdge",[a("INFO", "[91]"),a("OBJECT", "e30"),],r("v14")),
+])),
+l("v14",n("tVertex",[a("_GO", "circle"),a("OBJECT", "14"),a("INFO", "Ipoint ID = 0x400b78 (4197240)"),],[
+e("tEdge",[a("INFO", "[106, 104, 105]"),a("OBJECT", "e34"),],r("v21")),
+
+e("tEdge",[a("INFO", "[104]"),a("OBJECT", "e43"),],r("v5")),
+])),
+l("v15",n("tVertex",[a("_GO", "circle"),a("OBJECT", "15"),a("INFO", "Ipoint ID = 0x400ac8 (4197064)"),],[
+e("tEdge",[a("INFO", "[96, 95]"),a("OBJECT", "e4"),],r("v16")),
+
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[95]\nExit for 20"),a("OBJECT", "e31"),],r("v14")),
+])),
+l("v16",n("tVertex",[a("_GO", "circle"),a("OBJECT", "16"),a("INFO", "Ipoint ID = 0x400af0 (4197104)"),],[
+e("tEdge",[a("INFO", "[100, 98, 99, 97]"),a("OBJECT", "e5"),],r("v18")),
+
+e("tEdge",[a("INFO", "[100, 98, 99, 97]"),a("OBJECT", "e6"),],r("v17")),
+
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[97]\nExit for 20"),a("OBJECT", "e32"),],r("v14")),
+])),
+l("v17",n("tVertex",[a("_GO", "circle"),a("OBJECT", "17"),a("INFO", "Ipoint ID = 0x400b30 (4197168)"),],[
+e("tEdge",[a("INFO", "[101]"),a("OBJECT", "e7"),],r("v19")),
+])),
+l("v18",n("tVertex",[a("_GO", "circle"),a("OBJECT", "18"),a("INFO", "Ipoint ID = 0x400b40 (4197184)"),],[
+e("tEdge",[a("INFO", "[102]"),a("OBJECT", "e8"),],r("v19")),
+])),
+l("v19",n("tVertex",[a("_GO", "circle"),a("OBJECT", "19"),a("INFO", "Ipoint ID = 0x400b60 (4197216)"),],[
+e("tEdge",[a("EDGEPATTERN", "single;solid;3;1"),a("INFO", "[103]\nIteration edge for [20]"),a("OBJECT", "e9"),],r("v20")),
+
+e("tEdge",[a("EDGEPATTERN", "single;dashed;2;1"),a("INFO", "[103]\nExit for 20"),a("OBJECT", "e33"),],r("v14")),
+])),
+l("v20",n("tVertex",[a("_GO", "circle"),a("OBJECT", "20"),a("INFO", "Ipoint ID = 0x400a88 (4197000)"),],[
+e("tEdge",[a("INFO", "[93]"),a("OBJECT", "e2"),],r("v15")),
+
+e("tEdge",[a("INFO", "[93, 94]"),a("OBJECT", "e3"),],r("v16")),
+])),
+l("v21",n("tVertex",[a("_GO", "circle"),a("OBJECT", "21"),a("INFO", "Ipoint ID = 0x400b90 (4197264)"),],[
+e("tEdge",[a("INFO", "[107]"),a("OBJECT", "e35"),],r("v22")),
+
+e("tEdge",[a("INFO", "[108, 107]"),a("OBJECT", "e36"),],r("v23")),
+
+e("tEdge",[a("INFO", "[108, 109, 107]"),a("OBJECT", "e38"),],r("v24")),
+])),
+l("v22",n("tVertex",[a("_GO", "circle"),a("OBJECT", "22"),a("INFO", "Ipoint ID = 0x400bb8 (4197304)"),],[
+e("tEdge",[a("INFO", "[110]"),a("OBJECT", "e37"),],r("v23")),
+
+e("tEdge",[a("INFO", "[110]"),a("OBJECT", "e39"),],r("v24")),
+])),
+l("v23",n("tVertex",[a("_GO", "circle"),a("OBJECT", "23"),a("INFO", "Ipoint ID = 0x400bc0 (4197312)"),],[
+e("tEdge",[a("INFO", "[111]"),a("OBJECT", "e40"),],r("v24")),
+])),
+l("v24",n("tVertex",[a("_GO", "circle"),a("OBJECT", "24"),a("INFO", "Ipoint ID = 0x400bc8 (4197320)"),],[
+e("tEdge",[a("INFO", "[112]"),a("OBJECT", "e41"),],r("v25")),
+
+e("tEdge",[a("INFO", "[114, 113, 112]"),a("OBJECT", "e45"),],r("v26")),
+])),
+l("v25",n("tVertex",[a("_GO", "circle"),a("OBJECT", "25"),a("INFO", "Ipoint ID = 0x400c08 (4197384)"),],[
+e("tEdge",[a("INFO", "[116, 115]"),a("OBJECT", "e46"),],r("v26")),
+])),
+l("v26",n("tVertex",[a("_GO", "circle"),a("OBJECT", "26"),a("INFO", "Ipoint ID = 0x400c40 (4197440)"),],[
+e("tEdge",[a("INFO", "[120]"),a("OBJECT", "e48"),],r("v30")),
+])),
+l("v27",n("tVertex",[a("_GO", "circle"),a("OBJECT", "27"),a("INFO", "Ipoint ID = 0x400c38 (4197432)"),],[
+e("tEdge",[a("INFO", "[119]"),a("OBJECT", "e47"),],r("v26")),
+])),
+l("v28",n("tVertex",[a("_GO", "circle"),a("OBJECT", "28"),a("INFO", "Ipoint ID = 0x400820 (4196384)"),],[
+e("tEdge",[a("INFO", "[68, 69, 67]"),a("OBJECT", "e11"),],r("v1")),
+
+e("tEdge",[a("INFO", "[68, 69, 67]"),a("OBJECT", "e12"),],r("v2")),
+])),
+l("v30",n("tVertex",[a("_GO", "circle"),a("COLOR", "black"),a("INFO", "Exit (id =30)"),],[
+e("tEdge",[a("EDGEPATTERN", "single;solid;3;1"),a("INFO", "[]\nIteration edge for [29]"),a("OBJECT", "e49"),],r("v29")),
+])),
+]
