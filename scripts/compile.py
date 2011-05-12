@@ -3,7 +3,20 @@
 from optparse import OptionParser
 from sys import argv, maxint
 from subprocess import Popen, PIPE
+from os import environ
 
+# These environment variables are needed to compile and disassemble the program under analysis 
+simpleScalarEnvironmentVariable = "SIMPLESCALAR"
+wcetToolsEnvironmentVariable = "WCET_TOOLS"
+environmentVariables = [simpleScalarEnvironmentVariable, wcetToolsEnvironmentVariable]
+
+for var in environmentVariables:
+    try:
+        environ[var]
+    except KeyError:
+        print ("Cannot find environment variable '" + var + "' which is needed to compile the program.")
+        exit(0)
+ 
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
 
@@ -44,6 +57,14 @@ parser.add_option("-v",
 
 (opts, args) = parser.parse_args(argv[1:])
 
+# Check that the user has passed the correct options
+if opts.program is None:
+    print("Missing option " + str(parser.get_option("-p")))
+    exit(0)
+if opts.root is None:
+    print("Missing option " + str(parser.get_option("-r")))
+    exit(0)
+
 def runCommand (cmd):
     if opts.debug:
         print("Running '" + cmd + "'")
@@ -58,17 +79,10 @@ def runCommand (cmd):
         print("\nProblem running '" + cmd + "'")
         exit(0)
 
-if opts.program is None:
-    print("Missing option " + str(parser.get_option("-p")))
-    exit(0)
-if opts.root is None:
-    print("Missing option " + str(parser.get_option("-r")))
-    exit(0)
+gcc          = "%s/sslittle-na-sstrix-gcc" % (environ[simpleScalarEnvironmentVariable])
+objdump      = "%s/sslittle-na-sstrix-objdump" % (environ[simpleScalarEnvironmentVariable])
+disassembler = "java -jar %s/disassemble.jar" % (environ[wcetToolsEnvironmentVariable])
 
-compiler     = "sslittle-na-sstrix-gcc"
-objdump      = "sslittle-na-sstrix-objdump"
-disassembler = "java -jar /home/abetts/workspace/MDH/jar/disassemble.jar"
-
-runCommand("%s -O2 -o %s %s"  % (compiler, opts.program[:-2], opts.program))
+runCommand("%s -O2 -o %s %s"  % (gcc, opts.program[:-2], opts.program))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
 runCommand("%s -p %s.asm -r %s -f XML"  % (disassembler, opts.program[:-2], opts.root))

@@ -36,7 +36,7 @@
 	<target name="compile">
 		<mkdir dir="${build.dir}" />
 		<echo>Compiling in ${src.dir}</echo>
-		<javac debug="on" srcdir="${src.dir}" destdir="${build.dir}" includes="**/*.java" classpathref="project.classpath" />
+		<javac debug="on" srcdir="${src.dir}" destdir="${build.dir}" includes="**/*.java" classpathref="project.classpath" includeantruntime="false" />
 	</target>
 
 	<target name="disassemble" depends="compile">
