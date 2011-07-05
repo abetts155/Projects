@@ -150,8 +150,6 @@ parser.add_option("-v",
 
 (opts, args) = parser.parse_args(argv[1:])
 
-print(opts.instrumentation)
-
 # Check that the user has passed the correct options
 if opts.numOfParameters is None:
     print("Missing option " + str(parser.get_option("-n")))

@@ -5,15 +5,15 @@
 	<property name="build.dir" value="build" />
 	<property name="lib.dir" value="lib" />
 	<property name="jar.dir" value="jar" />
-	<property name="cfg.main.class" value="se.mdh.tools.MainProgramBuilder" />
-	<property name="wcet.main.class" value="se.mdh.tools.MainWCETAnalyser" />
-	<property name="trace-parser.main.class" value="se.mdh.tools.MainTraceParser" />
-	<property name="trace-simplescalar.main.class" value="se.mdh.tools.MainSimpleScalarTraceParser" />
-	<property name="trace-generator.main.class" value="se.mdh.tools.MainTraceGenerator" />
-	<property name="program-generator.main.class" value="se.mdh.tools.MainProgramGenerator" />
-	<property name="tree.main.class" value="se.mdh.tools.MainTreeAnalysis" />
-	<property name="loop.main.class" value="se.mdh.tools.MainLoopAnalyser" />
-	<property name="tests.main.class" value="se.mdh.program.AllTests" />
+	<property name="cfg.main.class" value="adam.betts.tools.MainProgramBuilder" />
+	<property name="wcet.main.class" value="adam.betts.tools.MainWCETAnalyser" />
+	<property name="trace-parser.main.class" value="adam.betts.tools.MainTraceParser" />
+	<property name="trace-simplescalar.main.class" value="adam.betts.tools.MainSimpleScalarTraceParser" />
+	<property name="trace-generator.main.class" value="adam.betts.tools.MainTraceGenerator" />
+	<property name="program-generator.main.class" value="adam.betts.tools.MainProgramGenerator" />
+	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
+	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
+	<property name="tests.main.class" value="adam.betts.program.AllTests" />
 	<property name="disassemble.jar" value="disassemble.jar" />
 	<property name="simplescalar.jar" value="simplescalar.jar" />
 	<property name="wcet.jar" value="wcet.jar" />
