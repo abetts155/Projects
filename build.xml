@@ -157,6 +157,7 @@
 				<attribute name="Class-Path" value="." />
 			</manifest>
 			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
 		</jar>
 
 		<chmod file="${jar.dir}/${program-generator.jar}" perm="+x" verbose="true" />

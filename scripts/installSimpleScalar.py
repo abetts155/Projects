@@ -31,6 +31,10 @@ parser.add_option("-v",
 
 (opts, args) = parser.parse_args(argv[1:])
 
+def debugMessage (message):
+	if opts.debug:
+		print(message)
+
 def verboseMessage (message):
 	if opts.verbose:
 		print(message)
@@ -61,81 +65,77 @@ def runCommand (command):
 def goToParentDirectory ():
 	os.chdir(os.path.dirname(os.getcwd()))
 
-mainDirectory         = "simplescalar"           
-simpleScalarDirectory = "simplesim-3.0"
-simpleUtilsDirectory  = "simpleutils-990811"
-gccDirectory          = "gcc-2.7.2.3"
+def expandTarball (fileName):
+	verboseMessage("Expanding tarball '" + fileName + "'")
+	tarball = tarfile.open(fileName)
+	tarball.extractall()
+	tarball.close()
 
-# Expand all the tarballs
-verboseMessage("Expanding tarball '" + mainDirectory + ".tar.gz'")
+# First move up into the directory where the main tarball is found and untar
+goToParentDirectory()
+rootDirectory  = "simplescalar"  
+expandTarball(rootDirectory + ".tar.gz")
 
-tarball = tarfile.open(mainDirectory + ".tar.gz")
-tarball.extractall()
-tarball.close()
-
-os.chdir(mainDirectory)
+# Go into the expanded directory and set the 'IDIR' environment variable as we need it to compile GCC
+os.chdir(rootDirectory)
 installDirectory = os.getcwd()
+os.environ['IDIR'] = installDirectory
+verboseMessage("Installation root directory is '" + installDirectory + "'")
 
-verboseMessage("Expanding tarball '" + simpleScalarDirectory + ".tgz'")
-
-tarball = tarfile.open(simpleScalarDirectory + ".tgz")
-tarball.extractall()
-tarball.close()
-
-verboseMessage("Expanding tarball '" + simpleUtilsDirectory + ".tar.gz'")
-
-tarball = tarfile.open(simpleUtilsDirectory + ".tar.gz")
-tarball.extractall()
-tarball.close()
-
-# Build SimpleScalar tools
-verboseMessage("Building SimpleScalar Tools in '" + simpleScalarDirectory + "'")
+# Expand the SimpleScalar tarball and compile
+simpleScalarDirectory = "simplesim-3.0"
+expandTarball(simpleScalarDirectory + ".tgz")
 
 os.chdir(simpleScalarDirectory)
+verboseMessage("Building SimpleScalar Tools in '" + simpleScalarDirectory + "'")
+
 runCommand("make")
 
 goToParentDirectory()
 
-# Build SimpleScalar binutils
-verboseMessage("Building SimpleScalar Binutils in '" + simpleUtilsDirectory + "'")
+# Expand the SimpleScalar binutils tarball and compile 
+simpleUtilsDirectory = "simpleutils-990811"
+expandTarball(simpleUtilsDirectory + ".tar.gz")
 
 os.chdir(simpleUtilsDirectory)
+verboseMessage("Building SimpleScalar Binutils in '" + simpleUtilsDirectory + "'")
+
 runCommand("./configure --host=i386-*-linux --target=sslittle-na-sstrix --with-gnu-as --with-gnu-ld --prefix=" + installDirectory)
 runCommand("make all")
 runCommand("make install")
 
 goToParentDirectory()
 
-# Overwrite some files and make sure they are executable
-arFile     = "ar"
-ranlibFile = "ranlib"
+# Now overwrite some of the compiled binaries (otherwise we'll get a buffer overflow in the next step) 
+# and make sure they are executable
+arFileSource          = "ar"
+ranlibFileSource      = "ranlib"
+arFileDestination     = installDirectory + os.sep + "sslittle-na-sstrix" + os.sep + "bin" + os.sep + "ar"
+ranlibFileDestination = installDirectory + os.sep + "sslittle-na-sstrix" + os.sep + "bin" + os.sep + "ranlib"
+
+verboseMessage("Moving '" + arFileSource + "' into '" + arFileDestination + "'")
+os.rename(arFileSource,arFileDestination)
+verboseMessage("Moving '" + ranlibFileSource + "' into '" + ranlibFileDestination + "'")
+os.rename(ranlibFileSource,ranlibFileDestination)
 
 verboseMessage("Changing file permissions")
-os.chmod(arFile, 0755)
-os.chmod(ranlibFile, 0755)
+os.chmod(arFileDestination, 0755)
+os.chmod(ranlibFileDestination, 0755)
 
-verboseMessage("Moving files")
-shutil.move(arFile, installDirectory + os.pathsep + "sslittle-na-sstrix" + os.pathsep + "bin")
-shutil.move(ranlibFile, installDirectory + os.pathsep + "sslittle-na-sstrix" + os.pathsep + "bin")
+# First expand tarball which contains GCC cross compiler 
+expandTarball("simpletools-2v0.tar.gz")
 
-# Expand tarballs to install GCC cross compiler 
-simpleToolsTarball = "simpletools-2v0.tar.gz" 
-verboseMessage("Expanding tarball '" +  simpleToolsTarball + "'")
+# Second expand GCC cross compiler tarball and build it 
+gccDirectory = "gcc-2.7.2.3"
+expandTarball(gccDirectory + ".tar.gz")
 
-tarball = tarfile.open(simpleToolsTarball)
-tarball.extractall()
-tarball.close()
-
-verboseMessage("Expanding tarball '" + gccDirectory + ".tar.gz'")
-
-tarball = tarfile.open(gccDirectory + ".tar.gz")
-tarball.extractall()
-tarball.close()
-
-# Build GCC cross compiler
 os.chdir(gccDirectory)
+verboseMessage("Building GCC '" + gccDirectory + "'")
 
-os.environ['PATH'] += installDirectory + os.pathsep + "sslittle-na-sstrix" + os.pathsep + "bin"
+pathExtension = os.pathsep + installDirectory + os.sep + "sslittle-na-sstrix" + os.sep + "bin"
+os.environ['PATH'] += pathExtension
+verboseMessage("Added '" + pathExtension + "' to environment variable PATH")
+
 runCommand("./configure --host=i386-*-linux --target=sslittle-na-sstrix --with-gnu-as --with-gnu-ld --enable-languages=c --prefix=" + installDirectory)
 runCommand("make all")
 runCommand("make install")
@@ -155,8 +155,8 @@ safe     = "sim-safe"
 
 files = [bpred, cache, eio, fast, outorder, profile, safe]
 for f in files:
-	source = installDirectory + os.pathsep + simpleScalarDirectory + os.pathsep + f
-	link   = installDirectory + os.pathsep + "bin" + os.pathsep + f
+	source = installDirectory + os.sep + simpleScalarDirectory + os.sep + f
+	link   = installDirectory + os.sep + "bin" + os.sep + f
 	os.symlink(source,link)
 
 verboseMessage("DONE!")
