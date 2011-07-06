@@ -26,6 +26,7 @@ public class MainProgramGenerator
 	private static Option callsOption;
 	private static Option breaksOption;
 	private static Option continuesOption;
+	private static Option numberOfVerticesOption;
 
 	public static void main (String[] args)
 	{
@@ -66,19 +67,17 @@ public class MainProgramGenerator
 		options.addOption (returnsOption);
 
 		subprogramsOption = new Option ("s", "subprograms", true,
-				"Maximum number of sub-programs in the program. Default is "
-						+ Globals.subprograms + ".");
+				"Maximum number of sub-programs in the program. Default is " + Globals.subprograms
+						+ ".");
 		subprogramsOption.setRequired (false);
 		options.addOption (subprogramsOption);
 
 		callsOption = new Option ("c", "calls", true,
-				"Maximum number of calls in the program. Default is "
-						+ Globals.calls + ".");
+				"Maximum number of calls in the program. Default is " + Globals.calls + ".");
 		callsOption.setRequired (false);
 		options.addOption (callsOption);
 
-		breaksOption = new Option ("b", "breaks", true,
-				"Include break-like structures in loops.");
+		breaksOption = new Option ("b", "breaks", true, "Include break-like structures in loops.");
 		breaksOption.setRequired (false);
 		options.addOption (breaksOption);
 
@@ -86,6 +85,12 @@ public class MainProgramGenerator
 				"Include continue-like structures in loops.");
 		continuesOption.setRequired (false);
 		options.addOption (continuesOption);
+
+		numberOfVerticesOption = new Option ("V", "vertices", true,
+				"Maximum number of vertices in a control flow graph. Default is "
+						+ Globals.vertices + ".");
+		numberOfVerticesOption.setRequired (false);
+		options.addOption (numberOfVerticesOption);
 	}
 
 	private static void parseCommandLine (String[] args)
@@ -103,8 +108,7 @@ public class MainProgramGenerator
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setOutputFormatOption (line);
@@ -124,19 +128,15 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.fanOut = fanOut;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ fanOutOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid fan out. It must be in the range 2..5.");
+						System.err.println (arg
+								+ " is not a valid fan out. It must be in the range 2..5.");
 						System.exit (1);
 					}
 				}
@@ -152,15 +152,12 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.loops = loops;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ loopsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
 						System.err.println (arg
 								+ " is not a valid number of loops. It must be in the range 0..10.");
@@ -170,8 +167,7 @@ public class MainProgramGenerator
 
 				if (line.hasOption (selfLoopsOption.getOpt ()))
 				{
-					String arg = line
-							.getOptionValue (selfLoopsOption.getOpt ());
+					String arg = line.getOptionValue (selfLoopsOption.getOpt ());
 					try
 					{
 						int selfLoops = Integer.parseInt (arg);
@@ -180,15 +176,12 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.selfLoops = selfLoops;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ selfLoopsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
 						System.err
 								.println (arg
@@ -208,15 +201,12 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.returns = returns;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ returnsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
 						System.err
 								.println (arg
@@ -228,8 +218,7 @@ public class MainProgramGenerator
 				if (line.hasOption (subprogramsOption.getOpt ()))
 				{
 
-					String arg = line.getOptionValue (subprogramsOption
-							.getOpt ());
+					String arg = line.getOptionValue (subprogramsOption.getOpt ());
 					try
 					{
 						int subprograms = Integer.parseInt (arg);
@@ -238,15 +227,12 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.subprograms = subprograms;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ subprogramsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
 						System.err.println (arg
 								+ " is not a valid number of subprograms. It must be a positive integer in the range 1.."
@@ -265,15 +251,12 @@ public class MainProgramGenerator
 							throw new IllegalArgumentException ();
 						}
 						Globals.calls = calls;
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ callsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
 						System.err
 								.println (arg
@@ -283,9 +266,33 @@ public class MainProgramGenerator
 					}
 				}
 
+				if (line.hasOption (numberOfVerticesOption.getOpt ()))
+				{
+					String arg = line.getOptionValue (numberOfVerticesOption.getOpt ());
+					try
+					{
+						int vertices = Integer.parseInt (arg);
+						if (vertices < 50 || vertices > 200)
+						{
+							throw new IllegalArgumentException ();
+						}
+						Globals.vertices = vertices;
+					} catch (NumberFormatException e)
+					{
+						System.err.println ("'" + arg + "' is not a valid argument to "
+								+ callsOption.getLongOpt ());
+						System.exit (1);
+					} catch (IllegalArgumentException e)
+					{
+						System.err
+								.println (arg
+										+ " is not a valid number of vertices. It must be a positive integer in the range 50..200");
+						System.exit (1);
+					}
+				}
+
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);
@@ -311,6 +318,7 @@ public class MainProgramGenerator
 		protected static int calls = subprograms - 1;
 		protected static boolean breaks = false;
 		protected static boolean continues = false;
+		protected static int vertices = 50;
 
 		public final static int getFanOut ()
 		{
@@ -351,6 +359,11 @@ public class MainProgramGenerator
 		public final static boolean continuesAllowed ()
 		{
 			return continues;
+		}
+
+		public final static int getNumberOfVerticesInCFG ()
+		{
+			return vertices;
 		}
 	}
 }
