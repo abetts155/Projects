@@ -7,6 +7,7 @@ import java.util.Stack;
 import adam.betts.edges.Edge;
 import adam.betts.vertices.Vertex;
 
+
 public class DirectedGraph extends Graph
 {
 	public DirectedGraph ()

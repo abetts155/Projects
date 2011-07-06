@@ -8,6 +8,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import adam.betts.calculations.CalculationEngineCFG;
+import adam.betts.calculations.Database;
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
 import adam.betts.programs.ProgramGenerator;
@@ -160,9 +162,8 @@ public class MainProgramGenerator
 					}
 					catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid number of loops. It must be in the range 0..10.");
+						System.err.println (arg
+								+ " is not a valid number of loops. It must be in the range 0..10.");
 						System.exit (1);
 					}
 				}
@@ -247,10 +248,9 @@ public class MainProgramGenerator
 					}
 					catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid number of subprograms. It must be a positive integer in the range 1.."
-										+ Integer.MAX_VALUE);
+						System.err.println (arg
+								+ " is not a valid number of subprograms. It must be a positive integer in the range 1.."
+								+ Integer.MAX_VALUE);
 					}
 				}
 
@@ -296,7 +296,9 @@ public class MainProgramGenerator
 	private static void run ()
 	{
 		Program program = new ProgramGenerator ().getProgram ();
+		Database data = new Database(program, true);
 		new WriteProgram (program);
+		new CalculationEngineCFG (program, data);
 	}
 
 	public static class Globals

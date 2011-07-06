@@ -2,9 +2,15 @@ package adam.betts.calculations;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+import java.util.Random;
 
+import adam.betts.edges.Edge;
+import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.programs.Program;
+import adam.betts.programs.Subprogram;
+import adam.betts.vertices.Vertex;
 
 public class Database
 {
@@ -47,6 +53,23 @@ public class Database
 	public Database (final Program program)
 	{
 		this.program = program;
+	}
+	
+	public Database (Program program, boolean gen)
+	{
+		Random generator = new Random(0);
+		for (Subprogram s: program) 
+		{
+			int subprogramID = s.getSubprogramID();
+			unitWCETs.put(subprogramID, new HashMap<Integer, Long>());
+			ControlFlowGraph cfg = s.getCFG();
+			for (Vertex v : cfg)
+			{
+				long data = Math.abs(generator.nextLong());
+				unitWCETs.get(subprogramID).put(v.getVertexID(), data);
+				//System.out.println(unitWCETs.get(subprogramID).get(v.getVertexID()));
+			}	
+		}
 	}
 
 	public final long getUnitWCET (int subprogramID, int unitID)

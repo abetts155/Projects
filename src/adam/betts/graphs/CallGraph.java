@@ -12,7 +12,7 @@ import adam.betts.vertices.call.CallVertex;
 public class CallGraph extends DirectedGraph
 {
 	protected HashMap<String, CallVertex> nameToVertex = new LinkedHashMap<String, CallVertex> ();
-
+	
 	public CallGraph ()
 	{
 	}

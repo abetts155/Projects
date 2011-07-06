@@ -56,7 +56,7 @@ public class DepthFirstTree extends Tree
 		vToPre.put (vertexID, preID);
 		preToV.put (preID, vertexID);
 		preID++;
-
+		
 		Vertex v = directedg.getVertex (vertexID);
 		Iterator<Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())

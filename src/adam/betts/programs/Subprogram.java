@@ -32,7 +32,7 @@ public class Subprogram
 	{
 		return subprogramName;
 	}
-
+	
 	public final void setCFG (ControlFlowGraph cfg)
 	{
 		this.cfg = cfg;

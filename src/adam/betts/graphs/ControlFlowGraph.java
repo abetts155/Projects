@@ -28,7 +28,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 	public ControlFlowGraph ()
 	{
 	}
-
+	
 	public ControlFlowGraph clone ()
 	{
 		ControlFlowGraph cfg = new ControlFlowGraph ();
@@ -52,6 +52,11 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		return cfg;
 	}
 
+	public void setName (String subprogramName)
+	{
+		this.subprogramName = subprogramName;
+	}
+	
 	public void inline (ControlFlowGraph cfg, String subprogramName)
 	{
 		for (Vertex v: cfg)

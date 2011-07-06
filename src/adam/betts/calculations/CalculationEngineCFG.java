@@ -37,7 +37,7 @@ public class CalculationEngineCFG
 		this.program = program;
 		this.callg = program.getCallGraph ();
 		this.database = database;
-
+		
 		DepthFirstTree dfs = new DepthFirstTree (callg, program.getRootID ());
 		for (int i = 1; i <= dfs.numOfVertices (); ++i)
 		{
