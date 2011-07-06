@@ -80,6 +80,11 @@ public class Program implements Iterable<Subprogram>
 	{
 		return callg;
 	}
+	
+	public final void setRootID (int rootID)
+	{
+		this.rootID = rootID;
+	}
 
 	public final int getRootID ()
 	{
