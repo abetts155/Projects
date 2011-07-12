@@ -64,14 +64,14 @@ public class ProgramGenerator
 		}
 				
 		ControlFlowGraph root = program.getSubprogram (1).getCFG();
-		root.setName (program.getSubprogram (1).getSubprogramName());
+		root.setSubprogramName (program.getSubprogram (1).getSubprogramName());
 		int id = gen.nextInt(MainProgramGenerator.Globals.getNumberOfSubprograms () + 1);
 		program.setRootID(id);
 		
 		for (int i = 2; i<= MainProgramGenerator.Globals.getNumberOfSubprograms (); ++i)
 		{
 			Subprogram s = program.getSubprogram(i);
-			s.getCFG().setName (s.getSubprogramName ());
+			s.getCFG().setSubprogramName (s.getSubprogramName ());
 			callgraph.addCall (root.getSubprogramName (), s.getCFG().getSubprogramName (), i);
 			Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);
 		}

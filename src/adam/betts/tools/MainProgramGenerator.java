@@ -272,7 +272,7 @@ public class MainProgramGenerator
 					try
 					{
 						int vertices = Integer.parseInt (arg);
-						if (vertices < 50 || vertices > 200)
+						if (vertices < 10 || vertices > 200)
 						{
 							throw new IllegalArgumentException ();
 						}
