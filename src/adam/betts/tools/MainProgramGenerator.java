@@ -147,7 +147,7 @@ public class MainProgramGenerator
 					try
 					{
 						int loops = Integer.parseInt (arg);
-						if (loops < 0 || loops > 10)
+						if (loops < 0 || loops > 100)
 						{
 							throw new IllegalArgumentException ();
 						}
