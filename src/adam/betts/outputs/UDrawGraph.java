@@ -100,25 +100,22 @@ public class UDrawGraph
 
 	private final static String setEdgePattern (EDGESHAPE shape, int width)
 	{
-		return "a(\"EDGEPATTERN\", \"single;"
-				+ shape.toString ().toLowerCase () + ";" + width + ";1\"),";
+		return "a(\"EDGEPATTERN\", \"single;" + shape.toString ().toLowerCase () + ";" + width
+				+ ";1\"),";
 	}
 
 	private final static String setEdgeColor (COLOR color)
 	{
-		return "a(\"EDGECOLOR\", \"" + color.toString ().toLowerCase ()
-				+ "\"),";
+		return "a(\"EDGECOLOR\", \"" + color.toString ().toLowerCase () + "\"),";
 	}
 
-	public final static void makeUDrawFile (ControlFlowGraph cfg,
-			String fileNamePrefix)
+	public final static void makeUDrawFile (ControlFlowGraph cfg, String fileNamePrefix)
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + ".cfg" + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".cfg"
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
@@ -127,7 +124,7 @@ public class UDrawGraph
 			 */
 			writeBasicBlock (out, cfg.getBasicBlock (cfg.getEntryID ()));
 
-			for (Vertex v: cfg)
+			for (Vertex v : cfg)
 			{
 				BasicBlock bb = (BasicBlock) v;
 				if (bb.getVertexID () != cfg.getEntryID ())
@@ -138,8 +135,7 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
@@ -156,11 +152,9 @@ public class UDrawGraph
 		if (subprogramName == null)
 		{
 			out.write (setName (Integer.toString (vertexID)));
-		}
-		else
+		} else
 		{
-			out.write (setName (Integer.toString (vertexID) + "\\n"
-					+ subprogramName));
+			out.write (setName (Integer.toString (vertexID) + "\\n" + subprogramName));
 		}
 
 		out.write (setToolTip (basicBlockString (bb)));
@@ -173,7 +167,7 @@ public class UDrawGraph
 
 	private static void writeCFGEdges (BufferedWriter out, BasicBlock bb) throws IOException
 	{
-		Iterator<Edge> succIt = bb.successorIterator ();
+		Iterator <Edge> succIt = bb.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			FlowEdge e = (FlowEdge) succIt.next ();
@@ -187,26 +181,23 @@ public class UDrawGraph
 		}
 	}
 
-	public final static void makeUDrawFile (IProfile iprofile,
-			CFGStar cfgStar,
+	public final static void makeUDrawFile (IProfile iprofile, CFGStar cfgStar,
 			String fileNamePrefix)
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + ".cfg." + iprofile + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".cfg."
+					+ iprofile + fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
 			/*
 			 * Write the entry vertex so it appears at the top of the graph
 			 */
-			writeCFGStarVertex (out, cfgStar, cfgStar.getVertex (cfgStar
-					.getEntryID ()));
+			writeCFGStarVertex (out, cfgStar, cfgStar.getVertex (cfgStar.getEntryID ()));
 
-			for (Vertex v: cfgStar)
+			for (Vertex v : cfgStar)
 			{
 				if (v.getVertexID () != cfgStar.getEntryID ())
 				{
@@ -216,17 +207,15 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
 	}
 
-	private static void writeCFGStarVertex (BufferedWriter out,
-			CFGStar cfgStar,
-			Vertex v) throws IOException
+	private static void writeCFGStarVertex (BufferedWriter out, CFGStar cfgStar, Vertex v)
+			throws IOException
 	{
 		int vertexID = v.getVertexID ();
 		out.write (newVertex (vertexID));
@@ -240,13 +229,11 @@ public class UDrawGraph
 			{
 				out.write (setColor (COLOR.BLACK));
 				out.write (setToolTip ("Entry (id =" + vertexID + ")"));
-			}
-			else if (vertexID == cfgStar.getExitID ())
+			} else if (vertexID == cfgStar.getExitID ())
 			{
 				out.write (setColor (COLOR.BLACK));
 				out.write (setToolTip ("Exit (id =" + vertexID + ")"));
-			}
-			else
+			} else
 			{
 				Ipoint i = (Ipoint) v;
 
@@ -256,14 +243,12 @@ public class UDrawGraph
 				if (i.isInlinedEntry () || i.isInlinedExit ())
 				{
 					out.write (setColor (COLOR.YELLOW));
-				}
-				else
+				} else
 				{
 					out.write (setColor (COLOR.BLUE));
 				}
 			}
-		}
-		else
+		} else
 		{
 			out.write (setName (Integer.toString (vertexID)));
 			ControlFlowGraph cfg = cfgStar.getCFG ();
@@ -281,12 +266,11 @@ public class UDrawGraph
 	{
 		StringBuffer buffer = new StringBuffer ();
 		int i = 1;
-		Iterator<Instruction> instrIt = bb.instructionIterator ();
+		Iterator <Instruction> instrIt = bb.instructionIterator ();
 		while (instrIt.hasNext ())
 		{
 			Instruction instr = instrIt.next ();
-			buffer.append (Long.toHexString (instr.getAddress ()) + ": "
-					+ instr.getInstruction ());
+			buffer.append (Long.toHexString (instr.getAddress ()) + ": " + instr.getInstruction ());
 			if (i++ < bb.numberofInstructions ())
 			{
 				buffer.append ("\\n");
@@ -302,13 +286,12 @@ public class UDrawGraph
 	private static String ipointString (Ipoint v)
 	{
 		StringBuffer buffer = new StringBuffer ();
-		buffer.append ("Ipoint ID = 0x" + Long.toHexString (v.getIpointID ())
-				+ " (" + Long.toString (v.getIpointID ()) + ")");
+		buffer.append ("Ipoint ID = 0x" + Long.toHexString (v.getIpointID ()) + " ("
+				+ Long.toString (v.getIpointID ()) + ")");
 		if (v.isInlinedEntry ())
 		{
 			buffer.append ("\\nMaster entry for " + v.getSubprogramName ());
-		}
-		else if (v.isInlinedExit ())
+		} else if (v.isInlinedExit ())
 		{
 			buffer.append ("\\nMaster exit for " + v.getSubprogramName ());
 		}
@@ -317,7 +300,7 @@ public class UDrawGraph
 
 	private static void writeEdges (BufferedWriter out, Vertex v) throws IOException
 	{
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			Edge e = succIt.next ();
@@ -329,16 +312,14 @@ public class UDrawGraph
 		}
 	}
 
-	public final static void makeUDrawFile (IProfile iprofile,
-			IpointGraph ipg,
+	public final static void makeUDrawFile (IProfile iprofile, IpointGraph ipg,
 			String fileNamePrefix)
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + ".ipg." + iprofile + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".ipg."
+					+ iprofile + fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
@@ -347,7 +328,7 @@ public class UDrawGraph
 			 */
 			writeIPGVertex (out, ipg, ipg.getVertex (ipg.getEntryID ()));
 
-			for (Vertex v: ipg)
+			for (Vertex v : ipg)
 			{
 				if (v.getVertexID () != ipg.getEntryID ())
 				{
@@ -357,17 +338,15 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
 	}
 
-	private static void writeIPGVertex (BufferedWriter out,
-			IpointGraph ipg,
-			Vertex v) throws IOException
+	private static void writeIPGVertex (BufferedWriter out, IpointGraph ipg, Vertex v)
+			throws IOException
 	{
 		Ipoint i = (Ipoint) v;
 		int vertexID = v.getVertexID ();
@@ -379,13 +358,11 @@ public class UDrawGraph
 		{
 			out.write (setColor (COLOR.BLACK));
 			out.write (setToolTip ("Entry (id =" + vertexID + ")"));
-		}
-		else if (vertexID == ipg.getExitID () && i.isGhostIpoint ())
+		} else if (vertexID == ipg.getExitID () && i.isGhostIpoint ())
 		{
 			out.write (setColor (COLOR.BLACK));
 			out.write (setToolTip ("Exit (id =" + vertexID + ")"));
-		}
-		else
+		} else
 		{
 			out.write (setName (Integer.toString (vertexID)));
 			out.write (setToolTip (ipointString (i)));
@@ -404,7 +381,7 @@ public class UDrawGraph
 
 	private static void writeIPGEdges (BufferedWriter out, Vertex v) throws IOException
 	{
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			IPGEdge e = (IPGEdge) succIt.next ();
@@ -416,17 +393,14 @@ public class UDrawGraph
 			{
 				out.write (setEdgePattern (EDGESHAPE.DASHED, 2));
 				buffer.append ("\\nEntry for " + e.getEntryHeaderID ());
-			}
-			else if (e.isExitEdge ())
+			} else if (e.isExitEdge ())
 			{
 				out.write (setEdgePattern (EDGESHAPE.DASHED, 2));
 				buffer.append ("\\nExit for " + e.getExitHeaderID ());
-			}
-			else if (e.isIterationEdge ())
+			} else if (e.isIterationEdge ())
 			{
 				out.write (setEdgePattern (EDGESHAPE.SOLID, 3));
-				buffer.append ("\\nIteration edge for "
-						+ e.iterationHeaderIDs ());
+				buffer.append ("\\nIteration edge for " + e.iterationHeaderIDs ());
 			}
 			out.write (setToolTip (buffer.toString ()));
 			out.write (setName ("e" + Integer.toString (e.getEdgeID ())));
@@ -436,34 +410,31 @@ public class UDrawGraph
 		}
 	}
 
-	public final static void makeUDrawFile (SuperBlockGraph superg,
-			String fileNamePrefix)
+	public final static void makeUDrawFile (SuperBlockGraph superg, String fileNamePrefix)
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + ".super" + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".super"
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
-			for (Vertex v: superg)
+			for (Vertex v : superg)
 			{
 				writeSuperBlockVertex (out, (SuperBlockVertex) v);
 			}
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
 	}
 
-	private static void writeSuperBlockVertex (BufferedWriter out,
-			SuperBlockVertex v) throws IOException
+	private static void writeSuperBlockVertex (BufferedWriter out, SuperBlockVertex v)
+			throws IOException
 	{
 		out.write (newVertex (v.getVertexID ()));
 		out.write (beginAttributes);
@@ -480,10 +451,9 @@ public class UDrawGraph
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
@@ -492,7 +462,7 @@ public class UDrawGraph
 			 */
 			writeTreeVertex (out, tree.getVertex (tree.getRootID ()));
 
-			for (Vertex v: tree)
+			for (Vertex v : tree)
 			{
 				if (v.getVertexID () != tree.getRootID ())
 				{
@@ -502,8 +472,7 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
@@ -514,28 +483,25 @@ public class UDrawGraph
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".lnt"
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
 			/*
 			 * Write the root vertex so it appears at the top of the graph
 			 */
-			writeHeaderVertex (out, (HeaderVertex) lnt.getVertex (lnt
-					.getRootID ()));
+			writeHeaderVertex (out, (HeaderVertex) lnt.getVertex (lnt.getRootID ()));
 
-			for (Vertex v: lnt)
+			for (Vertex v : lnt)
 			{
 				if (v.getVertexID () != lnt.getRootID ())
 				{
 					if (v instanceof HeaderVertex)
 					{
 						writeHeaderVertex (out, (HeaderVertex) v);
-					}
-					else
+					} else
 					{
 						writeTreeVertex (out, (TreeVertex) v);
 					}
@@ -544,33 +510,29 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
 	}
 
-	public final static void makeUDrawFile (SyntaxTree syntaxTree,
-			String fileNamePrefix)
+	public final static void makeUDrawFile (SyntaxTree syntaxTree, String fileNamePrefix)
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					fileNamePrefix + ".stree" + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".stree"
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
 
 			/*
 			 * Write the root vertex so it appears at the top of the graph
 			 */
-			writeSyntaxTreeVertex (out, syntaxTree.getVertex (syntaxTree
-					.getRootID ()));
+			writeSyntaxTreeVertex (out, syntaxTree.getVertex (syntaxTree.getRootID ()));
 
-			for (Vertex v: syntaxTree)
+			for (Vertex v : syntaxTree)
 			{
 				if (v.getVertexID () != syntaxTree.getRootID ())
 				{
@@ -580,29 +542,24 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
 	}
 
-	public final static void makeUDrawFile (IProfile iprofile,
-			LoopNests lnt,
-			String fileNamePrefix)
+	public final static void makeUDrawFile (IProfile iprofile, LoopNests lnt, String fileNamePrefix)
 	{
 		makeUDrawFile (lnt, fileNamePrefix + ".lnt." + iprofile);
 	}
 
-	public final static void makeUDrawFile (DepthFirstTree dfs,
-			String fileNamePrefix)
+	public final static void makeUDrawFile (DepthFirstTree dfs, String fileNamePrefix)
 	{
 		makeUDrawFile ((Tree) dfs, fileNamePrefix + ".dfs");
 	}
 
-	public final static void makeUDrawFile (DominatorTree domt,
-			DominatorTreeType type,
+	public final static void makeUDrawFile (DominatorTree domt, DominatorTreeType type,
 			String fileNamePrefix)
 	{
 		makeUDrawFile ((Tree) domt, fileNamePrefix + ".domt." + type);
@@ -617,7 +574,7 @@ public class UDrawGraph
 		out.write (endAttibutes);
 
 		out.write (beginAttributes);
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			Edge e = succIt.next ();
@@ -637,12 +594,11 @@ public class UDrawGraph
 		out.write (beginAttributes);
 		out.write (setShape (SHAPE.CIRCLE));
 		out.write (setName (Integer.toString (v.getVertexID ())));
-		out.write (setToolTip ("Header = " + v.getHeaderID () + "\\nLevel = "
-				+ v.getLevel ()));
+		out.write (setToolTip ("Header = " + v.getHeaderID () + "\\nLevel = " + v.getLevel ()));
 		out.write (endAttibutes);
 
 		out.write (beginAttributes);
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			Edge e = succIt.next ();
@@ -656,8 +612,8 @@ public class UDrawGraph
 		out.write (endVertex + "\n");
 	}
 
-	private static void writeSyntaxTreeVertex (BufferedWriter out,
-			SyntaxVertex v) throws IOException
+	private static void writeSyntaxTreeVertex (BufferedWriter out, SyntaxVertex v)
+			throws IOException
 	{
 		out.write (newVertex (v.getVertexID ()));
 		out.write (beginAttributes);
@@ -666,40 +622,34 @@ public class UDrawGraph
 			out.write (setName ("SEQ_" + Integer.toString (v.getVertexID ())));
 			out.write (setColor (COLOR.YELLOW));
 			out.write (setShape (SHAPE.RHOMBUS));
-		}
-		else if (v instanceof AlternativeVertex)
+		} else if (v instanceof AlternativeVertex)
 		{
 			out.write (setName ("ALT_" + Integer.toString (v.getVertexID ())));
 			out.write (setColor (COLOR.BLUE));
 			out.write (setShape (SHAPE.RHOMBUS));
-		}
-		else if (v instanceof adam.betts.vertices.trees.LoopVertex)
+		} else if (v instanceof adam.betts.vertices.trees.LoopVertex)
 		{
 			out.write (setName ("LOOP_" + Integer.toString (v.getVertexID ())));
 			out.write (setColor (COLOR.RED));
 			out.write (setShape (SHAPE.RHOMBUS));
-		}
-		else
+		} else
 		{
 			LeafVertex leafv = (LeafVertex) v;
 			if (leafv.isLambdaVertex ())
 			{
 				out.write (setName ("<>"));
 				out.write (setShape (SHAPE.BOX));
-			}
-			else
+			} else
 			{
 				out.write (setToolTip ("Vertex id = " + v.getVertexID ()));
-				out
-						.write (setName (Integer.toString (leafv
-								.getCFGVertexID ())));
+				out.write (setName (Integer.toString (leafv.getCFGVertexID ())));
 			}
 		}
 
 		out.write (endAttibutes);
 
 		out.write (beginAttributes);
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			Edge e = succIt.next ();
@@ -717,13 +667,11 @@ public class UDrawGraph
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (), "callg"
-					+ fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), "callg" + fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
-			for (Vertex v: callg)
+			for (Vertex v : callg)
 			{
 				CallVertex callv = (CallVertex) v;
 
@@ -734,17 +682,17 @@ public class UDrawGraph
 				if (callv.numOfPredecessors () == 0)
 				{
 					out.write (setColor (COLOR.YELLOW));
-				}
-				else if (callv.numOfSuccessors () == 0)
+				} else if (callv.numOfSuccessors () == 0)
 				{
 					out.write (setColor (COLOR.RED));
 				}
-				out.write (setToolTip ("Subprogram ID = "
-						+ Integer.toString (callv.getVertexID ())));
+				out
+						.write (setToolTip ("Subprogram ID = "
+								+ Integer.toString (callv.getVertexID ())));
 				out.write (endAttibutes);
 
 				out.write (beginAttributes);
-				Iterator<Edge> succIt = v.successorIterator ();
+				Iterator <Edge> succIt = v.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					CallEdge e = (CallEdge) succIt.next ();
@@ -761,8 +709,7 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
@@ -773,13 +720,11 @@ public class UDrawGraph
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (), "clg"
-					+ fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), "clg" + fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
-			for (Vertex v: clg)
+			for (Vertex v : clg)
 			{
 				CallLoopVertex clv = (CallLoopVertex) v;
 
@@ -791,18 +736,15 @@ public class UDrawGraph
 					out.write (setName (Integer.toString (clv.getVertexID ())));
 					out.write (setColor (COLOR.BLUE));
 					out.write (setShape (SHAPE.RHOMBUS));
-					out.write (setToolTip (clv.getSubprogramName ()
-							+ "\\nHeader = "
+					out.write (setToolTip (clv.getSubprogramName () + "\\nHeader = "
 							+ ((LoopVertex) clv).getHeaderID ()));
-				}
-				else
+				} else
 				{
 					out.write (setName (clv.getSubprogramName ()));
 					if (clv.numOfPredecessors () == 0)
 					{
 						out.write (setColor (COLOR.YELLOW));
-					}
-					else if (clv.numOfSuccessors () == 0)
+					} else if (clv.numOfSuccessors () == 0)
 					{
 						out.write (setColor (COLOR.RED));
 					}
@@ -810,7 +752,7 @@ public class UDrawGraph
 				out.write (endAttibutes);
 
 				out.write (beginAttributes);
-				Iterator<Edge> succIt = v.successorIterator ();
+				Iterator <Edge> succIt = v.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					Edge e = succIt.next ();
@@ -826,8 +768,7 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
@@ -838,26 +779,23 @@ public class UDrawGraph
 	{
 		try
 		{
-			final File file = new File (Globals.getUDrawDirectory (),
-					"contextg" + fileNameSuffix);
-			BufferedWriter out = new BufferedWriter (new FileWriter (file
-					.getAbsolutePath ()));
+			final File file = new File (Globals.getUDrawDirectory (), "contextg" + fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
-			for (Vertex v: contextg)
+			for (Vertex v : contextg)
 			{
 				ContextVertex contextv = (ContextVertex) v;
 
 				out.write (newVertex (v.getVertexID ()));
 
 				out.write (beginAttributes);
-				out.write (setName (contextv.getSubprogramName ()
-						+ " (context id = "
+				out.write (setName (contextv.getSubprogramName () + " (context id = "
 						+ Integer.toString (v.getVertexID ()) + ")"));
 				out.write (endAttibutes);
 
 				out.write (beginAttributes);
-				Iterator<Edge> succIt = v.successorIterator ();
+				Iterator <Edge> succIt = v.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					CallEdge e = (CallEdge) succIt.next ();
@@ -874,8 +812,7 @@ public class UDrawGraph
 			out.write (endGraph);
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);

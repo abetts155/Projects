@@ -32,14 +32,14 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 	public ControlFlowGraph clone ()
 	{
 		ControlFlowGraph cfg = new ControlFlowGraph ();
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			cfg.addBasicBlock (v.getVertexID ());
 		}
 
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				FlowEdge e = (FlowEdge) succIt.next ();
@@ -54,7 +54,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public void inline (ControlFlowGraph cfg, String subprogramName)
 	{
-		for (Vertex v: cfg)
+		for (Vertex v : cfg)
 		{
 			BasicBlock bb = (BasicBlock) v;
 			BasicBlock clone = bb.clone ();
@@ -62,12 +62,12 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 			idToVertex.put (v.getVertexID (), clone);
 		}
 
-		for (Vertex v: cfg)
+		for (Vertex v : cfg)
 		{
 			int vertexID = v.getVertexID ();
 			if (vertexID != cfg.getExitID ())
 			{
-				Iterator<Edge> succIt = v.successorIterator ();
+				Iterator <Edge> succIt = v.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					FlowEdge e = (FlowEdge) succIt.next ();
@@ -100,10 +100,10 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final void addAllPredecessorEdges ()
 	{
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			int sourceID = v.getVertexID ();
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				FlowEdge e = (FlowEdge) succIt.next ();
@@ -111,8 +111,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 				BasicBlock destination = getBasicBlock (destinationID);
 				if (!destination.hasPredecessor (sourceID))
 				{
-					destination.addPredecessor (sourceID, e.getBranchType (), e
-							.getEdgeID ());
+					destination.addPredecessor (sourceID, e.getBranchType (), e.getEdgeID ());
 				}
 			}
 		}
@@ -130,9 +129,9 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final BasicBlock getBasicBlock (long address)
 	{
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
-			if ( ((BasicBlock) v).hasAddress (address))
+			if (((BasicBlock) v).hasAddress (address))
 			{
 				return (BasicBlock) v;
 			}
@@ -142,7 +141,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final BasicBlock getSuccessor (BasicBlock u, Long address)
 	{
-		Iterator<Edge> succIt = u.successorIterator ();
+		Iterator <Edge> succIt = u.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			Edge e = succIt.next ();
@@ -158,7 +157,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 	public final void setEntry ()
 	{
 		long firstAddress = Long.MAX_VALUE;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			long address = ((BasicBlock) v).getFirstAddress ();
 			if (address < firstAddress)
@@ -170,14 +169,11 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 		if (entryID == Vertex.DUMMY_VERTEX_ID)
 		{
-			Debug
-					.debugMessage (
-							getClass (),
-							"Could not find a unique entry point using basic block addresses",
-							1);
+			Debug.debugMessage (getClass (),
+					"Could not find a unique entry point using basic block addresses", 1);
 
-			ArrayList<Vertex> noPreds = new ArrayList<Vertex> ();
-			for (Vertex v: this)
+			ArrayList <Vertex> noPreds = new ArrayList <Vertex> ();
+			for (Vertex v : this)
 			{
 				if (v.numOfPredecessors () == 0)
 				{
@@ -188,8 +184,11 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 			if (noPreds.size () == 1)
 			{
 				entryID = noPreds.get (noPreds.size () - 1).getVertexID ();
-			}
-			else
+
+				Debug.debugMessage (getClass (), "Found entry vertex " + entryID
+						+ " as it has no predecessors", 1);
+
+			} else
 			{
 				Debug
 						.debugMessage (
@@ -203,8 +202,8 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final void setExit ()
 	{
-		ArrayList<Vertex> noSuccs = new ArrayList<Vertex> ();
-		for (Vertex v: this)
+		ArrayList <Vertex> noSuccs = new ArrayList <Vertex> ();
+		for (Vertex v : this)
 		{
 			if (v.numOfSuccessors () == 0)
 			{
@@ -215,8 +214,10 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		if (noSuccs.size () == 1)
 		{
 			exitID = noSuccs.get (noSuccs.size () - 1).getVertexID ();
-		}
-		else
+
+			Debug.debugMessage (getClass (), "Found exit vertex " + exitID
+					+ " as it has no successors", 1);
+		} else
 		{
 			Debug.debugMessage (getClass (),
 					"Could not find a unique exit point. Giving up. Potential exit points found: "
@@ -245,7 +246,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		firstAddress = Long.MAX_VALUE;
 		lastAddress = Long.MIN_VALUE;
 
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof BasicBlock)
 			{
@@ -290,10 +291,10 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final void removeDeadCode ()
 	{
-		HashSet<Integer> toRemove = new HashSet<Integer> (idToVertex.keySet ());
-		HashSet<Integer> visited = new HashSet<Integer> ();
+		HashSet <Integer> toRemove = new HashSet <Integer> (idToVertex.keySet ());
+		HashSet <Integer> visited = new HashSet <Integer> ();
 
-		Stack<Integer> stack = new Stack<Integer> ();
+		Stack <Integer> stack = new Stack <Integer> ();
 		stack.push (entryID);
 		while (!stack.isEmpty ())
 		{
@@ -302,7 +303,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 			visited.add (vertexID);
 
 			Vertex v = idToVertex.get (vertexID);
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge succEdge = succIt.next ();
@@ -314,21 +315,19 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 			}
 		}
 
-		for (int vertexID: toRemove)
+		for (int vertexID : toRemove)
 		{
-			Debug.debugMessage (getClass (),
-					"Removing basic block " + vertexID, 3);
-			Debug.debugMessage (getClass (), idToVertex.get (vertexID)
-					.toString (), 4);
+			Debug.debugMessage (getClass (), "Removing basic block " + vertexID, 3);
+			Debug.debugMessage (getClass (), idToVertex.get (vertexID).toString (), 4);
 			removeVertex (vertexID);
 		}
 	}
 
 	public void addEntryAndExitEdges ()
 	{
-		ArrayList<Integer> noPreds = new ArrayList<Integer> ();
-		ArrayList<Integer> noSuccs = new ArrayList<Integer> ();
-		for (Vertex v: this)
+		ArrayList <Integer> noPreds = new ArrayList <Integer> ();
+		ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
+		for (Vertex v : this)
 		{
 			int vertexID = v.getVertexID ();
 			if (v.numOfPredecessors () == 0)
@@ -344,14 +343,13 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		if (noPreds.size () == 1)
 		{
 			this.entryID = noPreds.get (noPreds.size () - 1);
-		}
-		else
+		} else
 		{
 			this.entryID = getNextVertexID ();
 			Debug.debugMessage (getClass (), "Adding entry " + entryID, 3);
 			addBasicBlock (entryID);
 
-			for (int vertexID: noPreds)
+			for (int vertexID : noPreds)
 			{
 				addEdge (entryID, vertexID, BranchType.UNKNOWN);
 			}
@@ -360,14 +358,13 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		if (noSuccs.size () == 1)
 		{
 			this.exitID = noSuccs.get (noSuccs.size () - 1);
-		}
-		else
+		} else
 		{
 			this.exitID = getNextVertexID ();
 			Debug.debugMessage (getClass (), "Adding exit " + exitID, 3);
 			addBasicBlock (exitID);
 
-			for (int vertexID: noSuccs)
+			for (int vertexID : noSuccs)
 			{
 				addEdge (vertexID, exitID, BranchType.UNKNOWN);
 			}
