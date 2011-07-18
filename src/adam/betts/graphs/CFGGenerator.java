@@ -18,7 +18,6 @@ public class CFGGenerator
 {
 	protected final static float branchToMergeBias = 0.2f;
 	protected final static int maxPathLength = 5;
-	private static final int remainingComponents = 0;
 
 	protected Random random = new Random ();
 	protected ControlFlowGraph cfg = new ControlFlowGraph ();
@@ -44,9 +43,9 @@ public class CFGGenerator
 		}
 		
 		checkExits ();
-		
 		setEntry ();
 		setExit ();
+		//LoopNests loop = new LoopNests (cfg, cfg.getEntryID());	
 	}
 
 	public final ControlFlowGraph getCFG ()
@@ -69,6 +68,7 @@ public class CFGGenerator
 			cfg.addEdge (disconnectedVertices.get (i), disconnectedVertices.get (i+1), BranchType.TAKEN);
 		}
 	}
+	
 	
 	private void addIfThenComponents (int vertices) 
 	{
@@ -145,8 +145,8 @@ public class CFGGenerator
 				
 				disconnectedBranches.add (branchID);
 				disconnectedBranches.add (mergeID);
-		
 			}
+			
 			addNonBranchComponents (remainingComponents);
 			if (noOfComponents == 1)
 			{	
@@ -156,6 +156,8 @@ public class CFGGenerator
 		else
 		{
 			addNonBranchComponents(remainingComponents);
+			disconnectedBranches.add (disconnectedVertices.get (0));
+			disconnectedBranches.add (disconnectedVertices.get (disconnectedVertices.size () - 1));
 		}
 				
 	}	
@@ -199,10 +201,41 @@ public class CFGGenerator
 		}
 	}
 	
-	private void addLoops ()
+	private int setLoopEntry (int n)
 	{
+		int exitID;
+		int entryID = cfg.getNextVertexID();
+		float decide = random.nextFloat ();
+		
+		if (decide < 0.33)
+		{	
+			addNonBranchComponents (n);
+			cfg.addEdge(entryID, disconnectedVertices.get (0), BranchType.TAKEN);
+			exitID = disconnectedVertices.get (disconnectedVertices.size () - 1);
+		}	
+		else 
+		{	
+			if (decide < 0.66)
+				addIfElseComponents(n);
+			else
+				addIfThenComponents(n);
+			cfg.addEdge(entryID, disconnectedBranches.get(0), BranchType.TAKEN);
+			exitID = disconnectedBranches.get(disconnectedBranches.size() - 1);
+		}	
+		return exitID;
+	}
+	
+	private void addLoops ()
+	{	
 		int loops = MainProgramGenerator.Globals.getNumberOfLoops ();	
-		disconnectedLoops = new Tree ();
+		int vertix = MainProgramGenerator.Globals.getNumberOfVerticesInCFG();
+		int remainingVertices = vertix - 2 * loops - 2;		
+		int loopEntry = random.nextInt (remainingVertices / 2 + 1) + 1;
+		
+		int entryID = setLoopEntry (loopEntry);
+		cfg.addBasicBlock (entryID);
+		
+		
 		for (int i = 0; i < loops; ++i)	
 		{
 			int headerID = cfg.getNextVertexID();	
@@ -210,16 +243,13 @@ public class CFGGenerator
 			int tailID = cfg.getNextVertexID();
 			cfg.addBasicBlock (tailID);
 			
-			int loopBody = random.nextInt (50) + 1; 
+			int loopBody = random.nextInt (remainingVertices/2 + 1) + 1; 
+			remainingVertices -= loopBody;
 			
-			System.out.println ("loopBody: " + loopBody);
-			
-			if (random.nextBoolean())	
+			if (random.nextBoolean ())	
 			{
 				float decideLoopBody = random.nextFloat ();
 				boolean componentType;
-				
-				System.out.println ("decide: " + decideLoopBody);
 				
 				if (decideLoopBody < 0.5)
 				{
@@ -268,13 +298,9 @@ public class CFGGenerator
 			
 			disconnectedLoops.addVertex(headerID);
 			disconnectedLoopsArray.add (headerID);
-			
-			System.out.println (i + " - the headerID: " + disconnectedLoopsArray.get (i));
 		}		
 		
-		int entryID = cfg.getNextVertexID();
-		cfg.addBasicBlock (entryID);
-		cfg.addEdge (entryID, disconnectedLoopsArray.get (0), BranchType.TAKEN);
+		//cfg.addEdge (entryID, disconnectedLoopsArray.get (0), BranchType.TAKEN);
 		
 		int vertices = disconnectedLoopsArray.size () - 1;
 		
@@ -344,7 +370,7 @@ public class CFGGenerator
 			int vertexID;
 			do
 			{
-				vertexID = random.nextInt (cfg.numOfVertices ()) + 1;
+				vertexID = random.nextInt (cfg.numOfVertices () + 1);
 			}
 			while (vertexID == cfg.getEntryID ());
 
@@ -354,7 +380,6 @@ public class CFGGenerator
 			counter--;
 		}
 	}
-	
 	
 	private void setEntry ()
 	{

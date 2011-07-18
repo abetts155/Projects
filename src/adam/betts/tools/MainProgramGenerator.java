@@ -160,7 +160,7 @@ public class MainProgramGenerator
 					} catch (IllegalArgumentException e)
 					{
 						System.err.println (arg
-								+ " is not a valid number of loops. It must be in the range 0..10.");
+								+ " is not a valid number of loops. It must be in the range 0..100.");
 						System.exit (1);
 					}
 				}
@@ -274,7 +274,14 @@ public class MainProgramGenerator
 						int vertices = Integer.parseInt (arg);
 						if (vertices < 10 || vertices > 200)
 						{
-							throw new IllegalArgumentException ();
+							throw new IllegalArgumentException (vertices + " is not a valid number of vertices. " +
+									"It must be a positive integer in the range 50..200");
+						}
+						if (vertices < 2 * Globals.loops + 2)
+						{
+							throw new IllegalArgumentException (vertices + " is not a valid number of vertices. " + 
+									"It must be grater or equal to " + (2 * Globals.loops + 2) + 
+									" to be able to generate " + Globals.loops + " loops.");
 						}
 						Globals.vertices = vertices;
 					} catch (NumberFormatException e)
@@ -284,11 +291,9 @@ public class MainProgramGenerator
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid number of vertices. It must be a positive integer in the range 50..200");
+						System.err.println (e.getMessage());					
 						System.exit (1);
-					}
+					} 
 				}
 
 			}
@@ -303,9 +308,9 @@ public class MainProgramGenerator
 	private static void run ()
 	{
 		Program program = new ProgramGenerator ().getProgram ();
-		Database data = new Database(program, true);
+		//Database data = new Database(program, true);
 		new WriteProgram (program);
-		new CalculationEngineCFG (program, data);
+		//new CalculationEngineCFG (program, data);
 	}
 
 	public static class Globals
@@ -333,7 +338,6 @@ public class MainProgramGenerator
 		public final static int getNumberOfSelfLoops ()
 		{
 			return selfLoops;
-
 		}
 
 		public final static int getNumberOfReturns ()
