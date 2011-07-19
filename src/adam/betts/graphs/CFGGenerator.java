@@ -32,9 +32,9 @@ public class CFGGenerator
 	public CFGGenerator ()
 	{
 		//addNonBranchComponents(MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
-		//addIfThenComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
+		addIfThenComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
 		//addIfElseComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
-		addLoops ();
+		//addLoops ();
 		//addSelfLoops ();
 		
 		if (disconnectedBranches.size () > 1)
@@ -158,8 +158,7 @@ public class CFGGenerator
 			addNonBranchComponents(remainingComponents);
 			disconnectedBranches.add (disconnectedVertices.get (0));
 			disconnectedBranches.add (disconnectedVertices.get (disconnectedVertices.size () - 1));
-		}
-				
+		}		
 	}	
 	
 	private void connectBranches (int structure) 
@@ -177,7 +176,6 @@ public class CFGGenerator
 				{
 					int sourceID = disconnectedBranches.get (i);
 					int destinationRemovedID = cfg.getVertex (sourceID).getNthSuccessor (destinationToRemove - 1).getVertexID ();
-					System.out.println (i + " destRemoved: " + destinationRemovedID);					
 					
 					Debug.debugMessage (getClass (), "Removing edge " + sourceID 
 							+ "=>" + destinationRemovedID, 4);
@@ -234,7 +232,6 @@ public class CFGGenerator
 		
 		int entryID = setLoopEntry (loopEntry);
 		cfg.addBasicBlock (entryID);
-		
 		
 		for (int i = 0; i < loops; ++i)	
 		{

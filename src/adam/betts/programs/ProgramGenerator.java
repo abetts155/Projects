@@ -13,13 +13,16 @@ import adam.betts.utilities.Globals;
 import adam.betts.graphs.CallGraph;
 
 
-
 public class ProgramGenerator
 {
 	protected ArrayList<Subprogram> subprograms = new ArrayList<Subprogram> ();
-	
 	protected Program program = new Program ();
-	
+	protected CallGraph callgraph = new CallGraph ();
+	protected ControlFlowGraph root;
+	protected Random gen = new Random();
+	protected final int numOfSubprograms = MainProgramGenerator.Globals.getNumberOfSubprograms ();
+	protected final int depth = MainProgramGenerator.Globals.getDepthOfCallGraph ();
+
 	public ProgramGenerator ()
 	{
 		addSubprograms ();
@@ -39,8 +42,7 @@ public class ProgramGenerator
 	{
 		Debug.debugMessage (getClass (), "Adding subprograms", 3);
 
-		for (int i = 1; i <= MainProgramGenerator.Globals
-				.getNumberOfSubprograms (); ++i)
+		for (int i = 1; i <= numOfSubprograms; ++i)
 		{
 			final String subprogramName = "F" + Integer.toString (i);
 			program.addSubprogram (i, subprogramName);
@@ -62,63 +64,74 @@ public class ProgramGenerator
 
 	private void addCalls ()
 	{
-		Random gen = new Random();
-		
 		Debug.debugMessage (getClass (), "Adding calls", 3);
-		CallGraph callgraph = new CallGraph ();
 		program.callg = callgraph;
 				
-		for (int i = 1; i <= MainProgramGenerator.Globals.getNumberOfSubprograms (); ++i)	
+		for (int i = 1; i <= numOfSubprograms; ++i)	
 		{
 			Subprogram s = program.getSubprogram (i);
 			callgraph.addVertex (s.getSubprogramID (), s.getSubprogramName ());
 		}
 				
-		ControlFlowGraph root = program.getSubprogram (1).getCFG();					
+		root = program.getSubprogram (1).getCFG();					
 		root.setSubprogramName (program.getSubprogram (1).getSubprogramName());		
 		int id = gen.nextInt (MainProgramGenerator.Globals.getNumberOfSubprograms () + 1);
 		program.setRootID (id);
-				
-		int numOfSubprograms = MainProgramGenerator.Globals.getNumberOfSubprograms ();
+		
+		add ();
+	}
+	
+	private void add () 
+	{
+		int level = 1;
 		int subprogramsLeft = numOfSubprograms - 1;
-			
-		for (int i = 1; i <= numOfSubprograms; ++i)
+	
+		for (int i = 1; i < numOfSubprograms; ++i)
 		{
-			Subprogram s = program.getSubprogram (i);						
-			s.getCFG().setSubprogramName(s.getSubprogramName());
-			
-			if (subprogramsLeft > 0)
-			{
-				int numOfSuccessors = gen.nextInt (subprogramsLeft);
-				int successorID = gen.nextInt (numOfSubprograms - i + 1) + i;	
-				while (successorID > i)
-				{			
-					Subprogram sNext = program.getSubprogram (successorID);	
-					sNext.getCFG ().setSubprogramName (sNext.getSubprogramName ());
-					successorID--;
-					
-					if (!s.getSubprogramName ().equals (sNext.getSubprogramName ()))
-					{
-						callgraph.addCall (s.getCFG ().getSubprogramName (), sNext.getCFG ().getSubprogramName (), i);
-						Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);
+			if (level < depth)
+			{	
+				Subprogram s = program.getSubprogram (i);						
+				s.getCFG().setSubprogramName (s.getSubprogramName());
+				
+				if (subprogramsLeft > 0)
+				{
+					int numOfSuccessors = gen.nextInt (subprogramsLeft);
+					int successorID = gen.nextInt (numOfSubprograms - i + 1) + i;	
+					while (successorID > i)
+					{			
+						Subprogram sNext = program.getSubprogram (successorID);	
+						sNext.getCFG ().setSubprogramName (sNext.getSubprogramName ());
+						successorID--;
+						
+						callgraph.addCall (s.getSubprogramName (), sNext.getSubprogramName (), i);
+						Debug.debugMessage (getClass (), "Adding call " + Integer.toString (i), 4);
 						numOfSuccessors--;
+						
 						if (!subprograms.contains (sNext))
 						{
 							subprogramsLeft--;
 							subprograms.add (sNext);
 						}	
 					}
-				}				
-			}
-		}
-		
-		for (int i = 2; i <= MainProgramGenerator.Globals.getNumberOfSubprograms(); ++i)
+					level++;
+				}
+			}	
+			else
+				i = numOfSubprograms + 1;
+		}	
+			
+		for (int i = 2; i <= numOfSubprograms; ++i)
 		{
 			Subprogram s = program.getSubprogram (i);
 			if (!subprograms.contains (s))
 			{
-				callgraph.addCall (root.getSubprogramName (), s.getCFG().getSubprogramName (), i);
-				Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);
+				int subprogramID = gen.nextInt(numOfSubprograms - i + 1) + i;
+				Subprogram subprogram = program.getSubprogram (subprogramID);
+				if (!callgraph.isLeaf (subprogramID))
+					callgraph.addCall (subprogram.getSubprogramName (), s.getSubprogramName (), i);
+				else
+					callgraph.addCall (root.getSubprogramName (), s.getSubprogramName (), i);
+				Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);	
 			}
 		}
 	}
