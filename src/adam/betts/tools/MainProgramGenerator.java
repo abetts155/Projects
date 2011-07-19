@@ -21,7 +21,7 @@ public class MainProgramGenerator
 	private static Option selfLoopsOption;
 	private static Option returnsOption;
 	private static Option subprogramsOption;
-	private static Option callsOption;
+	private static Option depthOption;
 	private static Option breaksOption;
 	private static Option continuesOption;
 	private static Option numberOfVerticesOption;
@@ -70,10 +70,10 @@ public class MainProgramGenerator
 		subprogramsOption.setRequired (false);
 		options.addOption (subprogramsOption);
 
-		callsOption = new Option ("c", "calls", true,
-				"Maximum number of calls in the program. Default is " + Globals.calls + ".");
-		callsOption.setRequired (false);
-		options.addOption (callsOption);
+		depthOption = new Option ("d", "depth", true,
+				"Maximum depth of the call graph. Default is " + Globals.depth + ".");
+		depthOption.setRequired (false);
+		options.addOption (depthOption);
 
 		breaksOption = new Option ("b", "breaks", true, "Include break-like structures in loops.");
 		breaksOption.setRequired (false);
@@ -240,28 +240,27 @@ public class MainProgramGenerator
 					}
 				}
 
-				if (line.hasOption (callsOption.getOpt ()))
+				if (line.hasOption (depthOption.getOpt ()))
 				{
-					String arg = line.getOptionValue (callsOption.getOpt ());
+					String arg = line.getOptionValue (depthOption.getOpt ());
 					try
 					{
-						int calls = Integer.parseInt (arg);
-						if (calls < 1)
+						int depth = Integer.parseInt (arg);
+						if (depth > Globals.subprograms)
 						{
 							throw new IllegalArgumentException ();
 						}
-						Globals.calls = calls;
+						Globals.depth = depth;
 					} catch (NumberFormatException e)
 					{
 						System.err.println ("'" + arg + "' is not a valid argument to "
-								+ callsOption.getLongOpt ());
+								+ depthOption.getLongOpt ());
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
 						System.err
 								.println (arg
-										+ " is not a valid number of calls. It must be a positive integer in the range 1.."
-										+ Integer.MAX_VALUE);
+										+ " is not a valid call graph depth. You need at least as many subprograms as the depth of the call graph.");
 						System.exit (1);
 					}
 				}
@@ -280,7 +279,7 @@ public class MainProgramGenerator
 					} catch (NumberFormatException e)
 					{
 						System.err.println ("'" + arg + "' is not a valid argument to "
-								+ callsOption.getLongOpt ());
+								+ numberOfVerticesOption.getLongOpt ());
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
@@ -313,7 +312,7 @@ public class MainProgramGenerator
 		protected static int selfLoops = 0;
 		protected static int returns = 1;
 		protected static int subprograms = 4;
-		protected static int calls = subprograms - 1;
+		protected static int depth = 7;
 		protected static boolean breaks = false;
 		protected static boolean continues = false;
 		protected static int vertices = 50;
@@ -344,9 +343,9 @@ public class MainProgramGenerator
 			return subprograms;
 		}
 
-		public final static int getNumberOfCalls ()
+		public final static int getDepthOfCallGraph ()
 		{
-			return calls;
+			return depth;
 		}
 
 		public final static boolean breaksAllowed ()
