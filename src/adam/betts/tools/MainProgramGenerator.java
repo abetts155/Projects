@@ -72,7 +72,7 @@ public class MainProgramGenerator
 		subprogramsOption.setRequired (false);
 		options.addOption (subprogramsOption);
 
-		depthOption = new Option ("d", "depth", true,
+		depthOption = new Option ("D", "depth", true,
 				"Maximum depth of the call graph. Default is " + Globals.depth + ".");
 		depthOption.setRequired (false);
 		options.addOption (depthOption);
