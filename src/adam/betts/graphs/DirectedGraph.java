@@ -1,5 +1,6 @@
 package adam.betts.graphs;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
@@ -44,12 +45,60 @@ public class DirectedGraph extends Graph
 		idToVertex.get (destinationID).removePredecessor (sourceID);
 	}
 
+	public final void removeAllPredecessorEdges (int vertexID)
+	{
+		ArrayList <Integer> predIDs = new ArrayList <Integer> ();
+
+		Vertex v = idToVertex.get (vertexID);
+		Iterator <Edge> predIt = v.predecessorIterator ();
+		while (predIt.hasNext ())
+		{
+			Edge e = predIt.next ();
+			int predID = e.getVertexID ();
+			predIDs.add (predID);
+		}
+
+		for (int predID : predIDs)
+		{
+			Vertex p = idToVertex.get (predID);
+			if (p.hasSuccessor (vertexID))
+			{
+				p.removeSuccessor (vertexID);
+			}
+			v.removePredecessor (predID);
+		}
+	}
+
+	public final void removeAllSuccessorEdges (int vertexID)
+	{
+		ArrayList <Integer> succIDs = new ArrayList <Integer> ();
+
+		Vertex v = idToVertex.get (vertexID);
+		Iterator <Edge> succIt = v.successorIterator ();
+		while (succIt.hasNext ())
+		{
+			Edge e = succIt.next ();
+			int succID = e.getVertexID ();
+			succIDs.add (succID);
+		}
+
+		for (int succID : succIDs)
+		{
+			Vertex s = idToVertex.get (succID);
+			if (s.hasPredecessor (vertexID))
+			{
+				s.removePredecessor (vertexID);
+			}
+			v.removeSuccessor (succID);
+		}
+	}
+
 	public final void removeAllPredecessorEdges ()
 	{
-		for (Vertex v: idToVertex.values ())
+		for (Vertex v : idToVertex.values ())
 		{
 			int sourceID = v.getVertexID ();
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -65,16 +114,16 @@ public class DirectedGraph extends Graph
 
 	public void reverseGraph (DirectedGraph reverseGraph)
 	{
-		for (Vertex v: idToVertex.values ())
+		for (Vertex v : idToVertex.values ())
 		{
 			int vertexID = v.getVertexID ();
 			reverseGraph.addVertex (vertexID);
 		}
 
-		for (Vertex v: idToVertex.values ())
+		for (Vertex v : idToVertex.values ())
 		{
 			int sourceID = v.getVertexID ();
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -84,11 +133,11 @@ public class DirectedGraph extends Graph
 		}
 	}
 
-	public final HashSet<Integer> getReachableVertices (int vertexID)
+	public final HashSet <Integer> getReachableVertices (int vertexID)
 	{
-		HashSet<Integer> reachable = new HashSet<Integer> ();
-		HashSet<Integer> visited = new HashSet<Integer> ();
-		Stack<Integer> stack = new Stack<Integer> ();
+		HashSet <Integer> reachable = new HashSet <Integer> ();
+		HashSet <Integer> visited = new HashSet <Integer> ();
+		Stack <Integer> stack = new Stack <Integer> ();
 		stack.push (vertexID);
 		while (!stack.isEmpty ())
 		{
@@ -98,7 +147,7 @@ public class DirectedGraph extends Graph
 
 			reachable.add (sourceID);
 
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
