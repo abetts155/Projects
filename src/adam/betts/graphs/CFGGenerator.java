@@ -27,17 +27,16 @@ public class CFGGenerator
 	protected Tree disconnectedLoops = new Tree ();
 	protected ArrayList<Integer> disconnectedLoopsArray = new ArrayList<Integer> ();
 	protected ArrayList<Integer> loopBody = new ArrayList<Integer> ();
-	protected boolean takenBranchAdded;
 
 	public CFGGenerator ()
 	{
 		//addNonBranchComponents(MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
-		addIfThenComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
+		//addIfThenComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
 		//addIfElseComponents (MainProgramGenerator.Globals.getNumberOfVerticesInCFG());
-		//addLoops ();
+		addLoops ();
 		//addSelfLoops ();
 		
-		if (disconnectedBranches.size () > 1)
+		if (disconnectedLoopsArray.size () > 1)
 		{
 			enforceSingleEntry ();
 		}
@@ -65,6 +64,8 @@ public class CFGGenerator
 		
 		for (int i = 0; i < disconnectedVertices.size () - 1; ++i)
 		{	
+			Debug.debugMessage (getClass (), "Adding edge " + disconnectedVertices.get (i)
+					+ "=>" + disconnectedVertices.get (i+1), 4);
 			cfg.addEdge (disconnectedVertices.get (i), disconnectedVertices.get (i+1), BranchType.TAKEN);
 		}
 	}
@@ -77,14 +78,14 @@ public class CFGGenerator
 		int remainingComponents = vertices % 3;
 		if (noOfComponents > 0)
 		{	
-			for (int i = 1; i <= noOfComponents; ++i) 
+			for (int i = 0; i < noOfComponents; ++i) 
 			{
 				int branchID = cfg.getNextVertexID ();
-				cfg.addBasicBlock(branchID);
+				cfg.addBasicBlock (branchID);
 				int ifBranchID = cfg.getNextVertexID ();
-				cfg.addBasicBlock(ifBranchID);
+				cfg.addBasicBlock (ifBranchID);
 				int mergeID = cfg.getNextVertexID ();
-				cfg.addBasicBlock(mergeID);
+				cfg.addBasicBlock (mergeID);
 					
 				Debug.debugMessage (getClass (), "Adding edge " + branchID
 						+ "=>" + ifBranchID, 4);
@@ -99,15 +100,16 @@ public class CFGGenerator
 				disconnectedBranches.add (branchID);
 				disconnectedBranches.add (mergeID);			
 			}
-			addNonBranchComponents(remainingComponents);
+			
+			addNonBranchComponents (remainingComponents);
 			if (noOfComponents != 1)
 			{	
-				connectBranches(3);
+				connectBranches (3);
 			}
 		}
 		else
 		{
-			addNonBranchComponents(remainingComponents);
+			addNonBranchComponents (remainingComponents);
 		}
 	}
 	
@@ -157,9 +159,8 @@ public class CFGGenerator
 		{
 			addNonBranchComponents(remainingComponents);
 			disconnectedBranches.add (disconnectedVertices.get (0));
-			disconnectedBranches.add (disconnectedVertices.get (disconnectedVertices.size () - 1));
-		}		
-	}	
+			disconnectedBranches.add (disconnectedVertices.get (disconnectedVertices.size () - 1));		}		
+		}	
 	
 	private void connectBranches (int structure) 
 	{
@@ -168,7 +169,7 @@ public class CFGGenerator
 		{
 			destinationToRemove = random.nextInt (2) + 1;
 		}
-		for (int i = 0; i < disconnectedBranches.size () - 3; i = i+2)
+		for (int i = 0; i < disconnectedBranches.size () - 2; i = i+2)
 		{
 			if (random.nextBoolean()) 
 			{
@@ -199,26 +200,31 @@ public class CFGGenerator
 		}
 	}
 	
-	private int setLoopEntry (int n)
+	private int setLoop (int n, int bound)
 	{
+		int entryID = cfg.getNextVertexID ();
 		int exitID;
-		int entryID = cfg.getNextVertexID();
 		float decide = random.nextFloat ();
+		 
+		if (n == 1 || bound == 1)
+		{
+			return entryID;
+		}
 		
-		if (decide < 0.33)
+		else if (decide < 0.33 || n < 4)
 		{	
 			addNonBranchComponents (n);
-			cfg.addEdge(entryID, disconnectedVertices.get (0), BranchType.TAKEN);
+			cfg.addEdge (entryID, disconnectedVertices.get (0), BranchType.TAKEN);
 			exitID = disconnectedVertices.get (disconnectedVertices.size () - 1);
 		}	
 		else 
 		{	
 			if (decide < 0.66)
-				addIfElseComponents(n);
+				addIfElseComponents (n);
 			else
-				addIfThenComponents(n);
-			cfg.addEdge(entryID, disconnectedBranches.get(0), BranchType.TAKEN);
-			exitID = disconnectedBranches.get(disconnectedBranches.size() - 1);
+				addIfThenComponents (n);
+			cfg.addEdge (entryID, disconnectedBranches.get (0), BranchType.TAKEN);
+			exitID = disconnectedBranches.get (disconnectedBranches.size () - 1);
 		}	
 		return exitID;
 	}
@@ -228,10 +234,26 @@ public class CFGGenerator
 		int loops = MainProgramGenerator.Globals.getNumberOfLoops ();	
 		int vertix = MainProgramGenerator.Globals.getNumberOfVerticesInCFG();
 		int remainingVertices = vertix - 2 * loops - 2;		
-		int loopEntry = random.nextInt (remainingVertices / 2 + 1) + 1;
+		int loopEntry = random.nextInt (remainingVertices/2 + 1) + 1;
+				
+		int loopEntryID = setLoop (loopEntry, 0);
+		cfg.addBasicBlock (loopEntryID);
 		
-		int entryID = setLoopEntry (loopEntry);
-		cfg.addBasicBlock (entryID);
+		if (loops == 0)
+		{
+			float decideBody = random.nextFloat ();
+			while (vertix > 0)
+			{
+				int nodes = random.nextInt (vertix);
+				if (decideBody < 0.33)
+					addIfThenComponents (nodes);
+				else if (decideBody < 0.66)
+					addIfElseComponents (nodes);
+				else
+					addNonBranchComponents (nodes);
+				vertix -= nodes;				
+			}
+		}
 		
 		for (int i = 0; i < loops; ++i)	
 		{
@@ -240,83 +262,86 @@ public class CFGGenerator
 			int tailID = cfg.getNextVertexID();
 			cfg.addBasicBlock (tailID);
 			
-			int loopBody = random.nextInt (remainingVertices/2 + 1) + 1; 
-			remainingVertices -= loopBody;
+			if (remainingVertices > 0)
+			{	
+				int loopBody = random.nextInt (remainingVertices / 2 + 1) + 1; 
+				remainingVertices -= loopBody;	
 			
-			if (random.nextBoolean ())	
-			{
-				float decideLoopBody = random.nextFloat ();
-				boolean componentType;
-				
-				if (decideLoopBody < 0.5)
+				if (random.nextBoolean ())	
 				{
-					addIfElseComponents (loopBody);
-					componentType = true;
-				}
-				else
-				{
-					addIfThenComponents (loopBody);
-					componentType = false;
-				}
+					float decideLoopBody = random.nextFloat ();
+					boolean componentType;
 				
-				if ((!componentType && loopBody < 3) || componentType && loopBody < 4)
+					if (decideLoopBody < 0.5)
+					{
+						addIfElseComponents (loopBody);
+						componentType = true;
+					}
+					else
+					{
+						addIfThenComponents (loopBody);
+						componentType = false;
+					}
+				
+					if ((!componentType && loopBody < 3) || (componentType && loopBody < 4))
+					{	
+						addNonBranchComponents (loopBody);
+						Debug.debugMessage (getClass (), "Adding edge " + headerID
+								+ "=>" + disconnectedVertices.get(0), 4);
+						cfg.addEdge (headerID, disconnectedVertices.get(0), BranchType.TAKEN); 
+						Debug.debugMessage (getClass (), "Adding edge " + disconnectedVertices.get (disconnectedVertices.size () - 1)
+								+ "=>" + tailID, 4);
+						cfg.addEdge (disconnectedVertices.get (disconnectedVertices.size () - 1), tailID, BranchType.TAKEN);	
+					}
+					else
+					{
+						Debug.debugMessage (getClass (), "Adding edge " + headerID
+								+ "=>" + disconnectedBranches.get(0), 4);
+						cfg.addEdge (headerID, disconnectedBranches.get(0), BranchType.TAKEN); 
+						Debug.debugMessage (getClass (), "Adding edge " + disconnectedBranches.get (disconnectedBranches.size () - 1)
+								+ "=>" + tailID, 4);
+						cfg.addEdge (disconnectedBranches.get (disconnectedBranches.size () - 1), tailID, BranchType.TAKEN);
+					}
+				}	
+				else 
 				{	
+					addNonBranchComponents (loopBody);
 					Debug.debugMessage (getClass (), "Adding edge " + headerID
 							+ "=>" + disconnectedVertices.get(0), 4);
 					cfg.addEdge (headerID, disconnectedVertices.get(0), BranchType.TAKEN); 
 					Debug.debugMessage (getClass (), "Adding edge " + disconnectedVertices.get (disconnectedVertices.size () - 1)
 							+ "=>" + tailID, 4);
-					cfg.addEdge (disconnectedVertices.get (disconnectedVertices.size () - 1), tailID, BranchType.TAKEN);	
-				}
-				else
-				{
-					Debug.debugMessage (getClass (), "Adding edge " + headerID
-							+ "=>" + disconnectedBranches.get(0), 4);
-					cfg.addEdge (headerID, disconnectedBranches.get(0), BranchType.TAKEN); 
-					Debug.debugMessage (getClass (), "Adding edge " + disconnectedBranches.get (disconnectedBranches.size () - 1)
-							+ "=>" + tailID, 4);
-					cfg.addEdge (disconnectedBranches.get (disconnectedBranches.size () - 1), tailID, BranchType.TAKEN);
-				}
-			}	
-			else 
-			{	
-				addNonBranchComponents (loopBody);
-				Debug.debugMessage (getClass (), "Adding edge " + headerID
-						+ "=>" + disconnectedVertices.get(0), 4);
-				cfg.addEdge (headerID, disconnectedVertices.get(0), BranchType.TAKEN); 
-				Debug.debugMessage (getClass (), "Adding edge " + disconnectedVertices.get (disconnectedVertices.size () - 1)
-						+ "=>" + tailID, 4);
-				cfg.addEdge (disconnectedVertices.get (disconnectedVertices.size () - 1), tailID, BranchType.TAKEN);		
-			
-			}	
+					cfg.addEdge (disconnectedVertices.get (disconnectedVertices.size () - 1), tailID, BranchType.TAKEN);		
 				
+				}	
+			}
+			else
+			{
+				Debug.debugMessage (getClass (), "Adding edge " + headerID + "=>" + tailID, 4);
+				cfg.addEdge(headerID, tailID, BranchType.TAKEN);
+			}
 			Debug.debugMessage (getClass (), "Adding edge " + tailID + "=>" + headerID, 4);
 			cfg.addEdge(tailID, headerID, BranchType.TAKEN);
-			
-			disconnectedLoops.addVertex(headerID);
 			disconnectedLoopsArray.add (headerID);
+			disconnectedLoops.addVertex(headerID);
 		}		
 		
-		//cfg.addEdge (entryID, disconnectedLoopsArray.get (0), BranchType.TAKEN);
-		
-		int vertices = disconnectedLoopsArray.size () - 1;
-		
-		for (int i = 1; i <= vertices; ++i)	
+		for (int i = 1; i < loops; ++i)	
 		{
 			int source = disconnectedLoopsArray.get (random.nextInt (i));
 			int destination = disconnectedLoopsArray.get (i);
 			disconnectedLoops.addEdge (source, destination);
 		}
 		
-		disconnectedLoops.setRootID(disconnectedLoopsArray.get (0));
-		disconnectedLoops.setHeight();
+		disconnectedLoops.setRootID (disconnectedLoopsArray.get (0));
+		disconnectedLoops.setHeight ();
 		
 		for (int i = disconnectedLoops.getHeight() - 1; i > 0; --i)
 		{
-			Iterator<TreeVertex> it = disconnectedLoops.levelIterator(i);
+			Iterator<TreeVertex> it = disconnectedLoops.levelIterator (i);
 			
 			int childID = it.next().getVertexID(); 
-			int parentID = disconnectedLoops.getVertex(childID).getParentID();		
+			int parentID = disconnectedLoops.getVertex (childID).getParentID ();		
 			
 			Debug.debugMessage (getClass (), "Adding edge " + parentID
 					+ "=>" + childID, 4);
@@ -324,8 +349,8 @@ public class CFGGenerator
 			
 			while (it.hasNext())
 			{
-				int nextChildID = it.next().getVertexID();
-				int nextParentID = disconnectedLoops.getVertex(nextChildID).getParentID();
+				int nextChildID = it.next ().getVertexID ();
+				int nextParentID = disconnectedLoops.getVertex (nextChildID).getParentID ();
 				if (parentID == nextParentID)
 				{	
 					Debug.debugMessage (getClass (), "Adding edge " + childID
@@ -334,29 +359,41 @@ public class CFGGenerator
 				}	
 				else
 				{
-					Debug.debugMessage (getClass (), "Adding edge " + cfg.getVertex(nextParentID).getNthSuccessor(0).getVertexID()
-							+ "=>" + nextChildID, 4);
-					cfg.addEdge (cfg.getVertex(nextParentID).getNthSuccessor(0).getVertexID(), nextChildID, BranchType.TAKEN);
+					Debug.debugMessage (getClass (), "Adding edge " + cfg.getVertex (nextParentID).
+							getNthSuccessor (0).getVertexID() + "=>" + nextChildID, 4);
+					cfg.addEdge (cfg.getVertex(nextParentID).getNthSuccessor(0).getVertexID(), 
+							nextChildID, BranchType.TAKEN);
 					parentID = nextParentID;
 				}	
 				childID = nextChildID;
 			}
 			
 			Debug.debugMessage (getClass (), "Adding edge " + childID
-					+ "=>" + cfg.getVertex(parentID).getNthSuccessor(0).getVertexID(), 4);
-			cfg.addEdge(childID, cfg.getVertex(parentID).getNthSuccessor(0).getVertexID(), BranchType.TAKEN);
+					+ "=>" + cfg.getVertex (parentID).getNthSuccessor (0).getVertexID (), 4);
+			cfg.addEdge(childID, cfg.getVertex (parentID).getNthSuccessor (0).getVertexID (), BranchType.TAKEN);
 			
-			if (cfg.getVertex(parentID).numOfSuccessors() > 1)
+			if (cfg.getVertex (parentID).numOfSuccessors () > 1)
 			{
 				Debug.debugMessage (getClass (), "Removing edge " + parentID
-						+ "=>" + cfg.getVertex(parentID).getNthSuccessor(0).getVertexID(), 4);
-				cfg.removeEdge (parentID, cfg.getVertex(parentID).getNthSuccessor(0).getVertexID());
+						+ "=>" + cfg.getVertex (parentID).getNthSuccessor (0).getVertexID (), 4);
+				cfg.removeEdge (parentID, cfg.getVertex (parentID).getNthSuccessor (0).getVertexID ());
 			}
 		}
 		
-		int exitID = cfg.getNextVertexID();
-		cfg.addBasicBlock(exitID);
-		cfg.addEdge (entryID, exitID, BranchType.TAKEN);
+		int exitID;
+		if (remainingVertices > 0)
+		{	
+			exitID = setLoop (remainingVertices, 1);
+		}
+		else
+		{
+			exitID = cfg.getNextVertexID ();
+			cfg.addBasicBlock (exitID);
+		}	
+		Debug.debugMessage (getClass (), "Adding edge " + loopEntryID + "=>" + disconnectedLoopsArray.get (0), 4);
+		cfg.addEdge (loopEntryID, disconnectedLoopsArray.get (0), BranchType.TAKEN);
+		Debug.debugMessage (getClass (), "Adding edge " + disconnectedLoopsArray.get (0) + "=>" + exitID, 4);
+		cfg.addEdge (disconnectedLoopsArray.get (0), exitID, BranchType.TAKEN);
 	}
 	
 	private void addSelfLoops ()

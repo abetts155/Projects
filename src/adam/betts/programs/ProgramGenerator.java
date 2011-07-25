@@ -95,7 +95,7 @@ public class ProgramGenerator
 	
 		for (int i = 1; i < numOfSubprograms; ++i)
 		{
-			if (currentLevel < depth)
+			if (currentLevel < depth && subprogramsLeft > 0)
 			{	
 				if (subprogramsLeft > 0)
 				{
@@ -103,8 +103,6 @@ public class ProgramGenerator
 					s.getCFG().setSubprogramName (s.getSubprogramName());
 					
 					int successorID = gen.nextInt (numOfSubprograms - i + 1) + i;
-					//System.out.println ("successor id " + i + " " + successorID);
-					//levelSet = new ArrayList<Subprogram>();
 					
 					while (successorID > i)
 					{			
@@ -114,50 +112,47 @@ public class ProgramGenerator
 						
 						callgraph.addCall (s.getSubprogramName (), sNext.getSubprogramName (), i);
 						Debug.debugMessage (getClass (), "Adding call " + Integer.toString (i), 4);
-						//levelSet.add (sNext);
 												
 						if (!subprograms.contains (sNext))
 						{
 							subprogramsLeft--;
 							subprograms.add (sNext);
 							currentSubprogram = sNext;
+							//System.out.println ("current subprogram: " + currentSubprogram.getSubprogramName());
 						}	
 					}
-					//levelMap.put (currentLevel, levelSet);
 					currentLevel++;
 				}
-				/*else 
-				{
-					i = numOfSubprograms + 1;
-					
-				}*/
 			}	
 			else
 			{	
 				i = numOfSubprograms + 1;
+				//currentLevel--;
+				//System.out.println ("currentLevel < depth failed");
 			}	
 			
 		}	
 		
 		if (subprogramsLeft > 0)
-		
-		for (int i = 2; i <= numOfSubprograms; ++i)
-		{
-			Subprogram s = program.getSubprogram (i);
-			if (!subprograms.contains (s))
+			for (int i = 2; i <= numOfSubprograms; ++i)
 			{
-				subprograms.add (s);
-				int subprogramID = gen.nextInt(numOfSubprograms - i + 1) + i;
-				Subprogram subprogram = program.getSubprogram (subprogramID); 
-				if (!callgraph.isLeaf (subprogramID))
-					callgraph.addCall (subprogram.getSubprogramName (), s.getSubprogramName (), i);
-				else
-					callgraph.addCall (root.getSubprogramName (), s.getSubprogramName (), i);
-				Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);	
+				Subprogram s = program.getSubprogram (i);
+				if (!subprograms.contains (s))
+				{
+					subprograms.add (s);
+					int subprogramID = gen.nextInt(numOfSubprograms - i + 1) + i;
+					Subprogram subprogram = program.getSubprogram (subprogramID); 
+					if (!callgraph.isLeaf (subprogramID))
+						callgraph.addCall (subprogram.getSubprogramName (), s.getSubprogramName (), i);
+					else
+						callgraph.addCall (root.getSubprogramName (), s.getSubprogramName (), i);
+					Debug.debugMessage (getClass (), "Adding call " + Integer.toString(i), 4);	
+				}
 			}
-		}
 		
-		System.out.println ("current level: " + currentLevel);
+		//System.out.println ("current level: " + currentLevel);
+		//System.out.println ("current subprogram: " + currentSubprogram.getSubprogramName());
+		
 		
 		if (currentLevel < depth)
 		{
@@ -166,9 +161,9 @@ public class ProgramGenerator
 				if (levelsToBeAdded > 0)
 				{	
 					if (callgraph.isLeaf (s.getSubprogramID ()))
-					{
-						callgraph.removeAllPredecessorEdges ();
-						callgraph.addCall(currentSubprogram.getSubprogramName (), s.getSubprogramName (), numOfSubprograms);
+					{						
+						callgraph.removeAllPredecessorEdges (s.getSubprogramID());
+						callgraph.addCall (currentSubprogram.getSubprogramName (), s.getSubprogramName (), numOfSubprograms);
 						Debug.debugMessage (getClass (), "Adding call " + Integer.toString (numOfSubprograms), 4);	
 						currentSubprogram = s;
 						levelsToBeAdded--;
@@ -179,7 +174,7 @@ public class ProgramGenerator
 				{	
 					break;
 				}	
-			System.out.println ("levels: " + currentLevel);
+			//System.out.println ("levels: " + currentLevel);
 		}
 	}
 }
