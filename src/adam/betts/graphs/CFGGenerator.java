@@ -60,6 +60,7 @@ public class CFGGenerator
 		for (int i = 0; i < n; ++i)						
 		{
 			int vertexID = cfg.getNextVertexID ();
+			Debug.debugMessage(getClass(), "Adding basic block " + vertexID , 4);
 			cfg.addBasicBlock (vertexID);
 			disconnectedVertices.add (vertexID);
 		}
@@ -83,10 +84,13 @@ public class CFGGenerator
 			for (int i = 0; i < noOfComponents; ++i) 
 			{
 				int branchID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + branchID, 4);
 				cfg.addBasicBlock (branchID);
 				int ifBranchID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + ifBranchID, 4);
 				cfg.addBasicBlock (ifBranchID);
 				int mergeID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + mergeID, 4);
 				cfg.addBasicBlock (mergeID);
 					
 				Debug.debugMessage (getClass (), "Adding edge " + branchID
@@ -126,12 +130,16 @@ public class CFGGenerator
 			for (int i = 1; i <= noOfComponents; ++i) 
 			{
 				int branchID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + branchID, 4);
 				cfg.addBasicBlock(branchID);
 				int ifBranchID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + ifBranchID, 4);
 				cfg.addBasicBlock(ifBranchID);
 				int elseBranchID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + elseBranchID, 4);
 				cfg.addBasicBlock(elseBranchID);
 				int mergeID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + mergeID, 4);
 				cfg.addBasicBlock(mergeID);
 								
 				Debug.debugMessage (getClass (), "Adding edge " + branchID
@@ -198,25 +206,27 @@ public class CFGGenerator
 				}	
 			}
 			else	
+			{	
+				Debug.debugMessage (getClass (), "Adding edge " + disconnectedBranches.get (i+1)
+						+ "=>" + disconnectedBranches.get (i+2), 4);
 				cfg.addEdge (disconnectedBranches.get (i+1), disconnectedBranches.get (i+2), BranchType.TAKEN);
+			}	
 		}
 	}
 	
-	private int setLoop (int n, int bound)
+	private int setLoop (int n, int position)
 	{
-		int entryID = cfg.getNextVertexID ();
 		int exitID;
 		float decide = random.nextFloat ();
 		 
-		if (n == 1 || bound == 1)
+		if (n == 1 || position == 1)
 		{
-			return entryID;
+			return cfg.getNextVertexID ();
 		}
 		
 		else if (decide < 0.33 || n < 4)
 		{	
 			addNonBranchComponents (n);
-			cfg.addEdge (entryID, disconnectedVertices.get (0), BranchType.TAKEN);
 			exitID = disconnectedVertices.get (disconnectedVertices.size () - 1);
 		}	
 		else 
@@ -225,7 +235,6 @@ public class CFGGenerator
 				addIfElseComponents (n);
 			else
 				addIfThenComponents (n);
-			cfg.addEdge (entryID, disconnectedBranches.get (0), BranchType.TAKEN);
 			exitID = disconnectedBranches.get (disconnectedBranches.size () - 1);
 		}	
 		return exitID;
@@ -234,12 +243,13 @@ public class CFGGenerator
 	private void addLoops ()
 	{	
 		int loops = MainProgramGenerator.Globals.getNumberOfLoops ();	
-		int vertix = MainProgramGenerator.Globals.getNumberOfVerticesInCFG();
-		int remainingVertices = vertix - 2 * loops - 2;		
+		int vertex = MainProgramGenerator.Globals.getNumberOfVerticesInCFG();
+		int remainingVertices = vertex - 2 * loops - 2;		
 		int loopEntry = random.nextInt (remainingVertices/2 + 1) + 1;
 				
 		int loopEntryID = setLoop (loopEntry, 0);
-		cfg.addBasicBlock (loopEntryID);
+		cfg.addBasicBlock(loopEntryID);
+		Debug.debugMessage(getClass(), "Adding basic block " + loopEntryID, 4);
 		
 		if (loops == 0)
 		{
@@ -247,17 +257,17 @@ public class CFGGenerator
 			
 			if (decideBody < 0.33)
 			{	
-				addIfThenComponents (vertix);
+				addIfThenComponents (vertex);
 				disconnectedLoopsArray.add(disconnectedBranches.get (0));
 			}	
 			else if (decideBody < 0.66)
 			{	
-				addIfElseComponents (vertix);
+				addIfElseComponents (vertex);
 				disconnectedLoopsArray.add (disconnectedBranches.get (0));
 			}	
 			else
 			{	
-				addNonBranchComponents (vertix);
+				addNonBranchComponents (vertex);
 				disconnectedLoopsArray.add(disconnectedVertices.get(0));
 			}
 		}
@@ -266,9 +276,12 @@ public class CFGGenerator
 		{
 			for (int i = 0; i < loops; ++i)	
 			{
+				
 				int headerID = cfg.getNextVertexID();	
+				Debug.debugMessage(getClass(), "Adding basic block " + headerID, 4);
 				cfg.addBasicBlock(headerID);
 				int tailID = cfg.getNextVertexID();
+				Debug.debugMessage(getClass(), "Adding basic block " + tailID, 4);
 				cfg.addBasicBlock (tailID);
 				
 				if (remainingVertices > 0)
@@ -397,6 +410,7 @@ public class CFGGenerator
 			else
 			{
 				exitID = cfg.getNextVertexID ();
+				Debug.debugMessage(getClass(), "Adding basic block " + exitID, 4);
 				cfg.addBasicBlock (exitID);
 			}	
 			Debug.debugMessage (getClass (), "Adding edge " + loopEntryID + "=>" + disconnectedLoopsArray.get (0), 4);

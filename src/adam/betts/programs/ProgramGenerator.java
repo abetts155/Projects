@@ -15,6 +15,7 @@ import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Globals;
 import adam.betts.graphs.CallGraph;
+import adam.betts.graphs.trees.LoopNests;
 
 
 public class ProgramGenerator
@@ -65,7 +66,9 @@ public class ProgramGenerator
 			{
 				UDrawGraph.makeUDrawFile (cfg, subprogramName);
 			}
+			LoopNests loop = new LoopNests (cfg, cfg.getEntryID ());
 		}
+			
 	}
 
 	private void addCalls ()
