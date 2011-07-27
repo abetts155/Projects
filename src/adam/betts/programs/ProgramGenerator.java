@@ -16,6 +16,7 @@ import adam.betts.utilities.Debug;
 import adam.betts.utilities.Globals;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.trees.LoopNests;
+import adam.betts.graphs.utils.StronglyConnectedComponents;
 
 
 public class ProgramGenerator
@@ -34,6 +35,14 @@ public class ProgramGenerator
 	{
 		addSubprograms ();
 		addCalls ();
+		StronglyConnectedComponents scc = new StronglyConnectedComponents (callgraph);
+		
+		if (scc.numberOfTrivialSccs() != callgraph.numOfVertices())
+		{
+			Debug.debugMessage (getClass(), "SCC detected in call graph", 1);
+			System.exit (1);
+		}
+		
 		if (Globals.uDrawDirectorySet ())
 		{
 			UDrawGraph.makeUDrawFile (program.getCallGraph());
@@ -67,6 +76,10 @@ public class ProgramGenerator
 				UDrawGraph.makeUDrawFile (cfg, subprogramName);
 			}
 			LoopNests loop = new LoopNests (cfg, cfg.getEntryID ());
+			if (Globals.uDrawDirectorySet ())
+			{
+				UDrawGraph.makeUDrawFile (loop, subprogramName);
+			}
 		}
 			
 	}
@@ -94,7 +107,7 @@ public class ProgramGenerator
 	{
 		int currentLevel = 1;
 		int subprogramsLeft = numOfSubprograms - 1;
-		Subprogram currentSubprogram = program.getSubprogram(1);
+		Subprogram currentSubprogram = program.getSubprogram (1);
 	
 		for (int i = 1; i < numOfSubprograms; ++i)
 		{
