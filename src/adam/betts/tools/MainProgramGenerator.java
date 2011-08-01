@@ -307,7 +307,7 @@ public class MainProgramGenerator
 	private static void run ()
 	{
 		Program program = new ProgramGenerator ().getProgram ();
-		//Database data = new Database(program, true);
+		Database data = new Database(program, 0);
 		new WriteProgram (program);
 		//new CalculationEngineCFG (program, data);
 	}

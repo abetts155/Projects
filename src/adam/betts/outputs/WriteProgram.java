@@ -126,14 +126,17 @@ public class WriteProgram
 				while (succIt.hasNext ())
 				{
 					FlowEdge succEdge = (FlowEdge) succIt.next ();
-					out.write ("        <link type=\""
+					if (succEdge.getVertexID () != cfg.getEntryID ())
+					{
+						
+						out.write ("        <link type=\""
 							+ succEdge.getBranchType ().toString ()
 									.toLowerCase () + "\" cfg=\""
 							+ Integer.toString (subprogram.getSubprogramID ())
 							+ "\" bb=\""
 							+ Integer.toString (succEdge.getVertexID ())
 							+ "\"/>\n");
-
+					}
 				}
 
 				int calleeID = callg.isCallSite (subprogram.getSubprogramID (),
