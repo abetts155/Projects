@@ -7,10 +7,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.Random;
 
-import adam.betts.edges.Edge;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.trees.LoopNests;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.vertices.Vertex;
@@ -93,20 +91,11 @@ public class Database
 			int subprogramID = s.getSubprogramID ();		
 			LoopNests loop = s.getCFG ().getLNT ();
 			
-			OutputGraph.output(loop);
-			
 			Iterator<Integer> it = loop.headerIterator ();
 			while (it.hasNext ())
 			{
 				int headerID = it.next ();
 				ArrayList<Integer> properAncestors = getProperAncestors (loop, headerID);
-				
-				System.out.println ("headerID: " + headerID);
-				for (int x : properAncestors)
-				{
-					System.out.print (x + " ");
-				}
-				
 				Iterator<Integer> listIterator = properAncestors.listIterator ();
 				
 				int properAncestor = listIterator.next ();

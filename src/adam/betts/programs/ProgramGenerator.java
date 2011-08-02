@@ -2,14 +2,10 @@ package adam.betts.programs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.ListIterator;
 import java.util.Random;
 
-import adam.betts.edges.Edge;
 import adam.betts.graphs.CFGGenerator;
 import adam.betts.graphs.ControlFlowGraph;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;

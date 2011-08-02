@@ -1,26 +1,21 @@
 package adam.betts.graphs;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 
-import sun.org.mozilla.javascript.debug.DebuggableObject;
-
-import adam.betts.outputs.OutputGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.TreeVertex;
+import adam.betts.edges.Edge;
 import adam.betts.graphs.trees.*;
 
 public class CFGGenerator
 {
 	protected Random random = new Random ();
 	protected ControlFlowGraph cfg = new ControlFlowGraph ();
-	protected HashMap<Integer, Integer> branchToMerge = new HashMap<Integer, Integer> ();
 	protected ArrayList<Integer> disconnectedBranches = new ArrayList<Integer> ();
 	protected ArrayList<Integer> disconnectedVertices = new ArrayList<Integer> ();
 	protected Tree disconnectedLoops = new Tree ();
@@ -183,7 +178,6 @@ public class CFGGenerator
 				{
 					int sourceID = disconnectedBranches.get (i);
 					int destinationRemovedID = cfg.getVertex (sourceID).getNthSuccessor (destinationToRemove).getVertexID ();
-					System.out.println ("DestinationRemovedID: " + destinationRemovedID);
 					
 					Debug.debugMessage (getClass (), "Removing edge " + sourceID 
 							+ "=>" + destinationRemovedID, 4);
@@ -213,6 +207,8 @@ public class CFGGenerator
 	
 	private int setLoopEntryExit (int n, int position)
 	{
+		
+		System.out.println ("!!!!!" + n);
 		int entryID = 0, exitID = 0;
 		float decide = random.nextFloat ();
 		 
@@ -278,22 +274,36 @@ public class CFGGenerator
 		
 		else
 		{
+			int entryID, exitID = 0;
 			remainingVertices = vertices - 2 * loops - 2;
 			
 			int loopEntry = random.nextInt (remainingVertices/2 + 1) + 1;
-			int entryID = setLoopEntryExit (loopEntry, 0);
+			entryID = setLoopEntryExit (loopEntry, 0);
+			
+			if (remainingVertices == 1)
+			{
+				exitID = setLoopEntryExit (1, 1);
+			}
 			
 			buildIndividualLoops (loops);
 			setLoopTree (loops);
 			connectLoops ();
-				
-			int exitID = setLoopEntryExit (remainingVertices, 1);
+			
+			if (remainingVertices > 0)
+			{	
+				exitID = setLoopEntryExit (remainingVertices, 1);
+			}	
 			
 			Debug.debugMessage (getClass (), "Adding edge " + entryID + "=>" + disconnectedLoopsArray.get (0), 4);
 			cfg.addEdge (entryID, disconnectedLoopsArray.get (0), BranchType.TAKEN);
 			Debug.debugMessage (getClass (), "Adding edge " + disconnectedLoopsArray.get (0) + "=>" + exitID, 4);
 			cfg.addEdge (disconnectedLoopsArray.get (0), exitID, BranchType.TAKEN);
-			checkLoopHeaders ();
+			//checkLoopHeaders ();
+			
+			for (Integer h : disconnectedLoopsArray)
+			{
+				System.out.println ("!! " + h + " has " + cfg.getVertex(h).numOfSuccessors() + " succs.");
+			}
 		}	
 	}
 
@@ -400,28 +410,32 @@ public class CFGGenerator
 			{
 				int nextChildID = it.next ().getVertexID ();
 				int nextParentID = disconnectedLoops.getVertex (nextChildID).getParentID ();
-				if (parentID == nextParentID)
+				
+				if (cfg.getVertex (parentID).numOfSuccessors() <= 1)
 				{	
-					Debug.debugMessage (getClass (), "Adding edge " + parentID
-							+ "=>" + nextChildID, 4);
-					cfg.addEdge (parentID, nextChildID, BranchType.TAKEN);
-					Debug.debugMessage (getClass (), "Adding edge " + nextChildID + "=>" + childID, 4);
-					cfg.addEdge (nextChildID, childID, BranchType.TAKEN);
-					Debug.debugMessage(getClass (), "Removing edge " + parentID + "=>" + childID, 4);
-					cfg.removeEdge (parentID, childID);
-				}	
-				else
-				{
-					Debug.debugMessage (getClass (), "Adding edge " + nextParentID
-							+ "=>" + nextChildID, 4);
-					cfg.addEdge (nextParentID, nextChildID, BranchType.TAKEN); 
-					Debug.debugMessage(getClass (), "Adding edge " + nextChildID + "=>" + 
-							cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), 4);
-					cfg.addEdge (nextChildID, cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), BranchType.TAKEN);
-					Debug.debugMessage(getClass(), "Removing edge " + nextParentID + "=>" + 
-							cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), 4);
-					cfg.removeEdge (nextParentID, cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID ());
-					parentID = nextParentID;
+					if (parentID == nextParentID)
+					{	
+						Debug.debugMessage (getClass (), "Adding edge " + parentID
+								+ "=>" + nextChildID, 4);
+						cfg.addEdge (parentID, nextChildID, BranchType.TAKEN);
+						Debug.debugMessage (getClass (), "Adding edge " + nextChildID + "=>" + childID, 4);
+						cfg.addEdge (nextChildID, childID, BranchType.TAKEN);
+						Debug.debugMessage(getClass (), "Removing edge " + parentID + "=>" + childID, 4);
+						cfg.removeEdge (parentID, childID);
+					}	
+					else
+					{
+						Debug.debugMessage (getClass (), "Adding edge " + nextParentID
+								+ "=>" + nextChildID, 4);
+						cfg.addEdge (nextParentID, nextChildID, BranchType.TAKEN); 
+						Debug.debugMessage(getClass (), "Adding edge " + nextChildID + "=>" + 
+								cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), 4);
+						cfg.addEdge (nextChildID, cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), BranchType.TAKEN);
+						Debug.debugMessage(getClass(), "Removing edge " + nextParentID + "=>" + 
+								cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID (), 4);
+						cfg.removeEdge (nextParentID, cfg.getVertex (nextParentID).getNthSuccessor (0).getVertexID ());
+						parentID = nextParentID;
+					}	
 				}	
 				childID = nextChildID;
 			}
@@ -430,16 +444,20 @@ public class CFGGenerator
 	
 	private void checkLoopHeaders ()
 	{
-		for (Vertex header : disconnectedLoops)
+		for (Integer header : disconnectedLoopsArray)
 		{
-			if (header.numOfSuccessors () < 2)
+			if (cfg.getVertex (header).numOfSuccessors () < 2)
 			{
 				int failCaseID = cfg.getNextVertexID ();
 				Debug.debugMessage (getClass (), "Adding basic block " + failCaseID, 4);
 				cfg.addBasicBlock (failCaseID);
-				Debug.debugMessage (getClass (), "Adding edge " + header.getVertexID () + "=>" + failCaseID, 4);
-				cfg.addEdge (header.getVertexID (), failCaseID, BranchType.TAKEN);
+				Debug.debugMessage (getClass (), "Adding edge " + header + "=>" + failCaseID, 4);
+				cfg.addEdge (header, failCaseID, BranchType.TAKEN);
 				remainingVertices--;
+			}
+			else if (cfg.getVertex (header).numOfSuccessors () > 2)
+			{
+				System.out.println ("!!!! more than 2 exits");
 			}
 		}
 	}

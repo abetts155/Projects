@@ -160,7 +160,7 @@ public class Vertex
 	{
 		return successors.get (i);
 	}
-
+	
 	public final boolean hasSuccessors ()
 	{
 		return successors.size () > 0;
