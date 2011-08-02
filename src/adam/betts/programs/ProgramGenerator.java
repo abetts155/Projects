@@ -7,7 +7,7 @@ import java.util.Random;
 import adam.betts.graphs.CFGGenerator;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
-import adam.betts.graphs.utils.StronglyConnectedComponents;
+import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
@@ -18,26 +18,22 @@ public class ProgramGenerator
 {
 	protected ArrayList <Subprogram> subprograms = new ArrayList <Subprogram> ();
 	protected Program program = new Program ();
-	protected ArrayList <Subprogram> levelSet = new ArrayList <Subprogram> ();
 	protected CallGraph callgraph = new CallGraph ();
-	protected ControlFlowGraph root;
+	protected int rootID;
 	protected Random gen = new Random ();
 	protected final int numOfSubprograms = MainProgramGenerator.Globals.getNumberOfSubprograms ();
 	protected final int depth = MainProgramGenerator.Globals.getDepthOfCallGraph ();
-	protected HashMap <Integer, ArrayList <Integer>> call = new HashMap <Integer, ArrayList <Integer>> ();
-	protected int callSiteID;
+	protected HashMap <Integer, ArrayList <Integer>> callSites = new HashMap <Integer, ArrayList <Integer>> ();
+	protected ArrayList <Integer> disconnectedNodes = new ArrayList <Integer> ();
+	protected ArrayList <Subprogram> possibleRoots = new ArrayList <Subprogram> ();
+	protected int level = 0;
+	protected HashMap <Integer, Integer> levelMap = new HashMap <Integer, Integer> ();
 
 	public ProgramGenerator ()
 	{
 		addSubprograms ();
 		addCalls ();
-		StronglyConnectedComponents scc = new StronglyConnectedComponents (callgraph);
-
-		if (scc.numberOfTrivialSccs () != callgraph.numOfVertices ())
-		{
-			Debug.debugMessage (getClass (), "SCC detected in call graph", 1);
-			System.exit (1);
-		}
+		program.callg = callgraph;
 
 		if (Globals.uDrawDirectorySet ())
 		{
@@ -71,194 +67,127 @@ public class ProgramGenerator
 				UDrawGraph.makeUDrawFile (cfg, subprogramName);
 			}
 
-			// LoopNests loop = new LoopNests (cfg, cfg.getEntryID ());
+			LoopNests loop = new LoopNests (cfg, cfg.getEntryID ());
 
 			if (Globals.uDrawDirectorySet ())
 			{
-				// UDrawGraph.makeUDrawFile (loop, subprogramName);
+				UDrawGraph.makeUDrawFile (loop, subprogramName);
 			}
 		}
 	}
 
 	private void addCalls ()
 	{
-		Debug.debugMessage (getClass (), "Adding calls", 3);
-		program.callg = callgraph;
-
-		addVerticesInCallGraph ();
+		initiateCallGraph ();
+		initLevelMap ();
 		setRoot ();
 		addEdges ();
 	}
 
-	private void addVerticesInCallGraph ()
+	private void initiateCallGraph ()
 	{
 		for (Subprogram s : program)
 		{
-			Debug.debugMessage (getClass (), "Adding subprogram " + s.getSubprogramName ()
-					+ " to call graph", 4);
-			callgraph.addVertex (s.getSubprogramID (), s.getSubprogramName ());
+			int subprogramID = s.getSubprogramID ();
+			disconnectedNodes.add (subprogramID);
+			callgraph.addVertex (subprogramID, s.getSubprogramName ());
+			callSites.put (subprogramID, new ArrayList <Integer> ());
+
+			for (Vertex v : s.getCFG ())
+			{
+				if (v.numOfSuccessors () == 1 && v.getVertexID () != s.getCFG ().getExitID ())
+				{
+					callSites.get (subprogramID).add (v.getVertexID ());
+				}
+			}
+
+			if (s.getCFG ().numOfVertices () > 0)
+			{
+				possibleRoots.add (s);
+			}
 		}
 	}
 
 	private void setRoot ()
 	{
-		root = program.getSubprogram (1).getCFG ();
-		root.setSubprogramName (program.getSubprogram (1).getSubprogramName ());
-		int rootID = gen.nextInt (MainProgramGenerator.Globals.getNumberOfSubprograms () + 1);
-		program.setRootID (rootID);
-
-		Debug.debugMessage (getClass (), "Root added - rootID is: " + rootID, 4);
-	}
-
-	private boolean checkCallSite (Subprogram s)
-	{
-		for (Vertex v : s.getCFG ())
+		int maxCallSites = 0;
+		for (Subprogram s : possibleRoots)
 		{
-			int vertexID = v.getVertexID ();
-			callSiteID = vertexID;
-
-			System.out.println ("callSiteID: " + callSiteID);
-
-			if (!call.get (s.getSubprogramID ()).contains (callSiteID)
-					&& s.getCFG ().getVertex (callSiteID).numOfSuccessors () == 1)
+			if (callSites.get (s.getSubprogramID ()).size () > maxCallSites)
 			{
-
-				return true;
+				maxCallSites = callSites.get (s.getSubprogramID ()).size ();
+				rootID = s.getSubprogramID ();
 			}
 		}
-		return false;
+
+		disconnectedNodes.remove (new Integer (rootID));
+		level++;
+		levelMap.put (rootID, level);
+	}
+
+	private void initLevelMap ()
+	{
+		for (Subprogram s : program)
+		{
+			levelMap.put (s.getSubprogramID (), 0);
+		}
 	}
 
 	private void addEdges ()
 	{
-		int currentLevel = 1;
-		int subprogramsLeft = numOfSubprograms - 1;
-		Subprogram currentSubprogram = program.getSubprogram (1);
-
-		for (int i = 1; i < numOfSubprograms; ++i)
+		while (!disconnectedNodes.isEmpty ())
 		{
-			if (currentLevel < depth && subprogramsLeft > 0)
+			// pick a random node
+			int node = disconnectedNodes.remove (disconnectedNodes.size () - 1);
+
+			System.out.println ("Analyzing node " + node);
+
+			ArrayList <Integer> candidateNodes = new ArrayList <Integer> ();
+
+			for (Integer key : levelMap.keySet ())
 			{
-				if (subprogramsLeft > 0)
+				int level = levelMap.get (key);
+				if (level != 0 && level < depth)
 				{
-					Subprogram s = program.getSubprogram (i);
-					s.getCFG ().setSubprogramName (s.getSubprogramName ());
-					ArrayList <Integer> callingVertexList = new ArrayList <Integer> ();
-					call.put (s.getSubprogramID (), callingVertexList);
-
-					int successorsID = gen.nextInt (numOfSubprograms - i + 1) + i;
-
-					while (successorsID > i)
+					if (callSites.get (key).size () > 0)
 					{
-						Subprogram sNext = program.getSubprogram (successorsID);
-						sNext.getCFG ().setSubprogramName (sNext.getSubprogramName ());
-						successorsID--;
-
-						if (checkCallSite (s))
-						{
-							System.out.println ("condiiton true and callSiteID = " + callSiteID);
-							call.get (s.getSubprogramID ()).add (callSiteID);
-							Debug.debugMessage (getClass (), "Adding call "
-									+ s.getSubprogramName () + " => " + sNext.getSubprogramName ()
-									+ " at call site " + callSiteID, 4);
-							callgraph.addCall (s.getSubprogramName (), sNext.getSubprogramName (),
-									callSiteID);
-						}
-
-						if (!subprograms.contains (sNext))
-						{
-							subprogramsLeft--;
-							subprograms.add (sNext);
-							currentSubprogram = sNext;
-						}
-					}
-					currentLevel++;
-				}
-			} else
-			{
-				break;
-			}
-		}
-
-		if (subprogramsLeft > 0)
-		{
-			connectVerticesLeft ();
-		}
-
-		checkLevel (currentLevel, currentSubprogram);
-	}
-
-	private void connectVerticesLeft ()
-	{
-		ArrayList <Integer> callingVertexInRoot = new ArrayList <Integer> ();
-		int rootID = callgraph.getVertex (root.getSubprogramName ()).getVertexID ();
-		call.put (rootID, callingVertexInRoot);
-		int callSiteID = 0;
-
-		for (int i = 2; i <= numOfSubprograms; ++i)
-		{
-			Subprogram s = program.getSubprogram (i);
-
-			if (!subprograms.contains (s))
-			{
-				subprograms.add (s);
-				int subprogramID = gen.nextInt (numOfSubprograms - i + 1) + i;
-				Subprogram subprogram = program.getSubprogram (subprogramID);
-
-				ArrayList <Integer> callingVertexList = new ArrayList <Integer> ();
-				call.put (subprogram.getSubprogramID (), callingVertexList);
-
-				if (!callgraph.isLeaf (subprogramID))
-				{
-					if (checkCallSite (subprogram))
-					{
-						call.get (subprogram.getSubprogramID ()).add (callSiteID);
-						Debug.debugMessage (getClass (), "Adding call "
-								+ subprogram.getSubprogramName () + " => " + s.getSubprogramName ()
-								+ " at call site " + callSiteID, 4);
-						callgraph.addCall (subprogram.getSubprogramName (), s.getSubprogramName (),
-								callSiteID);
-					}
-				} else
-				{
-					if (checkCallSite (program.getSubprogram (rootID)))
-					{
-						call.get (rootID).add (callSiteID);
-						Debug.debugMessage (getClass (), "Adding call " + root.getSubprogramName ()
-								+ " => " + s.getSubprogramName () + " at call site " + callSiteID,
-								4);
-						callgraph.addCall (root.getSubprogramName (), s.getSubprogramName (),
-								callSiteID);
+						candidateNodes.add (key);
 					}
 				}
 			}
-		}
-	}
 
-	private void checkLevel (int currentLevel, Subprogram currentSubprogram)
-	{
-		if (currentLevel < depth)
-		{
-			int levelsToBeAdded = depth - currentLevel;
-			for (Subprogram s : subprograms)
+			System.out.println ("candidateNodes = " + candidateNodes);
+
+			int predecessors = gen.nextInt (candidateNodes.size ()) + 1;
+			for (int i = 1; i <= predecessors; ++i)
 			{
-				if (levelsToBeAdded > 0)
+				int predecessorIndex = gen.nextInt (candidateNodes.size ());
+				int predecessorID = candidateNodes.remove (predecessorIndex);
+
+				int noOfCallSites = gen.nextInt (callSites.get (predecessorID).size ()) + 1;
+				System.out.println ("callSites chosen: " + noOfCallSites);
+				System.out.println ("actual callSites: " + callSites.get (predecessorID).size ());
+
+				for (int j = 0; j < noOfCallSites; ++j)
 				{
-					if (callgraph.isLeaf (s.getSubprogramID ()))
-					{
-						callgraph.removeAllPredecessorEdges (s.getSubprogramID ());
-						callgraph.addCall (currentSubprogram.getSubprogramName (), s
-								.getSubprogramName (), numOfSubprograms);
-						Debug.debugMessage (getClass (), "Adding call "
-								+ currentSubprogram.getSubprogramName () + " => "
-								+ s.getSubprogramName () + " at call site " + callSiteID, 4);
-						currentSubprogram = s;
-						levelsToBeAdded--;
-						currentLevel++;
-					}
-				} else
+					int callSiteID = callSites.get (predecessorID).get (j);
+					Debug.debugMessage (getClass (), "Adding call from " + predecessorID + " to "
+							+ node + " at " + callSiteID, 4);
+					callgraph.addCall (predecessorID, node, callSiteID);
+				}
+
+				ArrayList <Integer> remainingCallSites = new ArrayList <Integer> ();
+
+				for (int j = noOfCallSites; j < callSites.get (predecessorID).size (); ++j)
 				{
-					break;
+					remainingCallSites.add (callSites.get (predecessorID).get (j));
+				}
+				callSites.put (predecessorID, remainingCallSites);
+				System.out.println ("remainingCallsites: " + callSites.get (predecessorID));
+
+				if (levelMap.get (predecessorID) > levelMap.get (node))
+				{
+					levelMap.put (node, levelMap.get (predecessorID) + 1);
 				}
 			}
 		}
