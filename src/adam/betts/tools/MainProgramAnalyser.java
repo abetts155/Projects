@@ -9,7 +9,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.programs.Program;
-import adam.betts.tools.MainTraceGenerator.Globals;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
 
@@ -25,8 +24,8 @@ public class MainProgramAnalyser
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
 		DefaultOptions.addUDrawDirectoryOption (options);
+		DefaultOptions.addIPETOptions (options);
 
 		inlineOption = new Option ("I", "inline", false,
 				"Inline all control flow graphs to create a single monolothic graph.");
@@ -63,8 +62,8 @@ public class MainProgramAnalyser
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setProgramOption (line);
-				DefaultOptions.setRootOption (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
+				DefaultOptions.setIPETOptions (line);
 
 				Globals.inline = line.hasOption (inlineOption.getOpt ());
 

@@ -128,7 +128,6 @@ public class WriteProgram
 					FlowEdge succEdge = (FlowEdge) succIt.next ();
 					if (succEdge.getVertexID () != cfg.getEntryID ())
 					{
-						
 						out.write ("        <link type=\""
 							+ succEdge.getBranchType ().toString ()
 									.toLowerCase () + "\" cfg=\""

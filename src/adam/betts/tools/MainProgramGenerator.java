@@ -8,7 +8,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import adam.betts.calculations.CalculationEngineCFG;
 import adam.betts.calculations.Database;
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
@@ -310,9 +309,9 @@ public class MainProgramGenerator
 	private static void run ()
 	{
 		Program program = new ProgramGenerator ().getProgram ();
-		Database data = new Database (program, 0);
 		new WriteProgram (program);
-		// new CalculationEngineCFG (program, data);
+		Database database = new Database (program);
+		database.generateData ();
 	}
 
 	public static class Globals
