@@ -87,7 +87,7 @@ public class Database
 			while (it.hasNext ())
 			{
 				int headerID = it.next ();
-				ArrayList <Integer> properAncestors = getProperAncestors (loop, headerID);
+				ArrayList <Integer> properAncestors = loop.getProperAncestors (headerID);
 				Iterator <Integer> listIterator = properAncestors.listIterator ();
 
 				int properAncestor = listIterator.next ();
@@ -108,22 +108,7 @@ public class Database
 		}
 	}
 
-	private final ArrayList <Integer> getProperAncestors (LoopNests loop, int headerID)
-	{
-		ArrayList <Integer> properAncestors = new ArrayList <Integer> ();
-		int parentID = loop.getVertex (headerID).getParentID ();
-		properAncestors.add (parentID);
-		int rootID = loop.getRootID ();
-
-		while (parentID != rootID)
-		{
-			int nextParentID = loop.getVertex (parentID).getParentID ();
-			properAncestors.add (nextParentID);
-			parentID = nextParentID;
-		}
-
-		return properAncestors;
-	}
+	
 
 	public final long getUnitWCET (int subprogramID, int unitID)
 	{

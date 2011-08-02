@@ -1,5 +1,6 @@
 package adam.betts.graphs.trees;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -167,6 +168,24 @@ public class Tree extends Graph
 		}
 	}
 
+	public final ArrayList <Integer> getProperAncestors (int vertexID)
+	{
+		ArrayList <Integer> properAncestors = new ArrayList <Integer> ();
+		int parentID = getVertex (vertexID).getParentID ();
+		properAncestors.add (parentID);
+		int rootID = getRootID ();
+
+		while (parentID != rootID)
+		{
+			int nextParentID = getVertex (parentID).getParentID ();
+			properAncestors.add (nextParentID);
+			parentID = nextParentID;
+		}
+
+		return properAncestors;
+	}
+	
+	
 	public final int numOfLeaves ()
 	{
 		int count = 0;
