@@ -67,9 +67,8 @@ public class MainProgramGenerator
 		options.addOption (returnsOption);
 
 		subprogramsOption = new Option ("s", "subprograms", true,
-				"Maximum number of sub-programs in the program. Default is " + Globals.subprograms
-						+ ".");
-		subprogramsOption.setRequired (false);
+				"Maximum number of sub-programs in the program.");
+		subprogramsOption.setRequired (true);
 		options.addOption (subprogramsOption);
 
 		depthOption = new Option ("D", "depth", true,
@@ -159,8 +158,9 @@ public class MainProgramGenerator
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
-						System.err.println (arg
-								+ " is not a valid number of loops. It must be in the range 0..100.");
+						System.err
+								.println (arg
+										+ " is not a valid number of loops. It must be in the range 0..100.");
 						System.exit (1);
 					}
 				}
@@ -234,9 +234,10 @@ public class MainProgramGenerator
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
-						System.err.println (arg
-								+ " is not a valid number of subprograms. It must be a positive integer in the range 1.."
-								+ Integer.MAX_VALUE);
+						System.err
+								.println (arg
+										+ " is not a valid number of subprograms. It must be a positive integer in the range 1.."
+										+ Integer.MAX_VALUE);
 					}
 				}
 
@@ -273,14 +274,16 @@ public class MainProgramGenerator
 						int vertices = Integer.parseInt (arg);
 						if (vertices < 10 || vertices > 200)
 						{
-							throw new IllegalArgumentException (vertices + " is not a valid number of vertices. " +
-									"It must be a positive integer in the range 50..200");
+							throw new IllegalArgumentException (vertices
+									+ " is not a valid number of vertices. "
+									+ "It must be a positive integer in the range 50..200");
 						}
 						if (vertices < 2 * Globals.loops + 2)
 						{
-							throw new IllegalArgumentException (vertices + " is not a valid number of vertices. " + 
-									"It must be grater or equal to " + (2 * Globals.loops + 2) + 
-									" to be able to generate " + Globals.loops + " loops.");
+							throw new IllegalArgumentException (vertices
+									+ " is not a valid number of vertices. "
+									+ "It must be grater or equal to " + (2 * Globals.loops + 2)
+									+ " to be able to generate " + Globals.loops + " loops.");
 						}
 						Globals.vertices = vertices;
 					} catch (NumberFormatException e)
@@ -290,9 +293,9 @@ public class MainProgramGenerator
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
-						System.err.println (e.getMessage());					
+						System.err.println (e.getMessage ());
 						System.exit (1);
-					} 
+					}
 				}
 
 			}
@@ -307,18 +310,18 @@ public class MainProgramGenerator
 	private static void run ()
 	{
 		Program program = new ProgramGenerator ().getProgram ();
-		Database data = new Database(program, 0);
+		Database data = new Database (program, 0);
 		new WriteProgram (program);
-		//new CalculationEngineCFG (program, data);
+		// new CalculationEngineCFG (program, data);
 	}
 
 	public static class Globals
 	{
+		protected static int subprograms;
 		protected static int fanOut = 2;
 		protected static int loops = 0;
 		protected static int selfLoops = 0;
 		protected static int returns = 1;
-		protected static int subprograms = 4;
 		protected static int depth = 7;
 		protected static boolean breaks = false;
 		protected static boolean continues = false;
