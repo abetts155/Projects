@@ -32,7 +32,13 @@ public class Debug
 		}
 	}
 
-	public final static void debugMessage (Class<?> c, String message, int level)
+	public final static void errorMessage (Class <?> c, String message)
+	{
+		System.err.println ("[" + c.getSimpleName () + "] " + message);
+		System.exit (1);
+	}
+
+	public final static void debugMessage (Class <?> c, String message, int level)
 	{
 		if (debug && level <= debugLevel)
 		{

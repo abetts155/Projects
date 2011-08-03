@@ -1,5 +1,6 @@
 package adam.betts.programs;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -22,9 +23,10 @@ import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.utilities.Enums.IProfile;
 import adam.betts.vertices.BasicBlock;
+import adam.betts.vertices.Vertex;
 import adam.betts.vertices.call.CallVertex;
 
-public class Program implements Iterable<Subprogram>
+public class Program implements Iterable <Subprogram>
 {
 	protected String programName = "program";
 	protected int rootID;
@@ -32,8 +34,8 @@ public class Program implements Iterable<Subprogram>
 	protected ContextGraph contextg = null;
 	protected CallLoopGraph clg = null;
 	protected ControlFlowGraph inlinedCFG = null;
-	protected HashMap<Integer, Subprogram> idToSubprogram = new LinkedHashMap<Integer, Subprogram> ();
-	protected HashMap<String, Integer> nameToId = new LinkedHashMap<String, Integer> ();
+	protected HashMap <Integer, Subprogram> idToSubprogram = new LinkedHashMap <Integer, Subprogram> ();
+	protected HashMap <String, Integer> nameToId = new LinkedHashMap <String, Integer> ();
 
 	public Program ()
 	{
@@ -54,10 +56,10 @@ public class Program implements Iterable<Subprogram>
 			{
 				UDrawGraph.makeUDrawFile (callg);
 
-				for (String subprogramName: nameToId.keySet ())
+				for (String subprogramName : nameToId.keySet ())
 				{
-					UDrawGraph.makeUDrawFile (getSubprogram (subprogramName)
-							.getCFG (), subprogramName);
+					UDrawGraph.makeUDrawFile (getSubprogram (subprogramName).getCFG (),
+							subprogramName);
 				}
 			}
 		}
@@ -80,10 +82,35 @@ public class Program implements Iterable<Subprogram>
 	{
 		return callg;
 	}
-	
+
 	public final void setRootID (int rootID)
 	{
 		this.rootID = rootID;
+	}
+
+	public final void setRootID ()
+	{
+		ArrayList <Integer> rootIDs = new ArrayList <Integer> ();
+
+		for (Vertex v : callg)
+		{
+			if (v.numOfPredecessors () == 0)
+			{
+				rootIDs.add (v.getVertexID ());
+			}
+		}
+
+		if (rootIDs.size () == 0)
+		{
+			Debug.errorMessage (getClass (), "Unable to find root. None found.");
+		} else if (rootIDs.size () > 1)
+		{
+			Debug.errorMessage (getClass (), "Unable to find root. Too many found: " + rootIDs);
+		} else
+		{
+			this.rootID = rootIDs.get (rootIDs.size () - 1);
+			Debug.debugMessage (getClass (), "Root ID set to " + this.rootID, 4);
+		}
 	}
 
 	public final int getRootID ()
@@ -96,7 +123,7 @@ public class Program implements Iterable<Subprogram>
 		return idToSubprogram.get (rootID).getSubprogramName ();
 	}
 
-	public Iterator<Subprogram> iterator ()
+	public Iterator <Subprogram> iterator ()
 	{
 		return idToSubprogram.values ().iterator ();
 	}
@@ -124,11 +151,10 @@ public class Program implements Iterable<Subprogram>
 
 	public final Subprogram getSubprogram (long address)
 	{
-		for (Subprogram subprogram: idToSubprogram.values ())
+		for (Subprogram subprogram : idToSubprogram.values ())
 		{
 			ControlFlowGraph cfg = subprogram.getCFG ();
-			if (address >= cfg.getFirstAddress ()
-					&& address <= cfg.getLastAddress ())
+			if (address >= cfg.getFirstAddress () && address <= cfg.getLastAddress ())
 			{
 				return subprogram;
 			}
@@ -141,11 +167,10 @@ public class Program implements Iterable<Subprogram>
 		Debug.debugMessage (getClass (), "Building inlined CFG", 3);
 
 		inlinedCFG = new ControlFlowGraph ();
-		for (Subprogram subprogram: idToSubprogram.values ())
+		for (Subprogram subprogram : idToSubprogram.values ())
 		{
-			Debug.debugMessage (getClass (),
-					"Adding basic blocks and edges from "
-							+ subprogram.getSubprogramName (), 3);
+			Debug.debugMessage (getClass (), "Adding basic blocks and edges from "
+					+ subprogram.getSubprogramName (), 3);
 
 			ControlFlowGraph cfg = subprogram.getCFG ();
 			inlinedCFG.inline (cfg, subprogram.getSubprogramName ());
@@ -177,53 +202,51 @@ public class Program implements Iterable<Subprogram>
 				inlinedCFG.setExitID (exitID);
 			}
 
-			Iterator<Edge> predIt = callv.predecessorIterator ();
+			Iterator <Edge> predIt = callv.predecessorIterator ();
 			while (predIt.hasNext ())
 			{
 				CallEdge calle = (CallEdge) predIt.next ();
 				int callerID = calle.getVertexID ();
 				Subprogram callerS = getSubprogram (callerID);
 
-				Iterator<Integer> callSiteIt = calle.iterator ();
+				Iterator <Integer> callSiteIt = calle.iterator ();
 				while (callSiteIt.hasNext ())
 				{
 					int callSiteID = callSiteIt.next ();
 
 					Debug.debugMessage (getClass (), "Analysing call "
-							+ getSubprogram (callerID).getSubprogramName ()
-							+ " to "
-							+ getSubprogram (calleeID).getSubprogramName ()
-							+ " @ call site " + callSiteID, 3);
+							+ getSubprogram (callerID).getSubprogramName () + " to "
+							+ getSubprogram (calleeID).getSubprogramName () + " @ call site "
+							+ callSiteID, 3);
 
 					/*
 					 * Add an edge from the call site to the entry basic block
 					 * of the callee
 					 */
-					inlinedCFG.addEdge (callSiteID, calleeS.getCFG ()
-							.getEntryID (), BranchType.CALL);
+					inlinedCFG.addEdge (callSiteID, calleeS.getCFG ().getEntryID (),
+							BranchType.CALL);
 
 					/*
 					 * Then add edges from the exit basic block of the callee to
 					 * each successor of the call site
 					 */
-					BasicBlock callSite = callerS.getCFG ().getBasicBlock (
-							callSiteID);
-					HashSet<Integer> succIDs = new HashSet<Integer> ();
-					Iterator<Edge> succIt = callSite.successorIterator ();
+					BasicBlock callSite = callerS.getCFG ().getBasicBlock (callSiteID);
+					HashSet <Integer> succIDs = new HashSet <Integer> ();
+					Iterator <Edge> succIt = callSite.successorIterator ();
 					while (succIt.hasNext ())
 					{
 						Edge succEdge = succIt.next ();
 						int succID = succEdge.getVertexID ();
 						succIDs.add (succID);
 
-						inlinedCFG.addEdge (calleeS.getCFG ().getExitID (),
-								succID, BranchType.RETURN);
+						inlinedCFG.addEdge (calleeS.getCFG ().getExitID (), succID,
+								BranchType.RETURN);
 					}
 
 					/*
 					 * Remove the edges from the call site to its old successors
 					 */
-					for (int succID: succIDs)
+					for (int succID : succIDs)
 					{
 						inlinedCFG.removeEdge (callSiteID, succID);
 					}
@@ -241,15 +264,15 @@ public class Program implements Iterable<Subprogram>
 	{
 		Debug.verboseMessage ("Adding virtual instrumentation");
 
-		for (final Subprogram subprogram: idToSubprogram.values ())
+		for (final Subprogram subprogram : idToSubprogram.values ())
 		{
 			subprogram.getCFG ().addAllPredecessorEdges ();
 			final String subprogramName = subprogram.getSubprogramName ();
 
-			for (IProfile iprofile: Globals.getInstrumentationProfiles ())
+			for (IProfile iprofile : Globals.getInstrumentationProfiles ())
 			{
-				Debug.debugMessage (getClass (), "Instrumenting "
-						+ subprogramName + " with " + iprofile, 2);
+				Debug.debugMessage (getClass (), "Instrumenting " + subprogramName + " with "
+						+ iprofile, 2);
 				subprogram.buildCFGStar (iprofile);
 				Debug.debugMessage (getClass (), "DONE", 2);
 			}
@@ -267,36 +290,31 @@ public class Program implements Iterable<Subprogram>
 			int subprogramID = dfs.getPostVertexID (i);
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
 
-			Debug
-					.debugMessage (getClass (),
-							subprogram.getSubprogramName (), 4);
+			Debug.debugMessage (getClass (), subprogram.getSubprogramName (), 4);
 
-			for (IProfile iprofile: Globals.getInstrumentationProfiles ())
+			for (IProfile iprofile : Globals.getInstrumentationProfiles ())
 			{
 				final CFGStar cfgStar = subprogram.getCFGStar (iprofile);
 				CallVertex callv = callg.getVertex (subprogramID);
 
-				Iterator<Edge> succIt = callv.successorIterator ();
+				Iterator <Edge> succIt = callv.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					CallEdge e = (CallEdge) succIt.next ();
 					int calleeID = e.getVertexID ();
-					String calleeName = idToSubprogram.get (calleeID)
-							.getSubprogramName ();
-					IpointGraph calleeIPG = idToSubprogram.get (calleeID)
-							.getIPG (iprofile);
+					String calleeName = idToSubprogram.get (calleeID).getSubprogramName ();
+					IpointGraph calleeIPG = idToSubprogram.get (calleeID).getIPG (iprofile);
 
-					Debug.debugMessage (getClass (), callv.getSubprogramName ()
-							+ " => " + calleeName, 4);
+					Debug.debugMessage (getClass (), callv.getSubprogramName () + " => "
+							+ calleeName, 4);
 
 					if (calleeIPG.numOfVertices () > 2)
 					{
-						for (int siteID: e)
+						for (int siteID : e)
 						{
-							Debug.debugMessage (getClass (),
-									"Adding inline from " + calleeName + " to "
-											+ subprogram.getSubprogramName ()
-											+ " @ basic block " + siteID, 3);
+							Debug.debugMessage (getClass (), "Adding inline from " + calleeName
+									+ " to " + subprogram.getSubprogramName () + " @ basic block "
+									+ siteID, 3);
 							cfgStar.addInline (siteID, calleeIPG, calleeName);
 						}
 					}
@@ -304,19 +322,16 @@ public class Program implements Iterable<Subprogram>
 
 				if (Globals.uDrawDirectorySet ())
 				{
-					UDrawGraph.makeUDrawFile (iprofile, cfgStar, subprogram
-							.getSubprogramName ());
+					UDrawGraph.makeUDrawFile (iprofile, cfgStar, subprogram.getSubprogramName ());
 				}
 
 				Debug.debugMessage (getClass (), "Building LNT of "
 						+ subprogram.getSubprogramName (), 2);
-				final LoopNests lnt = new LoopNests (cfgStar, cfgStar
-						.getEntryID ());
+				final LoopNests lnt = new LoopNests (cfgStar, cfgStar.getEntryID ());
 
 				if (Globals.uDrawDirectorySet ())
 				{
-					UDrawGraph.makeUDrawFile (iprofile, lnt, subprogram
-							.getSubprogramName ());
+					UDrawGraph.makeUDrawFile (iprofile, lnt, subprogram.getSubprogramName ());
 				}
 
 				Debug.debugMessage (getClass (), "Building IPG of "
@@ -326,8 +341,7 @@ public class Program implements Iterable<Subprogram>
 				if (structureOnly)
 				{
 					ipg = new IpointGraph (cfgStar);
-				}
-				else
+				} else
 				{
 					ipg = new IpointGraph (cfgStar, lnt);
 				}
@@ -335,8 +349,7 @@ public class Program implements Iterable<Subprogram>
 
 				if (Globals.uDrawDirectorySet ())
 				{
-					UDrawGraph.makeUDrawFile (iprofile, ipg, subprogram
-							.getSubprogramName ());
+					UDrawGraph.makeUDrawFile (iprofile, ipg, subprogram.getSubprogramName ());
 				}
 			}
 		}
@@ -346,12 +359,15 @@ public class Program implements Iterable<Subprogram>
 	{
 		Debug.debugMessage (getClass (), "Building LNTs", 2);
 
-		for (int subprogramID: idToSubprogram.keySet ())
+		for (int subprogramID : idToSubprogram.keySet ())
 		{
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
 			final ControlFlowGraph cfg = subprogram.getCFG ();
-			Debug.debugMessage (getClass (), "Building LNT of "
-					+ subprogram.getSubprogramName (), 3);
+			cfg.addEntryAndExitEdges ();
+
+			Debug.debugMessage (getClass (), "Building LNT of " + subprogram.getSubprogramName (),
+					3);
+
 			final LoopNests lnt = new LoopNests (cfg, cfg.getEntryID ());
 
 			if (Globals.uDrawDirectorySet ())
@@ -365,16 +381,22 @@ public class Program implements Iterable<Subprogram>
 	{
 		Debug.debugMessage (getClass (), "Building Syntax Trees", 2);
 
-		for (int subprogramID: idToSubprogram.keySet ())
+		for (int subprogramID : idToSubprogram.keySet ())
 		{
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
 			final ControlFlowGraph cfg = subprogram.getCFG ();
 			cfg.addEntryAndExitEdges ();
+
 			Debug.debugMessage (getClass (), "Building syntax tree of "
 					+ subprogram.getSubprogramName (), 3);
-			final SyntaxTree stree = new SyntaxTree (cfg, subprogram
-					.getSubprogramName ());
+
+			final SyntaxTree stree = new SyntaxTree (cfg, subprogram.getSubprogramName ());
 			subprogram.setSyntaxTree (stree);
+
+			if (Globals.uDrawDirectorySet ())
+			{
+				UDrawGraph.makeUDrawFile (stree, subprogram.getSubprogramName ());
+			}
 		}
 	}
 

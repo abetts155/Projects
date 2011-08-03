@@ -28,7 +28,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 	public ControlFlowGraph ()
 	{
 	}
-	
+
 	public ControlFlowGraph clone ()
 	{
 		ControlFlowGraph cfg = new ControlFlowGraph ();
@@ -325,52 +325,70 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public void addEntryAndExitEdges ()
 	{
-		ArrayList <Integer> noPreds = new ArrayList <Integer> ();
-		ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
-		for (Vertex v : this)
+		if (entryID == Vertex.DUMMY_VERTEX_ID)
 		{
-			int vertexID = v.getVertexID ();
-			if (v.numOfPredecessors () == 0)
+			ArrayList <Integer> noPreds = new ArrayList <Integer> ();
+
+			for (Vertex v : this)
 			{
-				noPreds.add (vertexID);
+				int vertexID = v.getVertexID ();
+				if (v.numOfPredecessors () == 0)
+				{
+					noPreds.add (vertexID);
+				}
 			}
-			if (v.numOfSuccessors () == 0)
+
+			if (noPreds.size () == 1)
 			{
-				noSuccs.add (vertexID);
-			}
-		}
-
-		if (noPreds.size () == 1)
-		{
-			this.entryID = noPreds.get (noPreds.size () - 1);
-		} else
-		{
-			this.entryID = getNextVertexID ();
-			Debug.debugMessage (getClass (), "Adding entry " + entryID, 3);
-			addBasicBlock (entryID);
-
-			for (int vertexID : noPreds)
+				this.entryID = noPreds.get (noPreds.size () - 1);
+			} else
 			{
-				addEdge (entryID, vertexID, BranchType.UNKNOWN);
-			}
-		}
+				this.entryID = getNextVertexID ();
+				Debug.debugMessage (getClass (), "Adding entry " + entryID, 3);
+				addBasicBlock (entryID);
 
-		if (noSuccs.size () == 1)
-		{
-			this.exitID = noSuccs.get (noSuccs.size () - 1);
-		} else
-		{
-			this.exitID = getNextVertexID ();
-			Debug.debugMessage (getClass (), "Adding exit " + exitID, 3);
-			addBasicBlock (exitID);
-
-			for (int vertexID : noSuccs)
-			{
-				addEdge (vertexID, exitID, BranchType.UNKNOWN);
+				for (int vertexID : noPreds)
+				{
+					addEdge (entryID, vertexID, BranchType.UNKNOWN);
+				}
 			}
 		}
 
-		addEdge (exitID, entryID, BranchType.UNKNOWN);
+		if (exitID == Vertex.DUMMY_VERTEX_ID)
+		{
+
+			ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
+			for (Vertex v : this)
+			{
+				int vertexID = v.getVertexID ();
+				if (v.numOfSuccessors () == 0)
+				{
+					noSuccs.add (vertexID);
+				}
+			}
+
+			if (noSuccs.size () == 1)
+			{
+				this.exitID = noSuccs.get (noSuccs.size () - 1);
+			} else
+			{
+				this.exitID = getNextVertexID ();
+				Debug.debugMessage (getClass (), "Adding exit " + exitID, 3);
+				addBasicBlock (exitID);
+
+				for (int vertexID : noSuccs)
+				{
+					addEdge (vertexID, exitID, BranchType.UNKNOWN);
+				}
+			}
+		}
+	
+		if (getVertex (entryID).hasPredecessor (exitID) == false
+				&& getVertex (exitID).hasSuccessor (entryID) == false)
+		{
+
+			addEdge (exitID, entryID, BranchType.UNKNOWN);
+		}
 	}
 
 	public final LoopNests getLNT ()

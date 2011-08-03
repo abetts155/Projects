@@ -8,8 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 
 import adam.betts.edges.Edge;
+import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.DirectedGraph;
 import adam.betts.utilities.Debug;
+import adam.betts.utilities.Enums.BranchType;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
@@ -18,15 +20,15 @@ import adam.betts.vertices.trees.TreeVertex;
 public class LoopNests extends Tree
 {
 	protected final DirectedGraph directedg;
-	protected HashMap<Integer, Set<Integer>> headerToLoop = new LinkedHashMap<Integer, Set<Integer>> ();
-	protected HashMap<Integer, Set<Integer>> headerToTails = new LinkedHashMap<Integer, Set<Integer>> ();
-	protected HashMap<Integer, Set<Integer>> headerToExits = new LinkedHashMap<Integer, Set<Integer>> ();
-	private HashMap<Integer, Integer> parent = new LinkedHashMap<Integer, Integer> ();
+	protected HashMap <Integer, Set <Integer>> headerToLoop = new LinkedHashMap <Integer, Set <Integer>> ();
+	protected HashMap <Integer, Set <Integer>> headerToTails = new LinkedHashMap <Integer, Set <Integer>> ();
+	protected HashMap <Integer, Set <Integer>> headerToExits = new LinkedHashMap <Integer, Set <Integer>> ();
+	private HashMap <Integer, Integer> parent = new LinkedHashMap <Integer, Integer> ();
 
 	public LoopNests (DirectedGraph directedg, int rootID)
 	{
 		this.directedg = directedg;
-
+		
 		initialise ();
 		findLoops (rootID);
 		setRoot ();
@@ -44,8 +46,7 @@ public class LoopNests extends Tree
 		if (headerToLoop.containsKey (vertexID))
 		{
 			return vertexID;
-		}
-		else
+		} else
 		{
 			TreeVertex v = (TreeVertex) idToVertex.get (vertexID);
 			return v.getParentID ();
@@ -57,8 +58,7 @@ public class LoopNests extends Tree
 		if (!headerToLoop.containsKey (vertexID))
 		{
 			return false;
-		}
-		else
+		} else
 		{
 			return headerToLoop.get (vertexID).size () == 1;
 		}
@@ -67,7 +67,7 @@ public class LoopNests extends Tree
 	public final int numOfSelfLoops ()
 	{
 		int total = 0;
-		for (int headerID: headerToLoop.keySet ())
+		for (int headerID : headerToLoop.keySet ())
 		{
 			if (isSelfLoop (headerID))
 			{
@@ -87,7 +87,7 @@ public class LoopNests extends Tree
 		return headerToLoop.size ();
 	}
 
-	public final Iterator<Integer> bodyIterator (int headerID)
+	public final Iterator <Integer> bodyIterator (int headerID)
 	{
 		return headerToLoop.get (headerID).iterator ();
 	}
@@ -97,20 +97,19 @@ public class LoopNests extends Tree
 		if (headerID == vertexID)
 		{
 			return true;
-		}
-		else
+		} else
 		{
 			TreeVertex v = (TreeVertex) idToVertex.get (vertexID);
 			return v.getParentID () == headerID;
 		}
 	}
 
-	public final Iterator<Integer> tailIterator (int headerID)
+	public final Iterator <Integer> tailIterator (int headerID)
 	{
 		return headerToTails.get (headerID).iterator ();
 	}
 
-	public final Set<Integer> getTails (int headerID)
+	public final Set <Integer> getTails (int headerID)
 	{
 		return headerToTails.get (headerID);
 	}
@@ -125,7 +124,7 @@ public class LoopNests extends Tree
 		return headerToTails.get (headerID).contains (vertexID);
 	}
 
-	public final Iterator<Integer> exitIterator (int headerID)
+	public final Iterator <Integer> exitIterator (int headerID)
 	{
 		return headerToExits.get (headerID).iterator ();
 	}
@@ -140,7 +139,7 @@ public class LoopNests extends Tree
 		return headerToExits.get (headerID).contains (vertexID);
 	}
 
-	public final Iterator<Integer> headerIterator ()
+	public final Iterator <Integer> headerIterator ()
 	{
 		return headerToLoop.keySet ().iterator ();
 	}
@@ -154,7 +153,7 @@ public class LoopNests extends Tree
 	{
 		Debug.debugMessage (getClass (), "Initialising", 3);
 
-		for (Vertex v: directedg)
+		for (Vertex v : directedg)
 		{
 			int vertexID = v.getVertexID ();
 			parent.put (vertexID, vertexID);
@@ -170,26 +169,23 @@ public class LoopNests extends Tree
 			Integer vertexID = dfsTree.getPreVertexID (i);
 			Vertex v = directedg.getVertex (vertexID);
 
-			ArrayList<Integer> workList = new ArrayList<Integer> ();
+			ArrayList <Integer> workList = new ArrayList <Integer> ();
 
-			Iterator<Edge> predIt = v.predecessorIterator ();
+			Iterator <Edge> predIt = v.predecessorIterator ();
 			while (predIt.hasNext ())
 			{
 				Edge e = predIt.next ();
 				int predID = e.getVertexID ();
 
-				Debug.debugMessage (getClass (), "Analysing " + predID + " => "
-						+ vertexID, 4);
+				Debug.debugMessage (getClass (), "Analysing " + predID + " => " + vertexID, 4);
 
 				if (dfsTree.getEdgeType (predID, vertexID) == DFSEdgeType.BACK_EDGE)
 				{
 					if (predID == vertexID)
 					{
-						Debug.debugMessage (getClass (), vertexID
-								+ " is self-loop", 3);
+						Debug.debugMessage (getClass (), vertexID + " is self-loop", 3);
 						addSelfLoop (vertexID);
-					}
-					else
+					} else
 					{
 						workList.add (parent.get (predID));
 					}
@@ -206,26 +202,25 @@ public class LoopNests extends Tree
 
 	private void addSelfLoop (int headerID)
 	{
-		Debug.debugMessage (getClass (),
-				"Header " + headerID + " is self-loop", 3);
+		Debug.debugMessage (getClass (), "Header " + headerID + " is self-loop", 3);
 
 		int vertexID = getNextVertexID ();
 		HeaderVertex header = new HeaderVertex (vertexID, headerID);
 		idToVertex.put (vertexID, header);
 		addEdge (header.getVertexID (), headerID);
 
-		HashSet<Integer> loopBody = new HashSet<Integer> ();
+		HashSet <Integer> loopBody = new HashSet <Integer> ();
 		loopBody.add (headerID);
 		headerToLoop.put (headerID, loopBody);
 
-		HashSet<Integer> tails = new HashSet<Integer> ();
+		HashSet <Integer> tails = new HashSet <Integer> ();
 		tails.add (headerID);
 		headerToTails.put (headerID, tails);
 	}
 
 	private HeaderVertex findHeader (int headerID)
 	{
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof HeaderVertex)
 			{
@@ -239,20 +234,16 @@ public class LoopNests extends Tree
 		return null;
 	}
 
-	private void findLoop (DepthFirstTree dfsTree,
-			ArrayList<Integer> workList,
-			int headerID)
+	private void findLoop (DepthFirstTree dfsTree, ArrayList <Integer> workList, int headerID)
 	{
-		Debug.debugMessage (getClass (), "Header " + headerID + " tails = "
-				+ workList, 1);
+		Debug.debugMessage (getClass (), "Header " + headerID + " tails = " + workList, 1);
 
 		if (headerToTails.containsKey (headerID))
 		{
 			headerToTails.get (headerID).addAll (workList);
-		}
-		else
+		} else
 		{
-			HashSet<Integer> tails = new HashSet<Integer> ();
+			HashSet <Integer> tails = new HashSet <Integer> ();
 			tails.addAll (workList);
 			headerToTails.put (headerID, tails);
 
@@ -264,14 +255,14 @@ public class LoopNests extends Tree
 			idToVertex.put (vertexID, header);
 		}
 
-		HashSet<Integer> loopBody = new HashSet<Integer> ();
+		HashSet <Integer> loopBody = new HashSet <Integer> ();
 		while (!workList.isEmpty ())
 		{
 			int listID = workList.remove (workList.size () - 1);
 			loopBody.add (listID);
 
 			Vertex v = directedg.getVertex (listID);
-			Iterator<Edge> predIt = v.predecessorIterator ();
+			Iterator <Edge> predIt = v.predecessorIterator ();
 			while (predIt.hasNext ())
 			{
 				Edge e = predIt.next ();
@@ -281,8 +272,8 @@ public class LoopNests extends Tree
 				{
 					int repID = parent.get (predID);
 
-					if (!workList.contains (repID)
-							&& !loopBody.contains (repID) && repID != headerID)
+					if (!workList.contains (repID) && !loopBody.contains (repID)
+							&& repID != headerID)
 					{
 						workList.add (repID);
 					}
@@ -294,19 +285,16 @@ public class LoopNests extends Tree
 		{
 			HeaderVertex headerv = findHeader (headerID);
 
-			for (int vertexID: loopBody)
+			for (int vertexID : loopBody)
 			{
-				Debug.debugMessage (getClass (), vertexID + " is in loop body",
-						4);
+				Debug.debugMessage (getClass (), vertexID + " is in loop body", 4);
 
 				parent.put (vertexID, headerID);
 				if (isLoopHeader (vertexID))
 				{
 					HeaderVertex innerHeaderv = findHeader (vertexID);
-					addEdge (headerv.getVertexID (), innerHeaderv
-							.getVertexID ());
-				}
-				else
+					addEdge (headerv.getVertexID (), innerHeaderv.getVertexID ());
+				} else
 				{
 					addEdge (headerv.getVertexID (), vertexID);
 				}
@@ -318,8 +306,7 @@ public class LoopNests extends Tree
 			if (!headerToLoop.containsKey (headerID))
 			{
 				headerToLoop.put (headerID, loopBody);
-			}
-			else
+			} else
 			{
 				headerToLoop.get (headerID).addAll (loopBody);
 			}
@@ -328,7 +315,7 @@ public class LoopNests extends Tree
 
 	private void setRoot ()
 	{
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v.numOfPredecessors () == 0)
 			{
@@ -341,14 +328,14 @@ public class LoopNests extends Tree
 	{
 		Debug.debugMessage (getClass (), "Identifying loop exits", 3);
 
-		for (int headerID: headerToLoop.keySet ())
+		for (int headerID : headerToLoop.keySet ())
 		{
-			headerToExits.put (headerID, new HashSet<Integer> ());
+			headerToExits.put (headerID, new HashSet <Integer> ());
 
-			for (int vertexID: headerToLoop.get (headerID))
+			for (int vertexID : headerToLoop.get (headerID))
 			{
 				Vertex v = directedg.getVertex (vertexID);
-				Iterator<Edge> succIt = v.successorIterator ();
+				Iterator <Edge> succIt = v.successorIterator ();
 				while (succIt.hasNext ())
 				{
 					Edge e = succIt.next ();
@@ -362,8 +349,7 @@ public class LoopNests extends Tree
 							{
 								headerToExits.get (headerID).add (vertexID);
 							}
-						}
-						else
+						} else
 						{
 							headerToExits.get (headerID).add (vertexID);
 						}

@@ -8,6 +8,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import adam.betts.calculations.Database;
 import adam.betts.programs.Program;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
@@ -84,6 +85,7 @@ public class MainProgramAnalyser
 		Debug.verboseMessage ("Reading program");
 
 		Program program = new Program ();
+		program.setRootID ();
 
 		if (Globals.LNTs)
 		{
@@ -96,6 +98,9 @@ public class MainProgramAnalyser
 			Debug.verboseMessage ("Building abstract syntax trees");
 			program.buildSyntaxTrees ();
 		}
+
+		Database database = new Database (program);
+		database.generateData ();
 	}
 
 	public static void main (String[] args)

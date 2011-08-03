@@ -8,6 +8,7 @@ import adam.betts.edges.Edge;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.utils.LeastCommonAncestor;
+import adam.betts.outputs.OutputGraph;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Globals;
@@ -15,6 +16,7 @@ import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.AlternativeVertex;
+import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.LeafVertex;
 import adam.betts.vertices.trees.LoopVertex;
 import adam.betts.vertices.trees.SequenceVertex;
@@ -30,7 +32,7 @@ public class SyntaxTree extends Tree
 	protected DominatorTree pret;
 	protected DominatorTree postt;
 	protected LeastCommonAncestor lca;
-	protected HashMap<Integer, LoopVertex> headerToSyntaxTree = new HashMap<Integer, LoopVertex> ();
+	protected HashMap <Integer, LoopVertex> headerToSyntaxTree = new HashMap <Integer, LoopVertex> ();
 	protected int headerID;
 
 	public SyntaxTree (ControlFlowGraph cfg, String subprogramName)
@@ -42,12 +44,7 @@ public class SyntaxTree extends Tree
 
 		build ();
 
-		if (Globals.uDrawDirectorySet ())
-		{
-			UDrawGraph.makeUDrawFile (cfg, subprogramName);
-			UDrawGraph.makeUDrawFile (lnt, subprogramName);
-			UDrawGraph.makeUDrawFile (this, subprogramName);
-		}
+		OutputGraph.output (this);
 	}
 
 	public final SyntaxVertex getVertex (int vertexID)
@@ -57,7 +54,7 @@ public class SyntaxTree extends Tree
 
 	public final LoopVertex getLoopVertex (int headerID)
 	{
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof LoopVertex)
 			{
@@ -75,49 +72,45 @@ public class SyntaxTree extends Tree
 	{
 		for (int level = lnt.getHeight () - 1; level >= 0; --level)
 		{
-			Iterator<TreeVertex> levelIt = lnt.levelIterator (level);
+			Iterator <TreeVertex> levelIt = lnt.levelIterator (level);
 			while (levelIt.hasNext ())
 			{
 				TreeVertex v = levelIt.next ();
-				int cfgVertexID = v.getVertexID ();
 
-				if (lnt.isLoopHeader (cfgVertexID))
+				if (v instanceof HeaderVertex)
 				{
-					headerID = cfgVertexID;
+					HeaderVertex headerv = (HeaderVertex) v;
+					headerID = headerv.getHeaderID ();
 
-					Debug.debugMessage (getClass (),
-							"Building portion of tree inside CFG header "
-									+ headerID, 3);
+					Debug.debugMessage (getClass (), "Building portion of tree inside CFG header "
+							+ headerID, 3);
 
 					FlowGraph flowg = new FlowGraph ();
 					induceSubraph (flowg);
 					FlowGraph reverseg = new FlowGraph ();
 					flowg.reverseGraph (reverseg);
 
-					Debug.debugMessage (getClass (),
-							"Building pre-dominator tree", 4);
+					Debug.debugMessage (getClass (), "Building pre-dominator tree", 4);
 					pret = new DominatorTree (flowg, flowg.getEntryID (),
 							DominatorTreeType.PRE_DOMINATOR);
 
-					Debug.debugMessage (getClass (),
-							"Building post-dominator tree", 4);
+					Debug.debugMessage (getClass (), "Building post-dominator tree", 4);
 					postt = new DominatorTree (reverseg, flowg.getExitID (),
 							DominatorTreeType.POST_DOMINATOR);
 					lca = new LeastCommonAncestor (postt);
 
-					SyntaxVertex rootVertex = whichSubTree (flowg, flowg
-							.getEntryID (), flowg.getExitID ());
+					SyntaxVertex rootVertex = whichSubTree (flowg, flowg.getEntryID (), flowg
+							.getExitID ());
 
-					if (cfgVertexID == cfg.getEntryID ())
+					if (headerID == cfg.getEntryID ())
 					{
 						this.rootID = rootVertex.getVertexID ();
 						setHeight ();
-					}
-					else
+					} else
 					{
-						LoopVertex loop = addLoopVertex (cfgVertexID);
+						LoopVertex loop = addLoopVertex (headerID);
 						addEdge (loop.getVertexID (), rootVertex.getVertexID ());
-						headerToSyntaxTree.put (cfgVertexID, loop);
+						headerToSyntaxTree.put (headerID, loop);
 					}
 				}
 			}
@@ -126,11 +119,11 @@ public class SyntaxTree extends Tree
 
 	private void induceSubraph (FlowGraph flowg)
 	{
-		ArrayList<Integer> workList = new ArrayList<Integer> ();
+		ArrayList <Integer> workList = new ArrayList <Integer> ();
 		workList.addAll (lnt.getTails (headerID));
 
 		// To track whether the induced subgraph has a unique exit point or not
-		ArrayList<Integer> succs = new ArrayList<Integer> ();
+		ArrayList <Integer> succs = new ArrayList <Integer> ();
 
 		while (!workList.isEmpty ())
 		{
@@ -142,15 +135,16 @@ public class SyntaxTree extends Tree
 				succs.add (vertexID);
 
 				Vertex cfgv = cfg.getVertex (vertexID);
-				Iterator<Edge> predIt = cfgv.predecessorIterator ();
+				Iterator <Edge> predIt = cfgv.predecessorIterator ();
 				while (predIt.hasNext ())
 				{
 					Edge e = predIt.next ();
 					int predID = e.getVertexID ();
-					int headerPredID = lnt.getLoopHeader (predID);
+					TreeVertex treePredv = lnt.getVertex (predID);
+					HeaderVertex headerv = (HeaderVertex) lnt.getVertex (treePredv.getParentID ());
+					int headerPredID = headerv.getHeaderID ();
 
-					if (headerPredID == headerID
-							|| lnt.isNested (headerPredID, headerID))
+					if (headerPredID == headerID || lnt.isNested (headerPredID, headerID))
 					{
 						if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
 						{
@@ -161,12 +155,12 @@ public class SyntaxTree extends Tree
 			}
 		}
 
-		for (Vertex v: flowg)
+		for (Vertex v : flowg)
 		{
 			Integer vertexID = v.getVertexID ();
 			Vertex cfgv = cfg.getVertex (vertexID);
 
-			Iterator<Edge> succIt = cfgv.successorIterator ();
+			Iterator <Edge> succIt = cfgv.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -190,12 +184,11 @@ public class SyntaxTree extends Tree
 			flowg.getVertex (exitID).setDummy ();
 			Debug.debugMessage (getClass (), "Adding exit vertex " + exitID, 3);
 
-			for (int vertexID: succs)
+			for (int vertexID : succs)
 			{
 				flowg.addEdge (vertexID, exitID);
 			}
-		}
-		else
+		} else
 		{
 			int exitID = succs.get (succs.size () - 1);
 			flowg.setExitID (exitID);
@@ -203,6 +196,8 @@ public class SyntaxTree extends Tree
 
 		// The entry vertex of the induced subgraph is the loop header
 		flowg.setEntryID (headerID);
+
+		OutputGraph.output (flowg);
 	}
 
 	private LoopVertex addLoopVertex (int headerID)
@@ -255,15 +250,12 @@ public class SyntaxTree extends Tree
 		return seq;
 	}
 
-	private SyntaxVertex whichSubTree (FlowGraph flowg,
-			int sourceID,
-			int destinationID)
+	private SyntaxVertex whichSubTree (FlowGraph flowg, int sourceID, int destinationID)
 	{
 		if (flowg.getVertex (sourceID).numOfSuccessors () == 0)
 		{
 			return buildSEQ (flowg, sourceID, sourceID);
-		}
-		else
+		} else
 		{
 			SequenceVertex seq = buildSEQ (flowg, sourceID, destinationID);
 			if (!flowg.getVertex (destinationID).isDummy ())
@@ -277,15 +269,14 @@ public class SyntaxTree extends Tree
 
 	private AlternativeVertex buildALT (FlowGraph flowg, int branchID)
 	{
-		CompressedDominatorTree comt = new CompressedDominatorTree (flowg,
-				postt, lca, branchID);
+		CompressedDominatorTree comt = new CompressedDominatorTree (flowg, postt, lca, branchID);
 
-		HashMap<Integer, AlternativeVertex> mergeRoots = new HashMap<Integer, AlternativeVertex> ();
+		HashMap <Integer, AlternativeVertex> mergeRoots = new HashMap <Integer, AlternativeVertex> ();
 		int ipostID = postt.getImmediateDominator (branchID);
 
 		for (int level = comt.getHeight () - 1; level >= 1; --level)
 		{
-			Iterator<TreeVertex> vertexIt = comt.levelIterator (level);
+			Iterator <TreeVertex> vertexIt = comt.levelIterator (level);
 			while (vertexIt.hasNext ())
 			{
 				TreeVertex comtreev = vertexIt.next ();
@@ -323,9 +314,7 @@ public class SyntaxTree extends Tree
 		return mergeRoots.get (ipostID);
 	}
 
-	private SequenceVertex buildSEQ (FlowGraph flowg,
-			int sourceID,
-			int destinationID)
+	private SequenceVertex buildSEQ (FlowGraph flowg, int sourceID, int destinationID)
 	{
 		SequenceVertex seq = addSEQVertex ();
 
@@ -356,8 +345,7 @@ public class SyntaxTree extends Tree
 			}
 
 			cfgVertexID = postt.getImmediateDominator (cfgVertexID);
-		}
-		while (cfgVertexID != destinationID);
+		} while (cfgVertexID != destinationID);
 
 		return seq;
 	}
@@ -365,7 +353,7 @@ public class SyntaxTree extends Tree
 	public final int countLeaves ()
 	{
 		int count = 0;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof LeafVertex)
 			{
@@ -378,7 +366,7 @@ public class SyntaxTree extends Tree
 	public final int countLambdaLeaves ()
 	{
 		int count = 0;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof LeafVertex)
 			{
@@ -395,7 +383,7 @@ public class SyntaxTree extends Tree
 	public final int countALTVertices ()
 	{
 		int count = 0;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof AlternativeVertex)
 			{
@@ -408,7 +396,7 @@ public class SyntaxTree extends Tree
 	public final int countSEQVertices ()
 	{
 		int count = 0;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v instanceof SequenceVertex)
 			{
