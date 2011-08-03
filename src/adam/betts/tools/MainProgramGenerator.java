@@ -310,8 +310,6 @@ public class MainProgramGenerator
 	{
 		Program program = new ProgramGenerator ().getProgram ();
 		new WriteProgram (program);
-		Database database = new Database (program);
-		database.generateData ();
 	}
 
 	public static class Globals
