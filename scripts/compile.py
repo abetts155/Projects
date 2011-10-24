@@ -6,8 +6,8 @@ from subprocess import Popen, PIPE
 from os import environ
 
 # These environment variables are needed to compile and disassemble the program under analysis 
-simpleScalarEnvironmentVariable = "SIMPLESCALAR"
-wcetToolsEnvironmentVariable = "WCET_TOOLS"
+simpleScalarEnvironmentVariable = "SIMPLESCALAR_HOME"
+wcetToolsEnvironmentVariable = "WCET_HOME"
 environmentVariables = [simpleScalarEnvironmentVariable, wcetToolsEnvironmentVariable]
 
 for var in environmentVariables:
