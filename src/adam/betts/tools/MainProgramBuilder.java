@@ -22,7 +22,6 @@ public class MainProgramBuilder
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
 		DefaultOptions.addRootOption (options);
-		DefaultOptions.addOutputFormatOption (options);
 		DefaultOptions.addUDrawDirectoryOption (options);
 	}
 
@@ -41,17 +40,14 @@ public class MainProgramBuilder
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setProgramOption (line);
 				DefaultOptions.setRootOption (line);
-				DefaultOptions.setOutputFormatOption (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);

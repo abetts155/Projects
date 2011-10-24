@@ -8,6 +8,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import adam.betts.calculations.CalculationEngineCFG;
 import adam.betts.calculations.Database;
 import adam.betts.programs.Program;
 import adam.betts.utilities.Debug;
@@ -101,6 +102,8 @@ public class MainProgramAnalyser
 
 		Database database = new Database (program);
 		database.generateData ();
+		
+		new CalculationEngineCFG (program, database);
 	}
 
 	public static void main (String[] args)

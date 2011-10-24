@@ -160,32 +160,6 @@ public class DefaultOptions
 		}
 	}
 
-	public final static void addOutputFormatOption (Options options)
-	{
-		outputFormatOption = new Option ("f", "format", true,
-				"Output the CFGs to a file."
-						+ "\nSupported formats are: "
-						+ Arrays.toString (OutputFormats.values ()).replace (
-								"[", "").replace ("]", ""));
-		outputFormatOption.setRequired (true);
-		options.addOption (outputFormatOption);
-	}
-
-	public final static void setOutputFormatOption (CommandLine line)
-	{
-		String arg = line.getOptionValue (outputFormatOption.getOpt ());
-		try
-		{
-			OutputFormats format = OutputFormats.valueOf (arg.toUpperCase ());
-			Globals.setOutputFormat (format);
-		}
-		catch (IllegalArgumentException e)
-		{
-			System.err.println (arg + " is not a valid output option.");
-			System.exit (1);
-		}
-	}
-
 	public final static void addTraceFileOption (Options options)
 	{
 		traceFileOption = new Option ("t", "trace", true, "The trace file.");

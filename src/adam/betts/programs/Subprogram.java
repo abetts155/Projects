@@ -5,7 +5,6 @@ import java.util.HashMap;
 import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.IpointGraph;
-import adam.betts.graphs.trees.LoopNests;
 import adam.betts.graphs.trees.SyntaxTree;
 import adam.betts.utilities.Enums.IProfile;
 
@@ -14,10 +13,9 @@ public class Subprogram
 	private int subprogramID;
 	private String subprogramName;
 	private ControlFlowGraph cfg;
-	private LoopNests lnt;
 	private SyntaxTree stree;
-	private HashMap<IProfile, CFGStar> cfgStars = new HashMap<IProfile, CFGStar> ();
-	private HashMap<IProfile, IpointGraph> ipgs = new HashMap<IProfile, IpointGraph> ();
+	private HashMap <IProfile, CFGStar> cfgStars = new HashMap <IProfile, CFGStar> ();
+	private HashMap <IProfile, IpointGraph> ipgs = new HashMap <IProfile, IpointGraph> ();
 
 	public Subprogram (int subprogramID, String subprogramName)
 	{
@@ -34,7 +32,7 @@ public class Subprogram
 	{
 		return subprogramName;
 	}
-	
+
 	public final void setCFG (ControlFlowGraph cfg)
 	{
 		this.cfg = cfg;
@@ -58,8 +56,7 @@ public class Subprogram
 	{
 		return stree;
 	}
-	
-	
+
 	public final void buildCFGStar (IProfile iprofile)
 	{
 		cfgStars.put (iprofile, new CFGStar (cfg, iprofile, subprogramName));

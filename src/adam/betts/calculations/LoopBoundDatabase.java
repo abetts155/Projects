@@ -35,7 +35,6 @@ public class LoopBoundDatabase extends Database
 		long time1 = System.nanoTime ();
 		parser.doParsing ();
 		long time2 = System.nanoTime ();
-		System.out.println (time2 - time1);
 
 		for (int subprogramID: loopBounds.keySet ())
 		{

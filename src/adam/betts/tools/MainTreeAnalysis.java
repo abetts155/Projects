@@ -7,10 +7,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import adam.betts.calculations.CFGDatabase;
-import adam.betts.calculations.CalculationEngineAST;
-import adam.betts.calculations.CalculationEngineCFG;
-import adam.betts.outputs.AnalysisOutput;
 import adam.betts.programs.Program;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
@@ -45,8 +41,7 @@ public class MainTreeAnalysis
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setProgramOption (line);
@@ -55,8 +50,7 @@ public class MainTreeAnalysis
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setIPETOptions (line);
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);
@@ -69,13 +63,6 @@ public class MainTreeAnalysis
 		Debug.verboseMessage ("Reading program");
 		Program program = new Program ();
 		program.buildSyntaxTrees ();
-		program.inline ();
-		CFGDatabase database = new CFGDatabase (program);
-		CalculationEngineCFG cfgCalculations = new CalculationEngineCFG (
-				program, database);
-		CalculationEngineAST astCalculations = new CalculationEngineAST (
-				program, database);
-		new AnalysisOutput (program, database, cfgCalculations, astCalculations);
 	}
 
 	public static void main (String[] args)

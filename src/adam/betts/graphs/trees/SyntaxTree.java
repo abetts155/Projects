@@ -8,10 +8,7 @@ import adam.betts.edges.Edge;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.utils.LeastCommonAncestor;
-import adam.betts.outputs.OutputGraph;
-import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.vertices.Vertex;
@@ -33,7 +30,6 @@ public class SyntaxTree extends Tree
 	protected DominatorTree postt;
 	protected LeastCommonAncestor lca;
 	protected HashMap <Integer, LoopVertex> headerToSyntaxTree = new HashMap <Integer, LoopVertex> ();
-	protected int headerID;
 
 	public SyntaxTree (ControlFlowGraph cfg, String subprogramName)
 	{
@@ -43,8 +39,6 @@ public class SyntaxTree extends Tree
 		lnt = new LoopNests (cfg, cfg.getEntryID ());
 
 		build ();
-
-		OutputGraph.output (this);
 	}
 
 	public final SyntaxVertex getVertex (int vertexID)
@@ -80,13 +74,12 @@ public class SyntaxTree extends Tree
 				if (v instanceof HeaderVertex)
 				{
 					HeaderVertex headerv = (HeaderVertex) v;
-					headerID = headerv.getHeaderID ();
 
 					Debug.debugMessage (getClass (), "Building portion of tree inside CFG header "
-							+ headerID, 3);
+							+ headerv.getHeaderID (), 3);
 
 					FlowGraph flowg = new FlowGraph ();
-					induceSubraph (flowg);
+					induceSubraph (flowg, headerv);
 					FlowGraph reverseg = new FlowGraph ();
 					flowg.reverseGraph (reverseg);
 
@@ -100,27 +93,27 @@ public class SyntaxTree extends Tree
 					lca = new LeastCommonAncestor (postt);
 
 					SyntaxVertex rootVertex = whichSubTree (flowg, flowg.getEntryID (), flowg
-							.getExitID ());
+							.getExitID (), headerv);
 
-					if (headerID == cfg.getEntryID ())
+					if (headerv.getHeaderID () == cfg.getEntryID ())
 					{
 						this.rootID = rootVertex.getVertexID ();
 						setHeight ();
 					} else
 					{
-						LoopVertex loop = addLoopVertex (headerID);
+						LoopVertex loop = addLoopVertex (headerv.getHeaderID ());
 						addEdge (loop.getVertexID (), rootVertex.getVertexID ());
-						headerToSyntaxTree.put (headerID, loop);
+						headerToSyntaxTree.put (headerv.getHeaderID (), loop);
 					}
 				}
 			}
 		}
 	}
 
-	private void induceSubraph (FlowGraph flowg)
+	private void induceSubraph (FlowGraph flowg, HeaderVertex headerv)
 	{
 		ArrayList <Integer> workList = new ArrayList <Integer> ();
-		workList.addAll (lnt.getTails (headerID));
+		workList.addAll (lnt.getTails (headerv.getHeaderID ()));
 
 		// To track whether the induced subgraph has a unique exit point or not
 		ArrayList <Integer> succs = new ArrayList <Integer> ();
@@ -141,10 +134,12 @@ public class SyntaxTree extends Tree
 					Edge e = predIt.next ();
 					int predID = e.getVertexID ();
 					TreeVertex treePredv = lnt.getVertex (predID);
-					HeaderVertex headerv = (HeaderVertex) lnt.getVertex (treePredv.getParentID ());
-					int headerPredID = headerv.getHeaderID ();
+					HeaderVertex predHeaderv = (HeaderVertex) lnt.getVertex (treePredv
+							.getParentID ());
+					int predHeaderID = predHeaderv.getHeaderID ();
 
-					if (headerPredID == headerID || lnt.isNested (headerPredID, headerID))
+					if (predHeaderID == headerv.getHeaderID ()
+							|| lnt.isNested (predHeaderv.getVertexID (), headerv.getVertexID ()))
 					{
 						if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
 						{
@@ -195,9 +190,7 @@ public class SyntaxTree extends Tree
 		}
 
 		// The entry vertex of the induced subgraph is the loop header
-		flowg.setEntryID (headerID);
-
-		OutputGraph.output (flowg);
+		flowg.setEntryID (headerv.getHeaderID ());
 	}
 
 	private LoopVertex addLoopVertex (int headerID)
@@ -250,14 +243,15 @@ public class SyntaxTree extends Tree
 		return seq;
 	}
 
-	private SyntaxVertex whichSubTree (FlowGraph flowg, int sourceID, int destinationID)
+	private SyntaxVertex whichSubTree (FlowGraph flowg, int sourceID, int destinationID,
+			HeaderVertex headerv)
 	{
 		if (flowg.getVertex (sourceID).numOfSuccessors () == 0)
 		{
-			return buildSEQ (flowg, sourceID, sourceID);
+			return buildSEQ (flowg, sourceID, sourceID, headerv);
 		} else
 		{
-			SequenceVertex seq = buildSEQ (flowg, sourceID, destinationID);
+			SequenceVertex seq = buildSEQ (flowg, sourceID, destinationID, headerv);
 			if (!flowg.getVertex (destinationID).isDummy ())
 			{
 				LeafVertex leaf = addLeafVertex (destinationID);
@@ -267,7 +261,7 @@ public class SyntaxTree extends Tree
 		}
 	}
 
-	private AlternativeVertex buildALT (FlowGraph flowg, int branchID)
+	private AlternativeVertex buildALT (FlowGraph flowg, int branchID, HeaderVertex headerv)
 	{
 		CompressedDominatorTree comt = new CompressedDominatorTree (flowg, postt, lca, branchID);
 
@@ -282,7 +276,7 @@ public class SyntaxTree extends Tree
 				TreeVertex comtreev = vertexIt.next ();
 				int cfgvertexID = comtreev.getVertexID ();
 				int parentID = comtreev.getParentID ();
-				SequenceVertex seq = buildSEQ (flowg, cfgvertexID, parentID);
+				SequenceVertex seq = buildSEQ (flowg, cfgvertexID, parentID, headerv);
 
 				if (!comtreev.isLeaf ())
 				{
@@ -314,14 +308,15 @@ public class SyntaxTree extends Tree
 		return mergeRoots.get (ipostID);
 	}
 
-	private SequenceVertex buildSEQ (FlowGraph flowg, int sourceID, int destinationID)
+	private SequenceVertex buildSEQ (FlowGraph flowg, int sourceID, int destinationID,
+			HeaderVertex headerv)
 	{
 		SequenceVertex seq = addSEQVertex ();
 
 		int cfgVertexID = sourceID;
 		do
 		{
-			if (lnt.isLoopHeader (cfgVertexID) && headerID != cfgVertexID)
+			if (lnt.isLoopHeader (cfgVertexID) && cfgVertexID != headerv.getHeaderID ())
 			{
 				LoopVertex loop = headerToSyntaxTree.get (cfgVertexID);
 
@@ -340,7 +335,7 @@ public class SyntaxTree extends Tree
 			Vertex cfgv = flowg.getVertex (cfgVertexID);
 			if (cfgv.numOfSuccessors () > 1)
 			{
-				AlternativeVertex alt = buildALT (flowg, cfgVertexID);
+				AlternativeVertex alt = buildALT (flowg, cfgVertexID, headerv);
 				addEdge (seq.getVertexID (), alt.getVertexID ());
 			}
 

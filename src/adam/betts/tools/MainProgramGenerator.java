@@ -38,7 +38,6 @@ public class MainProgramGenerator
 	{
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
-		DefaultOptions.addOutputFormatOption (options);
 		DefaultOptions.addUDrawDirectoryOption (options);
 
 		fanOutOption = new Option ("F", "fan-out", true,
@@ -109,7 +108,6 @@ public class MainProgramGenerator
 			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
-				DefaultOptions.setOutputFormatOption (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
 
 				Globals.breaks = line.hasOption (breaksOption.getOpt ());
