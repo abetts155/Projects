@@ -7,7 +7,6 @@ import java.util.List;
 
 import adam.betts.tools.MainWCETAnalyser;
 import adam.betts.utilities.Enums.IProfile;
-import adam.betts.utilities.Enums.OutputFormats;
 
 public class Globals
 {
@@ -15,9 +14,8 @@ public class Globals
 	private static String traceFileName = null;
 	private static String outFileName = null;
 	private static String uDrawGraphDirectory = null;
-	private static ArrayList<String> roots = new ArrayList<String> ();
-	private static ArrayList<Enums.IProfile> iprofiles = new ArrayList<IProfile> ();
-	private static Enums.OutputFormats format = null;
+	private static ArrayList <String> roots = new ArrayList <String> ();
+	private static ArrayList <Enums.IProfile> iprofiles = new ArrayList <IProfile> ();
 
 	public final static void setProgramFileName (String value)
 	{
@@ -54,8 +52,7 @@ public class Globals
 
 	public final static void setRoot (String value)
 	{
-		Debug.debugMessage (Globals.class,
-				"'" + value + "' is the chosen root", 1);
+		Debug.debugMessage (Globals.class, "'" + value + "' is the chosen root", 1);
 		roots.add (value);
 	}
 
@@ -70,7 +67,7 @@ public class Globals
 		return roots.get (roots.size () - 1);
 	}
 
-	public final static List<String> getRoots ()
+	public final static List <String> getRoots ()
 	{
 		return Collections.unmodifiableList (roots);
 	}
@@ -82,8 +79,7 @@ public class Globals
 
 	public final static void setUDrawDirectory (String value)
 	{
-		Debug.debugMessage (MainWCETAnalyser.class,
-				"Setting uDraw directory to " + value, 1);
+		Debug.debugMessage (MainWCETAnalyser.class, "Setting uDraw directory to " + value, 1);
 		uDrawGraphDirectory = value;
 	}
 
@@ -97,22 +93,9 @@ public class Globals
 		return uDrawGraphDirectory;
 	}
 
-	public final static void setOutputFormat (OutputFormats value)
-	{
-		Debug.debugMessage (Globals.class, "Setting output format to " + value,
-				1);
-		format = value;
-	}
-
-	public final static OutputFormats getOutputFormat ()
-	{
-		return format;
-	}
-
 	public final static void addInstrumentationProfile (IProfile value)
 	{
-		Debug.debugMessage (Globals.class, "Adding instrumentation profile "
-				+ value, 1);
+		Debug.debugMessage (Globals.class, "Adding instrumentation profile " + value, 1);
 		iprofiles.add (value);
 	}
 
@@ -122,7 +105,7 @@ public class Globals
 		return iprofiles.get (iprofiles.size () - 1);
 	}
 
-	public final static List<IProfile> getInstrumentationProfiles ()
+	public final static List <IProfile> getInstrumentationProfiles ()
 	{
 		return Collections.unmodifiableList (iprofiles);
 	}

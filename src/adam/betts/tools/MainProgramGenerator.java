@@ -8,7 +8,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import adam.betts.calculations.Database;
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
 import adam.betts.programs.ProgramGenerator;
@@ -97,6 +96,13 @@ public class MainProgramGenerator
 		HelpFormatter formatter = new HelpFormatter ();
 		formatter.setWidth (128);
 		CommandLine line = null;
+
+		final int minVertices = 10;
+		final int maxVertices = 1000;
+
+		final int minFanOut = 2;
+		final int maxFanOut = 10;
+
 		try
 		{
 			line = parser.parse (options, args);
@@ -119,7 +125,7 @@ public class MainProgramGenerator
 					try
 					{
 						int fanOut = Integer.parseInt (arg);
-						if (fanOut < 2 || fanOut > 5)
+						if (fanOut < minFanOut || fanOut > maxFanOut)
 						{
 							throw new IllegalArgumentException ();
 						}
@@ -132,7 +138,8 @@ public class MainProgramGenerator
 					} catch (IllegalArgumentException e)
 					{
 						System.err.println (arg
-								+ " is not a valid fan out. It must be in the range 2..5.");
+								+ " is not a valid fan out. It must be in the range " + minFanOut
+								+ ".." + maxFanOut);
 						System.exit (1);
 					}
 				}
@@ -244,21 +251,11 @@ public class MainProgramGenerator
 					try
 					{
 						int depth = Integer.parseInt (arg);
-						if (depth > Globals.subprograms)
-						{
-							throw new IllegalArgumentException ();
-						}
 						Globals.depth = depth;
 					} catch (NumberFormatException e)
 					{
 						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ depthOption.getLongOpt ());
-						System.exit (1);
-					} catch (IllegalArgumentException e)
-					{
-						System.err
-								.println (arg
-										+ " is not a valid call graph depth. You need at least as many subprograms as the depth of the call graph.");
 						System.exit (1);
 					}
 				}
@@ -269,11 +266,12 @@ public class MainProgramGenerator
 					try
 					{
 						int vertices = Integer.parseInt (arg);
-						if (vertices < 10 || vertices > 200)
+						if (vertices < minVertices || vertices > maxVertices)
 						{
 							throw new IllegalArgumentException (vertices
 									+ " is not a valid number of vertices. "
-									+ "It must be a positive integer in the range 50..200");
+									+ "It must be a positive integer in the range " + minVertices
+									+ ".." + maxVertices);
 						}
 						if (vertices < 2 * Globals.loops + 2)
 						{

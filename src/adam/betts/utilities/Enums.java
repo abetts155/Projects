@@ -24,12 +24,7 @@ public final class Enums
 
 	public enum BranchType
 	{
-		TAKEN, NOTTAKEN, CALL, RETURN, UNKNOWN
-	};
-
-	public enum OutputFormats
-	{
-		XML, SWEET;
+		TAKEN, NOTTAKEN, CALL, RETURN, CASE, UNKNOWN
 	};
 
 	public enum LpSolveVerbosity

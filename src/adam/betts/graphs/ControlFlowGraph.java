@@ -96,6 +96,9 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		u.addSuccessor (destinationID, type, edgeID);
 		v.addPredecessor (sourceID, type, edgeID);
 		edgeID++;
+
+		Debug.debugMessage (getClass (), "Adding edge " + sourceID + " => " + destinationID + " ("
+				+ type + ")", 4);
 	}
 
 	public final void addAllPredecessorEdges ()
@@ -382,7 +385,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 				}
 			}
 		}
-	
+
 		if (getVertex (entryID).hasPredecessor (exitID) == false
 				&& getVertex (exitID).hasSuccessor (entryID) == false)
 		{

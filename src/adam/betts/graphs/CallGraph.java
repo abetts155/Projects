@@ -6,13 +6,14 @@ import java.util.LinkedHashMap;
 
 import adam.betts.edges.CallEdge;
 import adam.betts.edges.Edge;
+import adam.betts.utilities.Debug;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.call.CallVertex;
 
 public class CallGraph extends DirectedGraph
 {
-	protected HashMap<String, CallVertex> nameToVertex = new LinkedHashMap<String, CallVertex> ();
-	
+	protected HashMap <String, CallVertex> nameToVertex = new LinkedHashMap <String, CallVertex> ();
+
 	public CallGraph ()
 	{
 	}
@@ -50,15 +51,20 @@ public class CallGraph extends DirectedGraph
 		CallVertex destination = nameToVertex.get (callee);
 		source.addSuccessor (destination.getVertexID (), callSiteID);
 		destination.addPredecessor (source.getVertexID (), callSiteID);
+
+		Debug.debugMessage (getClass (), "Adding call from subprogram '" + caller
+				+ "' to subprogram '" + callee + "' at call site " + callSiteID, 4);
 	}
 
 	public final void addCall (int callerID, int calleeID, int callSiteID)
 	{
-		
 		CallVertex source = (CallVertex) idToVertex.get (callerID);
 		CallVertex destination = (CallVertex) idToVertex.get (calleeID);
 		source.addSuccessor (destination.getVertexID (), callSiteID);
 		destination.addPredecessor (source.getVertexID (), callSiteID);
+
+		Debug.debugMessage (getClass (), "Adding call from subprogram " + callerID
+				+ " to subprogram " + calleeID + " at call site " + callSiteID, 4);
 	}
 
 	public final boolean calls (String caller, String callee)
@@ -111,7 +117,7 @@ public class CallGraph extends DirectedGraph
 	public final int isCallSite (int subprogramID, int vertexID)
 	{
 		CallVertex v = (CallVertex) idToVertex.get (subprogramID);
-		Iterator<Edge> succIt = v.successorIterator ();
+		Iterator <Edge> succIt = v.successorIterator ();
 		while (succIt.hasNext ())
 		{
 			CallEdge e = (CallEdge) succIt.next ();

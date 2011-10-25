@@ -10,7 +10,6 @@ import adam.betts.calculations.IPETModel;
 import adam.betts.utilities.Enums.IProfile;
 import adam.betts.utilities.Enums.ISA;
 import adam.betts.utilities.Enums.LpSolveVerbosity;
-import adam.betts.utilities.Enums.OutputFormats;
 
 public class DefaultOptions
 {

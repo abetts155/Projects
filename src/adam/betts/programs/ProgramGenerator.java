@@ -2,8 +2,11 @@ package adam.betts.programs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Random;
+import java.util.Stack;
 
+import adam.betts.edges.Edge;
 import adam.betts.graphs.CFGGenerator;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
@@ -16,23 +19,21 @@ import adam.betts.vertices.Vertex;
 
 public class ProgramGenerator
 {
-	protected ArrayList <Subprogram> subprograms = new ArrayList <Subprogram> ();
+	protected Random random = new Random ();
 	protected Program program = new Program ();
 	protected CallGraph callgraph = new CallGraph ();
-	protected int rootID;
-	protected Random gen = new Random ();
-	protected final int numOfSubprograms = MainProgramGenerator.Globals.getNumberOfSubprograms ();
-	protected final int depth = MainProgramGenerator.Globals.getDepthOfCallGraph ();
-	protected HashMap <Integer, ArrayList <Integer>> callSites = new HashMap <Integer, ArrayList <Integer>> ();
+	protected int rootID = Vertex.DUMMY_VERTEX_ID;
+	protected HashMap <Integer, ArrayList <Integer>> candidateCallSites = new HashMap <Integer, ArrayList <Integer>> ();
 	protected ArrayList <Integer> disconnectedNodes = new ArrayList <Integer> ();
-	protected ArrayList <Subprogram> possibleRoots = new ArrayList <Subprogram> ();
-	protected int level = 0;
 	protected HashMap <Integer, Integer> levelMap = new HashMap <Integer, Integer> ();
 
 	public ProgramGenerator ()
 	{
 		addSubprograms ();
-		addCalls ();
+		setCallGraphRoot ();
+		addTreeEdgesToCallGraph ();
+		addOtherAcyclicEdgesToCallGraph ();
+
 		program.callg = callgraph;
 
 		if (Globals.uDrawDirectorySet ())
@@ -48,19 +49,34 @@ public class ProgramGenerator
 
 	private void addSubprograms ()
 	{
-		Debug.debugMessage (getClass (), "Adding subprograms", 3);
+		Debug.debugMessage (getClass (), "Adding subprograms", 1);
 
-		for (int i = 1; i <= numOfSubprograms; ++i)
+		for (int subprogramID = 1; subprogramID <= MainProgramGenerator.Globals
+				.getNumberOfSubprograms (); ++subprogramID)
 		{
-			final String subprogramName = "F" + Integer.toString (i);
-			program.addSubprogram (i, subprogramName);
-			Subprogram subprogram = program.getSubprogram (i);
+			final String subprogramName = "F" + Integer.toString (subprogramID);
+			program.addSubprogram (subprogramID, subprogramName);
+			Subprogram s = program.getSubprogram (subprogramID);
 
-			Debug.debugMessage (getClass (), "Adding subprogram " + subprogramName, 4);
+			Debug.debugMessage (getClass (), "Adding subprogram " + subprogramName + " with id = "
+					+ subprogramID, 1);
 
 			CFGGenerator generator = new CFGGenerator ();
 			final ControlFlowGraph cfg = generator.getCFG ();
-			subprogram.setCFG (cfg);
+			s.setCFG (cfg);
+
+			callgraph.addVertex (subprogramID, s.getSubprogramName ());
+			disconnectedNodes.add (subprogramID);
+			candidateCallSites.put (subprogramID, new ArrayList <Integer> ());
+			levelMap.put (subprogramID, 0);
+
+			for (Vertex v : cfg)
+			{
+				if (v.numOfSuccessors () == 1 && v.getVertexID () != cfg.getExitID ())
+				{
+					candidateCallSites.get (subprogramID).add (v.getVertexID ());
+				}
+			}
 
 			if (Globals.uDrawDirectorySet ())
 			{
@@ -76,118 +92,169 @@ public class ProgramGenerator
 		}
 	}
 
-	private void addCalls ()
+	private void setCallGraphRoot ()
 	{
-		initiateCallGraph ();
-		initLevelMap ();
-		setRoot ();
-		addEdges ();
-	}
+		Debug.debugMessage (getClass (), "Setting call graph root", 2);
 
-	private void initiateCallGraph ()
-	{
+		int totalCallSites = 0;
+		int maxCallSites = 0;
+
 		for (Subprogram s : program)
 		{
-			int subprogramID = s.getSubprogramID ();
-			disconnectedNodes.add (subprogramID);
-			callgraph.addVertex (subprogramID, s.getSubprogramName ());
-			callSites.put (subprogramID, new ArrayList <Integer> ());
+			int callSites = candidateCallSites.get (s.getSubprogramID ()).size ();
 
-			for (Vertex v : s.getCFG ())
-			{
-				if (v.numOfSuccessors () == 1 && v.getVertexID () != s.getCFG ().getExitID ())
-				{
-					callSites.get (subprogramID).add (v.getVertexID ());
-				}
-			}
+			totalCallSites += callSites;
 
-			if (s.getCFG ().numOfVertices () > 0)
+			if (candidateCallSites.get (s.getSubprogramID ()).size () > maxCallSites)
 			{
-				possibleRoots.add (s);
-			}
-		}
-	}
-
-	private void setRoot ()
-	{
-		int maxCallSites = 0;
-		for (Subprogram s : possibleRoots)
-		{
-			if (callSites.get (s.getSubprogramID ()).size () > maxCallSites)
-			{
-				maxCallSites = callSites.get (s.getSubprogramID ()).size ();
+				maxCallSites = callSites;
 				rootID = s.getSubprogramID ();
 			}
 		}
 
+		Debug.debugMessage (getClass (), "Root set to " + rootID, 2);
 		disconnectedNodes.remove (new Integer (rootID));
-		level++;
-		levelMap.put (rootID, level);
-	}
 
-	private void initLevelMap ()
-	{
-		for (Subprogram s : program)
+		if (rootID == Vertex.DUMMY_VERTEX_ID)
 		{
-			levelMap.put (s.getSubprogramID (), 0);
+			Debug.errorMessage (getClass (), "Unable to set root");
+		} else if (totalCallSites < disconnectedNodes.size ())
+		{
+			Debug.errorMessage (getClass (), "Unable to link the call graph together as there are "
+					+ disconnectedNodes.size () + " subprograms but only " + totalCallSites
+					+ " call sites are available");
 		}
 	}
 
-	private void addEdges ()
+	private int getPredecessorWithMaximumCallSites (int subprogramID)
 	{
-		while (!disconnectedNodes.isEmpty ())
+		if (subprogramID == rootID)
 		{
-			// pick a random node
-			int node = disconnectedNodes.remove (disconnectedNodes.size () - 1);
+			return rootID;
+		} else
+		{
+			ArrayList <Vertex> candidatePredecessors = new ArrayList <Vertex> ();
 
-			System.out.println ("Analyzing node " + node);
-
-			ArrayList <Integer> candidateNodes = new ArrayList <Integer> ();
-
-			for (Integer key : levelMap.keySet ())
+			Stack <Vertex> stack = new Stack <Vertex> ();
+			stack.push (callgraph.getVertex (subprogramID));
+			while (!stack.isEmpty ())
 			{
-				int level = levelMap.get (key);
-				if (level != 0 && level < depth)
+				Vertex v = stack.pop ();
+				Iterator <Edge> predIt = v.predecessorIterator ();
+				while (predIt.hasNext ())
 				{
-					if (callSites.get (key).size () > 0)
-					{
-						candidateNodes.add (key);
-					}
+					Edge e = predIt.next ();
+					Vertex p = callgraph.getVertex (e.getVertexID ());
+					candidatePredecessors.add (p);
+					stack.push (p);
 				}
 			}
 
-			System.out.println ("candidateNodes = " + candidateNodes);
-
-			int predecessors = gen.nextInt (candidateNodes.size ()) + 1;
-			for (int i = 1; i <= predecessors; ++i)
+			int maxSize = 0;
+			int bestPredecessorID = Vertex.DUMMY_VERTEX_ID;
+			for (Vertex v : candidatePredecessors)
 			{
-				int predecessorIndex = gen.nextInt (candidateNodes.size ());
-				int predecessorID = candidateNodes.remove (predecessorIndex);
-
-				int noOfCallSites = gen.nextInt (callSites.get (predecessorID).size ()) + 1;
-				System.out.println ("callSites chosen: " + noOfCallSites);
-				System.out.println ("actual callSites: " + callSites.get (predecessorID).size ());
-
-				for (int j = 0; j < noOfCallSites; ++j)
+				if (candidateCallSites.get (v.getVertexID ()).size () > maxSize)
 				{
-					int callSiteID = callSites.get (predecessorID).get (j);
-					Debug.debugMessage (getClass (), "Adding call from " + predecessorID + " to "
-							+ node + " at " + callSiteID, 4);
-					callgraph.addCall (predecessorID, node, callSiteID);
+					maxSize = candidateCallSites.get (v.getVertexID ()).size ();
+					bestPredecessorID = v.getVertexID ();
 				}
+			}
 
-				ArrayList <Integer> remainingCallSites = new ArrayList <Integer> ();
+			if (bestPredecessorID == Vertex.DUMMY_VERTEX_ID)
+			{
+				Debug.errorMessage (getClass (),
+						"Unable to find a suitable vertex to which to backtrack");
+			}
 
-				for (int j = noOfCallSites; j < callSites.get (predecessorID).size (); ++j)
+			return bestPredecessorID;
+		}
+	}
+
+	private void addTreeEdgesToCallGraph ()
+	{
+		Debug.debugMessage (getClass (), "Adding tree edges to call graph", 1);
+
+		int callerID = rootID;
+
+		while (!disconnectedNodes.isEmpty ())
+		{
+			int subprogramID = disconnectedNodes.remove (disconnectedNodes.size () - 1);
+
+			int callSiteIDIndex = random.nextInt (candidateCallSites.get (callerID).size ());
+			int callSiteID = candidateCallSites.get (callerID).remove (callSiteIDIndex);
+
+			callgraph.addCall (callerID, subprogramID, callSiteID);
+
+			int newLevel = levelMap.get (callerID) + 1;
+			levelMap.put (subprogramID, newLevel);
+
+			if (newLevel == MainProgramGenerator.Globals.getDepthOfCallGraph ()
+					|| candidateCallSites.get (subprogramID).size () == 0 || random.nextBoolean ())
+			{
+				callerID = getPredecessorWithMaximumCallSites (subprogramID);
+
+				Debug.debugMessage (getClass (), "Backtracking up call graph to " + callerID, 4);
+			} else
+			{
+				callerID = subprogramID;
+
+				Debug.debugMessage (getClass (), "Moving the predecessor down to " + callerID, 4);
+			}
+		}
+	}
+
+	private void getCandidatePredecessors (Vertex subprogram, ArrayList <Integer> candidateCallers)
+	{
+		Debug.debugMessage (getClass (), "Finding candidate predecessors for subprogram "
+				+ subprogram.getVertexID (), 1);
+
+		for (Vertex v : callgraph)
+		{
+			int subprogramID = v.getVertexID ();
+
+			if (subprogramID != subprogram.getVertexID ())
+			{
+				if (levelMap.get (subprogramID) < levelMap.get (subprogram.getVertexID ())
+						&& subprogram.hasPredecessor (subprogramID) == false
+						&& candidateCallSites.get (subprogramID).size () > 0)
 				{
-					remainingCallSites.add (callSites.get (predecessorID).get (j));
+					candidateCallers.add (subprogramID);
 				}
-				callSites.put (predecessorID, remainingCallSites);
-				System.out.println ("remainingCallsites: " + callSites.get (predecessorID));
+			}
+		}
+	}
 
-				if (levelMap.get (predecessorID) > levelMap.get (node))
+	private void addOtherAcyclicEdgesToCallGraph ()
+	{
+		Debug.debugMessage (getClass (), "Adding other acyclic edges to call graph", 1);
+
+		ArrayList <Integer> callerCandidates = new ArrayList <Integer> ();
+
+		for (Vertex v : callgraph)
+		{
+			callerCandidates.clear ();
+			getCandidatePredecessors (v, callerCandidates);
+
+			if (callerCandidates.size () > 0)
+			{
+				int numberOfCallers = random.nextInt (callerCandidates.size ()) + 1;
+
+				for (int i = 0; i < numberOfCallers; ++i)
 				{
-					levelMap.put (node, levelMap.get (predecessorID) + 1);
+					int callerIDIndex = random.nextInt (callerCandidates.size ());
+					int callerID = callerCandidates.remove (callerIDIndex);
+
+					int numberOfCallSites = random.nextInt (candidateCallSites.get (callerID)
+							.size ()) + 1;
+					for (int j = 0; j < numberOfCallSites; ++j)
+					{
+						int callSiteIDIndex = random.nextInt (candidateCallSites.get (callerID)
+								.size ());
+						int callSiteID = candidateCallSites.get (callerID).remove (callSiteIDIndex);
+
+						callgraph.addCall (callerID, v.getVertexID (), callSiteID);
+					}
 				}
 			}
 		}
