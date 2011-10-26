@@ -1,8 +1,11 @@
 package adam.betts.graphs;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Random;
 
+import adam.betts.outputs.OutputGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
@@ -99,7 +102,9 @@ public class CFGGenerator
 			addLoops ();
 		}
 
-		connectRemainingComponentsAndVertices ();
+		connectDisconnectedComponents ();
+		findMergeVerticesToRemove ();
+		connectRemainingVertices ();
 		setEntry ();
 		setExit ();
 
@@ -122,9 +127,14 @@ public class CFGGenerator
 
 		if (remainingVertices >= sizeOfComponent)
 		{
-			int rand = random.nextInt (remainingVertices) + sizeOfComponent;
-			numOfComponents = rand / sizeOfComponent;
-			remainingVertices = (remainingVertices - rand) + (rand % sizeOfComponent);
+			numOfComponents = random.nextInt ((int) Math
+					.floor (remainingVertices / sizeOfComponent)) + 1;
+
+			remainingVertices = remainingVertices - (numOfComponents * sizeOfComponent);
+
+			Debug.debugMessage (getClass (), "Component size = " + sizeOfComponent
+					+ ". #Components = " + numOfComponents + ". #Remaining vertices = "
+					+ remainingVertices, 4);
 		}
 
 		return numOfComponents;
@@ -235,7 +245,10 @@ public class CFGGenerator
 		Debug.debugMessage (getClass (), "Adding merge vertex " + mergeID, 4);
 		cfg.addBasicBlock (mergeID);
 
-		for (int i = 1; i <= MainProgramGenerator.Globals.getFanOut (); ++i)
+		int numberOfSwitchComponents = 2 + (int) (Math.random () * ((MainProgramGenerator.Globals
+				.getFanOut () - 2) + 1));
+
+		for (int i = 1; i <= numberOfSwitchComponents; ++i)
 		{
 			SingleEntrySingleExitComponent switchBranch = buildSESEComponent ();
 
@@ -289,9 +302,9 @@ public class CFGGenerator
 		return seseComponent;
 	}
 
-	private void connectRemainingComponentsAndVertices ()
+	private void connectDisconnectedComponents ()
 	{
-		Debug.debugMessage (getClass (), "Connecting remaining components and vertices", 1);
+		Debug.debugMessage (getClass (), "Connecting disconnected components", 1);
 
 		while (disconnectedComponents.size () > 1)
 		{
@@ -318,6 +331,99 @@ public class CFGGenerator
 
 			disconnectedComponents.add (firstSeseComponent);
 		}
+	}
+
+	private void findMergeVerticesToRemove ()
+	{
+		Debug.debugMessage (getClass (), "Finding potential merge vertices to remove", 1);
+
+		HashMap <Integer, HashSet <Integer>> newSuccessors = new HashMap <Integer, HashSet <Integer>> ();
+		HashSet <Integer> toRemove = new HashSet <Integer> ();
+
+		for (Vertex v : cfg)
+		{
+			if (v.numOfPredecessors () > 1 && v.numOfSuccessors () == 1)
+			{
+				if (random.nextBoolean ())
+				{
+					toRemove.add (v.getVertexID ());
+				}
+			}
+		}
+
+		remainingVertices += toRemove.size ();
+
+		for (int vertexID : toRemove)
+		{
+			Debug.debugMessage (getClass (), "Analysing merge vertex " + vertexID, 2);
+
+			HashSet <Integer> predIDs = cfg.getVertex (vertexID).getPredecessorIDs ();
+			HashSet <Integer> succIDs = cfg.getVertex (vertexID).getSuccessorIDs ();
+
+			newSuccessors.put (vertexID, new HashSet <Integer> ());
+			newSuccessors.get (vertexID).addAll (succIDs);
+
+			for (int predID : predIDs)
+			{
+				newSuccessors.put (predID, new HashSet <Integer> ());
+				newSuccessors.get (predID).addAll (succIDs);
+
+				Debug.debugMessage (getClass (), "newSucc(" + predID + ")"
+						+ newSuccessors.get (predID), 4);
+			}
+		}
+
+		boolean changed = true;
+		while (changed)
+		{
+			Debug.debugMessage (getClass (), "Updating new successors of unlinked vertices", 2);
+
+			changed = false;
+			for (int predID : newSuccessors.keySet ())
+			{
+				for (int succID : newSuccessors.get (predID))
+				{
+					if (toRemove.contains (succID) && newSuccessors.containsKey (succID))
+					{
+						newSuccessors.get (predID).remove (succID);
+						newSuccessors.get (predID).addAll (newSuccessors.get (succID));
+
+						Debug.debugMessage (getClass (), "Updated: newSucc(" + predID + ")"
+								+ newSuccessors.get (predID), 4);
+
+						changed = true;
+					}
+				}
+			}
+		}
+
+		for (int vertexID : toRemove)
+		{
+			Debug.debugMessage (getClass (), "Removing merge vertex " + vertexID, 2);
+
+			cfg.removeVertex (vertexID);
+		}
+
+		for (int predID : newSuccessors.keySet ())
+		{
+			if (toRemove.contains (predID) == false)
+			{
+				Debug.debugMessage (getClass (), "Updating new successors of vertex " + predID, 3);
+
+				for (int succID : newSuccessors.get (predID))
+				{
+					if (toRemove.contains (succID) == false)
+					{
+						cfg.addEdge (predID, succID, BranchType.TAKEN);
+					}
+				}
+			}
+		}
+	}
+
+	private void connectRemainingVertices ()
+	{
+		Debug.debugMessage (getClass (), "Connecting remaining vertices", 1);
 
 		if (disconnectedComponents.isEmpty () == false)
 		{
@@ -393,9 +499,11 @@ public class CFGGenerator
 			int numberOfSelfLoops = Math.min (selfLoopCandidates.size (),
 					MainProgramGenerator.Globals.getNumberOfSelfLoops ());
 
+			Debug.debugMessage (getClass (), "Self-loop candidates = " + selfLoopCandidates, 4);
+
 			while (numberOfSelfLoops > 0)
 			{
-				int vertexIDIndex = random.nextInt (numberOfSelfLoops);
+				int vertexIDIndex = random.nextInt (selfLoopCandidates.size ());
 				int vertexID = selfLoopCandidates.remove (vertexIDIndex);
 
 				cfg.addEdge (vertexID, vertexID, BranchType.TAKEN);
@@ -409,28 +517,32 @@ public class CFGGenerator
 	{
 		Debug.debugMessage (getClass (), "Setting the entry vertex", 1);
 
-		ArrayList <Vertex> noPreds = new ArrayList <Vertex> ();
+		ArrayList <Integer> noPreds = new ArrayList <Integer> ();
 		for (Vertex v : cfg)
 		{
 			if (v.numOfPredecessors () == 0)
 			{
 				Debug.debugMessage (getClass (),
 						v.getVertexID () + " is currently an entry vertex", 4);
-				noPreds.add (v);
+				noPreds.add (v.getVertexID ());
 			}
 		}
 
 		if (noPreds.size () > 1)
 		{
+			OutputGraph.output (cfg);
 			Debug.errorMessage (getClass (),
-					"Unable to find entry vertex : too many vertices with no predecessors.");
+					"Unable to find entry vertex. Too many vertices with no predecessors: "
+							+ noPreds);
 		} else if (noPreds.size () == 0)
 		{
-			Debug.errorMessage (getClass (),
-					"Unable to find entry vertex : no vertex without predecessors found. ");
+			Debug
+					.errorMessage (getClass (),
+							"Unable to find entry vertex. No vertex without predecessors found: "
+									+ noPreds);
 		} else
 		{
-			int entryID = noPreds.get (noPreds.size () - 1).getVertexID ();
+			int entryID = noPreds.get (noPreds.size () - 1);
 			cfg.setEntryID (entryID);
 			Debug.debugMessage (getClass (), "Setting entry id to " + entryID, 4);
 		}
@@ -440,28 +552,29 @@ public class CFGGenerator
 	{
 		Debug.debugMessage (getClass (), "Setting the exit vertex", 1);
 
-		ArrayList <Vertex> noSuccs = new ArrayList <Vertex> ();
+		ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
 		for (Vertex v : cfg)
 		{
 			if (v.numOfSuccessors () == 0)
 			{
 				Debug.debugMessage (getClass (), v.getVertexID () + " is currently an exit vertex",
 						4);
-				noSuccs.add (v);
+				noSuccs.add (v.getVertexID ());
 			}
 		}
 
 		if (noSuccs.size () > 1)
 		{
+			OutputGraph.output (cfg);
 			Debug.errorMessage (getClass (),
-					"Unable to find exit vertex : too many vertices with no predecessors.");
+					"Unable to find exit vertex. Too many vertices with no successors: " + noSuccs);
 		} else if (noSuccs.size () == 0)
 		{
 			Debug.errorMessage (getClass (),
-					"Unable to find exit vertex : no vertex without successors found. ");
+					"Unable to find exit vertex. No vertex without successors found: " + noSuccs);
 		} else
 		{
-			int exitID = noSuccs.get (noSuccs.size () - 1).getVertexID ();
+			int exitID = noSuccs.get (noSuccs.size () - 1);
 			cfg.setExitID (exitID);
 			Debug.debugMessage (getClass (), "Setting exit id to " + exitID, 4);
 		}

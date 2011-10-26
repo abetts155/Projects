@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import adam.betts.edges.CallEdge;
@@ -663,7 +664,7 @@ public class UDrawGraph
 		out.write (endVertex + "\n");
 	}
 
-	public final static void makeUDrawFile (CallGraph callg)
+	public final static void makeUDrawFile (CallGraph callg, int rootID)
 	{
 		try
 		{
@@ -671,40 +672,20 @@ public class UDrawGraph
 			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
 
 			out.write (beginGraph);
+
+			/*
+			 * Write the root vertex so it appears at the top of the graph
+			 */
+			writeCallGraphVertex (out, callg.getVertex (rootID), rootID);
+
 			for (Vertex v : callg)
 			{
 				CallVertex callv = (CallVertex) v;
 
-				out.write (newVertex (v.getVertexID ()));
-
-				out.write (beginAttributes);
-				out.write (setName (callv.getSubprogramName ()));
-				if (callv.numOfPredecessors () == 0)
+				if (callv.getVertexID () != rootID)
 				{
-					out.write (setColor (COLOR.YELLOW));
-				} else if (callv.numOfSuccessors () == 0)
-				{
-					out.write (setColor (COLOR.RED));
+					writeCallGraphVertex (out, callv, rootID);
 				}
-				out
-						.write (setToolTip ("Subprogram ID = "
-								+ Integer.toString (callv.getVertexID ())));
-				out.write (endAttibutes);
-
-				out.write (beginAttributes);
-				Iterator <Edge> succIt = v.successorIterator ();
-				while (succIt.hasNext ())
-				{
-					CallEdge e = (CallEdge) succIt.next ();
-					out.write (newEdge);
-					out.write (beginAttributes);
-					out.write (setToolTip (e.callSites ().toString ()));
-					out.write (endAttibutes);
-					out.write (edgeLink (e.getVertexID ()));
-					out.write (endEdge + ",\n");
-				}
-
-				out.write (endVertex + "\n");
 			}
 			out.write (endGraph);
 
@@ -714,6 +695,45 @@ public class UDrawGraph
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
 		}
+	}
+
+	private static void writeCallGraphVertex (BufferedWriter out, CallVertex v, int rootID)
+			throws IOException
+	{
+		final int subprogramID = v.getVertexID ();
+
+		out.write (newVertex (subprogramID));
+
+		out.write (beginAttributes);
+		out.write (setName (v.getSubprogramName ()));
+		if (subprogramID == rootID)
+		{
+			out.write (setToolTip ("Root\\nSubprogram ID = " + Integer.toString (subprogramID)));
+			out.write (setColor (COLOR.YELLOW));
+		} else if (v.numOfSuccessors () == 0)
+		{
+			out.write (setToolTip ("Leaf\\nSubprogram ID = " + Integer.toString (subprogramID)));
+			out.write (setColor (COLOR.RED));
+		} else
+		{
+			out.write (setToolTip ("Subprogram ID = " + Integer.toString (subprogramID)));
+		}
+		out.write (endAttibutes);
+
+		out.write (beginAttributes);
+		Iterator <Edge> succIt = v.successorIterator ();
+		while (succIt.hasNext ())
+		{
+			CallEdge e = (CallEdge) succIt.next ();
+			out.write (newEdge);
+			out.write (beginAttributes);
+			out.write (setToolTip (e.callSites ().toString ()));
+			out.write (endAttibutes);
+			out.write (edgeLink (e.getVertexID ()));
+			out.write (endEdge + ",\n");
+		}
+
+		out.write (endVertex + "\n");
 	}
 
 	public final static void makeUDrawFile (CallLoopGraph clg)

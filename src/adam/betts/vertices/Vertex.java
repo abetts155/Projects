@@ -1,6 +1,7 @@
 package adam.betts.vertices;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import adam.betts.edges.Edge;
@@ -11,8 +12,8 @@ public class Vertex
 	public final static int FIRST_VERTEX_ID = 1;
 
 	protected int vertexID;
-	protected ArrayList<Edge> predecessors = new ArrayList<Edge> ();
-	protected ArrayList<Edge> successors = new ArrayList<Edge> ();
+	protected ArrayList <Edge> predecessors = new ArrayList <Edge> ();
+	protected ArrayList <Edge> successors = new ArrayList <Edge> ();
 
 	public Vertex (int vertexID)
 	{
@@ -37,7 +38,7 @@ public class Vertex
 	public final void removePredecessor (Integer predecessorID)
 	{
 		int i = 0;
-		for (Edge e: predecessors)
+		for (Edge e : predecessors)
 		{
 			if (e.getVertexID () == predecessorID)
 			{
@@ -53,7 +54,7 @@ public class Vertex
 
 	public final boolean hasPredecessor (Integer predecessorID)
 	{
-		for (Edge e: predecessors)
+		for (Edge e : predecessors)
 		{
 			if (e.getVertexID () == predecessorID)
 			{
@@ -65,7 +66,7 @@ public class Vertex
 
 	public final Edge getPredecessor (Integer predecessorID)
 	{
-		for (Edge e: predecessors)
+		for (Edge e : predecessors)
 		{
 			if (e.getVertexID () == predecessorID)
 			{
@@ -90,7 +91,7 @@ public class Vertex
 		return predecessors.size ();
 	}
 
-	public Iterator<Edge> predecessorIterator ()
+	public Iterator <Edge> predecessorIterator ()
 	{
 		return predecessors.iterator ();
 	}
@@ -99,7 +100,7 @@ public class Vertex
 	{
 		StringBuffer buffer = new StringBuffer ();
 		int i = 0;
-		for (Edge e: predecessors)
+		for (Edge e : predecessors)
 		{
 			buffer.append (e.toString ());
 			if (i++ < predecessors.size ())
@@ -110,6 +111,16 @@ public class Vertex
 		return buffer.toString ();
 	}
 
+	public final HashSet <Integer> getPredecessorIDs ()
+	{
+		HashSet <Integer> predIDs = new HashSet <Integer> ();
+		for (Edge e : predecessors)
+		{
+			predIDs.add (e.getVertexID ());
+		}
+		return predIDs;
+	}
+
 	public void addSuccessor (Integer successorID)
 	{
 		successors.add (new Edge (successorID));
@@ -118,7 +129,7 @@ public class Vertex
 	public final void removeSuccessor (Integer successorID)
 	{
 		int i = 0;
-		for (Edge e: successors)
+		for (Edge e : successors)
 		{
 			if (e.getVertexID () == successorID)
 			{
@@ -134,7 +145,7 @@ public class Vertex
 
 	public final boolean hasSuccessor (Integer successorID)
 	{
-		for (Edge e: successors)
+		for (Edge e : successors)
 		{
 			if (e.getVertexID () == successorID)
 			{
@@ -146,7 +157,7 @@ public class Vertex
 
 	public final Edge getSuccessor (Integer successorID)
 	{
-		for (Edge e: successors)
+		for (Edge e : successors)
 		{
 			if (e.getVertexID () == successorID)
 			{
@@ -160,7 +171,7 @@ public class Vertex
 	{
 		return successors.get (i);
 	}
-	
+
 	public final boolean hasSuccessors ()
 	{
 		return successors.size () > 0;
@@ -171,7 +182,7 @@ public class Vertex
 		return successors.size ();
 	}
 
-	public Iterator<Edge> successorIterator ()
+	public Iterator <Edge> successorIterator ()
 	{
 		return successors.iterator ();
 	}
@@ -180,7 +191,7 @@ public class Vertex
 	{
 		StringBuffer buffer = new StringBuffer ();
 		int i = 0;
-		for (Edge e: successors)
+		for (Edge e : successors)
 		{
 			buffer.append (e.toString ());
 			if (i++ < successors.size ())
@@ -189,5 +200,15 @@ public class Vertex
 			}
 		}
 		return buffer.toString ();
+	}
+
+	public final HashSet <Integer> getSuccessorIDs ()
+	{
+		HashSet <Integer> succIDs = new HashSet <Integer> ();
+		for (Edge e : successors)
+		{
+			succIDs.add (e.getVertexID ());
+		}
+		return succIDs;
 	}
 }

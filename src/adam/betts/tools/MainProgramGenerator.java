@@ -19,12 +19,22 @@ public class MainProgramGenerator
 	private static Option fanOutOption;
 	private static Option loopsOption;
 	private static Option selfLoopsOption;
-	private static Option returnsOption;
 	private static Option subprogramsOption;
 	private static Option depthOption;
 	private static Option breaksOption;
 	private static Option continuesOption;
+	private static Option indirectRecursionOption;
+	private static Option directRecursionOption;
 	private static Option numberOfVerticesOption;
+
+	private final static int minVertices = 10;
+	private final static int maxVertices = 1000;
+
+	private final static int minFanOut = 2;
+	private final static int maxFanOut = 10;
+
+	private final static int maxNumberOfLoops = 10;
+	private final static int maxNumberOfSelfLoops = 5;
 
 	public static void main (String[] args)
 	{
@@ -40,28 +50,22 @@ public class MainProgramGenerator
 		DefaultOptions.addUDrawDirectoryOption (options);
 
 		fanOutOption = new Option ("F", "fan-out", true,
-				"Maximum number of successors of a vertex in range 2..5. Default is "
-						+ Globals.fanOut + ".");
+				"Maximum number of successors of a vertex in range [" + minFanOut + ".."
+						+ maxFanOut + "]. Default is " + Globals.fanOut + ".");
 		fanOutOption.setRequired (false);
 		options.addOption (fanOutOption);
 
 		loopsOption = new Option ("l", "loops", true,
-				"Maximum number of loops in a single graph in range 0..10. Default is "
-						+ Globals.loops + ".");
+				"Maximum number of loops in a single graph in range [0.." + maxNumberOfLoops
+						+ "]. Default is " + Globals.loops + ".");
 		loopsOption.setRequired (false);
 		options.addOption (loopsOption);
 
 		selfLoopsOption = new Option ("S", "self-loops", true,
-				"Maximum number of self-loops in a single graph in range 0..5. Default is "
-						+ Globals.selfLoops + ".");
+				"Maximum number of self-loops in a single graph in range [0.."
+						+ maxNumberOfSelfLoops + "]. Default is " + Globals.selfLoops + ".");
 		selfLoopsOption.setRequired (false);
 		options.addOption (selfLoopsOption);
-
-		returnsOption = new Option ("r", "returns", true,
-				"Maximum number of returns in a single graph in range 1..4. Default is "
-						+ Globals.returns + ".");
-		returnsOption.setRequired (false);
-		options.addOption (returnsOption);
 
 		subprogramsOption = new Option ("s", "subprograms", true,
 				"Maximum number of sub-programs in the program.");
@@ -72,6 +76,18 @@ public class MainProgramGenerator
 				"Maximum depth of the call graph. Default is " + Globals.depth + ".");
 		depthOption.setRequired (false);
 		options.addOption (depthOption);
+
+		directRecursionOption = new Option ("R", "direct-recursion", true,
+				"Number of direct recursive calls. Default is " + Globals.directRecursiveCalls
+						+ ".");
+		directRecursionOption.setRequired (false);
+		options.addOption (directRecursionOption);
+
+		indirectRecursionOption = new Option ("I", "indirect-recursion", true,
+				"Number of indirect recursive calls. Default is " + Globals.indirectRecursiveCalls
+						+ ".");
+		indirectRecursionOption.setRequired (false);
+		options.addOption (indirectRecursionOption);
 
 		breaksOption = new Option ("b", "breaks", true, "Include break-like structures in loops.");
 		breaksOption.setRequired (false);
@@ -96,12 +112,6 @@ public class MainProgramGenerator
 		HelpFormatter formatter = new HelpFormatter ();
 		formatter.setWidth (128);
 		CommandLine line = null;
-
-		final int minVertices = 10;
-		final int maxVertices = 1000;
-
-		final int minFanOut = 2;
-		final int maxFanOut = 10;
 
 		try
 		{
@@ -138,8 +148,8 @@ public class MainProgramGenerator
 					} catch (IllegalArgumentException e)
 					{
 						System.err.println (arg
-								+ " is not a valid fan out. It must be in the range " + minFanOut
-								+ ".." + maxFanOut);
+								+ " is not a valid fan out. It must be in the range [" + minFanOut
+								+ ".." + maxFanOut + "].");
 						System.exit (1);
 					}
 				}
@@ -150,7 +160,7 @@ public class MainProgramGenerator
 					try
 					{
 						int loops = Integer.parseInt (arg);
-						if (loops < 0 || loops > 100)
+						if (loops < 0 || loops > maxNumberOfLoops)
 						{
 							throw new IllegalArgumentException ();
 						}
@@ -162,9 +172,9 @@ public class MainProgramGenerator
 						System.exit (1);
 					} catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid number of loops. It must be in the range 0..100.");
+						System.err.println (arg
+								+ " is not a valid number of loops. It must be in the range [0.."
+								+ maxNumberOfLoops + "].");
 						System.exit (1);
 					}
 				}
@@ -175,7 +185,7 @@ public class MainProgramGenerator
 					try
 					{
 						int selfLoops = Integer.parseInt (arg);
-						if (selfLoops < 0 || selfLoops > 5)
+						if (selfLoops < 0 || selfLoops > maxNumberOfSelfLoops)
 						{
 							throw new IllegalArgumentException ();
 						}
@@ -189,32 +199,8 @@ public class MainProgramGenerator
 					{
 						System.err
 								.println (arg
-										+ " is not a valid number of self loops. It must be in the range 0..5.");
-						System.exit (1);
-					}
-				}
-
-				if (line.hasOption (returnsOption.getOpt ()))
-				{
-					String arg = line.getOptionValue (returnsOption.getOpt ());
-					try
-					{
-						int returns = Integer.parseInt (arg);
-						if (returns < 0 || returns > 4)
-						{
-							throw new IllegalArgumentException ();
-						}
-						Globals.returns = returns;
-					} catch (NumberFormatException e)
-					{
-						System.err.println ("'" + arg + "' is not a valid argument to "
-								+ returnsOption.getLongOpt ());
-						System.exit (1);
-					} catch (IllegalArgumentException e)
-					{
-						System.err
-								.println (arg
-										+ " is not a valid number of returns. It must be in the range 0..4.");
+										+ " is not a valid number of self loops. It must be in the range [0.."
+										+ maxNumberOfSelfLoops + "]");
 						System.exit (1);
 					}
 				}
@@ -245,6 +231,61 @@ public class MainProgramGenerator
 					}
 				}
 
+				if (line.hasOption (directRecursionOption.getOpt ()))
+				{
+					String arg = line.getOptionValue (directRecursionOption.getOpt ());
+					try
+					{
+						int calls = Integer.parseInt (arg);
+						if (calls < 0)
+						{
+							throw new IllegalArgumentException (
+									calls
+											+ " is not a valid number of direct recursive calls. Negative numbers not permitted.");
+						} else if (calls > Globals.subprograms)
+						{
+							throw new IllegalArgumentException (
+									calls
+											+ " is not a valid number of direct recursive calls. There must be at least as many subprograms as the number of direct recursive calls.");
+						}
+						Globals.directRecursiveCalls = calls;
+					} catch (NumberFormatException e)
+					{
+						System.err.println ("'" + arg + "' is not a valid argument to "
+								+ subprogramsOption.getLongOpt ());
+						System.exit (1);
+					} catch (IllegalArgumentException e)
+					{
+						System.err.println (e.getMessage ());
+						System.exit (1);
+					}
+				}
+
+				if (line.hasOption (indirectRecursionOption.getOpt ()))
+				{
+					String arg = line.getOptionValue (indirectRecursionOption.getOpt ());
+					try
+					{
+						int calls = Integer.parseInt (arg);
+						if (calls < 0)
+						{
+							throw new IllegalArgumentException (
+									calls
+											+ " is not a valid number of indirect recursive calls. Negative numbers not permitted.");
+						}
+						Globals.indirectRecursiveCalls = calls;
+					} catch (NumberFormatException e)
+					{
+						System.err.println ("'" + arg + "' is not a valid argument to "
+								+ subprogramsOption.getLongOpt ());
+						System.exit (1);
+					} catch (IllegalArgumentException e)
+					{
+						System.err.println (e.getMessage ());
+						System.exit (1);
+					}
+				}
+
 				if (line.hasOption (depthOption.getOpt ()))
 				{
 					String arg = line.getOptionValue (depthOption.getOpt ());
@@ -270,8 +311,8 @@ public class MainProgramGenerator
 						{
 							throw new IllegalArgumentException (vertices
 									+ " is not a valid number of vertices. "
-									+ "It must be a positive integer in the range " + minVertices
-									+ ".." + maxVertices);
+									+ "It must be a positive integer in the range [" + minVertices
+									+ ".." + maxVertices + "].");
 						}
 						if (vertices < 2 * Globals.loops + 2)
 						{
@@ -311,14 +352,15 @@ public class MainProgramGenerator
 	public static class Globals
 	{
 		protected static int subprograms;
-		protected static int fanOut = 2;
+		protected static int fanOut = minFanOut;
 		protected static int loops = 0;
 		protected static int selfLoops = 0;
-		protected static int returns = 1;
 		protected static int depth = 7;
 		protected static boolean breaks = false;
 		protected static boolean continues = false;
 		protected static int vertices = 50;
+		protected static int directRecursiveCalls = 0;
+		protected static int indirectRecursiveCalls = 0;
 
 		public final static int getFanOut ()
 		{
@@ -333,11 +375,6 @@ public class MainProgramGenerator
 		public final static int getNumberOfSelfLoops ()
 		{
 			return selfLoops;
-		}
-
-		public final static int getNumberOfReturns ()
-		{
-			return returns;
 		}
 
 		public final static int getNumberOfSubprograms ()
@@ -363,6 +400,16 @@ public class MainProgramGenerator
 		public final static int getNumberOfVerticesInCFG ()
 		{
 			return vertices;
+		}
+
+		public final static int getNumberOfDirectRecursiveCalls ()
+		{
+			return directRecursiveCalls;
+		}
+
+		public final static int getNumberOfIndirectRecursiveCalls ()
+		{
+			return indirectRecursiveCalls;
 		}
 	}
 }

@@ -54,7 +54,7 @@ public class Program implements Iterable <Subprogram>
 
 			if (Globals.uDrawDirectorySet ())
 			{
-				UDrawGraph.makeUDrawFile (callg);
+				UDrawGraph.makeUDrawFile (callg, rootID);
 
 				for (String subprogramName : nameToId.keySet ())
 				{

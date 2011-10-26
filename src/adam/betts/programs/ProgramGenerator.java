@@ -2,6 +2,7 @@ package adam.betts.programs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Stack;
@@ -10,6 +11,7 @@ import adam.betts.edges.Edge;
 import adam.betts.graphs.CFGGenerator;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.tools.MainProgramGenerator;
@@ -21,7 +23,7 @@ public class ProgramGenerator
 {
 	protected Random random = new Random ();
 	protected Program program = new Program ();
-	protected CallGraph callgraph = new CallGraph ();
+	protected CallGraph callg = new CallGraph ();
 	protected int rootID = Vertex.DUMMY_VERTEX_ID;
 	protected HashMap <Integer, ArrayList <Integer>> candidateCallSites = new HashMap <Integer, ArrayList <Integer>> ();
 	protected ArrayList <Integer> disconnectedNodes = new ArrayList <Integer> ();
@@ -34,11 +36,21 @@ public class ProgramGenerator
 		addTreeEdgesToCallGraph ();
 		addOtherAcyclicEdgesToCallGraph ();
 
-		program.callg = callgraph;
+		if (MainProgramGenerator.Globals.getNumberOfDirectRecursiveCalls () > 0)
+		{
+			addDirectRecursiveCalls ();
+		}
+
+		if (MainProgramGenerator.Globals.getNumberOfIndirectRecursiveCalls () > 0)
+		{
+			addIndirectRecursiveCalls ();
+		}
+
+		program.callg = callg;
 
 		if (Globals.uDrawDirectorySet ())
 		{
-			UDrawGraph.makeUDrawFile (program.getCallGraph ());
+			UDrawGraph.makeUDrawFile (callg, rootID);
 		}
 	}
 
@@ -65,7 +77,7 @@ public class ProgramGenerator
 			final ControlFlowGraph cfg = generator.getCFG ();
 			s.setCFG (cfg);
 
-			callgraph.addVertex (subprogramID, s.getSubprogramName ());
+			callg.addVertex (subprogramID, s.getSubprogramName ());
 			disconnectedNodes.add (subprogramID);
 			candidateCallSites.put (subprogramID, new ArrayList <Integer> ());
 			levelMap.put (subprogramID, 0);
@@ -136,7 +148,7 @@ public class ProgramGenerator
 			ArrayList <Vertex> candidatePredecessors = new ArrayList <Vertex> ();
 
 			Stack <Vertex> stack = new Stack <Vertex> ();
-			stack.push (callgraph.getVertex (subprogramID));
+			stack.push (callg.getVertex (subprogramID));
 			while (!stack.isEmpty ())
 			{
 				Vertex v = stack.pop ();
@@ -144,7 +156,7 @@ public class ProgramGenerator
 				while (predIt.hasNext ())
 				{
 					Edge e = predIt.next ();
-					Vertex p = callgraph.getVertex (e.getVertexID ());
+					Vertex p = callg.getVertex (e.getVertexID ());
 					candidatePredecessors.add (p);
 					stack.push (p);
 				}
@@ -184,7 +196,7 @@ public class ProgramGenerator
 			int callSiteIDIndex = random.nextInt (candidateCallSites.get (callerID).size ());
 			int callSiteID = candidateCallSites.get (callerID).remove (callSiteIDIndex);
 
-			callgraph.addCall (callerID, subprogramID, callSiteID);
+			callg.addCall (callerID, subprogramID, callSiteID);
 
 			int newLevel = levelMap.get (callerID) + 1;
 			levelMap.put (subprogramID, newLevel);
@@ -207,9 +219,9 @@ public class ProgramGenerator
 	private void getCandidatePredecessors (Vertex subprogram, ArrayList <Integer> candidateCallers)
 	{
 		Debug.debugMessage (getClass (), "Finding candidate predecessors for subprogram "
-				+ subprogram.getVertexID (), 1);
+				+ subprogram.getVertexID (), 4);
 
-		for (Vertex v : callgraph)
+		for (Vertex v : callg)
 		{
 			int subprogramID = v.getVertexID ();
 
@@ -217,6 +229,7 @@ public class ProgramGenerator
 			{
 				if (levelMap.get (subprogramID) < levelMap.get (subprogram.getVertexID ())
 						&& subprogram.hasPredecessor (subprogramID) == false
+						&& v.numOfSuccessors () <= 3
 						&& candidateCallSites.get (subprogramID).size () > 0)
 				{
 					candidateCallers.add (subprogramID);
@@ -231,32 +244,126 @@ public class ProgramGenerator
 
 		ArrayList <Integer> callerCandidates = new ArrayList <Integer> ();
 
-		for (Vertex v : callgraph)
+		for (Vertex v : callg)
 		{
 			callerCandidates.clear ();
 			getCandidatePredecessors (v, callerCandidates);
 
 			if (callerCandidates.size () > 0)
 			{
-				int numberOfCallers = random.nextInt (callerCandidates.size ()) + 1;
+				int numberOfCallers = Math.min (random.nextInt (callerCandidates.size ()) + 1, 3);
+
+				Debug.debugMessage (getClass (), "Adding an additional " + numberOfCallers
+						+ " callers to subprogram " + v.getVertexID () + ". Candidates are: "
+						+ callerCandidates, 3);
 
 				for (int i = 0; i < numberOfCallers; ++i)
 				{
 					int callerIDIndex = random.nextInt (callerCandidates.size ());
 					int callerID = callerCandidates.remove (callerIDIndex);
 
-					int numberOfCallSites = random.nextInt (candidateCallSites.get (callerID)
-							.size ()) + 1;
+					int numberOfCallSites = Math.min (random.nextInt (candidateCallSites.get (
+							callerID).size ()) + 1, 5);
+
 					for (int j = 0; j < numberOfCallSites; ++j)
 					{
 						int callSiteIDIndex = random.nextInt (candidateCallSites.get (callerID)
 								.size ());
 						int callSiteID = candidateCallSites.get (callerID).remove (callSiteIDIndex);
 
-						callgraph.addCall (callerID, v.getVertexID (), callSiteID);
+						callg.addCall (callerID, v.getVertexID (), callSiteID);
 					}
 				}
 			}
+		}
+	}
+
+	private void addDirectRecursiveCalls ()
+	{
+		Debug.debugMessage (getClass (), "Adding direct recursive calls to call graph", 1);
+
+		ArrayList <Integer> recursiveCandidates = new ArrayList <Integer> ();
+
+		for (Vertex v : callg)
+		{
+			int subprogramID = v.getVertexID ();
+
+			if (v.numOfSuccessors () <= 2 && candidateCallSites.get (subprogramID).size () > 0)
+			{
+				recursiveCandidates.add (subprogramID);
+			}
+		}
+
+		int totalDirectRecursiveCalls = Math.min (MainProgramGenerator.Globals
+				.getNumberOfDirectRecursiveCalls (), recursiveCandidates.size ());
+
+		Debug.debugMessage (getClass (), "Will add " + totalDirectRecursiveCalls
+				+ " direct recursive calls", 2);
+
+		for (int i = 0; i < totalDirectRecursiveCalls; ++i)
+		{
+			int subprogramIDIndex = random.nextInt (recursiveCandidates.size ());
+			int subprogramID = recursiveCandidates.remove (subprogramIDIndex);
+
+			int callSiteIDIndex = random.nextInt (candidateCallSites.get (subprogramID).size ());
+			int callSiteID = candidateCallSites.get (subprogramID).remove (callSiteIDIndex);
+
+			callg.addCall (subprogramID, subprogramID, callSiteID);
+		}
+	}
+
+	private void addIndirectRecursiveCalls ()
+	{
+		Debug.debugMessage (getClass (), "Adding indirect recursive calls to call graph", 1);
+
+		HashMap <Integer, HashSet <Integer>> properAncestors = new HashMap <Integer, HashSet <Integer>> ();
+
+		DepthFirstTree dfs = new DepthFirstTree (callg, rootID);
+
+		for (int i = callg.numOfVertices (); i >= 1; --i)
+		{
+			int subprogramID = dfs.getPostVertexID (i);
+
+			properAncestors.put (subprogramID, new HashSet <Integer> ());
+
+			Vertex subprogram = callg.getVertex (subprogramID);
+			Iterator <Edge> predIt = subprogram.predecessorIterator ();
+			while (predIt.hasNext ())
+			{
+				Edge p = predIt.next ();
+				int predID = p.getVertexID ();
+				properAncestors.get (subprogramID).add (predID);
+				properAncestors.get (subprogramID).addAll (properAncestors.get (predID));
+			}
+		}
+
+		for (int i = 0; i < MainProgramGenerator.Globals.getNumberOfIndirectRecursiveCalls (); ++i)
+		{
+			int subprogramID = Vertex.DUMMY_VERTEX_ID;
+			while (subprogramID == Vertex.DUMMY_VERTEX_ID || subprogramID == rootID
+					|| candidateCallSites.get (subprogramID).isEmpty ())
+			{
+				subprogramID = random.nextInt (callg.numOfVertices ()) + 1;
+			}
+
+			Debug.debugMessage (getClass (), "Chosen subprogram is " + subprogramID, 3);
+
+			int succIDIndex = random.nextInt (properAncestors.get (subprogramID).size ());
+
+			Iterator <Integer> it = properAncestors.get (subprogramID).iterator ();
+			for (int j = 0; j < succIDIndex; ++j)
+			{
+				it.next ();
+			}
+			int succID = it.next ();
+
+			Debug.debugMessage (getClass (), "Chosen callee is " + succID + " out of "
+					+ properAncestors.get (subprogramID), 3);
+
+			int callSiteIDIndex = random.nextInt (candidateCallSites.get (subprogramID).size ());
+			int callSiteID = candidateCallSites.get (subprogramID).remove (callSiteIDIndex);
+
+			callg.addCall (subprogramID, succID, callSiteID);
 		}
 	}
 }
