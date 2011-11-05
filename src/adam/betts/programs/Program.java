@@ -45,11 +45,17 @@ public class Program implements Iterable <Subprogram>
 
 			if (Globals.hasRoot ())
 			{
-				/*
-				 * Only set the root if the user entered one and once the
-				 * program has been read in from the file
-				 */
 				rootID = nameToId.get (Globals.getRoot ());
+			} else
+			{
+				setRootID ();
+			}
+
+			for (int subprogramID : idToSubprogram.keySet ())
+			{
+				final Subprogram subprogram = idToSubprogram.get (subprogramID);
+				final ControlFlowGraph cfg = subprogram.getCFG ();
+				cfg.addEntryAndExitEdges ();
 			}
 
 			if (Globals.uDrawDirectorySet ())
@@ -86,31 +92,6 @@ public class Program implements Iterable <Subprogram>
 	public final void setRootID (int rootID)
 	{
 		this.rootID = rootID;
-	}
-
-	public final void setRootID ()
-	{
-		ArrayList <Integer> rootIDs = new ArrayList <Integer> ();
-
-		for (Vertex v : callg)
-		{
-			if (v.numOfPredecessors () == 0)
-			{
-				rootIDs.add (v.getVertexID ());
-			}
-		}
-
-		if (rootIDs.size () == 0)
-		{
-			Debug.errorMessage (getClass (), "Unable to find root. None found.");
-		} else if (rootIDs.size () > 1)
-		{
-			Debug.errorMessage (getClass (), "Unable to find root. Too many found: " + rootIDs);
-		} else
-		{
-			this.rootID = rootIDs.get (rootIDs.size () - 1);
-			Debug.debugMessage (getClass (), "Root ID set to " + this.rootID, 4);
-		}
 	}
 
 	public final int getRootID ()
@@ -357,39 +338,37 @@ public class Program implements Iterable <Subprogram>
 
 	public final void buildLNTs ()
 	{
-		Debug.debugMessage (getClass (), "Building LNTs", 2);
+		Debug.debugMessage (getClass (), "Building LNTs", Debug.FUNCTION_LEVEL);
 
 		for (int subprogramID : idToSubprogram.keySet ())
 		{
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
-			final ControlFlowGraph cfg = subprogram.getCFG ();
-			cfg.addEntryAndExitEdges ();
 
 			Debug.debugMessage (getClass (), "Building LNT of " + subprogram.getSubprogramName (),
-					3);
+					Debug.LOOP_LEVEL_1);
 
-			final LoopNests lnt = new LoopNests (cfg, cfg.getEntryID ());
+			final ControlFlowGraph cfg = subprogram.getCFG ();
+			cfg.generateLNT ();
 
 			if (Globals.uDrawDirectorySet ())
 			{
-				UDrawGraph.makeUDrawFile (lnt, subprogram.getSubprogramName ());
+				UDrawGraph.makeUDrawFile (cfg.getLNT (), subprogram.getSubprogramName ());
 			}
 		}
 	}
 
 	public final void buildSyntaxTrees ()
 	{
-		Debug.debugMessage (getClass (), "Building Syntax Trees", 2);
+		Debug.debugMessage (getClass (), "Building Syntax Trees", Debug.FUNCTION_LEVEL);
 
 		for (int subprogramID : idToSubprogram.keySet ())
 		{
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
-			final ControlFlowGraph cfg = subprogram.getCFG ();
-			cfg.addEntryAndExitEdges ();
 
 			Debug.debugMessage (getClass (), "Building syntax tree of "
-					+ subprogram.getSubprogramName (), 3);
+					+ subprogram.getSubprogramName (), Debug.LOOP_LEVEL_1);
 
+			final ControlFlowGraph cfg = subprogram.getCFG ();
 			final SyntaxTree stree = new SyntaxTree (cfg, subprogram.getSubprogramName ());
 			subprogram.setSyntaxTree (stree);
 
@@ -428,5 +407,30 @@ public class Program implements Iterable <Subprogram>
 			}
 		}
 		return clg;
+	}
+
+	private final void setRootID ()
+	{
+		ArrayList <Integer> rootIDs = new ArrayList <Integer> ();
+
+		for (Vertex v : callg)
+		{
+			if (v.numOfPredecessors () == 0)
+			{
+				rootIDs.add (v.getVertexID ());
+			}
+		}
+
+		if (rootIDs.size () == 0)
+		{
+			Debug.errorMessage (getClass (), "Unable to find root. None found.");
+		} else if (rootIDs.size () > 1)
+		{
+			Debug.errorMessage (getClass (), "Unable to find root. Too many found: " + rootIDs);
+		} else
+		{
+			this.rootID = rootIDs.get (rootIDs.size () - 1);
+			Debug.debugMessage (getClass (), "Root ID set to " + this.rootID, 4);
+		}
 	}
 }

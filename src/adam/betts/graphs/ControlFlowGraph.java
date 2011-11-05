@@ -23,7 +23,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 	protected String subprogramName;
 	protected Long firstAddress;
 	protected Long lastAddress;
-	protected LoopNests lnt = null;
+	protected LoopNests lnt;
 
 	public ControlFlowGraph ()
 	{
@@ -163,7 +163,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		for (Vertex v : this)
 		{
 			long address = ((BasicBlock) v).getFirstAddress ();
-			if (address < firstAddress)
+			if (address < firstAddress && address != BasicBlock.DUMMY_ADDRESS)
 			{
 				firstAddress = address;
 				entryID = v.getVertexID ();
@@ -194,11 +194,10 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 			} else
 			{
 				Debug
-						.debugMessage (
+						.errorMessage (
 								getClass (),
 								"Could not find a unique entry point through predecessor inspection either. Giving up. Potential entry points found: "
-										+ noPreds, 1);
-				System.exit (1);
+										+ noPreds);
 			}
 		}
 	}
@@ -222,10 +221,9 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 					+ " as it has no successors", 1);
 		} else
 		{
-			Debug.debugMessage (getClass (),
+			Debug.errorMessage (getClass (),
 					"Could not find a unique exit point. Giving up. Potential exit points found: "
-							+ noSuccs, 1);
-			System.exit (1);
+							+ noSuccs);
 		}
 	}
 
@@ -328,6 +326,8 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public void addEntryAndExitEdges ()
 	{
+		Debug.debugMessage (getClass (), "Adding entry and exit edges", Debug.FUNCTION_LEVEL);
+
 		if (entryID == Vertex.DUMMY_VERTEX_ID)
 		{
 			ArrayList <Integer> noPreds = new ArrayList <Integer> ();
@@ -343,6 +343,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 			if (noPreds.size () == 1)
 			{
+				Debug.debugMessage (getClass (), "Setting entry to " + entryID, 3);
 				this.entryID = noPreds.get (noPreds.size () - 1);
 			} else
 			{
@@ -372,6 +373,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 			if (noSuccs.size () == 1)
 			{
+				Debug.debugMessage (getClass (), "Setting exit to " + entryID, 3);
 				this.exitID = noSuccs.get (noSuccs.size () - 1);
 			} else
 			{
@@ -394,12 +396,13 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 		}
 	}
 
+	public final void generateLNT ()
+	{
+		this.lnt = new LoopNests (this, this.entryID);
+	}
+
 	public final LoopNests getLNT ()
 	{
-		if (lnt == null)
-		{
-			lnt = new LoopNests (this, this.entryID);
-		}
 		return lnt;
 	}
 }

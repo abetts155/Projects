@@ -20,7 +20,7 @@ public class MainTreeAnalysis
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
+		DefaultOptions.addRootOption (options, false);
 		DefaultOptions.addTraceFileOption (options);
 		DefaultOptions.addUDrawDirectoryOption (options);
 		DefaultOptions.addIPETOptions (options);

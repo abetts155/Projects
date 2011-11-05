@@ -30,7 +30,7 @@ public class DepthFirstTree extends Tree
 		this.directedg = directedg;
 		this.rootID = rootID;
 
-		Debug.debugMessage (getClass (), "Root = " + rootID, 4);
+		Debug.debugMessage (getClass (), "Root = " + rootID, 2);
 
 		initialise ();
 		doDFS (rootID);
@@ -52,6 +52,7 @@ public class DepthFirstTree extends Tree
 	{
 		Debug.debugMessage (getClass (), "Visiting " + vertexID
 				+ " (pre-order = " + preID + ")", 4);
+		
 		visited.add (vertexID);
 		vToPre.put (vertexID, preID);
 		preToV.put (preID, vertexID);

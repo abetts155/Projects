@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Set;
 
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
@@ -31,7 +30,7 @@ public class CalculationEngineCFG
 	protected final Program program;
 	protected final CallGraph callg;
 	protected final Database database;
-	protected final HashMap <String, IPETModel> ILPs = new HashMap <String, IPETModel> ();
+	protected final HashMap <String, IPETModelCFG> ILPs = new HashMap <String, IPETModelCFG> ();
 
 	public CalculationEngineCFG (Program program, Database database)
 	{
@@ -72,6 +71,8 @@ public class CalculationEngineCFG
 	private class IPETModelCFG extends IPETModel
 	{
 		protected final ControlFlowGraph cfg;
+		protected int flowConstraints = 0;
+		protected int loopConstraints = 0;
 
 		public IPETModelCFG (ControlFlowGraph cfg, LoopNests lnt, int subprogramID,
 				String subprogramName)
@@ -124,7 +125,7 @@ public class CalculationEngineCFG
 						null);
 				try
 				{
-					lp = LpSolve.readLp (file.getAbsolutePath (), MainTraceParser.Globals
+					lp = LpSolve.readLp (file.getAbsolutePath (), MainTraceParser
 							.getLpSolveVerbosity (), null);
 					solve ();
 				} catch (SolutionException e)
@@ -146,20 +147,22 @@ public class CalculationEngineCFG
 				while (levelIt.hasNext ())
 				{
 					TreeVertex v = levelIt.next ();
-					int vertexID = v.getVertexID ();
 
-					if (lnt.isLoopHeader (vertexID))
+					if (v instanceof HeaderVertex)
 					{
+						HeaderVertex headerv = (HeaderVertex) v;
+						int headerID = headerv.getHeaderID ();
+						int vertexID = v.getVertexID ();
+
 						entryEdges.put (vertexID, new ArrayList <Integer> ());
 						backEdges.put (vertexID, new ArrayList <Integer> ());
 						ancestors.put (vertexID, new ArrayList <Integer> ());
-						ancestors.get (vertexID).add (vertexID);
 
 						if (vertexID != lnt.getRootID ())
 						{
 							ancestors.get (vertexID).addAll (ancestors.get (v.getParentID ()));
 
-							BasicBlock cfgv = cfg.getBasicBlock (vertexID);
+							BasicBlock cfgv = cfg.getBasicBlock (headerID);
 							Iterator <Edge> predIt = cfgv.predecessorIterator ();
 							while (predIt.hasNext ())
 							{
@@ -167,9 +170,9 @@ public class CalculationEngineCFG
 								int edgeID = e.getEdgeID ();
 								int predID = e.getVertexID ();
 
-								if (!lnt.isLoopTail (vertexID, predID))
+								if (!lnt.isLoopTail (headerID, predID))
 								{
-									entryEdges.get (vertexID).add (edgeID);
+									entryEdges.get (headerID).add (edgeID);
 								}
 							}
 						}
@@ -225,17 +228,12 @@ public class CalculationEngineCFG
 		{
 			for (Vertex v : cfg)
 			{
-				/*
-				 * Only add the flow constraint for a vertex if it has both
-				 * successors and predecessors
-				 */
 				if (v.hasPredecessors () && v.hasSuccessors ())
 				{
+					flowConstraints++;
+
 					out.write ("// Vertex " + Integer.toString (v.getVertexID ()) + "\n");
 
-					/*
-					 * First write out the vertex constraint
-					 */
 					out.write (vertexPrefix + Long.toString (v.getVertexID ()) + " = ");
 
 					int num = 1;
@@ -253,39 +251,46 @@ public class CalculationEngineCFG
 					}
 					out.write (";\n");
 
-					num = 1;
-					Iterator <Edge> succIt = v.successorIterator ();
-					while (succIt.hasNext ())
-					{
-						FlowEdge e = (FlowEdge) succIt.next ();
-						int edgeID = e.getEdgeID ();
-						out.write (edgePrefix + Integer.toString (edgeID));
-
-						if (num++ < v.numOfSuccessors ())
-						{
-							out.write (" + ");
-						}
-					}
-
-					out.write (" = ");
-
-					num = 1;
-					predIt = v.predecessorIterator ();
-					while (predIt.hasNext ())
-					{
-						FlowEdge e = (FlowEdge) predIt.next ();
-						int edgeID = e.getEdgeID ();
-						out.write (edgePrefix + Integer.toString (edgeID));
-
-						if (num++ < v.numOfPredecessors ())
-						{
-							out.write (" + ");
-						}
-					}
-
-					out.write (";\n\n");
+					writeEdgeConstraints (v, out);
 				}
 			}
+		}
+
+		private void writeEdgeConstraints (Vertex v, BufferedWriter out) throws IOException
+		{
+			flowConstraints++;
+
+			int num = 1;
+			Iterator <Edge> succIt = v.successorIterator ();
+			while (succIt.hasNext ())
+			{
+				FlowEdge e = (FlowEdge) succIt.next ();
+				int edgeID = e.getEdgeID ();
+				out.write (edgePrefix + Integer.toString (edgeID));
+
+				if (num++ < v.numOfSuccessors ())
+				{
+					out.write (" + ");
+				}
+			}
+
+			out.write (" = ");
+
+			num = 1;
+			Iterator <Edge> predIt = v.predecessorIterator ();
+			while (predIt.hasNext ())
+			{
+				FlowEdge e = (FlowEdge) predIt.next ();
+				int edgeID = e.getEdgeID ();
+				out.write (edgePrefix + Integer.toString (edgeID));
+
+				if (num++ < v.numOfPredecessors ())
+				{
+					out.write (" + ");
+				}
+			}
+
+			out.write (";\n\n");
 		}
 
 		private void writeLoopConstraints (int subprogramID, LoopNests lnt, BufferedWriter out)
@@ -301,15 +306,15 @@ public class CalculationEngineCFG
 					if (v instanceof HeaderVertex)
 					{
 						HeaderVertex headerv = (HeaderVertex) v;
-						int headerID = headerv.getHeaderID ();
 
-						out.write ("// Header " + Integer.toString (headerID) + "\n");
-						if (headerID == cfg.getEntryID ())
+						out.write ("// Header " + Integer.toString (headerv.getHeaderID ()) + "\n");
+						if (headerv.getHeaderID () == cfg.getEntryID ())
 						{
-							out.write (vertexPrefix + Long.toString (headerID) + " = 1;\n");
+							out.write (vertexPrefix + Long.toString (headerv.getHeaderID ())
+									+ " = 1;\n");
 						} else
 						{
-							writeInnerLoopConstraints (subprogramID, lnt, headerID, out);
+							writeInnerLoopConstraints (subprogramID, lnt, headerv, out);
 						}
 						out.newLine ();
 					}
@@ -317,40 +322,39 @@ public class CalculationEngineCFG
 			}
 		}
 
-		private void writeInnerLoopConstraints (int subprogramID, LoopNests lnt, int headerID,
-				BufferedWriter out) throws IOException
+		private void writeInnerLoopConstraints (int subprogramID, LoopNests lnt,
+				HeaderVertex headerv, BufferedWriter out) throws IOException
 		{
-			for (int ancestorID : ancestors.get (headerID))
+			for (int ancestorID : ancestors.get (headerv.getVertexID ()))
 			{
-				if (ancestorID != cfg.getEntryID ())
+				HeaderVertex ancestorv = (HeaderVertex) lnt.getVertex (ancestorID);
+
+				if (headerv.getLevel () - ancestorv.getLevel () <= loopConstraintLevel)
 				{
-					int parentID = lnt.getVertex (ancestorID).getParentID ();
+					out.write ("//...with respect to "
+							+ Integer.toString (ancestorv.getHeaderID ()) + "\n");
 
-					TreeVertex h = lnt.getVertex (headerID);
-					TreeVertex p = lnt.getVertex (parentID);
+					int bound = database.getLoopBound (subprogramID, headerv.getVertexID (),
+							ancestorID);
+					Debug.debugMessage (getClass (), "Adding constraint on loop "
+							+ headerv.getVertexID () + " relative to loop " + ancestorv
+							+ ". Bound = " + bound, 4);
 
-					if (h.getLevel () - p.getLevel () <= loopConstraintLevel)
-					{
-						out.write ("//...with respect to " + Integer.toString (parentID) + "\n");
-
-						int bound = database.getLoopBound (subprogramID, headerID, parentID);
-						Debug.debugMessage (getClass (), "Adding constraint on loop " + headerID
-								+ " relative to loop " + parentID + ". Bound = " + bound, 4);
-
-						writeSuccessorEdges (out, headerID);
-						out.write (" <= ");
-						writeImplicatingEdges (out, ancestorID, bound);
-						out.write (";\n");
-					}
+					writeSuccessorEdges (out, headerv);
+					out.write (" <= ");
+					writeImplicatingEdges (out, ancestorv, bound);
+					out.write (";\n");
 				}
+
 			}
 		}
 
-		private void writeSuccessorEdges (BufferedWriter out, int headerID) throws IOException
+		private void writeSuccessorEdges (BufferedWriter out, HeaderVertex headerv)
+				throws IOException
 		{
 			int num = 1;
 
-			Vertex v = cfg.getVertex (headerID);
+			Vertex v = cfg.getVertex (headerv.getHeaderID ());
 			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
@@ -365,45 +369,17 @@ public class CalculationEngineCFG
 			}
 		}
 
-		private void writeImplicatingEdges (BufferedWriter out, int headerID, int bound)
+		private void writeImplicatingEdges (BufferedWriter out, HeaderVertex headerv, int bound)
 				throws IOException
 		{
 			int num = 1;
-			for (int edgeID : entryEdges.get (headerID))
+			for (int edgeID : entryEdges.get (headerv.getVertexID ()))
 			{
 				out.write (Integer.toString (bound) + " " + edgePrefix + Integer.toString (edgeID));
 
-				if (num++ < entryEdges.get (headerID).size ())
+				if (num++ < entryEdges.get (headerv.getVertexID ()).size ())
 				{
 					out.write (" + ");
-				}
-			}
-		}
-
-		private void writeInfeasiblePathConstraints (int subprogramID, BufferedWriter out)
-				throws IOException
-		{
-			out.write ("// Infeasible path constraints\n\n");
-			for (Vertex v : cfg)
-			{
-				int vertexID = v.getVertexID ();
-				Set <Integer> infeasibleVertices = database.getInfeasibleUnits (subprogramID,
-						vertexID);
-
-				if (!infeasibleVertices.isEmpty ())
-				{
-					out.write ("// Vertex " + Integer.toString (vertexID) + "\n");
-
-					for (int infeasibleVertexID : infeasibleVertices)
-					{
-						if (infeasibleVertexID != vertexID)
-						{
-							out.write (vertexPrefix + Integer.toString (vertexID) + " + "
-									+ vertexPrefix + Integer.toString (infeasibleVertexID)
-									+ " <= 1;\n");
-						}
-					}
-					out.write ("\n");
 				}
 			}
 		}

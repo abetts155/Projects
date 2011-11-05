@@ -22,7 +22,6 @@ public class DefaultOptions
 	private static Option rootOption;
 	private static Option iprofileOption;
 	private static Option uDrawDirectoryOption;
-	private static Option outputFormatOption;
 	private static Option lpSolveDirectoryOption;
 	private static Option lpSolveVerbosityOption;
 	private static Option loopContraintLevelOption;
@@ -45,17 +44,15 @@ public class DefaultOptions
 		programFileOption = new Option ("p", "program", true,
 				"File containing program structure (either XML or disassembly)."
 						+ "\nSupported instruction set architectures: "
-						+ Arrays.toString (ISA.values ()).replace ("[", "")
-								.replace ("]", "") + ".");
+						+ Arrays.toString (ISA.values ()).replace ("[", "").replace ("]", "") + ".");
 		programFileOption.setRequired (true);
 		options.addOption (programFileOption);
 	}
 
-	public final static void addRootOption (Options options)
+	public final static void addRootOption (Options options, boolean required)
 	{
-		rootOption = new Option ("r", "root", true,
-				"Entry point(s) of the program.");
-		rootOption.setRequired (true);
+		rootOption = new Option ("r", "root", true, "Entry point(s) of the program.");
+		rootOption.setRequired (required);
 		rootOption.setArgs (Option.UNLIMITED_VALUES);
 		options.addOption (rootOption);
 	}
@@ -72,33 +69,26 @@ public class DefaultOptions
 				try
 				{
 					int debugLevel = Integer.parseInt (arg);
-					if (debugLevel < Debug.LOWEST_DEBUG
-							|| debugLevel > Debug.HIGHEST_DEBUG)
+					if (debugLevel < Debug.LOWEST_LEVEL || debugLevel > Debug.HIGHEST_LEVEL)
 					{
 						throw new IllegalArgumentException ();
-					}
-					else
+					} else
 					{
 						Debug.setDebugLevel (debugLevel);
 					}
-				}
-				catch (NumberFormatException e)
+				} catch (NumberFormatException e)
 				{
 					System.err.println ("'" + arg
 							+ "' is not a valid argument to the debug option.");
 					System.exit (1);
-				}
-				catch (IllegalArgumentException e)
+				} catch (IllegalArgumentException e)
 				{
-					System.err
-							.println (arg
-									+ " is not a valid debug level. It should be in the range: "
-									+ Debug.LOWEST_DEBUG + ".."
-									+ Debug.HIGHEST_DEBUG + ".");
+					System.err.println (arg
+							+ " is not a valid debug level. It should be in the range: "
+							+ Debug.LOWEST_LEVEL + ".." + Debug.HIGHEST_LEVEL + ".");
 					System.exit (1);
 				}
-			}
-			else
+			} else
 			{
 				System.err
 						.println ("You must specify the level of debug mode as an argument to the debug option.");
@@ -109,27 +99,27 @@ public class DefaultOptions
 
 	public final static void setProgramOption (CommandLine line)
 	{
-		Globals.setProgramFileName (line.getOptionValue (programFileOption
-				.getOpt ()));
+		Globals.setProgramFileName (line.getOptionValue (programFileOption.getOpt ()));
 	}
 
 	public final static void setRootOption (CommandLine line)
 	{
-		for (String arg: line.getOptionValues (rootOption.getOpt ()))
+		if (line.hasOption (rootOption.getOpt ()))
 		{
-			Globals.setRoot (arg);
+			for (String arg : line.getOptionValues (rootOption.getOpt ()))
+			{
+				Globals.setRoot (arg);
+			}
 		}
 	}
 
 	public final static void addInstrumentationProfileOption (Options options,
-			boolean requiredOption,
-			int numberOfArgs)
+			boolean requiredOption, int numberOfArgs)
 	{
 		iprofileOption = new Option ("i", "instrument", true,
 				"Instrument virtually according to a particular profile."
 						+ "\nSupported arguments are: "
-						+ Arrays.toString (IProfile.values ())
-								.replace ("[", "").replace ("]", ""));
+						+ Arrays.toString (IProfile.values ()).replace ("[", "").replace ("]", ""));
 		iprofileOption.setRequired (requiredOption);
 		iprofileOption.setArgs (numberOfArgs);
 		options.addOption (iprofileOption);
@@ -139,20 +129,16 @@ public class DefaultOptions
 	{
 		if (line.hasOption (iprofileOption.getOpt ()))
 		{
-			String[] iprofileOpts = line.getOptionValues (iprofileOption
-					.getOpt ());
+			String[] iprofileOpts = line.getOptionValues (iprofileOption.getOpt ());
 			for (int i = 0; i < iprofileOpts.length; ++i)
 			{
 				String iprofile = iprofileOpts[i];
 				try
 				{
-					Globals.addInstrumentationProfile (IProfile
-							.valueOf (iprofile.toUpperCase ()));
-				}
-				catch (IllegalArgumentException e)
+					Globals.addInstrumentationProfile (IProfile.valueOf (iprofile.toUpperCase ()));
+				} catch (IllegalArgumentException e)
 				{
-					System.err.println (iprofile
-							+ " is not a valid instrumentation profile");
+					System.err.println (iprofile + " is not a valid instrumentation profile");
 					System.exit (1);
 				}
 			}
@@ -168,8 +154,7 @@ public class DefaultOptions
 
 	public final static void setTraceFileOption (CommandLine line)
 	{
-		Globals.setTraceFileName (line.getOptionValue (traceFileOption
-				.getOpt ()));
+		Globals.setTraceFileName (line.getOptionValue (traceFileOption.getOpt ()));
 	}
 
 	public final static void addOutFileOption (Options options)
@@ -181,8 +166,7 @@ public class DefaultOptions
 
 	public final static void setOutFileOption (CommandLine line)
 	{
-		Globals.setOutputFileName (line
-				.getOptionValue (outFileOption.getOpt ()));
+		Globals.setOutputFileName (line.getOptionValue (outFileOption.getOpt ()));
 	}
 
 	public final static void addUDrawDirectoryOption (Options options)
@@ -197,8 +181,7 @@ public class DefaultOptions
 	{
 		if (line.hasOption (uDrawDirectoryOption.getOpt ()))
 		{
-			Globals.setUDrawDirectory (line
-					.getOptionValue (uDrawDirectoryOption.getOpt ()));
+			Globals.setUDrawDirectory (line.getOptionValue (uDrawDirectoryOption.getOpt ()));
 		}
 	}
 
@@ -209,13 +192,10 @@ public class DefaultOptions
 		lpSolveDirectoryOption.setRequired (false);
 		options.addOption (lpSolveDirectoryOption);
 
-		lpSolveVerbosityOption = new Option (
-				"l",
-				"lpsolve-verbose",
-				true,
+		lpSolveVerbosityOption = new Option ("l", "lpsolve-verbose", true,
 				"Force the verbosity of lp_solve to the selected level.\nSupported arguments are: "
-						+ Arrays.toString (LpSolveVerbosity.values ()).replace (
-								"[", "").replace ("]", ""));
+						+ Arrays.toString (LpSolveVerbosity.values ()).replace ("[", "").replace (
+								"]", ""));
 		lpSolveVerbosityOption.setRequired (false);
 		options.addOption (lpSolveVerbosityOption);
 
@@ -244,11 +224,9 @@ public class DefaultOptions
 			try
 			{
 				IPETModel.setLpSolveVerbosity (arg.toUpperCase ());
-			}
-			catch (IllegalArgumentException e)
+			} catch (IllegalArgumentException e)
 			{
-				System.err.println (arg
-						+ " is not a valid verbosity level of lp_solve.");
+				System.err.println (arg + " is not a valid verbosity level of lp_solve.");
 				System.exit (1);
 			}
 		}
@@ -262,23 +240,19 @@ public class DefaultOptions
 				if (level < 1)
 				{
 					throw new IllegalArgumentException ();
-				}
-				else
+				} else
 				{
 					IPETModel.setLoopConstraintLevel (level);
 				}
-			}
-			catch (NumberFormatException e)
+			} catch (NumberFormatException e)
 			{
 				System.err.println ("'" + arg + "' is not a valid argument to "
 						+ loopContraintLevelOption.getLongOpt ());
 				System.exit (1);
-			}
-			catch (IllegalArgumentException e)
+			} catch (IllegalArgumentException e)
 			{
-				System.err
-						.println (arg
-								+ " is not a valid loop constraint level. It must be a positive number.");
+				System.err.println (arg
+						+ " is not a valid loop constraint level. It must be a positive number.");
 				System.exit (1);
 			}
 		}

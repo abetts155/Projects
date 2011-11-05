@@ -35,7 +35,7 @@ public class MainWCETAnalyser
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
+		DefaultOptions.addRootOption (options, true);
 		DefaultOptions.addInstrumentationProfileOption (options, true, 1);
 		DefaultOptions.addTraceFileOption (options);
 		DefaultOptions.addOutFileOption (options);
@@ -73,8 +73,7 @@ public class MainWCETAnalyser
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				/*
 				 * Set the global variables according to the command-line
@@ -89,15 +88,11 @@ public class MainWCETAnalyser
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setIPETOptions (line);
 
-				Globals.observedWCET = line.hasOption (observedWCETOption
-						.getOpt ());
-				Globals.expandContexts = line.hasOption (expandContextsOption
-						.getOpt ());
-				Globals.incrementalWCET = line.hasOption (incrementalWCETOption
-						.getOpt ());
+				Globals.observedWCET = line.hasOption (observedWCETOption.getOpt ());
+				Globals.expandContexts = line.hasOption (expandContextsOption.getOpt ());
+				Globals.incrementalWCET = line.hasOption (incrementalWCETOption.getOpt ());
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);
@@ -119,8 +114,7 @@ public class MainWCETAnalyser
 			WCETOutput.writeSubprogramTableHeader ();
 			new IPGDatabase (program);
 			WCETOutput.closeFileHandles ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			e.printStackTrace ();
 			System.exit (1);

@@ -21,7 +21,7 @@ public class MainProgramBuilder
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
+		DefaultOptions.addRootOption (options, true);
 		DefaultOptions.addUDrawDirectoryOption (options);
 	}
 

@@ -33,8 +33,8 @@ public class CalculationEngineAST
 	protected final Program program;
 	protected final CallGraph callg;
 	protected final Database database;
-	protected final HashMap<String, TimingSchema> timingSchemas = new HashMap<String, TimingSchema> ();
-	protected final HashMap<String, IPETModelAST> ILPs = new HashMap<String, IPETModelAST> ();
+	protected final HashMap <String, TimingSchema> timingSchemas = new HashMap <String, TimingSchema> ();
+	protected final HashMap <String, IPETModelAST> ILPs = new HashMap <String, IPETModelAST> ();
 
 	public CalculationEngineAST (Program program, Database database)
 	{
@@ -52,37 +52,35 @@ public class CalculationEngineAST
 			/*
 			 * Timing schema calculation
 			 */
-			Debug.debugMessage (getClass (), "Timing schema on "
-					+ subprogramName, 3);
+			Debug.debugMessage (getClass (), "Timing schema on " + subprogramName, 3);
 
 			SyntaxTree stree = subprogram.getSyntaxTree ();
-			TimingSchema ts = new TimingSchema (stree, subprogram.getCFG ()
-					.getLNT (), subprogramID);
+			TimingSchema ts = new TimingSchema (stree, subprogram.getCFG ().getLNT (), subprogramID);
 			timingSchemas.put (subprogramName, ts);
 
-			Debug.debugMessage (getClass (), "AST-TS: WCET(" + subprogramName
-					+ ") = " + ts.wcet, 3);
+			Debug
+					.debugMessage (getClass (),
+							"AST-TS: WCET(" + subprogramName + ") = " + ts.wcet, 3);
 
 			/*
 			 * ILP calculation
 			 */
 
-			Debug.debugMessage (getClass (), "Building IPET of "
-					+ subprogramName, 3);
+			Debug.debugMessage (getClass (), "Building IPET of " + subprogramName, 3);
 
-			IPETModelAST ilp = new IPETModelAST (stree, subprogram.getCFG ()
-					.getLNT (), subprogramID, subprogramName);
+			IPETModelAST ilp = new IPETModelAST (stree, subprogram.getCFG ().getLNT (),
+					subprogramID, subprogramName);
 			ILPs.put (subprogramName, ilp);
 
-			Debug.debugMessage (getClass (), "AST-ILP: WCET(" + subprogramName
-					+ ") = " + ilp.wcet, 3);
+			Debug.debugMessage (getClass (), "AST-ILP: WCET(" + subprogramName + ") = " + ilp.wcet,
+					3);
 
 		}
 	}
 
 	public final long getTimingSchemaWCET (int subprogramID)
 	{
-		for (String subprogramName: timingSchemas.keySet ())
+		for (String subprogramName : timingSchemas.keySet ())
 		{
 			if (program.getSubprogram (subprogramName).getSubprogramID () == subprogramID)
 			{
@@ -94,7 +92,7 @@ public class CalculationEngineAST
 
 	public final long getIPETWCET (int subprogramID)
 	{
-		for (String subprogramName: ILPs.keySet ())
+		for (String subprogramName : ILPs.keySet ())
 		{
 			if (program.getSubprogram (subprogramName).getSubprogramID () == subprogramID)
 			{
@@ -123,7 +121,7 @@ public class CalculationEngineAST
 
 		private void markLeavesWithWCETS ()
 		{
-			for (Vertex v: stree)
+			for (Vertex v : stree)
 			{
 				if (v instanceof LeafVertex)
 				{
@@ -135,10 +133,8 @@ public class CalculationEngineAST
 
 						if (calleeID == Vertex.DUMMY_VERTEX_ID)
 						{
-							leafv.setWCET (database.getUnitWCET (subprogramID,
-									bbID));
-						}
-						else
+							leafv.setWCET (database.getUnitWCET (subprogramID, bbID));
+						} else
 						{
 							leafv.setWCET (getTimingSchemaWCET (calleeID));
 						}
@@ -151,7 +147,7 @@ public class CalculationEngineAST
 		{
 			for (int level = stree.getHeight () - 1; level >= 0; --level)
 			{
-				Iterator<TreeVertex> levelIt = stree.levelIterator (level);
+				Iterator <TreeVertex> levelIt = stree.levelIterator (level);
 				while (levelIt.hasNext ())
 				{
 					TreeVertex v = levelIt.next ();
@@ -159,12 +155,10 @@ public class CalculationEngineAST
 					if (v instanceof SequenceVertex)
 					{
 						calculateSEQVertex ((SequenceVertex) v);
-					}
-					else if (v instanceof AlternativeVertex)
+					} else if (v instanceof AlternativeVertex)
 					{
 						calculateALTVertex ((AlternativeVertex) v);
-					}
-					else if (v instanceof LoopVertex)
+					} else if (v instanceof LoopVertex)
 					{
 						calculateLOOPVertex ((LoopVertex) v);
 					}
@@ -177,7 +171,7 @@ public class CalculationEngineAST
 		private void calculateSEQVertex (SequenceVertex seq)
 		{
 			long wcet = 0;
-			Iterator<Edge> succIt = seq.successorIterator ();
+			Iterator <Edge> succIt = seq.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -186,13 +180,13 @@ public class CalculationEngineAST
 			}
 			seq.setWCET (wcet);
 
-			Debug.debugMessage (getClass (), "WCET(SEQ_" + seq.getVertexID ()
-					+ ") = " + +seq.getWCET (), 4);
+			Debug.debugMessage (getClass (), "WCET(SEQ_" + seq.getVertexID () + ") = "
+					+ +seq.getWCET (), 4);
 		}
 
 		private void calculateALTVertex (AlternativeVertex alt)
 		{
-			Iterator<Edge> succIt = alt.successorIterator ();
+			Iterator <Edge> succIt = alt.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -203,19 +197,18 @@ public class CalculationEngineAST
 				}
 			}
 
-			Debug.debugMessage (getClass (), "WCET(ALT_" + alt.getVertexID ()
-					+ ") = " + +alt.getWCET (), 4);
+			Debug.debugMessage (getClass (), "WCET(ALT_" + alt.getVertexID () + ") = "
+					+ +alt.getWCET (), 4);
 		}
 
 		private void calculateLOOPVertex (LoopVertex loop)
 		{
 			int headerID = loop.getHeaderID ();
 			int parentID = lnt.getVertex (headerID).getParentID ();
-			int bound = database
-					.getLoopBound (subprogramID, headerID, parentID);
+			int bound = database.getLoopBound (subprogramID, headerID, parentID);
 			long wcet = 0;
 
-			Iterator<Edge> succIt = loop.successorIterator ();
+			Iterator <Edge> succIt = loop.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -225,8 +218,8 @@ public class CalculationEngineAST
 
 			loop.setWCET (wcet * bound);
 
-			Debug.debugMessage (getClass (), "WCET(LOOP_" + loop.getVertexID ()
-					+ ") = " + +loop.getWCET (), 4);
+			Debug.debugMessage (getClass (), "WCET(LOOP_" + loop.getVertexID () + ") = "
+					+ +loop.getWCET (), 4);
 		}
 	}
 
@@ -239,11 +232,9 @@ public class CalculationEngineAST
 		protected final SyntaxTree stree;
 		protected final LoopNests lnt;
 		protected final int subprogramID;
-		protected HashMap<Integer, HashSet<Integer>> bbToLeafIDs = new HashMap<Integer, HashSet<Integer>> ();
+		protected HashMap <Integer, HashSet <Integer>> bbToLeafIDs = new HashMap <Integer, HashSet <Integer>> ();
 
-		public IPETModelAST (SyntaxTree stree,
-				LoopNests lnt,
-				int subprogramID,
+		public IPETModelAST (SyntaxTree stree, LoopNests lnt, int subprogramID,
 				String subprogramName)
 		{
 			this.stree = stree;
@@ -265,62 +256,55 @@ public class CalculationEngineAST
 
 				try
 				{
-					BufferedWriter out = new BufferedWriter (new FileWriter (
-							file.getAbsolutePath ()));
+					BufferedWriter out = new BufferedWriter (new FileWriter (file
+							.getAbsolutePath ()));
 
 					Debug.debugMessage (getClass (), "Writing ILP model to "
 							+ file.getCanonicalPath (), 3);
 
-					Debug.debugMessage (getClass (),
-							"Writing objective function", 3);
+					Debug.debugMessage (getClass (), "Writing objective function", 3);
 					writeObjectiveFunction (subprogramID, out);
 
-					Debug.debugMessage (getClass (),
-							"Writing parent-ancestor constraints", 3);
+					Debug.debugMessage (getClass (), "Writing parent-ancestor constraints", 3);
 					writeParentAncestorConstraints (out);
 
-					Debug.debugMessage (getClass (),
-							"Writing integer constraints", 3);
+					Debug.debugMessage (getClass (), "Writing integer constraints", 3);
 					writeIntegerConstraints (out);
 
 					out.close ();
-				}
-				catch (IOException e)
+				} catch (IOException e)
 				{
 					System.err.println ("Problem with file " + fileName);
 					System.exit (1);
 				}
 
-				lp = LpSolve.readLp (file.getAbsolutePath (), IPETModel
-						.getLpSolveVerbosity (), null);
+				lp = LpSolve.readLp (file.getAbsolutePath (), IPETModel.getLpSolveVerbosity (),
+						null);
 				try
 				{
-					lp = LpSolve.readLp (file.getAbsolutePath (),
-							MainTraceParser.Globals.getLpSolveVerbosity (),
-							null);
+					lp = LpSolve.readLp (file.getAbsolutePath (), MainTraceParser
+							.getLpSolveVerbosity (), null);
 					solve ();
-				}
-				catch (SolutionException e)
+				} catch (SolutionException e)
 				{
 					System.exit (1);
 				}
-			}
-			catch (LpSolveException e)
+			} catch (LpSolveException e)
 			{
 				e.printStackTrace ();
 				System.exit (1);
 			}
 		}
 
-		private void writeObjectiveFunction (int subprogramID,
-				BufferedWriter out) throws IOException
+		private void writeObjectiveFunction (int subprogramID, BufferedWriter out)
+				throws IOException
 		{
 			out.write ("// Objective function\n");
 			out.write ("max: ");
 
 			int num = 1;
 			int numOfLeaves = stree.numOfLeaves ();
-			for (Vertex v: stree)
+			for (Vertex v : stree)
 			{
 				if (v instanceof LeafVertex)
 				{
@@ -339,21 +323,19 @@ public class CalculationEngineAST
 						if (calleeID == Vertex.DUMMY_VERTEX_ID)
 						{
 							wcet = database.getUnitWCET (subprogramID, bbID);
-						}
-						else
+						} else
 						{
 							wcet = getIPETWCET (calleeID);
 						}
 
 						if (!bbToLeafIDs.containsKey (bbID))
 						{
-							bbToLeafIDs.put (bbID, new HashSet<Integer> ());
+							bbToLeafIDs.put (bbID, new HashSet <Integer> ());
 						}
 						bbToLeafIDs.get (bbID).add (vertexID);
 					}
 
-					Debug.debugMessage (getClass (), "WCET(v_" + vertexID
-							+ ") = " + wcet, 4);
+					Debug.debugMessage (getClass (), "WCET(v_" + vertexID + ") = " + wcet, 4);
 					out.write (Long.toString (wcet) + " " + vertexPrefix
 							+ Integer.toString (vertexID));
 
@@ -374,43 +356,39 @@ public class CalculationEngineAST
 
 		private void writeParentAncestorConstraints (BufferedWriter out) throws IOException
 		{
-			HashSet<SequenceVertex> SEQs = new HashSet<SequenceVertex> ();
-			HashSet<LoopVertex> LOOPs = new HashSet<LoopVertex> ();
-			HashSet<AlternativeVertex> ALTs = new HashSet<AlternativeVertex> ();
-			HashSet<LeafVertex> leaves = new HashSet<LeafVertex> ();
+			HashSet <SequenceVertex> SEQs = new HashSet <SequenceVertex> ();
+			HashSet <LoopVertex> LOOPs = new HashSet <LoopVertex> ();
+			HashSet <AlternativeVertex> ALTs = new HashSet <AlternativeVertex> ();
+			HashSet <LeafVertex> leaves = new HashSet <LeafVertex> ();
 
-			for (Vertex v: stree)
+			for (Vertex v : stree)
 			{
 				TreeVertex treev = (TreeVertex) v;
 
 				if (v instanceof SequenceVertex)
 				{
 					SEQs.add ((SequenceVertex) treev);
-				}
-				else if (v instanceof AlternativeVertex)
+				} else if (v instanceof AlternativeVertex)
 				{
 					ALTs.add ((AlternativeVertex) treev);
-				}
-				else if (v instanceof LoopVertex)
+				} else if (v instanceof LoopVertex)
 				{
 					LOOPs.add ((LoopVertex) treev);
-				}
-				else
+				} else
 				{
 					leaves.add ((LeafVertex) treev);
 				}
 			}
 
 			out.write ("// Leaf constraints\n");
-			for (LeafVertex v: leaves)
+			for (LeafVertex v : leaves)
 			{
-				out.write (writeLeafConstraint (v.getVertexID (), v
-						.getParentID ()));
+				out.write (writeLeafConstraint (v.getVertexID (), v.getParentID ()));
 			}
 			out.write ("\n");
 
 			out.write ("// SEQ constraints\n");
-			for (SequenceVertex v: SEQs)
+			for (SequenceVertex v : SEQs)
 			{
 				int vertexID = v.getVertexID ();
 
@@ -418,8 +396,7 @@ public class CalculationEngineAST
 				{
 					out.write (seqPrefix + Integer.toString (vertexID) + " = "
 							+ Integer.toString (1) + ";\n");
-				}
-				else
+				} else
 				{
 					SyntaxVertex parent = stree.getVertex (v.getParentID ());
 					if (parent instanceof LoopVertex)
@@ -427,8 +404,7 @@ public class CalculationEngineAST
 						/*
 						 * The other case is handled by the alternative vertex
 						 */
-						out.write (seqPrefix + Integer.toString (vertexID)
-								+ " = " + loopPrefix
+						out.write (seqPrefix + Integer.toString (vertexID) + " = " + loopPrefix
 								+ Integer.toString (v.getParentID ()) + ";\n");
 					}
 				}
@@ -436,13 +412,12 @@ public class CalculationEngineAST
 			out.write ("\n");
 
 			out.write ("// ALT constraints\n");
-			for (AlternativeVertex v: ALTs)
+			for (AlternativeVertex v : ALTs)
 			{
-				out.write (writeALTConstraint (v.getVertexID (), v
-						.getParentID ()));
+				out.write (writeALTConstraint (v.getVertexID (), v.getParentID ()));
 			}
 
-			for (LoopVertex v: LOOPs)
+			for (LoopVertex v : LOOPs)
 			{
 				out.write (writeLOOPConstraint (v.getVertexID ()));
 			}
@@ -455,12 +430,12 @@ public class CalculationEngineAST
 			/*
 			 * The parent of an ALT is always a SEQ
 			 */
-			buffer.append (altPrefix + Integer.toString (vertexID) + " = "
-					+ seqPrefix + Integer.toString (parentID) + ";\n");
+			buffer.append (altPrefix + Integer.toString (vertexID) + " = " + seqPrefix
+					+ Integer.toString (parentID) + ";\n");
 
 			int num = 1;
 			Vertex altv = stree.getVertex (vertexID);
-			Iterator<Edge> succIt = altv.successorIterator ();
+			Iterator <Edge> succIt = altv.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -473,8 +448,7 @@ public class CalculationEngineAST
 				}
 			}
 
-			buffer.append (" = " + altPrefix + Integer.toString (vertexID)
-					+ ";\n\n");
+			buffer.append (" = " + altPrefix + Integer.toString (vertexID) + ";\n\n");
 
 			return buffer.toString ();
 		}
@@ -498,18 +472,14 @@ public class CalculationEngineAST
 
 				if (h.getLevel () - p.getLevel () <= loopConstraintLevel)
 				{
-					buffer.append ("//...with respect to "
-							+ Integer.toString (parentID) + "\n");
+					buffer.append ("//...with respect to " + Integer.toString (parentID) + "\n");
 
-					int bound = database.getLoopBound (subprogramID, headerID,
-							parentID);
+					int bound = database.getLoopBound (subprogramID, headerID, parentID);
 
-					Debug.debugMessage (getClass (),
-							"Adding constraint on loop " + headerID
-									+ " relative to loop " + parentID
-									+ ". Bound = " + bound, 4);
+					Debug.debugMessage (getClass (), "Adding constraint on loop " + headerID
+							+ " relative to loop " + parentID + ". Bound = " + bound, 4);
 
-					Iterator<Integer> bodyIt = lnt.bodyIterator (headerID);
+					Iterator <Integer> bodyIt = lnt.bodyIterator (headerID);
 					while (bodyIt.hasNext ())
 					{
 						Integer bbID = bodyIt.next ();
@@ -523,26 +493,23 @@ public class CalculationEngineAST
 						if (write)
 						{
 							int num = 1;
-							HashSet<Integer> leafIDs = bbToLeafIDs.get (bbID);
+							HashSet <Integer> leafIDs = bbToLeafIDs.get (bbID);
 
-							for (int leafID: leafIDs)
+							for (int leafID : leafIDs)
 							{
-								buffer.append (vertexPrefix
-										+ Integer.toString (leafID));
+								buffer.append (vertexPrefix + Integer.toString (leafID));
 								if (num++ < leafIDs.size ())
 								{
 									buffer.append (" + ");
 								}
 							}
 
-							buffer
-									.append (" <= "
-											+ Integer.toString (bound)
-											+ " "
-											+ seqPrefix
-											+ Integer.toString (stree
-													.getLoopVertex (ancestorID)
-													.getParentID ()) + ";\n");
+							buffer.append (" <= "
+									+ Integer.toString (bound)
+									+ " "
+									+ seqPrefix
+									+ Integer.toString (stree.getLoopVertex (ancestorID)
+											.getParentID ()) + ";\n");
 
 						}
 
@@ -566,12 +533,10 @@ public class CalculationEngineAST
 			if (parent instanceof AlternativeVertex)
 			{
 				buffer.append (altPrefix);
-			}
-			else if (parent instanceof LoopVertex)
+			} else if (parent instanceof LoopVertex)
 			{
 				buffer.append (loopPrefix);
-			}
-			else
+			} else
 			{
 				buffer.append (seqPrefix);
 			}
@@ -580,32 +545,28 @@ public class CalculationEngineAST
 			return buffer.toString ();
 		}
 
-		private void writeInfeasiblePathConstraints (int subprogramID,
-				BufferedWriter out) throws IOException
+		private void writeInfeasiblePathConstraints (int subprogramID, BufferedWriter out)
+				throws IOException
 		{
 			out.write ("// Infeasible path constraints\n\n");
-			for (int bbID: bbToLeafIDs.keySet ())
+			for (int bbID : bbToLeafIDs.keySet ())
 			{
-				Set<Integer> infeasibleVertices = database.getInfeasibleUnits (
-						subprogramID, bbID);
+				Set <Integer> infeasibleVertices = database.getInfeasibleUnits (subprogramID, bbID);
 
 				if (!infeasibleVertices.isEmpty ())
 				{
 					out.write ("// Vertex " + Integer.toString (bbID) + "\n");
 
-					for (int infeasibleBBID: infeasibleVertices)
+					for (int infeasibleBBID : infeasibleVertices)
 					{
 						if (infeasibleBBID != bbID)
 						{
-							for (int leaf1ID: bbToLeafIDs.get (bbID))
+							for (int leaf1ID : bbToLeafIDs.get (bbID))
 							{
-								for (int leaf2ID: bbToLeafIDs
-										.get (infeasibleBBID))
+								for (int leaf2ID : bbToLeafIDs.get (infeasibleBBID))
 								{
-									out.write (vertexPrefix
-											+ Integer.toString (leaf1ID)
-											+ " + " + vertexPrefix
-											+ Integer.toString (leaf2ID)
+									out.write (vertexPrefix + Integer.toString (leaf1ID) + " + "
+											+ vertexPrefix + Integer.toString (leaf2ID)
 											+ " <= 1;\n");
 								}
 							}
@@ -624,12 +585,11 @@ public class CalculationEngineAST
 
 			out.write ("// Integer constraints\n");
 			out.write ("int ");
-			for (Vertex v: stree)
+			for (Vertex v : stree)
 			{
 				if (v instanceof LeafVertex)
 				{
-					out.write (vertexPrefix
-							+ Integer.toString (v.getVertexID ()));
+					out.write (vertexPrefix + Integer.toString (v.getVertexID ()));
 
 					if (num++ < numOfLeaves)
 					{
@@ -647,13 +607,12 @@ public class CalculationEngineAST
 			switch (solution)
 			{
 				case LpSolve.OPTIMAL:
-					Debug.debugMessage (getClass (), "Optimal solution found "
-							+ lp.getObjective (), 3);
+					Debug.debugMessage (getClass (),
+							"Optimal solution found " + lp.getObjective (), 3);
 					wcet = Math.round (lp.getObjective ());
 					break;
 				default:
-					Debug.debugMessage (getClass (),
-							"Problem with the LP model: " + solution, 2);
+					Debug.debugMessage (getClass (), "Problem with the LP model: " + solution, 2);
 					throw new SolutionException (solution);
 			}
 		}

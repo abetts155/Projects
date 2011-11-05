@@ -1,15 +1,12 @@
 package adam.betts.graphs.trees;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import adam.betts.edges.Edge;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.utils.LeastCommonAncestor;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.AlternativeVertex;
@@ -78,8 +75,7 @@ public class SyntaxTree extends Tree
 					Debug.debugMessage (getClass (), "Building portion of tree inside CFG header "
 							+ headerv.getHeaderID (), 3);
 
-					FlowGraph flowg = new FlowGraph ();
-					induceSubraph (flowg, headerv);
+					FlowGraph flowg = lnt.induceSubraph (headerv);
 					FlowGraph reverseg = new FlowGraph ();
 					flowg.reverseGraph (reverseg);
 
@@ -108,89 +104,6 @@ public class SyntaxTree extends Tree
 				}
 			}
 		}
-	}
-
-	private void induceSubraph (FlowGraph flowg, HeaderVertex headerv)
-	{
-		ArrayList <Integer> workList = new ArrayList <Integer> ();
-		workList.addAll (lnt.getTails (headerv.getHeaderID ()));
-
-		// To track whether the induced subgraph has a unique exit point or not
-		ArrayList <Integer> succs = new ArrayList <Integer> ();
-
-		while (!workList.isEmpty ())
-		{
-			int vertexID = workList.remove (workList.size () - 1);
-
-			if (!flowg.hasVertex (vertexID))
-			{
-				flowg.addVertex (vertexID);
-				succs.add (vertexID);
-
-				Vertex cfgv = cfg.getVertex (vertexID);
-				Iterator <Edge> predIt = cfgv.predecessorIterator ();
-				while (predIt.hasNext ())
-				{
-					Edge e = predIt.next ();
-					int predID = e.getVertexID ();
-					TreeVertex treePredv = lnt.getVertex (predID);
-					HeaderVertex predHeaderv = (HeaderVertex) lnt.getVertex (treePredv
-							.getParentID ());
-					int predHeaderID = predHeaderv.getHeaderID ();
-
-					if (predHeaderID == headerv.getHeaderID ()
-							|| lnt.isNested (predHeaderv.getVertexID (), headerv.getVertexID ()))
-					{
-						if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
-						{
-							workList.add (predID);
-						}
-					}
-				}
-			}
-		}
-
-		for (Vertex v : flowg)
-		{
-			Integer vertexID = v.getVertexID ();
-			Vertex cfgv = cfg.getVertex (vertexID);
-
-			Iterator <Edge> succIt = cfgv.successorIterator ();
-			while (succIt.hasNext ())
-			{
-				Edge e = succIt.next ();
-				int succID = e.getVertexID ();
-
-				if (flowg.hasVertex (succID)
-						&& dfs.getEdgeType (vertexID, succID) != DFSEdgeType.BACK_EDGE)
-				{
-					succs.remove (vertexID);
-					flowg.addEdge (vertexID, succID);
-				}
-			}
-		}
-
-		// Either add another vertex to ensure there is a unique exit (when
-		// there are multiple tails) or set it to the unique tail
-		if (succs.size () != 1)
-		{
-			int exitID = flowg.getNextVertexID ();
-			flowg.addExit (exitID);
-			flowg.getVertex (exitID).setDummy ();
-			Debug.debugMessage (getClass (), "Adding exit vertex " + exitID, 3);
-
-			for (int vertexID : succs)
-			{
-				flowg.addEdge (vertexID, exitID);
-			}
-		} else
-		{
-			int exitID = succs.get (succs.size () - 1);
-			flowg.setExitID (exitID);
-		}
-
-		// The entry vertex of the induced subgraph is the loop header
-		flowg.setEntryID (headerv.getHeaderID ());
 	}
 
 	private LoopVertex addLoopVertex (int headerID)

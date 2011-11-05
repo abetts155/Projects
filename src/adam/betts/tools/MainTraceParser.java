@@ -25,7 +25,10 @@ public class MainTraceParser
 	private static Option lpSolveDirectoryOption;
 	private static Option incrementalWCETOption;
 	private static Option lpSolveVerbosityOption;
-	private static Option modelIdentificationOption;
+
+	protected static String lpSolveDirectory = null;
+	protected static Enums.LpSolveVerbosity lpVerbosity = LpSolveVerbosity.CRITICAL;
+	protected static boolean incrementalWCET;
 
 	public static void main (String[] args)
 	{
@@ -46,23 +49,15 @@ public class MainTraceParser
 		incrementalWCETOption.setRequired (false);
 		options.addOption (incrementalWCETOption);
 
-		modelIdentificationOption = new Option ("m", "model", false,
-				"Write out the model identification matrices.");
-		modelIdentificationOption.setRequired (false);
-		options.addOption (modelIdentificationOption);
-
 		lpSolveDirectoryOption = new Option ("L", "lpsolve", true,
 				"Write the lp_solve models to files inside this directory.");
 		lpSolveDirectoryOption.setRequired (false);
 		options.addOption (lpSolveDirectoryOption);
 
-		lpSolveVerbosityOption = new Option (
-				"l",
-				"lpsolve-verbose",
-				true,
+		lpSolveVerbosityOption = new Option ("l", "lpsolve-verbose", true,
 				"Force the verbosity of lp_solve to the selected level.\nSupported arguments are: "
-						+ Arrays.toString (LpSolveVerbosity.values ()).replace (
-								"[", "").replace ("]", ""));
+						+ Arrays.toString (LpSolveVerbosity.values ()).replace ("[", "").replace (
+								"]", ""));
 		lpSolveVerbosityOption.setRequired (false);
 		options.addOption (lpSolveVerbosityOption);
 	}
@@ -82,23 +77,18 @@ public class MainTraceParser
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setTraceFileOption (line);
 
-				Globals.incrementalWCET = line.hasOption (incrementalWCETOption
-						.getOpt ());
-				Globals.doModelIdentification = line
-						.hasOption (modelIdentificationOption.getOpt ());
+				MainTraceParser.incrementalWCET = line.hasOption (incrementalWCETOption.getOpt ());
 
-				String arg = line.getOptionValue (lpSolveDirectoryOption
-						.getOpt ());
+				String arg = line.getOptionValue (lpSolveDirectoryOption.getOpt ());
 				if (arg != null)
 				{
-					Globals.lpSolveDirectory = arg;
+					MainTraceParser.lpSolveDirectory = arg;
 				}
 
 				arg = line.getOptionValue (lpSolveVerbosityOption.getOpt ());
@@ -106,20 +96,15 @@ public class MainTraceParser
 				{
 					try
 					{
-						Globals.lpVerbosity = LpSolveVerbosity.valueOf (arg
-								.toUpperCase ());
-					}
-					catch (IllegalArgumentException e)
+						MainTraceParser.lpVerbosity = LpSolveVerbosity.valueOf (arg.toUpperCase ());
+					} catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid verbosity level of lp_solve.");
+						System.err.println (arg + " is not a valid verbosity level of lp_solve.");
 						System.exit (1);
 					}
 				}
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);
@@ -132,69 +117,54 @@ public class MainTraceParser
 		Debug.verboseMessage ("Parsing trace");
 		try
 		{
-			WCETOutput
-					.openFileHandles ();
+			WCETOutput.openFileHandles ();
 			WCETOutput.writeTableHeader ();
 			new DatabaseWithoutProgram ();
 			WCETOutput.closeFileHandles ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			e.printStackTrace ();
 			System.exit (1);
 		}
 	}
 
-	public static class Globals
+	public final static boolean lpSolveDirectorySet ()
 	{
-		protected static String lpSolveDirectory = null;
-		protected static Enums.LpSolveVerbosity lpVerbosity = LpSolveVerbosity.CRITICAL;
-		protected static boolean incrementalWCET;
-		protected static boolean doModelIdentification;
+		return lpSolveDirectory != null;
+	}
 
-		public final static boolean lpSolveDirectorySet ()
+	public final static String getLpSolveDirectory ()
+	{
+		File dir = new File (lpSolveDirectory);
+		if (!dir.exists ())
 		{
-			return lpSolveDirectory != null;
+			dir.mkdir ();
 		}
+		return lpSolveDirectory;
+	}
 
-		public final static String getLpSolveDirectory ()
+	public final static int getLpSolveVerbosity ()
+	{
+		switch (lpVerbosity)
 		{
-			File dir = new File (lpSolveDirectory);
-			if (!dir.exists ())
-			{
-				dir.mkdir ();
-			}
-			return lpSolveDirectory;
+			case CRITICAL:
+				return 1;
+			case SEVERE:
+				return 2;
+			case IMPORTANT:
+				return 3;
+			case NORMAL:
+				return 4;
+			case DETAILED:
+				return 5;
+			case FULL:
+				return 6;
 		}
+		return 0;
+	}
 
-		public final static int getLpSolveVerbosity ()
-		{
-			switch (lpVerbosity)
-			{
-				case CRITICAL:
-					return 1;
-				case SEVERE:
-					return 2;
-				case IMPORTANT:
-					return 3;
-				case NORMAL:
-					return 4;
-				case DETAILED:
-					return 5;
-				case FULL:
-					return 6;
-			}
-			return 0;
-		}
-
-		public final static boolean doIncrementalWCET ()
-		{
-			return incrementalWCET;
-		}
-
-		public final static boolean writeModelIdentificationData ()
-		{
-			return doModelIdentification;
-		}
+	public final static boolean doIncrementalWCET ()
+	{
+		return incrementalWCET;
 	}
 }

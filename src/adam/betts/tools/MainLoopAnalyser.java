@@ -23,7 +23,7 @@ public class MainLoopAnalyser
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
+		DefaultOptions.addRootOption (options, true);
 		DefaultOptions.addTraceFileOption (options);
 		DefaultOptions.addUDrawDirectoryOption (options);
 		DefaultOptions.addInstrumentationProfileOption (options, true, 1);
@@ -49,8 +49,7 @@ public class MainLoopAnalyser
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				DefaultOptions.setDefaultOptions (line);
 				DefaultOptions.setProgramOption (line);
@@ -61,8 +60,7 @@ public class MainLoopAnalyser
 
 				if (line.hasOption (boundLevelOption.getOpt ()))
 				{
-					String arg = line.getOptionValue (boundLevelOption
-							.getOpt ());
+					String arg = line.getOptionValue (boundLevelOption.getOpt ());
 					if (arg != null)
 					{
 						try
@@ -71,30 +69,24 @@ public class MainLoopAnalyser
 							if (boundLevel < 1)
 							{
 								throw new IllegalArgumentException ();
-							}
-							else
+							} else
 							{
 								Globals.boundLevel = boundLevel;
 							}
-						}
-						catch (NumberFormatException e)
+						} catch (NumberFormatException e)
 						{
-							System.err
-									.println ("'"
-											+ arg
-											+ "' is not a valid argument to the option -"
-											+ boundLevelOption.getOpt () + ".");
+							System.err.println ("'" + arg
+									+ "' is not a valid argument to the option -"
+									+ boundLevelOption.getOpt () + ".");
 							System.exit (1);
-						}
-						catch (IllegalArgumentException e)
+						} catch (IllegalArgumentException e)
 						{
 							System.err
 									.println (arg
 											+ " is not a valid bound level. It should be a positive number greater than 1.");
 							System.exit (1);
 						}
-					}
-					else
+					} else
 					{
 						System.err
 								.println ("You must specify the bound level as an argument to the option -"
@@ -103,8 +95,7 @@ public class MainLoopAnalyser
 					}
 				}
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);

@@ -12,28 +12,28 @@ import adam.betts.utilities.Enums.BranchType;
 
 public class BasicBlock extends FlowVertex implements Cloneable
 {
+	public final static int DUMMY_ADDRESS = -1;
+
 	/*
 	 * The subprogram name for inlined basic blocks
 	 */
 	String subprogramName = null;
-	
+
 	/*
 	 * The instructions inside a basic block
 	 */
-	private TreeSet<Instruction> instructions = new TreeSet<Instruction> (
-			new Comparator<Instruction> ()
+	private TreeSet <Instruction> instructions = new TreeSet <Instruction> (
+			new Comparator <Instruction> ()
 			{
 				public int compare (Instruction instr1, Instruction instr2)
 				{
 					if (instr1.getAddress () < instr2.getAddress ())
 					{
 						return -1;
-					}
-					else if (instr1.getAddress () > instr2.getAddress ())
+					} else if (instr1.getAddress () > instr2.getAddress ())
 					{
 						return 1;
-					}
-					else
+					} else
 					{
 						return 0;
 					}
@@ -48,7 +48,7 @@ public class BasicBlock extends FlowVertex implements Cloneable
 	public BasicBlock clone ()
 	{
 		BasicBlock theClone = new BasicBlock (this.vertexID);
-		for (Instruction instr: instructions)
+		for (Instruction instr : instructions)
 		{
 			theClone.instructions.add (instr);
 		}
@@ -86,7 +86,7 @@ public class BasicBlock extends FlowVertex implements Cloneable
 		instructions.add (instruction);
 	}
 
-	public final Iterator<Instruction> instructionIterator ()
+	public final Iterator <Instruction> instructionIterator ()
 	{
 		return instructions.iterator ();
 	}
@@ -98,7 +98,7 @@ public class BasicBlock extends FlowVertex implements Cloneable
 
 	public final boolean hasAddress (long address)
 	{
-		for (Instruction instr: instructions)
+		for (Instruction instr : instructions)
 		{
 			if (instr.getAddress () == address)
 			{
@@ -112,9 +112,8 @@ public class BasicBlock extends FlowVertex implements Cloneable
 	{
 		if (instructions.size () == 0)
 		{
-			return Long.MAX_VALUE;
-		}
-		else
+			return DUMMY_ADDRESS;
+		} else
 		{
 			return instructions.first ().getAddress ();
 		}
@@ -124,9 +123,8 @@ public class BasicBlock extends FlowVertex implements Cloneable
 	{
 		if (instructions.size () == 0)
 		{
-			return Long.MIN_VALUE;
-		}
-		else
+			return DUMMY_ADDRESS;
+		} else
 		{
 			return instructions.last ().getAddress ();
 		}
@@ -150,7 +148,7 @@ public class BasicBlock extends FlowVertex implements Cloneable
 
 		buffer.append ("pred(" + vertexID + ") = {");
 		int i = 1;
-		for (Edge e: predecessors)
+		for (Edge e : predecessors)
 		{
 			buffer.append (e.getVertexID ());
 			if (i++ < predecessors.size ())
@@ -162,7 +160,7 @@ public class BasicBlock extends FlowVertex implements Cloneable
 
 		buffer.append ("succ(" + vertexID + ") = {");
 		i = 1;
-		for (Edge e: successors)
+		for (Edge e : successors)
 		{
 			buffer.append (e.getVertexID ());
 			if (i++ < successors.size ())
@@ -173,10 +171,9 @@ public class BasicBlock extends FlowVertex implements Cloneable
 		buffer.append ("}\n\n");
 
 		i = 1;
-		for (Instruction inst: instructions)
+		for (Instruction inst : instructions)
 		{
-			buffer.append (Long.toHexString (inst.getAddress ()) + ": "
-					+ inst.getInstruction ());
+			buffer.append (Long.toHexString (inst.getAddress ()) + ": " + inst.getInstruction ());
 			if (i++ < instructions.size ())
 			{
 				buffer.append ("\n");

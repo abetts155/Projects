@@ -1,9 +1,7 @@
 package adam.betts.calculations;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -33,11 +31,11 @@ public class DatabaseWithoutProgram
 	protected int nextEdgeID = FlowEdge.FIRST_EDGE_ID;
 	protected long newRunDelimiter;
 	protected Ipoint startv;
-	protected HashMap<Integer, Integer> edgeCounts = new HashMap<Integer, Integer> ();
-	protected HashMap<Integer, Integer> temporaryEdgeCounts = new HashMap<Integer, Integer> ();
-	protected HashMap<Integer, Long> edgeToMin = new HashMap<Integer, Long> ();
-	protected HashMap<Integer, Long> edgeToMax = new HashMap<Integer, Long> ();
-	protected HashMap<Long, Ipoint> ipointIDToIpoint = new HashMap<Long, Ipoint> ();
+	protected HashMap <Integer, Integer> edgeCounts = new HashMap <Integer, Integer> ();
+	protected HashMap <Integer, Integer> temporaryEdgeCounts = new HashMap <Integer, Integer> ();
+	protected HashMap <Integer, Long> edgeToMin = new HashMap <Integer, Long> ();
+	protected HashMap <Integer, Long> edgeToMax = new HashMap <Integer, Long> ();
+	protected HashMap <Long, Ipoint> ipointIDToIpoint = new HashMap <Long, Ipoint> ();
 	protected long highestMET = 0;
 	protected long lowestMET = Long.MAX_VALUE;
 	protected long testCounter;
@@ -45,10 +43,10 @@ public class DatabaseWithoutProgram
 	/*
 	 * Variables used to extract matrices and vectors for model identification
 	 */
-	protected HashMap<Long, HashMap<Integer, Integer>> runToEdgeCounts = new HashMap<Long, HashMap<Integer, Integer>> ();
-	protected HashMap<Long, Long> runToMET = new HashMap<Long, Long> ();
-	protected HashMap<Long, Long> runToWCET_All = new HashMap<Long, Long> ();
-	protected HashMap<Long, Long> runToWCET_DFS = new HashMap<Long, Long> ();
+	protected HashMap <Long, HashMap <Integer, Integer>> runToEdgeCounts = new HashMap <Long, HashMap <Integer, Integer>> ();
+	protected HashMap <Long, Long> runToMET = new HashMap <Long, Long> ();
+	protected HashMap <Long, Long> runToWCET_All = new HashMap <Long, Long> ();
+	protected HashMap <Long, Long> runToWCET_DFS = new HashMap <Long, Long> ();
 
 	public DatabaseWithoutProgram ()
 	{
@@ -58,20 +56,12 @@ public class DatabaseWithoutProgram
 		enforceSingleExit ();
 		writeTimingDataFiles ();
 
-		if (MainTraceParser.Globals.writeModelIdentificationData ())
-		{
-			writeMatrixFile ();
-			writeMETFile ();
-			writeMinimumEdgeTimesFile ();
-			writeMaximumEdgeTimesFile ();
-		}
-
 		if (Globals.uDrawDirectorySet ())
 		{
-			for (IProfile iprofile: IProfile.values ())
+			for (IProfile iprofile : IProfile.values ())
 			{
-				Pattern pattern = Pattern.compile (".*" + iprofile.toString ()
-						+ ".*", Pattern.CASE_INSENSITIVE);
+				Pattern pattern = Pattern.compile (".*" + iprofile.toString () + ".*",
+						Pattern.CASE_INSENSITIVE);
 				Matcher fit = pattern.matcher (Globals.getTraceFileName ());
 				if (fit.matches ())
 				{
@@ -84,21 +74,18 @@ public class DatabaseWithoutProgram
 		{
 			public void doJob ()
 			{
-				Debug.debugMessage (DatabaseWithoutProgram.class, "MET = "
-						+ highestMET, 4);
+				Debug.debugMessage (DatabaseWithoutProgram.class, "MET = " + highestMET, 4);
 
-				for (int edgeID: edgeCounts.keySet ())
+				for (int edgeID : edgeCounts.keySet ())
 				{
-					Debug.debugMessage (DatabaseWithoutProgram.class, "Edge "
-							+ edgeID + " has execution count = "
-							+ edgeCounts.get (edgeID), 4);
+					Debug.debugMessage (DatabaseWithoutProgram.class, "Edge " + edgeID
+							+ " has execution count = " + edgeCounts.get (edgeID), 4);
 				}
 
-				for (int edgeID: edgeToMax.keySet ())
+				for (int edgeID : edgeToMax.keySet ())
 				{
-					Debug.debugMessage (DatabaseWithoutProgram.class, "Edge "
-							+ edgeID + " has WCET = " + edgeToMax.get (edgeID),
-							4);
+					Debug.debugMessage (DatabaseWithoutProgram.class, "Edge " + edgeID
+							+ " has WCET = " + edgeToMax.get (edgeID), 4);
 				}
 			}
 		}, 4);
@@ -138,14 +125,13 @@ public class DatabaseWithoutProgram
 	{
 		try
 		{
-			RandomAccessFile raf = new RandomAccessFile (Globals
-					.getTraceFileName (), "r");
+			RandomAccessFile raf = new RandomAccessFile (Globals.getTraceFileName (), "r");
 			String str;
 
 			/*
 			 * Loop past any comments in the trace file
 			 */
-			while ( (str = raf.readLine ()).startsWith ("//"))
+			while ((str = raf.readLine ()).startsWith ("//"))
 			{
 				;
 			}
@@ -154,8 +140,7 @@ public class DatabaseWithoutProgram
 			if (lexemes[0].startsWith ("0x"))
 			{
 				newRunDelimiter = Long.parseLong (lexemes[0].substring (2));
-			}
-			else
+			} else
 			{
 				newRunDelimiter = Long.parseLong (lexemes[0]);
 			}
@@ -166,11 +151,9 @@ public class DatabaseWithoutProgram
 			ipg.setEntryID (startv.getVertexID ());
 			ipointIDToIpoint.put (newRunDelimiter, startv);
 
-			Debug.debugMessage (getClass (), "Start ipoint is "
-					+ startv.getVertexID () + " with ipoint id = "
-					+ newRunDelimiter, 3);
-		}
-		catch (Exception e)
+			Debug.debugMessage (getClass (), "Start ipoint is " + startv.getVertexID ()
+					+ " with ipoint id = " + newRunDelimiter, 3);
+		} catch (Exception e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			e.printStackTrace ();
@@ -188,10 +171,9 @@ public class DatabaseWithoutProgram
 			long T2 = 0;
 			long startOfRun = 0;
 
-			BufferedReader in = new BufferedReader (new FileReader (Globals
-					.getTraceFileName ()));
+			BufferedReader in = new BufferedReader (new FileReader (Globals.getTraceFileName ()));
 			String str;
-			while ( (str = in.readLine ()) != null)
+			while ((str = in.readLine ()) != null)
 			{
 				if (!str.startsWith ("//") && !str.startsWith ("/*"))
 				{
@@ -201,22 +183,20 @@ public class DatabaseWithoutProgram
 					if (lexemes[0].startsWith ("0x"))
 					{
 						ipointID = Long.parseLong (lexemes[0].substring (2));
-					}
-					else
+					} else
 					{
 						ipointID = Long.parseLong (lexemes[0]);
 					}
 
 					long timeStamp = Long.parseLong (lexemes[1]);
 
-					Debug.debugMessage (getClass (), "Ipoint = " + ipointID
-							+ ", t = " + timeStamp, 3);
+					Debug.debugMessage (getClass (), "Ipoint = " + ipointID + ", t = " + timeStamp,
+							3);
 
 					if (ipointID == startv.getIpointID ())
 					{
-						Debug.debugMessage (getClass (),
-								"=== New run detected @ " + timeStamp + " ===",
-								4);
+						Debug.debugMessage (getClass (), "=== New run detected @ " + timeStamp
+								+ " ===", 4);
 
 						if (testCounter > 0)
 						{
@@ -227,7 +207,7 @@ public class DatabaseWithoutProgram
 							commitEdgeCounts ();
 							setMETs (T2 - startOfRun);
 
-							if (MainTraceParser.Globals.doIncrementalWCET ())
+							if (MainTraceParser.doIncrementalWCET ())
 							{
 								doWCETComputation ();
 							}
@@ -237,27 +217,21 @@ public class DatabaseWithoutProgram
 						source = startv;
 						startOfRun = timeStamp;
 						T1 = timeStamp;
-					}
-					else
+					} else
 					{
 						if (!source.hasTraceSuccessor (ipointID))
 						{
 							if (!ipointIDToIpoint.containsKey (ipointID))
 							{
-								destination = new Ipoint (nextVertexID,
-										ipointID);
+								destination = new Ipoint (nextVertexID, ipointID);
 								nextVertexID++;
 								ipg.addIpoint (destination);
-								Debug
-										.debugMessage (getClass (),
-												"Adding new ipoint with id "
-														+ ipointID, 4);
+								Debug.debugMessage (getClass (), "Adding new ipoint with id "
+										+ ipointID, 4);
 
-								source.addSuccessor (
-										destination.getVertexID (), ipointID,
+								source.addSuccessor (destination.getVertexID (), ipointID,
 										nextEdgeID, IPGEdgeType.TRACE_EDGE);
-								destination.addPredecessor (source
-										.getVertexID (), nextEdgeID,
+								destination.addPredecessor (source.getVertexID (), nextEdgeID,
 										IPGEdgeType.TRACE_EDGE);
 								ipointIDToIpoint.put (ipointID, destination);
 								nextEdgeID++;
@@ -265,15 +239,12 @@ public class DatabaseWithoutProgram
 								Debug.debugMessage (getClass (), "Adding edge "
 										+ source.getVertexID () + " => "
 										+ destination.getVertexID (), 4);
-							}
-							else
+							} else
 							{
 								destination = ipointIDToIpoint.get (ipointID);
-								source.addSuccessor (
-										destination.getVertexID (), ipointID,
+								source.addSuccessor (destination.getVertexID (), ipointID,
 										nextEdgeID, IPGEdgeType.TRACE_EDGE);
-								destination.addPredecessor (source
-										.getVertexID (), nextEdgeID,
+								destination.addPredecessor (source.getVertexID (), nextEdgeID,
 										IPGEdgeType.TRACE_EDGE);
 								nextEdgeID++;
 
@@ -281,26 +252,21 @@ public class DatabaseWithoutProgram
 										+ source.getVertexID () + " => "
 										+ destination.getVertexID (), 4);
 							}
-						}
-						else
+						} else
 						{
-							IPGEdge transition = source
-									.getTraceSuccessor (ipointID);
-							destination = ipg.getVertex (transition
-									.getVertexID ());
+							IPGEdge transition = source.getTraceSuccessor (ipointID);
+							destination = ipg.getVertex (transition.getVertexID ());
 						}
 
 						T2 = timeStamp;
 						long transitionWCET = T2 - T1;
 
-						IPGEdge transition = source
-								.getTraceSuccessor (ipointID);
+						IPGEdge transition = source.getTraceSuccessor (ipointID);
 						int edgeID = transition.getEdgeID ();
 
-						Debug.debugMessage (getClass (), "Edge "
-								+ source.getVertexID () + " => "
-								+ destination.getVertexID () + " (edge id = "
-								+ edgeID + ") traversed", 4);
+						Debug.debugMessage (getClass (), "Edge " + source.getVertexID () + " => "
+								+ destination.getVertexID () + " (edge id = " + edgeID
+								+ ") traversed", 4);
 
 						if (edgeToMax.containsKey (edgeID))
 						{
@@ -313,8 +279,7 @@ public class DatabaseWithoutProgram
 							{
 								edgeToMax.put (edgeID, transitionWCET);
 							}
-						}
-						else
+						} else
 						{
 							edgeToMin.put (edgeID, transitionWCET);
 							edgeToMax.put (edgeID, transitionWCET);
@@ -324,8 +289,7 @@ public class DatabaseWithoutProgram
 						{
 							int edgeCount = temporaryEdgeCounts.get (edgeID);
 							temporaryEdgeCounts.put (edgeID, edgeCount + 1);
-						}
-						else
+						} else
 						{
 							temporaryEdgeCounts.put (edgeID, 1);
 						}
@@ -336,8 +300,7 @@ public class DatabaseWithoutProgram
 						T1 = T2;
 						source = destination;
 					}
-				}
-				else
+				} else
 				{
 					Debug.debugMessage (getClass (), str, 4);
 				}
@@ -349,8 +312,7 @@ public class DatabaseWithoutProgram
 			commitEdgeCounts ();
 			doWCETComputation ();
 			setMETs (T2 - startOfRun);
-		}
-		catch (Exception e)
+		} catch (Exception e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			e.printStackTrace ();
@@ -360,9 +322,9 @@ public class DatabaseWithoutProgram
 
 	private void commitEdgeCounts ()
 	{
-		runToEdgeCounts.put (testCounter, new HashMap<Integer, Integer> ());
+		runToEdgeCounts.put (testCounter, new HashMap <Integer, Integer> ());
 
-		for (int edgeID: temporaryEdgeCounts.keySet ())
+		for (int edgeID : temporaryEdgeCounts.keySet ())
 		{
 			int edgeCount = temporaryEdgeCounts.get (edgeID);
 			runToEdgeCounts.get (testCounter).put (edgeID, edgeCount);
@@ -373,8 +335,7 @@ public class DatabaseWithoutProgram
 				{
 					edgeCounts.put (edgeID, edgeCount);
 				}
-			}
-			else
+			} else
 			{
 				edgeCounts.put (edgeID, edgeCount);
 			}
@@ -409,8 +370,8 @@ public class DatabaseWithoutProgram
 
 	private void enforceSingleExit ()
 	{
-		ArrayList<Integer> noSuccs = new ArrayList<Integer> ();
-		for (Vertex v: ipg)
+		ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
+		for (Vertex v : ipg)
 
 		{
 			if (v.numOfSuccessors () == 0)
@@ -423,20 +384,18 @@ public class DatabaseWithoutProgram
 		{
 			int vertexID = noSuccs.get (noSuccs.size () - 1);
 			ipg.setExitID (vertexID);
-		}
-		else
+		} else
 		{
 			Ipoint exitv = new Ipoint (nextVertexID, Ipoint.GHOST_IPOINT_ID);
 			ipg.addIpoint (exitv);
 			ipg.setExitID (exitv.getVertexID ());
 
-			for (int vertexID: noSuccs)
+			for (int vertexID : noSuccs)
 			{
 				Ipoint u = ipg.getVertex (vertexID);
-				u.addSuccessor (exitv.getVertexID (), Ipoint.GHOST_IPOINT_ID,
-						nextEdgeID, IPGEdgeType.GHOST_EDGE);
-				exitv.addPredecessor (vertexID, nextEdgeID,
+				u.addSuccessor (exitv.getVertexID (), Ipoint.GHOST_IPOINT_ID, nextEdgeID,
 						IPGEdgeType.GHOST_EDGE);
+				exitv.addPredecessor (vertexID, nextEdgeID, IPGEdgeType.GHOST_EDGE);
 				nextEdgeID++;
 			}
 		}
@@ -444,109 +403,18 @@ public class DatabaseWithoutProgram
 
 	private void writeTimingDataFiles ()
 	{
-		for (long test: new TreeSet<Long> (runToMET.keySet ()))
+		for (long test : new TreeSet <Long> (runToMET.keySet ()))
 		{
 			try
 			{
 				WCETOutput.writeRunDelimiter ();
-				WCETOutput.writeToGNUPlotFile (test, runToMET.get (test),
-						runToWCET_All.get (test), runToWCET_DFS.get (test),
-						highestMET);
-			}
-			catch (IOException e)
+				WCETOutput.writeToGNUPlotFile (test, runToMET.get (test), runToWCET_All.get (test),
+						runToWCET_DFS.get (test), highestMET);
+			} catch (IOException e)
 			{
 				e.printStackTrace ();
 				System.exit (1);
 			}
-		}
-	}
-
-	private void writeMatrixFile ()
-	{
-		final String fileName = "counts.mat";
-		try
-		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (fileName));
-			for (long run: runToEdgeCounts.keySet ())
-			{
-				for (int edgeID = FlowEdge.FIRST_EDGE_ID; edgeID < nextEdgeID; ++edgeID)
-				{
-					if (runToEdgeCounts.get (run).containsKey (edgeID))
-					{
-						out.write (Long.toString (runToEdgeCounts.get (run)
-								.get (edgeID)));
-					}
-					else
-					{
-						out.write (Long.toString (0));
-					}
-					out.write (" ");
-				}
-				out.newLine ();
-			}
-			out.close ();
-		}
-		catch (IOException e)
-		{
-			System.err.println ("Problem with file " + fileName);
-			System.exit (1);
-		}
-	}
-
-	private void writeMETFile ()
-	{
-		final String fileName = "met.mat";
-		try
-		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (fileName));
-			for (long run: runToMET.keySet ())
-			{
-				out.write (Long.toString (runToMET.get (run)) + "\n");
-			}
-			out.close ();
-		}
-		catch (IOException e)
-		{
-			System.err.println ("Problem with file " + fileName);
-			System.exit (1);
-		}
-	}
-
-	private void writeMinimumEdgeTimesFile ()
-	{
-		final String fileName = "min.mat";
-		try
-		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (fileName));
-			for (int edgeID = FlowEdge.FIRST_EDGE_ID; edgeID < nextEdgeID; ++edgeID)
-			{
-				out.write (Long.toString (edgeToMin.get (edgeID)) + "\n");
-			}
-			out.close ();
-		}
-		catch (IOException e)
-		{
-			System.err.println ("Problem with file " + fileName);
-			System.exit (1);
-		}
-	}
-
-	private void writeMaximumEdgeTimesFile ()
-	{
-		final String fileName = "max.mat";
-		try
-		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (fileName));
-			for (int edgeID = FlowEdge.FIRST_EDGE_ID; edgeID < nextEdgeID; ++edgeID)
-			{
-				out.write (Long.toString (edgeToMax.get (edgeID)) + "\n");
-			}
-			out.close ();
-		}
-		catch (IOException e)
-		{
-			System.err.println ("Problem with file " + fileName);
-			System.exit (1);
 		}
 	}
 }

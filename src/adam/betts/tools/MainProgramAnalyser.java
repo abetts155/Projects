@@ -20,6 +20,12 @@ public class MainProgramAnalyser
 	private static Option inlineOption;
 	private static Option loopsOption;
 	private static Option syntaxTreesOption;
+	private static Option timingAnalysisOption;
+
+	protected static boolean inline;
+	protected static boolean LNTs;
+	protected static boolean ASTs;
+	protected static boolean timingAnalysis;
 
 	private static void addOptions ()
 	{
@@ -43,6 +49,11 @@ public class MainProgramAnalyser
 				"Generate the syntax trees of the control flow graphs.");
 		syntaxTreesOption.setRequired (false);
 		options.addOption (syntaxTreesOption);
+
+		timingAnalysisOption = new Option ("T", "timing-analysis", false,
+				"Generate (random) WCET data for the program and do a WCET computation.");
+		timingAnalysisOption.setRequired (false);
+		options.addOption (timingAnalysisOption);
 	}
 
 	private static void parseCommandLine (String[] args)
@@ -67,11 +78,10 @@ public class MainProgramAnalyser
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setIPETOptions (line);
 
-				Globals.inline = line.hasOption (inlineOption.getOpt ());
-
-				Globals.LNTs = line.hasOption (loopsOption.getOpt ());
-
-				Globals.ASTs = line.hasOption (syntaxTreesOption.getOpt ());
+				inline = line.hasOption (inlineOption.getOpt ());
+				LNTs = line.hasOption (loopsOption.getOpt ());
+				ASTs = line.hasOption (syntaxTreesOption.getOpt ());
+				timingAnalysis = line.hasOption (timingAnalysisOption.getOpt ());
 			}
 		} catch (ParseException e)
 		{
@@ -86,24 +96,26 @@ public class MainProgramAnalyser
 		Debug.verboseMessage ("Reading program");
 
 		Program program = new Program ();
-		program.setRootID ();
 
-		if (Globals.LNTs)
+		if (LNTs)
 		{
 			Debug.verboseMessage ("Building loop-nesting trees");
 			program.buildLNTs ();
 		}
 
-		if (Globals.ASTs)
+		if (ASTs)
 		{
 			Debug.verboseMessage ("Building abstract syntax trees");
 			program.buildSyntaxTrees ();
 		}
 
-		Database database = new Database (program);
-		database.generateData ();
-		
-		new CalculationEngineCFG (program, database);
+		if (timingAnalysis)
+		{
+			Database database = new Database (program);
+			database.generateRandomData ();
+
+			new CalculationEngineCFG (program, database);
+		}
 	}
 
 	public static void main (String[] args)
@@ -111,12 +123,5 @@ public class MainProgramAnalyser
 		addOptions ();
 		parseCommandLine (args);
 		run ();
-	}
-
-	public static class Globals
-	{
-		protected static boolean inline;
-		protected static boolean LNTs;
-		protected static boolean ASTs;
 	}
 }

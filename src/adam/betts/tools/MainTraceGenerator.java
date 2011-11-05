@@ -10,14 +10,17 @@ import org.apache.commons.cli.ParseException;
 
 import adam.betts.programs.Program;
 import adam.betts.traces.GenerateTrace;
-import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
+import adam.betts.utilities.Globals;
 
 public class MainTraceGenerator
 {
 	private static Options options;
 	private static Option runsOption;
 	private static Option addressTraceOption;
+
+	protected static long runs = 1;
+	protected static boolean addressTrace;
 
 	public static void main (String[] args)
 	{
@@ -31,15 +34,15 @@ public class MainTraceGenerator
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
+		DefaultOptions.addRootOption (options, false);
 		DefaultOptions.addInstrumentationProfileOption (options, true, 1);
 		DefaultOptions.addUDrawDirectoryOption (options);
 		DefaultOptions.addOutFileOption (options);
 
 		runsOption = new Option ("n", "runs", true,
-				"Number of runs of root to be generated. Default is "
-						+ Globals.runs + ".");
-		runsOption.setRequired (true);
+				"Number of runs of root to be generated. Default is " + MainTraceGenerator.runs
+						+ ".");
+		runsOption.setRequired (false);
 		options.addOption (runsOption);
 
 		addressTraceOption = new Option ("a", "address-trace", false,
@@ -63,8 +66,7 @@ public class MainTraceGenerator
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				/*
 				 * Set the global variables according to the command-line
@@ -77,15 +79,11 @@ public class MainTraceGenerator
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setOutFileOption (line);
 
-				Globals.addressTrace = line.hasOption (addressTraceOption
-						.getOpt ());
+				addressTrace = line.hasOption (addressTraceOption.getOpt ());
 
-				if (!Globals.addressTrace
-						&& adam.betts.utilities.Globals
-								.getInstrumentationProfile () == null)
+				if (!addressTrace && Globals.getInstrumentationProfile () == null)
 				{
-					System.err
-							.println ("You must specify an instrumentation profile.");
+					System.err.println ("You must specify an instrumentation profile.");
 					System.exit (1);
 				}
 
@@ -98,31 +96,25 @@ public class MainTraceGenerator
 						if (runs < 1 || runs > Long.MAX_VALUE)
 						{
 							throw new IllegalArgumentException ();
-						}
-						else
+						} else
 						{
-							Globals.runs = runs;
+							MainTraceGenerator.runs = runs;
 						}
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						System.err.println ("'" + arg
-								+ "' is not a valid argument to "
+						System.err.println ("'" + arg + "' is not a valid argument to "
 								+ runsOption.getLongOpt ());
 						System.exit (1);
-					}
-					catch (IllegalArgumentException e)
+					} catch (IllegalArgumentException e)
 					{
-						System.err
-								.println (arg
-										+ " is not a valid number of runs. It should be in the range: 1.."
-										+ Long.MAX_VALUE);
+						System.err.println (arg
+								+ " is not a valid number of runs. It should be in the range: 1.."
+								+ Long.MAX_VALUE);
 						System.exit (1);
 					}
 				}
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);
@@ -132,26 +124,17 @@ public class MainTraceGenerator
 
 	private static void run ()
 	{
-		Debug.verboseMessage ("Reading program");
 		Program program = new Program ();
-		Debug.verboseMessage ("Generating trace");
 		new GenerateTrace (program);
 	}
 
-	public static class Globals
+	public final static long getNumberOfRuns ()
 	{
-		protected static long runs = 1;
-		protected static boolean addressTrace;
+		return runs;
+	}
 
-		public final static long getNumberOfRuns ()
-		{
-			return runs;
-		}
-
-		public final static boolean addressTrace ()
-		{
-			return addressTrace;
-		}
-
+	public final static boolean addressTrace ()
+	{
+		return addressTrace;
 	}
 }

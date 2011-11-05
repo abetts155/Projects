@@ -1,16 +1,16 @@
 package adam.betts.calculations;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Random;
+import java.util.Set;
 
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
+import adam.betts.utilities.Debug;
 import adam.betts.vertices.Vertex;
 
 public class Database
@@ -56,28 +56,27 @@ public class Database
 		this.program = program;
 	}
 
-	public void generateData ()
+	public void generateRandomData ()
 	{
-		/*
-		 * The bounds set for each proper ancestor
-		 */
 		HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer> ();
-
-		/*
-		 * The bounds of each header
-		 */
 		HashMap <Integer, HashMap <Integer, Integer>> headerBounds = new HashMap <Integer, HashMap <Integer, Integer>> ();
 
-		Random random = new Random (0);
+		Random random = new Random ();
 
 		for (Subprogram s : program)
 		{
+			Debug.debugMessage (getClass (), "Generating data for " + s.getSubprogramName (), 2);
+
 			int subprogramID = s.getSubprogramID ();
 			unitWCETs.put (subprogramID, new HashMap <Integer, Long> ());
 			ControlFlowGraph cfg = s.getCFG ();
 			for (Vertex v : cfg)
 			{
-				long data = Math.abs (random.nextLong ());
+				long data = Math.abs (random.nextInt ());
+				if (data == 0)
+				{
+					data = 1;
+				}
 				unitWCETs.get (subprogramID).put (v.getVertexID (), data);
 			}
 
@@ -87,28 +86,23 @@ public class Database
 			while (it.hasNext ())
 			{
 				int headerID = it.next ();
-				ArrayList <Integer> properAncestors = loop.getProperAncestors (headerID);
-				Iterator <Integer> listIterator = properAncestors.listIterator ();
 
-				int properAncestor = listIterator.next ();
-				int bound = Math.abs (random.nextInt ());
-				properAncestorBounds.put (properAncestor, bound);
-
-				while (listIterator.hasNext ())
+				for (int ancestorID : loop.getProperAncestors (headerID))
 				{
-					int nextProperAncestor = listIterator.next ();
-					int nextBound = random.nextInt () + bound;
-					properAncestorBounds.put (nextProperAncestor, nextBound);
-					properAncestor = nextProperAncestor;
-					bound = nextBound;
+					int bound = Math.abs (random.nextInt ());
+					if (bound == 0)
+					{
+						bound = 1;
+					}
+					properAncestorBounds.put (ancestorID, bound);
 				}
+
 				headerBounds.put (headerID, properAncestorBounds);
 			}
+
 			loopBounds.put (subprogramID, headerBounds);
 		}
 	}
-
-	
 
 	public final long getUnitWCET (int subprogramID, int unitID)
 	{

@@ -32,9 +32,8 @@ public class MainSimpleScalarTraceParser
 		options = new Options ();
 		DefaultOptions.addDefaultOptions (options);
 		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options);
-		DefaultOptions.addInstrumentationProfileOption (options, true, IProfile
-				.values ().length);
+		DefaultOptions.addRootOption (options, true);
+		DefaultOptions.addInstrumentationProfileOption (options, true, IProfile.values ().length);
 		DefaultOptions.addUDrawDirectoryOption (options);
 		DefaultOptions.addTraceFileOption (options);
 
@@ -64,8 +63,7 @@ public class MainSimpleScalarTraceParser
 			{
 				formatter.printHelp (toolName, options);
 				System.exit (1);
-			}
-			else
+			} else
 			{
 				/*
 				 * Set the global variables according to the command-line
@@ -77,13 +75,10 @@ public class MainSimpleScalarTraceParser
 				DefaultOptions.setInstrumentationProfileOption (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setTraceFileOption (line);
-				Globals.outputBasicBlockIds = line
-						.hasOption (basicBlockIDTraceOption.getOpt ());
-				Globals.outputHexAddresses = line
-						.hasOption (outputHexAddressesOption.getOpt ());
+				Globals.outputBasicBlockIds = line.hasOption (basicBlockIDTraceOption.getOpt ());
+				Globals.outputHexAddresses = line.hasOption (outputHexAddressesOption.getOpt ());
 			}
-		}
-		catch (ParseException e)
+		} catch (ParseException e)
 		{
 			System.out.println (e.getMessage ());
 			formatter.printHelp (toolName, options);

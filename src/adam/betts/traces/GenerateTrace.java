@@ -16,7 +16,6 @@ import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.instructions.Instruction;
-import adam.betts.outputs.UDrawGraph;
 import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.tools.MainTraceGenerator;
@@ -25,31 +24,33 @@ import adam.betts.utilities.Globals;
 import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Ipoint;
 import adam.betts.vertices.Vertex;
-import adam.betts.vertices.trees.HeaderVertex;
 
 public class GenerateTrace
 {
 	protected Program program;
 	protected CallGraph callg;
-	protected Stack<Integer> callStack = new Stack<Integer> ();
-	protected Stack<Vertex> returnStack = new Stack<Vertex> ();
+	protected Stack <Integer> callStack = new Stack <Integer> ();
+	protected Stack <Vertex> returnStack = new Stack <Vertex> ();
 	protected Random random = new Random ();
-	protected HashMap<Integer, LoopNests> subprogramToLNT = new HashMap<Integer, LoopNests> ();
-	protected HashMap<Integer, HashMap<Integer, Integer>> subprogramToExecutionCounts = new HashMap<Integer, HashMap<Integer, Integer>> ();
+	protected HashMap <Integer, HashMap <Integer, Integer>> subprogramToExecutionCounts = new HashMap <Integer, HashMap <Integer, Integer>> ();
 
 	public GenerateTrace (Program program)
 	{
 		this.program = program;
 		this.callg = program.getCallGraph ();
 
+		program.buildLNTs ();
 		initialise ();
 
-		if (MainTraceGenerator.Globals.addressTrace ())
+		if (MainTraceGenerator.addressTrace ())
 		{
+			Debug.debugMessage (getClass (), "Generating address trace", 1);
+
 			generateAddressTrace ();
-		}
-		else
+		} else
 		{
+			Debug.debugMessage (getClass (), "Generating timing trace", 1);
+
 			program.insertVirtualIpoints ();
 			program.buildIPGS (false);
 			generateTimingTrace ();
@@ -58,31 +59,19 @@ public class GenerateTrace
 
 	private void initialise ()
 	{
-		for (Subprogram subprogram: program)
+		for (Subprogram subprogram : program)
 		{
 			int subprogramID = subprogram.getSubprogramID ();
-			subprogramToExecutionCounts.put (subprogramID,
-					new HashMap<Integer, Integer> ());
+			subprogramToExecutionCounts.put (subprogramID, new HashMap <Integer, Integer> ());
 
-			ControlFlowGraph cfg = subprogram.getCFG ();
-			cfg.addEntryAndExitEdges ();
-			Debug.debugMessage (getClass (), "Building LNT of "
-					+ subprogram.getSubprogramName (), 3);
-			LoopNests lnt = new LoopNests (cfg, cfg.getEntryID ());
-			subprogramToLNT.put (subprogramID, lnt);
+			LoopNests lnt = subprogram.getCFG ().getLNT ();
 
-			if (Globals.uDrawDirectorySet ())
-			{
-				UDrawGraph.makeUDrawFile (lnt, subprogram.getSubprogramName ());
-			}
-
-			for (Vertex v: lnt)
+			for (Vertex v : lnt)
 			{
 				int vertexID = v.getVertexID ();
 				if (lnt.isLoopHeader (vertexID))
 				{
-					subprogramToExecutionCounts.get (subprogramID).put (
-							vertexID, 0);
+					subprogramToExecutionCounts.get (subprogramID).put (vertexID, 0);
 				}
 			}
 		}
@@ -92,18 +81,16 @@ public class GenerateTrace
 	{
 		try
 		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (
-					adam.betts.utilities.Globals.getOutputFileName ()));
+			BufferedWriter out = new BufferedWriter (new FileWriter (Globals.getOutputFileName ()));
 
-			for (long i = 1; i <= MainTraceGenerator.Globals.getNumberOfRuns (); ++i)
+			for (long i = 1; i <= MainTraceGenerator.getNumberOfRuns (); ++i)
 			{
 				Debug.debugMessage (getClass (), "Run #" + i, 3);
 
 				boolean finished = false;
 				final int loopHeaderBudget = 2;
 				int subprogramID = program.getRootID ();
-				ControlFlowGraph cfg = program.getSubprogram (subprogramID)
-						.getCFG ();
+				ControlFlowGraph cfg = program.getSubprogram (subprogramID).getCFG ();
 				int vertexID = cfg.getEntryID ();
 				BasicBlock bb = cfg.getBasicBlock (vertexID);
 
@@ -112,22 +99,17 @@ public class GenerateTrace
 
 				while (!finished)
 				{
-					Debug.debugMessage (getClass (), "At basic block "
-							+ vertexID + " in "
+					Debug.debugMessage (getClass (), "At basic block " + vertexID + " in "
 							+ program.getSubprogramName (subprogramID), 4);
 
 					/*
 					 * Output all the addresses inside the basic block
 					 */
-					Iterator<Instruction> instrIt = bb.instructionIterator ();
+					Iterator <Instruction> instrIt = bb.instructionIterator ();
 					while (instrIt.hasNext ())
 					{
 						Instruction instr = instrIt.next ();
-						out
-								.write ("0x"
-										+ Long
-												.toHexString (instr
-														.getAddress ()) + "\n");
+						out.write ("0x" + Long.toHexString (instr.getAddress ()) + "\n");
 					}
 
 					int calleeID = callg.isCallSite (subprogramID, vertexID);
@@ -157,24 +139,17 @@ public class GenerateTrace
 						if (subprogramID == program.getRootID ())
 						{
 							finished = true;
-						}
-						else
+						} else
 						{
 							subprogramID = callStack.pop ();
-							cfg = program.getSubprogram (subprogramID)
-									.getCFG ();
+							cfg = program.getSubprogram (subprogramID).getCFG ();
 							bb = (BasicBlock) returnStack.pop ();
 							Edge e = bb.getNthSuccessor (0);
 							vertexID = e.getVertexID ();
 							bb = cfg.getBasicBlock (vertexID);
 
-							Debug
-									.debugMessage (
-											getClass (),
-											"Returning to subprogram "
-													+ program
-															.getSubprogramName (subprogramID),
-											3);
+							Debug.debugMessage (getClass (), "Returning to subprogram "
+									+ program.getSubprogramName (subprogramID), 3);
 						}
 					}
 					/*
@@ -186,7 +161,9 @@ public class GenerateTrace
 						int nthSucc = 0;
 						if (numOfSucc > 1)
 						{
-							LoopNests lnt = subprogramToLNT.get (subprogramID);
+							LoopNests lnt = program.getSubprogram (subprogramID).getCFG ()
+									.getLNT ();
+							
 							boolean ok = false;
 
 							while (!ok)
@@ -198,8 +175,8 @@ public class GenerateTrace
 
 								if (lnt.isLoopHeader (succID))
 								{
-									int count = subprogramToExecutionCounts
-											.get (subprogramID).get (succID);
+									int count = subprogramToExecutionCounts.get (subprogramID).get (
+											succID);
 
 									if (lnt.isLoopTail (succID, vertexID))
 									{
@@ -214,19 +191,16 @@ public class GenerateTrace
 																	+ " in "
 																	+ program
 																			.getSubprogramName (subprogramID)
-																	+ " exceeded",
-															4);
+																	+ " exceeded", 4);
 										}
 									}
 
-									subprogramToExecutionCounts.get (
-											subprogramID).put (succID,
+									subprogramToExecutionCounts.get (subprogramID).put (succID,
 											count + 1);
-								}
-								else if (lnt.isLoopHeader (vertexID))
+								} else if (lnt.isLoopHeader (vertexID))
 								{
-									int count = subprogramToExecutionCounts
-											.get (subprogramID).get (vertexID);
+									int count = subprogramToExecutionCounts.get (subprogramID).get (
+											vertexID);
 
 									if (lnt.inLoopBody (vertexID, succID)
 											&& count > loopHeaderBudget)
@@ -234,15 +208,13 @@ public class GenerateTrace
 										ok = false;
 									}
 
-									subprogramToExecutionCounts.get (
-											subprogramID).put (vertexID,
+									subprogramToExecutionCounts.get (subprogramID).put (vertexID,
 											count + 1);
 								}
 							}
 						}
 
-						Debug.debugMessage (getClass (), "Selecting successor "
-								+ nthSucc, 4);
+						Debug.debugMessage (getClass (), "Selecting successor " + nthSucc, 4);
 						Edge e = bb.getNthSuccessor (nthSucc);
 						vertexID = e.getVertexID ();
 						bb = cfg.getBasicBlock (vertexID);
@@ -252,8 +224,7 @@ public class GenerateTrace
 			}
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);
@@ -264,24 +235,26 @@ public class GenerateTrace
 	{
 		try
 		{
-			BufferedWriter out = new BufferedWriter (new FileWriter (
-					adam.betts.utilities.Globals.getOutputFileName ()));
+			BufferedWriter out = new BufferedWriter (new FileWriter (Globals.getOutputFileName ()));
 
-			for (int i = 1; i <= MainTraceGenerator.Globals.getNumberOfRuns (); ++i)
+			for (int i = 1; i <= MainTraceGenerator.getNumberOfRuns (); ++i)
 			{
+				Debug.debugMessage (getClass (), "Generating trace #" + i, 3);
+				
+				out.write ("=> Trace #" + Integer.toString (i) + " <=\n");
+
 				long timestamp = 0;
 				boolean finished = false;
 
 				int subprogramID = program.getRootID ();
 
-				LoopNests lnt = program.getSubprogram (subprogramID)
-						.getCFGStar (Globals.getInstrumentationProfile ())
-						.getLNT ();
+				LoopNests lnt = program.getSubprogram (subprogramID).getCFGStar (
+						Globals.getInstrumentationProfile ()).getLNT ();
 
 				IpointGraph ipg = program.getSubprogram (subprogramID).getIPG (
 						Globals.getInstrumentationProfile ());
 
-				HashMap<Integer, Integer> edgeCounts = new HashMap<Integer, Integer> ();
+				HashMap <Integer, Integer> edgeCounts = new HashMap <Integer, Integer> ();
 
 				Ipoint v = ipg.getVertex (ipg.getEntryID ());
 
@@ -293,12 +266,10 @@ public class GenerateTrace
 					{
 						Edge succEdge = v.getNthSuccessor (0);
 						v = ipg.getVertex (succEdge.getVertexID ());
-					}
-					else if (vertexID == ipg.getExitID ())
+					} else if (vertexID == ipg.getExitID ())
 					{
 						finished = true;
-					}
-					else
+					} else
 					{
 						timestamp += random.nextInt (50) + 1;
 
@@ -310,15 +281,14 @@ public class GenerateTrace
 							IPGEdge iterationEdge = null;
 							IPGEdge exitEdge = null;
 
-							Iterator<Edge> succIt = v.successorIterator ();
+							Iterator <Edge> succIt = v.successorIterator ();
 							while (succIt.hasNext ())
 							{
 								IPGEdge succEdge = (IPGEdge) succIt.next ();
 								if (succEdge.isIterationEdge ())
 								{
 									iterationEdge = succEdge;
-								}
-								else if (succEdge.isExitEdge ())
+								} else if (succEdge.isExitEdge ())
 								{
 									exitEdge = succEdge;
 								}
@@ -326,14 +296,11 @@ public class GenerateTrace
 
 							if (iterationEdge == null && exitEdge == null)
 							{
-								int nthSucc = random.nextInt (v
-										.numOfSuccessors ());
-								FlowEdge succEdge = (FlowEdge) v
-										.getNthSuccessor (nthSucc);
+								int nthSucc = random.nextInt (v.numOfSuccessors ());
+								FlowEdge succEdge = (FlowEdge) v.getNthSuccessor (nthSucc);
 								vertexID = succEdge.getVertexID ();
 								v = ipg.getVertex (vertexID);
-							}
-							else
+							} else
 							{
 								if (iterationEdge != null)
 								{
@@ -347,26 +314,21 @@ public class GenerateTrace
 
 									if (edgeCounts.get (edgeID) < bound)
 									{
-										edgeCounts.put (edgeID, edgeCounts
-												.get (edgeID) + 1);
+										edgeCounts.put (edgeID, edgeCounts.get (edgeID) + 1);
 										vertexID = iterationEdge.getVertexID ();
 										v = ipg.getVertex (vertexID);
-									}
-									else
+									} else
 									{
-										edgeCounts.put (iterationEdge
-												.getEdgeID (), 1);
+										edgeCounts.put (iterationEdge.getEdgeID (), 1);
 										vertexID = exitEdge.getVertexID ();
 										v = ipg.getVertex (vertexID);
 									}
 								}
 							}
-						}
-						else
+						} else
 						{
 							int nthSucc = random.nextInt (v.numOfSuccessors ());
-							FlowEdge succEdge = (FlowEdge) v
-									.getNthSuccessor (nthSucc);
+							FlowEdge succEdge = (FlowEdge) v.getNthSuccessor (nthSucc);
 							vertexID = succEdge.getVertexID ();
 							v = ipg.getVertex (vertexID);
 						}
@@ -376,8 +338,7 @@ public class GenerateTrace
 			}
 
 			out.close ();
-		}
-		catch (IOException e)
+		} catch (IOException e)
 		{
 			System.err.println ("Error: " + e.getMessage ());
 			System.exit (1);

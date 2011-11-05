@@ -8,10 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 
 import adam.betts.edges.Edge;
-import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.DirectedGraph;
+import adam.betts.graphs.FlowGraph;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Enums.BranchType;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
@@ -20,6 +19,7 @@ import adam.betts.vertices.trees.TreeVertex;
 public class LoopNests extends Tree
 {
 	protected final DirectedGraph directedg;
+	protected DepthFirstTree dfs;
 	protected HashMap <Integer, Set <Integer>> headerToLoop = new LinkedHashMap <Integer, Set <Integer>> ();
 	protected HashMap <Integer, Set <Integer>> headerToTails = new LinkedHashMap <Integer, Set <Integer>> ();
 	protected HashMap <Integer, Set <Integer>> headerToExits = new LinkedHashMap <Integer, Set <Integer>> ();
@@ -28,7 +28,7 @@ public class LoopNests extends Tree
 	public LoopNests (DirectedGraph directedg, int rootID)
 	{
 		this.directedg = directedg;
-		
+
 		initialise ();
 		findLoops (rootID);
 		setRoot ();
@@ -149,6 +149,92 @@ public class LoopNests extends Tree
 		return isProperAncestor (right, left);
 	}
 
+	public FlowGraph induceSubraph (HeaderVertex headerv)
+	{
+		FlowGraph flowg = new FlowGraph ();
+
+		ArrayList <Integer> workList = new ArrayList <Integer> ();
+		workList.addAll (getTails (headerv.getHeaderID ()));
+
+		// To track whether the induced subgraph has a unique exit point or not
+		ArrayList <Integer> succs = new ArrayList <Integer> ();
+
+		while (!workList.isEmpty ())
+		{
+			int vertexID = workList.remove (workList.size () - 1);
+
+			if (!flowg.hasVertex (vertexID))
+			{
+				flowg.addVertex (vertexID);
+				succs.add (vertexID);
+
+				Vertex cfgv = directedg.getVertex (vertexID);
+				Iterator <Edge> predIt = cfgv.predecessorIterator ();
+				while (predIt.hasNext ())
+				{
+					Edge e = predIt.next ();
+					int predID = e.getVertexID ();
+					TreeVertex treePredv = getVertex (predID);
+					HeaderVertex predHeaderv = (HeaderVertex) getVertex (treePredv.getParentID ());
+					int predHeaderID = predHeaderv.getHeaderID ();
+
+					if (predHeaderID == headerv.getHeaderID ()
+							|| isNested (predHeaderv.getVertexID (), headerv.getVertexID ()))
+					{
+						if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
+						{
+							workList.add (predID);
+						}
+					}
+				}
+			}
+		}
+
+		for (Vertex v : flowg)
+		{
+			Integer vertexID = v.getVertexID ();
+			Vertex cfgv = directedg.getVertex (vertexID);
+
+			Iterator <Edge> succIt = cfgv.successorIterator ();
+			while (succIt.hasNext ())
+			{
+				Edge e = succIt.next ();
+				int succID = e.getVertexID ();
+
+				if (flowg.hasVertex (succID)
+						&& dfs.getEdgeType (vertexID, succID) != DFSEdgeType.BACK_EDGE)
+				{
+					succs.remove (vertexID);
+					flowg.addEdge (vertexID, succID);
+				}
+			}
+		}
+
+		// Either add another vertex to ensure there is a unique exit (when
+		// there are multiple tails) or set it to the unique tail
+		if (succs.size () != 1)
+		{
+			int exitID = flowg.getNextVertexID ();
+			flowg.addExit (exitID);
+			flowg.getVertex (exitID).setDummy ();
+			Debug.debugMessage (getClass (), "Adding exit vertex " + exitID, 3);
+
+			for (int vertexID : succs)
+			{
+				flowg.addEdge (vertexID, exitID);
+			}
+		} else
+		{
+			int exitID = succs.get (succs.size () - 1);
+			flowg.setExitID (exitID);
+		}
+
+		// The entry vertex of the induced subgraph is the loop header
+		flowg.setEntryID (headerv.getHeaderID ());
+
+		return flowg;
+	}
+
 	private void initialise ()
 	{
 		Debug.debugMessage (getClass (), "Initialising", 3);
@@ -163,10 +249,10 @@ public class LoopNests extends Tree
 
 	private void findLoops (int rootID)
 	{
-		DepthFirstTree dfsTree = new DepthFirstTree (directedg, rootID);
-		for (int i = dfsTree.numOfVertices (); i >= 1; --i)
+		dfs = new DepthFirstTree (directedg, rootID);
+		for (int i = dfs.numOfVertices (); i >= 1; --i)
 		{
-			Integer vertexID = dfsTree.getPreVertexID (i);
+			Integer vertexID = dfs.getPreVertexID (i);
 			Vertex v = directedg.getVertex (vertexID);
 
 			ArrayList <Integer> workList = new ArrayList <Integer> ();
@@ -179,7 +265,7 @@ public class LoopNests extends Tree
 
 				Debug.debugMessage (getClass (), "Analysing " + predID + " => " + vertexID, 4);
 
-				if (dfsTree.getEdgeType (predID, vertexID) == DFSEdgeType.BACK_EDGE)
+				if (dfs.getEdgeType (predID, vertexID) == DFSEdgeType.BACK_EDGE)
 				{
 					if (predID == vertexID)
 					{
@@ -195,7 +281,7 @@ public class LoopNests extends Tree
 
 			if (!workList.isEmpty ())
 			{
-				findLoop (dfsTree, workList, vertexID);
+				findLoop (dfs, workList, vertexID);
 			}
 		}
 	}
