@@ -3,14 +3,11 @@
 from optparse import OptionParser
 from sys import argv, maxint
 from subprocess import Popen, PIPE
-from os import environ
+from os import environ, sep
 
 # These environment variables are needed to compile and disassemble the program under analysis 
-simpleScalarEnvironmentVariable = "SIMPLESCALAR_HOME"
 wcetToolsEnvironmentVariable = "WCET_HOME"
-environmentVariables = [simpleScalarEnvironmentVariable, wcetToolsEnvironmentVariable]
-
-for var in environmentVariables:
+for var in [wcetToolsEnvironmentVariable]:
     try:
         environ[var]
     except KeyError:
@@ -79,10 +76,12 @@ def runCommand (cmd):
         print("\nProblem running '" + cmd + "'")
         exit(0)
 
-gcc          = "%s/sslittle-na-sstrix-gcc" % (environ[simpleScalarEnvironmentVariable])
-objdump      = "%s/sslittle-na-sstrix-objdump" % (environ[simpleScalarEnvironmentVariable])
-disassembler = "java -jar %s/disassemble.jar" % (environ[wcetToolsEnvironmentVariable])
+rootPath         = environ[wcetToolsEnvironmentVariable]
+simpleScalarPath = rootPath + sep + "simplescalar" + sep + "bin"
+gcc              = simpleScalarPath + sep + "sslittle-na-sstrix-gcc"
+objdump          = simpleScalarPath + sep + "sslittle-na-sstrix-objdump"
+disassembler     = "java -jar " + rootPath + sep + "bin" + sep + "disassemble.jar"
 
 runCommand("%s -O2 -o %s %s"  % (gcc, opts.program[:-2], opts.program))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
-runCommand("%s -p %s.asm -r %s -f XML"  % (disassembler, opts.program[:-2], opts.root))
+runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))

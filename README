@@ -7,3 +7,5 @@ This will create several executable jar files in the 'bin' directory.
 
 To install SimpleScalar and associated tools, run:
 'python scripts/installSimpleScalar.py'
+
+*** Note that SimpleScalar installation requires Flex and Bison ***

@@ -11,25 +11,24 @@ import gzip
 import os
 
 # These environment variables are needed run the program under analysis on SimpleScalar 
-simpleScalarEnvironmentVariable = "SIMPLESCALAR"
-wcetToolsEnvironmentVariable = "WCET_TOOLS"
-environmentVariables = [simpleScalarEnvironmentVariable, wcetToolsEnvironmentVariable]
+wcetHomeEnvironmentVariable = "WCET_HOME"
+environmentVariables = [wcetHomeEnvironmentVariable]
 
 for var in environmentVariables:
     try:
         environ[var]
     except KeyError:
-        print ("Cannot find environment variable '" + var + "' which is needed to compile the program.")
+        print ("Cannot find environment variable '" + var + "' which is needed to run the program under analysis.")
         exit(0)
 
 # The SimpleScalar binary on which the simulation will be carried out
-simpleScalarBinary = environ[simpleScalarEnvironmentVariable] + "/sim-outorder"
+simpleScalarBinary = environ[wcetHomeEnvironmentVariable] + os.sep + "simplescalar" + os.sep + "bin" + os.sep + "sim-outorder"
 
 # The names of the instrumentation profiles
-BASIC_BLOCK = "BASIC_BLOCK"
+BASIC_BLOCK   = "BASIC_BLOCK"
 PRE_DOMINATOR = "PRE_DOMINATOR"
-BRANCH = "BRANCH"
-SUPER_BLOCK = "SUPER_BLOCK"
+BRANCH        = "BRANCH"
+SUPER_BLOCK   = "SUPER_BLOCK"
     
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
@@ -168,7 +167,7 @@ elif opts.populationSize <= 1:
     exit(0)
 
 if opts.instrumentation is None:
-    print("Must supply at least one instrumentation profile")
+    print("You must supply at least one instrumentation profile")
     exit(0)
 else:
     for s in opts.instrumentation:
@@ -208,7 +207,7 @@ xmlFile = opts.program + ".xml"
 
 # The name of the Java utility designed to strip the SimpleScalar trace into
 # more digestible format
-simpleScalarJar = "java -jar %s/simplescalar.jar" % (environ[wcetToolsEnvironmentVariable])
+simpleScalarJar = "java -jar " + environ[wcetHomeEnvironmentVariable] + os.sep + "bin" + os.sep + "simplescalar.jar"
 
 # In order to produce trace files for different instrumentation profiles
 # the program structure file must exist and the root function supplied on
