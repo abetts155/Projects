@@ -1,14 +1,13 @@
 #!/usr/bin/python2.6
 
 from optparse import OptionParser
-from os import path, environ, pathsep
-from os.path import isfile
+from os import path, environ
 from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 from re import split
 from subprocess import Popen, PIPE
 from sys import argv, maxint
+from os import environ, sep
 import gzip
-import os
 
 # These environment variables are needed run the program under analysis on SimpleScalar 
 wcetHomeEnvironmentVariable = "WCET_HOME"
@@ -22,13 +21,17 @@ for var in environmentVariables:
         exit(0)
 
 # The SimpleScalar binary on which the simulation will be carried out
-simpleScalarBinary = environ[wcetHomeEnvironmentVariable] + os.sep + "simplescalar" + os.sep + "bin" + os.sep + "sim-outorder"
+simpleScalarBinary = environ[wcetHomeEnvironmentVariable] + sep + "simplescalar" + sep + "bin" + sep + "sim-outorder"
+simpleScalarJar    = environ[wcetHomeEnvironmentVariable] + sep + "bin" + sep + "simplescalar.jar"
 
 # The names of the instrumentation profiles
 BASIC_BLOCK   = "BASIC_BLOCK"
 PRE_DOMINATOR = "PRE_DOMINATOR"
 BRANCH        = "BRANCH"
 SUPER_BLOCK   = "SUPER_BLOCK"
+
+# Global variable controlling whether to dump traces
+dumpTraces = False
     
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
@@ -56,6 +59,13 @@ parser.add_option("-d",
                   dest="debug",
                   help="Debug mode.",
                   default=False)
+
+parser.add_option("-F",
+                 "--separate-files",
+                 action="store_true",
+                 dest="separateFiles",
+                 help="Output traces to separate files rather than one monolithic file.",
+                 default=False)
 
 parser.add_option("-G",
                   "--generations",
@@ -140,6 +150,13 @@ parser.add_option("-u",
                   default=maxint,
                   metavar="<INT>")
 
+parser.add_option("-T",
+                 "--no-time",
+                 action="store_true",
+                 dest="noTime",
+                 help="Do NOT output timestamps to the trace.",
+                 default=False)
+
 parser.add_option("-v",
                  "--verbose",
                  action="store_true",
@@ -149,114 +166,129 @@ parser.add_option("-v",
 
 (opts, args) = parser.parse_args(argv[1:])
 
-# Check that the user has passed the correct options
-if opts.numOfParameters is None:
-    print("Missing option " + str(parser.get_option("-n")))
-    exit(0)
-elif opts.program is None:
-    print("Missing option " + str(parser.get_option("-p")))
-    exit(0)
-elif opts.crossoverRate < 0.0 or opts.crossoverRate > 1.0:
-    print("Crossover rate must be in range 0.0..1.0")
-    exit(0)
-elif opts.mutationRate < 0.0 or opts.mutationRate > 1.0:
-    print("Mutation rate must be in range 0.0..1.0")
-    exit(0)
-elif opts.populationSize <= 1:
-    print("Population must have at least 2 chromosones")
-    exit(0)
+def checkOptions ():
+	# Check that the user has passed the correct options
+	if opts.numOfParameters is None:
+		print("Missing option " + str(parser.get_option("-n")))
+		exit(0)
+	elif opts.program is None:
+		print("Missing option " + str(parser.get_option("-p")))
+		exit(0)
+	elif opts.crossoverRate < 0.0 or opts.crossoverRate > 1.0:
+		print("Crossover rate must be in range 0.0..1.0")
+		exit(0)
+	elif opts.mutationRate < 0.0 or opts.mutationRate > 1.0:
+		print("Mutation rate must be in range 0.0..1.0")
+		exit(0)
+	elif opts.populationSize <= 1:
+		print("Population must have at least 2 chromosones")
+		exit(0)
 
-if opts.instrumentation is None:
-    print("You must supply at least one instrumentation profile")
-    exit(0)
-else:
-    for s in opts.instrumentation:
-        if s not in [BASIC_BLOCK, BRANCH, PRE_DOMINATOR, SUPER_BLOCK]:
-            print("'" + s + "' not recognised as a valid instrumentation profile.")
-            exit(0)    
+	if opts.instrumentation is None:
+		print("You must supply at least one instrumentation profile")
+		exit(0)
+	else:
+		for s in opts.instrumentation:
+		    if s not in [BASIC_BLOCK, BRANCH, PRE_DOMINATOR, SUPER_BLOCK]:
+		        print("'" + s + "' not recognised as a valid instrumentation profile.")
+		        exit(0)    
 
-if opts.config is None:
-    print("Missing option " + str(parser.get_option("-c")))
-    exit(0)
+	if opts.config is None:
+		print("Missing option " + str(parser.get_option("-c")))
+		exit(0)
+				
+	if opts.debug:
+		print("Program = " + opts.program)
+		print("#Parameters = " + str(opts.numOfParameters))
+		print("#Generations = " + str(opts.numOfGenerations))
+		print("Population size = " + str(opts.populationSize))
+		print("Lower bound = " + str(opts.lowerBound))
+		print("Upper bound = " + str(opts.upperBound))
+		print("Crossover rate = " + str(opts.crossoverRate))
+		print("Mutation rate = " + str(opts.mutationRate))
 
-# Before proceeding, ensure that SimpleScalar exists
-if not isfile(simpleScalarBinary):
-    print "Unable to find executable '" + simpleScalarBinary + "'"
-    exit(0)
+def checkEnvironment ():
+	import os.path
+	
+	if not os.path.isfile(simpleScalarBinary):
+		print "Unable to find executable '" + simpleScalarBinary + "'"
+		exit(0)
 
-# Check the SimpleScalar configuration file exists as well
-if not isfile(opts.config):
-    print "Unable to find file " + opts.config
-    exit(0)
+	# Check the SimpleScalar configuration file exists as well
+	if not os.path.isfile(opts.config):
+	    print "Unable to find file " + opts.config
+	    exit(0)
 
-if opts.debug:
-    print("Program = " + opts.program)
-    print("#Parameters = " + str(opts.numOfParameters))
-    print("#Generations = " + str(opts.numOfGenerations))
-    print("Population size = " + str(opts.populationSize))
-    print("Lower bound = " + str(opts.lowerBound))
-    print("Upper bound = " + str(opts.upperBound))
-    print("Crossover rate = " + str(opts.crossoverRate))
-    print("Mutation rate = " + str(opts.mutationRate))
+def checkWhetherTODumpTraces (xmlFile):
+	import os.path
+	
+	# In order to produce trace files for different instrumentation profiles
+	# the program structure file must exist and the root function supplied on
+	# the command line. Check that both conditions are met before opening various 
+	# trace files where the traces produced during execution will be dumped
+	dump = True
+	if opts.root is None:
+		if opts.debug:
+			print("No root function specified")
+		dump = False
+	elif not os.path.exists(xmlFile):
+		if opts.debug:
+			print("Unable to find program file " + xmlFile)
+		dump = False
+	return dump
 
 # The set of TVs used by the GA across all generations
 TVs = []
 
-# The XML file describing the program structure
-xmlFile = opts.program + ".xml"
-
-# The name of the Java utility designed to strip the SimpleScalar trace into
-# more digestible format
-simpleScalarJar = "java -jar " + environ[wcetHomeEnvironmentVariable] + os.sep + "bin" + os.sep + "simplescalar.jar"
-
-# In order to produce trace files for different instrumentation profiles
-# the program structure file must exist and the root function supplied on
-# the command line. Check that both conditions are met before opening various 
-# trace files where the traces produced during execution will be dumped
-dumpTraces = True
-
-if opts.root is None:
-    if opts.debug:
-        print("No root function specified")
-    dumpTraces = False
-elif not os.path.exists(xmlFile):
-    if opts.debug:
-        print("Unable to find program file " + xmlFile)
-    dumpTraces = False
-
-if dumpTraces:
-    # Higher compression rate for the basic block trace as it is expected to be larger
-    if BASIC_BLOCK in opts.instrumentation:
-        basicBlockTrace = gzip.GzipFile(filename="trace." + BASIC_BLOCK + ".GA.gz",
+# Higher compression rate for the basic block trace as it is expected to be larger
+if BASIC_BLOCK in opts.instrumentation:
+	basicBlockTrace = gzip.GzipFile(filename="trace." + BASIC_BLOCK + ".GA.gz",
                                         mode="wb",
                                         compresslevel=9)
     
-    if BRANCH in opts.instrumentation:
-        branchTrace = gzip.GzipFile(filename="trace." + BRANCH + ".GA.gz",
+if BRANCH in opts.instrumentation:
+	branchTrace = gzip.GzipFile(filename="trace." + BRANCH + ".GA.gz",
                                     mode="wb",
                                     compresslevel=7)
     
-    if PRE_DOMINATOR in opts.instrumentation:
-        preDominatorTrace = gzip.GzipFile(filename="trace." + PRE_DOMINATOR + ".GA.gz",
+if PRE_DOMINATOR in opts.instrumentation:
+	preDominatorTrace = gzip.GzipFile(filename="trace." + PRE_DOMINATOR + ".GA.gz",
                                           mode="wb",
                                           compresslevel=7)
     
-    if SUPER_BLOCK in opts.instrumentation:
-        superBlockTrace = gzip.GzipFile(filename="trace." + SUPER_BLOCK + ".GA.gz",
+if SUPER_BLOCK in opts.instrumentation:
+	superBlockTrace = gzip.GzipFile(filename="trace." + SUPER_BLOCK + ".GA.gz",
                                         mode="wb",
                                         compresslevel=7)
+                                        
+def closeFileHandles ():
+    if BASIC_BLOCK in opts.instrumentation:
+        basicBlockTrace.close()
+        
+    if BRANCH in opts.instrumentation:
+        branchTrace.close()
+        
+    if PRE_DOMINATOR in opts.instrumentation:
+        preDominatorTrace.close()
+        
+    if SUPER_BLOCK in opts.instrumentation:
+        superBlockTrace.close()
 
-def dumpTrace ():
-    cmd = "%s -p %s -r %s -t %s.trc -i" % (simpleScalarJar, xmlFile, opts.root, opts.program)
+def sanitiseSimpleScalarTrace ():
+    cmd = "java -jar " + simpleScalarJar + " -p " + opts.program + ".xml -r " + opts.root + " -t " + opts.program + ".trc"
+    #cmd = "java -jar %s -p %s -r %s -t %s.trc -i" % (simpleScalarJar, xmlFile, opts.root, opts.program)
     
     if BASIC_BLOCK in opts.instrumentation:
-        cmd += " %s" % (BASIC_BLOCK)
+		cmd += " -i " + BASIC_BLOCK
     if BRANCH in opts.instrumentation:
-        cmd += " %s" % (BRANCH)
+    	cmd += " %s" % (BRANCH)
     if PRE_DOMINATOR in opts.instrumentation:
-        cmd += " %s" % (PRE_DOMINATOR)
+    	cmd += " %s" % (PRE_DOMINATOR)
     if SUPER_BLOCK in opts.instrumentation:
-        cmd += " %s" % (SUPER_BLOCK)
+    	cmd += " %s" % (SUPER_BLOCK)
+
+    if opts.noTime:
+    	cmd += " -T"
 
     if opts.debug:
         print("Running '" + cmd + "'")
@@ -276,7 +308,8 @@ def dumpTrace ():
         lines = f.readlines()
         f.close()
         for line in lines:
-            basicBlockTrace.write(line)
+		print(line)
+		basicBlockTrace.write(line)
 
     if BRANCH in opts.instrumentation:
         f = open(opts.program + "." + BRANCH + ".txt", "r")
@@ -352,9 +385,8 @@ def fitnessFunction (chromosome):
             TVs.append(chromosome.genomeList)
             
             # Dump the sanitised trace to the trace files
-            if dumpTraces:
-                #TVstr = "// TV = " + str(chromosome.genomeList) + "\n"
-                dumpTrace()
+            #TVstr = "// TV = " + str(chromosome.genomeList) + "\n"
+            sanitiseSimpleScalarTrace ()
 
     if opts.debug:
         print("Fitness = " + str(score))
@@ -362,28 +394,38 @@ def fitnessFunction (chromosome):
     return score
 
 def main ():
+	checkOptions ()
+	checkEnvironment ()
+	
+	# The XML file describing the program structure
+	xmlFile = opts.program + ".xml"
+	dumpTraces = checkWhetherTODumpTraces (xmlFile)
+	
     # Create the population
-    genome = G1DList.G1DList(opts.numOfParameters)
-    genome.setParams(rangemin=opts.lowerBound, rangemax=opts.upperBound)
-    genome.evaluator.set(fitnessFunction)
-    genome.mutator.set(Mutators.G1DListMutatorIntegerRange)
+	genome = G1DList.G1DList(opts.numOfParameters)
+	genome.setParams(rangemin=opts.lowerBound, rangemax=opts.upperBound)
+	genome.evaluator.set(fitnessFunction)
+	genome.mutator.set(Mutators.G1DListMutatorIntegerRange)
 
-    # Cannot crossover if there is only a single gene in the chromosone
-    if opts.numOfParameters == 1:
-        genome.crossover.clear()
-    else:
-        genome.crossover.set(Crossovers.G1DListCrossoverTwoPoint)
+	# Cannot crossover if there is only a single gene in the chromosone
+	if opts.numOfParameters == 1:
+		genome.crossover.clear()
+	else:
+		genome.crossover.set(Crossovers.G1DListCrossoverTwoPoint)
 
-    # Set up the engine
-    ga = GSimpleGA.GSimpleGA(genome)
-    ga.setPopulationSize(opts.populationSize)
-    ga.setGenerations(opts.numOfGenerations)
-    ga.setCrossoverRate(opts.crossoverRate)
-    ga.setMutationRate(opts.mutationRate)
-    ga.setElitism(True)
+	# Set up the engine
+	ga = GSimpleGA.GSimpleGA(genome)
+	ga.setPopulationSize(opts.populationSize)
+	ga.setGenerations(opts.numOfGenerations)
+	ga.setCrossoverRate(opts.crossoverRate)
+	ga.setMutationRate(opts.mutationRate)
+	ga.setElitism(True)
 
-    # Start the evolution
-    ga.evolve (freq_stats=1)
+	# Start the evolution
+	ga.evolve (freq_stats=1)
+	
+	if dumpTraces:
+		closeFileHandles ()
 
 if __name__ == "__main__":
     main()
@@ -393,33 +435,3 @@ if __name__ == "__main__":
     for tv in TVs:
         f.write(' '.join(map(str, tv)) + "\n")
     f.close()
-
-# Final action is to close the file handles and remove temporary files
-if dumpTraces:
-    cmd = "rm -f %s" % (opts.program + ".trc")
-    
-    if BASIC_BLOCK in opts.instrumentation:
-        cmd += " %s" % (opts.program + "." + BASIC_BLOCK + ".txt")
-        basicBlockTrace.close()
-        
-    if BRANCH in opts.instrumentation:
-        cmd += " %s" % (opts.program + "." + BRANCH + ".txt")
-        branchTrace.close()
-        
-    if PRE_DOMINATOR in opts.instrumentation:
-        cmd += " %s" % (opts.program + "." + PRE_DOMINATOR + ".txt")
-        preDominatorTrace.close()
-        
-    if SUPER_BLOCK in opts.instrumentation:
-        cmd += " %s" % (opts.program + "." + SUPER_BLOCK + ".txt")
-        superBlockTrace.close()
-
-    proc = Popen(cmd,
-                 shell=True,
-                 executable="/bin/bash",
-                 stderr=PIPE)
-    proc.wait()
-
-    if proc.returncode != 0:
-        print("\nProblem running '" + cmd + "'")
-        exit(0)

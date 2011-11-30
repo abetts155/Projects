@@ -31,6 +31,35 @@ public class CFGGenerator
 				.debugMessage (getClass (),
 						"Number of vertices in this CFG = " + remainingVertices, 1);
 
+		decideWhichAcyclicComponents ();
+		addAcyclicComponents ();
+
+		if (random.nextBoolean ())
+		{
+			addLoops ();
+		}
+
+		connectDisconnectedComponents ();
+		findMergeVerticesToRemove ();
+		connectRemainingVertices ();
+		setEntry ();
+		setExit ();
+
+		if (random.nextBoolean ())
+		{
+			addSelfLoops ();
+		}
+
+		cfg.addEdge (cfg.getExitID (), cfg.getEntryID (), BranchType.TAKEN);
+	}
+
+	public final ControlFlowGraph getCFG ()
+	{
+		return cfg;
+	}
+
+	private void decideWhichAcyclicComponents ()
+	{
 		if (random.nextBoolean ())
 		{
 			numberOfIfThenElseComponents = setNumberOfComponents (4);
@@ -54,16 +83,37 @@ public class CFGGenerator
 
 		if (MainProgramGenerator.Globals.getFanOut () > 2 && random.nextBoolean ())
 		{
-			numberOfCaseComponents = setNumberOfComponents (2 + MainProgramGenerator.Globals
-					.getFanOut ());
-
+			final int sizeOfComponent = 2 + MainProgramGenerator.Globals.getFanOut ();
+			numberOfCaseComponents = setNumberOfComponents (sizeOfComponent);
 			Debug.debugMessage (getClass (), "Number of case components = "
 					+ numberOfCaseComponents, 1);
 		}
 
 		Debug.debugMessage (getClass (), "Number of single basic blocks = "
 				+ this.remainingVertices, 1);
+	}
 
+	private int setNumberOfComponents (final int sizeOfComponent)
+	{
+		int numOfComponents = 0;
+
+		if (remainingVertices >= sizeOfComponent)
+		{
+			numOfComponents = random.nextInt ((int) Math
+					.floor (remainingVertices / sizeOfComponent)) + 1;
+
+			remainingVertices = remainingVertices - (numOfComponents * sizeOfComponent);
+
+			Debug.debugMessage (getClass (), "Component size = " + sizeOfComponent
+					+ ". #Components = " + numOfComponents + ". #Remaining vertices = "
+					+ remainingVertices, 4);
+		}
+
+		return numOfComponents;
+	}
+
+	private void addAcyclicComponents ()
+	{
 		while (numberOfIfThenElseComponents > 0 || numberOfIfThenComponents > 0
 				|| numberOfShortCircuitedAndComponents > 0 || numberOfCaseComponents > 0)
 		{
@@ -96,48 +146,6 @@ public class CFGGenerator
 				numberOfCaseComponents -= 1;
 			}
 		}
-
-		if (random.nextBoolean ())
-		{
-			addLoops ();
-		}
-
-		connectDisconnectedComponents ();
-		findMergeVerticesToRemove ();
-		connectRemainingVertices ();
-		setEntry ();
-		setExit ();
-
-		if (random.nextBoolean ())
-		{
-			addSelfLoops ();
-		}
-
-		cfg.addEdge (cfg.getExitID (), cfg.getEntryID (), BranchType.TAKEN);
-	}
-
-	public final ControlFlowGraph getCFG ()
-	{
-		return cfg;
-	}
-
-	private int setNumberOfComponents (final int sizeOfComponent)
-	{
-		int numOfComponents = 0;
-
-		if (remainingVertices >= sizeOfComponent)
-		{
-			numOfComponents = random.nextInt ((int) Math
-					.floor (remainingVertices / sizeOfComponent)) + 1;
-
-			remainingVertices = remainingVertices - (numOfComponents * sizeOfComponent);
-
-			Debug.debugMessage (getClass (), "Component size = " + sizeOfComponent
-					+ ". #Components = " + numOfComponents + ". #Remaining vertices = "
-					+ remainingVertices, 4);
-		}
-
-		return numOfComponents;
 	}
 
 	private SingleEntrySingleExitComponent addIfThenElseComponent ()

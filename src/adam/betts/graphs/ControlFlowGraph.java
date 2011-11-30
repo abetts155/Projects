@@ -403,6 +403,10 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
 	public final LoopNests getLNT ()
 	{
+		if (lnt == null)
+		{
+			generateLNT ();
+		}
 		return lnt;
 	}
 }

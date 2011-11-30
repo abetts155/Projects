@@ -1,6 +1,5 @@
 package adam.betts.graphs.trees;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,7 +14,7 @@ import adam.betts.vertices.trees.TreeVertex;
 public class Tree extends Graph
 {
 	protected int rootID;
-	protected HashMap<Integer, HashSet<TreeVertex>> levelMap = new LinkedHashMap<Integer, HashSet<TreeVertex>> ();
+	protected HashMap <Integer, HashSet <TreeVertex>> levelMap = new LinkedHashMap <Integer, HashSet <TreeVertex>> ();
 
 	public Tree ()
 	{
@@ -69,8 +68,8 @@ public class Tree extends Graph
 
 	public final void setHeight ()
 	{
-		HashSet<Integer> visited = new HashSet<Integer> ();
-		Stack<Integer> stack = new Stack<Integer> ();
+		HashSet <Integer> visited = new HashSet <Integer> ();
+		Stack <Integer> stack = new Stack <Integer> ();
 		stack.push (rootID);
 		while (!stack.isEmpty ())
 		{
@@ -82,8 +81,7 @@ public class Tree extends Graph
 			if (vertexID == rootID)
 			{
 				level = 0;
-			}
-			else
+			} else
 			{
 				TreeVertex p = (TreeVertex) idToVertex.get (v.getParentID ());
 				level = p.getLevel () + 1;
@@ -91,12 +89,12 @@ public class Tree extends Graph
 
 			if (!levelMap.containsKey (level))
 			{
-				levelMap.put (level, new HashSet<TreeVertex> ());
+				levelMap.put (level, new HashSet <TreeVertex> ());
 			}
 			v.setLevel (level);
 			levelMap.get (level).add (v);
 
-			Iterator<Edge> succIt = v.successorIterator ();
+			Iterator <Edge> succIt = v.successorIterator ();
 			while (succIt.hasNext ())
 			{
 				Edge e = succIt.next ();
@@ -115,7 +113,7 @@ public class Tree extends Graph
 		return levelMap.size ();
 	}
 
-	public Iterator<TreeVertex> levelIterator (int level)
+	public Iterator <TreeVertex> levelIterator (int level)
 	{
 		return levelMap.get (level).iterator ();
 	}
@@ -126,12 +124,10 @@ public class Tree extends Graph
 		if (left == right)
 		{
 			answer = true;
-		}
-		else if (right == rootID)
+		} else if (right == rootID)
 		{
 			answer = false;
-		}
-		else
+		} else
 		{
 			int vertexID = right;
 			TreeVertex v = getVertex (vertexID);
@@ -147,8 +143,7 @@ public class Tree extends Graph
 			if (parentID == left)
 			{
 				answer = true;
-			}
-			else
+			} else
 			{
 				answer = false;
 			}
@@ -161,35 +156,44 @@ public class Tree extends Graph
 		if (left == right)
 		{
 			return false;
-		}
-		else
+		} else
 		{
 			return isAncestor (left, right);
 		}
 	}
 
-	public final ArrayList <Integer> getProperAncestors (int vertexID)
+	public final HashSet <Integer> getProperAncestors (int vertexID)
 	{
-		ArrayList <Integer> properAncestors = new ArrayList <Integer> ();
-		int parentID = getVertex (vertexID).getParentID ();
-		properAncestors.add (parentID);
-		int rootID = getRootID ();
+		HashSet <Integer> properAncestors = new HashSet <Integer> ();
 
-		while (parentID != rootID)
+		if (vertexID == getRootID ())
 		{
-			int nextParentID = getVertex (parentID).getParentID ();
-			properAncestors.add (nextParentID);
-			parentID = nextParentID;
-		}
+			return properAncestors;
+		} else
+		{
+			int parentID;
+			do
+			{
+				parentID = getVertex (vertexID).getParentID ();
+				properAncestors.add (parentID);
+				vertexID = parentID;
+			} while (parentID != getRootID ());
 
-		return properAncestors;
+			return properAncestors;
+		}
 	}
-	
-	
+
+	public final HashSet <Integer> getAncestors (int vertexID)
+	{
+		HashSet <Integer> ancestors = getProperAncestors (vertexID);
+		ancestors.add (vertexID);
+		return ancestors;
+	}
+
 	public final int numOfLeaves ()
 	{
 		int count = 0;
-		for (Vertex v: this)
+		for (Vertex v : this)
 		{
 			if (v.numOfSuccessors () == 0)
 			{

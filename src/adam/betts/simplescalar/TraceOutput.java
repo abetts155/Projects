@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 
+import adam.betts.tools.MainSimpleScalarTraceParser;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.IProfile;
@@ -14,7 +15,7 @@ public class TraceOutput
 	/*
 	 * One file handle per instrumentation profile
 	 */
-	private static HashMap<IProfile, BufferedWriter> files = new HashMap<IProfile, BufferedWriter> ();
+	private static HashMap <IProfile, BufferedWriter> files = new HashMap <IProfile, BufferedWriter> ();
 
 	public final static void openFileHandles ()
 	{
@@ -25,64 +26,68 @@ public class TraceOutput
 			i = 0;
 		}
 
-		for (IProfile iprofile: Globals.getInstrumentationProfiles ())
+		for (IProfile iprofile : Globals.getInstrumentationProfiles ())
 		{
 			try
 			{
-				files.put (iprofile, new BufferedWriter (new FileWriter (
-						traceFileName.substring (0, i) + "."
-								+ iprofile.toString () + ".txt")));
-			}
-			catch (IOException e)
+				files.put (iprofile, new BufferedWriter (new FileWriter (traceFileName.substring (
+						0, i)
+						+ "." + iprofile.toString () + ".txt")));
+			} catch (IOException e)
 			{
-				Debug.debugMessage (TraceOutput.class, e.getMessage (), 1);
-				System.exit (1);
+				Debug.errorMessage (TraceOutput.class, e.getMessage ());
 			}
 		}
 	}
 
 	public final static void closeFileHandles ()
 	{
-		for (IProfile iprofile: Globals.getInstrumentationProfiles ())
+		for (IProfile iprofile : Globals.getInstrumentationProfiles ())
 		{
 			try
 			{
 				files.get (iprofile).close ();
-			}
-			catch (IOException e)
+			} catch (IOException e)
 			{
-				Debug.debugMessage (TraceOutput.class, e.getMessage (), 1);
-				System.exit (1);
+				Debug.errorMessage (TraceOutput.class, e.getMessage ());
 			}
 		}
 	}
 
-	public final static void writeTuple (IProfile iprofile, long ipointID,
-			long time)
+	public final static void writeTuple (IProfile iprofile, long ipointID, long time)
 	{
 		try
 		{
-			files.get (iprofile).write (ipointID + " " + time + "\n");
-		}
-		catch (IOException e)
+			BufferedWriter out = files.get (iprofile);
+
+			out.write (Long.toString (ipointID));
+			if (MainSimpleScalarTraceParser.outputTimestamps () == false)
+			{
+				out.write (" " + time);
+			}
+			out.write ("\n");
+		} catch (IOException e)
 		{
-			Debug.debugMessage (TraceOutput.class, e.getMessage (), 1);
-			System.exit (1);
+			Debug.errorMessage (TraceOutput.class, e.getMessage ());
 		}
 
 	}
 
-	public final static void writeTuple (IProfile iprofile, String ipointID,
-			long time)
+	public final static void writeTuple (IProfile iprofile, String ipointID, long time)
 	{
 		try
 		{
-			files.get (iprofile).write (ipointID + " " + time + "\n");
-		}
-		catch (IOException e)
+			BufferedWriter out = files.get (iprofile);
+
+			out.write (ipointID);
+			if (MainSimpleScalarTraceParser.outputTimestamps () == false)
+			{
+				out.write (" " + time);
+			}
+			out.write ("\n");
+		} catch (IOException e)
 		{
-			Debug.debugMessage (TraceOutput.class, e.getMessage (), 1);
-			System.exit (1);
+			Debug.errorMessage (TraceOutput.class, e.getMessage ());
 		}
 
 	}

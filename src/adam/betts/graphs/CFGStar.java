@@ -11,7 +11,6 @@ import java.util.Random;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.trees.DominatorTree;
-import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.OutputGraph;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;

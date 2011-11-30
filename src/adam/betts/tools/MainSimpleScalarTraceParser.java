@@ -19,6 +19,11 @@ public class MainSimpleScalarTraceParser
 	private static Options options;
 	private static Option basicBlockIDTraceOption;
 	private static Option outputHexAddressesOption;
+	private static Option outputTimestampsOption;
+
+	private static boolean outputBasicBlockIds;
+	private static boolean outputHexAddresses;
+	private static boolean outputTimestamps;
 
 	public static void main (String[] args)
 	{
@@ -46,6 +51,11 @@ public class MainSimpleScalarTraceParser
 				"Output hexadecimal addresses to the trace files instead of integers.");
 		outputHexAddressesOption.setRequired (false);
 		options.addOption (outputHexAddressesOption);
+
+		outputTimestampsOption = new Option ("T", "no-time", false,
+				"Do NOT output time stamps to the trace file.");
+		outputTimestampsOption.setRequired (false);
+		options.addOption (outputTimestampsOption);
 	}
 
 	private static void parseCommandLine (String[] args)
@@ -75,8 +85,9 @@ public class MainSimpleScalarTraceParser
 				DefaultOptions.setInstrumentationProfileOption (line);
 				DefaultOptions.setUDrawDirectoryOption (line);
 				DefaultOptions.setTraceFileOption (line);
-				Globals.outputBasicBlockIds = line.hasOption (basicBlockIDTraceOption.getOpt ());
-				Globals.outputHexAddresses = line.hasOption (outputHexAddressesOption.getOpt ());
+				outputBasicBlockIds = line.hasOption (basicBlockIDTraceOption.getOpt ());
+				outputHexAddresses = line.hasOption (outputHexAddressesOption.getOpt ());
+				outputTimestamps = line.hasOption (outputTimestampsOption.getOpt ());
 			}
 		} catch (ParseException e)
 		{
@@ -96,19 +107,18 @@ public class MainSimpleScalarTraceParser
 		new TraceParser (program);
 	}
 
-	public static class Globals
+	public final static boolean outputBasicBlockIds ()
 	{
-		protected static boolean outputBasicBlockIds;
-		protected static boolean outputHexAddresses;
+		return outputBasicBlockIds;
+	}
 
-		public final static boolean outputBasicBlockIds ()
-		{
-			return outputBasicBlockIds;
-		}
+	public final static boolean outputHexAddresses ()
+	{
+		return outputHexAddresses;
+	}
 
-		public final static boolean outputHexAddresses ()
-		{
-			return outputHexAddresses;
-		}
+	public final static boolean outputTimestamps ()
+	{
+		return outputTimestamps;
 	}
 }

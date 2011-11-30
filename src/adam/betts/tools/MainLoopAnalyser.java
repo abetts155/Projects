@@ -9,6 +9,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.calculations.LoopBoundDatabase;
+import adam.betts.outputs.AnalysisOutput;
 import adam.betts.programs.Program;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
@@ -17,6 +18,8 @@ public class MainLoopAnalyser
 {
 	private static Options options;
 	private static Option boundLevelOption;
+
+	private static int boundLevel = 1;
 
 	private static void addOptions ()
 	{
@@ -29,7 +32,8 @@ public class MainLoopAnalyser
 		DefaultOptions.addInstrumentationProfileOption (options, true, 1);
 
 		boundLevelOption = new Option ("b", "bound-level", true,
-				"Only obtain bounds up to this number of outer-nested loops.");
+				"Obtain bounds up to this number of outer-nested loops. Default is " + boundLevel
+						+ ".");
 		boundLevelOption.setRequired (false);
 		options.addOption (boundLevelOption);
 	}
@@ -71,7 +75,7 @@ public class MainLoopAnalyser
 								throw new IllegalArgumentException ();
 							} else
 							{
-								Globals.boundLevel = boundLevel;
+								MainLoopAnalyser.boundLevel = boundLevel;
 							}
 						} catch (NumberFormatException e)
 						{
@@ -109,7 +113,8 @@ public class MainLoopAnalyser
 		Program program = new Program ();
 		program.insertVirtualIpoints ();
 		program.buildIPGS (true);
-		new LoopBoundDatabase (program);
+		LoopBoundDatabase database = new LoopBoundDatabase (program);
+		new AnalysisOutput (program, database);
 	}
 
 	public static void main (String[] args)
@@ -119,13 +124,8 @@ public class MainLoopAnalyser
 		run ();
 	}
 
-	public static class Globals
+	public final static int getBoundLevel ()
 	{
-		protected static int boundLevel = 1;
-
-		public final static int getBoundLevel ()
-		{
-			return boundLevel;
-		}
+		return boundLevel;
 	}
 }
