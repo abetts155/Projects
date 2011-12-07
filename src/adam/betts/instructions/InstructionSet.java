@@ -74,6 +74,16 @@ public class InstructionSet
 	private final static String jsrInstruction = "jsr";
 	private final static String retInstruction = "ret";
 
+	private final static String bDotnInstruction = "b.n";
+	private final static String beqDotnInstruction = "beq.n";
+	private final static String bgeDotnInstruction = "bge.n";
+	private final static String bgtDotnInstruction = "bgt.n";
+	private final static String bhiDotnInstruction = "bhi.n";
+	private final static String bleDotnInstruction = "ble.n";
+	private final static String blsDotnInstruction = "bls.n";
+	private final static String bltDotnInstruction = "blt.n";
+	private final static String bneDotnInstruction = "bne.n";
+
 	private final static String bc1fInstruction = "bc1f";
 	private final static String bc1tInstruction = "bc1t";
 	private final static String bgezInstruction = "bgez";
@@ -97,12 +107,12 @@ public class InstructionSet
 	/*
 	 * Branches of the instruction set
 	 */
-	private HashSet<String> branches;
+	private HashSet <String> branches;
 
 	/*
 	 * Unconditional branch instructions
 	 */
-	private HashSet<String> unconditionalBranch;
+	private HashSet <String> unconditionalBranch;
 
 	/*
 	 * The subprogram call instruction
@@ -157,36 +167,37 @@ public class InstructionSet
 				 * these are indirect calls and we cannot statically determine
 				 * their destinations
 				 */
-				branches = new HashSet<String> (Arrays.asList (new String[] {
-						jInstruction, jalInstruction, beqInstruction,
-						bneInstruction, blezInstruction, bgtzInstruction,
-						bltzInstruction, bgezInstruction, bc1fInstruction,
+				branches = new HashSet <String> (Arrays.asList (new String[] { jInstruction,
+						jalInstruction, beqInstruction, bneInstruction, blezInstruction,
+						bgtzInstruction, bltzInstruction, bgezInstruction, bc1fInstruction,
 						bc1tInstruction }));
-				unconditionalBranch = new HashSet<String> (Arrays
+				unconditionalBranch = new HashSet <String> (Arrays
 						.asList (new String[] { jInstruction }));
 				subprogramCall = jalInstruction;
 				isa = ISA.PISA;
 				addressOffset = 8;
-			}
-			else if (line.endsWith ("elf32-littlearm"))
+			} else if (line.endsWith ("elf32-littlearm"))
 			{
 				/*
 				 * The different types of jump instructions that the
 				 * disassembler reader recognises for the ARM instruction set
 				 */
-				branches = new HashSet<String> (Arrays.asList (new String[] {
-						bInstruction, blInstruction, bccInstruction,
-						bcsInstruction, beqInstruction, bgeInstruction,
-						bgtInstruction, bhiInstruction, bleInstruction,
-						blsInstruction, bltInstruction, bmiInstruction,
-						bneInstruction, bplInstruction, bvsInstruction,
-						bvcInstruction }));
-				unconditionalBranch = new HashSet<String> (Arrays
-						.asList (new String[] { bInstruction }));
+				branches = new HashSet <String> (Arrays.asList (new String[] { bInstruction,
+						blInstruction, bccInstruction, bcsInstruction, beqInstruction,
+						bgeInstruction, bgtInstruction, bhiInstruction, bleInstruction,
+						blsInstruction, bltInstruction, bmiInstruction, bneInstruction,
+						bplInstruction, bvsInstruction, bvcInstruction, bDotnInstruction,
+						beqDotnInstruction, bgeDotnInstruction, bgtDotnInstruction,
+						bhiDotnInstruction, bleDotnInstruction, blsDotnInstruction,
+						bltDotnInstruction, bneDotnInstruction }));
+
+				unconditionalBranch = new HashSet <String> (Arrays.asList (new String[] {
+						bInstruction, bDotnInstruction }));
+
 				subprogramCall = blInstruction;
+				
 				isa = ISA.ARM;
-			}
-			else if (line.endsWith ("elf64-alpha"))
+			} else if (line.endsWith ("elf64-alpha"))
 			{
 				/*
 				 * The different types of jump instructions that the
@@ -195,58 +206,45 @@ public class InstructionSet
 				 * subprogram instruction that has no edge in the CFG. Also note
 				 * that the "jsr_coroutine" and "jmp" are not supported
 				 */
-				branches = new HashSet<String> (Arrays.asList (new String[] {
-						brInstruction, beqInstruction, bneInstruction,
-						bltInstruction, bleInstruction, bgtInstruction,
-						bgeInstruction, blbcInstruction, blbsInstruction,
+				branches = new HashSet <String> (Arrays.asList (new String[] { brInstruction,
+						beqInstruction, bneInstruction, bltInstruction, bleInstruction,
+						bgtInstruction, bgeInstruction, blbcInstruction, blbsInstruction,
 						bsrInstruction, jsrInstruction }));
-				unconditionalBranch = new HashSet<String> (Arrays
+				unconditionalBranch = new HashSet <String> (Arrays
 						.asList (new String[] { brInstruction }));
 				subprogramCall = bsrInstruction;
 				isa = ISA.ALPHA;
-			}
-			else if (line.endsWith ("elf32-sparc"))
+			} else if (line.endsWith ("elf32-sparc"))
 			{
-				branches = new HashSet<String> (Arrays.asList (new String[] {
-						bInstruction, baInstruction, bneInstruction,
-						beInstruction, bgInstruction, bleInstruction,
-						bgeInstruction, blInstruction, bguInstruction,
-						bleuInstruction, callInstruction, retInstruction,
-						retlInstruction }));
-				unconditionalBranch = new HashSet<String> (Arrays
-						.asList (new String[] { bInstruction, retInstruction,
-								retlInstruction }));
+				branches = new HashSet <String> (Arrays.asList (new String[] { bInstruction,
+						baInstruction, bneInstruction, beInstruction, bgInstruction,
+						bleInstruction, bgeInstruction, blInstruction, bguInstruction,
+						bleuInstruction, callInstruction, retInstruction, retlInstruction }));
+				unconditionalBranch = new HashSet <String> (Arrays.asList (new String[] {
+						bInstruction, retInstruction, retlInstruction }));
 				subprogramCall = callInstruction;
 				isa = ISA.SPARC;
-			}
-			else if (line.endsWith ("elf32-i386"))
+			} else if (line.endsWith ("elf32-i386"))
 			{
-				branches = new HashSet<String> (Arrays.asList (new String[] {
-						callInstruction, jaInstruction, jaeInstruction,
-						jbInstruction, jbeInstruction, jcInstruction,
-						jcxzInstruction, jeInstruction, jgInstruction,
-						jgeInstruction, jlInstruction, jleInstruction,
-						jmpInstruction, jnaInstruction, jnaeInstruction,
-						jnbInstruction, jnbeInstruction, jncInstruction,
-						jneInstruction, jngInstruction, jngeInstruction,
-						jnlInstruction, jnleInstruction, jnoInstruction,
-						jnpInstruction, jnsInstruction, jnzInstruction,
-						joInstruction, jpInstruction, jpeInstruction,
-						jpoInstruction, jsInstruction, jzInstruction }));
-				unconditionalBranch = new HashSet<String> (Arrays
+				branches = new HashSet <String> (Arrays.asList (new String[] { callInstruction,
+						jaInstruction, jaeInstruction, jbInstruction, jbeInstruction,
+						jcInstruction, jcxzInstruction, jeInstruction, jgInstruction,
+						jgeInstruction, jlInstruction, jleInstruction, jmpInstruction,
+						jnaInstruction, jnaeInstruction, jnbInstruction, jnbeInstruction,
+						jncInstruction, jneInstruction, jngInstruction, jngeInstruction,
+						jnlInstruction, jnleInstruction, jnoInstruction, jnpInstruction,
+						jnsInstruction, jnzInstruction, joInstruction, jpInstruction,
+						jpeInstruction, jpoInstruction, jsInstruction, jzInstruction }));
+				unconditionalBranch = new HashSet <String> (Arrays
 						.asList (new String[] { jmpInstruction }));
 				subprogramCall = callInstruction;
 				isa = ISA.X86;
-			}
-			else
+			} else
 			{
-				Debug.debugMessage (getClass (), "Disassembly first line "
-						+ line, 4);
-				throw new IOException (programFileName
-						+ " is not a valid disassembly file");
+				Debug.debugMessage (getClass (), "Disassembly first line " + line, 4);
+				throw new IOException (programFileName + " is not a valid disassembly file");
 			}
-		}
-		catch (Exception e)
+		} catch (Exception e)
 		{
 			e.printStackTrace ();
 			System.exit (1);
@@ -258,12 +256,12 @@ public class InstructionSet
 		return isa;
 	}
 
-	public final Set<String> getBranches ()
+	public final Set <String> getBranches ()
 	{
 		return Collections.unmodifiableSet (branches);
 	}
 
-	public final Set<String> getUnconditionalBranches ()
+	public final Set <String> getUnconditionalBranches ()
 	{
 		return Collections.unmodifiableSet (unconditionalBranch);
 	}
