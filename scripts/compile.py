@@ -45,6 +45,13 @@ parser.add_option("-r",
                   help="Entry point of the program.",
                   metavar="<NAME>")
 
+parser.add_option("-m",
+                  "--m5sim",
+                  action="store_true",
+                  dest="m5sim",
+                  help="Use m5 Simulator",
+                  default=False)
+
 parser.add_option("-v",
                  "--verbose",
                  action="store_true",
@@ -81,6 +88,17 @@ simpleScalarPath = rootPath + sep + "simplescalar" + sep + "bin"
 gcc              = simpleScalarPath + sep + "sslittle-na-sstrix-gcc"
 objdump          = simpleScalarPath + sep + "sslittle-na-sstrix-objdump"
 disassembler     = "java -jar " + rootPath + sep + "bin" + sep + "disassemble.jar"
+
+if opts.m5sim:
+    armToolchainVar = "ARM_GCC_TOOLCHAIN"
+    try:
+        armToolchain = environ[armToolchainVar]
+    except KeyError:
+        print ("Cannot find environment variable '" + armToolchainVar + "' which is needed to compile the program for m5.")
+        exit(0)
+
+    gcc     = armToolchain + "-gcc -static"
+    objdump = armToolchain + "-objdump"
 
 runCommand("%s -O2 -o %s %s"  % (gcc, opts.program[:-2], opts.program))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))

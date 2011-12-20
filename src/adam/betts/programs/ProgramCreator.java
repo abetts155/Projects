@@ -660,12 +660,27 @@ public class ProgramCreator
 		{
 			final String[] lexemes = str.split ("\\s+");
 			final int addressIndex = 1;
-			final int opCodeIndex = 3;
-			final int destinationIndex = 4;
+			int opCodeIndex = 3;
+			int destinationIndex = 4;
 
 			String addressStr = lexemes[addressIndex].substring (0,
 					lexemes[addressIndex].length () - 1);
 			StringBuffer buffer = new StringBuffer ();
+			
+			// Checks whether the instruction has two instructions before the opcode
+			// If it does then increments the opCode and destination indexes
+			if(lexemes[opCodeIndex].trim().length() == 4) {
+				try
+				{
+					long opCode = Long.parseLong(lexemes[opCodeIndex], 16);
+					opCodeIndex++;
+					destinationIndex++;
+				}
+				catch (NumberFormatException e)
+				{
+				}
+			}
+			
 			for (int i = opCodeIndex; i < lexemes.length; ++i)
 			{
 				buffer.append (lexemes[i] + " ");
