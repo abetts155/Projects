@@ -50,26 +50,21 @@ public class ProgramCreator
 				throw new IOException (
 						programFileName
 								+ " does not have a file extension. Cannot deduce whether to parse XML or read disassembly.");
-			}
-			else
+			} else
 			{
-				String fileExtension = programFileName.substring (i + 1,
-						programFileName.length ());
+				String fileExtension = programFileName.substring (i + 1, programFileName.length ());
 
 				program.programName = programFileName.substring (0, i);
 
 				if (fileExtension.equals ("asm"))
 				{
-					Debug.debugMessage (getClass (),
-							"Reading a disassembly file", 3);
+					Debug.debugMessage (getClass (), "Reading a disassembly file", 3);
 					new Disassembler ();
-				}
-				else if (fileExtension.equals ("xml"))
+				} else if (fileExtension.equals ("xml"))
 				{
 					Debug.debugMessage (getClass (), "Reading an XML file", 3);
 					new XMLReader ();
-				}
-				else
+				} else
 				{
 					throw new IOException (
 							programFileName
@@ -77,8 +72,7 @@ public class ProgramCreator
 
 				}
 			}
-		}
-		catch (Exception e)
+		} catch (Exception e)
 		{
 			e.printStackTrace ();
 			System.exit (1);
@@ -91,14 +85,13 @@ public class ProgramCreator
 		 * The binary has a lot of system calls, which can over complicate the
 		 * analysis, so remove them
 		 */
-		LinkedList<Integer> stack = new LinkedList<Integer> ();
-		HashSet<Integer> visited = new HashSet<Integer> ();
-		HashSet<Integer> unreachable = new HashSet<Integer> (
-				program.idToSubprogram.keySet ());
+		LinkedList <Integer> stack = new LinkedList <Integer> ();
+		HashSet <Integer> visited = new HashSet <Integer> ();
+		HashSet <Integer> unreachable = new HashSet <Integer> (program.idToSubprogram.keySet ());
 
 		try
 		{
-			for (String rootName: Globals.getRoots ())
+			for (String rootName : Globals.getRoots ())
 			{
 				if (!program.nameToId.containsKey (rootName))
 				{
@@ -112,14 +105,13 @@ public class ProgramCreator
 					int subprogramID = stack.removeLast ();
 
 					Debug.debugMessage (getClass (), "Visiting "
-							+ program.idToSubprogram.get (subprogramID)
-									.getSubprogramName (), 4);
+							+ program.idToSubprogram.get (subprogramID).getSubprogramName (), 4);
 
 					unreachable.remove (subprogramID);
 					visited.add (subprogramID);
 
 					CallVertex callv = program.callg.getVertex (subprogramID);
-					Iterator<Edge> succIt = callv.successorIterator ();
+					Iterator <Edge> succIt = callv.successorIterator ();
 					while (succIt.hasNext ())
 					{
 						Edge e = succIt.next ();
@@ -131,8 +123,7 @@ public class ProgramCreator
 					}
 				}
 			}
-		}
-		catch (NoSuchRootException e)
+		} catch (NoSuchRootException e)
 		{
 			System.err.println (e.getMessage ());
 			System.exit (1);
@@ -141,13 +132,11 @@ public class ProgramCreator
 		/*
 		 * Fix the call graph, removing calls to unreachable subprograms
 		 */
-		Debug.debugMessage (getClass (),
-				"Removing the following subprograms: ", 4);
+		Debug.debugMessage (getClass (), "Removing the following subprograms: ", 4);
 		int i = 0;
-		for (int subprogramID: unreachable)
+		for (int subprogramID : unreachable)
 		{
-			String subprogramName = program.idToSubprogram.get (subprogramID)
-					.getSubprogramName ();
+			String subprogramName = program.idToSubprogram.get (subprogramID).getSubprogramName ();
 			Debug.debugMessage (getClass (), i++ + ") " + subprogramName, 4);
 			program.callg.removeVertex (subprogramID);
 			program.idToSubprogram.remove (subprogramID);
@@ -171,14 +160,12 @@ public class ProgramCreator
 				trim ();
 			}
 
-			for (String subprogramName: program.nameToId.keySet ())
+			for (String subprogramName : program.nameToId.keySet ())
 			{
 				int subprogramID = program.nameToId.get (subprogramName);
-				Debug.debugMessage (getClass (),
-						"Setting entry and exit points in CFG of "
-								+ subprogramName, 4);
-				ControlFlowGraph cfg = program.idToSubprogram
-						.get (subprogramID).getCFG ();
+				Debug.debugMessage (getClass (), "Setting entry and exit points in CFG of "
+						+ subprogramName, 4);
+				ControlFlowGraph cfg = program.idToSubprogram.get (subprogramID).getCFG ();
 				cfg.addAllPredecessorEdges ();
 				cfg.setEntry ();
 				cfg.setExit ();
@@ -208,12 +195,10 @@ public class ProgramCreator
 					if (node instanceof Element)
 					{
 						Element child = (Element) node;
-						int subprogramID = Integer.parseInt (child
-								.getAttribute ("id"));
+						int subprogramID = Integer.parseInt (child.getAttribute ("id"));
 						String subprogramName = child.getAttribute ("name");
-						Debug.debugMessage (getClass (), "Adding sub-program "
-								+ subprogramName + " with id " + subprogramID,
-								2);
+						Debug.debugMessage (getClass (), "Adding sub-program " + subprogramName
+								+ " with id " + subprogramID, 2);
 						program.addSubprogram (subprogramID, subprogramName);
 					}
 				}
@@ -230,41 +215,30 @@ public class ProgramCreator
 					{
 						Element child = (Element) node;
 						String subprogramName = child.getAttribute ("name");
-						Debug.debugMessage (getClass (), "In sub-program "
-								+ subprogramName, 4);
-						int subprogramID = program.nameToId
-								.get (subprogramName);
-						ControlFlowGraph cfg = program.idToSubprogram.get (
-								subprogramID).getCFG ();
+						Debug.debugMessage (getClass (), "In sub-program " + subprogramName, 4);
+						int subprogramID = program.nameToId.get (subprogramName);
+						ControlFlowGraph cfg = program.idToSubprogram.get (subprogramID).getCFG ();
 						cfg.setSubprogramName (subprogramName);
 						parseCFG (child, cfg, subprogramID);
 						cfg.setFirstAndLastAddress ();
 					}
 				}
-			}
-			catch (ParserConfigurationException e)
+			} catch (ParserConfigurationException e)
 			{
-				Debug.debugMessage (getClass (),
-						"Error instantiating XML parser", 1);
+				Debug.debugMessage (getClass (), "Error instantiating XML parser", 1);
 				System.exit (1);
-			}
-			catch (SAXException e)
+			} catch (SAXException e)
 			{
-				Debug.debugMessage (getClass (),
-						"SAX exception with XML parser", 1);
+				Debug.debugMessage (getClass (), "SAX exception with XML parser", 1);
 				System.exit (1);
-			}
-			catch (IOException e)
+			} catch (IOException e)
 			{
-				Debug.debugMessage (getClass (),
-						"IO exception with XML parser", 1);
+				Debug.debugMessage (getClass (), "IO exception with XML parser", 1);
 				System.exit (1);
 			}
 		}
 
-		private void parseCFG (Element element,
-				ControlFlowGraph cfg,
-				int subprogramID)
+		private void parseCFG (Element element, ControlFlowGraph cfg, int subprogramID)
 		{
 			NodeList nodes = element.getElementsByTagName ("bb");
 			for (int i = 0; i < nodes.getLength (); i++)
@@ -278,11 +252,10 @@ public class ProgramCreator
 					Debug.debugMessage (getClass (), "Added BB " + bbID, 4);
 					cfg.addBasicBlock (Integer.parseInt (bbID));
 					NodeList instNodes = child.getElementsByTagName ("inst");
-					parseInstructions (instNodes, (BasicBlock) cfg
-							.getVertex (Integer.parseInt (bbID)));
+					parseInstructions (instNodes, (BasicBlock) cfg.getVertex (Integer
+							.parseInt (bbID)));
 					NodeList succNodes = child.getElementsByTagName ("succ");
-					parseSuccessors (succNodes, Integer.parseInt (bbID), cfg,
-							subprogramID);
+					parseSuccessors (succNodes, Integer.parseInt (bbID), cfg, subprogramID);
 				}
 			}
 		}
@@ -298,17 +271,15 @@ public class ProgramCreator
 					Element child = (Element) node;
 					String address = child.getAttribute ("addr");
 					String instructionStr = child.getAttribute ("instr");
-					Debug.debugMessage (getClass (), "Added instruction @ "
-							+ address + " '" + instructionStr + "'", 4);
-					bb.addInstruction (new Instruction (Long.parseLong (address
-							.substring (2), 16), instructionStr));
+					Debug.debugMessage (getClass (), "Added instruction @ " + address + " '"
+							+ instructionStr + "'", 4);
+					bb.addInstruction (new Instruction (Long.parseLong (address.substring (2), 16),
+							instructionStr));
 				}
 			}
 		}
 
-		private void parseSuccessors (NodeList nodes,
-				int vertexID,
-				ControlFlowGraph cfg,
+		private void parseSuccessors (NodeList nodes, int vertexID, ControlFlowGraph cfg,
 				int subprogramID)
 		{
 			for (int i = 0; i < nodes.getLength (); i++)
@@ -327,23 +298,19 @@ public class ProgramCreator
 						{
 							Element grandChild = (Element) childNode;
 							String type = grandChild.getAttribute ("type");
-							int subprogramID2 = Integer.parseInt (grandChild
-									.getAttribute ("cfg"));
+							int subprogramID2 = Integer.parseInt (grandChild.getAttribute ("cfg"));
 
 							if (subprogramID2 != subprogramID)
 							{
-								program.callg.addCall (subprogramID,
-										subprogramID2, vertexID);
-							}
-							else
+								program.callg.addCall (subprogramID, subprogramID2, vertexID);
+							} else
 							{
-								int succID = Integer.parseInt (grandChild
-										.getAttribute ("bb"));
-								cfg.addEdge (vertexID, succID, BranchType
-										.valueOf (type.toUpperCase ()));
+								int succID = Integer.parseInt (grandChild.getAttribute ("bb"));
+								cfg.addEdge (vertexID, succID, BranchType.valueOf (type
+										.toUpperCase ()));
 
-								Debug.debugMessage (getClass (), "Added edge "
-										+ vertexID + "=>" + succID, 4);
+								Debug.debugMessage (getClass (), "Added edge " + vertexID + "=>"
+										+ succID, 4);
 							}
 						}
 					}
@@ -369,15 +336,15 @@ public class ProgramCreator
 		 */
 		private InstructionSet instructionSet;
 
-		private HashMap<String, Long> subprogramToFirstAddress = new LinkedHashMap<String, Long> ();
-		private HashMap<String, Long> subprogramToLastAddress = new LinkedHashMap<String, Long> ();
-		private HashMap<Long, String> lastAddressToSubprogram = new LinkedHashMap<Long, String> ();
-		private HashMap<Long, String> firstAddressToSubprogram = new LinkedHashMap<Long, String> ();
-		private HashMap<String, TreeSet<Instruction>> subprogramToInstructions = new LinkedHashMap<String, TreeSet<Instruction>> ();
-		private HashMap<String, HashMap<Long, Long>> subprogramToBranchInstructions = new LinkedHashMap<String, HashMap<Long, Long>> ();
-		private HashMap<String, HashSet<Long>> subprogramToBranchTargets = new LinkedHashMap<String, HashSet<Long>> ();
-		private HashMap<String, HashSet<Long>> subprogramToUnconditionalBranches = new LinkedHashMap<String, HashSet<Long>> ();
-		private HashMap<String, TreeSet<Long>> subprogramToLeader = new LinkedHashMap<String, TreeSet<Long>> ();
+		private HashMap <String, Long> subprogramToFirstAddress = new LinkedHashMap <String, Long> ();
+		private HashMap <String, Long> subprogramToLastAddress = new LinkedHashMap <String, Long> ();
+		private HashMap <Long, String> lastAddressToSubprogram = new LinkedHashMap <Long, String> ();
+		private HashMap <Long, String> firstAddressToSubprogram = new LinkedHashMap <Long, String> ();
+		private HashMap <String, TreeSet <Instruction>> subprogramToInstructions = new LinkedHashMap <String, TreeSet <Instruction>> ();
+		private HashMap <String, HashMap <Long, Long>> subprogramToBranchInstructions = new LinkedHashMap <String, HashMap <Long, Long>> ();
+		private HashMap <String, HashSet <Long>> subprogramToBranchTargets = new LinkedHashMap <String, HashSet <Long>> ();
+		private HashMap <String, HashSet <Long>> subprogramToUnconditionalBranches = new LinkedHashMap <String, HashSet <Long>> ();
+		private HashMap <String, TreeSet <Long>> subprogramToLeader = new LinkedHashMap <String, TreeSet <Long>> ();
 
 		public Disassembler ()
 		{
@@ -387,8 +354,7 @@ public class ProgramCreator
 			try
 			{
 				identifyJumps ();
-			}
-			catch (IOException e)
+			} catch (IOException e)
 			{
 				System.exit (1);
 			}
@@ -406,23 +372,21 @@ public class ProgramCreator
 			trim ();
 
 			Debug.verboseMessage ("Removing dead code");
-			Debug.debugMessage (getClass (), "#Subprograms = "
-					+ program.nameToId.size (), 2);
-			for (String subprogramName: program.nameToId.keySet ())
+			Debug.debugMessage (getClass (), "#Subprograms = " + program.nameToId.size (), 2);
+			for (String subprogramName : program.nameToId.keySet ())
 			{
 				Debug.debugMessage (getClass (), "In " + subprogramName, 2);
 				int subprogramID = program.nameToId.get (subprogramName);
-				program.idToSubprogram.get (subprogramID).getCFG ()
-						.removeDeadCode ();
+				program.idToSubprogram.get (subprogramID).getCFG ().removeDeadCode ();
 			}
 
 			if (Globals.uDrawDirectorySet ())
 			{
-				for (String subprogramName: program.nameToId.keySet ())
+				for (String subprogramName : program.nameToId.keySet ())
 				{
 					int subprogramID = program.nameToId.get (subprogramName);
-					final ControlFlowGraph cfg = program.idToSubprogram.get (
-							subprogramID).getCFG ();
+					final ControlFlowGraph cfg = program.idToSubprogram.get (subprogramID)
+							.getCFG ();
 					UDrawGraph.makeUDrawFile (cfg, subprogramName);
 				}
 			}
@@ -438,9 +402,8 @@ public class ProgramCreator
 				boolean parse = false;
 
 				String disassemblyFileName = Globals.getProgramFileName ();
-				BufferedReader in = new BufferedReader (new FileReader (
-						disassemblyFileName));
-				while ( (str = in.readLine ()) != null)
+				BufferedReader in = new BufferedReader (new FileReader (disassemblyFileName));
+				while ((str = in.readLine ()) != null)
 				{
 					/*
 					 * Only parse the text section of the disassembly
@@ -448,8 +411,7 @@ public class ProgramCreator
 					if (str.startsWith ("Disassembly"))
 					{
 						parse = str.contains (".text");
-					}
-					else if (parse)
+					} else if (parse)
 					{
 						/*
 						 * To extract the sub-program name to which assembly
@@ -462,62 +424,48 @@ public class ProgramCreator
 						if (str.matches ("[0-9A-Fa-f]+\\s<.*>.*"))
 						{
 							String[] lexemes = str.split ("\\s+");
-							subprogramName = lexemes[1].substring (1,
-									lexemes[1].length () - 2);
+							subprogramName = lexemes[1].substring (1, lexemes[1].length () - 2);
 							subprogramID += 1;
 
-							Debug.debugMessage (getClass (),
-									"New sub-program identified: "
-											+ subprogramName
-											+ " starting @ address "
-											+ lexemes[0], 2);
+							Debug.debugMessage (getClass (), "New sub-program identified: "
+									+ subprogramName + " starting @ address " + lexemes[0], 2);
 
 							if (program.nameToId.containsKey (subprogramName))
 							{
 								Debug.debugMessage (getClass (), subprogramName
-										+ " already exists. Changing it to "
-										+ subprogramName + "_" + subprogramID,
-										2);
+										+ " already exists. Changing it to " + subprogramName + "_"
+										+ subprogramID, 2);
 								subprogramName += "_" + subprogramID;
 							}
 
 							subprogramToBranchInstructions.put (subprogramName,
-									new HashMap<Long, Long> ());
-							subprogramToBranchTargets.put (subprogramName,
-									new HashSet<Long> ());
-							subprogramToUnconditionalBranches.put (
-									subprogramName, new HashSet<Long> ());
+									new HashMap <Long, Long> ());
+							subprogramToBranchTargets.put (subprogramName, new HashSet <Long> ());
+							subprogramToUnconditionalBranches.put (subprogramName,
+									new HashSet <Long> ());
 
 							subprogramToInstructions.put (subprogramName,
-									new TreeSet<Instruction> (
-											new Comparator<Instruction> ()
-											{
-												public int compare (Instruction instr1,
-														Instruction instr2)
-												{
-													if (instr1.getAddress () < instr2
-															.getAddress ())
-													{
-														return -1;
-													}
-													else if (instr1
-															.getAddress () > instr2
-															.getAddress ())
-													{
-														return 1;
-													}
-													else
-													{
-														return 0;
-													}
-												}
-											}));
-
-							subprogramToLeader.put (subprogramName,
-									new TreeSet<Long> (new Comparator<Long> ()
+									new TreeSet <Instruction> (new Comparator <Instruction> ()
 									{
-										public int compare (Long long1,
-												Long long2)
+										public int compare (Instruction instr1, Instruction instr2)
+										{
+											if (instr1.getAddress () < instr2.getAddress ())
+											{
+												return -1;
+											} else if (instr1.getAddress () > instr2.getAddress ())
+											{
+												return 1;
+											} else
+											{
+												return 0;
+											}
+										}
+									}));
+
+							subprogramToLeader.put (subprogramName, new TreeSet <Long> (
+									new Comparator <Long> ()
+									{
+										public int compare (Long long1, Long long2)
 										{
 											if (long1 < long2)
 											{
@@ -526,8 +474,7 @@ public class ProgramCreator
 											if (long1 > long2)
 											{
 												return 1;
-											}
-											else
+											} else
 											{
 												return 0;
 											}
@@ -535,9 +482,7 @@ public class ProgramCreator
 
 									}));
 
-							program
-									.addSubprogram (subprogramID,
-											subprogramName);
+							program.addSubprogram (subprogramID, subprogramName);
 						}
 						/*
 						 * To extract assembly instructions from the listing
@@ -567,11 +512,8 @@ public class ProgramCreator
 									parseX86Instruction (str, subprogramName);
 									break;
 								default:
-									Debug
-											.debugMessage (
-													getClass (),
-													"Cannot handle this instruction set",
-													1);
+									Debug.debugMessage (getClass (),
+											"Cannot handle this instruction set", 1);
 									System.exit (1);
 							}
 
@@ -579,8 +521,7 @@ public class ProgramCreator
 					}
 				}
 				in.close ();
-			}
-			catch (Exception e)
+			} catch (Exception e)
 			{
 				System.err.println ("Error: " + e.getMessage ());
 				e.printStackTrace ();
@@ -597,17 +538,16 @@ public class ProgramCreator
 
 			if (lexemes.length > 6)
 			{
-				String addressStr = lexemes[addressIndex].substring (0,
-						lexemes[addressIndex].length () - 1);
+				String addressStr = lexemes[addressIndex].substring (0, lexemes[addressIndex]
+						.length () - 1);
 				StringBuffer buffer = new StringBuffer ();
 				for (int i = opCodeIndex; i < lexemes.length; ++i)
 				{
 					buffer.append (lexemes[i] + " ");
 				}
-				Instruction instr = new Instruction (Long.parseLong (
-						addressStr, 16), buffer.toString ());
-				TreeSet<Instruction> instructions = subprogramToInstructions
-						.get (subprg);
+				Instruction instr = new Instruction (Long.parseLong (addressStr, 16), buffer
+						.toString ());
+				TreeSet <Instruction> instructions = subprogramToInstructions.get (subprg);
 				instructions.add (instr);
 
 				String opCode = lexemes[opCodeIndex];
@@ -617,15 +557,11 @@ public class ProgramCreator
 							+ " is branch/jump instruction", 4);
 
 					long destination;
-					if (instructionSet.getUnconditionalBranches ().contains (
-							opCode)
-							|| opCode.equals (instructionSet
-									.getSubprogramCallInstruction ()))
+					if (instructionSet.getUnconditionalBranches ().contains (opCode)
+							|| opCode.equals (instructionSet.getSubprogramCallInstruction ()))
 					{
-						destination = Long.parseLong (
-								lexemes[destinationIndex], 16);
-					}
-					else
+						destination = Long.parseLong (lexemes[destinationIndex], 16);
+					} else
 					{
 						int i1 = buffer.lastIndexOf (",");
 						if (i1 == -1)
@@ -638,16 +574,14 @@ public class ProgramCreator
 						}
 
 						int i2 = buffer.indexOf ("<");
-						destination = Long.parseLong (buffer.substring (i1 + 1,
-								i2 - 1), 16);
+						destination = Long.parseLong (buffer.substring (i1 + 1, i2 - 1), 16);
 					}
 
 					subprogramToBranchTargets.get (subprg).add (destination);
 					subprogramToBranchInstructions.get (subprg).put (
 							Long.parseLong (addressStr, 16), destination);
 
-					if (instructionSet.getUnconditionalBranches ().contains (
-							opCode))
+					if (instructionSet.getUnconditionalBranches ().contains (opCode))
 					{
 						subprogramToUnconditionalBranches.get (subprg).add (
 								Long.parseLong (addressStr, 16));
@@ -666,29 +600,29 @@ public class ProgramCreator
 			String addressStr = lexemes[addressIndex].substring (0,
 					lexemes[addressIndex].length () - 1);
 			StringBuffer buffer = new StringBuffer ();
-			
-			// Checks whether the instruction has two instructions before the opcode
+
+			// Checks whether the instruction has two instructions before the
+			// opcode
 			// If it does then increments the opCode and destination indexes
-			if(lexemes[opCodeIndex].trim().length() == 4) {
+			if (lexemes[opCodeIndex].trim ().length () == 4)
+			{
 				try
 				{
-					long opCode = Long.parseLong(lexemes[opCodeIndex], 16);
+					long opCode = Long.parseLong (lexemes[opCodeIndex], 16);
 					opCodeIndex++;
 					destinationIndex++;
-				}
-				catch (NumberFormatException e)
+				} catch (NumberFormatException e)
 				{
 				}
 			}
-			
+
 			for (int i = opCodeIndex; i < lexemes.length; ++i)
 			{
 				buffer.append (lexemes[i] + " ");
 			}
-			Instruction instr = new Instruction (Long
-					.parseLong (addressStr, 16), buffer.toString ());
-			TreeSet<Instruction> instructions = subprogramToInstructions
-					.get (subprg);
+			Instruction instr = new Instruction (Long.parseLong (addressStr, 16), buffer
+					.toString ());
+			TreeSet <Instruction> instructions = subprogramToInstructions.get (subprg);
 			instructions.add (instr);
 
 			String opCode = lexemes[opCodeIndex];
@@ -697,14 +631,12 @@ public class ProgramCreator
 				Debug.debugMessage (getClass (), addressStr + " " + opCode
 						+ " is branch/jump instruction", 4);
 
-				long destination = Long.parseLong (lexemes[destinationIndex],
-						16);
+				long destination = Long.parseLong (lexemes[destinationIndex], 16);
 				subprogramToBranchTargets.get (subprg).add (destination);
-				subprogramToBranchInstructions.get (subprg).put (
-						Long.parseLong (addressStr, 16), destination);
+				subprogramToBranchInstructions.get (subprg).put (Long.parseLong (addressStr, 16),
+						destination);
 
-				if (instructionSet.getUnconditionalBranches ()
-						.contains (opCode))
+				if (instructionSet.getUnconditionalBranches ().contains (opCode))
 				{
 					subprogramToUnconditionalBranches.get (subprg).add (
 							Long.parseLong (addressStr, 16));
@@ -727,10 +659,9 @@ public class ProgramCreator
 			{
 				buffer.append (lexemes[i] + " ");
 			}
-			Instruction instr = new Instruction (Long
-					.parseLong (addressStr, 16), buffer.toString ());
-			TreeSet<Instruction> instructions = subprogramToInstructions
-					.get (subprg);
+			Instruction instr = new Instruction (Long.parseLong (addressStr, 16), buffer
+					.toString ());
+			TreeSet <Instruction> instructions = subprogramToInstructions.get (subprg);
 			instructions.add (instr);
 
 			String opCode = lexemes[opCodeIndex];
@@ -740,8 +671,7 @@ public class ProgramCreator
 						+ " is branch/jump instruction", 4);
 
 				long destination;
-				if (opCode.equals (instructionSet
-						.getSubprogramCallInstruction ()))
+				if (opCode.equals (instructionSet.getSubprogramCallInstruction ()))
 				{
 					int i1 = lexemes[destinationIndex].lastIndexOf (",");
 					long baseAddress = Long.parseLong (
@@ -751,24 +681,20 @@ public class ProgramCreator
 					{
 						int i2 = lexemes[symbolIndex].lastIndexOf ("x");
 						int i3 = lexemes[symbolIndex].lastIndexOf (">");
-						offset = Long.parseLong (lexemes[symbolIndex]
-								.substring (i2 + 1, i3), 16);
+						offset = Long.parseLong (lexemes[symbolIndex].substring (i2 + 1, i3), 16);
 					}
 					destination = baseAddress - offset;
-				}
-				else
+				} else
 				{
 					int i = lexemes[destinationIndex].lastIndexOf (",");
-					destination = Long.parseLong (lexemes[destinationIndex]
-							.substring (i + 1), 16);
+					destination = Long.parseLong (lexemes[destinationIndex].substring (i + 1), 16);
 				}
 
 				subprogramToBranchTargets.get (subprg).add (destination);
-				subprogramToBranchInstructions.get (subprg).put (
-						Long.parseLong (addressStr, 16), destination);
+				subprogramToBranchInstructions.get (subprg).put (Long.parseLong (addressStr, 16),
+						destination);
 
-				if (instructionSet.getUnconditionalBranches ()
-						.contains (opCode))
+				if (instructionSet.getUnconditionalBranches ().contains (opCode))
 				{
 					subprogramToUnconditionalBranches.get (subprg).add (
 							Long.parseLong (addressStr, 16));
@@ -790,10 +716,9 @@ public class ProgramCreator
 			{
 				buffer.append (lexemes[i] + " ");
 			}
-			Instruction instr = new Instruction (Long
-					.parseLong (addressStr, 16), buffer.toString ());
-			TreeSet<Instruction> instructions = subprogramToInstructions
-					.get (subprg);
+			Instruction instr = new Instruction (Long.parseLong (addressStr, 16), buffer
+					.toString ());
+			TreeSet <Instruction> instructions = subprogramToInstructions.get (subprg);
 			instructions.add (instr);
 
 			try
@@ -804,8 +729,7 @@ public class ProgramCreator
 					Debug.debugMessage (getClass (), addressStr + " " + opCode
 							+ " is branch/jump instruction", 4);
 
-					if (instructionSet.getUnconditionalBranches ().contains (
-							opCode))
+					if (instructionSet.getUnconditionalBranches ().contains (opCode))
 					{
 						subprogramToUnconditionalBranches.get (subprg).add (
 								Long.parseLong (addressStr, 16));
@@ -823,36 +747,27 @@ public class ProgramCreator
 
 						if (lexemes.length > destinationIndex)
 						{
-							destination = Long.parseLong (
-									lexemes[destinationIndex], 16);
+							destination = Long.parseLong (lexemes[destinationIndex], 16);
 
 							/*
 							 * Only add the destination address as a branch
 							 * target if it an actual address, and not a dummy
 							 * value
 							 */
-							subprogramToBranchTargets.get (subprg).add (
-									destination);
+							subprogramToBranchTargets.get (subprg).add (destination);
 						}
 
 						subprogramToBranchInstructions.get (subprg).put (
 								Long.parseLong (addressStr, 16), destination);
-					}
-					catch (NumberFormatException e)
+					} catch (NumberFormatException e)
 					{
-						Debug
-								.debugMessage (
-										getClass (),
-										lexemes[destinationIndex]
-												+ " is not a valid destination of the branch",
-										1);
+						Debug.debugMessage (getClass (), lexemes[destinationIndex]
+								+ " is not a valid destination of the branch", 1);
 					}
 				}
-			}
-			catch (ArrayIndexOutOfBoundsException e)
+			} catch (ArrayIndexOutOfBoundsException e)
 			{
-				Debug.debugMessage (getClass (), str
-						+ " does not have have an opcode", 1);
+				Debug.debugMessage (getClass (), str + " does not have have an opcode", 1);
 			}
 		}
 
@@ -892,10 +807,9 @@ public class ProgramCreator
 
 			String addressStr = lexemes[addressIndex].substring (0,
 					lexemes[addressIndex].length () - 1);
-			Instruction instr = new Instruction (Long
-					.parseLong (addressStr, 16), buffer.toString ());
-			TreeSet<Instruction> instructions = subprogramToInstructions
-					.get (subprg);
+			Instruction instr = new Instruction (Long.parseLong (addressStr, 16), buffer
+					.toString ());
+			TreeSet <Instruction> instructions = subprogramToInstructions.get (subprg);
 			instructions.add (instr);
 
 			String opCode = lexemes[opCodeIndex];
@@ -906,20 +820,17 @@ public class ProgramCreator
 
 				try
 				{
-					long destination = Long.parseLong (
-							lexemes[destinationIndex], 16);
+					long destination = Long.parseLong (lexemes[destinationIndex], 16);
 					subprogramToBranchTargets.get (subprg).add (destination);
 					subprogramToBranchInstructions.get (subprg).put (
 							Long.parseLong (addressStr, 16), destination);
 
-					if (instructionSet.getUnconditionalBranches ().contains (
-							opCode))
+					if (instructionSet.getUnconditionalBranches ().contains (opCode))
 					{
 						subprogramToUnconditionalBranches.get (subprg).add (
 								Long.parseLong (addressStr, 16));
 					}
-				}
-				catch (NumberFormatException e)
+				} catch (NumberFormatException e)
 				{
 					Debug
 							.debugMessage (
@@ -933,20 +844,18 @@ public class ProgramCreator
 
 		private void identifyLeaders ()
 		{
-			for (String subprogramName: subprogramToInstructions.keySet ())
+			for (String subprogramName : subprogramToInstructions.keySet ())
 			{
 				int subprogramID = program.nameToId.get (subprogramName);
-				Debug.debugMessage (getClass (), "Identifying leaders in "
-						+ subprogramName, 2);
+				Debug.debugMessage (getClass (), "Identifying leaders in " + subprogramName, 2);
 
-				TreeSet<Long> leaders = subprogramToLeader.get (subprogramName);
+				TreeSet <Long> leaders = subprogramToLeader.get (subprogramName);
 				long previousAddress = 0;
 				long firstAddress = Long.MAX_VALUE;
 				long lastAddress = 0;
 				boolean firstInstruction = true;
 
-				for (Instruction instr: subprogramToInstructions
-						.get (subprogramName))
+				for (Instruction instr : subprogramToInstructions.get (subprogramName))
 				{
 					long address = instr.getAddress ();
 
@@ -954,24 +863,20 @@ public class ProgramCreator
 					{
 						firstInstruction = false;
 						leaders.add (address);
-						Debug.debugMessage (getClass (), Long
-								.toHexString (address)
+						Debug.debugMessage (getClass (), Long.toHexString (address)
 								+ " is the first instruction", 3);
 					}
-					if (subprogramToBranchInstructions.get (subprogramName)
-							.containsKey (previousAddress))
+					if (subprogramToBranchInstructions.get (subprogramName).containsKey (
+							previousAddress))
 					{
 						leaders.add (address);
-						Debug.debugMessage (getClass (), Long
-								.toHexString (previousAddress)
+						Debug.debugMessage (getClass (), Long.toHexString (previousAddress)
 								+ " is a branch instruction", 3);
 					}
-					if (subprogramToBranchTargets.get (subprogramName)
-							.contains (address))
+					if (subprogramToBranchTargets.get (subprogramName).contains (address))
 					{
 						leaders.add (address);
-						Debug.debugMessage (getClass (), Long
-								.toHexString (address)
+						Debug.debugMessage (getClass (), Long.toHexString (address)
 								+ " is a branch target", 3);
 					}
 
@@ -987,39 +892,33 @@ public class ProgramCreator
 					}
 				}
 
-				Debug.debugMessage (getClass (), firstAddress
-						+ " is its first address", 4);
-				Debug.debugMessage (getClass (), lastAddress
-						+ " is its last address", 4);
+				Debug.debugMessage (getClass (), firstAddress + " is its first address", 4);
+				Debug.debugMessage (getClass (), lastAddress + " is its last address", 4);
 
 				firstAddressToSubprogram.put (firstAddress, subprogramName);
 				lastAddressToSubprogram.put (lastAddress, subprogramName);
 				subprogramToFirstAddress.put (subprogramName, firstAddress);
 				subprogramToLastAddress.put (subprogramName, lastAddress);
-				program.idToSubprogram.get (subprogramID).getCFG ()
-						.setFirstAddress (firstAddress);
-				program.idToSubprogram.get (subprogramID).getCFG ()
-						.setLastAddress (lastAddress);
+				program.idToSubprogram.get (subprogramID).getCFG ().setFirstAddress (firstAddress);
+				program.idToSubprogram.get (subprogramID).getCFG ().setLastAddress (lastAddress);
 			}
 		}
 
 		private void identifyBasicBlocks ()
 		{
-			for (String subprogramName: subprogramToInstructions.keySet ())
+			for (String subprogramName : subprogramToInstructions.keySet ())
 			{
 				int subprogramID = program.nameToId.get (subprogramName);
-				TreeSet<Long> leaders = subprogramToLeader.get (subprogramName);
+				TreeSet <Long> leaders = subprogramToLeader.get (subprogramName);
 				BasicBlock bb = null;
 
-				for (Instruction instr: subprogramToInstructions
-						.get (subprogramName))
+				for (Instruction instr : subprogramToInstructions.get (subprogramName))
 				{
 					long address = instr.getAddress ();
 
 					if (leaders.contains (address))
 					{
-						ControlFlowGraph cfg = program.idToSubprogram.get (
-								subprogramID).getCFG ();
+						ControlFlowGraph cfg = program.idToSubprogram.get (subprogramID).getCFG ();
 						cfg.setSubprogramName (subprogramName);
 						cfg.addBasicBlock (bbID);
 						bb = cfg.getBasicBlock (bbID);
@@ -1029,8 +928,7 @@ public class ProgramCreator
 							cfg.setEntryID (bbID);
 						}
 						bbID++;
-					}
-					else
+					} else
 					{
 						bb.addInstruction (instr);
 					}
@@ -1040,15 +938,13 @@ public class ProgramCreator
 
 		private void addEdges ()
 		{
-			for (String subprogramName: program.nameToId.keySet ())
+			for (String subprogramName : program.nameToId.keySet ())
 			{
-				Debug.debugMessage (getClass (), "Adding edges to CFG of "
-						+ subprogramName, 2);
+				Debug.debugMessage (getClass (), "Adding edges to CFG of " + subprogramName, 2);
 
 				int subprogramID = program.nameToId.get (subprogramName);
-				ControlFlowGraph cfg = program.idToSubprogram
-						.get (subprogramID).getCFG ();
-				for (Vertex u: cfg)
+				ControlFlowGraph cfg = program.idToSubprogram.get (subprogramID).getCFG ();
+				for (Vertex u : cfg)
 				{
 					BasicBlock v = (BasicBlock) u;
 
@@ -1058,39 +954,33 @@ public class ProgramCreator
 					if (instr.getOperation ().equals (
 							instructionSet.getSubprogramCallInstruction ()))
 					{
-						if (subprogramToBranchInstructions.get (subprogramName)
-								.containsKey (instr.getAddress ()))
+						if (subprogramToBranchInstructions.get (subprogramName).containsKey (
+								instr.getAddress ()))
 						{
 							/*
 							 * Guard against register-indirect branches
 							 */
-							long target = subprogramToBranchInstructions.get (
-									subprogramName).get (instr.getAddress ());
+							long target = subprogramToBranchInstructions.get (subprogramName).get (
+									instr.getAddress ());
 
 							if (firstAddressToSubprogram.containsKey (target))
 							{
-								String destination = firstAddressToSubprogram
-										.get (target);
-								program.callg.addCall (subprogramName,
-										destination, v.getVertexID ());
+								String destination = firstAddressToSubprogram.get (target);
+								program.callg.addCall (subprogramName, destination, v
+										.getVertexID ());
 
-								Debug.debugMessage (getClass (),
-										"Adding call from " + subprogramName
-												+ " to " + destination + " @ "
-												+ v.getVertexID (), 4);
+								Debug.debugMessage (getClass (), "Adding call from "
+										+ subprogramName + " to " + destination + " @ "
+										+ v.getVertexID (), 4);
 							}
 						}
-					}
-					else if (instructionSet.getBranches ().contains (
-							instr.getOperation ()))
+					} else if (instructionSet.getBranches ().contains (instr.getOperation ()))
 					{
-						long target = subprogramToBranchInstructions.get (
-								subprogramName).get (instr.getAddress ());
+						long target = subprogramToBranchInstructions.get (subprogramName).get (
+								instr.getAddress ());
 
-						if (target < subprogramToFirstAddress
-								.get (subprogramName)
-								|| target > subprogramToLastAddress
-										.get (subprogramName))
+						if (target < subprogramToFirstAddress.get (subprogramName)
+								|| target > subprogramToLastAddress.get (subprogramName))
 						{
 							/*
 							 * Some of branch instructions can "emulate" a
@@ -1101,34 +991,29 @@ public class ProgramCreator
 							 */
 							if (firstAddressToSubprogram.containsKey (target))
 							{
-								String destination = firstAddressToSubprogram
-										.get (target);
-								program.callg.addCall (subprogramName,
-										destination, v.getVertexID ());
+								String destination = firstAddressToSubprogram.get (target);
+								program.callg.addCall (subprogramName, destination, v
+										.getVertexID ());
 
-								Debug.debugMessage (getClass (),
-										"Adding call from " + subprogramName
-												+ " to " + destination + " @ "
-												+ v.getVertexID (), 4);
+								Debug.debugMessage (getClass (), "Adding call from "
+										+ subprogramName + " to " + destination + " @ "
+										+ v.getVertexID (), 4);
 							}
-						}
-						else
+						} else
 						{
 							BasicBlock w = cfg.getBasicBlock (target);
-							cfg.addEdge (v.getVertexID (), w.getVertexID (),
-									BranchType.TAKEN);
+							cfg.addEdge (v.getVertexID (), w.getVertexID (), BranchType.TAKEN);
 
-							Debug.debugMessage (getClass (), "Adding edge "
-									+ v.getVertexID () + "=>"
-									+ w.getVertexID (), 4);
+							Debug.debugMessage (getClass (), "Adding edge " + v.getVertexID ()
+									+ "=>" + w.getVertexID (), 4);
 						}
 
 						/*
 						 * Only add a not-taken edge if the branch instruction
 						 * is not an unconditional jump
 						 */
-						if (subprogramToUnconditionalBranches.get (
-								subprogramName).contains (instr.getAddress ()))
+						if (subprogramToUnconditionalBranches.get (subprogramName).contains (
+								instr.getAddress ()))
 						{
 							addUnconditional = false;
 						}
@@ -1136,24 +1021,34 @@ public class ProgramCreator
 
 					if (addUnconditional)
 					{
-						if (v.getLastAddress () != subprogramToLastAddress
-								.get (subprogramName))
+						if (v.getLastAddress () != subprogramToLastAddress.get (subprogramName))
 						{
 							/*
 							 * Only add a successor if this is not the return
 							 * basic block of the subprogram
 							 */
-							BasicBlock w = cfg.getBasicBlock (v
-									.getLastAddress ()
-									+ instructionSet.getAddressOffset ());
-							if (w != null)
-							{
-								cfg.addEdge (v.getVertexID (),
-										w.getVertexID (), BranchType.NOTTAKEN);
 
-								Debug.debugMessage (getClass (), "Adding edge "
-										+ v.getVertexID () + "=>"
-										+ w.getVertexID (), 4);
+							boolean success = false;
+
+							for (int offset : instructionSet.getNumberOfBytesPerInstruction ())
+							{
+								BasicBlock w = cfg.getBasicBlock (v.getLastAddress () + offset);
+
+								if (w != null)
+								{
+									cfg.addEdge (v.getVertexID (), w.getVertexID (),
+											BranchType.NOTTAKEN);
+
+									Debug.debugMessage (getClass (), "Adding edge "
+											+ v.getVertexID () + "=>" + w.getVertexID (), 4);
+
+									success = true;
+								}
+
+								if (success)
+								{
+									break;
+								}
 							}
 						}
 					}
@@ -1175,11 +1070,11 @@ public class ProgramCreator
 
 		public String getMessage ()
 		{
-			StringBuffer buffer = new StringBuffer ("The root subprogram '"
-					+ rootName + "' does not exist in this program. ");
-			HashSet<String> suggestions = new HashSet<String> ();
+			StringBuffer buffer = new StringBuffer ("The root subprogram '" + rootName
+					+ "' does not exist in this program. ");
+			HashSet <String> suggestions = new HashSet <String> ();
 
-			for (String subprogramName: program.nameToId.keySet ())
+			for (String subprogramName : program.nameToId.keySet ())
 			{
 				if (subprogramName.matches (rootName + "[a-zA-Z0-9_]+")
 						|| subprogramName.matches ("[a-zA-Z_]" + rootName))
@@ -1191,7 +1086,7 @@ public class ProgramCreator
 			{
 				int i = 1;
 				buffer.append ("Did you mean: ");
-				for (String subprogramName: suggestions)
+				for (String subprogramName : suggestions)
 				{
 					buffer.append ("'" + subprogramName + "'");
 					if (i++ < suggestions.size ())
@@ -1200,11 +1095,9 @@ public class ProgramCreator
 					}
 				}
 				buffer.append ("?");
-			}
-			else
+			} else
 			{
-				buffer
-						.append ("Unable to find a subprogram with a similar name.");
+				buffer.append ("Unable to find a subprogram with a similar name.");
 			}
 			return buffer.toString ();
 		}

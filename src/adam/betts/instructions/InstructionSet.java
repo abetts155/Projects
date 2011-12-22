@@ -1,11 +1,12 @@
 package adam.betts.instructions;
 
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Globals;
@@ -126,9 +127,9 @@ public class InstructionSet
 
 	/*
 	 * The offset to add an address to find the next instruction. Normally 4 but
-	 * sometimes can be 8
+	 * sometimes can be 2 or 8
 	 */
-	private int addressOffset = 4;
+	private TreeSet <Integer> numberOfBytesPerInstruction = new TreeSet <Integer> ();
 
 	/*
 	 * The particular instruction set, which is determined in the constructor
@@ -175,7 +176,7 @@ public class InstructionSet
 						.asList (new String[] { jInstruction }));
 				subprogramCall = jalInstruction;
 				isa = ISA.PISA;
-				addressOffset = 8;
+				numberOfBytesPerInstruction.add (8);
 			} else if (line.endsWith ("elf32-littlearm"))
 			{
 				/*
@@ -195,8 +196,10 @@ public class InstructionSet
 						bInstruction, bDotnInstruction }));
 
 				subprogramCall = blInstruction;
-				
+
 				isa = ISA.ARM;
+				numberOfBytesPerInstruction.add (4);
+				numberOfBytesPerInstruction.add (2);
 			} else if (line.endsWith ("elf64-alpha"))
 			{
 				/*
@@ -214,6 +217,7 @@ public class InstructionSet
 						.asList (new String[] { brInstruction }));
 				subprogramCall = bsrInstruction;
 				isa = ISA.ALPHA;
+				numberOfBytesPerInstruction.add (4);
 			} else if (line.endsWith ("elf32-sparc"))
 			{
 				branches = new HashSet <String> (Arrays.asList (new String[] { bInstruction,
@@ -224,6 +228,7 @@ public class InstructionSet
 						bInstruction, retInstruction, retlInstruction }));
 				subprogramCall = callInstruction;
 				isa = ISA.SPARC;
+				numberOfBytesPerInstruction.add (4);
 			} else if (line.endsWith ("elf32-i386"))
 			{
 				branches = new HashSet <String> (Arrays.asList (new String[] { callInstruction,
@@ -239,10 +244,11 @@ public class InstructionSet
 						.asList (new String[] { jmpInstruction }));
 				subprogramCall = callInstruction;
 				isa = ISA.X86;
+				numberOfBytesPerInstruction.add (4);
 			} else
 			{
-				Debug.debugMessage (getClass (), "Disassembly first line " + line, 4);
-				throw new IOException (programFileName + " is not a valid disassembly file");
+				Debug.errorMessage (getClass (), "Disassembly first line " + line + programFileName
+						+ " is not a valid disassembly file");
 			}
 		} catch (Exception e)
 		{
@@ -271,8 +277,8 @@ public class InstructionSet
 		return subprogramCall;
 	}
 
-	public final int getAddressOffset ()
+	public final TreeSet <Integer> getNumberOfBytesPerInstruction ()
 	{
-		return addressOffset;
+		return numberOfBytesPerInstruction;
 	}
 }
