@@ -18,6 +18,7 @@ public class MainProgramGenerator
 	private static Options options;
 	private static Option fanOutOption;
 	private static Option loopsOption;
+	private static Option loopsDepthOption;
 	private static Option selfLoopsOption;
 	private static Option subprogramsOption;
 	private static Option depthOption;
@@ -61,6 +62,11 @@ public class MainProgramGenerator
 		loopsOption.setRequired (false);
 		options.addOption (loopsOption);
 
+		loopsDepthOption = new Option ("L", "loop-depth", true,
+				"Maximum loop-nesting level depth. Default is " + Globals.loopsDepth + ".");
+		loopsDepthOption.setRequired (false);
+		options.addOption (loopsDepthOption);
+
 		selfLoopsOption = new Option ("S", "self-loops", true,
 				"Maximum number of self-loops in a single graph in range [0.."
 						+ maxNumberOfSelfLoops + "]. Default is " + Globals.selfLoops + ".");
@@ -89,11 +95,11 @@ public class MainProgramGenerator
 		indirectRecursionOption.setRequired (false);
 		options.addOption (indirectRecursionOption);
 
-		breaksOption = new Option ("b", "breaks", true, "Include break-like structures in loops.");
+		breaksOption = new Option ("b", "breaks", false, "Include break-like structures in loops.");
 		breaksOption.setRequired (false);
 		options.addOption (breaksOption);
 
-		continuesOption = new Option ("C", "continue", true,
+		continuesOption = new Option ("C", "continue", false,
 				"Include continue-like structures in loops.");
 		continuesOption.setRequired (false);
 		options.addOption (continuesOption);
@@ -129,6 +135,39 @@ public class MainProgramGenerator
 				Globals.breaks = line.hasOption (breaksOption.getOpt ());
 				Globals.continues = line.hasOption (continuesOption.getOpt ());
 
+				if (line.hasOption (numberOfVerticesOption.getOpt ()))
+				{
+					String arg = line.getOptionValue (numberOfVerticesOption.getOpt ());
+					try
+					{
+						int vertices = Integer.parseInt (arg);
+						if (vertices < minVertices || vertices > maxVertices)
+						{
+							throw new IllegalArgumentException (vertices
+									+ " is not a valid number of vertices. "
+									+ "It must be a positive integer in the range [" + minVertices
+									+ ".." + maxVertices + "].");
+						}
+						if (vertices < 2 * Globals.loops + 2)
+						{
+							throw new IllegalArgumentException (vertices
+									+ " is not a valid number of vertices. "
+									+ "It must be grater or equal to " + (2 * Globals.loops + 2)
+									+ " to be able to generate " + Globals.loops + " loops.");
+						}
+						Globals.vertices = vertices;
+					} catch (NumberFormatException e)
+					{
+						System.err.println ("'" + arg + "' is not a valid argument to "
+								+ numberOfVerticesOption.getLongOpt ());
+						System.exit (1);
+					} catch (IllegalArgumentException e)
+					{
+						System.err.println (e.getMessage ());
+						System.exit (1);
+					}
+				}
+
 				if (line.hasOption (fanOutOption.getOpt ()))
 				{
 					String arg = line.getOptionValue (fanOutOption.getOpt ());
@@ -163,7 +202,13 @@ public class MainProgramGenerator
 						if (loops < 0 || loops > maxNumberOfLoops)
 						{
 							throw new IllegalArgumentException ();
+						} else if (loops > (Globals.vertices - 2) / 2)
+						{
+							System.err.println ("You need at least " + (loops * 2 + 2)
+									+ " vertices to have " + loops + " loops");
+							System.exit (1);
 						}
+
 						Globals.loops = loops;
 					} catch (NumberFormatException e)
 					{
@@ -175,6 +220,38 @@ public class MainProgramGenerator
 						System.err.println (arg
 								+ " is not a valid number of loops. It must be in the range [0.."
 								+ maxNumberOfLoops + "].");
+						System.exit (1);
+					}
+				}
+
+				if (line.hasOption (loopsDepthOption.getOpt ()))
+				{
+					if (line.hasOption (loopsOption.getOpt ()) == false)
+					{
+						System.err
+								.println ("The loop-nesting depth option must be used in conjunction with the number of loops option, otherwise there are no loops generated.");
+						System.exit (1);
+					}
+
+					String arg = line.getOptionValue (loopsDepthOption.getOpt ());
+					try
+					{
+						int depth = Integer.parseInt (arg);
+						if (depth < 1 || depth > Globals.loops)
+						{
+							throw new IllegalArgumentException ();
+						}
+						Globals.loopsDepth = depth;
+					} catch (NumberFormatException e)
+					{
+						System.err.println ("'" + arg + "' is not a valid argument to "
+								+ loopsDepthOption.getLongOpt ());
+						System.exit (1);
+					} catch (IllegalArgumentException e)
+					{
+						System.err
+								.println (arg
+										+ " is not a valid loop-nesting depth. It must be in the range [1..#Loops].");
 						System.exit (1);
 					}
 				}
@@ -207,7 +284,6 @@ public class MainProgramGenerator
 
 				if (line.hasOption (subprogramsOption.getOpt ()))
 				{
-
 					String arg = line.getOptionValue (subprogramsOption.getOpt ());
 					try
 					{
@@ -300,40 +376,6 @@ public class MainProgramGenerator
 						System.exit (1);
 					}
 				}
-
-				if (line.hasOption (numberOfVerticesOption.getOpt ()))
-				{
-					String arg = line.getOptionValue (numberOfVerticesOption.getOpt ());
-					try
-					{
-						int vertices = Integer.parseInt (arg);
-						if (vertices < minVertices || vertices > maxVertices)
-						{
-							throw new IllegalArgumentException (vertices
-									+ " is not a valid number of vertices. "
-									+ "It must be a positive integer in the range [" + minVertices
-									+ ".." + maxVertices + "].");
-						}
-						if (vertices < 2 * Globals.loops + 2)
-						{
-							throw new IllegalArgumentException (vertices
-									+ " is not a valid number of vertices. "
-									+ "It must be grater or equal to " + (2 * Globals.loops + 2)
-									+ " to be able to generate " + Globals.loops + " loops.");
-						}
-						Globals.vertices = vertices;
-					} catch (NumberFormatException e)
-					{
-						System.err.println ("'" + arg + "' is not a valid argument to "
-								+ numberOfVerticesOption.getLongOpt ());
-						System.exit (1);
-					} catch (IllegalArgumentException e)
-					{
-						System.err.println (e.getMessage ());
-						System.exit (1);
-					}
-				}
-
 			}
 		} catch (ParseException e)
 		{
@@ -354,6 +396,7 @@ public class MainProgramGenerator
 		protected static int subprograms;
 		protected static int fanOut = minFanOut;
 		protected static int loops = 0;
+		protected static int loopsDepth = 1;
 		protected static int selfLoops = 0;
 		protected static int depth = 7;
 		protected static boolean breaks = false;
@@ -370,6 +413,11 @@ public class MainProgramGenerator
 		public final static int getNumberOfLoops ()
 		{
 			return loops;
+		}
+
+		public final static int getLoopNestingLevelDepth ()
+		{
+			return loopsDepth;
 		}
 
 		public final static int getNumberOfSelfLoops ()
