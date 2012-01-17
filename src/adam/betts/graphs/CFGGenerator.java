@@ -51,15 +51,16 @@ public class CFGGenerator
 				{
 					remainingVerticesInRegion = remainingVertices;
 
-					Debug.debugMessage (getClass (), "#Vertices in acyclic region = "
-							+ remainingVerticesInRegion, 1);
+					Debug.debugMessage (getClass (), "#Vertices in loop " + treev.getVertexID ()
+							+ " = " + remainingVerticesInRegion, 1);
 
 					decideWhichAcyclicComponents ();
 					addAcyclicComponents ();
 					connectDisconnectedComponents ();
 					findMergeVerticesToRemove ();
 
-					LoopComponent loopComponent = connectRemainingVertices ();
+					SingleEntrySingleExitComponent seseComponent = connectRemainingVertices ();
+					LoopComponent loopComponent = setLoopVertices (seseComponent);
 					loops.put (treev.getVertexID (), loopComponent);
 				} else
 				{
@@ -79,10 +80,11 @@ public class CFGGenerator
 					connectDisconnectedComponents ();
 					findMergeVerticesToRemove ();
 
-					disconnectedComponents.clear ();
-
-					LoopComponent loopComponent = connectRemainingVertices ();
+					SingleEntrySingleExitComponent seseComponent = connectRemainingVertices ();
+					LoopComponent loopComponent = setLoopVertices (seseComponent);
 					loops.put (treev.getVertexID (), loopComponent);
+
+					disconnectedComponents.clear ();
 				}
 			}
 		}
@@ -96,6 +98,9 @@ public class CFGGenerator
 			while (levelIt.hasNext ())
 			{
 				TreeVertex treev = levelIt.next ();
+
+				Debug.debugMessage (getClass (), "Analysing loop " + treev.getVertexID () + " = "
+						+ remainingVerticesInRegion, 1);
 
 				if (level == 0)
 				{
@@ -128,6 +133,35 @@ public class CFGGenerator
 		return cfg;
 	}
 
+	private LoopComponent setLoopVertices (SingleEntrySingleExitComponent seseComponent)
+	{
+		Debug.debugMessage (getClass (), "Setting loop vertices", 1);
+
+		LoopComponent loopComponent = new LoopComponent ();
+
+		loopComponent.headerID = seseComponent.startID;
+		loopComponent.tails.add (seseComponent.exitID);
+
+		if (random.nextBoolean () && cfg.getVertex (seseComponent.startID).numOfSuccessors () == 1)
+		{
+			// Create a for loop where the exit is the header
+			// But only if this vertex has one successor, otherwise, we'll
+			// create a header
+			// with > 2 sucessors
+			loopComponent.exits.add (seseComponent.startID);
+
+		} else
+		{
+			// Create a do-while loop where the exit is the tail
+			loopComponent.exits.add (seseComponent.exitID);
+		}
+
+		Debug.debugMessage (getClass (), "Header = " + loopComponent.headerID + ", tails = "
+				+ loopComponent.tails + ", exits = " + loopComponent.exits, 4);
+
+		return loopComponent;
+	}
+
 	private void addLoopEdges (LoopComponent loopComponent)
 	{
 		Debug.debugMessage (getClass (), "Adding loop edges with header ID = "
@@ -152,12 +186,15 @@ public class CFGGenerator
 			successors.add (e.getVertexID ());
 		}
 
-		// The loop components which should be linked to
+		// The inner nested loops which should be linked to from the
+		// outer-enclosing loop
 		LoopComponent firstComponent = null;
 		LoopComponent lastComponent = null;
 
 		if (successors.size () > 1)
 		{
+			// The outer loop has several nested loops to link together
+
 			while (successors.size () > 1)
 			{
 				LoopComponent predLoopComponent = loops.get (successors
@@ -173,6 +210,7 @@ public class CFGGenerator
 
 				lastComponent = succLoopComponent;
 
+				// Sequentially compose two loops at the same nesting level
 				for (int exitID : predLoopComponent.exits)
 				{
 					cfg.addEdge (exitID, succLoopComponent.headerID, BranchType.TAKEN);
@@ -182,6 +220,8 @@ public class CFGGenerator
 			assert (successors.size () == 1);
 		} else
 		{
+			// There is only one nested loop to link to the outer enclosing loop
+
 			firstComponent = loops.get (successors.get (0));
 			lastComponent = loops.get (successors.get (0));
 		}
@@ -191,24 +231,11 @@ public class CFGGenerator
 		final int parentTailID = parentComponent.tails.iterator ().next ();
 		final int parentHeaderID = parentComponent.headerID;
 
-		HashSet <Integer> predEdgesToRemove = cfg.getVertex (parentTailID).getPredecessorIDs ();
-		HashSet <Integer> succEdgesToRemove = cfg.getVertex (parentHeaderID).getSuccessorIDs ();
-
 		cfg.addEdge (parentHeaderID, firstComponent.headerID, BranchType.TAKEN);
 
 		for (int exitID : lastComponent.exits)
 		{
 			cfg.addEdge (exitID, parentTailID, BranchType.TAKEN);
-		}
-
-		for (int predID : predEdgesToRemove)
-		{
-			cfg.removeEdge (predID, parentTailID);
-		}
-
-		for (int succID : succEdgesToRemove)
-		{
-			cfg.removeEdge (parentHeaderID, succID);
 		}
 	}
 
@@ -251,6 +278,9 @@ public class CFGGenerator
 					parentID = vertexID;
 				} else
 				{
+					// The level of the LNT exceeds the user-supplied depth
+					// Therefore, backtrack to an arbitrary ancestor in the tree
+
 					int ancestorID = parentID;
 					boolean ancestorFound = false;
 
@@ -259,6 +289,8 @@ public class CFGGenerator
 						TreeVertex treev = tree.getVertex (ancestorID);
 						ancestorID = treev.getParentID ();
 
+						// Only stop if the random generator decides to or we
+						// reach the root of the LNT
 						if (random.nextBoolean () || ancestorID == rootID)
 						{
 							ancestorFound = true;
@@ -273,8 +305,6 @@ public class CFGGenerator
 				}
 			}
 		}
-
-		OutputGraph.output (tree);
 
 		return tree;
 	}
@@ -511,8 +541,6 @@ public class CFGGenerator
 
 			cfg.addEdge (seseComponent.getExitID (), vertexID, BranchType.TAKEN);
 
-			Debug.debugMessage (getClass (), "Adding edge " + seseComponent.getExitID () + " => "
-					+ vertexID, 4);
 			seseComponent.setExitID (vertexID);
 
 			remainingVerticesInRegion -= 1;
@@ -524,8 +552,6 @@ public class CFGGenerator
 			cfg.addEdge (seseComponent.getExitID (), nestedSeseComponent.getStartID (),
 					BranchType.TAKEN);
 
-			Debug.debugMessage (getClass (), "Adding edge " + seseComponent.getExitID () + " => "
-					+ nestedSeseComponent.getStartID (), 4);
 			seseComponent.setExitID (nestedSeseComponent.getExitID ());
 		}
 
@@ -651,14 +677,17 @@ public class CFGGenerator
 		}
 	}
 
-	private LoopComponent connectRemainingVertices ()
+	private SingleEntrySingleExitComponent connectRemainingVertices ()
 	{
-		Debug.debugMessage (getClass (), "Connecting remaining vertices", 1);
+		Debug.debugMessage (getClass (), "Connecting remaining vertices. #Vertices remaining = "
+				+ remainingVerticesInRegion, 1);
 
-		LoopComponent loopComponent = new LoopComponent ();
+		SingleEntrySingleExitComponent masterSeseComponent = new SingleEntrySingleExitComponent ();
 
 		if (disconnectedComponents.isEmpty () == false)
 		{
+			Debug.debugMessage (getClass (), "Disconnected components to connect", 2);
+
 			SingleEntrySingleExitComponent seseComponent = disconnectedComponents.remove (0);
 
 			while (remainingVerticesInRegion > 0)
@@ -680,12 +709,13 @@ public class CFGGenerator
 
 				remainingVerticesInRegion -= 1;
 			}
-			loopComponent.headerID = seseComponent.startID;
-			loopComponent.exits.add (seseComponent.exitID);
-			loopComponent.tails.add (seseComponent.exitID);
 
+			masterSeseComponent.startID = seseComponent.startID;
+			masterSeseComponent.exitID = seseComponent.exitID;
 		} else
 		{
+			Debug.debugMessage (getClass (), "Components ALL connected", 2);
+
 			int predID = Vertex.DUMMY_VERTEX_ID;
 			int vertexID = Vertex.DUMMY_VERTEX_ID;
 
@@ -701,7 +731,7 @@ public class CFGGenerator
 					cfg.addEdge (predID, vertexID, BranchType.TAKEN);
 				} else
 				{
-					loopComponent.headerID = vertexID;
+					masterSeseComponent.startID = vertexID;
 				}
 
 				predID = vertexID;
@@ -709,11 +739,13 @@ public class CFGGenerator
 				remainingVerticesInRegion -= 1;
 			}
 
-			loopComponent.exits.add (vertexID);
-			loopComponent.tails.add (vertexID);
+			masterSeseComponent.exitID = vertexID;
 		}
 
-		return loopComponent;
+		Debug.debugMessage (getClass (), "SESE entry = " + masterSeseComponent.startID
+				+ ". SESE exit = " + masterSeseComponent.exitID, 3);
+
+		return masterSeseComponent;
 	}
 
 	private void addSelfLoops ()
