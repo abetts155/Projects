@@ -76,6 +76,7 @@ public class InstructionSet
 	private final static String retInstruction = "ret";
 
 	private final static String bDotnInstruction = "b.n";
+	private final static String bDotwInstruction = "b.w";
 	private final static String beqDotnInstruction = "beq.n";
 	private final static String bgeDotnInstruction = "bge.n";
 	private final static String bgtDotnInstruction = "bgt.n";
@@ -188,9 +189,9 @@ public class InstructionSet
 						bgeInstruction, bgtInstruction, bhiInstruction, bleInstruction,
 						blsInstruction, bltInstruction, bmiInstruction, bneInstruction,
 						bplInstruction, bvsInstruction, bvcInstruction, bDotnInstruction,
-						beqDotnInstruction, bgeDotnInstruction, bgtDotnInstruction,
-						bhiDotnInstruction, bleDotnInstruction, blsDotnInstruction,
-						bltDotnInstruction, bneDotnInstruction }));
+						bDotwInstruction, beqDotnInstruction, bgeDotnInstruction,
+						bgtDotnInstruction, bhiDotnInstruction, bleDotnInstruction,
+						blsDotnInstruction, bltDotnInstruction, bneDotnInstruction }));
 
 				unconditionalBranch = new HashSet <String> (Arrays.asList (new String[] {
 						bInstruction, bDotnInstruction }));

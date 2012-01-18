@@ -64,7 +64,8 @@ def runCommand (cmd):
 
 gem5Home = environ[gem5EnvironmentVariable]
 gem5Bin = gem5Home + "/build/ARM_SE/m5.opt"
-traceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks\""
+traceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
+#traceFlags = "--debug-flags=\"Exec,-ExecSymbol\""
 configScript = gem5Home + "/configs/example/se.py"
 
 if opts.outOfOrder:
