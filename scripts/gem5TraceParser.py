@@ -118,7 +118,7 @@ def getOutputString(instrTimings, basicBlockAddrs):
 
     for instrTime in instrTimings:
         if instrTime[0] in basicBlockAddrs:
-             timingString += (instrTime[0] + " " + instrTime[1] + "\n")
+             timingString += (str(int(instrTime[0], 16)) + " " + instrTime[1] + "\n")
 
     return timingString
 
