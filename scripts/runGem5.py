@@ -10,7 +10,14 @@ gem5EnvironmentVariable = "GEM5_HOME"
 try:
     environ[gem5EnvironmentVariable]
 except KeyError:
-    print ("Cannot find environment variable '" + var + "' which is needed to simulate the program using gem5.")
+    print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to simulate the program using gem5.")
+    exit(0)
+
+wcetToolsEnvironmentVariable = "WCET_HOME"
+try:
+    environ[wcetToolsEnvironmentVariable]
+except KeyError:
+    print ("Cannot find environment variable '" + wcetToolsEnvironmentVariable + "' which is needed to simulate the program using gem5.")
     exit(0)
 
 # The command-line parser and its options
@@ -65,12 +72,15 @@ def runCommand (cmd):
 gem5Home = environ[gem5EnvironmentVariable]
 gem5Bin = gem5Home + "/build/ARM_SE/m5.opt"
 traceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
-#traceFlags = "--debug-flags=\"Exec,-ExecSymbol\""
 configScript = gem5Home + "/configs/example/se.py"
+
+wcetHome = environ[wcetToolsEnvironmentVariable]
+traceParser = wcetHome + "/scripts/gem5TraceParser.py"
 
 if opts.outOfOrder:
     runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" -d --caches"  % (gem5Bin, traceFlags, configScript, opts.program, opts.arguments))
 else:
     runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\""  % (gem5Bin, traceFlags, configScript, opts.program, opts.arguments))
+runCommand("python %s -p %s.xml -t m5out/trace.out -o blockTimings.out -H" % (traceParser, opts.program))
 
 

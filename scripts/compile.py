@@ -45,11 +45,11 @@ parser.add_option("-r",
                   help="Entry point of the program.",
                   metavar="<NAME>")
 
-parser.add_option("-m",
-                  "--m5sim",
+parser.add_option("-g",
+                  "--gem5sim",
                   action="store_true",
-                  dest="m5sim",
-                  help="Use m5 Simulator",
+                  dest="gem5sim",
+                  help="Use gem5 Simulator",
                   default=False)
 
 parser.add_option("-v",
@@ -89,7 +89,7 @@ gcc              = simpleScalarPath + sep + "sslittle-na-sstrix-gcc"
 objdump          = simpleScalarPath + sep + "sslittle-na-sstrix-objdump"
 disassembler     = "java -jar " + rootPath + sep + "bin" + sep + "disassemble.jar"
 
-if opts.m5sim:
+if opts.gem5sim:
     armToolchainVar = "ARM_GCC_TOOLCHAIN"
     try:
         armToolchain = environ[armToolchainVar]
