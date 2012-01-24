@@ -163,7 +163,7 @@ public class GenerateTrace
 						{
 							LoopNests lnt = program.getSubprogram (subprogramID).getCFG ()
 									.getLNT ();
-							
+
 							boolean ok = false;
 
 							while (!ok)
@@ -233,6 +233,23 @@ public class GenerateTrace
 
 	private void generateTimingTrace ()
 	{
+		int subprogramID = program.getRootID ();
+
+		IpointGraph ipg = program.getSubprogram (subprogramID).getIPG (
+				Globals.getInstrumentationProfile ());
+
+		HashMap <Integer, Boolean> edgeCovered = new HashMap <Integer, Boolean> ();
+
+		for (Vertex v : ipg)
+		{
+			Iterator <Edge> succIt = v.successorIterator ();
+			while (succIt.hasNext ())
+			{
+				FlowEdge flowe = (FlowEdge) succIt.next ();
+				edgeCovered.put (flowe.getEdgeID (), false);
+			}
+		}
+
 		try
 		{
 			BufferedWriter out = new BufferedWriter (new FileWriter (Globals.getOutputFileName ()));
@@ -240,25 +257,12 @@ public class GenerateTrace
 			for (int i = 1; i <= MainTraceGenerator.getNumberOfRuns (); ++i)
 			{
 				Debug.debugMessage (getClass (), "Generating trace #" + i, 3);
-				
-				out.write ("=> Trace #" + Integer.toString (i) + " <=\n");
 
-				long timestamp = 0;
 				boolean finished = false;
-
-				int subprogramID = program.getRootID ();
-
-				LoopNests lnt = program.getSubprogram (subprogramID).getCFGStar (
-						Globals.getInstrumentationProfile ()).getLNT ();
-
-				IpointGraph ipg = program.getSubprogram (subprogramID).getIPG (
-						Globals.getInstrumentationProfile ());
-
-				HashMap <Integer, Integer> edgeCounts = new HashMap <Integer, Integer> ();
 
 				Ipoint v = ipg.getVertex (ipg.getEntryID ());
 
-				while (!finished)
+				while (finished == false)
 				{
 					int vertexID = v.getVertexID ();
 
@@ -271,68 +275,34 @@ public class GenerateTrace
 						finished = true;
 					} else
 					{
-						timestamp += random.nextInt (50) + 1;
+						out.write (Long.toString (v.getIpointID ()) + "\n");
 
-						out.write (Long.toString (v.getIpointID ()) + " "
-								+ Long.toString (timestamp) + "\n");
+						FlowEdge succEdge = null;
 
-						if (v.numOfSuccessors () > 1)
+						Iterator <Edge> succIt = v.successorIterator ();
+						while (succIt.hasNext ())
 						{
-							IPGEdge iterationEdge = null;
-							IPGEdge exitEdge = null;
-
-							Iterator <Edge> succIt = v.successorIterator ();
-							while (succIt.hasNext ())
+							FlowEdge flowe = (FlowEdge) succIt.next ();
+							if (edgeCovered.get (flowe.getEdgeID ()) == false)
 							{
-								IPGEdge succEdge = (IPGEdge) succIt.next ();
-								if (succEdge.isIterationEdge ())
-								{
-									iterationEdge = succEdge;
-								} else if (succEdge.isExitEdge ())
-								{
-									exitEdge = succEdge;
-								}
+								succEdge = flowe;
 							}
-
-							if (iterationEdge == null && exitEdge == null)
-							{
-								int nthSucc = random.nextInt (v.numOfSuccessors ());
-								FlowEdge succEdge = (FlowEdge) v.getNthSuccessor (nthSucc);
-								vertexID = succEdge.getVertexID ();
-								v = ipg.getVertex (vertexID);
-							} else
-							{
-								if (iterationEdge != null)
-								{
-									int edgeID = iterationEdge.getEdgeID ();
-									if (!edgeCounts.containsKey (edgeID))
-									{
-										edgeCounts.put (edgeID, 1);
-									}
-
-									int bound = 2;
-
-									if (edgeCounts.get (edgeID) < bound)
-									{
-										edgeCounts.put (edgeID, edgeCounts.get (edgeID) + 1);
-										vertexID = iterationEdge.getVertexID ();
-										v = ipg.getVertex (vertexID);
-									} else
-									{
-										edgeCounts.put (iterationEdge.getEdgeID (), 1);
-										vertexID = exitEdge.getVertexID ();
-										v = ipg.getVertex (vertexID);
-									}
-								}
-							}
-						} else
-						{
-							int nthSucc = random.nextInt (v.numOfSuccessors ());
-							FlowEdge succEdge = (FlowEdge) v.getNthSuccessor (nthSucc);
-							vertexID = succEdge.getVertexID ();
-							v = ipg.getVertex (vertexID);
 						}
 
+						if (succEdge == null)
+						{
+							int nthSucc = random.nextInt (v.numOfSuccessors ());
+							succEdge = (FlowEdge) v.getNthSuccessor (nthSucc);
+						} else
+						{
+							edgeCovered.put (succEdge.getEdgeID (), true);
+						}
+
+						vertexID = succEdge.getVertexID ();
+						v = ipg.getVertex (vertexID);
+
+						Debug.debugMessage (getClass (), "Next Ipoint chosen: " + v.getIpointID (),
+								4);
 					}
 				}
 			}

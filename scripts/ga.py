@@ -308,7 +308,6 @@ def sanitiseSimpleScalarTrace ():
         lines = f.readlines()
         f.close()
         for line in lines:
-		print(line)
 		basicBlockTrace.write(line)
 
     if BRANCH in opts.instrumentation:
