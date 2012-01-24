@@ -11,6 +11,7 @@ import gzip
 
 # These environment variables are needed run the program under analysis on SimpleScalar 
 wcetHomeEnvironmentVariable = "WCET_HOME"
+gem5EnvironmentVariable = "GEM5_HOME"
 environmentVariables = [wcetHomeEnvironmentVariable]
 
 for var in environmentVariables:
@@ -35,6 +36,13 @@ dumpTraces = False
     
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
+
+parser.add_option("-g",
+                  "--gem5sim",
+                  action="store_true",
+                  dest="gem5sim",
+                  help="Use gem5 Simulator",
+                  default=False)
 
 parser.add_option("-c",
                   "--config",
@@ -166,6 +174,19 @@ parser.add_option("-v",
 
 (opts, args) = parser.parse_args(argv[1:])
 
+# The gem5 binary on which the simulation will be carried out
+if opts.gem5sim:
+    try:
+        environ[gem5EnvironmentVariable]
+    except KeyError:
+        print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to run the program under analysis on gem5.")
+        exit(0)
+    gem5Home = environ[gem5EnvironmentVariable]
+    gem5Binary = gem5Home + sep + "build" + sep + "ARM_SE" + sep + "m5.opt"
+    gem5TraceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
+    gem5ConfigScript = gem5Home + "/configs/example/se.py"
+    gem5TraceParser = environ[wcetHomeEnvironmentVariable] + sep + "scripts" + sep + "gem5TraceParser.py"
+
 def checkOptions ():
 	# Check that the user has passed the correct options
 	if opts.numOfParameters is None:
@@ -193,7 +214,7 @@ def checkOptions ():
 		        print("'" + s + "' not recognised as a valid instrumentation profile.")
 		        exit(0)    
 
-	if opts.config is None:
+	if opts.config is None and not opts.gem5sim:
 		print("Missing option " + str(parser.get_option("-c")))
 		exit(0)
 				
@@ -208,16 +229,26 @@ def checkOptions ():
 		print("Mutation rate = " + str(opts.mutationRate))
 
 def checkEnvironment ():
-	import os.path
-	
-	if not os.path.isfile(simpleScalarBinary):
-		print "Unable to find executable '" + simpleScalarBinary + "'"
-		exit(0)
+    import os.path
 
-	# Check the SimpleScalar configuration file exists as well
-	if not os.path.isfile(opts.config):
-	    print "Unable to find file " + opts.config
-	    exit(0)
+    if opts.gem5sim:
+        if not os.path.isfile(gem5Binary):
+            print "Unable to find executable '" + gem5Binary + "'"
+            exit(0)
+
+        # Check the SimpleScalar configuration file exists as well
+        if not os.path.isfile(gem5ConfigScript):
+            print "Unable to find file " + gem5configScript
+            exit(0)
+    else:
+        if not os.path.isfile(simpleScalarBinary):
+            print "Unable to find executable '" + simpleScalarBinary + "'"
+            exit(0)
+
+        # Check the SimpleScalar configuration file exists as well
+        if not os.path.isfile(opts.config):
+            print "Unable to find file " + opts.config
+            exit(0)
 
 def checkWhetherTODumpTraces (xmlFile):
 	import os.path
@@ -331,7 +362,30 @@ def sanitiseSimpleScalarTrace ():
         for line in lines:
             superBlockTrace.write(line)
 
-def fitnessFunction (chromosome):
+def sanitiseGem5Trace ():
+    cmd = "python " + gem5TraceParser + " -p " + opts.program + ".xml -t m5out/trace.out -o " + opts.program + ".BASIC_BLOCK.txt"
+    
+    if opts.debug:
+        print("Running '" + cmd + "'")
+
+    proc = Popen(cmd,
+                 shell=True,
+                 executable="/bin/bash",
+                 stderr=PIPE)
+    proc.wait()
+
+    if proc.returncode != 0:
+        print("\nProblem running '" + cmd + "'")
+        exit(0)
+
+    f = open(opts.program + ".BASIC_BLOCK.txt", "r")
+    lines = f.readlines()
+    f.close()
+    for line in lines:
+        # print(line)
+        basicBlockTrace.write(line)
+
+def executeOnSimplescalar (chromosome):
     cmd = "%s -config %s -ptrace %s.trc : %s " \
     % (simpleScalarBinary, opts.config, opts.program, opts.program) + \
     ' '.join(map(str, chromosome.genomeList))
@@ -370,6 +424,56 @@ def fitnessFunction (chromosome):
         except:
             raise StopIteration
 
+    return score
+
+def executeOnGem5 (chromosome):
+    cmd = "%s %s --trace-file=trace.out %s -c %s -o \"" \
+    % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
+    ' '.join(map(str, chromosome.genomeList)) + "\""
+
+    if opts.debug:
+        print("Running '" + cmd + "'")
+
+    # Run the binary on gem5
+    proc = Popen(cmd,
+                 shell=True,
+                 executable="/bin/bash",
+                 stderr=PIPE,
+                 stdout=PIPE)
+    # ..and get both standard output and standard error streams from gem5
+    stoutdata, stderrdata = proc.communicate()
+
+    # If a non-zero return code is detected then gem5 choked
+    if proc.returncode != 0:
+        print("\nProblem running " + cmd)
+        exit(0)
+
+    # Iterate through standard out until we find the tick count
+    # (For the moment we ignore standard error as it provides nothing useful)
+    it = iter(stoutdata.splitlines())
+    found = False
+    while not found:
+        try:
+            line = it.next()
+            if line.startswith("Exiting @ tick"):
+                tokens = split("\s+", line, 4)
+                
+                # The tick count is always the 4th token
+                # This is the fitness criterion for a chromosone
+                score = float(tokens[3])
+                print score
+                found = True
+        except:
+            raise StopIteration
+
+    return score
+
+def fitnessFunction (chromosome):
+    if opts.gem5sim:
+        score = executeOnGem5 (chromosome)
+    else:
+        score = executeOnSimplescalar(chromosome)
+
     it = iter(TVs)
     stop = False
     while not stop:
@@ -385,7 +489,10 @@ def fitnessFunction (chromosome):
             
             # Dump the sanitised trace to the trace files
             #TVstr = "// TV = " + str(chromosome.genomeList) + "\n"
-            sanitiseSimpleScalarTrace ()
+            if opts.gem5sim:
+                sanitiseGem5Trace ()
+            else:
+                sanitiseSimpleScalarTrace ()
 
     if opts.debug:
         print("Fitness = " + str(score))

@@ -53,6 +53,13 @@ parser.add_option("-a",
                   help="Append the output to the end of the output file rather than overwriting",
                   default=False)
 
+parser.add_option("-H",
+                  "--hex-addresses",
+                  action="store_true",
+                  dest="hexAddrs",
+                  help="Output basic block addresses as hex values",
+                  default=False)
+
 (opts, args) = parser.parse_args(argv[1:])
 
 # Check that the user has passed the correct options
@@ -75,7 +82,11 @@ def basicBlockInfo(programXML):
         for bb in cfg.getElementsByTagName("bb"):
             insts = bb.getElementsByTagName("inst")
             if len(insts) > 0:
-                basicBlockAddrs.append(insts[0].getAttribute("addr"))
+                firstAddr = insts[0].getAttribute("addr")
+                sndAddr = insts[len(insts)-1].getAttribute("addr")
+
+                basicBlockAddrs.append(firstAddr)
+                basicBlockAddrs.append(sndAddr)
 
     return set(basicBlockAddrs)
 
@@ -106,6 +117,8 @@ def instructionTimings(trace):
             if microInst[1] == "0":
                 timings.append([microInst[0],time])
 
+        
+
     return timings
 
 
@@ -118,7 +131,11 @@ def getOutputString(instrTimings, basicBlockAddrs):
 
     for instrTime in instrTimings:
         if instrTime[0] in basicBlockAddrs:
-             timingString += (str(int(instrTime[0], 16)) + " " + instrTime[1] + "\n")
+             if opts.hexAddrs:
+                  blockID = instrTime[0]
+             else:
+                  blockID = str(int(instrTime[0],16))
+             timingString += (blockID + " " + instrTime[1] + "\n")
 
     return timingString
 
