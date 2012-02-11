@@ -8,10 +8,12 @@ import java.util.Random;
 
 import adam.betts.edges.Edge;
 import adam.betts.graphs.trees.Tree;
+import adam.betts.instructions.Instruction;
 import adam.betts.outputs.OutputGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
+import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.TreeVertex;
 
@@ -126,11 +128,30 @@ public class CFGGenerator
 		}
 
 		cfg.addEdge (cfg.getExitID (), cfg.getEntryID (), BranchType.TAKEN);
+
+		addInstructions ();
 	}
 
 	public final ControlFlowGraph getCFG ()
 	{
 		return cfg;
+	}
+
+	private void addInstructions ()
+	{
+		long nextAdress = 0;
+		BasicBlock entry = cfg.getBasicBlock (cfg.getEntryID ());
+		entry.addInstruction (new Instruction (nextAdress, ""));
+
+		for (Vertex v : cfg)
+		{
+			if (v.getVertexID () != cfg.getEntryID ())
+			{
+				++nextAdress;
+				BasicBlock basicBlock = (BasicBlock) v;
+				basicBlock.addInstruction (new Instruction (nextAdress, ""));
+			}
+		}
 	}
 
 	private LoopComponent setLoopVertices (SingleEntrySingleExitComponent seseComponent)

@@ -34,7 +34,7 @@ public class MainProgramGenerator
 	private final static int minFanOut = 2;
 	private final static int maxFanOut = 10;
 
-	private final static int maxNumberOfLoops = 10;
+	private final static int maxNumberOfLoops = 100;
 	private final static int maxNumberOfSelfLoops = 5;
 
 	public static void main (String[] args)

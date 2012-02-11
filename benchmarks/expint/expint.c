@@ -6,12 +6,6 @@
  */
 
 long int
-foo (long int x)
-{
-  return x * x + (8* x ) << 4 - x;
-}
-
-long int
 expint (int n, int x)
 {
   /*
@@ -80,7 +74,7 @@ expint (int n, int x)
           counter3++;         
           psi += ii + nm1;
         }
-        del = psi + fact * foo(x);
+        del = psi + fact * x * x + (8* x ) << 4 - x;
       }
       ans += del;
     }

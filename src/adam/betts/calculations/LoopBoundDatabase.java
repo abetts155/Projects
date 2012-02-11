@@ -56,6 +56,10 @@ public class LoopBoundDatabase extends Database
 		for (int subprogramID : reachableSubprograms)
 		{
 			Subprogram subprogram = program.getSubprogram (subprogramID);
+
+			Debug.debugMessage (getClass (), "Analysing subprogram "
+					+ subprogram.getSubprogramName (), 2);
+
 			loopBounds.put (subprogramID, new HashMap <Integer, HashMap <Integer, Integer>> ());
 			parser.tempLoopBounds.put (subprogramID,
 					new HashMap <Integer, HashMap <Integer, Integer>> ());
