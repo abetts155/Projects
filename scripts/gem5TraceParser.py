@@ -85,8 +85,8 @@ def basicBlockInfo(programXML):
                 firstAddr = insts[0].getAttribute("addr")
                 sndAddr = insts[len(insts)-1].getAttribute("addr")
 
-                basicBlockAddrs.append(firstAddr)
-                basicBlockAddrs.append(sndAddr)
+                basicBlockAddrs.append(int(firstAddr,16))
+                basicBlockAddrs.append(int(sndAddr,16))
 
     return set(basicBlockAddrs)
 
@@ -112,12 +112,11 @@ def instructionTimings(trace):
 
         microInst = address.split('.')
         if len(microInst) == 1:
-            timings.append([address,time])
+            timings.append([int(address,16),time])
         else:
             if microInst[1] == "0":
-                timings.append([microInst[0],time])
+                timings.append([int(microInst[0],16),time])
 
-        
 
     return timings
 
@@ -132,9 +131,9 @@ def getOutputString(instrTimings, basicBlockAddrs):
     for instrTime in instrTimings:
         if instrTime[0] in basicBlockAddrs:
              if opts.hexAddrs:
-                  blockID = instrTime[0]
+                  blockID = str(hex(instrTime[0]))
              else:
-                  blockID = str(int(instrTime[0],16))
+                  blockID = str(instrTime[0])
              timingString += (blockID + " " + instrTime[1] + "\n")
 
     return timingString
