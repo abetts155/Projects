@@ -47,7 +47,7 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-	for (i = 0; i < argc - 1; ++i)
+	for (i = 0; i < argc - 1; i++)
 	{
 		TV[i] = atoi (argv[i + 1]);
 	}

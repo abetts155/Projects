@@ -44,6 +44,13 @@ parser.add_option("-g",
                   help="Use gem5 Simulator",
                   default=False)
 
+parser.add_option("-o",
+                  "--gem5-out-of-order",
+                  action="store_true",
+                  dest="gem5o3",
+                  help="Use out of order processor in gem5",
+                  default=False)
+
 parser.add_option("-c",
                   "--config",
                   action="store",
@@ -427,9 +434,14 @@ def executeOnSimplescalar (chromosome):
     return score
 
 def executeOnGem5 (chromosome):
-    cmd = "%s %s --trace-file=trace.out %s -c %s -o \"" \
-    % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
-    ' '.join(map(str, chromosome.genomeList)) + "\""
+    if opts.gem5o3:
+        cmd = "%s %s --trace-file=trace.out %s -c %s -d --caches -o \"" \
+        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
+        ' '.join(map(str, chromosome.genomeList)) + "\""
+    else:
+        cmd = "%s %s --trace-file=trace.out %s -c %s -o \"" \
+        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
+        ' '.join(map(str, chromosome.genomeList)) + "\""
 
     if opts.debug:
         print("Running '" + cmd + "'")
@@ -526,6 +538,7 @@ def main ():
 	ga.setCrossoverRate(opts.crossoverRate)
 	ga.setMutationRate(opts.mutationRate)
 	ga.setElitism(True)
+	#ga.setMultiProcessing(True)
 
 	# Start the evolution
 	ga.evolve (freq_stats=1)
