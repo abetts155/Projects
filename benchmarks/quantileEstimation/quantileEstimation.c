@@ -14,7 +14,7 @@ int nd = 0;
 
 double pval[nq];
 double dbuf[nbuf];
-double *qile;
+double qile[nq];
 
 double q0 = 1.0e99;
 double qm = -1.0e99;
@@ -93,8 +93,6 @@ void mergesort (int ARRAY_SIZE, double a[])
 
 void initialise() {
 	int i;
-	double initqile[nq];
-	qile = initqile;
 	for (i = 0; i < nq; i++) {
 		qile[i] = 0.0;
 	}
