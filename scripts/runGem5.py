@@ -44,12 +44,13 @@ parser.add_option("-a",
                   help="The command line arguments to pass to the program",
                   metavar="<arguments>")
 
-parser.add_option("-o",
-                  "--out-of-order",
-                  action="store_true",
-                  dest="outOfOrder",
-                  help="Use out of order cpu",
-                  default=False)
+parser.add_option("-c",
+                  "--cpu-type",
+                  action="store",
+                  type="string",
+                  dest="cpuType",
+                  help="Type of cpu to be used (atomic, timing, detailed, inorder)",
+                  metavar="CPU_TYPE")
 
 (opts, args) = parser.parse_args(argv[1:])
 
@@ -70,17 +71,19 @@ def runCommand (cmd):
         exit(0)
 
 gem5Home = environ[gem5EnvironmentVariable]
-gem5Bin = gem5Home + "/build/ARM_SE/m5.opt"
+gem5Bin = gem5Home + "/build/ARM/gem5.opt"
 traceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
 configScript = gem5Home + "/configs/example/se.py"
 
 wcetHome = environ[wcetToolsEnvironmentVariable]
 traceParser = wcetHome + "/scripts/gem5TraceParser.py"
 
-if opts.outOfOrder:
-    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" -d --caches"  % (gem5Bin, traceFlags, configScript, opts.program, opts.arguments))
+if opts.cpuType == "detailed" or opts.cpuType == "inorder":
+    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" --cpu-type=%s --caches" \
+				% (gem5Bin, traceFlags, configScript, opts.program, opts.arguments, opts.cpuType))
 else:
-    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\""  % (gem5Bin, traceFlags, configScript, opts.program, opts.arguments))
+    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" --cpu-type=%s" \
+				% (gem5Bin, traceFlags, configScript, opts.program, opts.arguments, opts.cpuType))
 runCommand("python %s -p %s.xml -t m5out/trace.out -o blockTimings.out -H" % (traceParser, opts.program))
 
 

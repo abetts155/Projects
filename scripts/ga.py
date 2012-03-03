@@ -44,12 +44,13 @@ parser.add_option("-g",
                   help="Use gem5 Simulator",
                   default=False)
 
-parser.add_option("-o",
-                  "--gem5-out-of-order",
-                  action="store_true",
-                  dest="gem5o3",
-                  help="Use out of order processor in gem5",
-                  default=False)
+parser.add_option("-t",
+                  "--cpu-type",
+                  action="store",
+                  type="string",
+                  dest="cpuType",
+                  help="Type of cpu to be used (atomic, timing, detailed, inorder)",
+                  metavar="CPU_TYPE")
 
 parser.add_option("-c",
                   "--config",
@@ -189,7 +190,7 @@ if opts.gem5sim:
         print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to run the program under analysis on gem5.")
         exit(0)
     gem5Home = environ[gem5EnvironmentVariable]
-    gem5Binary = gem5Home + sep + "build" + sep + "ARM_SE" + sep + "m5.opt"
+    gem5Binary = gem5Home + sep + "build" + sep + "ARM" + sep + "gem5.opt"
     gem5TraceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
     gem5ConfigScript = gem5Home + "/configs/example/se.py"
     gem5TraceParser = environ[wcetHomeEnvironmentVariable] + sep + "scripts" + sep + "gem5TraceParser.py"
@@ -434,13 +435,13 @@ def executeOnSimplescalar (chromosome):
     return score
 
 def executeOnGem5 (chromosome):
-    if opts.gem5o3:
-        cmd = "%s %s --trace-file=trace.out %s -c %s -d --caches -o \"" \
-        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
+    if opts.cpuType == "detailed" or opts.cpuType == "inorder":
+        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s --caches -o \"" \
+        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program, opts.cpuType) + \
         ' '.join(map(str, chromosome.genomeList)) + "\""
     else:
-        cmd = "%s %s --trace-file=trace.out %s -c %s -o \"" \
-        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program) + \
+        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s -o \"" \
+        % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program, opts.cpuType) + \
         ' '.join(map(str, chromosome.genomeList)) + "\""
 
     if opts.debug:
