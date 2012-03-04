@@ -244,7 +244,7 @@ def checkEnvironment ():
             print "Unable to find executable '" + gem5Binary + "'"
             exit(0)
 
-        # Check the SimpleScalar configuration file exists as well
+        # Check the gem5 configuration file exists as well
         if not os.path.isfile(gem5ConfigScript):
             print "Unable to find file " + gem5configScript
             exit(0)
