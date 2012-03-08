@@ -51,4 +51,9 @@ public final class Enums
 	{
 		PRE_DOMINATOR, POST_DOMINATOR
 	}
+
+	public enum LoopType
+	{
+		SINGLE_ENTRY, MULTIPLE_ENTRY
+	}
 }

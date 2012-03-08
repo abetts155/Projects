@@ -10,21 +10,43 @@ import adam.betts.vertices.Vertex;
 
 public class AcyclicReducibility
 {
-	protected FlowGraph flowg;
-	protected Set<Integer> irreducibleBranches = new HashSet<Integer> ();
-	protected Set<Integer> irreducibleMerges = new HashSet<Integer> ();
+	protected final FlowGraph flowg;
+	protected final FlowGraph reverseg;
+	protected final Set <Integer> irreducibleBranches = new HashSet <Integer> ();
+	protected final Set <Integer> irreducibleMerges = new HashSet <Integer> ();
+
+	protected final DominatorTree predomt;
+	protected final DominatorTree postdomt;
 
 	public AcyclicReducibility (FlowGraph flowg)
 	{
 		this.flowg = flowg;
+
+		predomt = new DominatorTree (flowg, flowg.getEntryID (), DominatorTreeType.PRE_DOMINATOR);
+
+		reverseg = new FlowGraph ();
+		flowg.reverseGraph (reverseg);
+
+		postdomt = new DominatorTree (reverseg, reverseg.getEntryID (),
+				DominatorTreeType.POST_DOMINATOR);
+
+		compute ();
+	}
+
+	public AcyclicReducibility (FlowGraph flowg, FlowGraph reverseg, DominatorTree predomt,
+			DominatorTree postdomt)
+	{
+		this.flowg = flowg;
+		this.reverseg = reverseg;
+		this.predomt = predomt;
+		this.postdomt = postdomt;
 
 		compute ();
 	}
 
 	public final boolean isReducible ()
 	{
-		return irreducibleBranches.size () == 0
-				&& irreducibleMerges.size () == 0;
+		return irreducibleBranches.size () == 0 && irreducibleMerges.size () == 0;
 	}
 
 	public final boolean isReducibleBranch (int vertexID)
@@ -39,16 +61,10 @@ public class AcyclicReducibility
 
 	private void compute ()
 	{
-		DominatorTree predomt = new DominatorTree (flowg, flowg.getEntryID (),
-				DominatorTreeType.PRE_DOMINATOR);
 		DominanceFrontiers preDF = new DominanceFrontiers (flowg, predomt);
-		FlowGraph reverseg = new FlowGraph ();
-		flowg.reverseGraph (reverseg);
-		DominatorTree postdomt = new DominatorTree (reverseg, reverseg
-				.getEntryID (), DominatorTreeType.POST_DOMINATOR);
 		DominanceFrontiers postDF = new DominanceFrontiers (reverseg, postdomt);
 
-		for (Vertex v: flowg)
+		for (Vertex v : flowg)
 		{
 			int vertexID = v.getVertexID ();
 

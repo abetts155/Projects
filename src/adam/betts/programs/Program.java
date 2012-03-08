@@ -12,16 +12,20 @@ import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.CallLoopGraph;
 import adam.betts.graphs.ContextGraph;
+import adam.betts.graphs.ControlDependenceGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
+import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.graphs.trees.SyntaxTree;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.BranchType;
+import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.IProfile;
+import adam.betts.utilities.Globals;
 import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.call.CallVertex;
@@ -150,8 +154,8 @@ public class Program implements Iterable <Subprogram>
 		inlinedCFG = new ControlFlowGraph ();
 		for (Subprogram subprogram : idToSubprogram.values ())
 		{
-			Debug.debugMessage (getClass (), "Adding basic blocks and edges from "
-					+ subprogram.getSubprogramName (), 3);
+			Debug.debugMessage (getClass (),
+					"Adding basic blocks and edges from " + subprogram.getSubprogramName (), 3);
 
 			ControlFlowGraph cfg = subprogram.getCFG ();
 			inlinedCFG.inline (cfg, subprogram.getSubprogramName ());
@@ -306,8 +310,8 @@ public class Program implements Iterable <Subprogram>
 					UDrawGraph.makeUDrawFile (iprofile, cfgStar, subprogram.getSubprogramName ());
 				}
 
-				Debug.debugMessage (getClass (), "Building LNT of "
-						+ subprogram.getSubprogramName (), 2);
+				Debug.debugMessage (getClass (),
+						"Building LNT of " + subprogram.getSubprogramName (), 2);
 				final LoopNests lnt = new LoopNests (cfgStar, cfgStar.getEntryID ());
 
 				if (Globals.uDrawDirectorySet ())
@@ -315,8 +319,8 @@ public class Program implements Iterable <Subprogram>
 					UDrawGraph.makeUDrawFile (iprofile, lnt, subprogram.getSubprogramName ());
 				}
 
-				Debug.debugMessage (getClass (), "Building IPG of "
-						+ subprogram.getSubprogramName (), 2);
+				Debug.debugMessage (getClass (),
+						"Building IPG of " + subprogram.getSubprogramName (), 2);
 
 				IpointGraph ipg;
 				if (structureOnly)
@@ -357,6 +361,67 @@ public class Program implements Iterable <Subprogram>
 		}
 	}
 
+	public final void buildControlDependenceGraphs ()
+	{
+		Debug.debugMessage (getClass (), "Building control dependence graphs", Debug.FUNCTION_LEVEL);
+
+		for (int subprogramID : idToSubprogram.keySet ())
+		{
+			final Subprogram subprogram = idToSubprogram.get (subprogramID);
+
+			Debug.debugMessage (getClass (),
+					"Control dependence of " + subprogram.getSubprogramName (), Debug.LOOP_LEVEL_1);
+
+			final ControlFlowGraph cfg = subprogram.getCFG ();
+			ControlDependenceGraph controlg = new ControlDependenceGraph (cfg);
+
+			if (Globals.uDrawDirectorySet ())
+			{
+				UDrawGraph.makeUDrawFile (controlg, subprogram.getSubprogramName ());
+			}
+		}
+	}
+
+	public final void buildDominatorTrees ()
+	{
+		Debug.debugMessage (getClass (), "Building Dominator Trees", Debug.FUNCTION_LEVEL);
+
+		for (int subprogramID : idToSubprogram.keySet ())
+		{
+			final Subprogram subprogram = idToSubprogram.get (subprogramID);
+			final ControlFlowGraph cfg = subprogram.getCFG ();
+
+			Debug.debugMessage (getClass (),
+					"Building pre-dominator tree of " + subprogram.getSubprogramName (),
+					Debug.LOOP_LEVEL_1);
+
+			DominatorTree preTree = new DominatorTree (cfg, cfg.getEntryID (),
+					DominatorTreeType.PRE_DOMINATOR);
+
+			if (Globals.uDrawDirectorySet ())
+			{
+				UDrawGraph.makeUDrawFile (preTree, DominatorTreeType.PRE_DOMINATOR,
+						subprogram.getSubprogramName ());
+			}
+
+			Debug.debugMessage (getClass (),
+					"Building post-dominator tree of " + subprogram.getSubprogramName (),
+					Debug.LOOP_LEVEL_1);
+
+			FlowGraph reverseg = new FlowGraph ();
+			cfg.reverseGraph (reverseg);
+
+			DominatorTree postTree = new DominatorTree (reverseg, cfg.getExitID (),
+					DominatorTreeType.POST_DOMINATOR);
+
+			if (Globals.uDrawDirectorySet ())
+			{
+				UDrawGraph.makeUDrawFile (postTree, DominatorTreeType.POST_DOMINATOR,
+						subprogram.getSubprogramName ());
+			}
+		}
+	}
+
 	public final void buildSyntaxTrees ()
 	{
 		Debug.debugMessage (getClass (), "Building Syntax Trees", Debug.FUNCTION_LEVEL);
@@ -365,12 +430,15 @@ public class Program implements Iterable <Subprogram>
 		{
 			final Subprogram subprogram = idToSubprogram.get (subprogramID);
 
-			Debug.debugMessage (getClass (), "Building syntax tree of "
-					+ subprogram.getSubprogramName (), Debug.LOOP_LEVEL_1);
+			Debug.debugMessage (getClass (),
+					"Building syntax tree of " + subprogram.getSubprogramName (),
+					Debug.LOOP_LEVEL_1);
 
 			final ControlFlowGraph cfg = subprogram.getCFG ();
 			final SyntaxTree stree = new SyntaxTree (cfg, subprogram.getSubprogramName ());
 			subprogram.setSyntaxTree (stree);
+
+			stree.outputStats ();
 
 			if (Globals.uDrawDirectorySet ())
 			{

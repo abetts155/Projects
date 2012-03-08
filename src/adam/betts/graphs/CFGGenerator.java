@@ -106,7 +106,10 @@ public class CFGGenerator
 
 				if (level == 0)
 				{
-					connectNestedLoops (treev);
+					if (treev.hasSuccessors ())
+					{
+						connectNestedLoops (treev);
+					}
 				} else
 				{
 					addLoopEdges (loops.get (treev.getVertexID ()));
@@ -218,11 +221,11 @@ public class CFGGenerator
 
 			while (successors.size () > 1)
 			{
-				LoopComponent predLoopComponent = loops.get (successors
-						.remove (successors.size () - 1));
+				LoopComponent predLoopComponent = loops
+						.get (successors.remove (successors.size () - 1));
 
-				LoopComponent succLoopComponent = loops.get (successors
-						.get (successors.size () - 1));
+				LoopComponent succLoopComponent = loops
+						.get (successors.get (successors.size () - 1));
 
 				if (firstComponent == null)
 				{
@@ -645,8 +648,8 @@ public class CFGGenerator
 				newSuccessors.put (predID, new HashSet <Integer> ());
 				newSuccessors.get (predID).addAll (succIDs);
 
-				Debug.debugMessage (getClass (), "newSucc(" + predID + ")"
-						+ newSuccessors.get (predID), 4);
+				Debug.debugMessage (getClass (),
+						"newSucc(" + predID + ")" + newSuccessors.get (predID), 4);
 			}
 		}
 
@@ -829,10 +832,8 @@ public class CFGGenerator
 							+ noPreds);
 		} else if (noPreds.size () == 0)
 		{
-			Debug
-					.errorMessage (getClass (),
-							"Unable to find entry vertex. No vertex without predecessors found: "
-									+ noPreds);
+			Debug.errorMessage (getClass (),
+					"Unable to find entry vertex. No vertex without predecessors found: " + noPreds);
 		} else
 		{
 			int entryID = noPreds.get (noPreds.size () - 1);

@@ -10,6 +10,7 @@ import java.util.Set;
 import adam.betts.edges.Edge;
 import adam.betts.graphs.DirectedGraph;
 import adam.betts.graphs.FlowGraph;
+import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.vertices.Vertex;
@@ -139,6 +140,24 @@ public class LoopNests extends Tree
 		return headerToExits.get (headerID).contains (vertexID);
 	}
 
+	public final boolean isDowhileLoop (int headerID)
+	{
+		assert isLoopHeader (headerID);
+
+		Set <Integer> exits = headerToExits.get (headerID);
+		Set <Integer> tails = headerToTails.get (headerID);
+
+		Debug.debugMessage (getClass (), "tails(" + headerID + ") = " + tails + ", exits("
+				+ headerID + ") = " + exits, Debug.HIGHEST_LEVEL);
+
+		if (exits.size () != tails.size ())
+		{
+			return false;
+		}
+
+		return exits.containsAll (tails) && tails.containsAll (exits);
+	}
+
 	public final Iterator <Integer> headerIterator ()
 	{
 		return headerToLoop.keySet ().iterator ();
@@ -151,22 +170,32 @@ public class LoopNests extends Tree
 
 	public FlowGraph induceSubraph (HeaderVertex headerv)
 	{
+		System.out.println ("Header " + headerv.getHeaderID ());
+
 		FlowGraph flowg = new FlowGraph ();
 
 		ArrayList <Integer> workList = new ArrayList <Integer> ();
 		workList.addAll (getTails (headerv.getHeaderID ()));
 
-		// To track whether the induced subgraph has a unique exit point or not
-		ArrayList <Integer> succs = new ArrayList <Integer> ();
+		HashMap <Integer, HashSet <Integer>> edges = new HashMap <Integer, HashSet <Integer>> ();
 
+		// Add vertices to the flow graph
 		while (!workList.isEmpty ())
 		{
 			int vertexID = workList.remove (workList.size () - 1);
 
-			if (!flowg.hasVertex (vertexID))
+			if (flowg.hasVertex (vertexID) == false)
 			{
 				flowg.addVertex (vertexID);
-				succs.add (vertexID);
+				edges.put (vertexID, new HashSet <Integer> ());
+
+				if (isLoopHeader (vertexID) && vertexID != headerv.getHeaderID ())
+				{
+					if (isDowhileLoop (vertexID))
+					{
+						flowg.getVertex (vertexID).setDummy ();
+					}
+				}
 
 				Vertex cfgv = directedg.getVertex (vertexID);
 				Iterator <Edge> predIt = cfgv.predecessorIterator ();
@@ -178,61 +207,81 @@ public class LoopNests extends Tree
 					HeaderVertex predHeaderv = (HeaderVertex) getVertex (treePredv.getParentID ());
 					int predHeaderID = predHeaderv.getHeaderID ();
 
-					if (predHeaderID == headerv.getHeaderID ()
-							|| isNested (predHeaderv.getVertexID (), headerv.getVertexID ()))
+					if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
 					{
-						if (dfs.getEdgeType (predID, vertexID) != DFSEdgeType.BACK_EDGE)
+						if (predHeaderID == headerv.getHeaderID ())
 						{
 							workList.add (predID);
+							edges.get (vertexID).add (predID);
+
+						} else if (isNested (predHeaderv.getVertexID (), headerv.getVertexID ()))
+						{
+							if (isDowhileLoop (predHeaderID))
+							{
+								Debug.debugMessage (getClass (), predHeaderID
+										+ " is a do-while loop", 4);
+
+								workList.add (predHeaderID);
+								edges.get (vertexID).add (predHeaderID);
+							} else
+							{
+								workList.add (predID);
+								edges.get (vertexID).add (predID);
+							}
 						}
 					}
 				}
 			}
 		}
 
+		// Now add edges to the induced flow graph
+		for (int vertexID : edges.keySet ())
+		{
+			for (int predID : edges.get (vertexID))
+			{
+				flowg.addEdge (predID, vertexID);
+			}
+		}
+
+		// Add exit vertex to the induced subgraph
+		addExitVertexToInducedSubgraph (flowg);
+
+		// The entry vertex of the induced subgraph is the loop header
+		flowg.setEntryID (headerv.getHeaderID ());
+
+		return flowg;
+	}
+
+	private void addExitVertexToInducedSubgraph (FlowGraph flowg)
+	{
+		ArrayList <Integer> noSuccs = new ArrayList <Integer> ();
+
 		for (Vertex v : flowg)
 		{
-			Integer vertexID = v.getVertexID ();
-			Vertex cfgv = directedg.getVertex (vertexID);
-
-			Iterator <Edge> succIt = cfgv.successorIterator ();
-			while (succIt.hasNext ())
+			if (v.numOfSuccessors () == 0)
 			{
-				Edge e = succIt.next ();
-				int succID = e.getVertexID ();
-
-				if (flowg.hasVertex (succID)
-						&& dfs.getEdgeType (vertexID, succID) != DFSEdgeType.BACK_EDGE)
-				{
-					succs.remove (vertexID);
-					flowg.addEdge (vertexID, succID);
-				}
+				noSuccs.add (v.getVertexID ());
 			}
 		}
 
 		// Either add another vertex to ensure there is a unique exit (when
 		// there are multiple tails) or set it to the unique tail
-		if (succs.size () != 1)
+		if (noSuccs.size () != 1)
 		{
 			int exitID = flowg.getNextVertexID ();
 			flowg.addExit (exitID);
 			flowg.getVertex (exitID).setDummy ();
 			Debug.debugMessage (getClass (), "Adding exit vertex " + exitID, 3);
 
-			for (int vertexID : succs)
+			for (int vertexID : noSuccs)
 			{
 				flowg.addEdge (vertexID, exitID);
 			}
 		} else
 		{
-			int exitID = succs.get (succs.size () - 1);
+			int exitID = noSuccs.get (noSuccs.size () - 1);
 			flowg.setExitID (exitID);
 		}
-
-		// The entry vertex of the induced subgraph is the loop header
-		flowg.setEntryID (headerv.getHeaderID ());
-
-		return flowg;
 	}
 
 	private void initialise ()
