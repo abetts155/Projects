@@ -192,7 +192,7 @@ if opts.gem5sim:
     gem5Home = environ[gem5EnvironmentVariable]
     gem5Binary = gem5Home + sep + "build" + sep + "ARM" + sep + "gem5.opt"
     gem5TraceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
-    gem5ConfigScript = gem5Home + "/configs/example/se.py"
+    gem5ConfigScript = environ[wcetToolsEnvironmentVariable] + "/scripts/gem5Config/se.py"
     gem5TraceParser = environ[wcetHomeEnvironmentVariable] + sep + "scripts" + sep + "gem5TraceParser.py"
 
 def checkOptions ():

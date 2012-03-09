@@ -4,19 +4,23 @@ from optparse import OptionParser
 from sys import argv, maxint
 from subprocess import Popen, PIPE
 from os import environ, sep
+from os.path import join as joinpath
 from re import split
 from random import randint
 
 gem5EnvironmentVariable = "GEM5_HOME"
-try:
-    environ[gem5EnvironmentVariable]
-except KeyError:
-    print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to simulate the program using gem5.")
-    exit(0)
+wcetToolsEnvironmentVariable = "WCET_HOME"
+envVars = [gem5EnvironmentVariable, wcetToolsEnvironmentVariable]
+for var in envVars:
+    try:
+        environ[var]
+    except KeyError:
+        print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to simulate the program using gem5.")
+        exit(0)
 gem5Home = environ[gem5EnvironmentVariable]
-gem5Binary = gem5Home + sep + "build" + sep + "ARM" + sep + "gem5.opt"
+gem5Binary = joinpath(gem5Home, "build", "ARM", "gem5.opt")
 gem5TraceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
-gem5ConfigScript = gem5Home + "/configs/example/se.py"
+gem5ConfigScript = joinpath(environ[wcetToolsEnvironmentVariable], "scripts", "gem5Config", "se.py")
 
 worstCaseTime = -1.0
 worstCaseVector = ""
@@ -152,6 +156,11 @@ def testVector(vector):
     # If a non-zero return code is detected then gem5 choked
     if proc.returncode != 0:
         print("\nProblem running " + cmd)
+        print "\nProcess output:"
+        for line in iter(stoutdata.splitlines()):
+            print line
+        for line in iter(stderrdata.splitlines()):
+            print line
         exit(0)
 
     # Iterate through standard out until we find the tick count

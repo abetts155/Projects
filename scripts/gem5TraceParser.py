@@ -65,10 +65,10 @@ parser.add_option("-H",
 # Check that the user has passed the correct options
 if opts.program is None:
     print("Missing option " + str(parser.get_option("-p")))
-    exit(0)
+    exit(1)
 if opts.trace is None:
     print("Missing option " + str(parser.get_option("-t")))
-    exit(0)
+    exit(1)
 
 
 # Extracts first addresses of basic blocks from xml file
@@ -164,14 +164,14 @@ try:
     programFile = open(opts.program, 'r')
 except IOError:
     print("Error - cannot open xml file: " + opts.program)
-    exit(0)
+    exit(1)
 try:
     programXML = parse(programFile)
     programFile.close()
     basicBlocks = basicBlockInfo(programXML)
 except DOMException:
     print("Error parsing xml file: " + opts.program)
-    exit(0)
+    exit(1)
 
 # Open trace file and extract timings for instructions
 try:
@@ -180,7 +180,7 @@ try:
     traceFile.close()
 except IOError:
     print("Error - cannot open gem5 trace file: " + opts.trace)
-    exit(0)
+    exit(1)
 
 # Get output string of basic block timings and output it
 outputString = getOutputString(instrTimings, basicBlocks)

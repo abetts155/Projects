@@ -5,6 +5,7 @@
 	<property name="build.dir" value="build" />
 	<property name="lib.dir" value="lib" />
 	<property name="jar.dir" value="bin" />
+	
 	<property name="cfg.main.class" value="adam.betts.tools.MainProgramBuilder" />
 	<property name="wcet.main.class" value="adam.betts.tools.MainWCETAnalyser" />
 	<property name="trace-parser.main.class" value="adam.betts.tools.MainTraceParser" />
@@ -15,6 +16,8 @@
 	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
 	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
 	<property name="tests.main.class" value="adam.betts.program.AllTests" />
+	<property name="tv-generator.main.class" value="tvgen.GenerateTestVectors" />
+
 	<property name="disassemble.jar" value="disassemble.jar" />
 	<property name="simplescalar.jar" value="simplescalar.jar" />
 	<property name="wcet.jar" value="wcet.jar" />
@@ -24,6 +27,7 @@
 	<property name="program-generator.jar" value="program-generator.jar" />
 	<property name="tree.jar" value="tree.jar" />
 	<property name="loop.jar" value="loop.jar" />
+	<property name="tv-generator.jar" value="tv-generator.jar" />
 
 	<path id="project.classpath">
 		<pathelement location="${lib.dir}/commons-cli-1.2.jar" />
@@ -180,8 +184,23 @@
 		<chmod file="${jar.dir}/${program-generator.jar}" perm="+x" verbose="true" />
 	</target>
 
+	<target name="tv-generator" depends="compile">
+		<mkdir dir="${jar.dir}" />
+
+		<jar destfile="${jar.dir}/${tv-generator.jar}" basedir="${build.dir}">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Main-Class" value="${tv-generator.main.class}" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+		</jar>
+
+		<chmod file="${jar.dir}/${tv-generator.jar}" perm="+x" verbose="true" />
+	</target>
+
 	<target name="jar" depends="disassemble, simplescalar, wcet, trace-parser, trace-generator,
-		program-generator, program-analyser, tree, loop" />
+		program-generator, program-analyser, tree, loop, tv-generator" />
 
 	<target name="clean">
 		<echo>Removing ${build.dir}</echo>

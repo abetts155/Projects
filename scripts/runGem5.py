@@ -7,18 +7,14 @@ from os import environ, sep
 
 # These environment variables are needed to simulate a program using gem5
 gem5EnvironmentVariable = "GEM5_HOME"
-try:
-    environ[gem5EnvironmentVariable]
-except KeyError:
-    print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to simulate the program using gem5.")
-    exit(0)
-
 wcetToolsEnvironmentVariable = "WCET_HOME"
-try:
-    environ[wcetToolsEnvironmentVariable]
-except KeyError:
-    print ("Cannot find environment variable '" + wcetToolsEnvironmentVariable + "' which is needed to simulate the program using gem5.")
-    exit(0)
+envVars = [gem5EnvironmentVariable, wcetToolsEnvironmentVariable]
+for var in envVars:
+    try:
+        environ[var]
+    except KeyError:
+        print ("Cannot find environment variable '" + gem5EnvironmentVariable + "' which is needed to simulate the program using gem5.")
+        exit(0)
 
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
@@ -73,9 +69,9 @@ def runCommand (cmd):
 gem5Home = environ[gem5EnvironmentVariable]
 gem5Bin = gem5Home + "/build/ARM/gem5.opt"
 traceFlags = "--debug-flags=\"ExecEnable,ExecUser,ExecTicks,ExecMicro\""
-configScript = gem5Home + "/configs/example/se.py"
 
 wcetHome = environ[wcetToolsEnvironmentVariable]
+configScript = wcetHome + "/scripts/gem5Config/se.py"
 traceParser = wcetHome + "/scripts/gem5TraceParser.py"
 
 if opts.cpuType == "detailed" or opts.cpuType == "inorder":
