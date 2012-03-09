@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.FlowGraph;
+import adam.betts.graphs.utils.AcyclicReducibility;
 import adam.betts.graphs.utils.LeastCommonAncestor;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DominatorTreeType;
@@ -23,8 +24,8 @@ public class SyntaxTree extends Tree
 	protected final String subprogramName;
 	protected final DepthFirstTree dfs;
 	protected final LoopNests lnt;
-	protected DominatorTree pret;
-	protected DominatorTree postt;
+	protected DominatorTree preTree;
+	protected DominatorTree postTree;
 	protected LeastCommonAncestor lca;
 	protected HashMap <Integer, LoopVertex> headerToSyntaxTree = new HashMap <Integer, LoopVertex> ();
 
@@ -59,6 +60,73 @@ public class SyntaxTree extends Tree
 		return null;
 	}
 
+	public void outputStats ()
+	{
+		int numOfALT = 0;
+		int numOfSEQ = 0;
+		int numOfLOOP = 0;
+		int numOfLeaves = 0;
+		int numOfLambda = 0;
+		int numOfMerges = 0;
+		int numOfBranches = 0;
+		int numOfHeaders = 0;
+		int numOfBasicBlocks = 0;
+
+		for (Vertex v : this)
+		{
+			if (v instanceof LoopVertex)
+			{
+				numOfLOOP++;
+			} else if (v instanceof AlternativeVertex)
+			{
+				numOfALT++;
+			} else if (v instanceof SequenceVertex)
+			{
+				numOfSEQ++;
+			} else if (v instanceof LeafVertex)
+			{
+				LeafVertex leafv = (LeafVertex) v;
+
+				if (leafv.isLambdaVertex ())
+				{
+					numOfLambda++;
+				} else
+				{
+					numOfLeaves++;
+				}
+			}
+		}
+
+		for (Vertex v : cfg)
+		{
+			numOfBasicBlocks++;
+
+			if (lnt.isLoopHeader (v.getVertexID ()))
+			{
+				numOfHeaders++;
+			} else if (v.numOfSuccessors () > 1)
+			{
+				numOfBranches++;
+			}
+
+			if (v.numOfPredecessors () > 1 && lnt.isSelfLoop (v.getVertexID ()) == false)
+			{
+				numOfMerges++;
+			}
+		}
+
+		System.out.println ("#ALT      = " + numOfALT);
+		System.out.println ("#SEQ      = " + numOfSEQ);
+		System.out.println ("#LOOP     = " + numOfLOOP);
+		System.out.println ("#Lambda   = " + numOfLambda);
+		System.out.println ("#Leaves   = " + numOfLeaves);
+
+		System.out.println ("#Headers  = " + numOfHeaders);
+		System.out.println ("#Branches = " + numOfBranches);
+		System.out.println ("#Merges   = " + numOfMerges);
+		System.out.println ("#Blocks   = " + numOfBasicBlocks);
+	}
+
 	private void build ()
 	{
 		for (int level = lnt.getHeight () - 1; level >= 0; --level)
@@ -80,16 +148,18 @@ public class SyntaxTree extends Tree
 					flowg.reverseGraph (reverseg);
 
 					Debug.debugMessage (getClass (), "Building pre-dominator tree", 4);
-					pret = new DominatorTree (flowg, flowg.getEntryID (),
+					preTree = new DominatorTree (flowg, flowg.getEntryID (),
 							DominatorTreeType.PRE_DOMINATOR);
 
 					Debug.debugMessage (getClass (), "Building post-dominator tree", 4);
-					postt = new DominatorTree (reverseg, flowg.getExitID (),
+					postTree = new DominatorTree (reverseg, flowg.getExitID (),
 							DominatorTreeType.POST_DOMINATOR);
-					lca = new LeastCommonAncestor (postt);
+					lca = new LeastCommonAncestor (postTree);
 
-					SyntaxVertex rootVertex = whichSubTree (flowg, flowg.getEntryID (), flowg
-							.getExitID (), headerv);
+					analyseAcyclicSubgraph (flowg, reverseg, preTree, postTree);
+
+					SyntaxVertex rootVertex = whichSubTree (flowg, flowg.getEntryID (),
+							flowg.getExitID (), headerv);
 
 					if (headerv.getHeaderID () == cfg.getEntryID ())
 					{
@@ -156,6 +226,29 @@ public class SyntaxTree extends Tree
 		return seq;
 	}
 
+	private void analyseAcyclicSubgraph (FlowGraph flowg, FlowGraph reverseg,
+			DominatorTree preTree, DominatorTree postTree)
+	{
+		AcyclicReducibility acyclicReducibility = new AcyclicReducibility (flowg, reverseg,
+				preTree, postTree);
+
+		DepthFirstTree dfs = new DepthFirstTree (flowg, flowg.getEntryID ());
+
+		for (int postID = flowg.numOfVertices (); postID >= 1; --postID)
+		{
+			int vertexID = dfs.getPostVertexID (postID);
+
+			if (flowg.getVertex (vertexID).numOfPredecessors () > 1)
+			{
+				if (acyclicReducibility.isReducibleMerge (vertexID) == false)
+				{
+					Debug.debugMessage (getClass (), vertexID
+							+ " is an acyclic irreducible merge vertex", Debug.FUNCTION_LEVEL);
+				}
+			}
+		}
+	}
+
 	private SyntaxVertex whichSubTree (FlowGraph flowg, int sourceID, int destinationID,
 			HeaderVertex headerv)
 	{
@@ -176,10 +269,10 @@ public class SyntaxTree extends Tree
 
 	private AlternativeVertex buildALT (FlowGraph flowg, int branchID, HeaderVertex headerv)
 	{
-		CompressedDominatorTree comt = new CompressedDominatorTree (flowg, postt, lca, branchID);
+		CompressedDominatorTree comt = new CompressedDominatorTree (flowg, postTree, lca, branchID);
 
 		HashMap <Integer, AlternativeVertex> mergeRoots = new HashMap <Integer, AlternativeVertex> ();
-		int ipostID = postt.getImmediateDominator (branchID);
+		int ipostID = postTree.getImmediateDominator (branchID);
 
 		for (int level = comt.getHeight () - 1; level >= 1; --level)
 		{
@@ -239,7 +332,7 @@ public class SyntaxTree extends Tree
 				}
 			}
 
-			if (!flowg.getVertex (cfgVertexID).isDummy ())
+			if (flowg.getVertex (cfgVertexID).isDummy () == false)
 			{
 				LeafVertex leaf = addLeafVertex (cfgVertexID);
 				addEdge (seq.getVertexID (), leaf.getVertexID ());
@@ -252,7 +345,7 @@ public class SyntaxTree extends Tree
 				addEdge (seq.getVertexID (), alt.getVertexID ());
 			}
 
-			cfgVertexID = postt.getImmediateDominator (cfgVertexID);
+			cfgVertexID = postTree.getImmediateDominator (cfgVertexID);
 		} while (cfgVertexID != destinationID);
 
 		return seq;

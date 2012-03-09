@@ -15,6 +15,7 @@ import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.CallLoopGraph;
 import adam.betts.graphs.ContextGraph;
+import adam.betts.graphs.ControlDependenceGraph;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.SuperBlockGraph;
@@ -28,6 +29,9 @@ import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.IProfile;
 import adam.betts.vertices.BasicBlock;
+import adam.betts.vertices.ControlDependenceBasicBlock;
+import adam.betts.vertices.ControlDependenceEdge;
+import adam.betts.vertices.ControlDependenceVertex;
 import adam.betts.vertices.Ipoint;
 import adam.betts.vertices.SuperBlockVertex;
 import adam.betts.vertices.Vertex;
@@ -661,6 +665,73 @@ public class UDrawGraph
 			out.write (edgeLink (e.getVertexID ()));
 			out.write (endEdge + ",\n");
 		}
+		out.write (endVertex + "\n");
+	}
+
+	public final static void makeUDrawFile (ControlDependenceGraph controlg, String fileNamePrefix)
+	{
+		try
+		{
+			final File file = new File (Globals.getUDrawDirectory (), fileNamePrefix + ".cdg"
+					+ fileNameSuffix);
+			BufferedWriter out = new BufferedWriter (new FileWriter (file.getAbsolutePath ()));
+
+			out.write (beginGraph);
+
+			for (Vertex v : controlg)
+			{
+				ControlDependenceVertex controlv = (ControlDependenceVertex) v;
+
+				writeControlDependenceVertex (out, controlv);
+			}
+			
+			out.write (endGraph);
+
+			out.close ();
+		} catch (IOException e)
+		{
+			System.err.println ("Error: " + e.getMessage ());
+			System.exit (1);
+		}
+	}
+
+	private static void writeControlDependenceVertex (BufferedWriter out, ControlDependenceVertex v)
+			throws IOException
+	{
+		out.write (newVertex (v.getVertexID ()));
+
+		out.write (beginAttributes);
+
+		if (v instanceof ControlDependenceBasicBlock)
+		{
+			ControlDependenceBasicBlock castv = (ControlDependenceBasicBlock) v;
+
+			out.write (setName (Integer.toString (castv.getBasicBlockID ())));
+			out.write (setColor (COLOR.YELLOW));
+		} else
+		{
+			ControlDependenceEdge castv = (ControlDependenceEdge) v;
+
+			final String name = castv.getPredecessorID () + " => " + castv.getSuccessorID ();
+
+			out.write (setName (name));
+			out.write (setColor (COLOR.RED));
+		}
+
+		out.write (endAttibutes);
+
+		out.write (beginAttributes);
+		Iterator <Edge> succIt = v.successorIterator ();
+		while (succIt.hasNext ())
+		{
+			Edge e = succIt.next ();
+			out.write (newEdge);
+			out.write (beginAttributes);
+			out.write (endAttibutes);
+			out.write (edgeLink (e.getVertexID ()));
+			out.write (endEdge + ",\n");
+		}
+
 		out.write (endVertex + "\n");
 	}
 

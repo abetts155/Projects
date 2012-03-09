@@ -20,11 +20,15 @@ public class MainProgramAnalyser
 	private static Option inlineOption;
 	private static Option loopsOption;
 	private static Option syntaxTreesOption;
+	private static Option controlDependenceOption;
+	private static Option dominatorTreesOption;
 	private static Option timingAnalysisOption;
 
 	protected static boolean inline;
 	protected static boolean LNTs;
 	protected static boolean ASTs;
+	protected static boolean dominators;
+	protected static boolean controlDependences;
 	protected static boolean timingAnalysis;
 
 	private static void addOptions ()
@@ -49,6 +53,16 @@ public class MainProgramAnalyser
 				"Generate the syntax trees of the control flow graphs.");
 		syntaxTreesOption.setRequired (false);
 		options.addOption (syntaxTreesOption);
+
+		controlDependenceOption = new Option ("C", "control-dependence", false,
+				"Generate the control dependence graphs of the control flow graphs.");
+		controlDependenceOption.setRequired (false);
+		options.addOption (controlDependenceOption);
+
+		dominatorTreesOption = new Option ("D", "dominator-trees", false,
+				"Generate the dominator trees of the control flow graphs.");
+		dominatorTreesOption.setRequired (false);
+		options.addOption (dominatorTreesOption);
 
 		timingAnalysisOption = new Option ("T", "timing-analysis", false,
 				"Generate (random) WCET data for the program and do a WCET computation.");
@@ -81,6 +95,8 @@ public class MainProgramAnalyser
 				inline = line.hasOption (inlineOption.getOpt ());
 				LNTs = line.hasOption (loopsOption.getOpt ());
 				ASTs = line.hasOption (syntaxTreesOption.getOpt ());
+				dominators = line.hasOption (dominatorTreesOption.getOpt ());
+				controlDependences = line.hasOption (controlDependenceOption.getOpt ());
 				timingAnalysis = line.hasOption (timingAnalysisOption.getOpt ());
 			}
 		} catch (ParseException e)
@@ -107,6 +123,18 @@ public class MainProgramAnalyser
 		{
 			Debug.verboseMessage ("Building abstract syntax trees");
 			program.buildSyntaxTrees ();
+		}
+
+		if (dominators)
+		{
+			Debug.verboseMessage ("Building pre- and post-dominator trees");
+			program.buildDominatorTrees ();
+		}
+
+		if (controlDependences)
+		{
+			Debug.verboseMessage ("Building control dependence graphs");
+			program.buildControlDependenceGraphs ();
 		}
 
 		if (timingAnalysis)
