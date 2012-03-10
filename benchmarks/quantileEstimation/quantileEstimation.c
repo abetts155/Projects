@@ -152,7 +152,10 @@ void update() {
 		told = tnew;
 		qold = qnew;
 	}
-	qile = newqile;
+	int i;
+	for(i = 0; i < nq; i++) {
+		qile[i] = newqile[i];
+	}
 	nt += nd;
 	nd = 0;
 }

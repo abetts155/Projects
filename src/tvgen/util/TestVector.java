@@ -18,7 +18,7 @@ public class TestVector implements Comparable<TestVector> {
 		return score;
 	}
 	
-	public void setScore(double score) {
+	public synchronized void setScore(double score) {
 		if(!scored) {
 			this.score = score;
 			scored = true;

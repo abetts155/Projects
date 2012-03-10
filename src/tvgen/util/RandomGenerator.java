@@ -33,7 +33,7 @@ public class RandomGenerator {
 		return new TestVector(vector);
 	}
 	
-	public int generateRandomInt(int min, int max) {
+	public synchronized int generateRandomInt(int min, int max) {
 		int range = max - min;
 		if (range < 0) {
 			SystemOutput.exitWithError("Error generating random number: range < 0");
@@ -46,7 +46,7 @@ public class RandomGenerator {
 	 * Generate random double between 0.0 and 1.0 inclusive
 	 * @return
 	 */
-	public double generateRandomDouble() {
+	public synchronized double generateRandomDouble() {
 		return randomGen.nextDouble();
 	}
 }

@@ -10,7 +10,7 @@ import java.util.zip.GZIPOutputStream;
 import tvgen.util.SystemOutput;
 import tvgen.util.TestVector;
 
-public class Gem5TimeEvaluator implements TVEvaluator {
+public class Gem5TimeEvaluator extends TVEvaluator {
 
 	public static final String gem5EnvVar = "GEM5_HOME";
 	public static final String wcetEnvVar = "WCET_HOME";
@@ -29,7 +29,8 @@ public class Gem5TimeEvaluator implements TVEvaluator {
 	private static PrintStream traceOutput = null;
 	private static String traceFileName = "trace.BASIC_BLOCK.GA.gz";
 	
-	public Gem5TimeEvaluator(String programName, String cpuType) {
+	public Gem5TimeEvaluator(int threadID, String programName, String cpuType) {
+		super(threadID);
 		gem5Home = System.getenv(gem5EnvVar);
 		if(gem5Home == null) {
 			SystemOutput.exitWithError("Error: could not find environment variable "
@@ -53,10 +54,10 @@ public class Gem5TimeEvaluator implements TVEvaluator {
 		checkFiles();
 	}
 	
-	@Override
-	public void evaluateTV(TestVector vector) {
-		String cmd = gem5Binary + " " + gem5TraceFlags + " --trace-file=trace.out " +
-				gem5ConfigScript + " -c " + programName + " --cpu-type=" + cpuType;
+	public void evaluate(TestVector vector) {
+		String cmd = gem5Binary + " " + gem5TraceFlags + " --trace-file=trace.out" +
+				" -d m5out/thread" + getThreadID() + " " + gem5ConfigScript + " -c " +
+				programName + " --cpu-type=" + cpuType;
 		if(cpuType.equals("detailed") || cpuType.equals("inorder")) {
 			cmd += " --caches";
 		}
@@ -94,7 +95,7 @@ public class Gem5TimeEvaluator implements TVEvaluator {
 	
 	private void sanitiseTrace() {
 		String cmd = "python " + gem5TraceParser + " -p " + programName +
-				".xml -t m5out/trace.out";
+				".xml -t m5out/thread" + getThreadID() + "/trace.out";
 		
 		SystemOutput.debugMessage("Running command: " + cmd);
 		
@@ -164,7 +165,7 @@ public class Gem5TimeEvaluator implements TVEvaluator {
 		}
 	}
 	
-	private static void addToTraceOutput(BufferedReader content) {
+	private synchronized static void addToTraceOutput(BufferedReader content) {
 		if(traceOutput == null) {
 			try {
 				GZIPOutputStream outStream = new GZIPOutputStream(
@@ -191,7 +192,9 @@ public class Gem5TimeEvaluator implements TVEvaluator {
 	}
 	
 	private static void closeTraceOutput() {
-		traceOutput.close();
+		if(traceOutput != null) {
+			traceOutput.close();
+		}
 	}
 
 }

@@ -15,16 +15,16 @@ public class SystemOutput {
 		}
 	}
 	
-	public static void printMessage(String message) {
+	public synchronized static void printMessage(String message) {
 		System.out.println(message);
 	}
 	
-	public static void errorMessage(String message) {
+	public synchronized static void errorMessage(String message) {
 		System.err.println(message);
 	}
 	
 	public static void exitWithError(String message) {
-		System.out.println(message);
+		printMessage(message);
 		System.exit(1);
 	}
 	

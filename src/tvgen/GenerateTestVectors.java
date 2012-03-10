@@ -29,6 +29,7 @@ public class GenerateTestVectors {
 	private static Option cpuTypeOption;
 	private static Option mutRateOption;
 	private static Option crossRateOption;
+	private static Option threadsOption;
 	
 	private static void addOptions ()
 	{
@@ -40,7 +41,7 @@ public class GenerateTestVectors {
 		debugOption = new Option ("d", "debug", false, "Debug mode.");
 		options.addOption (debugOption);
 
-		typeOption = new Option ("t", "gen-type", true,
+		typeOption = new Option ("g", "gen-type", true,
 				"The type of generator to use (rand or ga)");
 		typeOption.setRequired (true);
 		options.addOption (typeOption);
@@ -91,6 +92,11 @@ public class GenerateTestVectors {
 				"The crossover rate to use in the genetic algorithm (default = 0.9)");
 		crossRateOption.setRequired (false);
 		options.addOption (crossRateOption);
+		
+		threadsOption = new Option ("t", "num-threads", true,
+				"The number of evaluator threads to use (default is 1)");
+		threadsOption.setRequired (false);
+		options.addOption (threadsOption);
 	}
 
 	private static CommandLine parseCommandLine (String[] args)
@@ -152,7 +158,7 @@ public class GenerateTestVectors {
 			TVCrossover cross = createCrossover("2point");
 			Mutator mut = createMutator("rand");
 			
-			TVEvaluator eval = createEvaluator("gem5Time", line);
+			GenerationEvaluator eval = createEvaluator("gem5Time", line);
 			
 			generator = createGAGenerator(outputFile, numVecsOrGens, eval, cross, selec, mut);
 			
@@ -204,7 +210,7 @@ public class GenerateTestVectors {
 	}
 	
 	private static TestVectorGenerator createGAGenerator(File outputFile, int numGens,
-			TVEvaluator eval, TVCrossover cross, TVSelector selec, Mutator mut) {
+			GenerationEvaluator eval, TVCrossover cross, TVSelector selec, Mutator mut) {
 		GaTVGenerator gen = new GaTVGenerator(outputFile);
 		gen.setNumGenerations(numGens);
 		gen.setEvaluator(eval);
@@ -214,7 +220,15 @@ public class GenerateTestVectors {
 		return gen;
 	}
 	
-	private static TVEvaluator createEvaluator(String type, CommandLine line) {
+	private static GenerationEvaluator createEvaluator(String type, CommandLine line) {
+		int numThreads = 1;
+		if(line.hasOption (threadsOption.getOpt ())) {
+			numThreads = Integer.parseInt(
+					line.getOptionValue(threadsOption.getOpt()));
+		}
+		
+		TVEvaluator[] evals = new TVEvaluator[numThreads];
+		
 		if(type.equals("gem5Time"))
 		{
 			if (!line.hasOption (programOption.getOpt ()))
@@ -226,11 +240,17 @@ public class GenerateTestVectors {
 			String programName = line.getOptionValue(programOption.getOpt());
 			String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
 			
-			return new Gem5TimeEvaluator(programName, cpuType);
+			for(int i = 0; i < numThreads; i++) {
+				evals[i] = new Gem5TimeEvaluator(i, programName, cpuType);
+			}
+			return new GenerationEvaluator(evals);
 		}
 		else if(type.equals("test"))
 		{
-			return new TestEvaluator();
+			for(int i = 0; i < numThreads; i++) {
+				evals[i] = new TestEvaluator(i);
+			}
+			return new GenerationEvaluator(evals);
 		}
 		SystemOutput.exitWithError("Error: invaild evaluator type: " + type);
 		return null;

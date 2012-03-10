@@ -75,11 +75,11 @@ configScript = wcetHome + "/scripts/gem5Config/se.py"
 traceParser = wcetHome + "/scripts/gem5TraceParser.py"
 
 if opts.cpuType == "detailed" or opts.cpuType == "inorder":
-    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" --cpu-type=%s --caches" \
-				% (gem5Bin, traceFlags, configScript, opts.program, opts.arguments, opts.cpuType))
+    runCommand("%s %s --trace-file=trace.out %s -c %s --cpu-type=%s --caches %s" \
+				% (gem5Bin, traceFlags, configScript, opts.program, opts.cpuType, opts.arguments))
 else:
-    runCommand("%s %s --trace-file=trace.out %s -c %s -o \"%s\" --cpu-type=%s" \
-				% (gem5Bin, traceFlags, configScript, opts.program, opts.arguments, opts.cpuType))
+    runCommand("%s %s --trace-file=trace.out %s -c %s --cpu-type=%s %s" \
+				% (gem5Bin, traceFlags, configScript, opts.program, opts.cpuType, opts.arguments))
 runCommand("python %s -p %s.xml -t m5out/trace.out -o blockTimings.out -H" % (traceParser, opts.program))
 
 

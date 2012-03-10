@@ -13,10 +13,10 @@ public class GaTVGenerator extends TestVectorGenerator {
 	private double mutationRate;
 	private double crossoverRate;
 	
-	private TVEvaluator evaluator;
-	private TVSelector selector;
-	private TVCrossover crossover;
-	private Mutator mutator;
+	private GenerationEvaluator evaluator = null;
+	private TVSelector selector = null;
+	private TVCrossover crossover = null;
+	private Mutator mutator = null;
 	
 	public GaTVGenerator(File outFile) {
 		super(outFile);
@@ -46,6 +46,7 @@ public class GaTVGenerator extends TestVectorGenerator {
 		
 		for(int i = 0; i < numGenerations; i++) {
 			SystemOutput.debugMessage("Start generation " + i);
+			evaluator.evaluateGeneration(generation);
 			
 			double bestScore = Double.NEGATIVE_INFINITY;
 			double worstScore = Double.POSITIVE_INFINITY;
@@ -53,9 +54,6 @@ public class GaTVGenerator extends TestVectorGenerator {
 			
 			// Evaluate each chromosome in the generation
 			for(TestVector chromosome : generation) {
-				if(!chromosome.hasBeenScored()) {
-					evaluator.evaluateTV(chromosome);
-				}
 				bestScore = Math.max(bestScore, chromosome.getScore());
 				worstScore = Math.min(worstScore, chromosome.getScore());
 				averageScore += chromosome.getScore();
@@ -139,7 +137,7 @@ public class GaTVGenerator extends TestVectorGenerator {
 		this.crossoverRate = crossoverRate;
 	}
 
-	public void setEvaluator(TVEvaluator evaluator) {
+	public void setEvaluator(GenerationEvaluator evaluator) {
 		this.evaluator = evaluator;
 	}
 

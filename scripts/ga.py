@@ -436,13 +436,13 @@ def executeOnSimplescalar (chromosome):
 
 def executeOnGem5 (chromosome):
     if opts.cpuType == "detailed" or opts.cpuType == "inorder":
-        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s --caches -o \"" \
+        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s --caches " \
         % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program, opts.cpuType) + \
-        ' '.join(map(str, chromosome.genomeList)) + "\""
+        ' '.join(map(str, chromosome.genomeList))
     else:
-        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s -o \"" \
+        cmd = "%s %s --trace-file=trace.out %s -c %s --cpu-type=%s " \
         % (gem5Binary, gem5TraceFlags, gem5ConfigScript, opts.program, opts.cpuType) + \
-        ' '.join(map(str, chromosome.genomeList)) + "\""
+        ' '.join(map(str, chromosome.genomeList))
 
     if opts.debug:
         print("Running '" + cmd + "'")
