@@ -3,6 +3,8 @@ There are several tools bundled in this distribution.
 To install the Java tools, run:
 'ant jar'
 
+Sth
+
 This will create several executable jar files in the 'bin' directory.
 
 To install SimpleScalar and associated tools, run:
