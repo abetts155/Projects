@@ -6,6 +6,9 @@
  * Third Edition by William H. Press et al
  */
 
+#include <limits.h>
+#include <math.h>
+
 #define XSIZE 10
 
 typedef struct {
@@ -108,7 +111,7 @@ void solveLUdcmp(LUdcmp l, double b[], double x[]) {
 }
 
 /*
-	The routine requires a user-supplied function of functor that computes
+	The routine requires a user-supplied function or functor that computes
 	the vector of functions to be zeroed. Its declaration as a function is:
 	VecDoub vecfunc(VecDoub_I x);
 	(The name vecfunc is arbitrary.) The declaration as a functor is similar
