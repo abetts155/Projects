@@ -12,6 +12,9 @@ public class GaTVGenerator extends TestVectorGenerator {
 	
 	private double mutationRate;
 	private double crossoverRate;
+	private double selectionRate;
+	
+	private boolean seedWithRand;
 	
 	private GenerationEvaluator evaluator = null;
 	private TVSelector selector = null;
@@ -25,6 +28,8 @@ public class GaTVGenerator extends TestVectorGenerator {
 		populationSize = 100;
 		mutationRate = 0.05;
 		crossoverRate = 0.9;
+		selectionRate = 0.1;
+		seedWithRand = false;
 	}
 
 	@Override
@@ -66,7 +71,8 @@ public class GaTVGenerator extends TestVectorGenerator {
 					bestScore + " / " + averageScore + " / " + worstScore);
 			
 			// Select which chromosomes will be used to generate next generation
-			TestVector[] selected = selector.selectVectors(generation, generation.length / 10);
+			TestVector[] selected = selector.selectVectors(generation,
+					(int)(generation.length * selectionRate));
 			
 			// Generate the next generation
 			generation = createNextGeneration(selected, rand);
@@ -79,7 +85,15 @@ public class GaTVGenerator extends TestVectorGenerator {
 	private TestVector[] createNextGeneration(TestVector[] selected, RandomGenerator rand) {
 		TestVector[] newGeneration = new TestVector[populationSize];
 		
-		for(int i = 0; i < newGeneration.length; i++) {
+		int startIndex = 0;
+		if(seedWithRand) {
+			SystemOutput.debugMessage("Seeding with random vector");
+			startIndex = 1;
+			newGeneration[0] = createTV( rand.generateRandomArray(getVectorLength(),
+					getLowerBound(), getUpperBound()) );
+		}
+		
+		for(int i = startIndex; i < newGeneration.length; i++) {
 			int[] crossed;
 			if(rand.generateRandomDouble() < crossoverRate) {
 				TestVector t1 = selected[rand.generateRandomInt(0, selected.length - 1)];
@@ -135,6 +149,14 @@ public class GaTVGenerator extends TestVectorGenerator {
 
 	public void setCrossoverRate(double crossoverRate) {
 		this.crossoverRate = crossoverRate;
+	}
+
+	public void setSelectionRate(double selectionRate) {
+		this.selectionRate = selectionRate;
+	}
+
+	public void setSeedWithRand(boolean seedWithRand) {
+		this.seedWithRand = seedWithRand;
 	}
 
 	public void setEvaluator(GenerationEvaluator evaluator) {

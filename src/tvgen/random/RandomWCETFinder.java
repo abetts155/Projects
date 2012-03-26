@@ -1,5 +1,6 @@
 package tvgen.random;
 
+import gem5.Gem5Tools;
 import tvgen.WCETFinder;
 import tvgen.util.RandomGenerator;
 
@@ -8,8 +9,8 @@ public class RandomWCETFinder extends WCETFinder {
 	private int numVecsToGen;
 	
 	public RandomWCETFinder(int threadID, String programName, String cpuType,
-			int numVecsToGen) {
-		super(threadID, programName, cpuType);
+			Gem5Tools g5Tools, int numVecsToGen) {
+		super(threadID, programName, cpuType, g5Tools);
 		this.numVecsToGen = numVecsToGen;
 	}
 	

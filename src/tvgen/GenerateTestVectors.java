@@ -8,6 +8,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import gem5.Gem5Tools;
+
 import java.io.File;
 
 import tvgen.ga.*;
@@ -27,9 +29,13 @@ public class GenerateTestVectors {
 	private static Option lowBoundOption;
 	private static Option numGensOption;
 	private static Option cpuTypeOption;
+	private static Option crossoverOption;
+	private static Option selectOption;
 	private static Option mutRateOption;
 	private static Option crossRateOption;
+	private static Option selectRateOption;
 	private static Option threadsOption;
+	private static Option seedOption;
 	
 	private static void addOptions ()
 	{
@@ -72,7 +78,7 @@ public class GenerateTestVectors {
 		options.addOption (lowBoundOption);
 		
 		numGensOption = new Option ("n", "num-generations", true,
-				"The number of generations to use with ga or total number of vectors to" +
+				"The number of generations to use with ga or total number of vectors to " +
 				"generate with rand");
 		numGensOption.setRequired (true);
 		options.addOption (numGensOption);
@@ -82,6 +88,16 @@ public class GenerateTestVectors {
 				"(atomic, timing, detailed, inorder)");
 		cpuTypeOption.setRequired (false);
 		options.addOption (cpuTypeOption);
+		
+		crossoverOption = new Option ("C", "crossover", true,
+				"The type of crossover to use (1point, 2point)");
+		crossoverOption.setRequired (false);
+		options.addOption (crossoverOption);
+		
+		selectOption = new Option ("S", "selector", true,
+				"The type of selector to use (elite, prob, rand)");
+		selectOption.setRequired (false);
+		options.addOption (selectOption);
 		
 		mutRateOption = new Option ("m", "mutation-rate", true,
 				"The mutation rate to use in the genetic algorithm (default = 0.05)");
@@ -93,10 +109,20 @@ public class GenerateTestVectors {
 		crossRateOption.setRequired (false);
 		options.addOption (crossRateOption);
 		
+		selectRateOption = new Option ("s", "selection-rate", true,
+				"The fraction of a generation selected for crossover/mutation " +
+				"(default = 0.1)");
+		selectRateOption.setRequired (false);
+		options.addOption (selectRateOption);
+		
 		threadsOption = new Option ("t", "num-threads", true,
 				"The number of evaluator threads to use (default is 1)");
 		threadsOption.setRequired (false);
 		options.addOption (threadsOption);
+		
+		seedOption = new Option ("r", "seed-rand", false,
+				"Seed each generation with random vector");
+		options.addOption (seedOption);
 	}
 
 	private static CommandLine parseCommandLine (String[] args)
@@ -154,8 +180,10 @@ public class GenerateTestVectors {
 		}
 		else if (genType.equals("ga"))
 		{
-			TVSelector selec = createSelector("elite");
-			TVCrossover cross = createCrossover("2point");
+			TVSelector selec = createSelector(
+					line.getOptionValue(selectOption.getOpt()));
+			TVCrossover cross = createCrossover(
+					line.getOptionValue(crossoverOption.getOpt()));
 			Mutator mut = createMutator("rand");
 			
 			GenerationEvaluator eval = createEvaluator("gem5Time", line);
@@ -164,17 +192,25 @@ public class GenerateTestVectors {
 			
 			if (line.hasOption (mutRateOption.getOpt ()))
 			{
-				double mutRate = Integer.parseInt(
+				double mutRate = Double.parseDouble(
 						line.getOptionValue(mutRateOption.getOpt()));
 				((GaTVGenerator)generator).setMutationRate(mutRate);
 			}
 			
 			if (line.hasOption (crossRateOption.getOpt ()))
 			{
-				double crossRate = Integer.parseInt(
+				double crossRate = Double.parseDouble(
 						line.getOptionValue(crossRateOption.getOpt()));
 				((GaTVGenerator)generator).setCrossoverRate(crossRate);
 			}
+			if (line.hasOption (selectRateOption.getOpt ()))
+			{
+				double selectRate = Double.parseDouble(
+						line.getOptionValue(selectRateOption.getOpt()));
+				((GaTVGenerator)generator).setSelectionRate(selectRate);
+			}
+			((GaTVGenerator)generator).setSeedWithRand(
+					line.hasOption (seedOption.getOpt ()));
 		}
 		else
 		{
@@ -240,8 +276,10 @@ public class GenerateTestVectors {
 			String programName = line.getOptionValue(programOption.getOpt());
 			String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
 			
+			Gem5Tools g5tools = new Gem5Tools(programName);
+			
 			for(int i = 0; i < numThreads; i++) {
-				evals[i] = new Gem5TimeEvaluator(i, programName, cpuType);
+				evals[i] = new Gem5TimeEvaluator(i, programName, cpuType, g5tools);
 			}
 			return new GenerationEvaluator(evals);
 		}
@@ -257,7 +295,11 @@ public class GenerateTestVectors {
 	}
 	
 	private static TVCrossover createCrossover(String type) {
-		if(type.equals("1point"))
+		if (type == null)
+		{
+			SystemOutput.exitWithError("Error: need to specify crossover type");
+		}
+		else if(type.equals("1point"))
 		{
 			return new OnePointCrossover();
 		}
@@ -270,7 +312,11 @@ public class GenerateTestVectors {
 	}
 
 	private static TVSelector createSelector(String type) {
-		if(type.equals("prob"))
+		if (type == null)
+		{
+			SystemOutput.exitWithError("Error: need to specify selector type");
+		}
+		else if(type.equals("prob"))
 		{
 			return new ProbabilisticSelector();
 		}
@@ -282,12 +328,16 @@ public class GenerateTestVectors {
 		{
 			return new RandomSelector();
 		}
-		SystemOutput.exitWithError("Error: invaild evaluator type: " + type);
+		SystemOutput.exitWithError("Error: invaild selector type: " + type);
 		return null;
 	}
 
 	private static Mutator createMutator(String type) {
-		if(type.equals("rand"))
+		if (type == null)
+		{
+			SystemOutput.exitWithError("Error: need to specify mutator type");
+		}
+		else if(type.equals("rand"))
 		{
 			return new RandomMutator();
 		}

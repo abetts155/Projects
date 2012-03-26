@@ -1,23 +1,28 @@
-package tvgen.util;
+package gem5;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+
+import tvgen.util.SystemOutput;
 
 public class Gem5Tools {
 
 	public static final String gem5EnvVar = "GEM5_HOME";
 	public static final String wcetEnvVar = "WCET_HOME";
 	
+	private TraceParser traceParser;
+	private String programName;
+	
 	private String gem5Home;
 	private String gem5Binary;
 	private String gem5TraceFlags;
 	private String gem5ConfigScript;
-	private String gem5TraceParser;
+//	private String gem5TraceParser;
 	
 	private String wcetHome;
 	
-	public Gem5Tools() {
+	public Gem5Tools(String programName) {
 		gem5Home = System.getenv(gem5EnvVar);
 		if(gem5Home == null) {
 			SystemOutput.exitWithError("Error: could not find environment variable "
@@ -33,12 +38,15 @@ public class Gem5Tools {
 		gem5Binary = gem5Home + "/build/ARM/gem5.opt";
 		gem5TraceFlags = "--debug-flags=ExecEnable,ExecUser,ExecTicks,ExecMicro";
 		gem5ConfigScript = wcetHome + "/scripts/gem5Config/se.py";
-		gem5TraceParser = wcetHome + "/scripts/gem5TraceParser.py";
+//		gem5TraceParser = wcetHome + "/scripts/gem5TraceParser.py";
+		
+		this.programName = programName;
+		traceParser = new TraceParser(programName + ".xml");
 		
 		checkFiles();
 	}
 	
-	public double runGem5(String programName, String programArgs, String cpuType,
+	public double runGem5(String programArgs, String cpuType,
 			String outputFolder, String traceFile) {
 		String cmd = gem5Binary + " " + gem5TraceFlags + " --trace-file=" + traceFile +
 				" -d " + outputFolder + " " + gem5ConfigScript + " -c " +
@@ -78,26 +86,30 @@ public class Gem5Tools {
 		return 0.0;
 	}
 	
-	public BufferedReader sanitiseGem5Trace(String programName, String traceFile) {
-		String cmd = "python " + gem5TraceParser + " -p " + programName +
-				".xml -t " + traceFile;
-		
-		SystemOutput.debugMessage("Running command: " + cmd);
-		
-		try {
-			Process child = Runtime.getRuntime().exec(cmd);
-			
-			BufferedReader outputReader = 
-					new BufferedReader(new InputStreamReader(child.getInputStream()));
-			
-			waitForProcess(child, cmd);
-			
-			//Append trace to compressed file
-			return outputReader;
-		} catch(Exception e) {
-			SystemOutput.exitWithError("Error running command " + cmd + "\n " + e.getMessage());
-		}
-		return null;
+//	public BufferedReader sanitiseGem5Trace(String traceFile) {
+//		String cmd = "python " + gem5TraceParser + " -p " + programName +
+//				".xml -t " + traceFile;
+//		
+//		SystemOutput.debugMessage("Running command: " + cmd);
+//		
+//		try {
+//			Process child = Runtime.getRuntime().exec(cmd);
+//			
+//			BufferedReader outputReader = 
+//					new BufferedReader(new InputStreamReader(child.getInputStream()));
+//			
+//			waitForProcess(child, cmd);
+//			
+//			//Append trace to compressed file
+//			return outputReader;
+//		} catch(Exception e) {
+//			SystemOutput.exitWithError("Error running command " + cmd + "\n " + e.getMessage());
+//		}
+//		return null;
+//	}
+	
+	public String sanitiseGem5Trace(String traceFile, String instrumentation) {
+		return traceParser.parseTrace(traceFile, instrumentation, false);
 	}
 	
 	private void waitForProcess(Process p, String cmd) {
@@ -140,10 +152,10 @@ public class Gem5Tools {
 			SystemOutput.exitWithError("Error: file " + gem5ConfigScript + " does not exist");
 		}
 		
-		File parser = new File(gem5TraceParser);
-		if(!parser.exists()) {
-			SystemOutput.exitWithError("Error: file " + gem5TraceParser + " does not exist");
-		}
+//		File parser = new File(gem5TraceParser);
+//		if(!parser.exists()) {
+//			SystemOutput.exitWithError("Error: file " + gem5TraceParser + " does not exist");
+//		}
 	}
 	
 }

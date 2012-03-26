@@ -1,0 +1,286 @@
+package gem5;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import tvgen.util.SystemOutput;
+
+public class TraceParser
+{
+	private Set<Integer> bbAddrs;
+	private Set<Integer> branchInsts;
+	
+	public TraceParser(String programXMLFile)
+	{
+		File xmlFile = new File(programXMLFile);
+		if(!xmlFile.exists())
+		{
+			SystemOutput.exitWithError("Error: XML file " + programXMLFile +
+					" does not exist");
+		}
+		
+		bbAddrs = new HashSet<Integer>();
+		branchInsts = new HashSet<Integer>();
+		
+		try
+		{
+			SystemOutput.debugMessage("Extracting program info from " + programXMLFile);
+			
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance ()
+					.newDocumentBuilder ();
+			Document document = builder.parse (xmlFile);
+			Element rootElement = document.getDocumentElement ();
+			
+			NodeList cfgNodes = rootElement.getElementsByTagName("cfg");
+			for(int i = 0; i < cfgNodes.getLength(); i++)
+			{
+				Node cfgNode = cfgNodes.item(i);
+				if(cfgNode instanceof Element)
+				{
+					NodeList bbNodes = ((Element)cfgNode).getElementsByTagName("bb");
+					for(int j = 0; j < bbNodes.getLength(); j++)
+					{
+						Node bbNode = bbNodes.item(j);
+						if(bbNode instanceof Element)
+						{
+							parseBasicBlock((Element)bbNode);
+						}
+					}
+				}
+			}
+		} 
+		catch (Exception e)
+		{
+			SystemOutput.printMessage(e.getStackTrace().toString());
+			SystemOutput.exitWithError("Error parsing programXMLFile: " + e.getMessage());
+		}
+	}
+	
+	private void parseBasicBlock(Element bbElement)
+	{
+		try
+		{
+			NodeList instNodes = bbElement.getElementsByTagName("inst");
+			if(instNodes.getLength() > 0)
+			{
+				Node firstInst = instNodes.item(0);
+				if(firstInst instanceof Element)
+				{
+					String firstInstAddr = ((Element)firstInst).getAttribute("addr");
+					int firstInstId = parseAddr(firstInstAddr);
+					bbAddrs.add(firstInstId);
+				}
+				
+				Node endInst = instNodes.item(instNodes.getLength() - 1);
+				if(endInst instanceof Element)
+				{
+					String endInstAddr = ((Element)endInst).getAttribute("addr");
+					int endInstId = parseAddr(endInstAddr);
+					bbAddrs.add(endInstId);
+					
+					if(branchBlock(bbElement))
+					{
+						branchInsts.add(endInstId);
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing basic block");
+		}
+	}
+	
+	private boolean branchBlock(Element bbElement)
+	{
+		try
+		{
+			int bbId = Integer.parseInt(bbElement.getAttribute("id"));
+			
+			NodeList succNodes = bbElement.getElementsByTagName("succ");
+			if(succNodes.getLength() != 1)
+			{
+				SystemOutput.exitWithError("Error: basic block with id " + bbId +
+						" does not have one succ child node");
+			}
+			
+			Node succNode = succNodes.item(0);
+			if(succNode instanceof Element)
+			{
+				NodeList links = ((Element)succNode).getElementsByTagName("link");
+				if(links.getLength() == 2)
+				{
+					Node firstBranch = links.item(0);
+					Node sndBranch = links.item(1);
+					if(firstBranch instanceof Element && sndBranch instanceof Element)
+					{
+						String firstType = ((Element)firstBranch).getAttribute("type");
+						String sndType = ((Element)sndBranch).getAttribute("type");
+						if((firstType.equals("taken") && sndType.equals("nottaken")) ||
+							(firstType.equals("nottaken") && sndType.equals("taken")))
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing basic block successors");
+		}
+		return false;
+	}
+	
+	public String parseTrace(String traceName, String instrumentation, boolean hexAddrs)
+	{
+		try
+		{
+			InputStream traceFile = new FileInputStream(traceName);
+			BufferedReader trace = new BufferedReader(new InputStreamReader(traceFile));
+			
+			List<InstructionTime> instTimes = getInstructionTimes(trace);
+			
+			String parsedTrace = null;
+			if(instrumentation.equals("BASIC_BLOCK"))
+			{
+				parsedTrace = parseBasicBlockTrace(instTimes, hexAddrs);
+			}
+			else if(instrumentation.equals("BRANCH"))
+			{
+				parsedTrace = parseBranchTrace(instTimes, hexAddrs);
+			}
+			
+			trace.close();
+			return parsedTrace;
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing trace file" + traceName);
+		}
+		return "";
+	}
+	
+	private List<InstructionTime> getInstructionTimes(BufferedReader trace)
+	{
+		int timeIndex = 0;
+		int cpuAddrIndex = 1;
+		int addrIndex = 1;
+		
+		List<InstructionTime> times = new ArrayList<InstructionTime>();
+		
+		try
+		{
+			for(String line = trace.readLine(); line != null; line = trace.readLine())
+			{
+				String[] splitLine = line.split(":");
+				Long time = Long.parseLong(splitLine[timeIndex].trim());
+				String[] cpuAddr = splitLine[cpuAddrIndex].trim().split(" ");
+				String addr = cpuAddr[addrIndex];
+				
+				String[] microInst = addr.split("\\.");
+				if(microInst.length == 1)
+					times.add(new InstructionTime(parseAddr(addr.trim()), time));
+				else
+				{
+					if(microInst[1].equals("0"))
+						times.add(new InstructionTime(parseAddr(microInst[0].trim()), time));
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing trace");
+		}
+		
+		return times;
+	}
+	
+	private String parseBasicBlockTrace(List<InstructionTime> instTimes, boolean hexAddrs)
+	{
+		String bbString = "";
+		
+		for(InstructionTime instTime : instTimes)
+		{
+			if(bbAddrs.contains(instTime.instruction))
+			{
+				bbString += instTime.toString(hexAddrs) + "\n";
+			}
+		}
+		
+		return bbString;
+	}
+	
+	private String parseBranchTrace(List<InstructionTime> instTimes, boolean hexAddrs)
+	{
+		String branchString = "";
+		
+		InstructionTime prev = null;
+		SystemOutput.printMessage(Integer.toString(branchInsts.size()));
+		for(InstructionTime instTime : instTimes)
+		{
+			if(prev != null && branchInsts.contains(prev.instruction))
+			{
+				branchString += instTime.toString(hexAddrs) + "\n";
+			}
+			
+			prev = instTime;
+		}
+		
+		return branchString;
+	}
+	
+	private class InstructionTime
+	{
+		public int instruction;
+		public long time;
+		
+		public InstructionTime(int inst, long time)
+		{
+			this.instruction = inst;
+			this.time = time;
+		}
+		
+		public String toString(boolean hexAddrs)
+		{
+			String addr;
+			if(hexAddrs)
+			{
+				addr = Integer.toHexString(instruction);
+			}
+			else
+			{
+				addr = Integer.toString(instruction);
+			}
+			return addr + " " + time;
+		}
+	}
+	
+	private int parseAddr(String addr)
+	{
+		String hex = addr.substring(2);
+		return Integer.parseInt(hex, 16);
+	}
+	
+	private void handleException(Exception e, String message)
+	{
+		SystemOutput.printMessage(e.getMessage());
+		e.printStackTrace();
+		SystemOutput.exitWithError(message);
+	}
+}

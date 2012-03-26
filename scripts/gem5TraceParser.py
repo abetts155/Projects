@@ -30,6 +30,15 @@ parser.add_option("-p",
                   help="The XML file describing the program",
                   metavar="<FILE>")
 
+parser.add_option("-i",
+                  "--instrumentation",
+                  action="append",
+                  dest="instrumentation",
+                  help="The type of instrumentation. Supported values: %s %s %s %s" 
+                  % (BASIC_BLOCK, BRANCH),
+                  type="string",
+                  metavar="<STRING>")
+
 parser.add_option("-t",
                   "--trace-file",
                   action="store",
@@ -71,7 +80,7 @@ if opts.trace is None:
     exit(1)
 
 
-# Extracts first addresses of basic blocks from xml file
+# Extracts first and last addresses of basic blocks from xml file
 def basicBlockInfo(programXML):
     if opts.debug:
         print("Extracting basic block info from xml")
@@ -107,7 +116,7 @@ def instructionTimings(trace):
 
         time = splitLine[timeIndex].strip()
 
-        cpuAddr = splitLine[cpuAddrIndex].strip().split(' ')
+        cpuAddr = splitLine[cpuAddrIndex].strip().split(' ')	
         address = cpuAddr[addrIndex]
 
         microInst = address.split('.')
@@ -122,7 +131,7 @@ def instructionTimings(trace):
 
 
 # Create string of basic block times
-def getOutputString(instrTimings, basicBlockAddrs):
+def getBasicBlockString(instrTimings, basicBlockAddrs):
     if opts.debug:
         print("Creating string of basic block times")
 
@@ -137,10 +146,10 @@ def getOutputString(instrTimings, basicBlockAddrs):
              timingString += (blockID + " " + instrTime[1] + "\n")
 
     return timingString
-
+    
 
 # Write string to output file
-def writeOutputString(outputString):
+def writeOutputString(outputString, instrumentation):
     if opts.debug:
         print("Writing string to file")
 
@@ -150,10 +159,11 @@ def writeOutputString(outputString):
         print(outputString)
 
     else:
+        filename = instrumentation + "_" + opts.output
         if opts.appendOutput:
-            outputFile = open(opts.output, 'a')
+            outputFile = open(filename, 'a')
         else:
-            outputFile = open(opts.output, 'w')
+            outputFile = open(filename, 'w')
 
         outputFile.write(outputString)
         outputFile.close()
@@ -168,7 +178,8 @@ except IOError:
 try:
     programXML = parse(programFile)
     programFile.close()
-    basicBlocks = basicBlockInfo(programXML)
+    if BASIC_BLOCK in opts.instrumentation:
+         basicBlocks = basicBlockInfo(programXML)
 except DOMException:
     print("Error parsing xml file: " + opts.program)
     exit(1)
@@ -183,9 +194,9 @@ except IOError:
     exit(1)
 
 # Get output string of basic block timings and output it
-outputString = getOutputString(instrTimings, basicBlocks)
-writeOutputString(outputString)
-
+if BASIC_BLOCK in opts.instrumentation:
+    outputString = getBasicBlockString(instrTimings, basicBlocks)
+    writeOutputString(outputString, "BASIC_BLOCK")
 
 
 

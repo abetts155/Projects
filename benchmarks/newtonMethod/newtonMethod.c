@@ -6,10 +6,10 @@
  * Third Edition by William H. Press et al
  */
 
-#include <limits.h>
+#include <float.h>
 #include <math.h>
 
-#define XSIZE 10
+#define XSIZE 3
 
 typedef struct {
 	int n;
@@ -18,13 +18,22 @@ typedef struct {
 	double d;
 } LUdcmp;
 
-LUdcmp initialiseLUdcmp(double a[][]) {
+double maxDoub(double a, double b)
+{
+	if(a > b)
+	{
+		return a;
+	}
+	return b;
+}
+
+LUdcmp initialiseLUdcmp(double **a) {
 	LUdcmp newLUcmp;
 	newLUcmp.n = XSIZE;
 	
 	int i, j;
-	for (int i = 0; i < XSIZE; i++) {
-		for (int j = 0; j < XSIZE; j++) {
+	for (i = 0; i < XSIZE; i++) {
+		for (j = 0; j < XSIZE; j++) {
 			newLUcmp.lu[i][j] = a[i][j];
 		}
 	}
@@ -40,7 +49,7 @@ LUdcmp initialiseLUdcmp(double a[][]) {
 		for (j = 0; j < newLUcmp.n; j++) {
 			if ((temp = abs(newLUcmp.lu[i][j])) > big) {big = temp;}
 		}
-		//if (big == 0.0) throw("Singular matrix in LUdcmp");
+		if (big == 0.0) exit(1);
 		vv[i] = 1.0 / big;
 	}
 	
@@ -80,8 +89,8 @@ void solveLUdcmp(LUdcmp l, double b[], double x[]) {
 	int i, ii = 0, ip, j;
 	double sum;
 
-	//if (b.size() != n || x.size() != n)
-	//	throw("solveLUdcmp bad sizes");
+	//if (b.size() != l.n || x.size() != l.n)
+	//	exit(1);
 
 	for (i = 0; i < l.n; i++) {
 		x[i] = b[i];
@@ -119,42 +128,52 @@ void solveLUdcmp(LUdcmp l, double b[], double x[]) {
 	The vector of functions to be zeroed, called fvec[0..n-1] in the routine below,
 	is returned by the user-supplied function or functor vecfunc.
  */
-double[] vecfunc(double x[]) {
+double funcValues[XSIZE];
+double* vecfunc(double x[]) {
+	int i;
 	
+	for (i = 0; i < XSIZE; i++) {
+		funcValues[i] = (x[i] * i) - i;
+	}
+
+	return funcValues;
 }
 
-double fvec[];
+double *fvec;
 // Returns f = 0.5F.F at x. ALso stores value of F in fvec
-double NRfmin(double[] x) {
+double NRfmin(double x[]) {
 	int n = XSIZE;
 	double sum = 0;
+	int i;
+
 	fvec = vecfunc(x);
-	for (int i = 0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		//sum += SQR(fvec[i]);
 		sum += (fvec[i] * fvec[i]);
 	}
 	return 0.5 * sum;
 }
 
-double[][] NRfdjac(double x[], double fvecIn[]) {
+double df[XSIZE][XSIZE];
+double** NRfdjac(double x[], double fvecIn[]) {
 	const double EPS = 1.0e-8;
 	int n = XSIZE;
-	double df[XSIZE][XSIZE];
+	int i, j;
 
 	double xh[XSIZE];
-	for(int i = 0; i < XSIZE; i++) {
+	for(i = 0; i < XSIZE; i++) {
 		xh[i] = x[i];
 	}
 
-	for(int j = 0; j < n; j++) {
+	for(j = 0; j < n; j++) {
 		double temp = xh[j];
 		double h = EPS * abs(temp);
 		if (h == 0.0) h = EPS;
 		xh[j] = temp + h;
 		h = xh[j] - temp;
-		double f[] = vecfunc(xh);
+		double *f = vecfunc(xh);
 		xh[j] = temp;
-		for (int i = 0; i < n; i++) {
+		for (i = 0; i < n; i++) {
 			df[i][j] = (f[i] - fvecIn[i]) / h;
 		}
 	}
@@ -162,7 +181,7 @@ double[][] NRfdjac(double x[], double fvecIn[]) {
 }
 
 void lnsearch(double xold[], const double fold, double g[], double p[],
-			double x[], double &f, const double stpmax, bool &check) {
+			double x[], double *f, const double stpmax, int *check) {
 	const double ALF = 1.0e-4;
 	// Library use DBL_EPSILON
 	const double TOLX = DBL_EPSILON;
@@ -171,7 +190,7 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 	double rhs1, rhs2, slope = 0.0, sum = 0.0, temp, test, tmplam;
 	int i, n = XSIZE;
 
-	check = false;
+	*check = 0;
 	for (i = 0; i < n; i++) {
 		sum += p[i] * p[i];
 	}
@@ -186,11 +205,11 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 	for (i = 0; i < n; i++) {
 		slope += g[i] * p[i];
 	}
-	//if (slope >= 0.0) throw ("Roundoff problem in lnsrch");
+	if (slope >= 0.0) exit (1);
 
 	test = 0.0;
 	for (i = 0; i < n; i++) {
-		temp = abs(p[i]) / MAX(abs(xold[i]), 1.0);
+		temp = abs(p[i]) / maxDoub(abs(xold[i]), 1.0);
 		if (temp > test) {test = temp;}
 	}
 
@@ -198,19 +217,19 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 	alam = 1.0;
 	for(;;) {
 		for (i = 0; i < n; i++) x[i] = xold[i] + alam * p[i];
-		f = NRfmin(x);
+		*f = NRfmin(x);
 		
 		if (alam < alamin) {
 			for (i = 0; i < n; i++) x[i] = xold[i];
-			check = true;
+			*check = 1;
 			return;
-		} else if (f <= fold + ALF * alam * slope) {
+		} else if (*f <= fold + ALF * alam * slope) {
 			return;
 		} else {
 			if (alam == 1.0) {
-				tmplam = -slope / (2.0 * (f - fold - slope));
+				tmplam = -slope / (2.0 * (*f - fold - slope));
 			} else {
-				rhs1 = f - fold - alam * slope;
+				rhs1 = *f - fold - alam * slope;
 				rhs2 = f2 - fold - alam2 * slope;
 				a = (rhs1 / (alam * alam) - rhs2 / (alam2 * alam2)) / (alam - alam2);
 				b = (-alam2 * rhs1 / (alam * alam) + alam * rhs2 / (alam2 * alam2)) / (alam - alam2);
@@ -228,12 +247,12 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 			}
 		}
 		alam2 = alam;
-		f2 = f;
-		alam = MAX(tmplam, 0.1 * alam);
+		f2 = *f;
+		alam = maxDoub(tmplam, 0.1 * alam);
 	}
 }
 
-void newt(double []x, bool &check) {
+void newt(double x[], int *check) {
 	const int MAXITS = 200;
 	const double TOLF = 1.0e-8, TOLMIN = 1.0e-12, STPMX = 100.0;
 	// Library use DBL_EPSILON
@@ -242,7 +261,7 @@ void newt(double []x, bool &check) {
 	int i, j, its, n = XSIZE;
 	double den, f, fold, stpmax, sum, temp, test;
 	double g[XSIZE], p[XSIZE], xold[XSIZE];
-	double fjac[XSIZE][XSIZE];
+	double **fjac;
 
 	f = NRfmin(x);
 	test = 0.0;
@@ -251,14 +270,14 @@ void newt(double []x, bool &check) {
 		if (abs(fvec[i]) > test) test = abs(fvec[i]);
 	}
 	if (test < 0.01 * TOLF) {
-		check = false;
+		*check = 0;
 		return;
 	}
 
 	sum = 0.0;
 	//for (i = 0; i < n; i++) sum += SQR(x[i]);
 	for (i = 0; i < n; i++) sum += x[i] * x[i];
-	stpmax = STPMX * MAX(sqrt(sum), (double)n);
+	stpmax = STPMX * maxDoub(sqrt(sum), (double)n);
 	
 	for (its = 0; its < MAXITS; its++) {
 		fjac = NRfdjac(x, fvec);
@@ -277,36 +296,80 @@ void newt(double []x, bool &check) {
 		LUdcmp alu = initialiseLUdcmp(fjac);
 		solveLUdcmp(alu, p, p);
 
-		lnsearch(xold, fold, g, p, x, f, stpmax, check);
+		lnsearch(xold, fold, g, p, x, &f, stpmax, check);
 		test = 0.0;
 		for (i = 0; i < n; i++) {
 			if (abs(fvec[i]) > test) test = abs(fvec[i]);
 		}
 		if (test < TOLF) {
-			check = false;
+			*check = 0;
 			return;
 		}
 		if (check) {
 			test = 0.0;
-			den = MAX(f, 0.5 * n);
+			den = maxDoub(f, 0.5 * n);
 			for (i = 0; i < n; i++) {
-				temp = abs(g[i]) * MAX(abs(x[i]), 1.0) / den;
+				temp = abs(g[i]) * maxDoub(abs(x[i]), 1.0) / den;
 				if (temp > test) test = temp;
 			}
-			check = (test < TOLMIN);
+			if (test < TOLMIN)
+			{
+				*check = 1;
+			}
+			else
+			{
+				*check = 0;
+			}
 			return;
 		}
 		
 		test = 0.0;
 		for (i = 0; i < n; i++) {
-			temp = (abs(x[i] - xold[i])) / MAX(abs(x[i]), 1.0);
+			temp = (abs(x[i] - xold[i])) / maxDoub(abs(x[i]), 1.0);
 			if (temp > test) test = temp;
 		}
 		if (test < TOLX)
 			return;
 	}
-	//throw("MAXITS exceeded in newt");
+	exit(1);
 }
 
+int
+main (int argc, char *argv[])
+{
+  const int ARRAY_SIZE = argc - 1;
+  double TV[ARRAY_SIZE];
+  int i;
+  int check = 0;
 
+  /*
+   * Expecting XSIZE arguments
+   */
+  if (argc != (XSIZE + 1))
+  {
+    return 1;
+  }
+
+  for (i = 0; i < argc - 1; ++i)
+  {
+    TV[i] = atoi (argv[i + 1]);
+  }
+
+  newt (TV, &check);
+
+/*
+  if (check)
+  {
+     printf("Check Value\n");
+  }
+
+  for (i = 0; i < argc - 1; ++i)
+  {
+    printf("%lf ", TV[i]);
+  }
+  printf("\n");
+*/
+
+  return 0;
+}
 

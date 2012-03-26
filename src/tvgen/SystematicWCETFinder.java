@@ -1,5 +1,6 @@
 package tvgen;
 
+import gem5.Gem5Tools;
 import tvgen.util.TestVector;
 
 public class SystematicWCETFinder extends WCETFinder {
@@ -8,8 +9,8 @@ public class SystematicWCETFinder extends WCETFinder {
 	private int lowerRange;
 	
 	public SystematicWCETFinder(int threadID, String programName, String cpuType,
-			int upperRange, int lowerRange) {
-		super(threadID, programName, cpuType);
+			Gem5Tools g5Tools, int upperRange, int lowerRange) {
+		super(threadID, programName, cpuType, g5Tools);
 		this.upperRange = upperRange;
 		this.lowerRange = lowerRange;
 	}

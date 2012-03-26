@@ -18,6 +18,7 @@
 	<property name="tests.main.class" value="adam.betts.program.AllTests" />
 	<property name="tv-generator.main.class" value="tvgen.GenerateTestVectors" />
 	<property name="find-wcet.main.class" value="tvgen.FindWCETVector" />
+	<property name="gem5-trace-parser.main.class" value="gem5.ParseGem5Trace" />
 
 	<property name="disassemble.jar" value="disassemble.jar" />
 	<property name="simplescalar.jar" value="simplescalar.jar" />
@@ -30,6 +31,7 @@
 	<property name="loop.jar" value="loop.jar" />
 	<property name="tv-generator.jar" value="tv-generator.jar" />
 	<property name="find-wcet.jar" value="find-wcet.jar" />
+	<property name="gem5-trace-parser.jar" value="gem5-trace-parser.jar" />
 
 	<path id="project.classpath">
 		<pathelement location="${lib.dir}/commons-cli-1.2.jar" />
@@ -202,22 +204,38 @@
 	</target>
 	
 	<target name="find-wcet" depends="compile">
-			<mkdir dir="${jar.dir}" />
+		<mkdir dir="${jar.dir}" />
 
-			<jar destfile="${jar.dir}/${find-wcet.jar}" basedir="${build.dir}">
-				<manifest>
-					<attribute name="Built-By" value="${user.name}" />
-					<attribute name="Main-Class" value="${find-wcet.main.class}" />
-					<attribute name="Class-Path" value="." />
-				</manifest>
-				<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-			</jar>
+		<jar destfile="${jar.dir}/${find-wcet.jar}" basedir="${build.dir}">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Main-Class" value="${find-wcet.main.class}" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+		</jar>
 
-			<chmod file="${jar.dir}/${find-wcet.jar}" perm="+x" verbose="true" />
-		</target>
+		<chmod file="${jar.dir}/${find-wcet.jar}" perm="+x" verbose="true" />
+	</target>
+	
+	<target name="gem5-trace-parser" depends="compile">
+		<mkdir dir="${jar.dir}" />
+
+		<jar destfile="${jar.dir}/${gem5-trace-parser.jar}" basedir="${build.dir}">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Main-Class" value="${gem5-trace-parser.main.class}" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+		</jar>
+
+		<chmod file="${jar.dir}/${gem5-trace-parser.jar}" perm="+x" verbose="true" />
+	</target>
 
 	<target name="jar" depends="disassemble, simplescalar, wcet, trace-parser, trace-generator,
-		program-generator, program-analyser, tree, loop, tv-generator, find-wcet" />
+		program-generator, program-analyser, tree, loop, tv-generator, find-wcet,
+		gem5-trace-parser" />
 
 	<target name="clean">
 		<echo>Removing ${build.dir}</echo>

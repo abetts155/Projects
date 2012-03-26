@@ -1,5 +1,7 @@
 package tvgen;
 
+import gem5.Gem5Tools;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -84,7 +86,7 @@ public class FindWCETVector {
 	
 	private static CommandLine parseCommandLine(String[] args)
 	{
-		final String toolName = "tv-generator.jar";
+		final String toolName = "find-wcet.jar";
 		CommandLineParser parser = new GnuParser ();
 		HelpFormatter formatter = new HelpFormatter ();
 		formatter.setWidth (80);
@@ -139,6 +141,8 @@ public class FindWCETVector {
 		String programName = line.getOptionValue(programOption.getOpt());
 		String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
 		
+		Gem5Tools g5Tools = new Gem5Tools(programName);
+		
 		int upBound = Integer.MAX_VALUE;
 		int lowBound = Integer.MIN_VALUE;
 		int vectorLength = Integer.parseInt(
@@ -160,7 +164,7 @@ public class FindWCETVector {
 					line.getOptionValue(numRandom.getOpt()));
 			for(int i = 0; i < numThreads; i++) {
 				finders[i] = new RandomWCETFinder(i, programName,
-						cpuType, numRand / numThreads);
+						cpuType, g5Tools, numRand / numThreads);
 			}
 		} else {
 			for(int i = 0; i < numThreads; i++) {
@@ -175,7 +179,7 @@ public class FindWCETVector {
 				}
 				
 				finders[i] = new SystematicWCETFinder(i, programName,
-						cpuType, threadUpRange, threadLowRange);
+						cpuType, g5Tools, threadUpRange, threadLowRange);
 			}
 		}
 		

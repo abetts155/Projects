@@ -77,7 +77,11 @@ def runCommand (cmd):
                  shell=True,
                  executable="/bin/bash",
                  stderr=PIPE)
+    stoutdata, stderrdata = proc.communicate()
     proc.wait()
+
+    for line in stderrdata.splitlines():
+        print line
 
     if proc.returncode != 0:
         print("\nProblem running '" + cmd + "'")

@@ -24,13 +24,17 @@ public class RandomGenerator {
 	}
 	
 	public TestVector generateRandomVector(int length, int min, int max) {
+		return new TestVector(generateRandomArray(length, min, max));
+	}
+	
+	public int[] generateRandomArray(int length, int min, int max) {
 		int[] vector = new int[length];
 		
 		for (int i = 0; i < vector.length; i++) {
 			vector[i] = generateRandomInt(min, max);
 		}
 		
-		return new TestVector(vector);
+		return vector;
 	}
 	
 	public synchronized int generateRandomInt(int min, int max) {

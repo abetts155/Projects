@@ -7,6 +7,22 @@
  * given to the program, i.e. argc - 1.
  */
 
+/*
+ * Swaps the values if the value pointed to by a is greater than the
+ * value pointed to by b
+ */
+void
+swapIfLarger (int *a, int *b)
+{
+	int tmp;
+	if (*a > *b)
+	{	
+		tmp = *a;
+		*a = *b;
+		*b = tmp;
+	}
+}
+
 void
 bubblesort (int ARRAY_SIZE, int a[])
 {
@@ -15,12 +31,15 @@ bubblesort (int ARRAY_SIZE, int a[])
   {
     for (j = 0; j < ARRAY_SIZE - 1 - i; j++)
     {
+      swapIfLarger(&a[j], &a[j+1]);
+/*
       if (a[j + 1] < a[j])
       {
         tmp = a[j];
         a[j] = a[j + 1];
         a[j + 1] = tmp;
       }
+*/
     }
   }
 }
@@ -46,6 +65,12 @@ main (int argc, char *argv[])
   }
 
   bubblesort (ARRAY_SIZE, TV);
+
+  for (i = 0; i < argc - 1; ++i)
+  {
+    printf("%i ", TV[i]);
+  }
+  printf("\n");
 
   return 0;
 }
