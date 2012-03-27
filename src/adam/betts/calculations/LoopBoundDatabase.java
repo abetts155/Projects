@@ -21,396 +21,452 @@ import adam.betts.vertices.trees.TreeVertex;
 
 public class LoopBoundDatabase extends Database
 {
-	private long parseTime;
 
-	public LoopBoundDatabase (final Program program)
-	{
-		super (program);
+    private long parseTime;
 
-		TraceParser parser = new TraceParser (this);
-		initialise (parser);
+    public LoopBoundDatabase (final Program program)
+    {
+        super(program);
 
-		Debug.verboseMessage ("Parsing trace file " + Globals.getTraceFileName ());
+        TraceParser parser = new TraceParser(this);
+        initialise(parser);
 
-		long stamp1 = System.nanoTime ();
-		parser.doParsing ();
-		long stamp2 = System.nanoTime ();
-		parseTime = stamp2 - stamp1;
-	}
+        Debug.verboseMessage("Parsing trace file " + Globals.getTraceFileName());
 
-	public long getParseTime ()
-	{
-		return parseTime;
-	}
+        long stamp1 = System.nanoTime();
+        parser.doParsing();
+        long stamp2 = System.nanoTime();
+        parseTime = stamp2 - stamp1;
+    }
 
-	public int getBound (int subprogramID, int vertexID, int ancestorID)
-	{
-		return loopBounds.get (subprogramID).get (vertexID).get (ancestorID);
-	}
+    public long getParseTime ()
+    {
+        return parseTime;
+    }
 
-	private void initialise (TraceParser parser)
-	{
-		HashSet <Integer> reachableSubprograms = program.getCallGraph ().getReachableVertices (
-				program.getRootID ());
+    public int getBound (int subprogramID, int vertexID, int ancestorID)
+    {
+        return loopBounds.get(subprogramID).get(vertexID).get(ancestorID);
+    }
 
-		for (int subprogramID : reachableSubprograms)
-		{
-			Subprogram subprogram = program.getSubprogram (subprogramID);
+    private void initialise (TraceParser parser)
+    {
+        HashSet <Integer> reachableSubprograms = program.getCallGraph()
+                .getReachableVertices(program.getRootID());
 
-			Debug.debugMessage (getClass (), "Analysing subprogram "
-					+ subprogram.getSubprogramName (), 2);
+        for (int subprogramID : reachableSubprograms)
+        {
+            Subprogram subprogram = program.getSubprogram(subprogramID);
 
-			loopBounds.put (subprogramID, new HashMap <Integer, HashMap <Integer, Integer>> ());
-			parser.tempLoopBounds.put (subprogramID,
-					new HashMap <Integer, HashMap <Integer, Integer>> ());
-			parser.properDescendants
-					.put (subprogramID, new HashMap <Integer, HashSet <Integer>> ());
+            Debug.debugMessage(getClass(),
+                    "Analysing subprogram " + subprogram.getSubprogramName(), 2);
 
-			LoopNests lnt = subprogram.getCFGStar (Globals.getInstrumentationProfile ()).getLNT ();
-			LeastCommonAncestor lca = new LeastCommonAncestor (lnt);
-			parser.lcas.put (subprogramID, lca);
+            loopBounds.put(subprogramID,
+                    new HashMap <Integer, HashMap <Integer, Integer>>());
+            parser.tempLoopBounds.put(subprogramID,
+                    new HashMap <Integer, HashMap <Integer, Integer>>());
+            parser.properDescendants.put(subprogramID,
+                    new HashMap <Integer, HashSet <Integer>>());
 
-			HashMap <Integer, HashSet <Integer>> ancestors = new HashMap <Integer, HashSet <Integer>> ();
-			for (int level = 0; level < lnt.getHeight (); ++level)
-			{
-				Iterator <TreeVertex> levelIt = lnt.levelIterator (level);
-				while (levelIt.hasNext ())
-				{
-					TreeVertex v = levelIt.next ();
-					int vertexID = v.getVertexID ();
+            LoopNests lnt = subprogram.getCFGStar(
+                    Globals.getInstrumentationProfile()).getLNT();
+            LeastCommonAncestor lca = new LeastCommonAncestor(lnt);
+            parser.lcas.put(subprogramID, lca);
 
-					if (v.numOfSuccessors () > 0)
-					{
-						parser.properDescendants.get (subprogramID).put (vertexID,
-								new HashSet <Integer> ());
+            HashMap <Integer, HashSet <Integer>> ancestors = new HashMap <Integer, HashSet <Integer>>();
+            for (int level = 0; level < lnt.getHeight(); ++level)
+            {
+                Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
+                while (levelIt.hasNext())
+                {
+                    TreeVertex v = levelIt.next();
+                    int vertexID = v.getVertexID();
 
-						if (vertexID == lnt.getRootID ())
-						{
-							ancestors.put (vertexID, new HashSet <Integer> ());
-							ancestors.get (vertexID).add (vertexID);
-						} else
-						{
-							int parentID = v.getParentID ();
-							ancestors.put (vertexID, new HashSet <Integer> ());
-							ancestors.get (vertexID).addAll (ancestors.get (parentID));
+                    if (v.numOfSuccessors() > 0)
+                    {
+                        parser.properDescendants.get(subprogramID).put(
+                                vertexID, new HashSet <Integer>());
 
-							HashMap <Integer, Integer> ancestorToBound = new HashMap <Integer, Integer> ();
-							HashMap <Integer, Integer> ancestorToBound2 = new HashMap <Integer, Integer> ();
+                        if (vertexID == lnt.getRootID())
+                        {
+                            ancestors.put(vertexID, new HashSet <Integer>());
+                            ancestors.get(vertexID).add(vertexID);
+                        }
+                        else
+                        {
+                            int parentID = v.getParentID();
+                            ancestors.put(vertexID, new HashSet <Integer>());
+                            ancestors.get(vertexID).addAll(
+                                    ancestors.get(parentID));
 
-							for (int ancestorID : ancestors.get (vertexID))
-							{
-								ancestorToBound.put (ancestorID, 0);
-								ancestorToBound2.put (ancestorID, 0);
-								parser.properDescendants.get (subprogramID).get (ancestorID).add (
-										vertexID);
-							}
-							loopBounds.get (subprogramID).put (vertexID, ancestorToBound);
-							parser.tempLoopBounds.get (subprogramID).put (vertexID,
-									ancestorToBound2);
+                            HashMap <Integer, Integer> ancestorToBound = new HashMap <Integer, Integer>();
+                            HashMap <Integer, Integer> ancestorToBound2 = new HashMap <Integer, Integer>();
 
-							ancestors.get (vertexID).add (vertexID);
-						}
-					}
-				}
-			}
-		}
-	}
+                            for (int ancestorID : ancestors.get(vertexID))
+                            {
+                                ancestorToBound.put(ancestorID, 0);
+                                ancestorToBound2.put(ancestorID, 0);
+                                parser.properDescendants.get(subprogramID)
+                                        .get(ancestorID).add(vertexID);
+                            }
 
-	private class TraceParser
-	{
-		/*
-		 * Cached LCA data structures
-		 */
-		private HashMap <Integer, LeastCommonAncestor> lcas = new HashMap <Integer, LeastCommonAncestor> ();
+                            loopBounds.get(subprogramID).put(vertexID,
+                                    ancestorToBound);
+                            parser.tempLoopBounds.get(subprogramID).put(
+                                    vertexID, ancestorToBound2);
 
-		/*
-		 * Stacks needed during trace parsing
-		 */
-		private Stack <Integer> callStack = new Stack <Integer> ();
-		private Stack <Ipoint> ipointStack = new Stack <Ipoint> ();
+                            ancestors.get(vertexID).add(vertexID);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-		/*
-		 * To keep track of the subprogram and where we are in the trace
-		 */
-		private int subprogramID;
-		private Subprogram subprogram;
-		private IpointGraph ipg;
-		private LoopNests lnt;
-		private Ipoint source;
-		private Ipoint destination;
-		private IPGEdge transition;
-		private boolean newRun = true;
+    private class TraceParser
+    {
 
-		/*
-		 * Temporary loop bounds
-		 */
-		protected HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> tempLoopBounds = new HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> ();
-		protected HashMap <Integer, HashMap <Integer, HashSet <Integer>>> properDescendants = new HashMap <Integer, HashMap <Integer, HashSet <Integer>>> ();
+        /*
+         * Cached LCA data structures
+         */
+        private HashMap <Integer, LeastCommonAncestor> lcas = new HashMap <Integer, LeastCommonAncestor>();
 
-		private TraceParser (LoopBoundDatabase database)
-		{
-		}
+        /*
+         * Stacks needed during trace parsing
+         */
+        private Stack <Integer> callStack = new Stack <Integer>();
+        private Stack <Ipoint> ipointStack = new Stack <Ipoint>();
 
-		private void doParsing ()
-		{
-			try
-			{
-				/*
-				 * The automata walking begins from the IPG of the root
-				 * subprogram
-				 */
-				resetToRoot ();
+        /*
+         * To keep track of the subprogram and where we are in the trace
+         */
+        private int subprogramID;
+        private Subprogram subprogram;
+        private IpointGraph ipg;
+        private LoopNests lnt;
+        private Ipoint source;
+        private Ipoint destination;
+        private IPGEdge transition;
+        private boolean newRun = true;
 
-				BufferedReader in = new BufferedReader (
-						new FileReader (Globals.getTraceFileName ()));
+        /*
+         * Temporary loop bounds
+         */
+        protected HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> tempLoopBounds = new HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>>();
+        protected HashMap <Integer, HashMap <Integer, HashSet <Integer>>> properDescendants = new HashMap <Integer, HashMap <Integer, HashSet <Integer>>>();
 
-				String str;
+        private TraceParser (LoopBoundDatabase database)
+        {
+        }
 
-				while ((str = in.readLine ()) != null)
-				{
-					if (str.startsWith ("//") == false && str.startsWith ("/*") == false)
-					{
-						final String[] lexemes = str.split ("\\s+");
-						long ipointID;
+        private void doParsing ()
+        {
+            try
+            {
+                /*
+                 * The automata walking begins from the IPG of the root
+                 * subprogram
+                 */
+                resetToRoot();
 
-						if (lexemes[0].startsWith ("0x"))
-						{
-							ipointID = Long.parseLong (lexemes[0].substring (2));
-						} else
-						{
-							ipointID = Long.parseLong (lexemes[0]);
-						}
+                BufferedReader in = new BufferedReader(new FileReader(
+                        Globals.getTraceFileName()));
 
-						Debug.debugMessage (getClass (), "Ipoint = " + ipointID, 3);
+                String str;
 
-						try
-						{
-							if (source.hasTraceSuccessor (ipointID))
-							{
-								if (newRun)
-								{
-									startNewRun (ipointID);
-								} else
-								{
-									continueRun (ipointID);
-								}
-							} else
-							{
-								throw new NoTransitionException (subprogram.getSubprogramName (),
-										source.getVertexID (), ipointID);
-							}
-						} catch (NoTransitionException e)
-						{
-							if (source.getVertexID () != ipg.getEntryID ())
-							{
-								if (ipg.isMasterExit (source.getVertexID ()))
-								{
-									resetToRoot ();
-								} else
-								{
-									Debug.errorMessage (getClass (), e.getMessage ());
-								}
-							}
-						}
-					} else
-					{
-						Debug.debugMessage (getClass (), str, 4);
-					}
-				}
-			} catch (Exception e)
-			{
-				System.err.println ("Error: " + e.getMessage ());
-				e.printStackTrace ();
-				System.exit (1);
-			}
-		}
+                while ((str = in.readLine()) != null)
+                {
+                    if (str.startsWith("//") == false
+                            && str.startsWith("/*") == false)
+                    {
+                        final String[] lexemes = str.split("\\s+");
+                        long ipointID;
 
-		private void resetToRoot ()
-		{
-			subprogramID = program.getRootID ();
-			subprogram = program.getSubprogram (subprogramID);
-			ipg = subprogram.getIPG (Globals.getInstrumentationProfile ());
-			lnt = subprogram.getCFGStar (Globals.getInstrumentationProfile ()).getLNT ();
-			source = ipg.getVertex (ipg.getEntryID ());
-		}
+                        if (lexemes[0].startsWith("0x"))
+                        {
+                            ipointID = Long.parseLong(lexemes[0].substring(2));
+                        }
+                        else
+                        {
+                            ipointID = Long.parseLong(lexemes[0]);
+                        }
 
-		private void startNewRun (long ipointID)
-		{
-			Debug.debugMessage (getClass (), "NEW RUN", 4);
-			newRun = false;
-			transition = source.getTraceSuccessor (ipointID);
-			source = ipg.getVertex (transition.getVertexID ());
-		}
+                        Debug.debugMessage(getClass(), "Ipoint = " + ipointID,
+                                3);
 
-		private void continueRun (long ipointID)
-		{
-			Debug.debugMessage (getClass (), "CONTINUE RUN", 4);
-			transition = source.getTraceSuccessor (ipointID);
-			destination = ipg.getVertex (transition.getVertexID ());
+                        try
+                        {
+                            if (source.hasTraceSuccessor(ipointID))
+                            {
+                                if (newRun)
+                                {
+                                    startNewRun(ipointID);
+                                }
+                                else
+                                {
+                                    continueRun(ipointID);
+                                }
+                            }
+                            else
+                            {
+                                throw new NoTransitionException(
+                                        subprogram.getSubprogramName(),
+                                        source.getVertexID(), ipointID);
+                            }
+                        }
+                        catch (NoTransitionException e)
+                        {
+                            if (source.getVertexID() != ipg.getEntryID())
+                            {
+                                if (ipg.isMasterExit(source.getVertexID()))
+                                {
+                                    resetToRoot();
+                                }
+                                else
+                                {
+                                    Debug.errorMessage(getClass(),
+                                            e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Debug.debugMessage(getClass(), str, 4);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
 
-			Debug.debugMessage (getClass (), "Analysing " + source.getVertexID () + " => "
-					+ destination.getVertexID () + " in " + subprogram.getSubprogramName (), 3);
+        private void resetToRoot ()
+        {
+            subprogramID = program.getRootID();
+            subprogram = program.getSubprogram(subprogramID);
+            ipg = subprogram.getIPG(Globals.getInstrumentationProfile());
+            lnt = subprogram.getCFGStar(Globals.getInstrumentationProfile())
+                    .getLNT();
+            source = ipg.getVertex(ipg.getEntryID());
+        }
 
-			updateLoopBounds ();
-			advanceTransition ();
-		}
+        private void startNewRun (long ipointID)
+        {
+            Debug.debugMessage(getClass(), "NEW RUN", 4);
+            newRun = false;
+            transition = source.getTraceSuccessor(ipointID);
+            source = ipg.getVertex(transition.getVertexID());
+        }
 
-		private void updateLoopBounds ()
-		{
-			for (int vertexID : transition.getEdgeLabel ())
-			{
-				boolean analyse = false;
-				if (lnt.isLoopHeader (vertexID))
-				{
-					if (vertexID == source.getVertexID ())
-					{
-						if (source.getVertexID () == destination.getVertexID ())
-						{
-							analyse = true;
-						}
-					} else
-					{
-						analyse = true;
-					}
-				}
+        private void continueRun (long ipointID)
+        {
+            Debug.debugMessage(getClass(), "CONTINUE RUN", 4);
+            transition = source.getTraceSuccessor(ipointID);
+            destination = ipg.getVertex(transition.getVertexID());
 
-				if (analyse)
-				{
-					int headerVertexID = lnt.getVertex (vertexID).getParentID ();
-					TreeVertex headerv = lnt.getVertex (headerVertexID);
+            Debug.debugMessage(
+                    getClass(),
+                    "Analysing " + source.getVertexID() + " => "
+                            + destination.getVertexID() + " in "
+                            + subprogram.getSubprogramName(), 3);
 
-					for (int ancestorID : lnt.getProperAncestors (headerVertexID))
-					{
-						TreeVertex ancestorv = lnt.getVertex (ancestorID);
+            updateLoopBounds();
+            advanceTransition();
+        }
 
-						if (headerv.getLevel () - ancestorv.getLevel () <= MainLoopAnalyser
-								.getBoundLevel ())
-						{
-							Debug.debugMessage (getClass (),
-									"Incrementing bound(" + headerVertexID + ", " + ancestorID
-											+ ") in " + subprogram.getSubprogramName (), 4);
+        private void updateLoopBounds ()
+        {
+            for (int vertexID : transition.getEdgeLabel())
+            {
+                boolean analyse = false;
+                if (lnt.isLoopHeader(vertexID))
+                {
+                    if (vertexID == source.getVertexID())
+                    {
+                        if (source.getVertexID() == destination.getVertexID())
+                        {
+                            analyse = true;
+                        }
+                    }
+                    else
+                    {
+                        analyse = true;
+                    }
+                }
 
-							int bound = tempLoopBounds.get (subprogramID).get (headerVertexID).get (
-									ancestorID);
-							tempLoopBounds.get (subprogramID).get (headerVertexID).put (ancestorID,
-									bound + 1);
-						}
-					}
-				}
-			}
+                if (analyse)
+                {
+                    int headerVertexID = lnt.getVertex(vertexID).getParentID();
+                    TreeVertex headerv = lnt.getVertex(headerVertexID);
 
-			int uParentID = lnt.getVertex (source.getVertexID ()).getParentID ();
-			int vParentID = lnt.getVertex (destination.getVertexID ()).getParentID ();
+                    for (int ancestorID : lnt
+                            .getProperAncestors(headerVertexID))
+                    {
+                        TreeVertex ancestorv = lnt.getVertex(ancestorID);
 
-			if (uParentID != vParentID)
-			{
-				if (properDescendants.get (subprogramID).get (vParentID).contains (uParentID))
-				{
-					int lcaID = lcas.get (subprogramID).getLCA (source.getVertexID (),
-							destination.getVertexID ());
-					TreeVertex lca = lnt.getVertex (lcaID);
+                        if (headerv.getLevel() - ancestorv.getLevel() <= MainLoopAnalyser
+                                .getBoundLevel())
+                        {
+                            Debug.debugMessage(getClass(),
+                                    "Incrementing bound(" + headerVertexID
+                                            + ", " + ancestorID + ") in "
+                                            + subprogram.getSubprogramName(), 4);
 
-					for (int descendantID : properDescendants.get (subprogramID).get (lcaID))
-					{
-						TreeVertex descendantv = lnt.getVertex (descendantID);
+                            int bound = tempLoopBounds.get(subprogramID)
+                                    .get(headerVertexID).get(ancestorID);
+                            tempLoopBounds.get(subprogramID)
+                                    .get(headerVertexID)
+                                    .put(ancestorID, bound + 1);
+                        }
+                    }
+                }
+            }
 
-						Debug.debugMessage (getClass (), descendantID + " is proper descendant of "
-								+ lcaID + " in " + subprogram.getSubprogramName (), 4);
+            int uParentID = lnt.getVertex(source.getVertexID()).getParentID();
+            int vParentID = lnt.getVertex(destination.getVertexID())
+                    .getParentID();
 
-						int ancestorID = descendantID;
-						while (ancestorID != lnt.getRootID ())
-						{
-							ancestorID = lnt.getVertex (ancestorID).getParentID ();
-							TreeVertex ancestorv = lnt.getVertex (ancestorID);
+            if (uParentID != vParentID)
+            {
+                if (properDescendants.get(subprogramID).get(vParentID)
+                        .contains(uParentID))
+                {
+                    int lcaID = lcas.get(subprogramID).getLCA(
+                            source.getVertexID(), destination.getVertexID());
+                    TreeVertex lca = lnt.getVertex(lcaID);
 
-							if (descendantv.getLevel () - ancestorv.getLevel () <= MainLoopAnalyser
-									.getBoundLevel ())
-							{
-								if (ancestorv.getLevel () >= lca.getLevel ())
-								{
-									int bound = tempLoopBounds.get (subprogramID)
-											.get (descendantID).get (ancestorID);
-									tempLoopBounds.get (subprogramID).get (descendantID).put (
-											ancestorID, 0);
+                    for (int descendantID : properDescendants.get(subprogramID)
+                            .get(lcaID))
+                    {
+                        TreeVertex descendantv = lnt.getVertex(descendantID);
 
-									int currentBound = loopBounds.get (subprogramID).get (
-											descendantID).get (ancestorID);
+                        Debug.debugMessage(getClass(), descendantID
+                                + " is proper descendant of " + lcaID + " in "
+                                + subprogram.getSubprogramName(), 4);
 
-									if (bound > currentBound)
-									{
-										Debug.debugMessage (getClass (), "Bound(" + descendantID
-												+ ", " + ancestorID + ") = " + bound, 4);
+                        int ancestorID = descendantID;
+                        while (ancestorID != lnt.getRootID())
+                        {
+                            ancestorID = lnt.getVertex(ancestorID)
+                                    .getParentID();
+                            TreeVertex ancestorv = lnt.getVertex(ancestorID);
 
-										loopBounds.get (subprogramID).get (descendantID).put (
-												ancestorID, bound);
-									} else
-									{
-										Debug.debugMessage (getClass (), "Bound(" + descendantID
-												+ ", " + ancestorID + ") = " + currentBound
-												+ " (UNCHANGED)", 4);
-									}
-								}
-							}
-						}
+                            if (descendantv.getLevel() - ancestorv.getLevel() <= MainLoopAnalyser
+                                    .getBoundLevel())
+                            {
+                                if (ancestorv.getLevel() >= lca.getLevel())
+                                {
+                                    int bound = tempLoopBounds
+                                            .get(subprogramID)
+                                            .get(descendantID).get(ancestorID);
+                                    tempLoopBounds.get(subprogramID)
+                                            .get(descendantID)
+                                            .put(ancestorID, 0);
 
-					}
-				}
-			}
-		}
+                                    int currentBound = loopBounds
+                                            .get(subprogramID)
+                                            .get(descendantID).get(ancestorID);
 
-		private void advanceTransition ()
-		{
-			if (destination.isInlinedEntry ())
-			{
-				final String destinationSubprogramName = destination.getSubprogramName ();
-				final int destinationSubprogramID = program
-						.getSubprogramID (destinationSubprogramName);
+                                    if (bound > currentBound)
+                                    {
+                                        Debug.debugMessage(getClass(), "Bound("
+                                                + descendantID + ", "
+                                                + ancestorID + ") = " + bound,
+                                                4);
 
-				Debug.debugMessage (getClass (), "Calling " + destinationSubprogramName, 3);
+                                        loopBounds.get(subprogramID)
+                                                .get(descendantID)
+                                                .put(ancestorID, bound);
+                                    }
+                                    else
+                                    {
+                                        Debug.debugMessage(getClass(),
+                                                "Bound(" + descendantID + ", "
+                                                        + ancestorID + ") = "
+                                                        + currentBound
+                                                        + " (UNCHANGED)", 4);
+                                    }
+                                }
+                            }
+                        }
 
-				callStack.push (subprogramID);
-				ipointStack.push (destination);
-				subprogramID = destinationSubprogramID;
-				subprogram = program.getSubprogram (subprogramID);
-				ipg = subprogram.getIPG (Globals.getInstrumentationProfile ());
-				lnt = subprogram.getCFGStar (Globals.getInstrumentationProfile ()).getLNT ();
-				source = ipg.getVertex (ipg.getEntryID ());
-				transition = source.getTraceSuccessor (destination.getIpointID ());
-				source = ipg.getVertex (transition.getVertexID ());
-			} else if (ipg.isMasterExit (destination.getVertexID ()))
-			{
-				if (subprogramID == program.getRootID ())
-				{
-					Debug.debugMessage (getClass (), "New run detected", 4);
-					newRun = true;
-					source = ipg.getVertex (ipg.getEntryID ());
-				} else
-				{
-					Debug.debugMessage (getClass (), "Returning from "
-							+ program.getSubprogram (subprogramID).getSubprogramName (), 3);
+                    }
+                }
+            }
+        }
 
-					subprogramID = callStack.pop ();
-					subprogram = program.getSubprogram (subprogramID);
-					ipg = subprogram.getIPG (Globals.getInstrumentationProfile ());
-					lnt = subprogram.getCFGStar (Globals.getInstrumentationProfile ()).getLNT ();
-					source = ipointStack.pop ();
-					transition = source.getTraceSuccessor (destination.getIpointID ());
-					source = ipg.getVertex (transition.getVertexID ());
-				}
-			} else
-			{
-				source = destination;
-			}
-		}
-	}
+        private void advanceTransition ()
+        {
+            if (destination.isInlinedEntry())
+            {
+                final String destinationSubprogramName = destination
+                        .getSubprogramName();
+                final int destinationSubprogramID = program
+                        .getSubprogramID(destinationSubprogramName);
 
-	@SuppressWarnings("serial")
-	private class NoTransitionException extends Exception
-	{
-		public NoTransitionException (String subprogramName, int sourceID, long ipointID)
-		{
-			super ("Unable to find successor of ipoint " + sourceID + " (in IPG of '"
-					+ subprogramName + "') with ipoint ID 0x" + Long.toHexString (ipointID));
-		}
-	}
+                Debug.debugMessage(getClass(), "Calling "
+                        + destinationSubprogramName, 3);
+
+                callStack.push(subprogramID);
+                ipointStack.push(destination);
+                subprogramID = destinationSubprogramID;
+                subprogram = program.getSubprogram(subprogramID);
+                ipg = subprogram.getIPG(Globals.getInstrumentationProfile());
+                lnt = subprogram
+                        .getCFGStar(Globals.getInstrumentationProfile())
+                        .getLNT();
+                source = ipg.getVertex(ipg.getEntryID());
+                transition = source
+                        .getTraceSuccessor(destination.getIpointID());
+                source = ipg.getVertex(transition.getVertexID());
+            }
+            else if (ipg.isMasterExit(destination.getVertexID()))
+            {
+                if (subprogramID == program.getRootID())
+                {
+                    Debug.debugMessage(getClass(), "New run detected", 4);
+                    newRun = true;
+                    source = ipg.getVertex(ipg.getEntryID());
+                }
+                else
+                {
+                    Debug.debugMessage(getClass(), "Returning from "
+                            + program.getSubprogram(subprogramID)
+                                    .getSubprogramName(), 3);
+
+                    subprogramID = callStack.pop();
+                    subprogram = program.getSubprogram(subprogramID);
+                    ipg = subprogram
+                            .getIPG(Globals.getInstrumentationProfile());
+                    lnt = subprogram.getCFGStar(
+                            Globals.getInstrumentationProfile()).getLNT();
+                    source = ipointStack.pop();
+                    transition = source.getTraceSuccessor(destination
+                            .getIpointID());
+                    source = ipg.getVertex(transition.getVertexID());
+                }
+            }
+            else
+            {
+                source = destination;
+            }
+        }
+    }
+
+    @SuppressWarnings("serial")
+    private class NoTransitionException extends Exception
+    {
+
+        public NoTransitionException (String subprogramName, int sourceID,
+                long ipointID)
+        {
+            super("Unable to find successor of ipoint " + sourceID
+                    + " (in IPG of '" + subprogramName + "') with ipoint ID 0x"
+                    + Long.toHexString(ipointID));
+        }
+    }
 }

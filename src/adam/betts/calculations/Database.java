@@ -15,147 +15,165 @@ import adam.betts.vertices.Vertex;
 
 public class Database
 {
-	/*
-	 * The program used during trace parsing to populate the database
-	 */
-	protected Program program;
 
-	/*
-	 * The calculation engine used after parsing
-	 */
-	protected CalculationEngine engine;
+    /*
+     * The program used during trace parsing to populate the database
+     */
+    protected Program program;
 
-	/*
-	 * The WCETs of the units of computation: either edges or vertices in the
-	 * graph
-	 */
-	protected HashMap <Integer, HashMap <Integer, Long>> unitWCETs = new HashMap <Integer, HashMap <Integer, Long>> ();
+    /*
+     * The calculation engine used after parsing
+     */
+    protected CalculationEngine engine;
 
-	/*
-	 * Loop bounds for each subprogram
-	 */
-	protected HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> loopBounds = new HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> ();
+    /*
+     * The WCETs of the units of computation: either edges or vertices in the
+     * graph
+     */
+    protected HashMap <Integer, HashMap <Integer, Long>> unitWCETs = new HashMap <Integer, HashMap <Integer, Long>>();
 
-	/*
-	 * Infeasible path data for each subprogram
-	 */
-	protected HashMap <Integer, HashMap <Integer, HashSet <Integer>>> observedPaths = new HashMap <Integer, HashMap <Integer, HashSet <Integer>>> ();
+    /*
+     * Loop bounds for each subprogram
+     */
+    protected HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>> loopBounds = new HashMap <Integer, HashMap <Integer, HashMap <Integer, Integer>>>();
 
-	/*
-	 * To record number of tests for each subprogram
-	 */
-	protected HashMap <Integer, Long> tests = new HashMap <Integer, Long> ();
+    /*
+     * Infeasible path data for each subprogram
+     */
+    protected HashMap <Integer, HashMap <Integer, HashSet <Integer>>> observedPaths = new HashMap <Integer, HashMap <Integer, HashSet <Integer>>>();
 
-	/*
-	 * METs of each subprogram
-	 */
-	protected HashMap <Integer, Long> mets = new HashMap <Integer, Long> ();
+    /*
+     * To record number of tests for each subprogram
+     */
+    protected HashMap <Integer, Long> tests = new HashMap <Integer, Long>();
 
-	public Database (final Program program)
-	{
-		this.program = program;
-	}
+    /*
+     * METs of each subprogram
+     */
+    protected HashMap <Integer, Long> mets = new HashMap <Integer, Long>();
 
-	public void generateRandomData ()
-	{
-		HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer> ();
-		HashMap <Integer, HashMap <Integer, Integer>> headerBounds = new HashMap <Integer, HashMap <Integer, Integer>> ();
+    public Database (final Program program)
+    {
+        this.program = program;
+    }
 
-		Random random = new Random ();
+    public void generateData (boolean random)
+    {
+        HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer>();
+        HashMap <Integer, HashMap <Integer, Integer>> headerBounds = new HashMap <Integer, HashMap <Integer, Integer>>();
 
-		for (Subprogram s : program)
-		{
-			Debug.debugMessage (getClass (), "Generating data for " + s.getSubprogramName (), 2);
+        Random randomGenerator = new Random();
 
-			int subprogramID = s.getSubprogramID ();
-			unitWCETs.put (subprogramID, new HashMap <Integer, Long> ());
-			ControlFlowGraph cfg = s.getCFG ();
-			for (Vertex v : cfg)
-			{
-				long data = Math.abs (random.nextInt ());
-				if (data == 0)
-				{
-					data = 1;
-				}
-				unitWCETs.get (subprogramID).put (v.getVertexID (), data);
-			}
+        for (Subprogram s : program)
+        {
+            Debug.debugMessage(getClass(),
+                    "Generating data for " + s.getSubprogramName(), 2);
 
-			LoopNests loop = s.getCFG ().getLNT ();
+            int subprogramID = s.getSubprogramID();
+            unitWCETs.put(subprogramID, new HashMap <Integer, Long>());
+            ControlFlowGraph cfg = s.getCFG();
+            for (Vertex v : cfg)
+            {
+                long data = 1;
 
-			Iterator <Integer> it = loop.headerIterator ();
-			while (it.hasNext ())
-			{
-				int headerID = it.next ();
+                if (random)
+                {
+                    data = Math.abs(randomGenerator.nextLong());
+                    
+                    if (data == 0)
+                    {
+                        data = 1;
 
-				for (int ancestorID : loop.getProperAncestors (headerID))
-				{
-					int bound = Math.abs (random.nextInt ());
-					if (bound == 0)
-					{
-						bound = 1;
-					}
-					properAncestorBounds.put (ancestorID, bound);
-				}
+                    }
+                }
 
-				headerBounds.put (headerID, properAncestorBounds);
-			}
+                unitWCETs.get(subprogramID).put(v.getVertexID(), data);
+            }
 
-			loopBounds.put (subprogramID, headerBounds);
-		}
-	}
+            LoopNests loop = s.getCFG().getLNT();
 
-	public final long getUnitWCET (int subprogramID, int unitID)
-	{
-		return unitWCETs.get (subprogramID).get (unitID);
-	}
+            Iterator <Integer> it = loop.headerIterator();
+            while (it.hasNext())
+            {
+                int headerID = it.next();
 
-	public final int getLoopBound (int subprogramID, int headerID, int ancestorID)
-	{
-		return loopBounds.get (subprogramID).get (headerID).get (ancestorID);
-	}
+                for (int ancestorID : loop.getProperAncestors(headerID))
+                {
+                    int bound = loop.getVertex(ancestorID).getLevel() + 1;
 
-	public Set <Integer> getInfeasibleUnits (int subprogramID, int unitID)
-	{
-		Set <Integer> infeasible = new HashSet <Integer> ();
-		for (int ID : unitWCETs.get (subprogramID).keySet ())
-		{
-			/*
-			 * Add the vertex or edge ID to the set of infeasible units only if
-			 * it was not seen during its execution
-			 */
-			if (!observedPaths.get (subprogramID).get (unitID).contains (ID))
-			{
-				infeasible.add (ID);
-			}
-		}
-		return infeasible;
-	}
+                    if (random)
+                    {
+                        bound = Math.abs(randomGenerator.nextInt());
 
-	public final int unitsCovered (int subprogramID)
-	{
-		int count = 0;
-		for (int edgeID : unitWCETs.get (subprogramID).keySet ())
-		{
-			if (unitWCETs.get (subprogramID).get (edgeID) != 0)
-			{
-				count++;
-			}
-		}
-		return count;
-	}
+                        if (bound == 0)
+                        {
+                            bound = 1;
+                        }
+                    }
 
-	public final boolean isCovered (int subprogramID, int unitID)
-	{
-		return unitWCETs.get (subprogramID).get (unitID) > 0;
-	}
+                    properAncestorBounds.put(ancestorID, bound);
+                }
 
-	public final long getTests (int subprogramID)
-	{
-		return tests.get (subprogramID);
-	}
+                headerBounds.put(headerID, properAncestorBounds);
+            }
 
-	public final long getMET (int subprogramID)
-	{
-		return mets.get (subprogramID);
-	}
+            loopBounds.put(subprogramID, headerBounds);
+        }
+    }
+
+    public final long getUnitWCET (int subprogramID, int unitID)
+    {
+        return unitWCETs.get(subprogramID).get(unitID);
+    }
+
+    public final int getLoopBound (int subprogramID, int headerID,
+            int ancestorID)
+    {
+        return loopBounds.get(subprogramID).get(headerID).get(ancestorID);
+    }
+
+    public Set <Integer> getInfeasibleUnits (int subprogramID, int unitID)
+    {
+        Set <Integer> infeasible = new HashSet <Integer>();
+        for (int ID : unitWCETs.get(subprogramID).keySet())
+        {
+            /*
+             * Add the vertex or edge ID to the set of infeasible units only if
+             * it was not seen during its execution
+             */
+            if (!observedPaths.get(subprogramID).get(unitID).contains(ID))
+            {
+                infeasible.add(ID);
+            }
+        }
+        return infeasible;
+    }
+
+    public final int unitsCovered (int subprogramID)
+    {
+        int count = 0;
+        for (int edgeID : unitWCETs.get(subprogramID).keySet())
+        {
+            if (unitWCETs.get(subprogramID).get(edgeID) != 0)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public final boolean isCovered (int subprogramID, int unitID)
+    {
+        return unitWCETs.get(subprogramID).get(unitID) > 0;
+    }
+
+    public final long getTests (int subprogramID)
+    {
+        return tests.get(subprogramID);
+    }
+
+    public final long getMET (int subprogramID)
+    {
+        return mets.get(subprogramID);
+    }
 }

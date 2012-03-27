@@ -16,140 +16,144 @@ import adam.betts.utilities.DefaultOptions;
 
 public class MainProgramAnalyser
 {
-	private static Options options;
-	private static Option inlineOption;
-	private static Option loopsOption;
-	private static Option syntaxTreesOption;
-	private static Option controlDependenceOption;
-	private static Option dominatorTreesOption;
-	private static Option timingAnalysisOption;
 
-	protected static boolean inline;
-	protected static boolean LNTs;
-	protected static boolean ASTs;
-	protected static boolean dominators;
-	protected static boolean controlDependences;
-	protected static boolean timingAnalysis;
+    private static Options options;
+    private static Option inlineOption;
+    private static Option loopsOption;
+    private static Option syntaxTreesOption;
+    private static Option controlDependenceOption;
+    private static Option dominatorTreesOption;
+    private static Option timingAnalysisOption;
 
-	private static void addOptions ()
-	{
-		options = new Options ();
-		DefaultOptions.addDefaultOptions (options);
-		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addUDrawDirectoryOption (options);
-		DefaultOptions.addIPETOptions (options);
+    protected static boolean inline;
+    protected static boolean LNTs;
+    protected static boolean ASTs;
+    protected static boolean dominators;
+    protected static boolean controlDependences;
+    protected static boolean timingAnalysis;
 
-		inlineOption = new Option ("I", "inline", false,
-				"Inline all control flow graphs to create a single monolothic graph.");
-		inlineOption.setRequired (false);
-		options.addOption (inlineOption);
+    private static void addOptions ()
+    {
+        options = new Options();
+        DefaultOptions.addDefaultOptions(options);
+        DefaultOptions.addProgramOption(options);
+        DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addIPETOptions(options);
 
-		loopsOption = new Option ("l", "loops", false,
-				"Generate the loop-nesting trees in the program.");
-		loopsOption.setRequired (false);
-		options.addOption (loopsOption);
+        inlineOption = new Option("I", "inline", false,
+                "Inline all control flow graphs to create a single monolothic graph.");
+        inlineOption.setRequired(false);
+        options.addOption(inlineOption);
 
-		syntaxTreesOption = new Option ("s", "syntax-trees", false,
-				"Generate the syntax trees of the control flow graphs.");
-		syntaxTreesOption.setRequired (false);
-		options.addOption (syntaxTreesOption);
+        loopsOption = new Option("l", "loops", false,
+                "Generate the loop-nesting trees in the program.");
+        loopsOption.setRequired(false);
+        options.addOption(loopsOption);
 
-		controlDependenceOption = new Option ("C", "control-dependence", false,
-				"Generate the control dependence graphs of the control flow graphs.");
-		controlDependenceOption.setRequired (false);
-		options.addOption (controlDependenceOption);
+        syntaxTreesOption = new Option("s", "syntax-trees", false,
+                "Generate the syntax trees of the control flow graphs.");
+        syntaxTreesOption.setRequired(false);
+        options.addOption(syntaxTreesOption);
 
-		dominatorTreesOption = new Option ("D", "dominator-trees", false,
-				"Generate the dominator trees of the control flow graphs.");
-		dominatorTreesOption.setRequired (false);
-		options.addOption (dominatorTreesOption);
+        controlDependenceOption = new Option("C", "control-dependence", false,
+                "Generate the control dependence graphs of the control flow graphs.");
+        controlDependenceOption.setRequired(false);
+        options.addOption(controlDependenceOption);
 
-		timingAnalysisOption = new Option ("T", "timing-analysis", false,
-				"Generate (random) WCET data for the program and do a WCET computation.");
-		timingAnalysisOption.setRequired (false);
-		options.addOption (timingAnalysisOption);
-	}
+        dominatorTreesOption = new Option("D", "dominator-trees", false,
+                "Generate the dominator trees of the control flow graphs.");
+        dominatorTreesOption.setRequired(false);
+        options.addOption(dominatorTreesOption);
 
-	private static void parseCommandLine (String[] args)
-	{
-		final String toolName = "program-analyser.jar";
-		CommandLineParser parser = new GnuParser ();
-		HelpFormatter formatter = new HelpFormatter ();
-		formatter.setWidth (128);
-		CommandLine line = null;
-		try
-		{
-			line = parser.parse (options, args);
+        timingAnalysisOption = new Option("T", "timing-analysis", false,
+                "Generate (random) WCET data for the program and do a WCET computation.");
+        timingAnalysisOption.setRequired(false);
+        options.addOption(timingAnalysisOption);
+    }
 
-			if (line.hasOption (DefaultOptions.helpOption.getOpt ()))
-			{
-				formatter.printHelp (toolName, options);
-				System.exit (1);
-			} else
-			{
-				DefaultOptions.setDefaultOptions (line);
-				DefaultOptions.setProgramOption (line);
-				DefaultOptions.setUDrawDirectoryOption (line);
-				DefaultOptions.setIPETOptions (line);
+    private static void parseCommandLine (String[] args)
+    {
+        final String toolName = "program-analyser.jar";
+        CommandLineParser parser = new GnuParser();
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(128);
+        CommandLine line = null;
+        try
+        {
+            line = parser.parse(options, args);
 
-				inline = line.hasOption (inlineOption.getOpt ());
-				LNTs = line.hasOption (loopsOption.getOpt ());
-				ASTs = line.hasOption (syntaxTreesOption.getOpt ());
-				dominators = line.hasOption (dominatorTreesOption.getOpt ());
-				controlDependences = line.hasOption (controlDependenceOption.getOpt ());
-				timingAnalysis = line.hasOption (timingAnalysisOption.getOpt ());
-			}
-		} catch (ParseException e)
-		{
-			System.out.println (e.getMessage ());
-			formatter.printHelp (toolName, options);
-			System.exit (1);
-		}
-	}
+            if (line.hasOption(DefaultOptions.helpOption.getOpt()))
+            {
+                formatter.printHelp(toolName, options);
+                System.exit(1);
+            }
+            else
+            {
+                DefaultOptions.setDefaultOptions(line);
+                DefaultOptions.setProgramOption(line);
+                DefaultOptions.setUDrawDirectoryOption(line);
+                DefaultOptions.setIPETOptions(line);
 
-	private static void run ()
-	{
-		Debug.verboseMessage ("Reading program");
+                inline = line.hasOption(inlineOption.getOpt());
+                LNTs = line.hasOption(loopsOption.getOpt());
+                ASTs = line.hasOption(syntaxTreesOption.getOpt());
+                dominators = line.hasOption(dominatorTreesOption.getOpt());
+                controlDependences = line.hasOption(controlDependenceOption
+                        .getOpt());
+                timingAnalysis = line.hasOption(timingAnalysisOption.getOpt());
+            }
+        }
+        catch (ParseException e)
+        {
+            System.out.println(e.getMessage());
+            formatter.printHelp(toolName, options);
+            System.exit(1);
+        }
+    }
 
-		Program program = new Program ();
+    private static void run ()
+    {
+        Debug.verboseMessage("Reading program");
 
-		if (LNTs)
-		{
-			Debug.verboseMessage ("Building loop-nesting trees");
-			program.buildLNTs ();
-		}
+        Program program = new Program();
 
-		if (ASTs)
-		{
-			Debug.verboseMessage ("Building abstract syntax trees");
-			program.buildSyntaxTrees ();
-		}
+        if (LNTs)
+        {
+            Debug.verboseMessage("Building loop-nesting trees");
+            program.buildLNTs();
+        }
 
-		if (dominators)
-		{
-			Debug.verboseMessage ("Building pre- and post-dominator trees");
-			program.buildDominatorTrees ();
-		}
+        if (ASTs)
+        {
+            Debug.verboseMessage("Building abstract syntax trees");
+            program.buildSyntaxTrees();
+        }
 
-		if (controlDependences)
-		{
-			Debug.verboseMessage ("Building control dependence graphs");
-			program.buildControlDependenceGraphs ();
-		}
+        if (dominators)
+        {
+            Debug.verboseMessage("Building pre- and post-dominator trees");
+            program.buildDominatorTrees();
+        }
 
-		if (timingAnalysis)
-		{
-			Database database = new Database (program);
-			database.generateRandomData ();
+        if (controlDependences)
+        {
+            Debug.verboseMessage("Building control dependence graphs");
+            program.buildControlDependenceGraphs();
+        }
 
-			new CalculationEngineCFG (program, database);
-		}
-	}
+        if (timingAnalysis)
+        {
+            Database database = new Database(program);
+            database.generateData(false);
 
-	public static void main (String[] args)
-	{
-		addOptions ();
-		parseCommandLine (args);
-		run ();
-	}
+            new CalculationEngineCFG(program, database);
+        }
+    }
+
+    public static void main (String[] args)
+    {
+        addOptions();
+        parseCommandLine(args);
+        run();
+    }
 }
