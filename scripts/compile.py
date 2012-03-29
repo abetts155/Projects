@@ -113,8 +113,8 @@ if opts.gem5sim:
         print ("Cannot find environment variable '" + armToolchainVar + "' which is needed to compile the program for m5.")
         exit(0)
 
-    gcc     = armToolchain + "-gcc -static"
-    objdump = armToolchain + "-objdump"
+    gcc     = "arm-linux-gnueabi-gcc -static"
+    objdump = "arm-linux-gnueabi-objdump"
 
 runCommand("%s -%s -o %s %s"  % (gcc, opts.optimisation, opts.program[:-2], opts.program))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))

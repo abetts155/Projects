@@ -18,128 +18,135 @@ import adam.betts.utilities.DefaultOptions;
 
 public class MainWCETAnalyser
 {
-	private static Options options;
-	private static Option observedWCETOption;
-	private static Option expandContextsOption;
-	private static Option incrementalWCETOption;
 
-	public static void main (String[] args)
-	{
-		addOptions ();
-		parseCommandLine (args);
-		run ();
-	}
+    private static Options options;
+    private static Option observedWCETOption;
+    private static Option expandContextsOption;
+    private static Option incrementalWCETOption;
 
-	private static void addOptions ()
-	{
-		options = new Options ();
-		DefaultOptions.addDefaultOptions (options);
-		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options, true);
-		DefaultOptions.addInstrumentationProfileOption (options, true, 1);
-		DefaultOptions.addTraceFileOption (options);
-		DefaultOptions.addOutFileOption (options);
-		DefaultOptions.addUDrawDirectoryOption (options);
-		DefaultOptions.addIPETOptions (options);
+    public static void main (String[] args)
+    {
+        addOptions();
+        parseCommandLine(args);
+        run();
+    }
 
-		observedWCETOption = new Option ("O", "observed", false,
-				"Perform a WCET computation of the observed paths in the trace.");
-		observedWCETOption.setRequired (false);
-		options.addOption (observedWCETOption);
+    private static void addOptions ()
+    {
+        options = new Options();
+        DefaultOptions.addDefaultOptions(options);
+        DefaultOptions.addProgramOption(options);
+        DefaultOptions.addRootOption(options, true);
+        DefaultOptions.addInstrumentationProfileOption(options, true, 1);
+        DefaultOptions.addTraceFileOption(options);
+        DefaultOptions.addOutFileOption(options);
+        DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addIPETOptions(options);
 
-		expandContextsOption = new Option ("e", "expand", false,
-				"Consider all contexts expanded in the WCET computation.");
-		expandContextsOption.setRequired (false);
-		options.addOption (expandContextsOption);
+        observedWCETOption = new Option("O", "observed", false,
+                "Perform a WCET computation of the observed paths in the trace.");
+        observedWCETOption.setRequired(false);
+        options.addOption(observedWCETOption);
 
-		incrementalWCETOption = new Option ("I", "incremental", false,
-				"Do a WCET computation after each run in the trace.");
-		incrementalWCETOption.setRequired (false);
-		options.addOption (incrementalWCETOption);
-	}
+        expandContextsOption = new Option("e", "expand", false,
+                "Consider all contexts expanded in the WCET computation.");
+        expandContextsOption.setRequired(false);
+        options.addOption(expandContextsOption);
 
-	private static void parseCommandLine (String[] args)
-	{
-		final String toolName = "wcet.jar";
-		CommandLineParser parser = new GnuParser ();
-		HelpFormatter formatter = new HelpFormatter ();
-		formatter.setWidth (128);
-		CommandLine line = null;
-		try
-		{
-			line = parser.parse (options, args);
+        incrementalWCETOption = new Option("I", "incremental", false,
+                "Do a WCET computation after each run in the trace.");
+        incrementalWCETOption.setRequired(false);
+        options.addOption(incrementalWCETOption);
+    }
 
-			if (line.hasOption (DefaultOptions.helpOption.getOpt ()))
-			{
-				formatter.printHelp (toolName, options);
-				System.exit (1);
-			} else
-			{
-				/*
-				 * Set the global variables according to the command-line
-				 * parameters
-				 */
-				DefaultOptions.setDefaultOptions (line);
-				DefaultOptions.setProgramOption (line);
-				DefaultOptions.setRootOption (line);
-				DefaultOptions.setInstrumentationProfileOption (line);
-				DefaultOptions.setTraceFileOption (line);
-				DefaultOptions.setOutFileOption (line);
-				DefaultOptions.setUDrawDirectoryOption (line);
-				DefaultOptions.setIPETOptions (line);
+    private static void parseCommandLine (String[] args)
+    {
+        final String toolName = "wcet.jar";
+        CommandLineParser parser = new GnuParser();
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(128);
+        CommandLine line = null;
+        try
+        {
+            line = parser.parse(options, args);
 
-				Globals.observedWCET = line.hasOption (observedWCETOption.getOpt ());
-				Globals.expandContexts = line.hasOption (expandContextsOption.getOpt ());
-				Globals.incrementalWCET = line.hasOption (incrementalWCETOption.getOpt ());
-			}
-		} catch (ParseException e)
-		{
-			System.out.println (e.getMessage ());
-			formatter.printHelp (toolName, options);
-			System.exit (1);
-		}
-	}
+            if (line.hasOption(DefaultOptions.helpOption.getOpt()))
+            {
+                formatter.printHelp(toolName, options);
+                System.exit(1);
+            }
+            else
+            {
+                /*
+                 * Set the global variables according to the command-line
+                 * parameters
+                 */
+                DefaultOptions.setDefaultOptions(line);
+                DefaultOptions.setProgramOption(line);
+                DefaultOptions.setRootOption(line);
+                DefaultOptions.setInstrumentationProfileOption(line);
+                DefaultOptions.setTraceFileOption(line);
+                DefaultOptions.setOutFileOption(line);
+                DefaultOptions.setUDrawDirectoryOption(line);
+                DefaultOptions.setIPETOptions(line);
 
-	private static void run ()
-	{
-		Debug.verboseMessage ("Reading program");
-		Program program = new Program ();
-		program.insertVirtualIpoints ();
-		program.buildIPGS (false);
-		Debug.verboseMessage ("Trace parsing");
+                Globals.observedWCET = line.hasOption(observedWCETOption
+                        .getOpt());
+                Globals.expandContexts = line.hasOption(expandContextsOption
+                        .getOpt());
+                Globals.incrementalWCET = line.hasOption(incrementalWCETOption
+                        .getOpt());
+            }
+        }
+        catch (ParseException e)
+        {
+            System.out.println(e.getMessage());
+            formatter.printHelp(toolName, options);
+            System.exit(1);
+        }
+    }
 
-		try
-		{
-			WCETOutput.openFileHandles ();
-			WCETOutput.writeSubprogramTableHeader ();
-			new IPGDatabase (program);
-			WCETOutput.closeFileHandles ();
-		} catch (IOException e)
-		{
-			e.printStackTrace ();
-			System.exit (1);
-		}
-	}
+    private static void run ()
+    {
+        Debug.verboseMessage("Reading program");
+        Program program = new Program();
+        program.insertVirtualIpoints();
+        program.buildIPGS(false);
+        Debug.verboseMessage("Trace parsing");
 
-	public static class Globals
-	{
-		protected static boolean observedWCET;
-		protected static boolean expandContexts;
-		protected static boolean incrementalWCET;
+        try
+        {
+            WCETOutput.openFileHandles();
+            WCETOutput.writeSubprogramTableHeader();
+            new IPGDatabase(program);
+            WCETOutput.closeFileHandles();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
 
-		public final static boolean doObservedWCET ()
-		{
-			return observedWCET;
-		}
+    public static class Globals
+    {
+        protected static boolean observedWCET;
+        protected static boolean expandContexts;
+        protected static boolean incrementalWCET;
 
-		public final static boolean expandContexts ()
-		{
-			return expandContexts;
-		}
+        public final static boolean doObservedWCET ()
+        {
+            return observedWCET;
+        }
 
-		public final static boolean doIncrementalWCET ()
-		{
-			return incrementalWCET;
-		}
-	}
+        public final static boolean expandContexts ()
+        {
+            return expandContexts;
+        }
+
+        public final static boolean doIncrementalWCET ()
+        {
+            return incrementalWCET;
+        }
+    }
 }

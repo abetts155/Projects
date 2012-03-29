@@ -49,10 +49,5 @@ int main (int argc, char *argv[])
 
 	shellsort (ARRAY_SIZE, TV);
 
-	for (i = 0; i < ARRAY_SIZE; i++)
-	{
-		printf("%i\n", TV[i]);
-	}
-
 	return 0;
 }
