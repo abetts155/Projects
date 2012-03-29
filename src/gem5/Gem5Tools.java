@@ -3,6 +3,7 @@ package gem5;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.Set;
 
 import tvgen.util.SystemOutput;
 
@@ -110,6 +111,10 @@ public class Gem5Tools {
 	
 	public String sanitiseGem5Trace(String traceFile, String instrumentation) {
 		return traceParser.parseTrace(traceFile, instrumentation, false);
+	}
+	
+	public Set<Integer> getBlockCoverage(String traceFile) {
+		return traceParser.basicBlocksInTrace(traceFile);
 	}
 	
 	private void waitForProcess(Process p, String cmd) {

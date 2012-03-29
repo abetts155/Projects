@@ -45,6 +45,15 @@ parser.add_option("-r",
                   help="Entry point of the program.",
                   metavar="<NAME>")
 
+parser.add_option("-o",
+                  "--optimisation-level",
+                  action="store",
+                  type="string",
+                  dest="optimisation",
+                  help="The optimisation level used by the compiler (O0,O1,O2 etc.)",
+                  metavar="<NAME>")
+
+
 parser.add_option("-g",
                   "--gem5sim",
                   action="store_true",
@@ -67,6 +76,9 @@ if opts.program is None:
     exit(0)
 if opts.root is None:
     print("Missing option " + str(parser.get_option("-r")))
+    exit(0)
+if opts.optimisation is None:
+    print("Missing option " + str(parser.get_option("-o")))
     exit(0)
 
 def runCommand (cmd):
@@ -104,6 +116,6 @@ if opts.gem5sim:
     gcc     = armToolchain + "-gcc -static"
     objdump = armToolchain + "-objdump"
 
-runCommand("%s -O2 -o %s %s"  % (gcc, opts.program[:-2], opts.program))
+runCommand("%s -%s -o %s %s"  % (gcc, opts.optimisation, opts.program[:-2], opts.program))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
 runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))

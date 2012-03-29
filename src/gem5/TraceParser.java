@@ -6,8 +6,10 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -24,6 +26,8 @@ public class TraceParser
 {
 	private Set<Integer> bbAddrs;
 	private Set<Integer> branchInsts;
+	// Maps basic block start addresses to basic block IDs
+	private Map<Integer,Integer> bbAddrId;
 	
 	public TraceParser(String programXMLFile)
 	{
@@ -36,6 +40,7 @@ public class TraceParser
 		
 		bbAddrs = new HashSet<Integer>();
 		branchInsts = new HashSet<Integer>();
+		bbAddrId = new HashMap<Integer,Integer>();
 		
 		try
 		{
@@ -75,6 +80,7 @@ public class TraceParser
 	{
 		try
 		{
+			int bbId = Integer.parseInt(bbElement.getAttribute("id"));
 			NodeList instNodes = bbElement.getElementsByTagName("inst");
 			if(instNodes.getLength() > 0)
 			{
@@ -84,6 +90,7 @@ public class TraceParser
 					String firstInstAddr = ((Element)firstInst).getAttribute("addr");
 					int firstInstId = parseAddr(firstInstAddr);
 					bbAddrs.add(firstInstId);
+					bbAddrId.put(firstInstId, bbId);
 				}
 				
 				Node endInst = instNodes.item(instNodes.getLength() - 1);
@@ -147,6 +154,34 @@ public class TraceParser
 		return false;
 	}
 	
+	// Returns a set of basic blocks covered in trace
+	public Set<Integer> basicBlocksInTrace(String traceName)
+	{
+		Set<Integer> bbs = new HashSet<Integer>();
+		try
+		{
+			InputStream traceFile = new FileInputStream(traceName);
+			BufferedReader trace = new BufferedReader(new InputStreamReader(traceFile));
+			
+			List<InstructionTime> instTimes = getInstructionTimes(trace);
+			trace.close();
+			
+			for(InstructionTime instTime : instTimes)
+			{
+				Integer bbId = bbAddrId.get(instTime.instruction);
+				if(bbId != null)
+				{
+					bbs.add(bbId);
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing trace file" + traceName);
+		}
+		return bbs;
+	}
+	
 	public String parseTrace(String traceName, String instrumentation, boolean hexAddrs)
 	{
 		try
@@ -155,6 +190,7 @@ public class TraceParser
 			BufferedReader trace = new BufferedReader(new InputStreamReader(traceFile));
 			
 			List<InstructionTime> instTimes = getInstructionTimes(trace);
+			trace.close();
 			
 			String parsedTrace = null;
 			if(instrumentation.equals("BASIC_BLOCK"))
@@ -166,7 +202,6 @@ public class TraceParser
 				parsedTrace = parseBranchTrace(instTimes, hexAddrs);
 			}
 			
-			trace.close();
 			return parsedTrace;
 		}
 		catch (Exception e)

@@ -1,25 +1,25 @@
-package tvgen.ga;
+package gem5;
 
-import gem5.Gem5Tools;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.zip.GZIPOutputStream;
 
+import tvgen.ga.TVEvaluator;
 import tvgen.util.*;
 
-public class Gem5TimeEvaluator extends TVEvaluator {
+public abstract class Gem5Evaluator extends TVEvaluator {
 
 	private String programName;
-	private String cpuType;
+	protected String cpuType;
 	
-	private Gem5Tools g5Tools;
+	protected Gem5Tools g5Tools;
 	
 	private static PrintStream traceOutput = null;
 	private static String traceFileName = "trace.BASIC_BLOCK.GA.gz";
 	
-	public Gem5TimeEvaluator(int threadID, String programName, String cpuType,
+	public Gem5Evaluator(int threadID, String programName, String cpuType,
 			Gem5Tools g5tools) {
 		super(threadID);
 		
@@ -31,17 +31,7 @@ public class Gem5TimeEvaluator extends TVEvaluator {
 		checkFiles();
 	}
 	
-	public void evaluate(TestVector vector) {
-		double score = g5Tools.runGem5(vector.toString(), cpuType,
-				"m5out/thread" + getThreadID(), "trace.out");
-		
-		vector.setScore(score);
-		String traceOutput = g5Tools.sanitiseGem5Trace(
-				"m5out/thread" + getThreadID() + "/trace.out", "BASIC_BLOCK");
-		
-		//Append trace to compressed file
-		addToTraceOutput(traceOutput);
-	}
+	public abstract void evaluate(TestVector vector);
 	
 	private void checkFiles() {
 		File programBin = new File(programName);
@@ -50,7 +40,7 @@ public class Gem5TimeEvaluator extends TVEvaluator {
 		}
 	}
 	
-	private synchronized static void addToTraceOutput(String content) {
+	protected synchronized static void addToTraceOutput(String content) {
 		if(traceOutput == null) {
 			try {
 				GZIPOutputStream outStream = new GZIPOutputStream(

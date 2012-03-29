@@ -8,6 +8,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import gem5.Gem5CoverageEvaluator;
+import gem5.Gem5TimeEvaluator;
 import gem5.Gem5Tools;
 
 import java.io.File;
@@ -24,6 +26,7 @@ public class GenerateTestVectors {
 	private static Option typeOption;
 	private static Option outputOption;
 	private static Option programOption;
+	private static Option entryOption;
 	private static Option vectorLengthOption;
 	private static Option upBoundOption;
 	private static Option lowBoundOption;
@@ -31,6 +34,7 @@ public class GenerateTestVectors {
 	private static Option cpuTypeOption;
 	private static Option crossoverOption;
 	private static Option selectOption;
+	private static Option evaluatorOption;
 	private static Option mutRateOption;
 	private static Option crossRateOption;
 	private static Option selectRateOption;
@@ -61,6 +65,11 @@ public class GenerateTestVectors {
 				"The name of the program binary to be tested");
 		programOption.setRequired (false);
 		options.addOption (programOption);
+		
+		entryOption = new Option ("r", "entry-point", true,
+				"The name of the function to use as the entry point of the program");
+		entryOption.setRequired (false);
+		options.addOption (entryOption);
 		
 		vectorLengthOption = new Option ("v", "vector-length", true,
 				"The length of the vectors generated");
@@ -99,6 +108,11 @@ public class GenerateTestVectors {
 		selectOption.setRequired (false);
 		options.addOption (selectOption);
 		
+		evaluatorOption = new Option ("E", "evaluator", true,
+				"The type of evaluator to use (gem5Time, gem5Cov)");
+		evaluatorOption.setRequired (false);
+		options.addOption (evaluatorOption);
+		
 		mutRateOption = new Option ("m", "mutation-rate", true,
 				"The mutation rate to use in the genetic algorithm (default = 0.05)");
 		mutRateOption.setRequired (false);
@@ -120,7 +134,7 @@ public class GenerateTestVectors {
 		threadsOption.setRequired (false);
 		options.addOption (threadsOption);
 		
-		seedOption = new Option ("r", "seed-rand", false,
+		seedOption = new Option ("R", "seed-rand", false,
 				"Seed each generation with random vector");
 		options.addOption (seedOption);
 	}
@@ -186,7 +200,8 @@ public class GenerateTestVectors {
 					line.getOptionValue(crossoverOption.getOpt()));
 			Mutator mut = createMutator("rand");
 			
-			GenerationEvaluator eval = createEvaluator("gem5Time", line);
+			GenerationEvaluator eval = createEvaluator(
+					line.getOptionValue(evaluatorOption.getOpt()), line);
 			
 			generator = createGAGenerator(outputFile, numVecsOrGens, eval, cross, selec, mut);
 			
@@ -257,6 +272,10 @@ public class GenerateTestVectors {
 	}
 	
 	private static GenerationEvaluator createEvaluator(String type, CommandLine line) {
+		if (type == null)
+		{
+			SystemOutput.exitWithError("Error: need to specify crossover type");
+		}
 		int numThreads = 1;
 		if(line.hasOption (threadsOption.getOpt ())) {
 			numThreads = Integer.parseInt(
@@ -265,7 +284,7 @@ public class GenerateTestVectors {
 		
 		TVEvaluator[] evals = new TVEvaluator[numThreads];
 		
-		if(type.equals("gem5Time"))
+		if(type.equals("gem5Time") || type.equals("gem5Cov"))
 		{
 			if (!line.hasOption (programOption.getOpt ()))
 				SystemOutput.exitWithError("Error: missing option " + programOption.getOpt());
@@ -273,13 +292,27 @@ public class GenerateTestVectors {
 			if (!line.hasOption (cpuTypeOption.getOpt ()))
 				SystemOutput.exitWithError("Error: missing option " + cpuTypeOption.getOpt());
 			
+			String entryPoint = "";
+			if(type.equals("gem5Cov")) {
+				if (!line.hasOption (entryOption.getOpt ())) {
+					SystemOutput.exitWithError("Error: missing option " +
+										programOption.getOpt());
+				}
+				entryPoint = line.getOptionValue(entryOption.getOpt());
+			}
+			
 			String programName = line.getOptionValue(programOption.getOpt());
 			String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
 			
 			Gem5Tools g5tools = new Gem5Tools(programName);
 			
 			for(int i = 0; i < numThreads; i++) {
-				evals[i] = new Gem5TimeEvaluator(i, programName, cpuType, g5tools);
+				if(type.equals("gem5Time")) {
+					evals[i] = new Gem5TimeEvaluator(i, programName, cpuType, g5tools);
+				} else if(type.equals("gem5Cov")) {
+					evals[i] = new Gem5CoverageEvaluator(i, programName, cpuType,
+							g5tools, entryPoint);
+				}
 			}
 			return new GenerationEvaluator(evals);
 		}
