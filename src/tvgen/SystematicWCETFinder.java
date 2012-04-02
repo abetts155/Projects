@@ -8,9 +8,9 @@ public class SystematicWCETFinder extends WCETFinder {
 	private int upperRange;
 	private int lowerRange;
 	
-	public SystematicWCETFinder(int threadID, String programName, String cpuType,
-			Gem5Tools g5Tools, int upperRange, int lowerRange) {
-		super(threadID, programName, cpuType, g5Tools);
+	public SystematicWCETFinder(int threadID, String programName, Gem5Tools g5Tools,
+			int upperRange, int lowerRange) {
+		super(threadID, programName, g5Tools);
 		this.upperRange = upperRange;
 		this.lowerRange = lowerRange;
 	}

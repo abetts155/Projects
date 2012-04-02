@@ -8,9 +8,9 @@ public class RandomWCETFinder extends WCETFinder {
 
 	private int numVecsToGen;
 	
-	public RandomWCETFinder(int threadID, String programName, String cpuType,
-			Gem5Tools g5Tools, int numVecsToGen) {
-		super(threadID, programName, cpuType, g5Tools);
+	public RandomWCETFinder(int threadID, String programName, Gem5Tools g5Tools,
+			int numVecsToGen) {
+		super(threadID, programName, g5Tools);
 		this.numVecsToGen = numVecsToGen;
 	}
 	

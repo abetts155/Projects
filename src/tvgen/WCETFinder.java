@@ -11,13 +11,10 @@ public abstract class WCETFinder implements Runnable {
 	private int upperBound;
 	private int lowerBound;
 	
-	private String cpuType;
-	
 	private Gem5Tools g5Tools;
 	
-	public WCETFinder(int threadID, String programName, String cpuType, Gem5Tools g5Tools) {
+	public WCETFinder(int threadID, String programName, Gem5Tools g5Tools) {
 		this.threadID = threadID;
-		this.cpuType = cpuType;
 		
 		upperBound = Integer.MAX_VALUE;
 		lowerBound = Integer.MIN_VALUE;
@@ -31,8 +28,8 @@ public abstract class WCETFinder implements Runnable {
 	abstract public void run();
 	
 	public void evaluateVector(TestVector vector) {
-		double score = g5Tools.runGem5(vector.toString(), cpuType,
-				"m5out/thread" + threadID, "trace.out");
+		double score = g5Tools.runGem5(vector.toString(), "m5out/thread" + threadID,
+				"trace.out");
 		
 		vector.setScore(score);
 		

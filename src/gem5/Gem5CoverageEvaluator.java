@@ -24,9 +24,9 @@ public class Gem5CoverageEvaluator extends Gem5Evaluator {
 	private String traceFile;
 	private Set<Integer> basicBlocks;
 	
-	public Gem5CoverageEvaluator(int threadID, String programName,
-			String cpuType, Gem5Tools g5tools, String entryPoint) {
-		super(threadID, programName, cpuType, g5tools);
+	public Gem5CoverageEvaluator(int threadID, String programName, Gem5Tools g5tools,
+			String entryPoint) {
+		super(threadID, programName, g5tools);
 		traceFile = "m5out/thread" + threadID + "/trace.out";
 		
 		basicBlocks = new HashSet<Integer>();
@@ -36,8 +36,8 @@ public class Gem5CoverageEvaluator extends Gem5Evaluator {
 
 	@Override
 	public void evaluate(TestVector vector) {
-		double time = g5Tools.runGem5(vector.toString(), cpuType,
-				"m5out/thread" + getThreadID(), "trace.out");
+		double time = g5Tools.runGem5(vector.toString(), "m5out/thread" + getThreadID(),
+				"trace.out");
 		
 		Set<Integer> blocksCovered = g5Tools.getBlockCoverage(traceFile);
 		

@@ -31,7 +31,7 @@ public class GenerateTestVectors {
 	private static Option upBoundOption;
 	private static Option lowBoundOption;
 	private static Option numGensOption;
-	private static Option cpuTypeOption;
+	private static Option configFlagsOption;
 	private static Option crossoverOption;
 	private static Option selectOption;
 	private static Option evaluatorOption;
@@ -92,11 +92,10 @@ public class GenerateTestVectors {
 		numGensOption.setRequired (true);
 		options.addOption (numGensOption);
 		
-		cpuTypeOption = new Option ("c", "cpu-type", true,
-				"The type of cpu to use in the gem5 simulation" +
-				"(atomic, timing, detailed, inorder)");
-		cpuTypeOption.setRequired (false);
-		options.addOption (cpuTypeOption);
+		configFlagsOption = new Option ("c", "config-file", true,
+				"The file specifying the flags to be used with gem5 config file");
+		configFlagsOption.setRequired (false);
+		options.addOption (configFlagsOption);
 		
 		crossoverOption = new Option ("C", "crossover", true,
 				"The type of crossover to use (1point, 2point)");
@@ -289,9 +288,6 @@ public class GenerateTestVectors {
 			if (!line.hasOption (programOption.getOpt ()))
 				SystemOutput.exitWithError("Error: missing option " + programOption.getOpt());
 			
-			if (!line.hasOption (cpuTypeOption.getOpt ()))
-				SystemOutput.exitWithError("Error: missing option " + cpuTypeOption.getOpt());
-			
 			String entryPoint = "";
 			if(type.equals("gem5Cov")) {
 				if (!line.hasOption (entryOption.getOpt ())) {
@@ -302,16 +298,15 @@ public class GenerateTestVectors {
 			}
 			
 			String programName = line.getOptionValue(programOption.getOpt());
-			String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
+			String configFileName = line.getOptionValue(configFlagsOption.getOpt());
 			
-			Gem5Tools g5tools = new Gem5Tools(programName);
+			Gem5Tools g5tools = new Gem5Tools(programName, configFileName);
 			
 			for(int i = 0; i < numThreads; i++) {
 				if(type.equals("gem5Time")) {
-					evals[i] = new Gem5TimeEvaluator(i, programName, cpuType, g5tools);
+					evals[i] = new Gem5TimeEvaluator(i, programName, g5tools);
 				} else if(type.equals("gem5Cov")) {
-					evals[i] = new Gem5CoverageEvaluator(i, programName, cpuType,
-							g5tools, entryPoint);
+					evals[i] = new Gem5CoverageEvaluator(i, programName, g5tools, entryPoint);
 				}
 			}
 			return new GenerationEvaluator(evals);
