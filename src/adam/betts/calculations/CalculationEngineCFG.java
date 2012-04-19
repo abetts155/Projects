@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -12,7 +11,6 @@ import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
-import adam.betts.edges.IPGEdge;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
@@ -21,7 +19,6 @@ import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.tools.MainTraceParser;
 import adam.betts.utilities.Debug;
-import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.TreeVertex;
@@ -108,6 +105,10 @@ public class CalculationEngineCFG
             this.lnt = lnt;
             this.subprogramID = subprogramID;
             this.subprogramName = subprogramName;
+
+            numOfColumns = cfg.numOfEdges() + cfg.numOfVertices();
+            colArray = new int[numOfColumns];
+            rowArray = new double[numOfColumns];
         }
 
         protected void solve () throws LpSolveException, SolutionException
@@ -121,11 +122,40 @@ public class CalculationEngineCFG
                     Debug.debugMessage(getClass(), "Optimal solution found "
                             + lp.getObjective(), 3);
                     wcet = Math.round(lp.getObjective());
+
+                    resetArray(rowArray);
+                    lp.getVariables(rowArray);
+
+                    if (columnToUnit.size() > 0)
+                    {
+                        for (int i = 0; i < rowArray.length; ++i)
+                        {
+                            Debug.debugMessage(getClass(), "rowArray[" + i
+                                    + "] = " + rowArray[i], 4);
+                        }
+                    }
+
                     break;
                 default:
                     Debug.debugMessage(getClass(),
                             "Problem with the LP model: " + solution, 2);
                     throw new SolutionException(solution);
+            }
+        }
+
+        protected void resetArray (int arr[])
+        {
+            for (int i = 0; i < arr.length; ++i)
+            {
+                arr[i] = 0;
+            }
+        }
+
+        protected void resetArray (double arr[])
+        {
+            for (int i = 0; i < arr.length; ++i)
+            {
+                arr[i] = 0.0d;
             }
         }
     }
@@ -219,8 +249,6 @@ public class CalculationEngineCFG
                     wcet = getWCET(calleeID);
                 }
 
-                Debug.debugMessage(getClass(), "WCET(v_" + vertexID + ") = "
-                        + wcet, 4);
                 out.write(Long.toString(wcet) + " " + vertexPrefix
                         + Integer.toString(vertexID));
 
@@ -340,9 +368,6 @@ public class CalculationEngineCFG
                         }
                         else
                         {
-                            Debug.debugMessage(getClass(), "Analysing header "
-                                    + headerv.getHeaderID(), 4);
-
                             writeInnerLoopConstraints(headerv, out);
                         }
                         out.newLine();
@@ -359,27 +384,47 @@ public class CalculationEngineCFG
                 HeaderVertex ancestorv = (HeaderVertex) lnt
                         .getVertex(ancestorID);
 
-                Debug.debugMessage(getClass(),
-                        "Analysing header " + headerv.getHeaderID()
-                                + " wrt ancestor " + ancestorv.getHeaderID(), 4);
+                out.write("//...with respect to "
+                        + Integer.toString(ancestorv.getHeaderID()) + "\n");
 
-                if (headerv.getLevel() - ancestorv.getLevel() <= loopConstraintLevel)
+                int bound = database.getLoopBound(subprogramID,
+                        headerv.getVertexID(), ancestorID);
+                Debug.debugMessage(getClass(), "Adding constraint on loop "
+                        + headerv.getVertexID() + " relative to loop "
+                        + ancestorv.getVertexID() + ". Bound = " + bound, 4);
+
+                writeSuccessorEdges(out, headerv);
+                out.write(" <= ");
+
+                if (ancestorID == headerv.getParentID())
                 {
-                    out.write("//...with respect to "
-                            + Integer.toString(ancestorv.getHeaderID()) + "\n");
+                    StringBuffer buffer = new StringBuffer();
 
-                    int bound = database.getLoopBound(subprogramID,
-                            headerv.getVertexID(), ancestorID);
-                    Debug.debugMessage(getClass(), "Adding constraint on loop "
-                            + headerv.getVertexID() + " relative to loop "
-                            + ancestorv.getVertexID() + ". Bound = " + bound, 4);
+                    Iterator <Edge> predIt = cfg.getVertex(
+                            headerv.getHeaderID()).predecessorIterator();
+                    while (predIt.hasNext())
+                    {
+                        FlowEdge e = (FlowEdge) predIt.next();
+                        int predID = e.getVertexID();
 
-                    writeSuccessorEdges(out, headerv);
-                    out.write(" <= ");
+                        if (lnt.inLoopBody(headerv.getHeaderID(), predID) == false)
+                        {
+                            int edgeID = e.getEdgeID();
+                            buffer.append(Integer.toString(bound) + edgePrefix
+                                    + Integer.toString(edgeID) + " + ");
+                        }
+                    }
+
+                    buffer.delete(buffer.length() - 3, buffer.length() - 1);
+                    out.write(buffer.toString() + ";\n");
+                }
+                else
+                {
                     out.write(Integer.toString(bound) + " " + vertexPrefix
                             + Integer.toString(ancestorv.getHeaderID()) + ";\n");
-                    loopConstraints++;
                 }
+
+                loopConstraints++;
             }
         }
 
@@ -417,12 +462,14 @@ public class CalculationEngineCFG
             out.write("int ");
             for (Vertex v : cfg)
             {
+                numberOfVariables++;
                 buffer.append(vertexPrefix + Integer.toString(v.getVertexID())
                         + ", ");
 
                 Iterator <Edge> succIt = v.successorIterator();
                 while (succIt.hasNext())
                 {
+                    numberOfVariables++;
                     FlowEdge e = (FlowEdge) succIt.next();
                     buffer.append(edgePrefix + Integer.toString(e.getEdgeID())
                             + ", ");
@@ -446,10 +493,6 @@ public class CalculationEngineCFG
 
             try
             {
-                numOfColumns = cfg.numOfEdges() + cfg.numOfVertices();
-                colArray = new int[numOfColumns];
-                rowArray = new double[numOfColumns];
-
                 lp = LpSolve.makeLp(cfg.numOfVertices(), numOfColumns);
 
                 addColumns();
@@ -498,22 +541,6 @@ public class CalculationEngineCFG
             }
         }
 
-        private void resetArray (int arr[])
-        {
-            for (int i = 0; i < arr.length; ++i)
-            {
-                arr[i] = 0;
-            }
-        }
-
-        private void resetArray (double arr[])
-        {
-            for (int i = 0; i < arr.length; ++i)
-            {
-                arr[i] = 0.0d;
-            }
-        }
-
         private void addColumns () throws LpSolveException
         {
             Debug.debugMessage(getClass(), "Adding columns", 3);
@@ -540,6 +567,8 @@ public class CalculationEngineCFG
                     columnNum++;
                 }
             }
+
+            numberOfVariables = columnNum - 1;
         }
 
         private void addVertexConstraints () throws LpSolveException
@@ -676,42 +705,62 @@ public class CalculationEngineCFG
                 HeaderVertex ancestorv = (HeaderVertex) lnt
                         .getVertex(ancestorID);
 
-                if (headerv.getLevel() - ancestorv.getLevel() <= loopConstraintLevel)
+                int index = 0;
+                resetArray(rowArray);
+                resetArray(colArray);
+
+                int bound = database.getLoopBound(subprogramID,
+                        headerv.getVertexID(), ancestorID);
+                Debug.debugMessage(getClass(), "Adding constraint on loop "
+                        + headerv.getVertexID() + " relative to loop "
+                        + ancestorv.getVertexID() + ". Bound = " + bound, 4);
+
+                Vertex v = cfg.getVertex(headerv.getHeaderID());
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
                 {
-                    int index = 0;
-                    resetArray(rowArray);
-                    resetArray(colArray);
+                    FlowEdge e = (FlowEdge) succIt.next();
+                    int succID = e.getVertexID();
 
-                    int bound = database.getLoopBound(subprogramID,
-                            headerv.getVertexID(), ancestorID);
-                    Debug.debugMessage(getClass(), "Adding constraint on loop "
-                            + headerv.getVertexID() + " relative to loop "
-                            + ancestorv.getVertexID() + ". Bound = " + bound, 4);
-
-                    Vertex v = cfg.getVertex(headerv.getHeaderID());
-                    Iterator <Edge> succIt = v.successorIterator();
-                    while (succIt.hasNext())
+                    if (lnt.inLoopBody(headerv.getHeaderID(), succID))
                     {
-                        FlowEdge e = (FlowEdge) succIt.next();
-                        int succID = e.getVertexID();
+                        int edgeID = e.getEdgeID();
+                        colArray[index] = unitToColumn.get(edgeID);
+                        rowArray[index] = 1;
+                        index++;
+                    }
+                }
 
-                        if (lnt.inLoopBody(headerv.getHeaderID(), succID))
+                if (ancestorID == headerv.getParentID())
+                {
+                    Iterator <Edge> predIt = cfg.getVertex(
+                            headerv.getHeaderID()).predecessorIterator();
+                    while (predIt.hasNext())
+                    {
+                        FlowEdge e = (FlowEdge) predIt.next();
+                        int predID = e.getVertexID();
+
+                        if (lnt.inLoopBody(headerv.getHeaderID(), predID) == false)
                         {
                             int edgeID = e.getEdgeID();
                             colArray[index] = unitToColumn.get(edgeID);
-                            rowArray[index] = 1;
+                            rowArray[index] = -bound;
                             index++;
                         }
                     }
 
+                    index--;
+                }
+                else
+                {
                     colArray[index] = unitToColumn.get(ancestorv.getHeaderID());
                     rowArray[index] = -bound;
-
-                    lp.addConstraintex(index + 1, rowArray, colArray,
-                            LpSolve.EQ, 0);
-                    loopConstraints++;
                 }
+
+                lp.addConstraintex(index + 1, rowArray, colArray, LpSolve.LE, 0);
+                loopConstraints++;
             }
+
         }
 
         private void addObjectiveFunction () throws LpSolveException
