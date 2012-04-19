@@ -13,6 +13,7 @@ import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.SuperBlockGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.programs.Program;
@@ -31,6 +32,8 @@ public class CalculationEngineCFG
     protected final Database database;
     protected final HashMap <String, IPETModelCFGInFile> ILPs = new HashMap <String, IPETModelCFGInFile>();
     protected final HashMap <String, IPETModelCFGInMemory> ILP2s = new HashMap <String, IPETModelCFGInMemory>();
+    protected final HashMap <String, IPETModelCFGInFileWithSuperBlocks> ILP3s = new HashMap <String, IPETModelCFGInFileWithSuperBlocks>();
+    protected final HashMap <String, IPETModelCFGInMemoryWithSuperBlocks> ILP4s = new HashMap <String, IPETModelCFGInMemoryWithSuperBlocks>();
 
     public CalculationEngineCFG (Program program, Database database)
     {
@@ -156,6 +159,21 @@ public class CalculationEngineCFG
             for (int i = 0; i < arr.length; ++i)
             {
                 arr[i] = 0.0d;
+            }
+        }
+
+        protected void dumpLPToFile ()
+        {
+            final String fileName = subprogramName + ".cfg.lp.memory";
+            Debug.debugMessage(getClass(), "Writing LP model to " + fileName, 1);
+
+            try
+            {
+                lp.writeLp(fileName);
+            }
+            catch (LpSolveException lpe)
+            {
+                lpe.printStackTrace();
             }
         }
     }
@@ -483,6 +501,90 @@ public class CalculationEngineCFG
         }
     }
 
+    private class IPETModelCFGInFileWithSuperBlocks extends IPETModelCFG
+    {
+
+        private SuperBlockGraph superBlockGraph;
+
+        public IPETModelCFGInFileWithSuperBlocks (ControlFlowGraph cfg,
+                LoopNests lnt, int subprogramID, String subprogramName)
+        {
+            super(cfg, lnt, subprogramID, subprogramName);
+
+            final String fileName = subprogramName + ".cfg.lp";
+            try
+            {
+                superBlockGraph = new SuperBlockGraph(cfg);
+
+                final File file = new File(ILPdirectory, fileName);
+
+                BufferedWriter out = new BufferedWriter(new FileWriter(
+                        file.getAbsolutePath()));
+
+                writeObjectiveFunction(out);
+                writeFlowConstraints(out);
+                writeLoopConstraints(out);
+                writeIntegerConstraints(out);
+
+                out.close();
+
+                try
+                {
+
+                    lp = LpSolve.makeLp(cfg.numOfVertices(),
+                            cfg.numOfVertices());
+
+                    lp = LpSolve.readLp(file.getAbsolutePath(),
+                            IPETModel.getLpSolveVerbosity(), null);
+                    try
+                    {
+                        lp = LpSolve.readLp(file.getAbsolutePath(),
+                                MainTraceParser.getLpSolveVerbosity(), null);
+                        solve();
+                    }
+                    catch (SolutionException e)
+                    {
+                        System.exit(1);
+                    }
+                }
+                catch (LpSolveException e)
+                {
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
+            catch (IOException e)
+            {
+                System.err.println("Problem with file " + fileName);
+                System.exit(1);
+            }
+        }
+
+        private void writeObjectiveFunction (BufferedWriter out)
+                throws IOException
+        {
+            Debug.debugMessage(getClass(), "Writing objective function", 3);
+        }
+
+        private void writeFlowConstraints (BufferedWriter out)
+                throws IOException
+        {
+            Debug.debugMessage(getClass(), "Writing flow constraints", 3);
+        }
+
+        private void writeLoopConstraints (BufferedWriter out)
+                throws IOException
+        {
+            Debug.debugMessage(getClass(), "Writing loop constraints", 3);
+        }
+
+        private void writeIntegerConstraints (BufferedWriter out)
+                throws IOException
+        {
+            Debug.debugMessage(getClass(), "Writing integer constraints", 3);
+        }
+    }
+
     private class IPETModelCFGInMemory extends IPETModelCFG
     {
 
@@ -523,21 +625,6 @@ public class CalculationEngineCFG
             {
                 e.printStackTrace();
                 System.exit(1);
-            }
-        }
-
-        private void dumpLPToFile ()
-        {
-            final String fileName = subprogramName + ".cfg.lp.memory";
-            Debug.debugMessage(getClass(), "Writing LP model to " + fileName, 1);
-
-            try
-            {
-                lp.writeLp(fileName);
-            }
-            catch (LpSolveException lpe)
-            {
-                lpe.printStackTrace();
             }
         }
 
@@ -760,6 +847,105 @@ public class CalculationEngineCFG
                 lp.addConstraintex(index + 1, rowArray, colArray, LpSolve.LE, 0);
                 loopConstraints++;
             }
+
+        }
+
+        private void addObjectiveFunction () throws LpSolveException
+        {
+            Debug.debugMessage(getClass(), "Adding objective function", 3);
+
+            resetArray(rowArray);
+            resetArray(colArray);
+
+            int index = 0;
+            for (Vertex v : cfg)
+            {
+                int vertexID = v.getVertexID();
+                long wcet = 0;
+
+                int calleeID = callg.isCallSite(subprogramID, vertexID);
+                if (calleeID == Vertex.DUMMY_VERTEX_ID)
+                {
+                    wcet = database.getUnitWCET(subprogramID, vertexID);
+                }
+                else
+                {
+                    wcet = getWCET(calleeID);
+                }
+
+                colArray[index] = unitToColumn.get(vertexID);
+                rowArray[index] = wcet;
+                index++;
+            }
+
+            lp.setObjFnex(cfg.numOfVertices(), rowArray, colArray);
+        }
+    }
+
+    private class IPETModelCFGInMemoryWithSuperBlocks extends IPETModelCFG
+    {
+
+        public IPETModelCFGInMemoryWithSuperBlocks (ControlFlowGraph cfg,
+                LoopNests lnt, int subprogramID, String subprogramName)
+        {
+            super(cfg, lnt, subprogramID, subprogramName);
+
+            try
+            {
+                lp = LpSolve.makeLp(cfg.numOfVertices(), numOfColumns);
+
+                addColumns();
+                lp.setAddRowmode(true);
+
+                addVertexConstraints();
+                addEdgeContraints();
+                addLoopConstraints();
+
+                lp.setAddRowmode(false);
+                addObjectiveFunction();
+
+                lp.setVerbose(getLpSolveVerbosity());
+                lp.setMaxim();
+                solve();
+
+                if (Debug.getDebugLevel() == Debug.HIGHEST_LEVEL)
+                {
+                    dumpLPToFile();
+                }
+            }
+            catch (SolutionException e)
+            {
+                dumpLPToFile();
+                System.exit(1);
+            }
+            catch (LpSolveException e)
+            {
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
+
+        private void addColumns () throws LpSolveException
+        {
+            Debug.debugMessage(getClass(), "Adding columns", 3);
+
+        }
+
+        private void addVertexConstraints () throws LpSolveException
+        {
+            Debug.debugMessage(getClass(), "Adding vertex constraints", 3);
+
+        }
+
+        private void addEdgeContraints () throws LpSolveException
+        {
+            Debug.debugMessage(getClass(), "Adding edge constraints", 3);
+
+        }
+
+        private void addLoopConstraints () throws LpSolveException
+        {
+            Debug.debugMessage(getClass(), "Adding loop constraints", 3);
 
         }
 
