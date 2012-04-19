@@ -104,15 +104,21 @@ public class LoopNests extends Tree
 
     public boolean inLoopBody (int headerID, int vertexID)
     {
-        if (headerID == vertexID)
+        for (int ancestorID : getAncestors(vertexID))
         {
-            return true;
+            TreeVertex ancestorv = (TreeVertex) idToVertex.get(ancestorID);
+            if (ancestorv instanceof HeaderVertex)
+            {
+                HeaderVertex headerv = (HeaderVertex) ancestorv;
+
+                if (headerv.getHeaderID() == headerID)
+                {
+                    return true;
+                }
+            }
         }
-        else
-        {
-            TreeVertex v = (TreeVertex) idToVertex.get(vertexID);
-            return v.getParentID() == headerID;
-        }
+
+        return false;
     }
 
     public final Iterator <Integer> tailIterator (int headerID)

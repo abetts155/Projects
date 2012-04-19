@@ -143,9 +143,9 @@ public class MainProgramAnalyser
 
         if (timingAnalysis)
         {
+            Debug.verboseMessage("Doing timing analysis");
             Database database = new Database(program);
             database.generateData(false);
-
             new CalculationEngineCFG(program, database);
         }
     }
