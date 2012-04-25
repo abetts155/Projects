@@ -53,13 +53,16 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
             }
         }
 
+        cfg.entryID = entryID;
+        cfg.exitID = exitID;
+
         return cfg;
     }
 
     public void makeVertexAndEdgeNumbersDistinct ()
     {
         OutputGraph.output(this);
-        
+
         HashMap <Integer, Integer> oldIdToNewID = new LinkedHashMap <Integer, Integer>();
 
         int newID = 0;

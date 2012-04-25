@@ -36,6 +36,11 @@ public class Vertex
         return vertexID;
     }
 
+    public void addPredecessor (Edge e)
+    {
+        predecessors.add(e);
+    }
+
     public void addPredecessor (Integer predecessorID)
     {
         predecessors.add(new Edge(predecessorID));
@@ -125,6 +130,11 @@ public class Vertex
             predIDs.add(e.getVertexID());
         }
         return predIDs;
+    }
+
+    public void addSuccessor (Edge e)
+    {
+        successors.add(e);
     }
 
     public void addSuccessor (Integer successorID)

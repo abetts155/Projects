@@ -13,13 +13,16 @@ import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.SuperBlockCFGStructureGraph;
 import adam.betts.graphs.SuperBlockGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.LoopNests;
+import adam.betts.outputs.UDrawGraph;
 import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.tools.MainTraceParser;
 import adam.betts.utilities.Debug;
+import adam.betts.utilities.Globals;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.TreeVertex;
@@ -30,10 +33,10 @@ public class CalculationEngineCFG
     protected final Program program;
     protected final CallGraph callg;
     protected final Database database;
-    protected final HashMap <String, IPETModelCFGInFile> ILPs = new HashMap <String, IPETModelCFGInFile>();
-    protected final HashMap <String, IPETModelCFGInMemory> ILP2s = new HashMap <String, IPETModelCFGInMemory>();
-    protected final HashMap <String, IPETModelCFGInFileWithSuperBlocks> ILP3s = new HashMap <String, IPETModelCFGInFileWithSuperBlocks>();
-    protected final HashMap <String, IPETModelCFGInMemoryWithSuperBlocks> ILP4s = new HashMap <String, IPETModelCFGInMemoryWithSuperBlocks>();
+    protected final HashMap <String, IPETModelCFGInFile> ILPsInFile = new HashMap <String, IPETModelCFGInFile>();
+    protected final HashMap <String, IPETModelCFGInMemory> ILPsInMemory = new HashMap <String, IPETModelCFGInMemory>();
+    protected final HashMap <String, IPETModelCFGInFileWithSuperBlocks> ILPsInFileSuperBlocks = new HashMap <String, IPETModelCFGInFileWithSuperBlocks>();
+    protected final HashMap <String, IPETModelCFGInMemoryWithSuperBlocks> ILPsInMemorySuperBlocks = new HashMap <String, IPETModelCFGInMemoryWithSuperBlocks>();
 
     public CalculationEngineCFG (Program program, Database database)
     {
@@ -54,14 +57,14 @@ public class CalculationEngineCFG
             ControlFlowGraph cfg = subprogram.getCFG();
             IPETModelCFGInFile ilp = new IPETModelCFGInFile(cfg, cfg.getLNT(),
                     subprogramID, subprogramName);
-            ILPs.put(subprogramName, ilp);
+            ILPsInFile.put(subprogramName, ilp);
 
             Debug.debugMessage(getClass(), "CFG-ILP: WCET(" + subprogramName
                     + ") = " + ilp.wcet, 3);
 
             IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
                     cfg.getLNT(), subprogramID, subprogramName);
-            ILP2s.put(subprogramName, ilp2);
+            ILPsInMemory.put(subprogramName, ilp2);
 
             assert ilp2.wcet == ilp.wcet : "Disparity between WCETs found: "
                     + ilp2.wcet + " and " + ilp.wcet;
@@ -74,16 +77,20 @@ public class CalculationEngineCFG
 
             assert ilp2.numberOfVariables == ilp.numberOfVariables : "Different number of variables found "
                     + ilp2.numberOfVariables + " and " + ilp.numberOfVariables;
+
+            IPETModelCFGInFileWithSuperBlocks ilp3 = new IPETModelCFGInFileWithSuperBlocks(
+                    cfg, cfg.getLNT(), subprogramID, subprogramName);
+            ILPsInFileSuperBlocks.put(subprogramName, ilp3);
         }
     }
 
     public final long getWCET (int subprogramID)
     {
-        for (String subprogramName : ILPs.keySet())
+        for (String subprogramName : ILPsInFile.keySet())
         {
             if (program.getSubprogram(subprogramName).getSubprogramID() == subprogramID)
             {
-                return ILPs.get(subprogramName).wcet;
+                return ILPsInFile.get(subprogramName).wcet;
             }
         }
         return 0;
@@ -504,17 +511,22 @@ public class CalculationEngineCFG
     private class IPETModelCFGInFileWithSuperBlocks extends IPETModelCFG
     {
 
-        private SuperBlockGraph superBlockGraph;
+        private SuperBlockCFGStructureGraph superBlockGraph;
 
         public IPETModelCFGInFileWithSuperBlocks (ControlFlowGraph cfg,
                 LoopNests lnt, int subprogramID, String subprogramName)
         {
             super(cfg, lnt, subprogramID, subprogramName);
 
-            final String fileName = subprogramName + ".cfg.lp";
+            final String fileName = subprogramName + ".cfg.super.lp";
             try
             {
-                superBlockGraph = new SuperBlockGraph(cfg);
+                superBlockGraph = new SuperBlockCFGStructureGraph(cfg);
+
+                if (Globals.uDrawDirectorySet())
+                {
+                    UDrawGraph.makeUDrawFile(superBlockGraph, subprogramName);
+                }
 
                 final File file = new File(ILPdirectory, fileName);
 
@@ -564,6 +576,46 @@ public class CalculationEngineCFG
                 throws IOException
         {
             Debug.debugMessage(getClass(), "Writing objective function", 3);
+
+            out.write("// Objective function\n");
+            out.write("max: ");
+
+            int num = 1;
+            int numOfVertices = cfg.numOfVertices();
+            for (Vertex v : cfg)
+            {
+                int vertexID = v.getVertexID();
+                long wcet = 0;
+
+                /*
+                 * Check whether this basic block is a call site
+                 */
+                int calleeID = callg.isCallSite(subprogramID, vertexID);
+
+                if (calleeID == Vertex.DUMMY_VERTEX_ID)
+                {
+                    wcet = database.getUnitWCET(subprogramID, vertexID);
+                }
+                else
+                {
+                    wcet = getWCET(calleeID);
+                }
+
+                out.write(Long.toString(wcet) + " " + vertexPrefix
+                        + Integer.toString(vertexID));
+
+                if (num < numOfVertices)
+                {
+                    out.write(" + ");
+                }
+                if (num % 10 == 0)
+                {
+                    out.newLine();
+                }
+                num++;
+            }
+
+            out.write(";\n\n");
         }
 
         private void writeFlowConstraints (BufferedWriter out)
