@@ -487,6 +487,7 @@ public class UDrawGraph
                 out.write(beginAttributes);
                 out.write(setShape(SHAPE.ELLIPSE));
                 out.write(setName(superv.basicBlockIDs().toString()));
+                out.write(setToolTip("Vertex " + v.getVertexID()));
                 out.write(endAttibutes);
 
                 out.write(beginAttributes);
@@ -497,9 +498,10 @@ public class UDrawGraph
                     SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) e;
                     out.write(newEdge);
                     out.write(beginAttributes);
+                    out.write(setName(Integer.toString(supere.getEdgeID())));
                     if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
                     {
-                        out.write(setEdgePattern(EDGESHAPE.SOLID, 4));
+                        out.write(setEdgePattern(EDGESHAPE.DASHED, 4));
                         out.write(setToolTip("Acyclic irreducible edge"));
                     }
                     out.write(endAttibutes);

@@ -5,16 +5,19 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
+import adam.betts.edges.SuperBlockCFGStructureEdge;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.SuperBlockCFGStructureGraph;
-import adam.betts.graphs.SuperBlockGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.UDrawGraph;
@@ -22,7 +25,9 @@ import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.tools.MainTraceParser;
 import adam.betts.utilities.Debug;
+import adam.betts.utilities.Enums.SuperBlockCFGStructureEdgeType;
 import adam.betts.utilities.Globals;
+import adam.betts.vertices.SuperBlockVertex;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.TreeVertex;
@@ -511,7 +516,7 @@ public class CalculationEngineCFG
     private class IPETModelCFGInFileWithSuperBlocks extends IPETModelCFG
     {
 
-        private SuperBlockCFGStructureGraph superBlockGraph;
+        private Set <Integer> variables = new HashSet <Integer>();
 
         public IPETModelCFGInFileWithSuperBlocks (ControlFlowGraph cfg,
                 LoopNests lnt, int subprogramID, String subprogramName)
@@ -521,21 +526,13 @@ public class CalculationEngineCFG
             final String fileName = subprogramName + ".cfg.super.lp";
             try
             {
-                superBlockGraph = new SuperBlockCFGStructureGraph(cfg);
-
-                if (Globals.uDrawDirectorySet())
-                {
-                    UDrawGraph.makeUDrawFile(superBlockGraph, subprogramName);
-                }
-
                 final File file = new File(ILPdirectory, fileName);
 
                 BufferedWriter out = new BufferedWriter(new FileWriter(
                         file.getAbsolutePath()));
 
                 writeObjectiveFunction(out);
-                writeFlowConstraints(out);
-                writeLoopConstraints(out);
+                writeConstraints(out);
                 writeIntegerConstraints(out);
 
                 out.close();
@@ -618,22 +615,206 @@ public class CalculationEngineCFG
             out.write(";\n\n");
         }
 
-        private void writeFlowConstraints (BufferedWriter out)
-                throws IOException
+        private void writeConstraints (BufferedWriter out) throws IOException
         {
             Debug.debugMessage(getClass(), "Writing flow constraints", 3);
+
+            for (int level = lnt.getHeight() - 1; level >= 0; --level)
+            {
+                Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
+                while (levelIt.hasNext())
+                {
+                    TreeVertex v = levelIt.next();
+
+                    if (v instanceof HeaderVertex)
+                    {
+                        HeaderVertex headerv = (HeaderVertex) v;
+
+                        writeFlowConstraints(out, headerv);
+
+                        if (headerv.getHeaderID() == cfg.getEntryID())
+                        {
+                            out.write(vertexPrefix
+                                    + Long.toString(headerv.getHeaderID())
+                                    + " = 1;\n\n");
+                        }
+                        else
+                        {
+
+                        }
+                    }
+                }
+            }
         }
 
-        private void writeLoopConstraints (BufferedWriter out)
-                throws IOException
+        private void writeFlowConstraints (BufferedWriter out,
+                HeaderVertex headerv) throws IOException
         {
-            Debug.debugMessage(getClass(), "Writing loop constraints", 3);
+            FlowGraph flowg = lnt.induceSubraph(headerv);
+
+            SuperBlockCFGStructureGraph superBlockGraph = new SuperBlockCFGStructureGraph(
+                    flowg);
+
+            if (Globals.uDrawDirectorySet())
+            {
+                UDrawGraph.makeUDrawFile(superBlockGraph, subprogramName
+                        + headerv.getHeaderID());
+            }
+
+            DepthFirstTree dfs = new DepthFirstTree(superBlockGraph,
+                    superBlockGraph.getRootID());
+
+            for (int postOrderID = superBlockGraph.numOfVertices(); postOrderID > 0; --postOrderID)
+            {
+                int vertexID = dfs.getPostVertexID(postOrderID);
+                SuperBlockVertex v = superBlockGraph.getVertex(vertexID);
+
+                Debug.debugMessage(getClass(), "Analysing vertex " + vertexID,
+                        4);
+
+                if (v.numberOfBasicBlocks() > 1)
+                {
+                    // Choose a representative basic block for this super block
+                    // vertex
+                    int repID = v.basicBlockIDs().get(0);
+
+                    for (int bbID : v.basicBlockIDs())
+                    {
+                        if (bbID != repID)
+                        {
+                            out.write("// Vertex " + Integer.toString(bbID)
+                                    + "\n");
+
+                            out.write(vertexPrefix + Long.toString(bbID)
+                                    + " = " + vertexPrefix
+                                    + Long.toString(repID) + ";\n\n");
+                        }
+                    }
+                }
+
+                if (v.numOfSuccessors() > 1)
+                {
+                    int lhsID = v.pickRandomBasicBlockID();
+
+                    out.write("// Vertex " + Integer.toString(lhsID) + "\n");
+                    out.write(vertexPrefix + Long.toString(lhsID) + " = ");
+
+                    int num = 1;
+                    Iterator <Edge> succIt = v.successorIterator();
+                    while (succIt.hasNext())
+                    {
+                        Edge succe = succIt.next();
+                        SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) succe;
+                        SuperBlockVertex succv = superBlockGraph
+                                .getVertex(supere.getVertexID());
+
+                        if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                        {
+                            int newVariableID = supere.getEdgeID()
+                                    + headerv.getHeaderID();
+
+                            variables.add(newVariableID);
+
+                            out.write(edgePrefix + Long.toString(newVariableID));
+                        }
+                        else
+                        {
+                            out.write(vertexPrefix
+                                    + Long.toString(succv
+                                            .pickRandomBasicBlockID()));
+                        }
+
+                        if (num++ < v.numOfSuccessors())
+                        {
+                            out.write(" + ");
+                        }
+                    }
+
+                    out.write(";\n\n");
+                }
+
+                if (v.numOfPredecessors() > 1)
+                {
+                    int lhsID = v.pickRandomBasicBlockID();
+
+                    out.write("// Vertex " + Integer.toString(lhsID) + "\n");
+                    out.write(vertexPrefix + Long.toString(lhsID) + " = ");
+
+                    int num = 1;
+                    Iterator <Edge> predIt = v.predecessorIterator();
+                    while (predIt.hasNext())
+                    {
+                        Edge prede = predIt.next();
+                        SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) prede;
+                        SuperBlockVertex predv = superBlockGraph
+                                .getVertex(supere.getVertexID());
+
+                        if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                        {
+                            int newVariableID = supere.getEdgeID()
+                                    + headerv.getHeaderID();
+
+                            variables.add(newVariableID);
+
+                            out.write(edgePrefix + Long.toString(newVariableID));
+                        }
+                        else
+                        {
+                            out.write(vertexPrefix
+                                    + Long.toString(predv
+                                            .pickRandomBasicBlockID()));
+                        }
+
+                        if (num++ < v.numOfPredecessors())
+                        {
+                            out.write(" + ");
+                        }
+                    }
+
+                    out.write(";\n\n");
+                }
+            }
         }
 
         private void writeIntegerConstraints (BufferedWriter out)
                 throws IOException
         {
             Debug.debugMessage(getClass(), "Writing integer constraints", 3);
+
+            StringBuffer buffer = new StringBuffer();
+
+            out.write("// Integer constraints\n");
+            out.write("int ");
+
+            int vertexNum = 1;
+            for (Vertex v : cfg)
+            {
+                buffer.append(vertexPrefix + Integer.toString(v.getVertexID()));
+
+                if (vertexNum++ < cfg.numOfVertices())
+                {
+                    buffer.append(", ");
+                }
+            }
+
+            if (variables.size() > 0)
+            {
+                buffer.append(", ");
+            }
+
+            int edgeNum = 1;
+            for (int edgeID : variables)
+            {
+                buffer.append(edgePrefix + Integer.toString(edgeID));
+
+                if (edgeNum++ < variables.size())
+                {
+                    buffer.append(", ");
+                }
+            }
+
+            buffer.append(";\n");
+            out.write(buffer.toString());
         }
     }
 

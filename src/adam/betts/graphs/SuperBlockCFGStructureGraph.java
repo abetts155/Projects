@@ -5,7 +5,7 @@ import java.util.Iterator;
 import adam.betts.edges.Edge;
 import adam.betts.edges.SuperBlockCFGStructureEdge;
 import adam.betts.graphs.trees.DominatorTree;
-import adam.betts.outputs.OutputGraph;
+import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.SuperBlockCFGStructureEdgeType;
 import adam.betts.vertices.SuperBlockVertex;
@@ -14,23 +14,30 @@ import adam.betts.vertices.Vertex;
 public class SuperBlockCFGStructureGraph extends DirectedGraph
 {
 
-    private final ControlFlowGraph cfg;
+    private final FlowGraph flowg;
     private final SuperBlockGraph superblockg;
+    protected int rootID;
 
-    public SuperBlockCFGStructureGraph (ControlFlowGraph cfg)
+    public SuperBlockCFGStructureGraph (FlowGraph flowg)
     {
-        this.cfg = cfg;
-
-        OutputGraph.output(cfg);
-        superblockg = new SuperBlockGraph(cfg);
+        this.flowg = flowg;
+        superblockg = new SuperBlockGraph(flowg);
+        rootID = Vertex.DUMMY_VERTEX_ID;
 
         addVertices();
         addEdges();
+        setRoot();
     }
 
     public final SuperBlockVertex getVertex (int vertexID)
     {
         return (SuperBlockVertex) idToVertex.get(vertexID);
+    }
+
+    public final int getRootID ()
+    {
+        assert rootID != Vertex.DUMMY_VERTEX_ID;
+        return rootID;
     }
 
     private void addVertices ()
@@ -60,65 +67,92 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 
     private void addEdges ()
     {
-        DominatorTree predomt = new DominatorTree(cfg, cfg.getEntryID(),
-                DominatorTreeType.PRE_DOMINATOR);
+        int edgeID = 1;
+
         FlowGraph reverseg = new FlowGraph();
-        cfg.reverseGraph(reverseg);
-        DominatorTree postdomt = new DominatorTree(reverseg, cfg.getExitID(),
+        flowg.reverseGraph(reverseg);
+        DominatorTree postdomt = new DominatorTree(reverseg, flowg.getExitID(),
                 DominatorTreeType.POST_DOMINATOR);
 
-        for (Vertex v : cfg)
+        for (Vertex v : flowg)
         {
-            SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(v
-                    .getVertexID());
-            int sourceID = sourcev.getVertexID();
-
-            Iterator <Edge> succIt = v.successorIterator();
-            while (succIt.hasNext())
+            if (v.numOfSuccessors() > 1)
             {
-                Edge cfge = succIt.next();
-
-                SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(cfge
-                        .getVertexID());
-                int destinationID = destinationv.getVertexID();
-
-                // Make sure that the source super block vertex does not already
-                // have that destination
-                // and that they are not the same vertex
-                if (sourcev.hasSuccessor(destinationID) == false
-                        && sourceID != destinationID)
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
                 {
-                    // Only add an edge if the basic block dominates its
-                    // successor
-                    if (predomt.dominates(v.getVertexID(), cfge.getVertexID()))
+                    Edge cfge = succIt.next();
+
+                    SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(v
+                            .getVertexID());
+                    SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(cfge
+                            .getVertexID());
+
+                    if (sourcev.hasSuccessor(destinationv.getVertexID()) == false)
                     {
-                        SuperBlockCFGStructureEdge succe;
-                        SuperBlockCFGStructureEdge prede;
-
-                        if (postdomt.dominates(cfge.getVertexID(),
-                                v.getVertexID()) == false)
-                        {
-                            succe = new SuperBlockCFGStructureEdge(
-                                    destinationID,
-                                    SuperBlockCFGStructureEdgeType.NORMAL);
-                            prede = new SuperBlockCFGStructureEdge(sourceID,
-                                    SuperBlockCFGStructureEdgeType.NORMAL);
-                        }
-                        else
-                        {
-                            succe = new SuperBlockCFGStructureEdge(
-                                    destinationID,
-                                    SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
-                            prede = new SuperBlockCFGStructureEdge(
-                                    sourceID,
-                                    SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
-
-                        }
+                        SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
+                                destinationv.getVertexID(), edgeID);
+                        SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
+                                sourcev.getVertexID(), edgeID);
 
                         sourcev.addSuccessor(succe);
                         destinationv.addPredecessor(prede);
+
+                        edgeID++;
                     }
                 }
+            }
+
+            if (v.numOfPredecessors() > 1)
+            {
+                Iterator <Edge> predIt = v.predecessorIterator();
+                while (predIt.hasNext())
+                {
+                    Edge cfge = predIt.next();
+
+                    SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(cfge
+                            .getVertexID());
+                    SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(v
+                            .getVertexID());
+
+                    if (postdomt.dominates(v.getVertexID(), cfge.getVertexID()) == false)
+                    {
+                        Debug.debugMessage(getClass(), v.getVertexID() + " does NOT post-dominate " + cfge.getVertexID(), 4);
+                        
+                        if (sourcev.hasSuccessor(destinationv.getVertexID()) == false)
+                        {
+                            SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
+                                    destinationv.getVertexID(), edgeID);
+                            SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
+                                    sourcev.getVertexID(), edgeID);
+
+                            sourcev.addSuccessor(succe);
+                            destinationv.addPredecessor(prede);
+
+                            edgeID++;
+                        }
+
+                        SuperBlockCFGStructureEdge succe = (SuperBlockCFGStructureEdge) sourcev
+                                .getSuccessor(destinationv.getVertexID());
+                        SuperBlockCFGStructureEdge prede = (SuperBlockCFGStructureEdge) destinationv
+                                .getPredecessor(sourcev.getVertexID());
+
+                        succe.setEdgeType(SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
+                        prede.setEdgeType(SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
+                    }
+                }
+            }
+        }
+    }
+
+    private void setRoot ()
+    {
+        for (Vertex v : this)
+        {
+            if (v.numOfPredecessors() == 0)
+            {
+                assert rootID == Vertex.DUMMY_VERTEX_ID : "Multiple roots found in super block graph";
+                rootID = v.getVertexID();
             }
         }
     }
