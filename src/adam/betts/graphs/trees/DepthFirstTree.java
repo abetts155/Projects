@@ -15,110 +15,115 @@ import adam.betts.vertices.trees.TreeVertex;
 
 public class DepthFirstTree extends Tree
 {
-	protected DirectedGraph directedg;
-	protected HashMap<Integer, Integer> vToPre = new LinkedHashMap<Integer, Integer> ();
-	protected HashMap<Integer, Integer> vToPost = new LinkedHashMap<Integer, Integer> ();
-	protected HashMap<Integer, Integer> preToV = new LinkedHashMap<Integer, Integer> ();
-	protected HashMap<Integer, Integer> postToV = new LinkedHashMap<Integer, Integer> ();
-	protected HashMap<Integer, Set<Integer>> vToBackEdge = new LinkedHashMap<Integer, Set<Integer>> ();
-	protected Set<Integer> visited = new HashSet<Integer> ();
-	protected int preID = 1;
-	protected int postID = 1;
 
-	public DepthFirstTree (DirectedGraph directedg, int rootID)
-	{
-		this.directedg = directedg;
-		this.rootID = rootID;
+    protected DirectedGraph directedg;
+    protected HashMap <Integer, Integer> vToPre = new LinkedHashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> vToPost = new LinkedHashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> preToV = new LinkedHashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> postToV = new LinkedHashMap <Integer, Integer>();
+    protected HashMap <Integer, Set <Integer>> vToBackEdge = new LinkedHashMap <Integer, Set <Integer>>();
+    protected Set <Integer> visited = new HashSet <Integer>();
+    protected int preID = 1;
+    protected int postID = 1;
 
-		Debug.debugMessage (getClass (), "Root = " + rootID, 2);
+    public DepthFirstTree (DirectedGraph directedg, int rootID)
+    {
+        this.directedg = directedg;
+        this.rootID = rootID;
 
-		initialise ();
-		doDFS (rootID);
-		setHeight ();
-	}
+        Debug.debugMessage(getClass(), "Root = " + rootID, 2);
 
-	private void initialise ()
-	{
-		for (Vertex v: directedg)
-		{
-			addVertex (v.getVertexID ());
-			vToPre.put (v.getVertexID (), 0);
-			vToPost.put (v.getVertexID (), 0);
-			vToBackEdge.put (v.getVertexID (), new HashSet<Integer> ());
-		}
-	}
+        initialise();
+        doDFS(rootID);
+        setHeight();
+    }
 
-	private void doDFS (int vertexID)
-	{
-		Debug.debugMessage (getClass (), "Visiting " + vertexID
-				+ " (pre-order = " + preID + ")", 4);
-		
-		visited.add (vertexID);
-		vToPre.put (vertexID, preID);
-		preToV.put (preID, vertexID);
-		preID++;
-		
-		Vertex v = directedg.getVertex (vertexID);
-		Iterator<Edge> succIt = v.successorIterator ();
-		while (succIt.hasNext ())
-		{
-			Edge e = succIt.next ();
-			int succID = e.getVertexID ();
+    private void initialise ()
+    {
+        for (Vertex v : directedg)
+        {
+            addVertex(v.getVertexID());
+            vToPre.put(v.getVertexID(), 0);
+            vToPost.put(v.getVertexID(), 0);
+            vToBackEdge.put(v.getVertexID(), new HashSet <Integer>());
+        }
+    }
 
-			if (!visited.contains (succID))
-			{
-				addEdge (vertexID, succID);
-				doDFS (succID);
-			}
-			else if (vToPre.get (vertexID) < vToPre.get (succID))
-			{
-				;
-			}
-			else if (vToPost.get (succID) == 0)
-			{
-				vToBackEdge.get (vertexID).add (succID);
-			}
-		}
+    private void doDFS (int vertexID)
+    {
+        Debug.debugMessage(getClass(), "Visiting " + vertexID
+                + " (pre-order = " + preID + ")", 4);
 
-		vToPost.put (vertexID, postID);
-		postToV.put (postID, vertexID);
-		postID++;
-	}
+        visited.add(vertexID);
+        vToPre.put(vertexID, preID);
+        preToV.put(preID, vertexID);
+        preID++;
 
-	public final int getPreID (int vertexID)
-	{
-		return vToPre.get (vertexID);
-	}
+        Vertex v = directedg.getVertex(vertexID);
+        Iterator <Edge> succIt = v.successorIterator();
+        while (succIt.hasNext())
+        {
+            Edge e = succIt.next();
+            int succID = e.getVertexID();
 
-	public final int getPreVertexID (int preID)
-	{
-		return preToV.get (preID);
-	}
+            if (!visited.contains(succID))
+            {
+                addEdge(vertexID, succID);
+                doDFS(succID);
+            }
+            else if (vToPre.get(vertexID) < vToPre.get(succID))
+            {
+                ;
+            }
+            else if (vToPost.get(succID) == 0)
+            {
+                vToBackEdge.get(vertexID).add(succID);
+            }
+        }
 
-	public final int getPostID (int vertexID)
-	{
-		return vToPost.get (vertexID);
-	}
+        vToPost.put(vertexID, postID);
+        postToV.put(postID, vertexID);
+        postID++;
+    }
 
-	public final int getPostVertexID (int postID)
-	{
-		return postToV.get (postID);
-	}
+    public final int getPreID (int vertexID)
+    {
+        assert vToPre.containsKey(vertexID);
+        return vToPre.get(vertexID);
+    }
 
-	public final DFSEdgeType getEdgeType (int sourceID, int destinationID)
-	{
-		TreeVertex destination = (TreeVertex) idToVertex.get (destinationID);
-		if (destination.getParentID () == sourceID && sourceID != rootID)
-		{
-			return DFSEdgeType.TREE_EDGE;
-		}
-		else if (vToBackEdge.get (sourceID).contains (destinationID))
-		{
-			return DFSEdgeType.BACK_EDGE;
-		}
-		else
-		{
-			return DFSEdgeType.CROSS_FORWARD_EDGE;
-		}
-	}
+    public final int getPreVertexID (int preID)
+    {
+        assert preToV.containsKey(preID);
+        return preToV.get(preID);
+    }
+
+    public final int getPostID (int vertexID)
+    {
+        assert vToPost.containsKey(vertexID);
+        return vToPost.get(vertexID);
+    }
+
+    public final int getPostVertexID (int postID)
+    {
+        assert postToV.containsKey(postID);
+        return postToV.get(postID);
+    }
+
+    public final DFSEdgeType getEdgeType (int sourceID, int destinationID)
+    {
+        TreeVertex destination = (TreeVertex) idToVertex.get(destinationID);
+        if (destination.getParentID() == sourceID && sourceID != rootID)
+        {
+            return DFSEdgeType.TREE_EDGE;
+        }
+        else if (vToBackEdge.get(sourceID).contains(destinationID))
+        {
+            return DFSEdgeType.BACK_EDGE;
+        }
+        else
+        {
+            return DFSEdgeType.CROSS_FORWARD_EDGE;
+        }
+    }
 }

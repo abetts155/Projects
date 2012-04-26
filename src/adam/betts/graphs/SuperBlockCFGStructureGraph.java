@@ -222,6 +222,26 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
                             succe.setEdgeType(SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
                             prede.setEdgeType(SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE);
                         }
+                        else
+                        {
+                            int predomID = superblockg.getPredominatorTree()
+                                    .getImmediateDominator(v.getVertexID());
+
+                            if (superblockg.getPostdominatorTree()
+                                    .getImmediateDominator(predomID) != v
+                                    .getVertexID())
+                            {
+                                SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
+                                        destinationv.getVertexID(), edgeID);
+                                SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
+                                        sourcev.getVertexID(), edgeID);
+
+                                sourcev.addSuccessor(succe);
+                                destinationv.addPredecessor(prede);
+
+                                edgeID++;
+                            }
+                        }
                     }
                 }
             }

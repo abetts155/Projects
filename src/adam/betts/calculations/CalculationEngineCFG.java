@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
@@ -62,6 +63,13 @@ public class CalculationEngineCFG
                     "Building IPET of " + subprogramName, 3);
 
             ControlFlowGraph cfg = subprogram.getCFG();
+
+            if (Globals.uDrawDirectorySet())
+            {
+                UDrawGraph.makeUDrawFile(cfg.getLNT(),
+                        subprogram.getSubprogramName());
+            }
+
             IPETModelCFGInFile ilp = new IPETModelCFGInFile(cfg, cfg.getLNT(),
                     subprogramID, subprogramName);
             ILPsInFile.put(subprogramName, ilp);
@@ -616,12 +624,20 @@ public class CalculationEngineCFG
     private class IPETModelCFGInFileWithSuperBlocks extends IPETModelCFG
     {
 
-        protected Set <Integer> variables = new HashSet <Integer>();
+        private HashMap <Integer, Set <String>> headerToVariablesInAcyclicRegion = new HashMap <Integer, Set <String>>();
+
+        StringBuffer objectiveFunction = new StringBuffer();
+        StringBuffer constraints = new StringBuffer();
+        StringBuffer integerConstraints = new StringBuffer();
 
         public IPETModelCFGInFileWithSuperBlocks (ControlFlowGraph cfg,
                 LoopNests lnt, int subprogramID, String subprogramName)
         {
             super(cfg, lnt, subprogramID, subprogramName);
+
+            writeConstraints();
+            writeIntegerConstraints();
+            writeObjectiveFunction();
 
             final String fileName = subprogramName + ".cfg.super.lp";
             try
@@ -630,16 +646,13 @@ public class CalculationEngineCFG
 
                 BufferedWriter out = new BufferedWriter(new FileWriter(
                         file.getAbsolutePath()));
-
-                writeObjectiveFunction(out);
-                writeConstraints(out);
-                writeIntegerConstraints(out);
-
+                out.write(objectiveFunction.toString());
+                out.write(constraints.toString());
+                out.write(integerConstraints.toString());
                 out.close();
 
                 try
                 {
-
                     lp = LpSolve.makeLp(cfg.numOfVertices(),
                             cfg.numOfVertices());
 
@@ -669,53 +682,68 @@ public class CalculationEngineCFG
             }
         }
 
-        private void writeObjectiveFunction (BufferedWriter out)
-                throws IOException
+        private void writeObjectiveFunction ()
         {
             Debug.debugMessage(getClass(), "Writing objective function", 3);
 
-            out.write("// Objective function\n");
-            out.write("max: ");
+            objectiveFunction.append(createComment("Objective function"));
+            objectiveFunction.append("max: ");
 
             int num = 1;
-            int numOfVertices = cfg.numOfVertices();
-            for (Vertex v : cfg)
+            for (int headerID : headerToVariablesInAcyclicRegion.keySet())
             {
-                int vertexID = v.getVertexID();
-                long wcet = 0;
+                Set <String> variables = headerToVariablesInAcyclicRegion
+                        .get(headerID);
 
-                /*
-                 * Check whether this basic block is a call site
-                 */
-                int calleeID = callg.isCallSite(subprogramID, vertexID);
+                for (String variable : variables)
+                {
+                    long wcet = 0;
 
-                if (calleeID == Vertex.DUMMY_VERTEX_ID)
-                {
-                    wcet = database.getUnitWCET(subprogramID, vertexID);
-                }
-                else
-                {
-                    wcet = getWCET(calleeID);
+                    String[] lexemes = variable.split(underscore);
+                    assert lexemes.length == 3 : "Tokenizing variable string '"
+                            + variable + "' failed";
+
+                    if (lexemes[0].equals("v"))
+                    {
+                        int vertexID = Integer.parseInt(lexemes[1]);
+
+                        if (lnt.isLoopHeader(vertexID)
+                                && lnt.isDowhileLoop(vertexID))
+                        {
+                            int vertexID2 = Integer.parseInt(lexemes[2]);
+
+                            if (vertexID2 == vertexID)
+                            {
+                                wcet = database.getUnitWCET(subprogramID,
+                                        vertexID);
+                            }
+                        }
+                        else
+                        {
+                            wcet = database.getUnitWCET(subprogramID, vertexID);
+                        }
+                    }
+
+                    objectiveFunction.append(Long.toString(wcet) + " "
+                            + variable + plus);
+
+                    if (num % 10 == 0)
+                    {
+                        objectiveFunction.append(newLine);
+                    }
+
+                    num++;
                 }
 
-                out.write(Long.toString(wcet) + " " + vertexPrefix
-                        + Integer.toString(vertexID));
-
-                if (num < numOfVertices)
-                {
-                    out.write(" + ");
-                }
-                if (num % 10 == 0)
-                {
-                    out.newLine();
-                }
-                num++;
             }
 
-            out.write(";\n\n");
+            objectiveFunction.delete(objectiveFunction.length() - 3,
+                    objectiveFunction.length() - 1);
+
+            objectiveFunction.append(statementTerminator + newLine + newLine);
         }
 
-        private void writeConstraints (BufferedWriter out) throws IOException
+        private void writeConstraints ()
         {
             Debug.debugMessage(getClass(), "Writing flow constraints", 3);
 
@@ -730,34 +758,90 @@ public class CalculationEngineCFG
                     {
                         HeaderVertex headerv = (HeaderVertex) v;
 
-                        writeFlowConstraints(out, headerv);
+                        writeFlowConstraints(headerv);
+
+                        constraints.append(createComment("Header "
+                                + Integer.toString(headerv.getHeaderID())));
 
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
                             loopConstraints++;
 
-                            out.write(createComment("Header "
-                                    + Integer.toString(headerv.getHeaderID())));
-
-                            out.write(createVertexVariable(headerv
-                                    .getHeaderID())
+                            constraints.append(createVertexVariable(
+                                    headerv.getHeaderID(),
+                                    headerv.getHeaderID())
                                     + equals
                                     + "1"
-                                    + statementTerminator + newLine + newLine);
+                                    + statementTerminator
+                                    + newLine + newLine);
                         }
                         else
                         {
+                            for (int ancestorID : lnt
+                                    .getProperAncestors(headerv.getVertexID()))
+                            {
+                                loopConstraints++;
 
+                                HeaderVertex ancestorv = (HeaderVertex) lnt
+                                        .getVertex(ancestorID);
+
+                                constraints.append("//...with respect to "
+                                        + Integer.toString(ancestorv
+                                                .getHeaderID()) + "\n");
+
+                                int bound = database.getLoopBound(subprogramID,
+                                        headerv.getVertexID(), ancestorID);
+
+                                Debug.debugMessage(
+                                        getClass(),
+                                        "Adding constraint on loop "
+                                                + headerv.getVertexID()
+                                                + " relative to loop "
+                                                + ancestorv.getVertexID()
+                                                + ". Bound = " + bound, 4);
+
+                                constraints.append(createVertexVariable(
+                                        headerv.getHeaderID(),
+                                        headerv.getHeaderID())
+                                        + "<="
+                                        + Integer.toString(bound)
+                                        + space
+                                        + createVertexVariable(
+                                                headerv.getHeaderID(),
+                                                ancestorv.getHeaderID())
+                                        + statementTerminator
+                                        + newLine
+                                        + newLine);
+                            }
                         }
                     }
                 }
             }
         }
 
-        private void writeFlowConstraints (BufferedWriter out,
-                HeaderVertex headerv) throws IOException
+        private void writeFlowConstraints (HeaderVertex headerv)
         {
+            Debug.debugMessage(getClass(),
+                    "Analysing header " + headerv.getHeaderID(), 4);
+
             FlowGraph flowg = lnt.induceSubraph(headerv);
+
+            headerToVariablesInAcyclicRegion.put(headerv.getHeaderID(),
+                    new HashSet <String>());
+
+            for (Vertex v : flowg)
+            {
+                final String variable = createVertexVariable(v.getVertexID(),
+                        headerv.getHeaderID());
+                headerToVariablesInAcyclicRegion.get(headerv.getHeaderID())
+                        .add(variable);
+            }
+
+            if (Globals.uDrawDirectorySet())
+            {
+                UDrawGraph.makeUDrawFile(flowg,
+                        subprogramName + headerv.getHeaderID());
+            }
 
             SuperBlockCFGStructureGraph superg = new SuperBlockCFGStructureGraph(
                     flowg);
@@ -790,11 +874,15 @@ public class CalculationEngineCFG
                         {
                             flowConstraints++;
 
-                            out.write(createComment("Super block vertex. Basic block = "
-                                    + Integer.toString(bbID)));
+                            constraints
+                                    .append(createComment("Super block vertex. Basic block = "
+                                            + Integer.toString(bbID)));
 
-                            out.write(createVertexVariable(bbID) + equals
-                                    + createVertexVariable(repID)
+                            constraints.append(createVertexVariable(bbID,
+                                    headerv.getHeaderID())
+                                    + equals
+                                    + createVertexVariable(repID,
+                                            headerv.getHeaderID())
                                     + statementTerminator + newLine + newLine);
                         }
                     }
@@ -802,19 +890,19 @@ public class CalculationEngineCFG
 
                 if (v.numOfSuccessors() > 1)
                 {
-                    writeBranchVertexConstraints(out, superg, v, headerv);
+                    writeBranchVertexConstraints(superg, v, headerv);
                 }
 
                 if (v.numOfPredecessors() > 1)
                 {
-                    writeMergeVertexConstraints(out, superg, v, headerv);
+                    writeMergeVertexConstraints(superg, v, headerv);
                 }
             }
         }
 
-        private void writeBranchVertexConstraints (BufferedWriter out,
+        private void writeBranchVertexConstraints (
                 SuperBlockCFGStructureGraph superg, SuperBlockVertex superv,
-                HeaderVertex headerv) throws IOException
+                HeaderVertex headerv)
         {
             int lhsID = superv.pickRandomBasicBlockID();
 
@@ -827,20 +915,25 @@ public class CalculationEngineCFG
                 Set <SuperBlockCFGStructureEdge> partitionedEdges = branchToSuccMap
                         .get(partitionID);
 
-                out.write(createComment("Branch vertex. Random basic block = "
-                        + Integer.toString(lhsID)));
-                out.write(createVertexVariable(lhsID) + equals);
+                constraints
+                        .append(createComment("Branch vertex. Random basic block = "
+                                + Integer.toString(lhsID)));
+                constraints.append(createVertexVariable(lhsID,
+                        headerv.getHeaderID())
+                        + equals);
 
                 int num = 1;
                 for (SuperBlockCFGStructureEdge supere : partitionedEdges)
                 {
                     if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
                     {
-                        int newVariableID = supere.getEdgeID()
-                                + headerv.getHeaderID();
-                        variables.add(newVariableID);
+                        final String dummyEdgeVariable = createEdgeVariable(
+                                supere.getEdgeID(), headerv.getHeaderID());
 
-                        out.write(createEdgeVariable(newVariableID));
+                        headerToVariablesInAcyclicRegion.get(
+                                headerv.getHeaderID()).add(dummyEdgeVariable);
+
+                        constraints.append(dummyEdgeVariable);
                     }
                     else
                     {
@@ -851,39 +944,46 @@ public class CalculationEngineCFG
 
                         if (basicBlockID == Vertex.DUMMY_VERTEX_ID)
                         {
-                            int newVariableID = supere.getEdgeID()
-                                    + headerv.getHeaderID();
-                            variables.add(newVariableID);
+                            final String dummyEdgeVariable = createEdgeVariable(
+                                    supere.getEdgeID(), headerv.getHeaderID());
 
-                            out.write(createEdgeVariable(newVariableID));
+                            headerToVariablesInAcyclicRegion.get(
+                                    headerv.getHeaderID()).add(
+                                    dummyEdgeVariable);
+
+                            constraints.append(dummyEdgeVariable);
                         }
                         else
                         {
-                            out.write(createVertexVariable(basicBlockID));
+                            constraints.append(createVertexVariable(
+                                    basicBlockID, headerv.getHeaderID()));
                         }
                     }
 
                     if (num++ < partitionedEdges.size())
                     {
-                        out.write(plus);
+                        constraints.append(plus);
                     }
                 }
 
-                out.write(statementTerminator + newLine + newLine);
+                constraints.append(statementTerminator + newLine + newLine);
             }
         }
 
-        private void writeMergeVertexConstraints (BufferedWriter out,
+        private void writeMergeVertexConstraints (
                 SuperBlockCFGStructureGraph superg, SuperBlockVertex superv,
-                HeaderVertex headerv) throws IOException
+                HeaderVertex headerv)
         {
             flowConstraints++;
 
             int lhsID = superv.pickRandomBasicBlockID();
 
-            out.write(createComment("Merge vertex. Random basic block = "
-                    + Integer.toString(lhsID)));
-            out.write(createVertexVariable(lhsID) + equals);
+            constraints
+                    .append(createComment("Merge vertex. Random basic block = "
+                            + Integer.toString(lhsID)));
+            constraints.append(createVertexVariable(lhsID,
+                    headerv.getHeaderID())
+                    + equals);
 
             int num = 1;
             Iterator <Edge> predIt = superv.predecessorIterator();
@@ -895,69 +995,53 @@ public class CalculationEngineCFG
 
                 if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
                 {
-                    int newVariableID = supere.getEdgeID()
-                            + headerv.getHeaderID();
+                    final String dummyEdgeVariable = createEdgeVariable(
+                            supere.getEdgeID(), headerv.getHeaderID());
 
-                    variables.add(newVariableID);
+                    headerToVariablesInAcyclicRegion.get(headerv.getHeaderID())
+                            .add(dummyEdgeVariable);
 
-                    out.write(createEdgeVariable(newVariableID));
+                    constraints.append(dummyEdgeVariable);
                 }
                 else
                 {
-                    out.write(createVertexVariable(predv
-                            .pickRandomBasicBlockID()));
+                    constraints.append(createVertexVariable(
+                            predv.pickRandomBasicBlockID(),
+                            headerv.getHeaderID()));
                 }
 
                 if (num++ < superv.numOfPredecessors())
                 {
-                    out.write(plus);
+                    constraints.append(plus);
                 }
             }
 
-            out.write(statementTerminator + newLine + newLine);
+            constraints.append(statementTerminator + newLine + newLine);
         }
 
-        private void writeIntegerConstraints (BufferedWriter out)
-                throws IOException
+        private void writeIntegerConstraints ()
         {
             Debug.debugMessage(getClass(), "Writing integer constraints", 3);
 
-            StringBuffer buffer = new StringBuffer();
+            integerConstraints.append(createComment("Integer constraints"));
+            integerConstraints.append("int ");
 
-            out.write(createComment("Integer constraints"));
-            out.write("int ");
-
-            int vertexNum = 1;
-            for (Vertex v : cfg)
+            for (int headerID : headerToVariablesInAcyclicRegion.keySet())
             {
-                numberOfVariables++;
-                buffer.append(vertexPrefix + Integer.toString(v.getVertexID()));
+                Set <String> variables = headerToVariablesInAcyclicRegion
+                        .get(headerID);
+                numberOfVariables += variables.size();
 
-                if (vertexNum++ < cfg.numOfVertices())
+                for (String variable : variables)
                 {
-                    buffer.append(", ");
+                    integerConstraints.append(variable + ", ");
                 }
             }
 
-            if (variables.size() > 0)
-            {
-                buffer.append(", ");
-            }
+            integerConstraints.delete(integerConstraints.length() - 3,
+                    integerConstraints.length() - 1);
 
-            int edgeNum = 1;
-            for (int edgeID : variables)
-            {
-                numberOfVariables++;
-                buffer.append(edgePrefix + Integer.toString(edgeID));
-
-                if (edgeNum++ < variables.size())
-                {
-                    buffer.append(", ");
-                }
-            }
-
-            buffer.append(statementTerminator + newLine);
-            out.write(buffer.toString());
+            integerConstraints.append(statementTerminator + newLine);
         }
     }
 

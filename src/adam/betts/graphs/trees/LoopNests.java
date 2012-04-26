@@ -1,6 +1,8 @@
 package adam.betts.graphs.trees;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -10,7 +12,6 @@ import java.util.Set;
 import adam.betts.edges.Edge;
 import adam.betts.graphs.DirectedGraph;
 import adam.betts.graphs.FlowGraph;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.vertices.Vertex;
@@ -36,6 +37,7 @@ public class LoopNests extends Tree
         findLoops(rootID);
         setRoot();
         identifyLoopExits();
+        setDoWhileVertices();
         setHeight();
     }
 
@@ -100,6 +102,11 @@ public class LoopNests extends Tree
     public final Iterator <Integer> bodyIterator (int headerID)
     {
         return headerToLoop.get(headerID).iterator();
+    }
+
+    public final Set <Integer> body (int headerID)
+    {
+        return Collections.unmodifiableSet(headerToLoop.get(headerID));
     }
 
     public boolean inLoopBody (int headerID, int vertexID)
@@ -186,8 +193,8 @@ public class LoopNests extends Tree
 
     public FlowGraph induceSubraph (HeaderVertex headerv)
     {
-        System.out.println("Header " + headerv.getHeaderID());
-
+        Debug.debugMessage(getClass(), "Inducing subgraph in loop with header "
+                + headerv.getHeaderID(), 2);
         FlowGraph flowg = new FlowGraph();
 
         ArrayList <Integer> workList = new ArrayList <Integer>();
@@ -526,4 +533,20 @@ public class LoopNests extends Tree
             }
         }
     }
+
+    private void setDoWhileVertices ()
+    {
+        for (Vertex v : this)
+        {
+            if (v instanceof HeaderVertex)
+            {
+                HeaderVertex headerv = (HeaderVertex) v;
+                if (isDowhileLoop(headerv.getHeaderID()))
+                {
+                    headerv.setDoWhile();
+                }
+            }
+        }
+    }
+
 }

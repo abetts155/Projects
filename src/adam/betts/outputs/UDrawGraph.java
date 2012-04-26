@@ -17,6 +17,7 @@ import adam.betts.graphs.CallLoopGraph;
 import adam.betts.graphs.ContextGraph;
 import adam.betts.graphs.ControlDependenceGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.SuperBlockCFGStructureGraph;
 import adam.betts.graphs.SuperBlockGraph;
@@ -468,6 +469,48 @@ public class UDrawGraph
         }
     }
 
+    public final static void makeUDrawFile (FlowGraph flowg,
+            String fileNamePrefix)
+    {
+        try
+        {
+            final File file = new File(Globals.getUDrawDirectory(),
+                    fileNamePrefix + ".flowg" + fileNameSuffix);
+            BufferedWriter out = new BufferedWriter(new FileWriter(
+                    file.getAbsolutePath()));
+
+            out.write(beginGraph);
+            for (Vertex v : flowg)
+            {
+                out.write(newVertex(v.getVertexID()));
+                out.write(beginAttributes);
+                out.write(setName(Integer.toString(v.getVertexID())));
+                out.write(endAttibutes);
+
+                out.write(beginAttributes);
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    out.write(newEdge);
+                    out.write(beginAttributes);
+                    out.write(endAttibutes);
+                    out.write(edgeLink(e.getVertexID()));
+                    out.write(endEdge + ",\n");
+                }
+                out.write(endVertex + "\n");
+            }
+            out.write(endGraph);
+
+            out.close();
+        }
+        catch (IOException e)
+        {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
     public final static void makeUDrawFile (SuperBlockCFGStructureGraph superg,
             String fileNamePrefix)
     {
@@ -700,9 +743,18 @@ public class UDrawGraph
         out.write(newVertex(v.getVertexID()));
         out.write(beginAttributes);
         out.write(setShape(SHAPE.CIRCLE));
-        out.write(setName(Integer.toString(v.getVertexID())));
-        out.write(setToolTip("Header = " + v.getHeaderID() + "\\nLevel = "
-                + v.getLevel()));
+        out.write(setName(Integer.toString(v.getVertexID()) + "\\n["
+                + v.getHeaderID() + "]"));
+
+        StringBuffer toolTip = new StringBuffer();
+        toolTip.append("Level = " + v.getLevel());
+        if (v.isDoWhile())
+        {
+            toolTip.append("\\nDo-While loop");
+            out.write(setColor(COLOR.RED));
+        }
+
+        out.write(setToolTip(toolTip.toString()));
         out.write(endAttibutes);
 
         out.write(beginAttributes);

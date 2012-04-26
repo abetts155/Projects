@@ -22,6 +22,8 @@ public class IPETModel
     protected final static String statementTerminator = ";";
     protected final static String equals = " = ";
     protected final static String plus = " + ";
+    protected final static String underscore = "_";
+    protected final static String space = " ";
 
     protected LpSolve lp;
     protected int numOfColumns;
@@ -100,8 +102,20 @@ public class IPETModel
         return vertexPrefix + Integer.toString(vID);
     }
 
+    protected final static String createVertexVariable (int vID, int index)
+    {
+        return vertexPrefix + Integer.toString(vID) + underscore
+                + Integer.toString(index);
+    }
+
     protected final static String createEdgeVariable (int eID)
     {
         return edgePrefix + Integer.toString(eID);
+    }
+
+    protected final static String createEdgeVariable (int eID, int index)
+    {
+        return edgePrefix + Integer.toString(eID) + underscore
+                + Integer.toString(index);
     }
 }

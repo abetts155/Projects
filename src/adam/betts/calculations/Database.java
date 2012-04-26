@@ -108,8 +108,8 @@ public class Database
                         for (int ancestorID : lnt.getProperAncestors(vertexID))
                         {
                             int ancestorLevel = lnt.getVertex(ancestorID)
-                                    .getLevel();
-                            int bound = (int) Math.pow(2, ancestorLevel);
+                                    .getLevel() + 1;
+                            int bound = (int) Math.pow(10, ancestorLevel);
 
                             if (random)
                             {
