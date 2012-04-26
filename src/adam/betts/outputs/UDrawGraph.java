@@ -499,11 +499,16 @@ public class UDrawGraph
                     out.write(newEdge);
                     out.write(beginAttributes);
                     out.write(setName(Integer.toString(supere.getEdgeID())));
+
+                    StringBuffer buffer = new StringBuffer(
+                            Integer.toString(supere.getBasicBlockID()));
                     if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
                     {
                         out.write(setEdgePattern(EDGESHAPE.DASHED, 4));
-                        out.write(setToolTip("Acyclic irreducible edge"));
+                        buffer.append("Acyclic irreducible edge");
                     }
+
+                    out.write(setToolTip(buffer.toString()));
                     out.write(endAttibutes);
                     out.write(edgeLink(e.getVertexID()));
                     out.write(endEdge + ",\n");

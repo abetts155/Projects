@@ -1,6 +1,9 @@
 package adam.betts.graphs;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import adam.betts.edges.Edge;
 import adam.betts.edges.SuperBlockCFGStructureEdge;
@@ -38,6 +41,31 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
     {
         assert rootID != Vertex.DUMMY_VERTEX_ID;
         return rootID;
+    }
+
+    public HashMap <Integer, Set <SuperBlockCFGStructureEdge>> partitionEdges (
+            SuperBlockVertex superv)
+    {
+        assert superv.numOfSuccessors() > 1 : "Paritioning of super block edges only works for branch vertices";
+
+        HashMap <Integer, Set <SuperBlockCFGStructureEdge>> theMap = new HashMap <Integer, Set <SuperBlockCFGStructureEdge>>();
+
+        Iterator <Edge> succIt = superv.successorIterator();
+        while (succIt.hasNext())
+        {
+            Edge succe = succIt.next();
+            SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) succe;
+            int bbID = supere.getBasicBlockID();
+
+            if (theMap.containsKey(bbID) == false)
+            {
+                theMap.put(bbID, new HashSet <SuperBlockCFGStructureEdge>());
+            }
+
+            theMap.get(bbID).add(supere);
+        }
+
+        return theMap;
     }
 
     private void addVertices ()
@@ -100,6 +128,14 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 
                         edgeID++;
                     }
+                    
+                    SuperBlockCFGStructureEdge succe = (SuperBlockCFGStructureEdge) sourcev
+                            .getSuccessor(destinationv.getVertexID());
+                    SuperBlockCFGStructureEdge prede = (SuperBlockCFGStructureEdge) destinationv
+                            .getPredecessor(sourcev.getVertexID());
+                    
+                    succe.setBasicBlockID(v.getVertexID());
+                    prede.setBasicBlockID(v.getVertexID());
                 }
             }
 
@@ -117,8 +153,10 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 
                     if (postdomt.dominates(v.getVertexID(), cfge.getVertexID()) == false)
                     {
-                        Debug.debugMessage(getClass(), v.getVertexID() + " does NOT post-dominate " + cfge.getVertexID(), 4);
-                        
+                        Debug.debugMessage(getClass(),
+                                v.getVertexID() + " does NOT post-dominate "
+                                        + cfge.getVertexID(), 4);
+
                         if (sourcev.hasSuccessor(destinationv.getVertexID()) == false)
                         {
                             SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(

@@ -38,6 +38,8 @@ public class CalculationEngineCFG
     protected final Program program;
     protected final CallGraph callg;
     protected final Database database;
+    protected final DepthFirstTree dfs;
+
     protected final HashMap <String, IPETModelCFGInFile> ILPsInFile = new HashMap <String, IPETModelCFGInFile>();
     protected final HashMap <String, IPETModelCFGInMemory> ILPsInMemory = new HashMap <String, IPETModelCFGInMemory>();
     protected final HashMap <String, IPETModelCFGInFileWithSuperBlocks> ILPsInFileSuperBlocks = new HashMap <String, IPETModelCFGInFileWithSuperBlocks>();
@@ -48,8 +50,8 @@ public class CalculationEngineCFG
         this.program = program;
         this.callg = program.getCallGraph();
         this.database = database;
+        dfs = new DepthFirstTree(callg, program.getRootID());
 
-        DepthFirstTree dfs = new DepthFirstTree(callg, program.getRootID());
         for (int i = 1; i <= dfs.numOfVertices(); ++i)
         {
             int subprogramID = dfs.getPostVertexID(i);
@@ -86,6 +88,102 @@ public class CalculationEngineCFG
             IPETModelCFGInFileWithSuperBlocks ilp3 = new IPETModelCFGInFileWithSuperBlocks(
                     cfg, cfg.getLNT(), subprogramID, subprogramName);
             ILPsInFileSuperBlocks.put(subprogramName, ilp3);
+        }
+    }
+
+    public final String pad (String rowEntry, int lengthOfColumn)
+    {
+        StringBuffer paddedString = new StringBuffer();
+        for (int i = rowEntry.length(); i < lengthOfColumn; ++i)
+        {
+            paddedString.append(" ");
+        }
+        return paddedString.toString();
+    }
+
+    public final void printResults ()
+    {
+        final int numOfColumns = 4;
+        final String column1Heading = "Subprogram";
+        final String column2Heading = "WCET";
+        final String column3Heading = "#Constraints";
+        final String column4Heading = "#Variables";
+        final char columnDivider = '|';
+        int column1Length = column1Heading.length();
+
+        for (int i = 1; i <= dfs.numOfVertices(); ++i)
+        {
+            int subprogramID = dfs.getPostVertexID(i);
+            Subprogram subprogram = program.getSubprogram(subprogramID);
+            String subprogramName = subprogram.getSubprogramName();
+
+            if (subprogramName.length() > column1Length)
+            {
+                column1Length = subprogramName.length();
+            }
+        }
+
+        StringBuffer rowDivider = new StringBuffer();
+        rowDivider.append(columnDivider);
+        for (int i = 0; i < column1Length + column2Heading.length()
+                + column3Heading.length() + column4Heading.length()
+                + numOfColumns - 1; ++i)
+        {
+            rowDivider.append("=");
+        }
+        rowDivider.append(columnDivider);
+
+        StringBuffer tableHeading = new StringBuffer();
+        tableHeading.append(columnDivider + column1Heading
+                + pad(column1Heading, column1Length) + columnDivider
+                + column2Heading + columnDivider + column3Heading
+                + columnDivider + column4Heading + columnDivider);
+        System.out.println(tableHeading.toString());
+        System.out.println(rowDivider.toString());
+
+        for (int i = 1; i <= dfs.numOfVertices(); ++i)
+        {
+            int subprogramID = dfs.getPostVertexID(i);
+            Subprogram subprogram = program.getSubprogram(subprogramID);
+            String subprogramName = subprogram.getSubprogramName();
+
+            IPETModelCFGInFile ilp = ILPsInFile.get(subprogramName);
+            IPETModelCFGInFileWithSuperBlocks ilp2 = ILPsInFileSuperBlocks
+                    .get(subprogramName);
+
+            StringBuffer row1 = new StringBuffer();
+            String row1WCET = Long.toString(ilp.wcet);
+            String row1Constraints = Long.toString(ilp.flowConstraints
+                    + ilp.loopConstraints);
+            String row1Variables = Long.toString(ilp.numberOfVariables);
+
+            row1.append(columnDivider + subprogramName
+                    + pad(subprogramName, column1Length) + columnDivider
+                    + row1WCET + pad(row1WCET, column2Heading.length())
+                    + columnDivider + row1Constraints
+                    + pad(row1Constraints, column3Heading.length())
+                    + columnDivider + row1Variables
+                    + pad(row1Variables, column4Heading.length())
+                    + columnDivider);
+
+            StringBuffer row2 = new StringBuffer();
+            String row2WCET = Long.toString(ilp2.wcet);
+            String row2Constraints = Long.toString(ilp2.flowConstraints
+                    + ilp2.loopConstraints);
+            String row2Variables = Long.toString(ilp2.numberOfVariables);
+
+            row2.append(columnDivider + subprogramName
+                    + pad(subprogramName, column1Length) + columnDivider
+                    + row2WCET + pad(row2WCET, column2Heading.length())
+                    + columnDivider + row2Constraints
+                    + pad(row2Constraints, column3Heading.length())
+                    + columnDivider + row2Variables
+                    + pad(row2Variables, column4Heading.length())
+                    + columnDivider);
+
+            System.out.println(row1.toString());
+            System.out.println(row2.toString());
+            System.out.println(rowDivider.toString());
         }
     }
 
@@ -391,10 +489,11 @@ public class CalculationEngineCFG
                                 + "\n");
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
+                            loopConstraints++;
+                            
                             out.write(vertexPrefix
                                     + Long.toString(headerv.getHeaderID())
                                     + " = 1;\n");
-                            loopConstraints++;
                         }
                         else
                         {
@@ -516,7 +615,7 @@ public class CalculationEngineCFG
     private class IPETModelCFGInFileWithSuperBlocks extends IPETModelCFG
     {
 
-        private Set <Integer> variables = new HashSet <Integer>();
+        protected Set <Integer> variables = new HashSet <Integer>();
 
         public IPETModelCFGInFileWithSuperBlocks (ControlFlowGraph cfg,
                 LoopNests lnt, int subprogramID, String subprogramName)
@@ -634,9 +733,16 @@ public class CalculationEngineCFG
 
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
-                            out.write(vertexPrefix
-                                    + Long.toString(headerv.getHeaderID())
-                                    + " = 1;\n\n");
+                            loopConstraints++;
+                            
+                            out.write(createComment("Header "
+                                    + Integer.toString(headerv.getHeaderID())));
+
+                            out.write(createVertexVariable(headerv
+                                    .getHeaderID())
+                                    + equals
+                                    + "1"
+                                    + statementTerminator + newLine + newLine);
                         }
                         else
                         {
@@ -652,22 +758,21 @@ public class CalculationEngineCFG
         {
             FlowGraph flowg = lnt.induceSubraph(headerv);
 
-            SuperBlockCFGStructureGraph superBlockGraph = new SuperBlockCFGStructureGraph(
+            SuperBlockCFGStructureGraph superg = new SuperBlockCFGStructureGraph(
                     flowg);
 
             if (Globals.uDrawDirectorySet())
             {
-                UDrawGraph.makeUDrawFile(superBlockGraph, subprogramName
-                        + headerv.getHeaderID());
+                UDrawGraph.makeUDrawFile(superg,
+                        subprogramName + headerv.getHeaderID());
             }
 
-            DepthFirstTree dfs = new DepthFirstTree(superBlockGraph,
-                    superBlockGraph.getRootID());
+            DepthFirstTree dfs = new DepthFirstTree(superg, superg.getRootID());
 
-            for (int postOrderID = superBlockGraph.numOfVertices(); postOrderID > 0; --postOrderID)
+            for (int postOrderID = superg.numOfVertices(); postOrderID > 0; --postOrderID)
             {
                 int vertexID = dfs.getPostVertexID(postOrderID);
-                SuperBlockVertex v = superBlockGraph.getVertex(vertexID);
+                SuperBlockVertex v = superg.getVertex(vertexID);
 
                 Debug.debugMessage(getClass(), "Analysing vertex " + vertexID,
                         4);
@@ -682,98 +787,122 @@ public class CalculationEngineCFG
                     {
                         if (bbID != repID)
                         {
-                            out.write("// Vertex " + Integer.toString(bbID)
-                                    + "\n");
+                            flowConstraints++;
 
-                            out.write(vertexPrefix + Long.toString(bbID)
-                                    + " = " + vertexPrefix
-                                    + Long.toString(repID) + ";\n\n");
+                            out.write(createComment("Super block vertex. Basic block = "
+                                    + Integer.toString(bbID)));
+
+                            out.write(createVertexVariable(bbID) + equals
+                                    + createVertexVariable(repID)
+                                    + statementTerminator + newLine + newLine);
                         }
                     }
                 }
 
                 if (v.numOfSuccessors() > 1)
                 {
-                    int lhsID = v.pickRandomBasicBlockID();
-
-                    out.write("// Vertex " + Integer.toString(lhsID) + "\n");
-                    out.write(vertexPrefix + Long.toString(lhsID) + " = ");
-
-                    int num = 1;
-                    Iterator <Edge> succIt = v.successorIterator();
-                    while (succIt.hasNext())
-                    {
-                        Edge succe = succIt.next();
-                        SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) succe;
-                        SuperBlockVertex succv = superBlockGraph
-                                .getVertex(supere.getVertexID());
-
-                        if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
-                        {
-                            int newVariableID = supere.getEdgeID()
-                                    + headerv.getHeaderID();
-
-                            variables.add(newVariableID);
-
-                            out.write(edgePrefix + Long.toString(newVariableID));
-                        }
-                        else
-                        {
-                            out.write(vertexPrefix
-                                    + Long.toString(succv
-                                            .pickRandomBasicBlockID()));
-                        }
-
-                        if (num++ < v.numOfSuccessors())
-                        {
-                            out.write(" + ");
-                        }
-                    }
-
-                    out.write(";\n\n");
+                    writeBranchVertexConstraints(out, superg, v, headerv);
                 }
 
                 if (v.numOfPredecessors() > 1)
                 {
-                    int lhsID = v.pickRandomBasicBlockID();
-
-                    out.write("// Vertex " + Integer.toString(lhsID) + "\n");
-                    out.write(vertexPrefix + Long.toString(lhsID) + " = ");
-
-                    int num = 1;
-                    Iterator <Edge> predIt = v.predecessorIterator();
-                    while (predIt.hasNext())
-                    {
-                        Edge prede = predIt.next();
-                        SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) prede;
-                        SuperBlockVertex predv = superBlockGraph
-                                .getVertex(supere.getVertexID());
-
-                        if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
-                        {
-                            int newVariableID = supere.getEdgeID()
-                                    + headerv.getHeaderID();
-
-                            variables.add(newVariableID);
-
-                            out.write(edgePrefix + Long.toString(newVariableID));
-                        }
-                        else
-                        {
-                            out.write(vertexPrefix
-                                    + Long.toString(predv
-                                            .pickRandomBasicBlockID()));
-                        }
-
-                        if (num++ < v.numOfPredecessors())
-                        {
-                            out.write(" + ");
-                        }
-                    }
-
-                    out.write(";\n\n");
+                    writeMergeVertexConstraints(out, superg, v, headerv);
                 }
             }
+        }
+
+        private void writeBranchVertexConstraints (BufferedWriter out,
+                SuperBlockCFGStructureGraph superg, SuperBlockVertex superv,
+                HeaderVertex headerv) throws IOException
+        {
+            int lhsID = superv.pickRandomBasicBlockID();
+
+            HashMap <Integer, Set <SuperBlockCFGStructureEdge>> branchToSuccMap = superg
+                    .partitionEdges(superv);
+            for (int partitionID : branchToSuccMap.keySet())
+            {
+                flowConstraints++;
+
+                Set <SuperBlockCFGStructureEdge> partitionedEdges = branchToSuccMap
+                        .get(partitionID);
+
+                out.write(createComment("Branch vertex. Random basic block = "
+                        + Integer.toString(lhsID)));
+                out.write(createVertexVariable(lhsID) + equals);
+
+                int num = 1;
+                for (SuperBlockCFGStructureEdge supere : partitionedEdges)
+                {
+                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                    {
+                        int newVariableID = supere.getEdgeID()
+                                + headerv.getHeaderID();
+
+                        variables.add(newVariableID);
+
+                        out.write(createEdgeVariable(newVariableID));
+                    }
+                    else
+                    {
+                        SuperBlockVertex succv = superg.getVertex(supere
+                                .getVertexID());
+
+                        out.write(createVertexVariable(succv
+                                .pickRandomBasicBlockID()));
+                    }
+
+                    if (num++ < partitionedEdges.size())
+                    {
+                        out.write(plus);
+                    }
+                }
+
+                out.write(statementTerminator + newLine + newLine);
+            }
+        }
+
+        private void writeMergeVertexConstraints (BufferedWriter out,
+                SuperBlockCFGStructureGraph superg, SuperBlockVertex superv,
+                HeaderVertex headerv) throws IOException
+        {
+            flowConstraints++;
+            
+            int lhsID = superv.pickRandomBasicBlockID();
+
+            out.write(createComment("Merge vertex. Random basic block = "
+                    + Integer.toString(lhsID)));
+            out.write(createVertexVariable(lhsID) + equals);
+
+            int num = 1;
+            Iterator <Edge> predIt = superv.predecessorIterator();
+            while (predIt.hasNext())
+            {
+                Edge prede = predIt.next();
+                SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) prede;
+                SuperBlockVertex predv = superg.getVertex(supere.getVertexID());
+
+                if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                {
+                    int newVariableID = supere.getEdgeID()
+                            + headerv.getHeaderID();
+
+                    variables.add(newVariableID);
+
+                    out.write(createEdgeVariable(newVariableID));
+                }
+                else
+                {
+                    out.write(createVertexVariable(predv
+                            .pickRandomBasicBlockID()));
+                }
+
+                if (num++ < superv.numOfPredecessors())
+                {
+                    out.write(plus);
+                }
+            }
+
+            out.write(statementTerminator + newLine + newLine);
         }
 
         private void writeIntegerConstraints (BufferedWriter out)
@@ -783,12 +912,13 @@ public class CalculationEngineCFG
 
             StringBuffer buffer = new StringBuffer();
 
-            out.write("// Integer constraints\n");
+            out.write(createComment("Integer constraints"));
             out.write("int ");
 
             int vertexNum = 1;
             for (Vertex v : cfg)
             {
+                numberOfVariables++;
                 buffer.append(vertexPrefix + Integer.toString(v.getVertexID()));
 
                 if (vertexNum++ < cfg.numOfVertices())
@@ -805,6 +935,7 @@ public class CalculationEngineCFG
             int edgeNum = 1;
             for (int edgeID : variables)
             {
+                numberOfVariables++;
                 buffer.append(edgePrefix + Integer.toString(edgeID));
 
                 if (edgeNum++ < variables.size())
@@ -813,7 +944,7 @@ public class CalculationEngineCFG
                 }
             }
 
-            buffer.append(";\n");
+            buffer.append(statementTerminator + newLine);
             out.write(buffer.toString());
         }
     }
