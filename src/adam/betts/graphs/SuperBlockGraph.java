@@ -16,18 +16,29 @@ public class SuperBlockGraph extends DirectedGraph
 
     protected final FlowGraph flowg;
     protected int rootID;
+    protected final DominatorGraph dominatorg;
 
     public SuperBlockGraph (FlowGraph flowg)
     {
         this.flowg = flowg;
 
-        DominatorGraph dominatorg = new DominatorGraph();
+        dominatorg = new DominatorGraph();
         StronglyConnectedComponents scc = new StronglyConnectedComponents(
                 dominatorg);
 
         addVertices(scc);
         addEdges(scc, dominatorg);
         setRoot();
+    }
+
+    public final DominatorTree getPredominatorTree ()
+    {
+        return dominatorg.predomt;
+    }
+
+    public final DominatorTree getPostdominatorTree ()
+    {
+        return dominatorg.postdomt;
     }
 
     public final SuperBlockVertex getVertex (int vertexID)
@@ -120,16 +131,21 @@ public class SuperBlockGraph extends DirectedGraph
     private class DominatorGraph extends DirectedGraph
     {
 
+        protected DominatorTree predomt;
+        protected DominatorTree postdomt;
+
         private DominatorGraph ()
         {
             Debug.debugMessage(getClass(), "Creating dominator graph", 3);
 
-            /*
-             * Make sure that the CFG has a unique entry and a unique exit.
-             * Since the CFG is cloned, it does not matter that we change its
-             * shape by adding vertices and edges; that is, the original CFG
-             * remains the same
-             */
+            predomt = new DominatorTree(flowg, flowg.getEntryID(),
+                    DominatorTreeType.PRE_DOMINATOR);
+
+            FlowGraph reverseg = new FlowGraph();
+            flowg.reverseGraph(reverseg);
+            postdomt = new DominatorTree(reverseg, flowg.getExitID(),
+                    DominatorTreeType.POST_DOMINATOR);
+
             addVertices();
             addEdges();
         }
@@ -145,13 +161,6 @@ public class SuperBlockGraph extends DirectedGraph
 
         private void addEdges ()
         {
-            DominatorTree predomt = new DominatorTree(flowg,
-                    flowg.getEntryID(), DominatorTreeType.PRE_DOMINATOR);
-            FlowGraph reverseg = new FlowGraph();
-            flowg.reverseGraph(reverseg);
-            DominatorTree postdomt = new DominatorTree(reverseg,
-                    flowg.getExitID(), DominatorTreeType.POST_DOMINATOR);
-
             for (Vertex v : predomt)
             {
                 int vertexID = v.getVertexID();

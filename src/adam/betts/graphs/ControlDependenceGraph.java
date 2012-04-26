@@ -33,8 +33,6 @@ public class ControlDependenceGraph extends DirectedGraph
 
 		// Add vertices representing basic blocks and control-dependent edges
 		initialise ();
-		
-		OutputGraph.output (this);
 
 		// Compute control dependence
 		compute ();

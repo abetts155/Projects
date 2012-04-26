@@ -138,6 +138,7 @@ public class CalculationEngineCFG
                 + pad(column1Heading, column1Length) + columnDivider
                 + column2Heading + columnDivider + column3Heading
                 + columnDivider + column4Heading + columnDivider);
+        System.out.println(rowDivider.toString());
         System.out.println(tableHeading.toString());
         System.out.println(rowDivider.toString());
 
@@ -490,7 +491,7 @@ public class CalculationEngineCFG
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
                             loopConstraints++;
-                            
+
                             out.write(vertexPrefix
                                     + Long.toString(headerv.getHeaderID())
                                     + " = 1;\n");
@@ -734,7 +735,7 @@ public class CalculationEngineCFG
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
                             loopConstraints++;
-                            
+
                             out.write(createComment("Header "
                                     + Integer.toString(headerv.getHeaderID())));
 
@@ -837,7 +838,6 @@ public class CalculationEngineCFG
                     {
                         int newVariableID = supere.getEdgeID()
                                 + headerv.getHeaderID();
-
                         variables.add(newVariableID);
 
                         out.write(createEdgeVariable(newVariableID));
@@ -847,8 +847,20 @@ public class CalculationEngineCFG
                         SuperBlockVertex succv = superg.getVertex(supere
                                 .getVertexID());
 
-                        out.write(createVertexVariable(succv
-                                .pickRandomBasicBlockID()));
+                        int basicBlockID = succv.pickRandomBasicBlockID();
+
+                        if (basicBlockID == Vertex.DUMMY_VERTEX_ID)
+                        {
+                            int newVariableID = supere.getEdgeID()
+                                    + headerv.getHeaderID();
+                            variables.add(newVariableID);
+
+                            out.write(createEdgeVariable(newVariableID));
+                        }
+                        else
+                        {
+                            out.write(createVertexVariable(basicBlockID));
+                        }
                     }
 
                     if (num++ < partitionedEdges.size())
@@ -866,7 +878,7 @@ public class CalculationEngineCFG
                 HeaderVertex headerv) throws IOException
         {
             flowConstraints++;
-            
+
             int lhsID = superv.pickRandomBasicBlockID();
 
             out.write(createComment("Merge vertex. Random basic block = "

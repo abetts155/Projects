@@ -61,8 +61,6 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
     public void makeVertexAndEdgeNumbersDistinct ()
     {
-        OutputGraph.output(this);
-
         HashMap <Integer, Integer> oldIdToNewID = new LinkedHashMap <Integer, Integer>();
 
         int newID = 0;
@@ -150,8 +148,6 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
                         + " to " + newPredID, 4);
             }
         }
-
-        OutputGraph.output(this);
     }
 
     public void inline (ControlFlowGraph cfg, String subprogramName)
