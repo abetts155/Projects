@@ -283,7 +283,7 @@ public class CalculationEngineCFG
 
         protected void dumpLPToFile ()
         {
-            final String fileName = subprogramName + ".cfg.lp.memory";
+            final String fileName = subprogramName + ".cfg.memory.lp";
             Debug.debugMessage(getClass(), "Writing LP model to " + fileName, 1);
 
             try
@@ -362,8 +362,8 @@ public class CalculationEngineCFG
         {
             Debug.debugMessage(getClass(), "Writing objective function", 3);
 
-            out.write("// Objective function\n");
-            out.write("max: ");
+            out.write(createComment("Objective function"));
+            out.write(maxString);
 
             int num = 1;
             int numOfVertices = cfg.numOfVertices();
@@ -386,12 +386,12 @@ public class CalculationEngineCFG
                     wcet = getWCET(calleeID);
                 }
 
-                out.write(Long.toString(wcet) + " " + vertexPrefix
-                        + Integer.toString(vertexID));
+                out.write(Long.toString(wcet) + space
+                        + createVertexVariable(vertexID));
 
                 if (num < numOfVertices)
                 {
-                    out.write(" + ");
+                    out.write(plus);
                 }
                 if (num % 10 == 0)
                 {
@@ -400,7 +400,7 @@ public class CalculationEngineCFG
                 num++;
             }
 
-            out.write(";\n\n");
+            out.write(statementTerminator + newLine + newLine);
         }
 
         private void writeFlowConstraints (BufferedWriter out)
@@ -413,11 +413,10 @@ public class CalculationEngineCFG
                 {
                     flowConstraints++;
 
-                    out.write("// Vertex " + Integer.toString(v.getVertexID())
-                            + "\n");
+                    out.write(createComment("Vertex "
+                            + Integer.toString(v.getVertexID())));
 
-                    out.write(vertexPrefix + Long.toString(v.getVertexID())
-                            + " = ");
+                    out.write(createVertexVariable(v.getVertexID()) + equals);
 
                     int num = 1;
                     Iterator <Edge> predIt = v.predecessorIterator();
@@ -425,14 +424,14 @@ public class CalculationEngineCFG
                     {
                         FlowEdge e = (FlowEdge) predIt.next();
                         int edgeID = e.getEdgeID();
-                        out.write(edgePrefix + Integer.toString(edgeID));
+                        out.write(createEdgeVariable(edgeID));
 
                         if (num++ < v.numOfPredecessors())
                         {
-                            out.write(" + ");
+                            out.write(plus);
                         }
                     }
-                    out.write(";\n");
+                    out.write(statementTerminator + newLine);
 
                     writeEdgeConstraints(v, out);
                 }
@@ -450,15 +449,15 @@ public class CalculationEngineCFG
             {
                 FlowEdge e = (FlowEdge) succIt.next();
                 int edgeID = e.getEdgeID();
-                out.write(edgePrefix + Integer.toString(edgeID));
+                out.write(createEdgeVariable(edgeID));
 
                 if (num++ < v.numOfSuccessors())
                 {
-                    out.write(" + ");
+                    out.write(plus);
                 }
             }
 
-            out.write(" = ");
+            out.write(equals);
 
             num = 1;
             Iterator <Edge> predIt = v.predecessorIterator();
@@ -466,15 +465,15 @@ public class CalculationEngineCFG
             {
                 FlowEdge e = (FlowEdge) predIt.next();
                 int edgeID = e.getEdgeID();
-                out.write(edgePrefix + Integer.toString(edgeID));
+                out.write(createEdgeVariable(edgeID));
 
                 if (num++ < v.numOfPredecessors())
                 {
-                    out.write(" + ");
+                    out.write(plus);
                 }
             }
 
-            out.write(";\n\n");
+            out.write(statementTerminator + newLine + newLine);
         }
 
         private void writeLoopConstraints (BufferedWriter out)
@@ -493,16 +492,18 @@ public class CalculationEngineCFG
                     {
                         HeaderVertex headerv = (HeaderVertex) v;
 
-                        out.write("// Header "
-                                + Integer.toString(headerv.getHeaderID())
-                                + "\n");
+                        out.write(createComment("Header "
+                                + Integer.toString(headerv.getHeaderID())));
+
                         if (headerv.getHeaderID() == cfg.getEntryID())
                         {
                             loopConstraints++;
 
-                            out.write(vertexPrefix
-                                    + Long.toString(headerv.getHeaderID())
-                                    + " = 1;\n");
+                            out.write(createVertexVariable(headerv
+                                    .getHeaderID())
+                                    + equals
+                                    + "1"
+                                    + statementTerminator + newLine);
                         }
                         else
                         {
@@ -522,8 +523,8 @@ public class CalculationEngineCFG
                 HeaderVertex ancestorv = (HeaderVertex) lnt
                         .getVertex(ancestorID);
 
-                out.write("//...with respect to "
-                        + Integer.toString(ancestorv.getHeaderID()) + "\n");
+                out.write(createComment("...with respect to "
+                        + Integer.toString(ancestorv.getHeaderID())));
 
                 int bound = database.getLoopBound(subprogramID,
                         headerv.getVertexID(), ancestorID);
@@ -531,8 +532,8 @@ public class CalculationEngineCFG
                         + headerv.getVertexID() + " relative to loop "
                         + ancestorv.getVertexID() + ". Bound = " + bound, 4);
 
-                writeSuccessorEdges(out, headerv);
-                out.write(" <= ");
+                out.write(createVertexVariable(headerv.getHeaderID())
+                        + lessThanOrEquals);
 
                 if (ancestorID == headerv.getParentID())
                 {
@@ -548,45 +549,23 @@ public class CalculationEngineCFG
                         if (lnt.inLoopBody(headerv.getHeaderID(), predID) == false)
                         {
                             int edgeID = e.getEdgeID();
-                            buffer.append(Integer.toString(bound) + edgePrefix
-                                    + Integer.toString(edgeID) + " + ");
+                            buffer.append(Integer.toString(bound) + space
+                                    + createEdgeVariable(edgeID) + plus);
                         }
                     }
 
                     buffer.delete(buffer.length() - 3, buffer.length() - 1);
-                    out.write(buffer.toString() + ";\n");
+                    out.write(buffer.toString() + statementTerminator + newLine);
                 }
                 else
                 {
-                    out.write(Integer.toString(bound) + " " + vertexPrefix
-                            + Integer.toString(ancestorv.getHeaderID()) + ";\n");
+                    out.write(Integer.toString(bound) + space
+                            + createVertexVariable(ancestorv.getHeaderID())
+                            + statementTerminator + newLine);
                 }
 
                 loopConstraints++;
             }
-        }
-
-        private void writeSuccessorEdges (BufferedWriter out,
-                HeaderVertex headerv) throws IOException
-        {
-            StringBuffer buffer = new StringBuffer();
-
-            Vertex v = cfg.getVertex(headerv.getHeaderID());
-            Iterator <Edge> succIt = v.successorIterator();
-            while (succIt.hasNext())
-            {
-                FlowEdge e = (FlowEdge) succIt.next();
-                int succID = e.getVertexID();
-
-                if (lnt.inLoopBody(headerv.getHeaderID(), succID))
-                {
-                    int edgeID = e.getEdgeID();
-                    buffer.append(edgePrefix + Integer.toString(edgeID) + " + ");
-                }
-            }
-
-            buffer.delete(buffer.length() - 3, buffer.length() - 1);
-            out.write(buffer.toString());
         }
 
         private void writeIntegerConstraints (BufferedWriter out)
@@ -596,26 +575,26 @@ public class CalculationEngineCFG
 
             StringBuffer buffer = new StringBuffer();
 
-            out.write("// Integer constraints\n");
-            out.write("int ");
+            out.write(createComment("Integer constraints"));
+            out.write(intString);
             for (Vertex v : cfg)
             {
                 numberOfVariables++;
-                buffer.append(vertexPrefix + Integer.toString(v.getVertexID())
-                        + ", ");
+                buffer.append(createVertexVariable(v.getVertexID())
+                        + variableSeparator);
 
                 Iterator <Edge> succIt = v.successorIterator();
                 while (succIt.hasNext())
                 {
                     numberOfVariables++;
                     FlowEdge e = (FlowEdge) succIt.next();
-                    buffer.append(edgePrefix + Integer.toString(e.getEdgeID())
-                            + ", ");
+                    buffer.append(createEdgeVariable(e.getEdgeID())
+                            + variableSeparator);
                 }
             }
 
-            buffer.delete(buffer.length() - 3, buffer.length() - 1);
-            buffer.append(";\n");
+            buffer.delete(buffer.length() - 2, buffer.length() - 1);
+            buffer.append(statementTerminator + newLine);
 
             out.write(buffer.toString());
         }
@@ -687,7 +666,7 @@ public class CalculationEngineCFG
             Debug.debugMessage(getClass(), "Writing objective function", 3);
 
             objectiveFunction.append(createComment("Objective function"));
-            objectiveFunction.append("max: ");
+            objectiveFunction.append(maxString);
 
             int num = 1;
             for (int headerID : headerToVariablesInAcyclicRegion.keySet())
@@ -724,7 +703,7 @@ public class CalculationEngineCFG
                         }
                     }
 
-                    objectiveFunction.append(Long.toString(wcet) + " "
+                    objectiveFunction.append(Long.toString(wcet) + space
                             + variable + plus);
 
                     if (num % 10 == 0)
@@ -785,12 +764,23 @@ public class CalculationEngineCFG
                                 HeaderVertex ancestorv = (HeaderVertex) lnt
                                         .getVertex(ancestorID);
 
-                                constraints.append("//...with respect to "
-                                        + Integer.toString(ancestorv
-                                                .getHeaderID()) + "\n");
+                                constraints
+                                        .append(createComment("...with respect to "
+                                                + Integer.toString(ancestorv
+                                                        .getHeaderID())));
 
                                 int bound = database.getLoopBound(subprogramID,
                                         headerv.getVertexID(), ancestorID);
+
+                                if (lnt.isDowhileLoop(headerv.getHeaderID()) == false)
+                                {
+                                    Debug.debugMessage(
+                                            getClass(),
+                                            "Decrementing bound because it is a for loop",
+                                            4);
+
+                                    bound -= 1;
+                                }
 
                                 Debug.debugMessage(
                                         getClass(),
@@ -800,18 +790,37 @@ public class CalculationEngineCFG
                                                 + ancestorv.getVertexID()
                                                 + ". Bound = " + bound, 4);
 
-                                constraints.append(createVertexVariable(
-                                        headerv.getHeaderID(),
-                                        headerv.getHeaderID())
-                                        + "<="
-                                        + Integer.toString(bound)
-                                        + space
-                                        + createVertexVariable(
-                                                headerv.getHeaderID(),
-                                                ancestorv.getHeaderID())
-                                        + statementTerminator
-                                        + newLine
-                                        + newLine);
+                                if (ancestorID == headerv.getParentID())
+                                {
+                                    constraints.append(createVertexVariable(
+                                            headerv.getHeaderID(),
+                                            headerv.getHeaderID())
+                                            + lessThanOrEquals
+                                            + Integer.toString(bound)
+                                            + space
+                                            + createVertexVariable(
+                                                    headerv.getHeaderID(),
+                                                    ancestorv.getHeaderID())
+                                            + statementTerminator
+                                            + newLine
+                                            + newLine);
+                                }
+                                else
+                                {
+                                    constraints.append(createVertexVariable(
+                                            headerv.getHeaderID(),
+                                            headerv.getHeaderID())
+                                            + lessThanOrEquals
+                                            + Integer.toString(bound)
+                                            + space
+                                            + createVertexVariable(
+                                                    ancestorv.getHeaderID(),
+                                                    ancestorv.getHeaderID())
+                                            + statementTerminator
+                                            + newLine
+                                            + newLine);
+                                }
+
                             }
                         }
                     }
@@ -1024,7 +1033,7 @@ public class CalculationEngineCFG
             Debug.debugMessage(getClass(), "Writing integer constraints", 3);
 
             integerConstraints.append(createComment("Integer constraints"));
-            integerConstraints.append("int ");
+            integerConstraints.append(intString);
 
             for (int headerID : headerToVariablesInAcyclicRegion.keySet())
             {
@@ -1034,11 +1043,11 @@ public class CalculationEngineCFG
 
                 for (String variable : variables)
                 {
-                    integerConstraints.append(variable + ", ");
+                    integerConstraints.append(variable + variableSeparator);
                 }
             }
 
-            integerConstraints.delete(integerConstraints.length() - 3,
+            integerConstraints.delete(integerConstraints.length() - 2,
                     integerConstraints.length() - 1);
 
             integerConstraints.append(statementTerminator + newLine);
@@ -1096,7 +1105,7 @@ public class CalculationEngineCFG
             for (Vertex v : cfg)
             {
                 int vertexID = v.getVertexID();
-                lp.setColName(columnNum, vertexPrefix + vertexID);
+                lp.setColName(columnNum, createVertexVariable(vertexID));
                 lp.setInt(columnNum, true);
                 unitToColumn.put(vertexID, columnNum);
                 columnToUnit.put(columnNum, vertexID);
@@ -1107,7 +1116,7 @@ public class CalculationEngineCFG
                 {
                     FlowEdge e = (FlowEdge) succIt.next();
                     int edgeID = e.getEdgeID();
-                    lp.setColName(columnNum, edgePrefix + edgeID);
+                    lp.setColName(columnNum, createEdgeVariable(edgeID));
                     lp.setInt(columnNum, true);
                     unitToColumn.put(edgeID, columnNum);
                     columnToUnit.put(columnNum, edgeID);
@@ -1262,21 +1271,25 @@ public class CalculationEngineCFG
                         + headerv.getVertexID() + " relative to loop "
                         + ancestorv.getVertexID() + ". Bound = " + bound, 4);
 
-                Vertex v = cfg.getVertex(headerv.getHeaderID());
-                Iterator <Edge> succIt = v.successorIterator();
-                while (succIt.hasNext())
-                {
-                    FlowEdge e = (FlowEdge) succIt.next();
-                    int succID = e.getVertexID();
+                colArray[index] = unitToColumn.get(headerv.getHeaderID());
+                rowArray[index] = 1;
+                index++;
 
-                    if (lnt.inLoopBody(headerv.getHeaderID(), succID))
-                    {
-                        int edgeID = e.getEdgeID();
-                        colArray[index] = unitToColumn.get(edgeID);
-                        rowArray[index] = 1;
-                        index++;
-                    }
-                }
+                // Vertex v = cfg.getVertex(headerv.getHeaderID());
+                // Iterator <Edge> succIt = v.successorIterator();
+                // while (succIt.hasNext())
+                // {
+                // FlowEdge e = (FlowEdge) succIt.next();
+                // int succID = e.getVertexID();
+                //
+                // if (lnt.inLoopBody(headerv.getHeaderID(), succID))
+                // {
+                // int edgeID = e.getEdgeID();
+                // colArray[index] = unitToColumn.get(edgeID);
+                // rowArray[index] = 1;
+                // index++;
+                // }
+                // }
 
                 if (ancestorID == headerv.getParentID())
                 {

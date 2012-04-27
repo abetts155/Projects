@@ -115,8 +115,7 @@ public class CFGGenerator
                 TreeVertex treev = levelIt.next();
 
                 Debug.debugMessage(getClass(),
-                        "Analysing loop " + treev.getVertexID() + " = "
-                                + remainingVerticesInRegion, 1);
+                        "Analysing loop " + treev.getVertexID(), 1);
 
                 if (level == 0)
                 {
@@ -941,11 +940,6 @@ public class CFGGenerator
     {
         LoopNests lnt = new LoopNests(cfg, cfg.getEntryID());
 
-        if (Globals.uDrawDirectorySet())
-        {
-            UDrawGraph.makeUDrawFile(lnt, "");
-        }
-
         for (int level = lnt.getHeight() - 1; level > 0; --level)
         {
             Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
@@ -960,23 +954,30 @@ public class CFGGenerator
                     Debug.debugMessage(getClass(), "Analysing header "
                             + headerv.getHeaderID(), 1);
 
+                    HeaderVertex parentv = (HeaderVertex) lnt.getVertex(headerv
+                            .getParentID());
+                    FlowGraph parentg = lnt.induceSubraph(parentv);
+                    DepthFirstTree dfs = new DepthFirstTree(parentg,
+                            parentg.getEntryID());
+
                     if (MainProgramGenerator.Globals.breaksAllowed()
-                            && random.nextBoolean() && v.hasSuccessors())
+                            && random.nextBoolean())
                     {
-                        addBreaks(headerv, lnt);
+                        addBreaks(headerv, lnt, dfs);
                     }
 
                     if (MainProgramGenerator.Globals.continuesAllowed()
                             && random.nextBoolean())
                     {
-                        addContinues(headerv, lnt);
+                        addContinues(headerv, lnt, dfs);
                     }
                 }
             }
         }
     }
 
-    private void addBreaks (HeaderVertex headerv, LoopNests lnt)
+    private void addBreaks (HeaderVertex headerv, LoopNests lnt,
+            DepthFirstTree dfs)
     {
         int headerID = headerv.getHeaderID();
 
@@ -997,40 +998,44 @@ public class CFGGenerator
             }
         }
 
-        if (candidateSources.isEmpty() == false)
+        ArrayList <Integer> candidateDestinations = new ArrayList <Integer>();
+        int postIDOfHeader = dfs.getPostID(headerID);
+        for (int postID = 1; postID < postIDOfHeader
+                && postID <= dfs.numOfVertices(); ++postID)
         {
-            HeaderVertex parentv = (HeaderVertex) lnt.getVertex(headerv
-                    .getParentID());
-            FlowGraph parentg = lnt.induceSubraph(parentv);
+            int bbID = dfs.getPostVertexID(postID);
+            candidateDestinations.add(bbID);
+        }
 
-            DepthFirstTree dfs = new DepthFirstTree(parentg,
-                    parentg.getEntryID());
-            int postIDOfHeader = dfs.getPostID(headerID);
-
+        if (candidateSources.isEmpty() == false
+                && candidateDestinations.isEmpty() == false)
+        {
             int numOfBreaks = random.nextInt(candidateSources.size());
             for (int i = 0; i < numOfBreaks; ++i)
             {
-                int bbID = candidateSources.get(i);
+                int randomIndex = random.nextInt(candidateSources.size());
+                int sourceID = candidateSources.remove(randomIndex);
 
-                int postID = 1;
-                while (postID < postIDOfHeader
-                        && postID <= parentg.numOfVertices())
-                {
-                    int bbID2 = dfs.getPostVertexID(postID);
+                int randomIndex2 = random.nextInt(candidateDestinations.size());
+                int destinationID = candidateDestinations.get(randomIndex2);
 
-                    Debug.debugMessage(getClass(), "Found candidate edge "
-                            + bbID + " => " + bbID2 + " for break out of "
-                            + headerID, 2);
+                Debug.debugMessage(getClass(), "Adding edge " + sourceID
+                        + " => " + destinationID + " to break out of "
+                        + headerv.getHeaderID(), 3);
 
-                    cfg.addEdge(bbID, bbID2, BranchType.TAKEN);
-
-                    postID++;
-                }
+                cfg.addEdge(sourceID, destinationID, BranchType.TAKEN);
             }
+        }
+        else
+        {
+            Debug.debugMessage(getClass(), "Empty candidates for break edges",
+                    3);
+
         }
     }
 
-    private void addContinues (HeaderVertex headerv, LoopNests lnt)
+    private void addContinues (HeaderVertex headerv, LoopNests lnt,
+            DepthFirstTree dfs)
     {
         Debug.debugMessage(getClass(),
                 "Trying to add continues to " + headerv.getHeaderID(), 2);

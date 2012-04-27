@@ -21,9 +21,13 @@ public class IPETModel
     protected final static String newLine = "\n";
     protected final static String statementTerminator = ";";
     protected final static String equals = " = ";
+    protected final static String lessThanOrEquals = " <= ";
     protected final static String plus = " + ";
     protected final static String underscore = "_";
     protected final static String space = " ";
+    protected final static String variableSeparator = ", ";
+    protected final static String intString = "int ";
+    protected final static String maxString = "max: ";
 
     protected LpSolve lp;
     protected int numOfColumns;
