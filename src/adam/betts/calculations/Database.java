@@ -61,7 +61,6 @@ public class Database
 
     public void generateData (boolean random)
     {
-        HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer>();
         HashMap <Integer, HashMap <Integer, Integer>> headerBounds = new HashMap <Integer, HashMap <Integer, Integer>>();
 
         Random randomGenerator = new Random();
@@ -102,14 +101,19 @@ public class Database
 
                     if (v instanceof HeaderVertex)
                     {
+                        HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer>();
                         HeaderVertex headerv = (HeaderVertex) v;
                         int vertexID = headerv.getVertexID();
 
                         for (int ancestorID : lnt.getProperAncestors(vertexID))
                         {
-                            int ancestorLevel = lnt.getVertex(ancestorID)
-                                    .getLevel() + 1;
-                            int bound = (int) Math.pow(10, ancestorLevel);
+                            int levelDifference = headerv.getLevel()
+                                    - lnt.getVertex(ancestorID).getLevel();
+
+                            int bound = (int) (Math.pow(10, levelDifference) / 2) - levelDifference;
+
+                            Debug.debugMessage(getClass(), "Exponent = "
+                                    + levelDifference + ", bound = " + bound, 1);
 
                             if (random)
                             {
@@ -130,6 +134,31 @@ public class Database
             }
 
             loopBounds.put(subprogramID, headerBounds);
+        }
+
+        for (Subprogram s : program)
+        {
+            Debug.debugMessage(getClass(),
+                    "Subprogram " + s.getSubprogramName(), 2);
+
+            int subprogramID = s.getSubprogramID();
+
+            for (int headerID : loopBounds.get(subprogramID).keySet())
+            {
+                for (int ancestorID : loopBounds.get(subprogramID)
+                        .get(headerID).keySet())
+                {
+                    Debug.debugMessage(
+                            getClass(),
+                            "Bound of "
+                                    + headerID
+                                    + " w.r.t "
+                                    + ancestorID
+                                    + " = "
+                                    + loopBounds.get(subprogramID)
+                                            .get(headerID).get(ancestorID), 1);
+                }
+            }
         }
     }
 

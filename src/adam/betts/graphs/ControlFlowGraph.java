@@ -97,8 +97,8 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
                 exitID = newID;
             }
 
-            Debug.debugMessage(getClass(), "Renumbering " + oldVertexID
-                    + " to " + newID, 4);
+            Debug.debugMessage(getClass(), "Renumbering vertex " + oldVertexID
+                    + " to new ID " + newID, 4);
         }
 
         HashSet <Vertex> vertices = new HashSet <Vertex>();
