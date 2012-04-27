@@ -4,6 +4,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -111,14 +113,19 @@ public class CalculationEngineCFG
 
     public final void printResults ()
     {
-        final int numOfColumns = 4;
+        final char columnDivider = '|';
+
         final String column1Heading = "Subprogram";
         final String column2Heading = "WCET";
         final String column3Heading = "#Constraints";
         final String column4Heading = "#Variables";
-        final char columnDivider = '|';
-        int column1Length = column1Heading.length();
+        final String column5Heading = "Time";
+        final String[] columns = { column1Heading, column2Heading,
+                column3Heading, column4Heading, column5Heading };
 
+        int column5Length = 10;
+
+        int column1Length = column1Heading.length();
         for (int i = 1; i <= dfs.numOfVertices(); ++i)
         {
             int subprogramID = dfs.getPostVertexID(i);
@@ -135,17 +142,29 @@ public class CalculationEngineCFG
         rowDivider.append(columnDivider);
         for (int i = 0; i < column1Length + column2Heading.length()
                 + column3Heading.length() + column4Heading.length()
-                + numOfColumns - 1; ++i)
+                + column5Length + columns.length - 1; ++i)
         {
             rowDivider.append("=");
         }
         rowDivider.append(columnDivider);
 
         StringBuffer tableHeading = new StringBuffer();
-        tableHeading.append(columnDivider + column1Heading
-                + pad(column1Heading, column1Length) + columnDivider
-                + column2Heading + columnDivider + column3Heading
-                + columnDivider + column4Heading + columnDivider);
+        tableHeading.append(columnDivider);
+        for (int i = 0; i < columns.length; ++i)
+        {
+            tableHeading.append(columns[i]);
+
+            if (i == 0)
+            {
+                tableHeading.append(pad(column1Heading, column1Length));
+            }
+            else if (i == 4)
+            {
+                tableHeading.append(pad(column5Heading, column5Length));
+            }
+
+            tableHeading.append(columnDivider);
+        }
         System.out.println(rowDivider.toString());
         System.out.println(tableHeading.toString());
         System.out.println(rowDivider.toString());
@@ -165,6 +184,7 @@ public class CalculationEngineCFG
             String row1Constraints = Long.toString(ilp.flowConstraints
                     + ilp.loopConstraints);
             String row1Variables = Long.toString(ilp.numberOfVariables);
+            String row1Time = Long.toString(ilp.solvingTime);
 
             row1.append(columnDivider + subprogramName
                     + pad(subprogramName, column1Length) + columnDivider
@@ -173,6 +193,7 @@ public class CalculationEngineCFG
                     + pad(row1Constraints, column3Heading.length())
                     + columnDivider + row1Variables
                     + pad(row1Variables, column4Heading.length())
+                    + columnDivider + row1Time + pad(row1Time, column5Length)
                     + columnDivider);
 
             StringBuffer row2 = new StringBuffer();
@@ -180,6 +201,7 @@ public class CalculationEngineCFG
             String row2Constraints = Long.toString(ilp2.flowConstraints
                     + ilp2.loopConstraints);
             String row2Variables = Long.toString(ilp2.numberOfVariables);
+            String row2Time = Long.toString(ilp2.solvingTime);
 
             row2.append(columnDivider + subprogramName
                     + pad(subprogramName, column1Length) + columnDivider
@@ -188,6 +210,7 @@ public class CalculationEngineCFG
                     + pad(row2Constraints, column3Heading.length())
                     + columnDivider + row2Variables
                     + pad(row2Variables, column4Heading.length())
+                    + columnDivider + row2Time + pad(row2Time, column5Length)
                     + columnDivider);
 
             System.out.println(row1.toString());
@@ -216,6 +239,7 @@ public class CalculationEngineCFG
         protected final int subprogramID;
         protected final String subprogramName;
 
+        protected long solvingTime = 0;
         protected int flowConstraints = 0;
         protected int loopConstraints = 0;
         protected int numberOfVariables = 0;
@@ -237,7 +261,11 @@ public class CalculationEngineCFG
         {
             Debug.debugMessage(getClass(), "Solving ILP", 3);
 
+            long stamp1 = System.nanoTime();
             int solution = lp.solve();
+            long stamp2 = System.nanoTime();
+            solvingTime = stamp2 - stamp1;
+
             switch (solution)
             {
                 case LpSolve.OPTIMAL:
