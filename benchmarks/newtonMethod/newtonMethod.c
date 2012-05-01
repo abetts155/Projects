@@ -8,6 +8,8 @@
 
 #include <float.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define XSIZE 3
 
@@ -27,14 +29,14 @@ double maxDoub(double a, double b)
 	return b;
 }
 
-LUdcmp initialiseLUdcmp(double **a) {
-	LUdcmp newLUcmp;
-	newLUcmp.n = XSIZE;
+LUdcmp initialiseLUdcmp(double a[XSIZE][XSIZE]) {
+	LUdcmp newLUdcmp;
+	newLUdcmp.n = XSIZE;
 	
 	int i, j;
 	for (i = 0; i < XSIZE; i++) {
 		for (j = 0; j < XSIZE; j++) {
-			newLUcmp.lu[i][j] = a[i][j];
+			newLUdcmp.lu[i][j] = a[i][j];
 		}
 	}
 
@@ -42,21 +44,21 @@ LUdcmp initialiseLUdcmp(double **a) {
 	int imax, k;
 	double big, temp;
 	double vv[XSIZE];
-	newLUcmp.d = 1.0;
+	newLUdcmp.d = 1.0;
 
-	for (i = 0; i < newLUcmp.n; i++) {
+	for (i = 0; i < newLUdcmp.n; i++) {
 		big = 0.0;
-		for (j = 0; j < newLUcmp.n; j++) {
-			if ((temp = abs(newLUcmp.lu[i][j])) > big) {big = temp;}
+		for (j = 0; j < newLUdcmp.n; j++) {
+			if ((temp = fabs(newLUdcmp.lu[i][j])) > big) {big = temp;}
 		}
-		if (big == 0.0) exit(1);
+		if (big == 0.0) { exit(1);}
 		vv[i] = 1.0 / big;
 	}
 	
-	for (k = 0; k < newLUcmp.n; k++) {
+	for (k = 0; k < newLUdcmp.n; k++) {
 		big = 0.0;
-		for (i = k; i < newLUcmp.n; i++) {
-			temp = vv[i] * abs(newLUcmp.lu[i][k]);
+		for (i = k; i < newLUdcmp.n; i++) {
+			temp = vv[i] * fabs(newLUdcmp.lu[i][k]);
 			if (temp > big) {
 				big = temp;
 				imax = i;
@@ -64,25 +66,25 @@ LUdcmp initialiseLUdcmp(double **a) {
 		}
 
 		if (k != imax) {
-			for (j = 0; j < newLUcmp.n; j++) {
-				temp = newLUcmp.lu[imax][j];
-				newLUcmp.lu[imax][j] = newLUcmp.lu[k][j];
-				newLUcmp.lu[k][j] = temp;
+			for (j = 0; j < newLUdcmp.n; j++) {
+				temp = newLUdcmp.lu[imax][j];
+				newLUdcmp.lu[imax][j] = newLUdcmp.lu[k][j];
+				newLUdcmp.lu[k][j] = temp;
 			}
-			newLUcmp.d = -newLUcmp.d;
+			newLUdcmp.d = -newLUdcmp.d;
 			vv[imax] = vv[k];
 		}
-		newLUcmp.indx[k] = imax;
-		if (newLUcmp.lu[k][k] == 0.0) {newLUcmp.lu[k][k] = TINY;}
+		newLUdcmp.indx[k] = imax;
+		if (newLUdcmp.lu[k][k] == 0.0) {newLUdcmp.lu[k][k] = TINY;}
 
-		for (i = k + 1; i < newLUcmp.n; i++) {
-			temp = newLUcmp.lu[i][k] /= newLUcmp.lu[k][k];
-			for (j = k + 1; j < newLUcmp.n; j++) {
-				newLUcmp.lu[i][j] -= temp * newLUcmp.lu[k][j];
+		for (i = k + 1; i < newLUdcmp.n; i++) {
+			temp = newLUdcmp.lu[i][k] /= newLUdcmp.lu[k][k];
+			for (j = k + 1; j < newLUdcmp.n; j++) {
+				newLUdcmp.lu[i][j] -= temp * newLUdcmp.lu[k][j];
 			}
 		}
 	}
-	return newLUcmp;
+	return newLUdcmp;
 }
 
 void solveLUdcmp(LUdcmp l, double b[], double x[]) {
@@ -132,21 +134,28 @@ double funcValues[XSIZE];
 double* vecfunc(double x[]) {
 	int i;
 	
-	for (i = 0; i < XSIZE; i++) {
-		funcValues[i] = (x[i] * i) - i;
-	}
+	funcValues[0] = (x[0] * 3) - 18;
+	funcValues[1] = pow(x[1], 3) + (-5 * pow(x[1], 2)) + (2 * x[1]) + 8;
+	funcValues[2] = pow(x[2], 2) + (-5 * x[2]) + 6;
+	/*for (i = 0; i < XSIZE; i++) {
+		funcValues[i] = (x[i] * (i + 1)) - (i + 1);
+	}*/
 
 	return funcValues;
 }
 
-double *fvec;
+double fvec[XSIZE];
 // Returns f = 0.5F.F at x. ALso stores value of F in fvec
 double NRfmin(double x[]) {
 	int n = XSIZE;
 	double sum = 0;
 	int i;
+	double *fvectmp;
 
-	fvec = vecfunc(x);
+	fvectmp = vecfunc(x);
+	for (i = 0; i < n; i++) {
+		fvec[i] = fvectmp[i];
+	}
 	for (i = 0; i < n; i++) {
 		//sum += SQR(fvec[i]);
 		sum += (fvec[i] * fvec[i]);
@@ -154,8 +163,7 @@ double NRfmin(double x[]) {
 	return 0.5 * sum;
 }
 
-double df[XSIZE][XSIZE];
-double** NRfdjac(double x[], double fvecIn[]) {
+void NRfdjac(double x[], double fvecIn[], double df[XSIZE][XSIZE]) {
 	const double EPS = 1.0e-8;
 	int n = XSIZE;
 	int i, j;
@@ -167,7 +175,7 @@ double** NRfdjac(double x[], double fvecIn[]) {
 
 	for(j = 0; j < n; j++) {
 		double temp = xh[j];
-		double h = EPS * abs(temp);
+		double h = EPS * fabs(temp);
 		if (h == 0.0) h = EPS;
 		xh[j] = temp + h;
 		h = xh[j] - temp;
@@ -177,7 +185,6 @@ double** NRfdjac(double x[], double fvecIn[]) {
 			df[i][j] = (f[i] - fvecIn[i]) / h;
 		}
 	}
-	return df;
 }
 
 void lnsearch(double xold[], const double fold, double g[], double p[],
@@ -205,11 +212,11 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 	for (i = 0; i < n; i++) {
 		slope += g[i] * p[i];
 	}
-	if (slope >= 0.0) exit (1);
+	if (slope >= 0.0) { exit (1); }
 
 	test = 0.0;
 	for (i = 0; i < n; i++) {
-		temp = abs(p[i]) / maxDoub(abs(xold[i]), 1.0);
+		temp = fabs(p[i]) / maxDoub(fabs(xold[i]), 1.0);
 		if (temp > test) {test = temp;}
 	}
 
@@ -252,7 +259,7 @@ void lnsearch(double xold[], const double fold, double g[], double p[],
 	}
 }
 
-void newt(double x[], int *check) {
+void newtonMethod(double x[], int *check) {
 	const int MAXITS = 200;
 	const double TOLF = 1.0e-8, TOLMIN = 1.0e-12, STPMX = 100.0;
 	// Library use DBL_EPSILON
@@ -261,13 +268,13 @@ void newt(double x[], int *check) {
 	int i, j, its, n = XSIZE;
 	double den, f, fold, stpmax, sum, temp, test;
 	double g[XSIZE], p[XSIZE], xold[XSIZE];
-	double **fjac;
+	double fjac[XSIZE][XSIZE];
 
 	f = NRfmin(x);
 	test = 0.0;
 
 	for (i = 0; i < n; i++) {
-		if (abs(fvec[i]) > test) test = abs(fvec[i]);
+		if (fabs(fvec[i]) > test) test = fabs(fvec[i]);
 	}
 	if (test < 0.01 * TOLF) {
 		*check = 0;
@@ -275,12 +282,11 @@ void newt(double x[], int *check) {
 	}
 
 	sum = 0.0;
-	//for (i = 0; i < n; i++) sum += SQR(x[i]);
 	for (i = 0; i < n; i++) sum += x[i] * x[i];
 	stpmax = STPMX * maxDoub(sqrt(sum), (double)n);
 	
 	for (its = 0; its < MAXITS; its++) {
-		fjac = NRfdjac(x, fvec);
+		NRfdjac(x, fvec, fjac);
 		for (i = 0; i < n; i++) {
 			sum = 0.0;
 			for (j = 0; j < n; j++) {
@@ -299,17 +305,17 @@ void newt(double x[], int *check) {
 		lnsearch(xold, fold, g, p, x, &f, stpmax, check);
 		test = 0.0;
 		for (i = 0; i < n; i++) {
-			if (abs(fvec[i]) > test) test = abs(fvec[i]);
+			if (fabs(fvec[i]) > test) test = fabs(fvec[i]);
 		}
-		if (test < TOLF) {
+		if (test < TOLF) {			
 			*check = 0;
 			return;
 		}
-		if (check) {
+		if (*check) {
 			test = 0.0;
 			den = maxDoub(f, 0.5 * n);
 			for (i = 0; i < n; i++) {
-				temp = abs(g[i]) * maxDoub(abs(x[i]), 1.0) / den;
+				temp = fabs(g[i]) * maxDoub(fabs(x[i]), 1.0) / den;
 				if (temp > test) test = temp;
 			}
 			if (test < TOLMIN)
@@ -325,11 +331,12 @@ void newt(double x[], int *check) {
 		
 		test = 0.0;
 		for (i = 0; i < n; i++) {
-			temp = (abs(x[i] - xold[i])) / maxDoub(abs(x[i]), 1.0);
+			temp = (fabs(x[i] - xold[i])) / maxDoub(fabs(x[i]), 1.0);
 			if (temp > test) test = temp;
 		}
-		if (test < TOLX)
+		if (test < TOLX) {	
 			return;
+		}
 	}
 	exit(1);
 }
@@ -352,23 +359,19 @@ main (int argc, char *argv[])
 
   for (i = 0; i < argc - 1; ++i)
   {
-    TV[i] = atoi (argv[i + 1]);
+    TV[i] = atof (argv[i + 1]);
   }
 
-  newt (TV, &check);
+  newtonMethod(TV, &check);
 
-/*
-  if (check)
-  {
-     printf("Check Value\n");
-  }
+  printf("Check value = %i\n", check);
 
   for (i = 0; i < argc - 1; ++i)
   {
     printf("%lf ", TV[i]);
   }
   printf("\n");
-*/
+
 
   return 0;
 }
