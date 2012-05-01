@@ -12,6 +12,8 @@ import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.utilities.Debug;
 import adam.betts.vertices.Vertex;
+import adam.betts.vertices.trees.HeaderVertex;
+import adam.betts.vertices.trees.TreeVertex;
 
 public class Database
 {
@@ -59,7 +61,6 @@ public class Database
 
     public void generateData (boolean random)
     {
-        HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer>();
         HashMap <Integer, HashMap <Integer, Integer>> headerBounds = new HashMap <Integer, HashMap <Integer, Integer>>();
 
         Random randomGenerator = new Random();
@@ -79,7 +80,7 @@ public class Database
                 if (random)
                 {
                     data = Math.abs(randomGenerator.nextLong());
-                    
+
                     if (data == 0)
                     {
                         data = 1;
@@ -90,34 +91,74 @@ public class Database
                 unitWCETs.get(subprogramID).put(v.getVertexID(), data);
             }
 
-            LoopNests loop = s.getCFG().getLNT();
-
-            Iterator <Integer> it = loop.headerIterator();
-            while (it.hasNext())
+            LoopNests lnt = s.getCFG().getLNT();
+            for (int level = lnt.getHeight() - 1; level >= 0; --level)
             {
-                int headerID = it.next();
-
-                for (int ancestorID : loop.getProperAncestors(headerID))
+                Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
+                while (levelIt.hasNext())
                 {
-                    int bound = loop.getVertex(ancestorID).getLevel() + 1;
+                    TreeVertex v = levelIt.next();
 
-                    if (random)
+                    if (v instanceof HeaderVertex)
                     {
-                        bound = Math.abs(randomGenerator.nextInt());
+                        HashMap <Integer, Integer> properAncestorBounds = new HashMap <Integer, Integer>();
+                        HeaderVertex headerv = (HeaderVertex) v;
+                        int vertexID = headerv.getVertexID();
 
-                        if (bound == 0)
+                        for (int ancestorID : lnt.getProperAncestors(vertexID))
                         {
-                            bound = 1;
+                            int levelDifference = headerv.getLevel()
+                                    - lnt.getVertex(ancestorID).getLevel();
+
+                            int bound = (int) (Math.pow(10, levelDifference) / 2) - levelDifference;
+
+                            Debug.debugMessage(getClass(), "Exponent = "
+                                    + levelDifference + ", bound = " + bound, 1);
+
+                            if (random)
+                            {
+                                bound = Math.abs(randomGenerator.nextInt());
+
+                                if (bound == 0)
+                                {
+                                    bound = 1;
+                                }
+                            }
+
+                            properAncestorBounds.put(ancestorID, bound);
                         }
+
+                        headerBounds.put(vertexID, properAncestorBounds);
                     }
-
-                    properAncestorBounds.put(ancestorID, bound);
                 }
-
-                headerBounds.put(headerID, properAncestorBounds);
             }
 
             loopBounds.put(subprogramID, headerBounds);
+        }
+
+        for (Subprogram s : program)
+        {
+            Debug.debugMessage(getClass(),
+                    "Subprogram " + s.getSubprogramName(), 2);
+
+            int subprogramID = s.getSubprogramID();
+
+            for (int headerID : loopBounds.get(subprogramID).keySet())
+            {
+                for (int ancestorID : loopBounds.get(subprogramID)
+                        .get(headerID).keySet())
+                {
+                    Debug.debugMessage(
+                            getClass(),
+                            "Bound of "
+                                    + headerID
+                                    + " w.r.t "
+                                    + ancestorID
+                                    + " = "
+                                    + loopBounds.get(subprogramID)
+                                            .get(headerID).get(ancestorID), 1);
+                }
+            }
         }
     }
 

@@ -29,7 +29,7 @@ public class MainProgramGenerator
 	private static Option numberOfVerticesOption;
 
 	private final static int minVertices = 10;
-	private final static int maxVertices = 1000;
+	private final static int maxVertices = 10000;
 
 	private final static int minFanOut = 2;
 	private final static int maxFanOut = 10;

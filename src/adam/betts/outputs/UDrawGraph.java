@@ -4,20 +4,22 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Iterator;
 
 import adam.betts.edges.CallEdge;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.edges.IPGEdge;
+import adam.betts.edges.SuperBlockCFGStructureEdge;
 import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.CallGraph;
 import adam.betts.graphs.CallLoopGraph;
 import adam.betts.graphs.ContextGraph;
 import adam.betts.graphs.ControlDependenceGraph;
 import adam.betts.graphs.ControlFlowGraph;
+import adam.betts.graphs.FlowGraph;
 import adam.betts.graphs.IpointGraph;
+import adam.betts.graphs.SuperBlockCFGStructureGraph;
 import adam.betts.graphs.SuperBlockGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.DominatorTree;
@@ -25,9 +27,10 @@ import adam.betts.graphs.trees.LoopNests;
 import adam.betts.graphs.trees.SyntaxTree;
 import adam.betts.graphs.trees.Tree;
 import adam.betts.instructions.Instruction;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.IProfile;
+import adam.betts.utilities.Enums.SuperBlockCFGStructureEdgeType;
+import adam.betts.utilities.Globals;
 import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.ControlDependenceBasicBlock;
 import adam.betts.vertices.ControlDependenceEdge;
@@ -466,6 +469,106 @@ public class UDrawGraph
         }
     }
 
+    public final static void makeUDrawFile (FlowGraph flowg,
+            String fileNamePrefix)
+    {
+        try
+        {
+            final File file = new File(Globals.getUDrawDirectory(),
+                    fileNamePrefix + ".flowg" + fileNameSuffix);
+            BufferedWriter out = new BufferedWriter(new FileWriter(
+                    file.getAbsolutePath()));
+
+            out.write(beginGraph);
+            for (Vertex v : flowg)
+            {
+                out.write(newVertex(v.getVertexID()));
+                out.write(beginAttributes);
+                out.write(setName(Integer.toString(v.getVertexID())));
+                out.write(endAttibutes);
+
+                out.write(beginAttributes);
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    out.write(newEdge);
+                    out.write(beginAttributes);
+                    out.write(endAttibutes);
+                    out.write(edgeLink(e.getVertexID()));
+                    out.write(endEdge + ",\n");
+                }
+                out.write(endVertex + "\n");
+            }
+            out.write(endGraph);
+
+            out.close();
+        }
+        catch (IOException e)
+        {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    public final static void makeUDrawFile (SuperBlockCFGStructureGraph superg,
+            String fileNamePrefix)
+    {
+        try
+        {
+            final File file = new File(Globals.getUDrawDirectory(),
+                    fileNamePrefix + ".super.structure" + fileNameSuffix);
+            BufferedWriter out = new BufferedWriter(new FileWriter(
+                    file.getAbsolutePath()));
+
+            out.write(beginGraph);
+            for (Vertex v : superg)
+            {
+                SuperBlockVertex superv = (SuperBlockVertex) v;
+
+                out.write(newVertex(v.getVertexID()));
+                out.write(beginAttributes);
+                out.write(setShape(SHAPE.ELLIPSE));
+                out.write(setName(superv.basicBlockIDs().toString()));
+                out.write(setToolTip("Vertex " + v.getVertexID()));
+                out.write(endAttibutes);
+
+                out.write(beginAttributes);
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) e;
+                    out.write(newEdge);
+                    out.write(beginAttributes);
+                    out.write(setName(Integer.toString(supere.getEdgeID())));
+
+                    StringBuffer buffer = new StringBuffer(
+                            Integer.toString(supere.getBasicBlockID()));
+                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                    {
+                        out.write(setEdgePattern(EDGESHAPE.DASHED, 4));
+                        buffer.append("Acyclic irreducible edge");
+                    }
+
+                    out.write(setToolTip(buffer.toString()));
+                    out.write(endAttibutes);
+                    out.write(edgeLink(e.getVertexID()));
+                    out.write(endEdge + ",\n");
+                }
+                out.write(endVertex + "\n");
+            }
+            out.write(endGraph);
+
+            out.close();
+        }
+        catch (IOException e)
+        {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
     private static void writeSuperBlockVertex (BufferedWriter out,
             SuperBlockVertex v) throws IOException
     {
@@ -640,9 +743,18 @@ public class UDrawGraph
         out.write(newVertex(v.getVertexID()));
         out.write(beginAttributes);
         out.write(setShape(SHAPE.CIRCLE));
-        out.write(setName(Integer.toString(v.getVertexID())));
-        out.write(setToolTip("Header = " + v.getHeaderID() + "\\nLevel = "
-                + v.getLevel()));
+        out.write(setName(Integer.toString(v.getVertexID()) + "\\n["
+                + v.getHeaderID() + "]"));
+
+        StringBuffer toolTip = new StringBuffer();
+        toolTip.append("Level = " + v.getLevel());
+        if (v.isDoWhile())
+        {
+            toolTip.append("\\nDo-While loop");
+            out.write(setColor(COLOR.RED));
+        }
+
+        out.write(setToolTip(toolTip.toString()));
         out.write(endAttibutes);
 
         out.write(beginAttributes);
