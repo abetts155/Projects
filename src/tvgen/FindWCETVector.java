@@ -24,7 +24,7 @@ public class FindWCETVector {
 	private static Option vectorLengthOption;
 	private static Option upBoundOption;
 	private static Option lowBoundOption;
-	private static Option cpuTypeOption;
+	private static Option configFlagsOption;
 	private static Option threadsOption;
 	
 	private static String worstCaseVector = "";
@@ -72,11 +72,10 @@ public class FindWCETVector {
 		lowBoundOption.setRequired (false);
 		options.addOption (lowBoundOption);
 		
-		cpuTypeOption = new Option ("c", "cpu-type", true,
-				"The type of cpu to use in the gem5 simulation" +
-				"(atomic, timing, detailed, inorder)");
-		cpuTypeOption.setRequired (true);
-		options.addOption (cpuTypeOption);
+		configFlagsOption = new Option ("c", "config-file", true,
+				"The file specifying the flags to be used with gem5 config file");
+		configFlagsOption.setRequired (false);
+		options.addOption (configFlagsOption);
 		
 		threadsOption = new Option ("t", "num-threads", true,
 				"The number of evaluator threads to use (default is 1)");
@@ -139,9 +138,9 @@ public class FindWCETVector {
 		Thread[] threads = new Thread[numThreads];
 		
 		String programName = line.getOptionValue(programOption.getOpt());
-		String cpuType = line.getOptionValue(cpuTypeOption.getOpt());
+		String configFile = line.getOptionValue(configFlagsOption.getOpt());
 		
-		Gem5Tools g5Tools = new Gem5Tools(programName);
+		Gem5Tools g5Tools = new Gem5Tools(programName, configFile);
 		
 		int upBound = Integer.MAX_VALUE;
 		int lowBound = Integer.MIN_VALUE;
@@ -163,8 +162,8 @@ public class FindWCETVector {
 			int numRand = Integer.parseInt(
 					line.getOptionValue(numRandom.getOpt()));
 			for(int i = 0; i < numThreads; i++) {
-				finders[i] = new RandomWCETFinder(i, programName,
-						cpuType, g5Tools, numRand / numThreads);
+				finders[i] = new RandomWCETFinder(i, programName, 
+						g5Tools, numRand / numThreads);
 			}
 		} else {
 			for(int i = 0; i < numThreads; i++) {
@@ -178,8 +177,8 @@ public class FindWCETVector {
 					threadUpRange++;
 				}
 				
-				finders[i] = new SystematicWCETFinder(i, programName,
-						cpuType, g5Tools, threadUpRange, threadLowRange);
+				finders[i] = new SystematicWCETFinder(i, programName, g5Tools,
+						threadUpRange, threadLowRange);
 			}
 		}
 		

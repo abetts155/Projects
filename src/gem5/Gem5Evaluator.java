@@ -12,19 +12,16 @@ import tvgen.util.*;
 public abstract class Gem5Evaluator extends TVEvaluator {
 
 	private String programName;
-	protected String cpuType;
 	
 	protected Gem5Tools g5Tools;
 	
 	private static PrintStream traceOutput = null;
 	private static String traceFileName = "trace.BASIC_BLOCK.GA.gz";
 	
-	public Gem5Evaluator(int threadID, String programName, String cpuType,
-			Gem5Tools g5tools) {
+	public Gem5Evaluator(int threadID, String programName, Gem5Tools g5tools) {
 		super(threadID);
 		
 		this.programName = programName;
-		this.cpuType = cpuType;
 		
 		this.g5Tools = g5tools;
 		

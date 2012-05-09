@@ -2,6 +2,7 @@ package gem5;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.Set;
 
@@ -19,11 +20,12 @@ public class Gem5Tools {
 	private String gem5Binary;
 	private String gem5TraceFlags;
 	private String gem5ConfigScript;
+	private String configFlags;
 //	private String gem5TraceParser;
 	
 	private String wcetHome;
 	
-	public Gem5Tools(String programName) {
+	public Gem5Tools(String programName, String configFlagsFileName) {
 		gem5Home = System.getenv(gem5EnvVar);
 		if(gem5Home == null) {
 			SystemOutput.exitWithError("Error: could not find environment variable "
@@ -42,18 +44,50 @@ public class Gem5Tools {
 //		gem5TraceParser = wcetHome + "/scripts/gem5TraceParser.py";
 		
 		this.programName = programName;
-		traceParser = new TraceParser(programName + ".xml");
 		
 		checkFiles();
+		
+		traceParser = new TraceParser(programName + ".xml");
+		parseConfigFlags(configFlagsFileName);
 	}
 	
-	public double runGem5(String programArgs, String cpuType,
-			String outputFolder, String traceFile) {
+	private void parseConfigFlags(String configFlagsFileName)
+	{
+		configFlags = "";
+		if(configFlagsFileName != null)
+		{
+			try
+			{
+				FileInputStream inStream = new FileInputStream(configFlagsFileName);
+				BufferedReader flagsReader = new BufferedReader(
+						new InputStreamReader(inStream));
+				for(String line = flagsReader.readLine(); line != null;
+						line = flagsReader.readLine())
+				{
+					configFlags += line.trim() + " ";
+				}
+				configFlags.trim();
+			}
+			catch (Exception e)
+			{
+				SystemOutput.exitWithError("Error parsing config flags file " +
+											configFlagsFileName + ": " + e.getMessage());
+			}
+		}
+	}
+	
+	public double runGem5(String programArgs, String outputFolder, String traceFile)
+	{
 		String cmd = gem5Binary + " " + gem5TraceFlags + " --trace-file=" + traceFile +
 				" -d " + outputFolder + " " + gem5ConfigScript + " -c " +
-				programName + " --cpu-type=" + cpuType;
-		if(cpuType.equals("detailed") || cpuType.equals("inorder")) {
-			cmd += " --caches";
+				programName + " ";
+		if(configFlags.equals(""))
+		{
+			cmd += "--cpu-type=atomic";
+		}
+		else
+		{
+			cmd += configFlags;
 		}
 		cmd += " " + programArgs;
 		

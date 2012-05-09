@@ -45,12 +45,13 @@ parser.add_option("-r",
                   help="Entry point of the program.",
                   metavar="<NAME>")
 
-parser.add_option("-o",
-                  "--optimisation-level",
+parser.add_option("-f",
+                  "--compiler-flags",
                   action="store",
                   type="string",
-                  dest="optimisation",
-                  help="The optimisation level used by the compiler (O0,O1,O2 etc.)",
+                  dest="compFlags",
+                  help="Any compiler flags to be used e.g. -O0/1/2, -lm etc. \
+						(surround text with quotes e.g. \"-O2 -lm\")",
                   metavar="<NAME>")
 
 
@@ -76,9 +77,6 @@ if opts.program is None:
     exit(0)
 if opts.root is None:
     print("Missing option " + str(parser.get_option("-r")))
-    exit(0)
-if opts.optimisation is None:
-    print("Missing option " + str(parser.get_option("-o")))
     exit(0)
 
 def runCommand (cmd):
@@ -116,6 +114,10 @@ if opts.gem5sim:
     gcc     = "arm-linux-gnueabi-gcc -static"
     objdump = "arm-linux-gnueabi-objdump"
 
-runCommand("%s -%s -o %s %s"  % (gcc, opts.optimisation, opts.program[:-2], opts.program))
+compFlags = ""
+if opts.compFlags is not None:
+    compFlags = opts.compFlags
+
+runCommand("%s -o %s %s %s"  % (gcc, opts.program[:-2], opts.program, compFlags))
 runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
 runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))

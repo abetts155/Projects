@@ -41,18 +41,21 @@ parser.add_option("-a",
                   metavar="<arguments>")
 
 parser.add_option("-c",
-                  "--cpu-type",
+                  "--config-file",
                   action="store",
                   type="string",
-                  dest="cpuType",
-                  help="Type of cpu to be used (atomic, timing, detailed, inorder)",
-                  metavar="CPU_TYPE")
+                  dest="config",
+                  help="The file specifying the config flags to be used with the gem5 config script",
+                  metavar="<FILE>")
 
 (opts, args) = parser.parse_args(argv[1:])
 
 # Check that the user has passed the correct options
 if opts.program is None:
     print("Missing option " + str(parser.get_option("-p")))
+    exit(0)
+if opts.config is None:
+    print("Missing option " + str(parser.get_option("-c")))
     exit(0)
 
 def runCommand (cmd):
@@ -61,9 +64,11 @@ def runCommand (cmd):
                  executable="/bin/bash",
                  stderr=PIPE)
     proc.wait()
+    stderrdata = proc.communicate()
 
     if proc.returncode != 0:
         print("\nProblem running '" + cmd + "'")
+        print stderrdata
         exit(0)
 
 gem5Home = environ[gem5EnvironmentVariable]
@@ -74,12 +79,18 @@ wcetHome = environ[wcetToolsEnvironmentVariable]
 configScript = wcetHome + "/scripts/gem5Config/se.py"
 traceParser = wcetHome + "/scripts/gem5TraceParser.py"
 
-if opts.cpuType == "detailed" or opts.cpuType == "inorder":
-    runCommand("%s %s --trace-file=trace.out %s -c %s --cpu-type=%s --caches %s" \
-				% (gem5Bin, traceFlags, configScript, opts.program, opts.cpuType, opts.arguments))
-else:
-    runCommand("%s %s --trace-file=trace.out %s -c %s --cpu-type=%s %s" \
-				% (gem5Bin, traceFlags, configScript, opts.program, opts.cpuType, opts.arguments))
-runCommand("python %s -p %s.xml -t m5out/trace.out -o blockTimings.out -H" % (traceParser, opts.program))
+try:
+    configFile = open(opts.config, 'r');
+except IOError:
+    print("Error - cannot open config file: " + opts.config)
+    exit(1)
+
+configFlags = ""
+for configLine in configFile:
+    configFlags += configLine.strip() + " "
+
+runCommand("%s %s --trace-file=trace.out %s -c %s %s%s" \
+            % (gem5Bin, traceFlags, configScript, opts.program, configFlags, opts.arguments))
+#runCommand("python %s -p %s.xml -t m5out/trace.out -o blockTimings.out -H" % (traceParser, opts.program))
 
 
