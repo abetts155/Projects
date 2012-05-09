@@ -26,6 +26,7 @@ import adam.betts.edges.Edge;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.instructions.Instruction;
 import adam.betts.instructions.InstructionSet;
+import adam.betts.instructions.PTXInstructionSet;
 import adam.betts.outputs.OutputGraph;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
@@ -70,6 +71,11 @@ public class ProgramCreator
                 {
                     Debug.debugMessage(getClass(), "Reading an XML file", 3);
                     new XMLReader();
+                }
+                else if (fileExtension.equals("ptx"))
+                {
+                    Debug.debugMessage(getClass(), "Reading a PTX file", 3);
+                    new PTXReader();
                 }
                 else
                 {
@@ -346,6 +352,289 @@ public class ProgramCreator
                                 Debug.debugMessage(getClass(), "Added edge "
                                         + vertexID + "=>" + succID, 4);
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private class PTXReader
+    {
+
+        /*
+         * The instruction set of the PTX file
+         */
+        private PTXInstructionSet instructionSet;
+
+        /*
+         * Global variable to ensure basic block ids are unique across all CFGs
+         */
+        private int bbID = 1;
+
+        /*
+         * Since PTX instructions do not have addresses, this is used to assign
+         * virtual addresses
+         */
+        private long nextAddress = 0;
+        private final int addressOffset = 4;
+
+        private HashMap <String, TreeSet <Instruction>> subprogramToInstructions = new LinkedHashMap <String, TreeSet <Instruction>>();
+        private HashMap <String, HashSet <Instruction>> subprogramToLeader = new LinkedHashMap <String, HashSet <Instruction>>();
+        private HashMap <String, HashMap <String, Instruction>> subprogramToLabelToInstruction = new LinkedHashMap <String, HashMap <String, Instruction>>();
+
+        public PTXReader ()
+        {
+            instructionSet = new PTXInstructionSet();
+
+            identifyInstructions();
+            identifyLeaders();
+            identifyBasicBlocks();
+            addEdges();
+        }
+
+        private void identifyInstructions ()
+        {
+            try
+            {
+                String subprogramName = null;
+                HashSet <String> labels = new HashSet <String>();
+                int subprogramID = 0;
+                boolean parse = false;
+                boolean isBranchTarget = false;
+
+                BufferedReader in = new BufferedReader(new FileReader(
+                        Globals.getProgramFileName()));
+
+                String str;
+                while ((str = in.readLine()) != null)
+                {
+                    // Remove trailing whitespace
+                    str = str.replaceAll("^\\s+", "");
+
+                    if (str.length() > 0
+                            && str.startsWith("//") == false
+                            && str.startsWith("{") == false
+                            && str.startsWith("}") == false
+                            && str.startsWith(PTXInstructionSet.directiveFile) == false)
+                    {
+                        if (str.startsWith(PTXInstructionSet.directiveEntry))
+                        {
+                            parse = true;
+
+                            String[] lexemes = str.split("\\s+");
+                            assert lexemes.length >= 2;
+                            subprogramName = lexemes[1];
+                            subprogramID += 1;
+
+                            Debug.debugMessage(getClass(),
+                                    "New sub-program identified: "
+                                            + subprogramName, 2);
+
+                            program.addSubprogram(subprogramID, subprogramName);
+
+                            subprogramToLeader.put(subprogramName,
+                                    new HashSet <Instruction>());
+                            subprogramToLabelToInstruction.put(subprogramName,
+                                    new HashMap <String, Instruction>());
+                            subprogramToInstructions.put(subprogramName,
+                                    new TreeSet <Instruction>(
+                                            new Comparator <Instruction>()
+                                            {
+
+                                                public int compare (
+                                                        Instruction instr1,
+                                                        Instruction instr2)
+                                                {
+                                                    if (instr1.getAddress() < instr2
+                                                            .getAddress())
+                                                    {
+                                                        return -1;
+                                                    }
+                                                    else if (instr1
+                                                            .getAddress() > instr2
+                                                            .getAddress())
+                                                    {
+                                                        return 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        return 0;
+                                                    }
+                                                }
+                                            }));
+                        }
+                        else if (parse && str.charAt(0) != '.')
+                        {
+                            // Ignore directives (which lead with '.')
+                            if (str.charAt(str.length() - 1) == ':')
+                            {
+                                isBranchTarget = true;
+                                String label = str.substring(0,
+                                        str.length() - 1);
+                                Debug.debugMessage(getClass(),"Adding label "+label, 4);
+                                labels.add(label);
+                            }
+                            else
+                            {
+                                if (isBranchTarget)
+                                {
+                                    Debug.debugMessage(
+                                            getClass(),
+                                            "Branch target and leader detected",
+                                            2);
+
+                                    Instruction instr = new Instruction(
+                                            nextAddress, str, labels);
+                                    nextAddress += addressOffset;
+                                    subprogramToInstructions
+                                            .get(subprogramName).add(instr);
+
+                                    subprogramToLeader.get(subprogramName).add(
+                                            instr);
+
+                                    for (String label : labels)
+                                    {
+                                        subprogramToLabelToInstruction.get(
+                                                subprogramName).put(label,
+                                                instr);
+                                    }
+
+                                    isBranchTarget = false;
+                                    labels.clear();
+                                }
+                                else
+                                {
+                                    Instruction instr = new Instruction(
+                                            nextAddress, str);
+                                    nextAddress += addressOffset;
+                                    subprogramToInstructions
+                                            .get(subprogramName).add(instr);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                in.close();
+            }
+            catch (Exception e)
+            {
+                Debug.errorMessage(getClass(), e.getMessage());
+            }
+        }
+
+        private void identifyLeaders ()
+        {
+            for (String subprogramName : subprogramToInstructions.keySet())
+            {
+                boolean leader = false;
+
+                for (Instruction instr : subprogramToInstructions
+                        .get(subprogramName))
+                {
+                    if (leader)
+                    {
+                        leader = false;
+                        subprogramToLeader.get(subprogramName).add(instr);
+                    }
+
+                    if (instr.getInstruction().contains(
+                            PTXInstructionSet.braInstr))
+                    {
+                        leader = true;
+                    }
+
+                }
+            }
+
+        }
+
+        private void identifyBasicBlocks ()
+        {
+            for (String subprogramName : subprogramToInstructions.keySet())
+            {
+                int subprogramID = program.nameToId.get(subprogramName);
+                HashSet <Instruction> leaders = subprogramToLeader
+                        .get(subprogramName);
+                BasicBlock bb = null;
+
+                for (Instruction instr : subprogramToInstructions
+                        .get(subprogramName))
+                {
+                    Debug.debugMessage(getClass(), "Analysing instruction "
+                            + instr, 2);
+
+                    if (leaders.contains(instr))
+                    {
+                        ControlFlowGraph cfg = program.idToSubprogram.get(
+                                subprogramID).getCFG();
+                        cfg.setSubprogramName(subprogramName);
+                        cfg.addBasicBlock(bbID);
+                        bb = cfg.getBasicBlock(bbID);
+                        bb.addInstruction(instr);
+                        bbID++;
+                    }
+                    else
+                    {
+                        bb.addInstruction(instr);
+                    }
+                }
+            }
+
+        }
+
+        private void addEdges ()
+        {
+            for (String subprogramName : program.nameToId.keySet())
+            {
+                Debug.debugMessage(getClass(), "Adding edges to CFG of "
+                        + subprogramName, 2);
+
+                int subprogramID = program.nameToId.get(subprogramName);
+                ControlFlowGraph cfg = program.idToSubprogram.get(subprogramID)
+                        .getCFG();
+
+                for (Vertex u : cfg)
+                {
+                    BasicBlock bb = (BasicBlock) u;
+                    Instruction instr = bb.getLastInstruction();
+                    String instrStr = instr.getInstruction();
+
+                    if (instrStr.contains(PTXInstructionSet.braInstr))
+                    {
+                        String[] lexemes = instrStr.split("\\s+");
+                        String label = lexemes[lexemes.length - 1];
+                        label = label.substring(0, label.length() - 1);
+
+                        Debug.debugMessage(getClass(), "Searching for label "
+                                + label, 4);
+
+                        Instruction targetInstr = subprogramToLabelToInstruction
+                                .get(subprogramName).get(label);
+                        assert targetInstr != null;
+                        BasicBlock branchSucc = cfg.getBasicBlock(targetInstr
+                                .getAddress());
+
+                        cfg.addEdge(bb.getVertexID(), branchSucc.getVertexID(),
+                                BranchType.TAKEN);
+
+                        BasicBlock fallThroughSucc = cfg.getBasicBlock(instr
+                                .getAddress() + addressOffset);
+                        cfg.addEdge(bb.getVertexID(),
+                                fallThroughSucc.getVertexID(),
+                                BranchType.NOTTAKEN);
+                    }
+                    else
+                    {
+                        BasicBlock fallThroughSucc = cfg.getBasicBlock(instr
+                                .getAddress() + addressOffset);
+
+                        if (fallThroughSucc != null)
+                        {
+                            cfg.addEdge(bb.getVertexID(),
+                                    fallThroughSucc.getVertexID(),
+                                    BranchType.NOTTAKEN);
                         }
                     }
                 }

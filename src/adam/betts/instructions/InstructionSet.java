@@ -5,12 +5,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.ISA;
+import adam.betts.utilities.Globals;
 
 public class InstructionSet
 {
@@ -160,6 +159,8 @@ public class InstructionSet
 			raf.seek (1);
 
 			String line = raf.readLine ();
+			raf.close();
+			
 			if (line.endsWith ("ss-coff-little"))
 			{
 				/*

@@ -295,6 +295,12 @@ public class UDrawGraph
             Instruction instr = instrIt.next();
             buffer.append(Long.toHexString(instr.getAddress()) + ": "
                     + instr.getInstruction());
+
+            if (instr.hasLabels())
+            {
+                buffer.append(instr.getLabelString());
+            }
+
             if (i++ < bb.numberofInstructions())
             {
                 buffer.append("\\n");

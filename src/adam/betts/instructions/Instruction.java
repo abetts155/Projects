@@ -1,48 +1,70 @@
 package adam.betts.instructions;
 
+import java.util.HashSet;
+
 public class Instruction
 {
-	protected long address;
-	protected String[] instruction;
 
-	public Instruction (long address, String instructionStr)
-	{
-		this.address = address;
-		instruction = instructionStr.split ("\\s+");
-	}
+    protected long address;
+    protected String[] instruction;
+    protected HashSet <String> labels = new HashSet <String>();
 
-	public final long getAddress ()
-	{
-		return address;
-	}
+    public Instruction (long address, String instructionStr)
+    {
+        this.address = address;
+        instruction = instructionStr.split("\\s+");
+    }
 
-	public final String getInstruction ()
-	{
-		StringBuffer buffer = new StringBuffer ();
-		for (int i = 0; i < instruction.length; ++i)
-		{
-			buffer.append (instruction[i].replace (">", "").replace ("<", "")
-					.replace ("\"", "").replace ("&", ""));
-			if (i < instruction.length - 1)
-			{
-				buffer.append (" ");
-			}
-		}
-		return buffer.toString ();
-	}
+    public Instruction (long address, String instructionStr,
+            HashSet <String> labels)
+    {
+        this.address = address;
+        instruction = instructionStr.split("\\s+");
+        this.labels.addAll(labels);
+    }
 
-	public final String getOperation ()
-	{
-		return instruction[0].trim ();
-	}
+    public final long getAddress ()
+    {
+        return address;
+    }
 
-	public final String getOperand (int i)
-	{
-		return instruction[i];
-	}
+    public final boolean hasLabels ()
+    {
+        return labels.isEmpty() == false;
+    }
 
-	public String toString ()
-	{
-		return Long.toHexString (address) + " " + getInstruction ();
-	}
+    public final String getLabelString ()
+    {
+        return "\\tLabels = " + labels;
+    }
+
+    public final String getInstruction ()
+    {
+        StringBuffer buffer = new StringBuffer();
+        for (int i = 0; i < instruction.length; ++i)
+        {
+            buffer.append(instruction[i].replace(">", "").replace("<", "")
+                    .replace("\"", "").replace("&", ""));
+            if (i < instruction.length - 1)
+            {
+                buffer.append(" ");
+            }
+        }
+        return buffer.toString();
+    }
+
+    public final String getOperation ()
+    {
+        return instruction[0].trim();
+    }
+
+    public final String getOperand (int i)
+    {
+        return instruction[i];
+    }
+
+    public String toString ()
+    {
+        return Long.toHexString(address) + " " + getInstruction();
+    }
 }

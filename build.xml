@@ -15,6 +15,7 @@
 	<property name="program-generator.main.class" value="adam.betts.tools.MainProgramGenerator" />
 	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
 	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
+	<property name="ptx.main.class" value="adam.betts.tools.MainPTXAnalyser" />
 	<property name="tests.main.class" value="adam.betts.program.AllTests" />
 	<property name="tv-generator.main.class" value="tvgen.GenerateTestVectors" />
 	<property name="find-wcet.main.class" value="tvgen.FindWCETVector" />
@@ -29,6 +30,7 @@
 	<property name="program-generator.jar" value="program-generator.jar" />
 	<property name="tree.jar" value="tree.jar" />
 	<property name="loop.jar" value="loop.jar" />
+	<property name="ptx-analyser.jar" value="ptx-analyser.jar" />
 	<property name="tv-generator.jar" value="tv-generator.jar" />
 	<property name="find-wcet.jar" value="find-wcet.jar" />
 	<property name="gem5-trace-parser.jar" value="gem5-trace-parser.jar" />
@@ -94,6 +96,22 @@
 
 		<chmod file="${jar.dir}/${loop.jar}" perm="+x" verbose="true" />
 	</target>
+
+        <target name="ptx-analyser" depends="compile">
+		<mkdir dir="${jar.dir}" />
+
+		<jar destfile="${jar.dir}/${ptx-analyser.jar}" basedir="${build.dir}">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Main-Class" value="${ptx.main.class}" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+		</jar>
+
+		<chmod file="${jar.dir}/${ptx-analyser.jar}" perm="+x" verbose="true" />
+	</target>
+
 
 	<target name="simplescalar" depends="compile">
 		<mkdir dir="${jar.dir}" />
@@ -233,7 +251,7 @@
 		<chmod file="${jar.dir}/${gem5-trace-parser.jar}" perm="+x" verbose="true" />
 	</target>
 
-	<target name="jar" depends="disassemble, simplescalar, wcet, trace-parser, trace-generator,
+	<target name="jar" depends="ptx-analyser, disassemble, simplescalar, wcet, trace-parser, trace-generator,
 		program-generator, program-analyser, tree, loop, tv-generator, find-wcet,
 		gem5-trace-parser" />
 
