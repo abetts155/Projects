@@ -556,6 +556,11 @@ public class UDrawGraph
                         out.write(setEdgePattern(EDGESHAPE.DASHED, 4));
                         buffer.append("Acyclic irreducible edge");
                     }
+                    else if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.LOOP)
+                    {
+                        out.write(setEdgePattern(EDGESHAPE.SOLID, 4));
+                        buffer.append("Loop edge");	
+                    }
 
                     out.write(setToolTip(buffer.toString()));
                     out.write(endAttibutes);
