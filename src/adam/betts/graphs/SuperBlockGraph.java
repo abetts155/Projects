@@ -5,6 +5,7 @@ import java.util.Iterator;
 import adam.betts.edges.Edge;
 import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.utils.StronglyConnectedComponents;
+import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.vertices.SuperBlockVertex;

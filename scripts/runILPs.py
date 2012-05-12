@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
+import sys
 from optparse import OptionParser
-from sys import argv, maxint, path
 from subprocess import Popen, PIPE
 from os import environ, sep, rename
 from re import split, match
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
 # Add the 'src' directory to the module search and PYTHONPATH
-path.append(path[0] + sep + "src")
+sys.path.append(sys.path[0] + sep + "src")
 from Debug import Debug
  
 # The command-line parser and its options
@@ -63,12 +63,13 @@ parser.add_option("--min-vertices",
                   default=10,
                   metavar="<INT>")
 
-parser.add_option("-l",
+parser.add_option("-L",
                   "--loops",
-                  action="store_true",
+                  type="int",
                   dest="loops",
-                  help="Inject loops into the generated CFGs.",
-                  default=False)
+                  help="Inject loops into the CFG with the given depth. [Default is %default].",
+                  default=1,
+                  metavar="<INT>")
 
 parser.add_option("-v",
                  "--verbose",
@@ -77,11 +78,12 @@ parser.add_option("-v",
                  help="Be verbose.",
                  default=False)
 
-(opts, args) = parser.parse_args(argv[1:])
-debug = Debug(opts.verbose)
+(opts, args) = parser.parse_args(sys.argv[1:])
+debug = Debug(opts.verbose, opts.debug)
 
 # Check that the user has passed the correct options
 assert opts.minVertices >= 10, "CFGs with less than 10 vertices not supported"
+assert opts.loops >= 1, "Loop-nesting depth must be a positive number"
 assert opts.runs >= 1, "The number of runs per CFG must be a positive integer"
 
 # Maps whose key is the num of vertices in the CFG and whose value is either:
@@ -98,6 +100,8 @@ wcetData2        = {}
 constraintData2  = {}
 variablesData2   = {}
 solvingTimeData2 = {}
+
+topLevelDir = "experiments"
 
 def initialise ():
 	for numOfVertices in range(opts.minVertices, opts.maxVertices + 1):
@@ -143,6 +147,9 @@ def parseMeasurements (numOfVertices, line, firstLine):
 		colNum += 1
 			
 def run ():
+	from time import ctime
+	from os import chdir
+
 	# These environment variables are needed to compile and disassemble the program under analysis 
 	WCET_HOME = "WCET_HOME"
 	for var in [WCET_HOME]:
@@ -150,12 +157,15 @@ def run ():
         		environ[var]
     		except KeyError:
        		 	debug.exitMessage ("Cannot find environment variable '" + var + "' which is needed to run the simulation.")
+	
+	chdir(topLevelDir)
 
 	javaPrefix = "java -ea -jar "
 	for numOfVertices in range(opts.minVertices, opts.maxVertices + 1):
-		for variations in range(1, opts.variations + 1):
-			debug.verboseMessage("Now generating CFG of size " + str(numOfVertices))
-			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -V " + str(numOfVertices)
+		debug.verboseMessage("Now generating CFG with " + str(numOfVertices) + " vertices")
+		for variation in range(1, opts.variations + 1):
+			debug.verboseMessage("Variation #" + str(variation) + " " + ctime())
+			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices)
 
 			proc1 = Popen(cmd1, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 			stdoutdata, stderrdata = proc1.communicate()
@@ -167,8 +177,8 @@ def run ():
 			rename(oldProgramFileName,newProgramFileName)
 
 			for run in range(1, opts.runs + 1):
-				debug.verboseMessage("Run #" + str(run))
-				cmd2Options = " -p" + newProgramFileName + " -T"
+				debug.debugMessage("Run #" + str(run))
+				cmd2Options = " -p " + newProgramFileName + " -T"
 			    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-analyser.jar" + cmd2Options
 				proc2 = Popen(cmd2, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 				stdoutdata, stderrdata = proc2.communicate()
@@ -182,15 +192,17 @@ def run ():
 						if firstLine:
 							firstLine = False
 
-def generateGraph (fileName, yLabel, xAxis, curve1, curve2):
+def generateGraph (fileName, yLabel, xAxis, curve1, curve2, yLim=0, logScale=False):
 	figConstraints = plt.figure()
 	ax = figConstraints.add_subplot(111)
 	ax.grid(False)
-	ax.plot(xAxis, curve1, markersize=11, marker='^', color='blue', label='CFG')
+	ax.plot(xAxis, curve1, markersize=11, marker='.', color='blue', label='CFG')
 	ax.plot(xAxis, curve2, markersize=11, marker='+', color='red', label='SB-CFG')
 	ax.set_xlim(10)
-	ax.set_xticks(xAxis)
+	ax.set_ylim(yLim)
 	ax.set_ylabel(yLabel, fontsize=12, fontweight='bold')
+	if logScale:
+		ax.set_yscale('log')
 	ax.set_xlabel("#Vertices in CFG", fontsize=12, fontweight='bold')
 	# Make the X-axis and Y-axis ticks thicker
 	for tick in ax.xaxis.get_major_ticks():
@@ -210,37 +222,58 @@ def showResults ():
 	sbcfgVariablesCurve   = []
 	cfgTimeCurve          = []
 	sbcfgTimeCurve        = []
+	timeCurveMin          = sys.maxint
 
-	# Collate the data
-	for numOfVertices in wcetData:
-		xAxis.append(numOfVertices)
-		print("#Vertices " + str(numOfVertices))
-		print("WCET " + str(wcetData[numOfVertices]) + " " +  str(wcetData2[numOfVertices]))
+	try:
+		f = open('results.txt', 'w')
+		# Collate the data
+		for numOfVertices in wcetData:
+			xAxis.append(numOfVertices)
+			f.write("#Vertices " + str(numOfVertices) + "\n")
+			f.write("WCET " + str(wcetData[numOfVertices]) + " " +  str(wcetData2[numOfVertices]) + "\n")
 
-		cfgConstraints   = ceil(constraintData[numOfVertices]/(opts.runs*opts.variations))
-		sbcfgConstraints = ceil(constraintData2[numOfVertices]/(opts.runs*opts.variations))
-		print("Constraints " + str(cfgConstraints) + " " + str(sbcfgConstraints))
-		cfgConstraintsCurve.append(cfgConstraints)
-		sbcfgConstraintsCurve.append(sbcfgConstraints)
+			cfgConstraints   = ceil(constraintData[numOfVertices]/(opts.runs*opts.variations))
+			sbcfgConstraints = ceil(constraintData2[numOfVertices]/(opts.runs*opts.variations))
+			f.write("Constraints " + str(cfgConstraints) + " " + str(sbcfgConstraints) + "\n")
+			cfgConstraintsCurve.append(cfgConstraints)
+			sbcfgConstraintsCurve.append(sbcfgConstraints)
 
-		cfgVariables  = ceil(variablesData[numOfVertices]/(opts.runs*opts.variations))
-		sbcfgVariables = ceil(variablesData2[numOfVertices]/(opts.runs*opts.variations))
-		print("Variables " + str(cfgVariables) + " " + str(sbcfgVariables))
-		cfgVariablesCurve.append(cfgVariables)
-		sbcfgVariablesCurve.append(sbcfgVariables)
+			cfgVariables  = ceil(variablesData[numOfVertices]/(opts.runs*opts.variations))
+			sbcfgVariables = ceil(variablesData2[numOfVertices]/(opts.runs*opts.variations))
+			f.write("Variables " + str(cfgVariables) + " " + str(sbcfgVariables) + "\n")
+			cfgVariablesCurve.append(cfgVariables)
+			sbcfgVariablesCurve.append(sbcfgVariables)
 
-		cfgSolveTime   = ceil(solvingTimeData[numOfVertices]/(opts.runs*opts.variations))
-		sbcfgSolveTime = ceil(solvingTimeData2[numOfVertices]/(opts.runs*opts.variations))
-		print("Solving time " + str(cfgSolveTime) + " " + str(sbcfgSolveTime))
-		cfgTimeCurve.append(cfgSolveTime)
-		sbcfgTimeCurve.append(sbcfgSolveTime)
+			cfgSolveTime   = ceil(solvingTimeData[numOfVertices]/(opts.runs*opts.variations))
+			sbcfgSolveTime = ceil(solvingTimeData2[numOfVertices]/(opts.runs*opts.variations))
+			f.write("Solving time " + str(cfgSolveTime) + " " + str(sbcfgSolveTime) + "\n")
+			cfgTimeCurve.append(cfgSolveTime)
+			sbcfgTimeCurve.append(sbcfgSolveTime)
 
-	# Generate the graphs
-	generateGraph("constraints.png", "#Constraints", xAxis, cfgConstraintsCurve, sbcfgConstraintsCurve)
-	generateGraph("variables.png", "#Variables", xAxis, cfgVariablesCurve, sbcfgVariablesCurve)
-	generateGraph("solvingTime.png", "ILP Solving Time", xAxis, cfgTimeCurve, sbcfgTimeCurve)
+			f.write("\n")
+
+			if sbcfgSolveTime < timeCurveMin:
+				timeCurveMin = sbcfgSolveTime
+
+		# Generate the graphs
+		generateGraph("constraints.png", "#Constraints", xAxis, cfgConstraintsCurve, sbcfgConstraintsCurve)
+		generateGraph("variables.png", "#Variables", xAxis, cfgVariablesCurve, sbcfgVariablesCurve)
+		generateGraph("solvingTime.png", "ILP Solving Time in Microseconds (Base 10 log scale)", xAxis, cfgTimeCurve, sbcfgTimeCurve, timeCurveMin - 1000, True)
+	
+	finally:
+		f.close()
+
+def createDirectoryStructure ():
+	from os import path, makedirs 
+	
+	if not path.exists(topLevelDir):
+		if path.isdir(topLevelDir):
+			debug.exitMessage("A file called %s exists which clashes with the directory name I want to create" % topLevelDir)
+		else:
+			makedirs("experiments")
 		
 if __name__ == "__main__":
+	createDirectoryStructure ()
 	initialise ()
 	run ()
 	showResults ()

@@ -36,6 +36,7 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 		assert disconnectedVertices.size () == 0 : "Dummy super block vertices added for branches with direct edge to post dominator are not empty";
 
 		setRoot ();
+		checkForSelfLoops ();
 	}
 
 	public final SuperBlockVertex getVertex (int vertexID)
@@ -147,6 +148,13 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 							sourcev.addSuccessor (succe);
 							destinationv.addPredecessor (prede);
 
+							if (sourcev.getVertexID () == destinationv.getVertexID ())
+							{
+								Debug.debugMessage (getClass (),
+										"Adding self-loop due to " + v.getVertexID () + " => "
+												+ cfge.getVertexID (), 1);
+							}
+
 							edgeID++;
 						}
 
@@ -249,8 +257,54 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 		{
 			if (v.numOfPredecessors () == 0)
 			{
+				if (rootID != Vertex.DUMMY_VERTEX_ID)
+				{
+
+					Debug.debugMessage (getClass (), "Vertex " + v.getVertexID () + " ("
+							+ this.getVertex (rootID).basicBlockIDs () + ") is potential root", 4);
+
+					Debug.debugMessage (getClass (), "Vertex " + v.getVertexID () + " ("
+							+ this.getVertex (v.getVertexID ()).basicBlockIDs ()
+							+ ") is potential root", 4);
+				}
+
 				assert rootID == Vertex.DUMMY_VERTEX_ID : "Multiple roots found in super block graph";
 				rootID = v.getVertexID ();
+			}
+		}
+
+		if (Globals.uDrawDirectorySet ())
+		{
+			UDrawGraph.makeUDrawFile (this, "debug");
+		}
+
+		if (rootID == Vertex.DUMMY_VERTEX_ID)
+		{
+			Debug.debugMessage (getClass (), "Unable to find root", 4);
+
+			for (Vertex v : this)
+			{
+				SuperBlockVertex superv = (SuperBlockVertex) v;
+
+				if (superv.basicBlockIDs ().contains (flowg.getEntryID ()))
+				{
+					Debug.debugMessage (getClass (), "Vertex " + superv.basicBlockIDs (), 4);
+				}
+			}
+		}
+	}
+
+	private void checkForSelfLoops ()
+	{
+		for (Vertex v : this)
+		{
+			Iterator <Edge> succIt = v.successorIterator ();
+			while (succIt.hasNext ())
+			{
+				Edge succe = succIt.next ();
+
+				assert succe.getVertexID () != v.getVertexID () : "Found erroneous self-loop edge "
+						+ v.getVertexID () + " => " + succe.getVertexID ();
 			}
 		}
 	}
