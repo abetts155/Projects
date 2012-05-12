@@ -76,21 +76,24 @@ public class CalculationEngineCFG
             Debug.debugMessage(getClass(), "CFG-ILP: WCET(" + subprogramName
                     + ") = " + ilp.wcet, 3);
 
-            IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
-                    cfg.getLNT(), subprogramID, subprogramName);
-            ILPsInMemory.put(subprogramName, ilp2);
-
-            assert ilp2.wcet == ilp.wcet : "Disparity between WCETs found: "
-                    + ilp2.wcet + " and " + ilp.wcet;
-
-            assert ilp2.flowConstraints == ilp.flowConstraints : "Different number of flow constraints found "
-                    + ilp2.flowConstraints + " and " + ilp.flowConstraints;
-
-            assert ilp2.loopConstraints == ilp.loopConstraints : "Different number of loop constraints found "
-                    + ilp2.loopConstraints + " and " + ilp.loopConstraints;
-
-            assert ilp2.numberOfVariables == ilp.numberOfVariables : "Different number of variables found "
-                    + ilp2.numberOfVariables + " and " + ilp.numberOfVariables;
+            // IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
+            // cfg.getLNT(), subprogramID, subprogramName);
+            // ILPsInMemory.put(subprogramName, ilp2);
+            //
+            // assert ilp2.wcet == ilp.wcet : "Disparity between WCETs found: "
+            // + ilp2.wcet + " and " + ilp.wcet;
+            //
+            // assert ilp2.flowConstraints == ilp.flowConstraints :
+            // "Different number of flow constraints found "
+            // + ilp2.flowConstraints + " and " + ilp.flowConstraints;
+            //
+            // assert ilp2.loopConstraints == ilp.loopConstraints :
+            // "Different number of loop constraints found "
+            // + ilp2.loopConstraints + " and " + ilp.loopConstraints;
+            //
+            // assert ilp2.numberOfVariables == ilp.numberOfVariables :
+            // "Different number of variables found "
+            // + ilp2.numberOfVariables + " and " + ilp.numberOfVariables;
 
             IPETModelCFGInFileWithSuperBlocks ilp3 = new IPETModelCFGInFileWithSuperBlocks(
                     cfg, cfg.getLNT(), subprogramID, subprogramName);
@@ -330,7 +333,8 @@ public class CalculationEngineCFG
         {
             super(cfg, lnt, subprogramID, subprogramName);
 
-            final String fileName = subprogramName + ".cfg.lp";
+            final String fileName = subprogramName + "." + cfg.numOfVertices()
+                    + ".cfg.lp";
             try
             {
 
@@ -643,7 +647,8 @@ public class CalculationEngineCFG
             writeIntegerConstraints();
             writeObjectiveFunction();
 
-            final String fileName = subprogramName + ".cfg.super.lp";
+            final String fileName = subprogramName + "." + cfg.numOfVertices()
+                    + ".cfg.super.lp";
             try
             {
                 final File file = new File(ILPdirectory, fileName);

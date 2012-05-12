@@ -14,240 +14,249 @@ import adam.betts.vertices.Vertex;
 
 public class StronglyConnectedComponents
 {
-	protected DirectedGraph directedg;
-	protected int sccCounter = 1;
-	protected int preCounter = 1;
-	protected Stack <Integer> stack = new Stack <Integer> ();
-	protected HashSet <Integer> trivialSCCs = new HashSet <Integer> ();
-	protected HashMap <Integer, Integer> vertexToScc = new HashMap <Integer, Integer> ();
-	protected HashMap <Integer, Integer> index = new HashMap <Integer, Integer> ();
-	protected HashMap <Integer, Integer> lowLinks = new HashMap <Integer, Integer> ();
 
-	enum COLOR
-	{
-		WHITE, BLACK, GRAY, BLUE, RED
-	};
+    protected DirectedGraph directedg;
+    protected int sccCounter = 1;
+    protected int preCounter = 1;
+    protected Stack <Integer> stack = new Stack <Integer>();
+    protected HashSet <Integer> trivialSCCs = new HashSet <Integer>();
+    protected HashMap <Integer, Integer> vertexToScc = new HashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> index = new HashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> lowLinks = new HashMap <Integer, Integer>();
 
-	protected HashMap <Integer, COLOR> vertexColor = new HashMap <Integer, COLOR> ();
-	protected HashMap <Integer, Integer> vertexStartTime = new HashMap <Integer, Integer> ();
-	protected HashMap <Integer, Integer> vertexFinishTime = new HashMap <Integer, Integer> ();
-	protected HashMap <Integer, Vertex> vertexComponent = new HashMap <Integer, Vertex> ();
-	protected HashMap <Integer, Integer> vertexToScc2 = new HashMap <Integer, Integer> ();
-	protected int preCounter2;
-	protected int sccCounter2;
+    enum COLOR
+    {
+        WHITE, BLACK, GRAY, BLUE, RED
+    };
 
-	public StronglyConnectedComponents (DirectedGraph directedg)
-	{
-		this.directedg = directedg;
+    protected HashMap <Integer, COLOR> vertexColor = new HashMap <Integer, COLOR>();
+    protected HashMap <Integer, Integer> vertexStartTime = new HashMap <Integer, Integer>();
+    protected HashMap <Integer, Integer> vertexFinishTime = new HashMap <Integer, Integer>();
+    protected HashMap <Integer, Vertex> vertexComponent = new HashMap <Integer, Vertex>();
+    protected HashMap <Integer, Integer> vertexToScc2 = new HashMap <Integer, Integer>();
+    protected int preCounter2;
+    protected int sccCounter2;
 
-		initialise ();
-		computeSCCs ();
-		algorithm2 ();
-	}
+    public StronglyConnectedComponents (DirectedGraph directedg)
+    {
+        this.directedg = directedg;
 
-	private void algorithm2 ()
-	{
-		for (Vertex v : directedg)
-		{
-			vertexColor.put (v.getVertexID (), COLOR.WHITE);
-		}
+        // initialise ();
+        // computeSCCs ();
+        algorithm2();
+    }
 
-		ArrayList <Integer> vertexList = new ArrayList <Integer> ();
-		preCounter2 = 0;
-		for (Vertex v : directedg)
-		{
-			if (vertexColor.get (v.getVertexID ()) == COLOR.WHITE)
-			{
-				visit1 (directedg, v, vertexList);
-			}
-		}
+    private void algorithm2 ()
+    {
+        for (Vertex v : directedg)
+        {
+            vertexColor.put(v.getVertexID(), COLOR.WHITE);
+        }
 
-		for (Vertex v : directedg)
-		{
-			vertexToScc2.put (v.getVertexID (), 0);
-		}
+        ArrayList <Integer> vertexList = new ArrayList <Integer>();
+        preCounter2 = 0;
+        for (Vertex v : directedg)
+        {
+            if (vertexColor.get(v.getVertexID()) == COLOR.WHITE)
+            {
+                visit1(directedg, v, vertexList);
+            }
+        }
 
-		DirectedGraph reverseg = new DirectedGraph ();
-		directedg.reverseGraph (reverseg);
+        for (Vertex v : directedg)
+        {
+            vertexToScc2.put(v.getVertexID(), 0);
+        }
 
-		sccCounter2 = 0;
-		for (int i = vertexList.size () - 1; i >= 0; --i)
-		{
-			int vertexID = vertexList.get (i);
-			if (vertexColor.get (vertexID) == COLOR.BLACK)
-			{
-				sccCounter2++;
-				visit2 (reverseg, reverseg.getVertex (vertexID));
-			}
-		}
-	}
+        DirectedGraph reverseg = new DirectedGraph();
+        directedg.reverseGraph(reverseg);
 
-	private void visit1 (DirectedGraph directedg, Vertex v, ArrayList <Integer> vertexList)
-	{
-		Stack <Vertex> theStack = new Stack <Vertex> ();
-		theStack.push (v);
+        sccCounter2 = 0;
+        for (int i = vertexList.size() - 1; i >= 0; --i)
+        {
+            int vertexID = vertexList.get(i);
+            if (vertexColor.get(vertexID) == COLOR.BLACK)
+            {
+                sccCounter2++;
+                visit2(reverseg, reverseg.getVertex(vertexID));
+            }
+        }
+    }
 
-		while (theStack.isEmpty () == false)
-		{
-			Vertex popv = theStack.pop ();
+    private void visit1 (DirectedGraph directedg, Vertex v,
+            ArrayList <Integer> vertexList)
+    {
+        Stack <Vertex> theStack = new Stack <Vertex>();
+        theStack.push(v);
 
-			if (vertexColor.get (popv.getVertexID ()) == COLOR.WHITE)
-			{
-				preCounter2++;
-				vertexStartTime.put (popv.getVertexID (), preCounter2);
-				vertexColor.put (popv.getVertexID (), COLOR.GRAY);
-				theStack.push (popv);
+        while (theStack.isEmpty() == false)
+        {
+            Vertex popv = theStack.pop();
 
-				Iterator <Edge> succIt = popv.successorIterator ();
-				while (succIt.hasNext ())
-				{
-					Edge e = succIt.next ();
-					int succID = e.getVertexID ();
+            if (vertexColor.get(popv.getVertexID()) == COLOR.WHITE)
+            {
+                preCounter2++;
+                vertexStartTime.put(popv.getVertexID(), preCounter2);
+                vertexColor.put(popv.getVertexID(), COLOR.GRAY);
+                theStack.push(popv);
 
-					if (vertexColor.get (succID) == COLOR.WHITE)
-					{
-						vertexComponent.put (succID, popv);
-						theStack.push (directedg.getVertex (succID));
-					}
-				}
-			} else if (vertexColor.get (popv.getVertexID ()) == COLOR.GRAY)
-			{
-				preCounter2++;
-				vertexFinishTime.put (popv.getVertexID (), preCounter2);
-				vertexColor.put (popv.getVertexID (), COLOR.BLACK);
-				vertexList.add (popv.getVertexID ());
-			}
-		}
-	}
+                Iterator <Edge> succIt = popv.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    int succID = e.getVertexID();
 
-	private void visit2 (DirectedGraph reverseg, Vertex v)
-	{
-		Stack <Vertex> theStack = new Stack <Vertex> ();
-		theStack.push (v);
+                    if (vertexColor.get(succID) == COLOR.WHITE)
+                    {
+                        vertexComponent.put(succID, popv);
+                        theStack.push(directedg.getVertex(succID));
+                    }
+                }
+            }
+            else if (vertexColor.get(popv.getVertexID()) == COLOR.GRAY)
+            {
+                preCounter2++;
+                vertexFinishTime.put(popv.getVertexID(), preCounter2);
+                vertexColor.put(popv.getVertexID(), COLOR.BLACK);
+                vertexList.add(popv.getVertexID());
+            }
+        }
+    }
 
-		while (theStack.isEmpty () == false)
-		{
-			Vertex popv = theStack.pop ();
-			vertexToScc2.put (popv.getVertexID (), sccCounter2);
+    private void visit2 (DirectedGraph reverseg, Vertex v)
+    {
+        Stack <Vertex> theStack = new Stack <Vertex>();
+        theStack.push(v);
 
-			Debug.debugMessage (getClass (), "Vertex " + popv.getVertexID () + " is in SCC "
-					+ sccCounter2, 4);
+        while (theStack.isEmpty() == false)
+        {
+            Vertex popv = theStack.pop();
+            vertexToScc2.put(popv.getVertexID(), sccCounter2);
 
-			if (vertexColor.get (popv.getVertexID ()) == COLOR.BLACK)
-			{
-				vertexColor.put (popv.getVertexID (), COLOR.BLUE);
-				theStack.push (popv);
+            Debug.debugMessage(getClass(), "Vertex " + popv.getVertexID()
+                    + " is in SCC " + sccCounter2, 4);
 
-				Iterator <Edge> succIt = popv.successorIterator ();
-				while (succIt.hasNext ())
-				{
-					Edge e = succIt.next ();
-					int succID = e.getVertexID ();
+            if (vertexColor.get(popv.getVertexID()) == COLOR.BLACK)
+            {
+                vertexColor.put(popv.getVertexID(), COLOR.BLUE);
+                theStack.push(popv);
 
-					if (vertexColor.get (succID) == COLOR.BLACK)
-					{
-						vertexComponent.put (succID, popv);
-						theStack.push (reverseg.getVertex (succID));
-					}
-				}
+                Iterator <Edge> succIt = popv.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    int succID = e.getVertexID();
 
-			} else if (vertexColor.get (popv.getVertexID ()) == COLOR.BLUE)
-			{
-				vertexColor.put (popv.getVertexID (), COLOR.RED);
-			}
-		}
-	}
+                    if (vertexColor.get(succID) == COLOR.BLACK)
+                    {
+                        vertexComponent.put(succID, popv);
+                        theStack.push(reverseg.getVertex(succID));
+                    }
+                }
 
-	public final int numberOfSccs ()
-	{
-		return sccCounter2;
-	}
+            }
+            else if (vertexColor.get(popv.getVertexID()) == COLOR.BLUE)
+            {
+                vertexColor.put(popv.getVertexID(), COLOR.RED);
+            }
+        }
+    }
 
-	public final int numberOfTrivialSccs ()
-	{
-		return trivialSCCs.size ();
-	}
+    public final int numberOfSccs ()
+    {
+        return sccCounter2;
+    }
 
-	public final boolean isTrivialScc (int sccID)
-	{
-		return trivialSCCs.contains (sccID);
-	}
+    public final int numberOfTrivialSccs ()
+    {
+        return trivialSCCs.size();
+    }
 
-	public final int getSCCID (int vertexID)
-	{
-		return vertexToScc2.get (vertexID);
-	}
+    public final boolean isTrivialScc (int sccID)
+    {
+        return trivialSCCs.contains(sccID);
+    }
 
-	private void initialise ()
-	{
-		for (Vertex v : directedg)
-		{
-			int vertexID = v.getVertexID ();
-			index.put (vertexID, 0);
-			lowLinks.put (vertexID, 0);
-			vertexToScc.put (vertexID, 0);
-		}
-	}
+    public final int getSCCID (int vertexID)
+    {
+        return vertexToScc2.get(vertexID);
+    }
 
-	private void computeSCCs ()
-	{
-		for (Vertex v : directedg)
-		{
-			int vertexID = v.getVertexID ();
-			if (index.get (vertexID) == 0)
-			{
-				doSearch (vertexID);
-			}
-		}
-	}
+    private void initialise ()
+    {
+        for (Vertex v : directedg)
+        {
+            int vertexID = v.getVertexID();
+            index.put(vertexID, 0);
+            lowLinks.put(vertexID, 0);
+            vertexToScc.put(vertexID, 0);
+        }
+    }
 
-	private void doSearch (int vertexID)
-	{
-		index.put (vertexID, preCounter);
-		lowLinks.put (vertexID, preCounter);
-		preCounter++;
-		stack.push (vertexID);
+    private void computeSCCs ()
+    {
+        for (Vertex v : directedg)
+        {
+            int vertexID = v.getVertexID();
+            if (index.get(vertexID) == 0)
+            {
+                doSearch(vertexID);
+            }
+        }
+    }
 
-		Vertex v = directedg.getVertex (vertexID);
-		Iterator <Edge> succIt = v.successorIterator ();
-		while (succIt.hasNext ())
-		{
-			Edge e = succIt.next ();
-			int succID = e.getVertexID ();
+    private void doSearch (int vertexID)
+    {
+        index.put(vertexID, preCounter);
+        lowLinks.put(vertexID, preCounter);
+        preCounter++;
+        stack.push(vertexID);
 
-			if (index.get (succID) == 0)
-			{
-				doSearch (succID);
+        Vertex v = directedg.getVertex(vertexID);
+        Iterator <Edge> succIt = v.successorIterator();
+        while (succIt.hasNext())
+        {
+            Edge e = succIt.next();
+            int succID = e.getVertexID();
 
-				int lowLink = Math.min (lowLinks.get (vertexID), lowLinks.get (succID));
-				lowLinks.put (vertexID, lowLink);
-			} else if (stack.contains (succID))
-			{
-				int lowLink = Math.min (lowLinks.get (vertexID), index.get (succID));
-				lowLinks.put (vertexID, lowLink);
-			}
-		}
+            if (index.get(succID) == 0)
+            {
+                doSearch(succID);
 
-		if (lowLinks.get (vertexID) == index.get (vertexID))
-		{
-			int counter = 0;
-			int poppedID;
-			do
-			{
-				poppedID = stack.pop ();
-				Debug.debugMessage (getClass (), "Vertex " + poppedID + " is in SCC " + sccCounter,
-						4);
-				vertexToScc.put (poppedID, sccCounter);
-				counter++;
-			} while (poppedID != vertexID);
+                int lowLink = Math.min(lowLinks.get(vertexID),
+                        lowLinks.get(succID));
+                lowLinks.put(vertexID, lowLink);
+            }
+            else if (stack.contains(succID))
+            {
+                int lowLink = Math.min(lowLinks.get(vertexID),
+                        index.get(succID));
+                lowLinks.put(vertexID, lowLink);
+            }
+        }
 
-			if (counter == 1)
-			{
-				Debug.debugMessage (getClass (), "SCC " + sccCounter + " is a trivial SCC", 4);
-				trivialSCCs.add (sccCounter);
-			}
+        if (lowLinks.get(vertexID) == index.get(vertexID))
+        {
+            int counter = 0;
+            int poppedID;
+            do
+            {
+                poppedID = stack.pop();
+                Debug.debugMessage(getClass(), "Vertex " + poppedID
+                        + " is in SCC " + sccCounter, 4);
+                vertexToScc.put(poppedID, sccCounter);
+                counter++;
+            }
+            while (poppedID != vertexID);
 
-			sccCounter++;
-		}
-	}
+            if (counter == 1)
+            {
+                Debug.debugMessage(getClass(), "SCC " + sccCounter
+                        + " is a trivial SCC", 4);
+                trivialSCCs.add(sccCounter);
+            }
+
+            sccCounter++;
+        }
+    }
 }

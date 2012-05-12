@@ -29,6 +29,14 @@ parser.add_option("-h",
                   action="help",
                   help="Display this help message.")
 
+parser.add_option("-F",
+                  "--file",
+                  action="store",
+                  type="string",
+                  dest="fileName",
+                  help="The file name into which to store results.",
+                  metavar="<FILE>")
+
 parser.add_option("-R",
                   "--number-of-runs",
                   action="store",
@@ -85,6 +93,7 @@ debug = Debug(opts.verbose, opts.debug)
 assert opts.minVertices >= 10, "CFGs with less than 10 vertices not supported"
 assert opts.loops >= 1, "Loop-nesting depth must be a positive number"
 assert opts.runs >= 1, "The number of runs per CFG must be a positive integer"
+assert opts.fileName is not None, "You must supply a file name into which results will be stored"
 
 # Maps whose key is the num of vertices in the CFG and whose value is either:
 # 1) WCET estimate
@@ -120,35 +129,36 @@ def parseMeasurements (numOfVertices, line, firstLine):
 	variablesCol   = 3
 	solvingTimeCol = 4
 
-	tokens = split("\s+", line)
+	# Tokenize the line on the '|' character
+	tokens = split("\|", line)
 	colNum = 1
-	for lexeme in tokens[1:-1]:
-		value = lexeme[1:].strip()
+	for lexeme in tokens[2:-1]:
+		value = lexeme.strip()
 		if colNum == wcetCol:
 			if firstLine:
-				wcetData[numOfVertices] += int(value)
+				wcetData[numOfVertices] += long(value)
 			else:
-				wcetData2[numOfVertices] += int(value)
+				wcetData2[numOfVertices] += long(value)
 		if colNum == constraintsCol:
 			if firstLine:
-				constraintData[numOfVertices] += int(value)
+				constraintData[numOfVertices] += long(value)
 			else:
-				constraintData2[numOfVertices] += int(value)
+				constraintData2[numOfVertices] += long(value)
 		if colNum == variablesCol:
 			if firstLine:
-				variablesData[numOfVertices] += int(value)
+				variablesData[numOfVertices] += long(value)
 			else:
-				variablesData2[numOfVertices] += int(value)
+				variablesData2[numOfVertices] += long(value)
 		if colNum == solvingTimeCol:
 			if firstLine:
-				solvingTimeData[numOfVertices] += int(value)
+				solvingTimeData[numOfVertices] += long(value)
 			else:
-				solvingTimeData2[numOfVertices] += int(value)
+				solvingTimeData2[numOfVertices] += long(value)
 		colNum += 1
 			
 def run ():
 	from time import ctime
-	from os import chdir
+	from os import chdir, remove, getcwd
 
 	# These environment variables are needed to compile and disassemble the program under analysis 
 	WCET_HOME = "WCET_HOME"
@@ -160,25 +170,22 @@ def run ():
 	
 	chdir(topLevelDir)
 
-	javaPrefix = "java -ea -jar "
+	javaPrefix = "java -ea -jar -Xss4m "
 	for numOfVertices in range(opts.minVertices, opts.maxVertices + 1):
 		debug.verboseMessage("Now generating CFG with " + str(numOfVertices) + " vertices")
 		for variation in range(1, opts.variations + 1):
 			debug.verboseMessage("Variation #" + str(variation) + " " + ctime())
-			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices)
+			programFileName = "program" + str(numOfVertices) + ".xml"
+			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices) + " -o " + programFileName
 
 			proc1 = Popen(cmd1, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 			stdoutdata, stderrdata = proc1.communicate()
 			if proc1.returncode:
 				debug.exitMessage("Problem running " + cmd1)
 
-			oldProgramFileName = "program.xml"
-			newProgramFileName = "program" + str(numOfVertices) + ".xml"
-			rename(oldProgramFileName,newProgramFileName)
-
 			for run in range(1, opts.runs + 1):
 				debug.debugMessage("Run #" + str(run))
-				cmd2Options = " -p " + newProgramFileName + " -T"
+				cmd2Options = " -p " + programFileName + " -T"
 			    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-analyser.jar" + cmd2Options
 				proc2 = Popen(cmd2, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 				stdoutdata, stderrdata = proc2.communicate()
@@ -191,6 +198,10 @@ def run ():
 						parseMeasurements (numOfVertices, line, firstLine)
 						if firstLine:
 							firstLine = False
+
+		
+		remove(getcwd() + sep + "F1." + str(numOfVertices) + ".cfg.lp")
+		remove(getcwd() + sep + "F1." + str(numOfVertices) + ".cfg.super.lp")
 
 def generateGraph (fileName, yLabel, xAxis, curve1, curve2, yLim=0, logScale=False):
 	figConstraints = plt.figure()
@@ -225,7 +236,7 @@ def showResults ():
 	timeCurveMin          = sys.maxint
 
 	try:
-		f = open('results.txt', 'w')
+		f = open(opts.fileName, 'w')
 		# Collate the data
 		for numOfVertices in wcetData:
 			xAxis.append(numOfVertices)

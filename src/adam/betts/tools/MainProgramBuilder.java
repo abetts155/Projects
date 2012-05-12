@@ -14,58 +14,61 @@ import adam.betts.utilities.DefaultOptions;
 
 public class MainProgramBuilder
 {
-	private static Options options;
 
-	private static void addOptions ()
-	{
-		options = new Options ();
-		DefaultOptions.addDefaultOptions (options);
-		DefaultOptions.addProgramOption (options);
-		DefaultOptions.addRootOption (options, true);
-		DefaultOptions.addUDrawDirectoryOption (options);
-	}
+    private static Options options;
 
-	private static void parseCommandLine (String[] args)
-	{
-		final String toolName = "disassemble.jar";
-		CommandLineParser parser = new GnuParser ();
-		HelpFormatter formatter = new HelpFormatter ();
-		formatter.setWidth (128);
-		CommandLine line = null;
-		try
-		{
-			line = parser.parse (options, args);
+    private static void addOptions ()
+    {
+        options = new Options();
+        DefaultOptions.addDefaultOptions(options);
+        DefaultOptions.addProgramOption(options);
+        DefaultOptions.addRootOption(options, true);
+        DefaultOptions.addUDrawDirectoryOption(options);
+    }
 
-			if (line.hasOption (DefaultOptions.helpOption.getOpt ()))
-			{
-				formatter.printHelp (toolName, options);
-				System.exit (1);
-			} else
-			{
-				DefaultOptions.setDefaultOptions (line);
-				DefaultOptions.setProgramOption (line);
-				DefaultOptions.setRootOption (line);
-				DefaultOptions.setUDrawDirectoryOption (line);
-			}
-		} catch (ParseException e)
-		{
-			System.out.println (e.getMessage ());
-			formatter.printHelp (toolName, options);
-			System.exit (1);
-		}
-	}
+    private static void parseCommandLine (String[] args)
+    {
+        final String toolName = "disassemble.jar";
+        CommandLineParser parser = new GnuParser();
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(128);
+        CommandLine line = null;
+        try
+        {
+            line = parser.parse(options, args);
 
-	private static void run ()
-	{
-		Debug.verboseMessage ("Reading program");
-		Program program = new Program ();
-		new WriteProgram (program);
-	}
+            if (line.hasOption(DefaultOptions.helpOption.getOpt()))
+            {
+                formatter.printHelp(toolName, options);
+                System.exit(1);
+            }
+            else
+            {
+                DefaultOptions.setDefaultOptions(line);
+                DefaultOptions.setProgramOption(line);
+                DefaultOptions.setRootOption(line);
+                DefaultOptions.setUDrawDirectoryOption(line);
+            }
+        }
+        catch (ParseException e)
+        {
+            System.out.println(e.getMessage());
+            formatter.printHelp(toolName, options);
+            System.exit(1);
+        }
+    }
 
-	public static void main (String[] args)
-	{
-		addOptions ();
-		parseCommandLine (args);
-		run ();
-	}
+    private static void run ()
+    {
+        Debug.verboseMessage("Reading program");
+        Program program = new Program();
+        new WriteProgram(program, "program.xml");
+    }
+
+    public static void main (String[] args)
+    {
+        addOptions();
+        parseCommandLine(args);
+        run();
+    }
 }
