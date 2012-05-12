@@ -158,7 +158,7 @@ def parseMeasurements (numOfVertices, line, firstLine):
 			
 def run ():
 	from time import ctime
-	from os import chdir, remove, getcwd
+	from os import chdir, getcwd
 
 	# These environment variables are needed to compile and disassemble the program under analysis 
 	WCET_HOME = "WCET_HOME"
@@ -198,10 +198,6 @@ def run ():
 						parseMeasurements (numOfVertices, line, firstLine)
 						if firstLine:
 							firstLine = False
-
-		
-		remove(getcwd() + sep + "F1." + str(numOfVertices) + ".cfg.lp")
-		remove(getcwd() + sep + "F1." + str(numOfVertices) + ".cfg.super.lp")
 
 def generateGraph (fileName, yLabel, xAxis, curve1, curve2, yLim=0, logScale=False):
 	figConstraints = plt.figure()

@@ -378,6 +378,8 @@ public class CalculationEngineCFG
                     e.printStackTrace();
                     System.exit(1);
                 }
+                
+                file.delete();
             }
             catch (IOException e)
             {
@@ -683,6 +685,8 @@ public class CalculationEngineCFG
                     e.printStackTrace();
                     System.exit(1);
                 }
+                
+                file.delete();
             }
             catch (IOException e)
             {
