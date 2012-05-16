@@ -5,7 +5,6 @@ import java.util.Iterator;
 import adam.betts.edges.Edge;
 import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.utils.StronglyConnectedComponents;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.vertices.SuperBlockVertex;
@@ -40,6 +39,11 @@ public class SuperBlockGraph extends DirectedGraph
     public final DominatorTree getPostdominatorTree ()
     {
         return dominatorg.postdomt;
+    }
+    
+    public final FlowGraph getReverseFlowGraph ()
+    {
+        return dominatorg.reverseg;
     }
 
     public final SuperBlockVertex getVertex (int vertexID)
@@ -134,6 +138,7 @@ public class SuperBlockGraph extends DirectedGraph
 
         protected DominatorTree predomt;
         protected DominatorTree postdomt;
+        protected FlowGraph reverseg;
 
         private DominatorGraph ()
         {
@@ -142,7 +147,7 @@ public class SuperBlockGraph extends DirectedGraph
             predomt = new DominatorTree(flowg, flowg.getEntryID(),
                     DominatorTreeType.PRE_DOMINATOR);
 
-            FlowGraph reverseg = new FlowGraph();
+            reverseg = new FlowGraph();
             flowg.reverseGraph(reverseg);
             postdomt = new DominatorTree(reverseg, flowg.getExitID(),
                     DominatorTreeType.POST_DOMINATOR);

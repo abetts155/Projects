@@ -60,6 +60,6 @@ public final class Enums
 
     public enum SuperBlockCFGStructureEdgeType
     {
-        NORMAL, ACYCLIC_IRREDUCIBLE, LOOP
+        NORMAL, LOOP
     }
 }

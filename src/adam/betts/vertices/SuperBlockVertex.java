@@ -7,11 +7,23 @@ import java.util.Random;
 
 public class SuperBlockVertex extends Vertex
 {
+
     protected ArrayList <Integer> basicBlocks = new ArrayList <Integer>();
+    protected boolean unstructuredMerge = false;
 
     public SuperBlockVertex (int vertexID)
     {
         super(vertexID);
+    }
+
+    public void setIsUnstructuredMerge ()
+    {
+        unstructuredMerge = true;
+    }
+
+    public boolean isUnstructuredMerge ()
+    {
+        return unstructuredMerge;
     }
 
     public final void addBasicBlock (int vertexID)

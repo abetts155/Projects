@@ -537,6 +537,10 @@ public class UDrawGraph
                 out.write(setShape(SHAPE.ELLIPSE));
                 out.write(setName(superv.basicBlockIDs().toString()));
                 out.write(setToolTip("Vertex " + v.getVertexID()));
+                if (superv.isUnstructuredMerge())
+                {
+                    out.write(setColor(COLOR.YELLOW));
+                }
                 out.write(endAttibutes);
 
                 out.write(beginAttributes);
@@ -551,15 +555,10 @@ public class UDrawGraph
 
                     StringBuffer buffer = new StringBuffer(
                             Integer.toString(supere.getBasicBlockID()));
-                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
-                    {
-                        out.write(setEdgePattern(EDGESHAPE.DASHED, 4));
-                        buffer.append("Acyclic irreducible edge");
-                    }
-                    else if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.LOOP)
+                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.LOOP)
                     {
                         out.write(setEdgePattern(EDGESHAPE.SOLID, 4));
-                        buffer.append("Loop edge");	
+                        buffer.append("Loop edge");
                     }
 
                     out.write(setToolTip(buffer.toString()));

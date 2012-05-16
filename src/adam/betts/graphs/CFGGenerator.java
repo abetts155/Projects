@@ -27,6 +27,7 @@ public class CFGGenerator
     protected ControlFlowGraph cfg = new ControlFlowGraph();
     protected ArrayList <SingleEntrySingleExitComponent> disconnectedComponents = new ArrayList <SingleEntrySingleExitComponent>();
     protected HashMap <Integer, LoopComponent> loops = new HashMap <Integer, LoopComponent>();
+    protected HashMap <Integer, HashSet <Integer>> verticesAdded = new HashMap <Integer, HashSet <Integer>>();
     protected int remainingVertices;
     protected int remainingVerticesInRegion;
     protected int numberOfIfThenElseComponents = 0;
@@ -68,9 +69,15 @@ public class CFGGenerator
                     connectDisconnectedComponents();
                     findMergeVerticesToRemove();
 
+                    remainingVerticesInRegion = MainProgramGenerator.Globals
+                            .getNumberOfVerticesInCFG() - cfg.numOfVertices();
+
                     SingleEntrySingleExitComponent seseComponent = connectRemainingVertices();
                     LoopComponent loopComponent = setLoopVertices(seseComponent);
                     loops.put(treev.getVertexID(), loopComponent);
+
+                    Debug.debugMessage(getClass(), "#Vertices remaining = "
+                            + remainingVerticesInRegion, 1);
                 }
                 else
                 {
@@ -137,14 +144,21 @@ public class CFGGenerator
         setExit();
         cfg.addEdge(cfg.getExitID(), cfg.getEntryID(), BranchType.TAKEN);
 
-        if (random.nextBoolean())
+        if (MainProgramGenerator.Globals.getNumberOfSelfLoops() > 0
+                && random.nextBoolean())
         {
             addSelfLoops();
         }
 
         addBreaksAndContinues();
-
+        addUnstructuredEdges();
         addInstructions();
+
+        assert cfg.numOfVertices() == MainProgramGenerator.Globals
+                .getNumberOfVerticesInCFG() : "Added " + cfg.numOfVertices()
+                + " to the CFG when "
+                + MainProgramGenerator.Globals.getNumberOfVerticesInCFG()
+                + " were requested";
     }
 
     public final ControlFlowGraph getCFG ()
@@ -746,7 +760,7 @@ public class CFGGenerator
     private SingleEntrySingleExitComponent connectRemainingVertices ()
     {
         Debug.debugMessage(getClass(),
-                "Connecting remaining vertices. #Vertices remaining = "
+                "Connecting remaining vertices. #Remaining vertices = "
                         + remainingVerticesInRegion, 1);
 
         SingleEntrySingleExitComponent masterSeseComponent = new SingleEntrySingleExitComponent();
@@ -821,6 +835,79 @@ public class CFGGenerator
                 + masterSeseComponent.exitID, 3);
 
         return masterSeseComponent;
+    }
+
+    private void addUnstructuredEdges ()
+    {
+        LoopNests lnt = new LoopNests(cfg, cfg.entryID);
+        DepthFirstTree dfs = new DepthFirstTree(cfg, cfg.entryID);
+
+        ArrayList <Integer> candidateSources = new ArrayList <Integer>();
+        for (int postID = 1; postID <= dfs.numOfVertices(); ++postID)
+        {
+            int bbID = dfs.getPostVertexID(postID);
+
+            if (cfg.getVertex(bbID).numOfSuccessors() == 1
+                    && cfg.entryID != bbID && cfg.exitID != bbID
+                    && lnt.isLoopHeader(bbID) == false
+                    && lnt.isLoopTail(bbID) == false
+                    && lnt.isLoopExit(bbID) == false)
+            {
+                candidateSources.add(bbID);
+            }
+        }
+
+        if (candidateSources.isEmpty() == false)
+        {
+            int numOfEdges = random.nextInt(candidateSources.size() / 2 + 1);
+            for (int i = 0; i < numOfEdges; ++i)
+            {
+                int randomIndex = random.nextInt(numOfEdges);
+                int sourceID = candidateSources.remove(randomIndex);
+                int sourceHeaderID = lnt.getLoopHeader(sourceID);
+
+                Debug.debugMessage(getClass(), "Choosing " + sourceID
+                        + " as the source for an unstructured edge", 1);
+
+                if (random.nextBoolean())
+                {
+                    int postIDOfSource = dfs.getPostID(sourceID);
+                    int destinationID = Vertex.DUMMY_VERTEX_ID;
+                    boolean destinationChosen = false;
+                    for (int postID = postIDOfSource - 1; postID >= 1
+                            && destinationChosen == false; --postID)
+                    {
+                        destinationID = dfs.getPostVertexID(postID);
+                        int destinationHeaderID = lnt
+                                .getLoopHeader(destinationID);
+
+                        if (cfg.getBasicBlock(sourceID).hasSuccessor(
+                                destinationID) == false
+                                && sourceHeaderID == destinationHeaderID
+                                && random.nextBoolean())
+                        {
+                            destinationChosen = true;
+                            Debug.debugMessage(getClass(),
+                                    "Adding unstructured edge " + sourceID
+                                            + " => " + destinationID
+                                            + " for header " + sourceHeaderID,
+                                    1);
+                        }
+                    }
+
+                    if (destinationChosen)
+                    {
+                        cfg.addEdge(sourceID, destinationID, BranchType.TAKEN);
+                    }
+                }
+            }
+        }
+        else
+        {
+            Debug.debugMessage(getClass(), "Empty candidates for break edges",
+                    3);
+        }
+
     }
 
     private void setEntry ()
@@ -900,7 +987,6 @@ public class CFGGenerator
         Debug.debugMessage(getClass(), "Adding self loops", 1);
 
         ArrayList <Integer> selfLoopCandidates = new ArrayList <Integer>();
-
         for (Vertex v : cfg)
         {
             final int vertexID = v.getVertexID();
@@ -912,8 +998,7 @@ public class CFGGenerator
             }
         }
 
-        if (MainProgramGenerator.Globals.getNumberOfSelfLoops() > 0
-                && selfLoopCandidates.size() > 0)
+        if (selfLoopCandidates.size() > 0)
         {
             int numberOfSelfLoops = Math.min(selfLoopCandidates.size(),
                     MainProgramGenerator.Globals.getNumberOfSelfLoops());

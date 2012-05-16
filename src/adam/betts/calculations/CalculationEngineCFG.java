@@ -69,12 +69,12 @@ public class CalculationEngineCFG
                         subprogram.getSubprogramName());
             }
 
-            IPETModelCFGInFile ilp = new IPETModelCFGInFile(cfg, cfg.getLNT(),
+            IPETModelCFGInFile ilp1 = new IPETModelCFGInFile(cfg, cfg.getLNT(),
                     subprogramID, subprogramName);
-            ILPsInFile.put(subprogramName, ilp);
+            ILPsInFile.put(subprogramName, ilp1);
 
             Debug.debugMessage(getClass(), "CFG-ILP: WCET(" + subprogramName
-                    + ") = " + ilp.wcet, 3);
+                    + ") = " + ilp1.wcet, 3);
 
             // IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
             // cfg.getLNT(), subprogramID, subprogramName);
@@ -98,6 +98,9 @@ public class CalculationEngineCFG
             IPETModelCFGInFileWithSuperBlocks ilp3 = new IPETModelCFGInFileWithSuperBlocks(
                     cfg, cfg.getLNT(), subprogramID, subprogramName);
             ILPsInFileSuperBlocks.put(subprogramName, ilp3);
+
+            assert ilp1.wcet == ilp3.wcet : "Disparity between WCETs found. CFG-ILP = "
+                    + ilp1.wcet + " and SB-CFG-ILP = " + ilp3.wcet;
         }
     }
 
@@ -378,8 +381,6 @@ public class CalculationEngineCFG
                     e.printStackTrace();
                     System.exit(1);
                 }
-                
-                file.delete();
             }
             catch (IOException e)
             {
@@ -685,8 +686,6 @@ public class CalculationEngineCFG
                     e.printStackTrace();
                     System.exit(1);
                 }
-                
-                file.delete();
             }
             catch (IOException e)
             {
@@ -968,7 +967,8 @@ public class CalculationEngineCFG
                 int num = 1;
                 for (SuperBlockCFGStructureEdge supere : partitionedEdges)
                 {
-                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                    if (superg.getVertex(supere.getVertexID())
+                            .isUnstructuredMerge())
                     {
                         final String dummyEdgeVariable = createEdgeVariable(
                                 supere.getEdgeID(), headerv.getHeaderID());
@@ -1036,7 +1036,7 @@ public class CalculationEngineCFG
                 SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) prede;
                 SuperBlockVertex predv = superg.getVertex(supere.getVertexID());
 
-                if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                if (predv.numOfSuccessors() > 1)
                 {
                     final String dummyEdgeVariable = createEdgeVariable(
                             supere.getEdgeID(), headerv.getHeaderID());
