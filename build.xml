@@ -60,8 +60,6 @@
                         </manifest>
                         <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
                 </jar>
-
-                <chmod file="${jar.dir}/@{jarname}" perm="+x" verbose="true" />
 		</sequential>
 	</macrodef>
 
@@ -94,8 +92,6 @@
                         <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
 	                <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
                 </jar>
-
-                <chmod file="${jar.dir}/@{jarname}" perm="+x" verbose="true" />
 		</sequential>
 	</macrodef>
 
