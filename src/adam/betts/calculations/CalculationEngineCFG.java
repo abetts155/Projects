@@ -882,7 +882,7 @@ public class CalculationEngineCFG
             if (Globals.uDrawDirectorySet())
             {
                 UDrawGraph.makeUDrawFile(flowg,
-                        subprogramName + headerv.getHeaderID());
+                        subprogramName + "." + headerv.getHeaderID());
             }
 
             SuperBlockCFGStructureGraph superg = new SuperBlockCFGStructureGraph(
@@ -891,7 +891,7 @@ public class CalculationEngineCFG
             if (Globals.uDrawDirectorySet())
             {
                 UDrawGraph.makeUDrawFile(superg,
-                        subprogramName + headerv.getHeaderID());
+                        subprogramName + "." + headerv.getHeaderID());
             }
 
             DepthFirstTree dfs = new DepthFirstTree(superg, superg.getRootID());

@@ -204,44 +204,103 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
                         .getImmediateDominator(vertexID);
 
                 if (superblockg.getPostdominatorTree().getImmediateDominator(
-                        predomID) != vertexID
-                        && postDominanceFrontiers.dfSet(vertexID).size() > 1)
+                        predomID) != vertexID)
                 {
-                    Debug.debugMessage(getClass(),
-                            "Acyclic irreducible merge found " + vertexID
-                                    + " ipre(" + vertexID + ") = " + predomID
-                                    + ", |DF(" + vertexID + ")| = "
-                                    + postDominanceFrontiers.dfSet(vertexID), 4);
-
-                    SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(v
-                            .getVertexID());
-                    destinationv.setIsUnstructuredMerge();
-
-                    Iterator <Edge> predIt = v.predecessorIterator();
-                    while (predIt.hasNext())
+                    if (postDominanceFrontiers.dfSet(vertexID).size() > 1)
                     {
-                        Edge cfge = predIt.next();
+                        Debug.debugMessage(
+                                getClass(),
+                                "Acyclic IRREDUCIBLE merge found "
+                                        + vertexID
+                                        + " ipre("
+                                        + vertexID
+                                        + ") = "
+                                        + predomID
+                                        + ", |DF("
+                                        + vertexID
+                                        + ")| = "
+                                        + postDominanceFrontiers
+                                                .dfSet(vertexID), 4);
 
-                        SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(cfge
+                        SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(v
+                                .getVertexID());
+                        destinationv.setIsUnstructuredMerge();
+
+                        Iterator <Edge> predIt = v.predecessorIterator();
+                        while (predIt.hasNext())
+                        {
+                            Edge cfge = predIt.next();
+
+                            SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(cfge
+                                    .getVertexID());
+
+                            assert sourcev.getVertexID() != destinationv
+                                    .getVertexID() : "Super blocks are the same for acyclic irreducible merge";
+
+                            if (sourcev
+                                    .hasSuccessor(destinationv.getVertexID()) == false)
+                            {
+                                SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
+                                        destinationv.getVertexID(), edgeID);
+                                SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
+                                        sourcev.getVertexID(), edgeID);
+
+                                sourcev.addSuccessor(succe);
+                                destinationv.addPredecessor(prede);
+
+                                succe.setBasicBlockID(cfge.getVertexID());
+                                prede.setBasicBlockID(cfge.getVertexID());
+
+                                edgeID++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Debug.debugMessage(
+                                getClass(),
+                                "Acyclic REDUCIBLE Merge found "
+                                        + vertexID
+                                        + " ipre("
+                                        + vertexID
+                                        + ") = "
+                                        + predomID
+                                        + ", |DF("
+                                        + vertexID
+                                        + ")| = "
+                                        + postDominanceFrontiers
+                                                .dfSet(vertexID), 4);
+
+                        SuperBlockVertex destinationv = getSuperBlockVertexWithBasicBlock(v
                                 .getVertexID());
 
-                        assert sourcev.getVertexID() != destinationv
-                                .getVertexID() : "Super blocks are the same for acyclic irreducible merge";
-
-                        if (sourcev.hasSuccessor(destinationv.getVertexID()) == false)
+                        Iterator <Edge> predIt = v.predecessorIterator();
+                        while (predIt.hasNext())
                         {
-                            SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
-                                    destinationv.getVertexID(), edgeID);
-                            SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
-                                    sourcev.getVertexID(), edgeID);
+                            Edge cfge = predIt.next();
 
-                            sourcev.addSuccessor(succe);
-                            destinationv.addPredecessor(prede);
+                            SuperBlockVertex sourcev = getSuperBlockVertexWithBasicBlock(cfge
+                                    .getVertexID());
 
-                            succe.setBasicBlockID(cfge.getVertexID());
-                            prede.setBasicBlockID(cfge.getVertexID());
+                            assert sourcev.getVertexID() != destinationv
+                                    .getVertexID() : "Super blocks are the same for acyclic irreducible merge";
 
-                            edgeID++;
+                            if (sourcev
+                                    .hasSuccessor(destinationv.getVertexID()) == false)
+                            {
+                                SuperBlockCFGStructureEdge succe = new SuperBlockCFGStructureEdge(
+                                        destinationv.getVertexID(), edgeID);
+                                SuperBlockCFGStructureEdge prede = new SuperBlockCFGStructureEdge(
+                                        sourcev.getVertexID(), edgeID);
+
+                                sourcev.addSuccessor(succe);
+                                destinationv.addPredecessor(prede);
+
+                                succe.setBasicBlockID(cfge.getVertexID());
+                                prede.setBasicBlockID(cfge.getVertexID());
+
+                                edgeID++;
+                            }
                         }
                     }
                 }
@@ -273,13 +332,13 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
             }
         }
 
-        if (Globals.uDrawDirectorySet())
-        {
-            UDrawGraph.makeUDrawFile(this, "debug");
-        }
-
         if (rootID == Vertex.DUMMY_VERTEX_ID)
         {
+            if (Globals.uDrawDirectorySet())
+            {
+                UDrawGraph.makeUDrawFile(this, "debug");
+            }
+
             Debug.debugMessage(getClass(), "Unable to find root", 4);
 
             for (Vertex v : this)

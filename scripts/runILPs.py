@@ -73,11 +73,10 @@ parser.add_option("--min-vertices",
 
 parser.add_option("-L",
                   "--loops",
-                  type="int",
+                  action="store_true",
                   dest="loops",
-                  help="Inject loops into the CFG with the given depth. [Default is %default].",
-                  default=1,
-                  metavar="<INT>")
+                  help="Allow loops in the CFG.",
+                  default=False)
 
 parser.add_option("-v",
                  "--verbose",
@@ -91,7 +90,6 @@ debug = Debug(opts.verbose, opts.debug)
 
 # Check that the user has passed the correct options
 assert opts.minVertices >= 10, "CFGs with less than 10 vertices not supported"
-assert opts.loops >= 1, "Loop-nesting depth must be a positive number"
 assert opts.runs >= 1, "The number of runs per CFG must be a positive integer"
 assert opts.fileName is not None, "You must supply a file name into which results will be stored"
 
@@ -159,6 +157,7 @@ def parseMeasurements (numOfVertices, line, firstLine):
 def run ():
 	from time import ctime
 	from os import chdir, getcwd
+	from random import randint
 
 	# These environment variables are needed to compile and disassemble the program under analysis 
 	WCET_HOME = "WCET_HOME"
@@ -178,6 +177,14 @@ def run ():
 			programFileName = "program" + str(numOfVertices) + ".xml"
 			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices) + " -o " + programFileName
 
+			if opts.loops:
+				numOfLoops   = randint(1, 10)
+				nestingLevel = 1
+				if numOfLoops > 1:
+					nestingLevel = randint(1, numOfLoops - 1)
+				cmd1 += " -l " + str(numOfLoops) + " -L " + str(nestingLevel)
+
+			debug.debugMessage("Running '" + cmd1 + "'")
 			proc1 = Popen(cmd1, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 			stdoutdata, stderrdata = proc1.communicate()
 			if proc1.returncode:
