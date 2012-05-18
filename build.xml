@@ -13,6 +13,7 @@
 	<property name="trace-simplescalar.main.class" value="adam.betts.tools.MainSimpleScalarTraceParser" />
 	<property name="trace-generator.main.class" value="adam.betts.tools.MainTraceGenerator" />
 	<property name="program-analyser.main.class" value="adam.betts.tools.MainProgramAnalyser" />
+	<property name="ipe-analyser.main.class" value="adam.betts.tools.MainIPEAnalyser" />
 	<property name="program-generator.main.class" value="adam.betts.tools.MainProgramGenerator" />
 	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
 	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
@@ -28,6 +29,7 @@
 	<property name="wcet.jar" value="wcet.jar" />
 	<property name="trace-parser.jar" value="trace-parser.jar" />
 	<property name="trace-generator.jar" value="trace-generator.jar" />
+	<property name="ipe-analyser.jar" value="ipe-analyser.jar" />
 	<property name="program-analyser.jar" value="program-analyser.jar" />
 	<property name="program-generator.jar" value="program-generator.jar" />
 	<property name="tree.jar" value="tree.jar" />
@@ -105,6 +107,7 @@
 		<buildLpsolveJar jarname="${wcet.jar}" mainclass="${wcet.main.class}"/>
 		<buildLpsolveJar jarname="${trace-parser.jar}" mainclass="${trace-parser.main.class}"/>
 		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}"/>
+		<buildLpsolveJar jarname="${ipe-analyser.jar}" mainclass="${ipe-analyser.main.class}"/>
 	</target>
 	
 	<target name="all" depends="standardTools, lpSolveTools">

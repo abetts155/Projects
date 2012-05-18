@@ -192,8 +192,8 @@ def run ():
 
 			for run in range(1, opts.runs + 1):
 				debug.debugMessage("Run #" + str(run))
-				cmd2Options = " -p " + programFileName + " -T"
-			    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-analyser.jar" + cmd2Options
+				cmd2Options = " -p " + programFileName
+			    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "ipe-analyser.jar" + cmd2Options
 				proc2 = Popen(cmd2, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
 				stdoutdata, stderrdata = proc2.communicate()
 				if proc2.returncode != 0:
