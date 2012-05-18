@@ -196,7 +196,7 @@ public class DefaultOptions
         }
     }
 
-    public final static void addIPETOptions (Options options)
+    public final static void addIPEOptions (Options options)
     {
         lpSolveDirectoryOption = new Option("L", "lpsolve", true,
                 "Write the lp_solve models to files inside this directory.");

@@ -25,12 +25,12 @@ public class MainIPEAnalyser
         DefaultOptions.addDefaultOptions(options);
         DefaultOptions.addProgramOption(options);
         DefaultOptions.addUDrawDirectoryOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
     }
 
     private static void parseCommandLine (String[] args)
     {
-        final String toolName = "program-analyser.jar";
+        final String toolName = "ipe-analyser.jar";
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
         formatter.setWidth(128);

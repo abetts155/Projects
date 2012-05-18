@@ -42,7 +42,7 @@ public class MainWCETAnalyser
         DefaultOptions.addTraceFileOption(options);
         DefaultOptions.addOutFileOption(options);
         DefaultOptions.addUDrawDirectoryOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
 
         observedWCETOption = new Option("O", "observed", false,
                 "Perform a WCET computation of the observed paths in the trace.");

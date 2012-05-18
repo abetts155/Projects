@@ -48,11 +48,7 @@ public class ProgramGenerator
         }
 
         program.callg = callg;
-
-        if (Globals.uDrawDirectorySet())
-        {
-            UDrawGraph.makeUDrawFile(callg, rootID);
-        }
+        UDrawGraph.makeUDrawFile(callg, rootID);
     }
 
     public final Program getProgram ()
@@ -92,17 +88,10 @@ public class ProgramGenerator
                 }
             }
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(cfg, subprogramName);
-            }
+            UDrawGraph.makeUDrawFile(cfg, subprogramName);
 
-            LoopNests loop = new LoopNests(cfg, cfg.getEntryID());
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(loop, subprogramName);
-            }
+            LoopNests lnt = new LoopNests(cfg, cfg.getEntryID());
+            UDrawGraph.makeUDrawFile(lnt, subprogramName);
         }
     }
 

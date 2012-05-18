@@ -843,15 +843,12 @@ public class ProgramReader
                         .removeDeadCode();
             }
 
-            if (Globals.uDrawDirectorySet())
+            for (String subprogramName : program.nameToId.keySet())
             {
-                for (String subprogramName : program.nameToId.keySet())
-                {
-                    int subprogramID = program.nameToId.get(subprogramName);
-                    final ControlFlowGraph cfg = program.idToSubprogram.get(
-                            subprogramID).getCFG();
-                    UDrawGraph.makeUDrawFile(cfg, subprogramName);
-                }
+                int subprogramID = program.nameToId.get(subprogramName);
+                final ControlFlowGraph cfg = program.idToSubprogram.get(
+                        subprogramID).getCFG();
+                UDrawGraph.makeUDrawFile(cfg, subprogramName);
             }
         }
 

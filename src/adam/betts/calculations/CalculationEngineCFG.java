@@ -63,11 +63,8 @@ public class CalculationEngineCFG
 
             ControlFlowGraph cfg = subprogram.getCFG();
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(cfg.getLNT(),
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(cfg.getLNT(),
+                    subprogram.getSubprogramName());
 
             IPETModelCFGInFile ilp1 = new IPETModelCFGInFile(cfg, cfg.getLNT(),
                     subprogramID, subprogramName);
@@ -234,7 +231,7 @@ public class CalculationEngineCFG
         return 0;
     }
 
-    public class IPETModelCFG extends IPETModel
+    private class IPETModelCFG extends IPETModel
     {
 
         protected final ControlFlowGraph cfg;
@@ -328,7 +325,7 @@ public class CalculationEngineCFG
         }
     }
 
-    public class IPETModelCFGInFile extends IPETModelCFG
+    private class IPETModelCFGInFile extends IPETModelCFG
     {
 
         public IPETModelCFGInFile (ControlFlowGraph cfg, LoopNests lnt,
@@ -876,20 +873,14 @@ public class CalculationEngineCFG
                         .add(variable);
             }
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(flowg,
-                        subprogramName + "." + headerv.getHeaderID());
-            }
+            UDrawGraph.makeUDrawFile(flowg,
+                    subprogramName + "." + headerv.getHeaderID());
 
             SuperBlockCFGStructureGraph superg = new SuperBlockCFGStructureGraph(
                     flowg);
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(superg,
-                        subprogramName + "." + headerv.getHeaderID());
-            }
+            UDrawGraph.makeUDrawFile(superg,
+                    subprogramName + "." + headerv.getHeaderID());
 
             DepthFirstTree dfs = new DepthFirstTree(superg, superg.getRootID());
 

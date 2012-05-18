@@ -26,7 +26,7 @@ public class MainTreeAnalysis
         DefaultOptions.addRootOption(options, false);
         DefaultOptions.addTraceFileOption(options);
         DefaultOptions.addUDrawDirectoryOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
     }
 
     private static void parseCommandLine (String[] args)

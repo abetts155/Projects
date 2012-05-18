@@ -334,12 +334,8 @@ public class SuperBlockCFGStructureGraph extends DirectedGraph
 
         if (rootID == Vertex.DUMMY_VERTEX_ID)
         {
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(this, "debug");
-            }
-
             Debug.debugMessage(getClass(), "Unable to find root", 4);
+            UDrawGraph.makeUDrawFile(this, "debug");
 
             for (Vertex v : this)
             {

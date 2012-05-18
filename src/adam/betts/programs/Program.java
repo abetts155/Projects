@@ -62,20 +62,16 @@ public class Program implements Iterable <Subprogram>
             cfg.addEntryAndExitEdges();
         }
 
-        if (Globals.uDrawDirectorySet())
+        UDrawGraph.makeUDrawFile(callg, rootID);
+        for (String subprogramName : nameToId.keySet())
         {
-            UDrawGraph.makeUDrawFile(callg, rootID);
-
-            for (String subprogramName : nameToId.keySet())
-            {
-                UDrawGraph.makeUDrawFile(
-                        getSubprogram(subprogramName).getCFG(), subprogramName);
-            }
+            UDrawGraph.makeUDrawFile(getSubprogram(subprogramName).getCFG(),
+                    subprogramName);
         }
     }
-    
+
     public Program ()
-    {        
+    {
     }
 
     public final String getName ()
@@ -148,6 +144,8 @@ public class Program implements Iterable <Subprogram>
                 return subprogram;
             }
         }
+        
+        assert false : "Unable to find subprogram with address " + address;
         return null;
     }
 
@@ -246,11 +244,7 @@ public class Program implements Iterable <Subprogram>
                 }
             }
         }
-
-        if (Globals.uDrawDirectorySet())
-        {
-            UDrawGraph.makeUDrawFile(inlinedCFG, "inlined");
-        }
+        UDrawGraph.makeUDrawFile(inlinedCFG, "inlined");
     }
 
     public final void insertVirtualIpoints ()
@@ -316,22 +310,16 @@ public class Program implements Iterable <Subprogram>
                     }
                 }
 
-                if (Globals.uDrawDirectorySet())
-                {
-                    UDrawGraph.makeUDrawFile(iprofile, cfgStar,
-                            subprogram.getSubprogramName());
-                }
+                UDrawGraph.makeUDrawFile(iprofile, cfgStar,
+                        subprogram.getSubprogramName());
 
                 Debug.debugMessage(getClass(),
                         "Building LNT of " + subprogram.getSubprogramName(), 2);
                 final LoopNests lnt = new LoopNests(cfgStar,
                         cfgStar.getEntryID());
 
-                if (Globals.uDrawDirectorySet())
-                {
-                    UDrawGraph.makeUDrawFile(iprofile, lnt,
-                            subprogram.getSubprogramName());
-                }
+                UDrawGraph.makeUDrawFile(iprofile, lnt,
+                        subprogram.getSubprogramName());
 
                 Debug.debugMessage(getClass(),
                         "Building IPG of " + subprogram.getSubprogramName(), 2);
@@ -347,11 +335,8 @@ public class Program implements Iterable <Subprogram>
                 }
                 subprogram.setIPG(iprofile, ipg);
 
-                if (Globals.uDrawDirectorySet())
-                {
-                    UDrawGraph.makeUDrawFile(iprofile, ipg,
-                            subprogram.getSubprogramName());
-                }
+                UDrawGraph.makeUDrawFile(iprofile, ipg,
+                        subprogram.getSubprogramName());
             }
         }
     }
@@ -371,11 +356,8 @@ public class Program implements Iterable <Subprogram>
             final ControlFlowGraph cfg = subprogram.getCFG();
             cfg.generateLNT();
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(cfg.getLNT(),
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(cfg.getLNT(),
+                    subprogram.getSubprogramName());
         }
     }
 
@@ -393,12 +375,7 @@ public class Program implements Iterable <Subprogram>
 
             final ControlFlowGraph cfg = subprogram.getCFG();
             ControlDependenceGraph controlg = new ControlDependenceGraph(cfg);
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(controlg,
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(controlg, subprogram.getSubprogramName());
         }
     }
 
@@ -417,13 +394,8 @@ public class Program implements Iterable <Subprogram>
 
             DominatorTree preTree = new DominatorTree(cfg, cfg.getEntryID(),
                     DominatorTreeType.PRE_DOMINATOR);
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(preTree,
-                        DominatorTreeType.PRE_DOMINATOR,
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(preTree, DominatorTreeType.PRE_DOMINATOR,
+                    subprogram.getSubprogramName());
 
             Debug.debugMessage(getClass(), "Building post-dominator tree of "
                     + subprogram.getSubprogramName(), Debug.LOOP_LEVEL_1);
@@ -434,12 +406,9 @@ public class Program implements Iterable <Subprogram>
             DominatorTree postTree = new DominatorTree(reverseg,
                     cfg.getExitID(), DominatorTreeType.POST_DOMINATOR);
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(postTree,
-                        DominatorTreeType.POST_DOMINATOR,
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(postTree,
+                    DominatorTreeType.POST_DOMINATOR,
+                    subprogram.getSubprogramName());
         }
     }
 
@@ -459,13 +428,8 @@ public class Program implements Iterable <Subprogram>
             final SyntaxTree stree = new SyntaxTree(cfg,
                     subprogram.getSubprogramName());
             subprogram.setSyntaxTree(stree);
-
             stree.outputStats();
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(stree, subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(stree, subprogram.getSubprogramName());
         }
     }
 
@@ -475,11 +439,7 @@ public class Program implements Iterable <Subprogram>
         {
             Debug.verboseMessage("Creating context graph");
             contextg = new ContextGraph(this);
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(contextg);
-            }
+            UDrawGraph.makeUDrawFile(contextg);
         }
         return contextg;
     }
@@ -490,11 +450,7 @@ public class Program implements Iterable <Subprogram>
         {
             Debug.verboseMessage("Creating call loop graph");
             clg = new CallLoopGraph(this);
-
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(clg);
-            }
+            UDrawGraph.makeUDrawFile(clg);
         }
         return clg;
     }

@@ -35,7 +35,7 @@ public class MainTraceParser
         DefaultOptions.addDefaultOptions(options);
         DefaultOptions.addUDrawDirectoryOption(options);
         DefaultOptions.addTraceFileOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
 
         incrementalWCETOption = new Option("I", "incremental", false,
                 "Do a WCET computation after each run in the trace.");

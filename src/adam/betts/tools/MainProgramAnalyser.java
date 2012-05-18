@@ -39,7 +39,7 @@ public class MainProgramAnalyser
         DefaultOptions.addDefaultOptions(options);
         DefaultOptions.addProgramOption(options);
         DefaultOptions.addUDrawDirectoryOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
 
         inlineOption = new Option("I", "inline", false,
                 "Inline all control flow graphs to create a single monolothic graph.");
