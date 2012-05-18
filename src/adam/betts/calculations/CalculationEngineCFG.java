@@ -234,7 +234,7 @@ public class CalculationEngineCFG
         return 0;
     }
 
-    private class IPETModelCFG extends IPETModel
+    public class IPETModelCFG extends IPETModel
     {
 
         protected final ControlFlowGraph cfg;
@@ -328,7 +328,7 @@ public class CalculationEngineCFG
         }
     }
 
-    private class IPETModelCFGInFile extends IPETModelCFG
+    public class IPETModelCFGInFile extends IPETModelCFG
     {
 
         public IPETModelCFGInFile (ControlFlowGraph cfg, LoopNests lnt,
@@ -361,14 +361,15 @@ public class CalculationEngineCFG
                      * |V| Variables (equivalent to Columns).
                      */
                     numOfColumns = cfg.numOfVertices();
+                    Debug.debugMessage(getClass(), "About to solve 1", 1);
                     lp = LpSolve.makeLp(numOfColumns, numOfColumns);
+                    Debug.debugMessage(getClass(), "About to solve 2", 1);
 
                     lp = LpSolve.readLp(file.getAbsolutePath(),
                             IPETModel.getLpSolveVerbosity(), null);
+                    Debug.debugMessage(getClass(), "About to solve 3", 1);
                     try
                     {
-                        lp = LpSolve.readLp(file.getAbsolutePath(),
-                                MainTraceParser.getLpSolveVerbosity(), null);
                         solve();
                     }
                     catch (SolutionException e)
@@ -384,8 +385,7 @@ public class CalculationEngineCFG
             }
             catch (IOException e)
             {
-                System.err.println("Problem with file " + fileName);
-                System.exit(1);
+                Debug.errorMessage(getClass(), "Problem with file " + fileName);
             }
         }
 
@@ -667,13 +667,10 @@ public class CalculationEngineCFG
                 {
                     lp = LpSolve.makeLp(cfg.numOfVertices(),
                             cfg.numOfVertices());
-
-                    lp = LpSolve.readLp(file.getAbsolutePath(),
-                            IPETModel.getLpSolveVerbosity(), null);
                     try
                     {
                         lp = LpSolve.readLp(file.getAbsolutePath(),
-                                MainTraceParser.getLpSolveVerbosity(), null);
+                                IPETModel.getLpSolveVerbosity(), null);
                         solve();
                     }
                     catch (SolutionException e)

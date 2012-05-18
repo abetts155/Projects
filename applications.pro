@@ -4,21 +4,26 @@
 #     java -jar proguard.jar @applications.pro
 #
 
+# Your application may contain more items that need to be preserved; 
+# typically classes that are dynamically created using Class.forName:
+-keep public class lpsolve.*** { *; }
+-keep public interface lpsolve.AbortListener
+-keep public interface lpsolve.BbListener
+-keep public interface lpsolve.LogListener
+-keep public interface lpsolve.MsgListener
+
 # Specify the input jars, output jars, and library jars.
 
 -injars bin/program-generator.jar
 -outjars bin/program-generator-obfuscated.jar
 
--injars bin/program-analyser.jar
--outjars bin/program-analsyer-obfuscated.jar
+-injars bin/ipe-analyser.jar
+-outjars bin/ipe-analyser-obfuscated.jar
 
 -libraryjars <java.home>/lib/rt.jar
 -libraryjars lib/commons-cli-1.2.jar
--libraryjars lib/lpsolve55j.jar
+#-libraryjars lib/lpsolve55j.jar
 -libraryjars lib/junit-4.8.1.jar
-#-libraryjars servlet.jar
-#-libraryjars jai_core.jar
-#...
 
 # Save the obfuscation mapping to a file, so you can de-obfuscate any stack
 # traces later on. Keep a fixed source file attribute and all line number
@@ -37,6 +42,8 @@
 #-printseeds out.seeds
 
 # Preserve all public applications.
+
+-printmapping mapping.txt
 
 -keepclasseswithmembers public class * {
     public static void main(java.lang.String[]);
@@ -71,9 +78,9 @@
     java.lang.Object readResolve();
 }
 
-# Your application may contain more items that need to be preserved; 
-# typically classes that are dynamically created using Class.forName:
+-dontshrink
+-dontoptimize
+-dontpreverify
+-verbose
 
-# -keep public class mypackage.MyClass
-# -keep public interface mypackage.MyInterface
-# -keep public class * implements mypackage.MyInterface
+

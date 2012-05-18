@@ -224,12 +224,10 @@ public class DefaultOptions
 
     public final static void setIPETOptions (CommandLine line)
     {
-
         String arg = line.getOptionValue(lpSolveDirectoryOption.getOpt());
         if (arg != null)
         {
             IPETModel.setILPDirectory(arg);
-
         }
 
         arg = line.getOptionValue(lpSolveVerbosityOption.getOpt());
