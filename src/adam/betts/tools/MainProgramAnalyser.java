@@ -31,6 +31,7 @@ public class MainProgramAnalyser
     protected static boolean dominators;
     protected static boolean controlDependences;
     protected static boolean timingAnalysis;
+    protected static String programFileName;
 
     private static void addOptions ()
     {
@@ -90,10 +91,13 @@ public class MainProgramAnalyser
             else
             {
                 DefaultOptions.setDefaultOptions(line);
-                DefaultOptions.setProgramOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
                 DefaultOptions.setIPETOptions(line);
 
+                programFileName = line
+                        .getOptionValue(DefaultOptions.programFileOption
+                                .getOpt());
+                
                 inline = line.hasOption(inlineOption.getOpt());
                 LNTs = line.hasOption(loopsOption.getOpt());
                 ASTs = line.hasOption(syntaxTreesOption.getOpt());
@@ -115,7 +119,7 @@ public class MainProgramAnalyser
     {
         Debug.verboseMessage("Reading program");
 
-        Program program = new Program();
+        Program program = new Program(programFileName);
 
         if (LNTs)
         {
@@ -146,7 +150,8 @@ public class MainProgramAnalyser
             Debug.verboseMessage("Doing timing analysis");
             Database database = new Database(program);
             database.generateData(false);
-            CalculationEngineCFG calc = new CalculationEngineCFG(program, database);
+            CalculationEngineCFG calc = new CalculationEngineCFG(program,
+                    database);
             calc.printResults();
         }
     }

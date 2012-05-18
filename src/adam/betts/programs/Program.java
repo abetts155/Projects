@@ -42,39 +42,40 @@ public class Program implements Iterable <Subprogram>
     protected HashMap <Integer, Subprogram> idToSubprogram = new LinkedHashMap <Integer, Subprogram>();
     protected HashMap <String, Integer> nameToId = new LinkedHashMap <String, Integer>();
 
-    public Program ()
+    public Program (String programFileName)
     {
-        if (Globals.getProgramFileName() != null)
+        new ProgramReader(this, programFileName);
+
+        if (Globals.hasRoot())
         {
-            new ProgramCreator(this);
+            rootID = nameToId.get(Globals.getRoot());
+        }
+        else
+        {
+            setRootID();
+        }
 
-            if (Globals.hasRoot())
-            {
-                rootID = nameToId.get(Globals.getRoot());
-            }
-            else
-            {
-                setRootID();
-            }
+        for (int subprogramID : idToSubprogram.keySet())
+        {
+            final Subprogram subprogram = idToSubprogram.get(subprogramID);
+            final ControlFlowGraph cfg = subprogram.getCFG();
+            cfg.addEntryAndExitEdges();
+        }
 
-            for (int subprogramID : idToSubprogram.keySet())
-            {
-                final Subprogram subprogram = idToSubprogram.get(subprogramID);
-                final ControlFlowGraph cfg = subprogram.getCFG();
-                cfg.addEntryAndExitEdges();
-            }
+        if (Globals.uDrawDirectorySet())
+        {
+            UDrawGraph.makeUDrawFile(callg, rootID);
 
-            if (Globals.uDrawDirectorySet())
+            for (String subprogramName : nameToId.keySet())
             {
-                UDrawGraph.makeUDrawFile(callg, rootID);
-
-                for (String subprogramName : nameToId.keySet())
-                {
-                    UDrawGraph.makeUDrawFile(getSubprogram(subprogramName)
-                            .getCFG(), subprogramName);
-                }
+                UDrawGraph.makeUDrawFile(
+                        getSubprogram(subprogramName).getCFG(), subprogramName);
             }
         }
+    }
+    
+    public Program ()
+    {        
     }
 
     public final String getName ()

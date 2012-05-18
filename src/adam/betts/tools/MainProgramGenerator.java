@@ -1,7 +1,5 @@
 package adam.betts.tools;
 
-import java.util.Arrays;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -14,7 +12,6 @@ import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
 import adam.betts.programs.ProgramGenerator;
 import adam.betts.utilities.DefaultOptions;
-import adam.betts.utilities.Enums.ISA;
 
 public class MainProgramGenerator
 {

@@ -9,13 +9,14 @@ import org.apache.commons.cli.ParseException;
 
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
-import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
 
 public class MainProgramBuilder
 {
 
     private static Options options;
+
+    private static String programFileName;
 
     private static void addOptions ()
     {
@@ -45,9 +46,12 @@ public class MainProgramBuilder
             else
             {
                 DefaultOptions.setDefaultOptions(line);
-                DefaultOptions.setProgramOption(line);
                 DefaultOptions.setRootOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
+
+                programFileName = line
+                        .getOptionValue(DefaultOptions.programFileOption
+                                .getOpt());
             }
         }
         catch (ParseException e)
@@ -60,8 +64,7 @@ public class MainProgramBuilder
 
     private static void run ()
     {
-        Debug.verboseMessage("Reading program");
-        Program program = new Program();
+        Program program = new Program(programFileName);
         new WriteProgram(program, "program.xml");
     }
 

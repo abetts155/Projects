@@ -165,27 +165,20 @@ public class PTXInstructionSet
     private int majorVersion = -1;
     private int minorVersion = -1;
 
-    public PTXInstructionSet ()
-    {
-        determineISAVersion();
-    }
-
-    private void determineISAVersion ()
+    public PTXInstructionSet (String ptxFileName)
     {
         try
         {
-            RandomAccessFile raf = new RandomAccessFile(
-                    Globals.getProgramFileName(), "r");
+            RandomAccessFile raf = new RandomAccessFile(ptxFileName, "r");
             String line = raf.readLine().replaceAll("^\\s+", "");
             raf.close();
 
             int index = line.lastIndexOf(directiveVersion);
             if (index == -1)
             {
-                Debug.errorMessage(
-                        getClass(),
-                        "Unable to find PTX version in module '"
-                                + Globals.getProgramFileName() + "'");
+                Debug.errorMessage(getClass(),
+                        "Unable to find PTX version in module '" + ptxFileName
+                                + "'");
             }
             else
             {
