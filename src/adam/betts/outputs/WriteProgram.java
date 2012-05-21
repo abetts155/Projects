@@ -1,21 +1,9 @@
 package adam.betts.outputs;
 
-import java.io.File;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Iterator;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
@@ -26,6 +14,7 @@ import adam.betts.programs.Program;
 import adam.betts.programs.Subprogram;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
+import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Vertex;
 
 public class WriteProgram
@@ -38,134 +27,125 @@ public class WriteProgram
     {
         this.program = program;
         this.fileName = fileName;
-
-        try
-        {
-            writeXML();
-        }
-        catch (ParserConfigurationException e)
-        {
-            Debug.errorMessage(getClass(), e.getMessage());
-        }
-        catch (TransformerException e)
-        {
-            Debug.errorMessage(getClass(), e.getMessage());
-        }
+        new XMLOutput();
     }
 
-    private void writeXML () throws ParserConfigurationException,
-            TransformerException
+    private class XMLOutput
     {
-        DocumentBuilderFactory docFactory = DocumentBuilderFactory
-                .newInstance();
-        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
 
-        Document doc = docBuilder.newDocument();
-        Element rootElement = doc.createElement("program");
-        doc.appendChild(rootElement);
-
-        for (Subprogram subprg : program)
+        public XMLOutput ()
         {
-            Element cfgElem = doc.createElement("cfg");
-            rootElement.appendChild(cfgElem);
+            try
+            {
+                BufferedWriter out = new BufferedWriter(
+                        new FileWriter(fileName));
+                writeDTD(out);
 
-            Attr cfgAttr1 = doc.createAttribute("id");
-            cfgAttr1.setValue(Integer.toString(subprg.getSubprogramID()));
-            cfgElem.setAttributeNode(cfgAttr1);
+                out.write("<program name=\"" + program.getName() + "\">\n");
+                for (Subprogram subprg : program)
+                {
+                    writeCFG(out, subprg, program.getCallGraph());
+                }
+                out.write("</program>\n");
 
-            Attr cfgAttr2 = doc.createAttribute("name");
-            cfgAttr2.setValue(subprg.getSubprogramName());
-            cfgElem.setAttributeNode(cfgAttr2);
+                out.close();
+            }
+            catch (Exception e)
+            {
+                System.err.println("Error: " + e.getMessage());
+                System.exit(1);
+            }
+        }
 
-            ControlFlowGraph cfg = subprg.getCFG();
+        private void writeDTD (BufferedWriter out) throws IOException
+        {
+            out.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\n");
+            out.write("<!DOCTYPE program [\n");
+            out.write("<!ATTLIST program\n");
+            out.write("   name CDATA #IMPLIED>\n");
+            out.write("<!ELEMENT program (cfg*)>\n");
+            out.write("<!ATTLIST cfg\n");
+            out.write("  id ID #REQUIRED\n");
+            out.write("  main CDATA #IMPLIED\n");
+            out.write("  name CDATA #IMPLIED>\n");
+            out.write("<!ELEMENT cfg (bb+)>\n");
+            out.write("<!ATTLIST bb\n");
+            out.write("   id ID #REQUIRED>\n");
+            out.write("<!ELEMENT bb (prec?,inst*,succ?)>\n");
+            out.write("<!ELEMENT prec (link+)>\n");
+            out.write("<!ELEMENT succ (link+)>\n");
+            out.write("<!ATTLIST link\n");
+            out.write("  type (taken|nottaken|call) #REQUIRED\n");
+            out.write("  cfg CDATA #REQUIRED\n");
+            out.write("  bb IDREF #REQUIRED>\n");
+            out.write("<!ELEMENT link EMPTY>\n");
+            out.write("<!ATTLIST inst\n");
+            out.write("   addr CDATA #REQUIRED\n");
+            out.write("   instr CDATA #IMPLIED>\n");
+            out.write("<!ELEMENT inst EMPTY>\n");
+            out.write("]>\n");
+        }
+
+        private void writeCFG (BufferedWriter out, Subprogram subprogram,
+                CallGraph callg) throws IOException
+        {
+            Debug.debugMessage(getClass(),
+                    "In " + subprogram.getSubprogramName(), 3);
+            ControlFlowGraph cfg = subprogram.getCFG();
+            out.write("  <cfg id=\"" + subprogram.getSubprogramID()
+                    + "\" name=\"" + subprogram.getSubprogramName() + "\">\n");
+
+            Debug.debugMessage(getClass(), "Writing basic blocks and edges", 3);
             for (Vertex v : cfg)
             {
-                Element bbElem = doc.createElement("bb");
-                cfgElem.appendChild(bbElem);
+                BasicBlock bb = (BasicBlock) v;
+                out.write("    <bb id=\"" + bb.getVertexID() + "\">\n");
 
-                Attr bbAttr1 = doc.createAttribute("id");
-                bbAttr1.setValue(Integer.toString(v.getVertexID()));
-                bbElem.setAttributeNode(bbAttr1);
-
-                Iterator <Instruction> instrIt = cfg.getBasicBlock(
-                        v.getVertexID()).instructionIterator();
+                Iterator <Instruction> instrIt = bb.instructionIterator();
                 while (instrIt.hasNext())
                 {
                     Instruction instr = instrIt.next();
-                    Element instElem = doc.createElement("inst");
-                    bbElem.appendChild(instElem);
-
-                    Attr instrAttr1 = doc.createAttribute("addr");
-                    instrAttr1.setValue("0x"
-                            + Long.toHexString(instr.getAddress()));
-                    instElem.setAttributeNode(instrAttr1);
-
-                    Attr instrAttr2 = doc.createAttribute("instr");
-                    instrAttr2.setValue(instr.getInstruction());
-                    instElem.setAttributeNode(instrAttr2);
+                    out.write("      <inst addr=\"0x"
+                            + Long.toHexString(instr.getAddress())
+                            + "\" instr=\"" + instr.getInstruction() + "\"/>\n");
                 }
 
-                Element succElem = doc.createElement("succ");
-                bbElem.appendChild(succElem);
-                Iterator <Edge> succIt = v.successorIterator();
+                out.write("      <succ>\n");
+                Iterator <Edge> succIt = bb.successorIterator();
                 while (succIt.hasNext())
                 {
                     FlowEdge succEdge = (FlowEdge) succIt.next();
                     if (succEdge.getVertexID() != cfg.getEntryID())
                     {
-                        Element linkElem = doc.createElement("link");
-                        succElem.appendChild(linkElem);
-
-                        Attr linkAttr1 = doc.createAttribute("type");
-                        linkAttr1.setValue(succEdge.getBranchType().toString()
-                                .toLowerCase());
-                        linkElem.setAttributeNode(linkAttr1);
-
-                        Attr linkAttr2 = doc.createAttribute("cfg");
-                        linkAttr2.setValue(Integer.toString(subprg
-                                .getSubprogramID()));
-                        linkElem.setAttributeNode(linkAttr2);
-
-                        Attr linkAttr3 = doc.createAttribute("bb");
-                        linkAttr3.setValue(Integer.toString(succEdge
-                                .getVertexID()));
-                        linkElem.setAttributeNode(linkAttr3);
+                        out.write("        <link type=\""
+                                + succEdge.getBranchType().toString()
+                                        .toLowerCase()
+                                + "\" cfg=\""
+                                + Integer.toString(subprogram.getSubprogramID())
+                                + "\" bb=\""
+                                + Integer.toString(succEdge.getVertexID())
+                                + "\"/>\n");
                     }
                 }
 
-                int calleeID = program.getCallGraph().isCallSite(
-                        subprg.getSubprogramID(), v.getVertexID());
+                int calleeID = callg.isCallSite(subprogram.getSubprogramID(),
+                        bb.getVertexID());
                 if (calleeID != Vertex.DUMMY_VERTEX_ID)
                 {
-                    Element linkElem = doc.createElement("link");
-                    succElem.appendChild(linkElem);
-
-                    Attr linkAttr1 = doc.createAttribute("type");
-                    linkAttr1
-                            .setValue(BranchType.CALL.toString().toLowerCase());
-                    linkElem.setAttributeNode(linkAttr1);
-
-                    Attr linkAttr2 = doc.createAttribute("cfg");
-                    linkAttr2.setValue(Integer.toString(calleeID));
-                    linkElem.setAttributeNode(linkAttr2);
-
-                    Attr linkAttr3 = doc.createAttribute("bb");
-                    linkAttr3.setValue(Integer.toString(program
-                            .getSubprogram(calleeID).getCFG().getEntryID()));
-                    linkElem.setAttributeNode(linkAttr3);
+                    ControlFlowGraph calleeCFG = program
+                            .getSubprogram(calleeID).getCFG();
+                    out.write("        <link type=\""
+                            + BranchType.CALL.toString().toLowerCase()
+                            + "\" cfg=\"" + Integer.toString(calleeID)
+                            + "\" bb=\""
+                            + Integer.toString(calleeCFG.getEntryID())
+                            + "\"/>\n");
                 }
+
+                out.write("      </succ>\n");
+                out.write("    </bb>\n");
             }
+            out.write("  </cfg>\n");
         }
-
-        TransformerFactory transformerFactory = TransformerFactory
-                .newInstance();
-        Transformer transformer = transformerFactory.newTransformer();
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty(
-                "{http://xml.apache.org/xslt}indent-amount", "2");
-        DOMSource source = new DOMSource(doc);
-        StreamResult result = new StreamResult(new File(fileName));
-        transformer.transform(source, result);
     }
-
 }
