@@ -105,9 +105,21 @@ int median(int ARRAY_SIZE, int a[])
 	}
 }
 
-int listOps(int ARRAY_SIZE, int a[], int (*listOp)(int, int*))
+int listOps(int ARRAY_SIZE, int a[])
 {
-	return listOp(ARRAY_SIZE, a);
+	int n = a[0] % 6;
+	int result = 0;
+
+	switch (n)
+	{
+		case 0 : result = max(ARRAY_SIZE, a); break;
+		case 1 : result = min(ARRAY_SIZE, a); break;
+		case 2 : result = sum(ARRAY_SIZE, a); break;
+		case 3 : result = product(ARRAY_SIZE, a); break;
+		case 4 : result = mean(ARRAY_SIZE, a); break;
+		default : result = median(ARRAY_SIZE, a); break;
+	}
+	return result;
 }
 
 int main (int argc, char *argv[])
@@ -129,22 +141,9 @@ int main (int argc, char *argv[])
 		TV[i] = atoi (argv[i + 1]);
 	}
 
-	int (*func)(int, int*) = 0;
-	int n = TV[0] % 6;
+	int result = listOps (ARRAY_SIZE, TV);
 
-	switch (n)
-	{
-		case 0 : func = &max; break;
-		case 1 : func = &min; break;
-		case 2 : func = &sum; break;
-		case 3 : func = &product; break;
-		case 4 : func = &mean; break;
-		default : func = &median; break;
-	}
-
-	int result = listOps (ARRAY_SIZE, TV, func);
-
-	printf("%i\n", result);
+	//printf("%i\n", result);
 
 	return 0;
 }

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.Map;
 import java.util.Set;
 
 import tvgen.util.SystemOutput;
@@ -149,6 +150,16 @@ public class Gem5Tools {
 	
 	public Set<Integer> getBlockCoverage(String traceFile) {
 		return traceParser.basicBlocksInTrace(traceFile);
+	}
+	
+	// Returns a map of basic block ids to the number of times they were executed in the trace
+	public Map<Integer,Integer> getBlockCoverageCount(String traceFile) {
+		return traceParser.basicBlocksCount(traceFile);
+	}
+	
+	public long getInstructionTimeDiff(int inst1, int inst2, String traceFile)
+	{
+		return traceParser.getInstructionTimeDiff(inst1, inst2, traceFile);
 	}
 	
 	private void waitForProcess(Process p, String cmd) {

@@ -98,7 +98,6 @@ public class TraceParser
 				{
 					String endInstAddr = ((Element)endInst).getAttribute("addr");
 					int endInstId = parseAddr(endInstAddr);
-					bbAddrs.add(endInstId);
 					
 					if(branchBlock(bbElement))
 					{
@@ -180,6 +179,69 @@ public class TraceParser
 			handleException(e, "Error parsing trace file" + traceName);
 		}
 		return bbs;
+	}
+	
+	// Returns a map of basic blocks to the number of times they were executed
+	public Map<Integer,Integer> basicBlocksCount(String traceName)
+	{
+		Map<Integer,Integer> bbcount = new HashMap<Integer,Integer>();
+		try
+		{
+			InputStream traceFile = new FileInputStream(traceName);
+			BufferedReader trace = new BufferedReader(new InputStreamReader(traceFile));
+			
+			List<InstructionTime> instTimes = getInstructionTimes(trace);
+			trace.close();
+			
+			for(InstructionTime instTime : instTimes)
+			{
+				Integer bbId = bbAddrId.get(instTime.instruction);
+				if(bbId != null)
+				{
+					Integer blockCount = bbcount.get(bbId);
+					if(blockCount == null)
+						bbcount.put(bbId, 1);
+					else
+						bbcount.put(bbId, blockCount + 1);
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing trace file" + traceName);
+		}
+		return bbcount;
+	}
+	
+	public long getInstructionTimeDiff(int inst1, int inst2, String traceName)
+	{
+		long time1 = 0;
+		long time2 = 0;
+		try
+		{
+			InputStream traceFile = new FileInputStream(traceName);
+			BufferedReader trace = new BufferedReader(new InputStreamReader(traceFile));
+			
+			List<InstructionTime> instTimes = getInstructionTimes(trace);
+			trace.close();
+			
+			for(InstructionTime instTime : instTimes)
+			{
+				if(inst1 == instTime.instruction)
+				{
+					time1 = instTime.time;
+				}
+				if(inst2 == instTime.instruction)
+				{
+					time2 = instTime.time;
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			handleException(e, "Error parsing trace file" + traceName);
+		}
+		return time2 - time1;
 	}
 	
 	public String parseTrace(String traceName, String instrumentation, boolean hexAddrs)

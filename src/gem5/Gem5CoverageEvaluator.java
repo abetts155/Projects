@@ -19,10 +19,10 @@ import org.w3c.dom.NodeList;
 import tvgen.util.SystemOutput;
 import tvgen.util.TestVector;
 
-public class Gem5CoverageEvaluator extends Gem5Evaluator {
+public abstract class Gem5CoverageEvaluator extends Gem5Evaluator {
 
-	private String traceFile;
-	private Set<Integer> basicBlocks;
+	protected String traceFile;
+	protected Set<Integer> basicBlocks;
 	
 	public Gem5CoverageEvaluator(int threadID, String programName, Gem5Tools g5tools,
 			String entryPoint) {
@@ -35,21 +35,7 @@ public class Gem5CoverageEvaluator extends Gem5Evaluator {
 	}
 
 	@Override
-	public void evaluate(TestVector vector) {
-		double time = g5Tools.runGem5(vector.toString(), "m5out/thread" + getThreadID(),
-				"trace.out");
-		
-		Set<Integer> blocksCovered = g5Tools.getBlockCoverage(traceFile);
-		
-		blocksCovered.retainAll(basicBlocks);
-		int relevantBlocksCovered = blocksCovered.size();
-		
-		vector.setScore((double)relevantBlocksCovered / (double)basicBlocks.size());
-		String traceOutput = g5Tools.sanitiseGem5Trace(traceFile, "BASIC_BLOCK");
-		
-		//Append trace to compressed file
-		addToTraceOutput(traceOutput);
-	}
+	public abstract void evaluate(TestVector vector);
 	
 	private void addBasicBlocks(CFGNode rootNode)
 	{
