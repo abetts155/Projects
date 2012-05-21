@@ -7,11 +7,13 @@ public class TestVector implements Comparable<TestVector> {
 	private int[] vector;
 	private double score;
 	private boolean scored;
+	private double time;
 	
 	public TestVector(int[] vector) {
 		this.vector = vector;
 		score = 0;
 		scored = false;
+		time = 0;
 	}
 	
 	public double getScore() {
@@ -51,6 +53,14 @@ public class TestVector implements Comparable<TestVector> {
 	@Override
 	public int compareTo(TestVector o) {
 		return Double.compare(score, o.getScore());
+	}
+
+	public double getTime() {
+		return time;
+	}
+
+	public void setTime(double time) {
+		this.time = time;
 	}
 
 }

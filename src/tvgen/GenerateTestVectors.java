@@ -8,7 +8,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import gem5.Gem5CoverageEvaluator;
+import gem5.Gem5CovCountEval;
+import gem5.Gem5CovFractionEval;
 import gem5.Gem5TimeEvaluator;
 import gem5.Gem5Tools;
 
@@ -40,6 +41,7 @@ public class GenerateTestVectors {
 	private static Option selectRateOption;
 	private static Option threadsOption;
 	private static Option seedOption;
+	private static Option populationOption;
 	
 	private static void addOptions ()
 	{
@@ -52,8 +54,8 @@ public class GenerateTestVectors {
 		options.addOption (debugOption);
 
 		typeOption = new Option ("g", "gen-type", true,
-				"The type of generator to use (rand or ga)");
-		typeOption.setRequired (true);
+				"The type of generator to use (rand or ga) (default is ga)");
+		typeOption.setRequired (false);
 		options.addOption (typeOption);
 		
 		outputOption = new Option ("o", "output-file", true,
@@ -98,17 +100,17 @@ public class GenerateTestVectors {
 		options.addOption (configFlagsOption);
 		
 		crossoverOption = new Option ("C", "crossover", true,
-				"The type of crossover to use (1point, 2point)");
+				"The type of crossover to use (1point, 2point) (default is 1point)");
 		crossoverOption.setRequired (false);
 		options.addOption (crossoverOption);
 		
 		selectOption = new Option ("S", "selector", true,
-				"The type of selector to use (elite, prob, rand)");
+				"The type of selector to use (elite, prob, rand) (default is elite)");
 		selectOption.setRequired (false);
 		options.addOption (selectOption);
 		
 		evaluatorOption = new Option ("E", "evaluator", true,
-				"The type of evaluator to use (gem5Time, gem5Cov)");
+				"The type of evaluator to use (gem5Time, gem5CovFrac, gem5CovCount)");
 		evaluatorOption.setRequired (false);
 		options.addOption (evaluatorOption);
 		
@@ -133,8 +135,14 @@ public class GenerateTestVectors {
 		threadsOption.setRequired (false);
 		options.addOption (threadsOption);
 		
+		populationOption = new Option ("P", "pop-size", true,
+				"The size of the population in each generation (default is 100)");
+		populationOption.setRequired (false);
+		options.addOption (populationOption);
+		
 		seedOption = new Option ("R", "seed-rand", false,
 				"Seed each generation with random vector");
+		seedOption.setRequired (false);
 		options.addOption (seedOption);
 	}
 
@@ -186,7 +194,8 @@ public class GenerateTestVectors {
 				line.getOptionValue(numGensOption.getOpt()));
 		
 		// Select type of generator to create
-		String genType = line.getOptionValue(typeOption.getOpt()); 
+		String genType = line.getOptionValue(typeOption.getOpt());
+		if (genType == null) { genType = "ga"; }
 		if (genType.equals("rand"))
 		{
 			generator = createRandomGenerator(outputFile, numVecsOrGens);
@@ -222,6 +231,12 @@ public class GenerateTestVectors {
 				double selectRate = Double.parseDouble(
 						line.getOptionValue(selectRateOption.getOpt()));
 				((GaTVGenerator)generator).setSelectionRate(selectRate);
+			}
+			if (line.hasOption (populationOption.getOpt ()))
+			{
+				int popSize = Integer.parseInt(
+						line.getOptionValue(populationOption.getOpt()));
+				((GaTVGenerator)generator).setPopulationSize(popSize);
 			}
 			((GaTVGenerator)generator).setSeedWithRand(
 					line.hasOption (seedOption.getOpt ()));
@@ -273,7 +288,7 @@ public class GenerateTestVectors {
 	private static GenerationEvaluator createEvaluator(String type, CommandLine line) {
 		if (type == null)
 		{
-			SystemOutput.exitWithError("Error: need to specify crossover type");
+			SystemOutput.exitWithError("Error: need to specify evaluator type");
 		}
 		int numThreads = 1;
 		if(line.hasOption (threadsOption.getOpt ())) {
@@ -283,19 +298,18 @@ public class GenerateTestVectors {
 		
 		TVEvaluator[] evals = new TVEvaluator[numThreads];
 		
-		if(type.equals("gem5Time") || type.equals("gem5Cov"))
+		if(type.equals("gem5Time") || type.equals("gem5CovFrac")
+				|| type.equals("gem5CovCount"))
 		{
 			if (!line.hasOption (programOption.getOpt ()))
-				SystemOutput.exitWithError("Error: missing option " + programOption.getOpt());
+				SystemOutput.exitWithError("Error: missing option " +programOption.getOpt());
 			
 			String entryPoint = "";
-			if(type.equals("gem5Cov")) {
-				if (!line.hasOption (entryOption.getOpt ())) {
-					SystemOutput.exitWithError("Error: missing option " +
-										programOption.getOpt());
-				}
-				entryPoint = line.getOptionValue(entryOption.getOpt());
+			if (!line.hasOption (entryOption.getOpt ())) {
+				SystemOutput.exitWithError("Error: missing option " +
+						entryOption.getOpt());
 			}
+			entryPoint = line.getOptionValue(entryOption.getOpt());
 			
 			String programName = line.getOptionValue(programOption.getOpt());
 			String configFileName = line.getOptionValue(configFlagsOption.getOpt());
@@ -304,9 +318,11 @@ public class GenerateTestVectors {
 			
 			for(int i = 0; i < numThreads; i++) {
 				if(type.equals("gem5Time")) {
-					evals[i] = new Gem5TimeEvaluator(i, programName, g5tools);
-				} else if(type.equals("gem5Cov")) {
-					evals[i] = new Gem5CoverageEvaluator(i, programName, g5tools, entryPoint);
+					evals[i] = new Gem5TimeEvaluator(i, programName, g5tools, entryPoint);
+				} else if(type.equals("gem5CovFrac")) {
+					evals[i] = new Gem5CovFractionEval(i, programName, g5tools, entryPoint);
+				} else if(type.equals("gem5CovCount")) {
+					evals[i] = new Gem5CovCountEval(i, programName, g5tools, entryPoint);
 				}
 			}
 			return new GenerationEvaluator(evals);
@@ -325,7 +341,7 @@ public class GenerateTestVectors {
 	private static TVCrossover createCrossover(String type) {
 		if (type == null)
 		{
-			SystemOutput.exitWithError("Error: need to specify crossover type");
+			return new OnePointCrossover();
 		}
 		else if(type.equals("1point"))
 		{
@@ -342,7 +358,7 @@ public class GenerateTestVectors {
 	private static TVSelector createSelector(String type) {
 		if (type == null)
 		{
-			SystemOutput.exitWithError("Error: need to specify selector type");
+			return new ElitistSelector();
 		}
 		else if(type.equals("prob"))
 		{

@@ -62,6 +62,8 @@ public abstract class TestVectorGenerator {
 			p.close();
 			SystemOutput.printMessage("Highest scoring vector with score = " +
 								highestScoring.getScore() + " is " + highestScoring.toString());
+			SystemOutput.printMessage("Runtime for highest scoring vector = " +
+					highestScoring.getTime());
 			SystemOutput.printMessage("Completed writing TVs to file");
 		} catch (Exception e) {
 			SystemOutput.errorMessage("Error writing test vectors to file");
