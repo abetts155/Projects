@@ -4,13 +4,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
@@ -66,38 +63,41 @@ public class CalculationEngineCFG
 
             ControlFlowGraph cfg = subprogram.getCFG();
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(cfg.getLNT(),
-                        subprogram.getSubprogramName());
-            }
+            UDrawGraph.makeUDrawFile(cfg.getLNT(),
+                    subprogram.getSubprogramName());
 
-            IPETModelCFGInFile ilp = new IPETModelCFGInFile(cfg, cfg.getLNT(),
+            IPETModelCFGInFile ilp1 = new IPETModelCFGInFile(cfg, cfg.getLNT(),
                     subprogramID, subprogramName);
-            ILPsInFile.put(subprogramName, ilp);
+            ILPsInFile.put(subprogramName, ilp1);
 
             Debug.debugMessage(getClass(), "CFG-ILP: WCET(" + subprogramName
-                    + ") = " + ilp.wcet, 3);
+                    + ") = " + ilp1.wcet, 3);
 
-            IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
-                    cfg.getLNT(), subprogramID, subprogramName);
-            ILPsInMemory.put(subprogramName, ilp2);
-
-            assert ilp2.wcet == ilp.wcet : "Disparity between WCETs found: "
-                    + ilp2.wcet + " and " + ilp.wcet;
-
-            assert ilp2.flowConstraints == ilp.flowConstraints : "Different number of flow constraints found "
-                    + ilp2.flowConstraints + " and " + ilp.flowConstraints;
-
-            assert ilp2.loopConstraints == ilp.loopConstraints : "Different number of loop constraints found "
-                    + ilp2.loopConstraints + " and " + ilp.loopConstraints;
-
-            assert ilp2.numberOfVariables == ilp.numberOfVariables : "Different number of variables found "
-                    + ilp2.numberOfVariables + " and " + ilp.numberOfVariables;
+            // IPETModelCFGInMemory ilp2 = new IPETModelCFGInMemory(cfg,
+            // cfg.getLNT(), subprogramID, subprogramName);
+            // ILPsInMemory.put(subprogramName, ilp2);
+            //
+            // assert ilp2.wcet == ilp.wcet : "Disparity between WCETs found: "
+            // + ilp2.wcet + " and " + ilp.wcet;
+            //
+            // assert ilp2.flowConstraints == ilp.flowConstraints :
+            // "Different number of flow constraints found "
+            // + ilp2.flowConstraints + " and " + ilp.flowConstraints;
+            //
+            // assert ilp2.loopConstraints == ilp.loopConstraints :
+            // "Different number of loop constraints found "
+            // + ilp2.loopConstraints + " and " + ilp.loopConstraints;
+            //
+            // assert ilp2.numberOfVariables == ilp.numberOfVariables :
+            // "Different number of variables found "
+            // + ilp2.numberOfVariables + " and " + ilp.numberOfVariables;
 
             IPETModelCFGInFileWithSuperBlocks ilp3 = new IPETModelCFGInFileWithSuperBlocks(
                     cfg, cfg.getLNT(), subprogramID, subprogramName);
             ILPsInFileSuperBlocks.put(subprogramName, ilp3);
+
+            assert ilp1.wcet == ilp3.wcet : "Disparity between WCETs found. CFG-ILP = "
+                    + ilp1.wcet + " and SB-CFG-ILP = " + ilp3.wcet;
         }
     }
 
@@ -333,7 +333,8 @@ public class CalculationEngineCFG
         {
             super(cfg, lnt, subprogramID, subprogramName);
 
-            final String fileName = subprogramName + ".cfg.lp";
+            final String fileName = subprogramName + "." + cfg.numOfVertices()
+                    + ".cfg.lp";
             try
             {
 
@@ -357,14 +358,15 @@ public class CalculationEngineCFG
                      * |V| Variables (equivalent to Columns).
                      */
                     numOfColumns = cfg.numOfVertices();
+                    Debug.debugMessage(getClass(), "About to solve 1", 1);
                     lp = LpSolve.makeLp(numOfColumns, numOfColumns);
+                    Debug.debugMessage(getClass(), "About to solve 2", 1);
 
                     lp = LpSolve.readLp(file.getAbsolutePath(),
                             IPETModel.getLpSolveVerbosity(), null);
+                    Debug.debugMessage(getClass(), "About to solve 3", 1);
                     try
                     {
-                        lp = LpSolve.readLp(file.getAbsolutePath(),
-                                MainTraceParser.getLpSolveVerbosity(), null);
                         solve();
                     }
                     catch (SolutionException e)
@@ -380,8 +382,7 @@ public class CalculationEngineCFG
             }
             catch (IOException e)
             {
-                System.err.println("Problem with file " + fileName);
-                System.exit(1);
+                Debug.errorMessage(getClass(), "Problem with file " + fileName);
             }
         }
 
@@ -646,7 +647,8 @@ public class CalculationEngineCFG
             writeIntegerConstraints();
             writeObjectiveFunction();
 
-            final String fileName = subprogramName + ".cfg.super.lp";
+            final String fileName = subprogramName + "." + cfg.numOfVertices()
+                    + ".cfg.super.lp";
             try
             {
                 final File file = new File(ILPdirectory, fileName);
@@ -662,13 +664,10 @@ public class CalculationEngineCFG
                 {
                     lp = LpSolve.makeLp(cfg.numOfVertices(),
                             cfg.numOfVertices());
-
-                    lp = LpSolve.readLp(file.getAbsolutePath(),
-                            IPETModel.getLpSolveVerbosity(), null);
                     try
                     {
                         lp = LpSolve.readLp(file.getAbsolutePath(),
-                                MainTraceParser.getLpSolveVerbosity(), null);
+                                IPETModel.getLpSolveVerbosity(), null);
                         solve();
                     }
                     catch (SolutionException e)
@@ -874,20 +873,14 @@ public class CalculationEngineCFG
                         .add(variable);
             }
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(flowg,
-                        subprogramName + headerv.getHeaderID());
-            }
+            UDrawGraph.makeUDrawFile(flowg,
+                    subprogramName + "." + headerv.getHeaderID());
 
             SuperBlockCFGStructureGraph superg = new SuperBlockCFGStructureGraph(
                     flowg);
 
-            if (Globals.uDrawDirectorySet())
-            {
-                UDrawGraph.makeUDrawFile(superg,
-                        subprogramName + headerv.getHeaderID());
-            }
+            UDrawGraph.makeUDrawFile(superg,
+                    subprogramName + "." + headerv.getHeaderID());
 
             DepthFirstTree dfs = new DepthFirstTree(superg, superg.getRootID());
 
@@ -962,7 +955,8 @@ public class CalculationEngineCFG
                 int num = 1;
                 for (SuperBlockCFGStructureEdge supere : partitionedEdges)
                 {
-                    if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                    if (superg.getVertex(supere.getVertexID())
+                            .isUnstructuredMerge())
                     {
                         final String dummyEdgeVariable = createEdgeVariable(
                                 supere.getEdgeID(), headerv.getHeaderID());
@@ -1030,7 +1024,7 @@ public class CalculationEngineCFG
                 SuperBlockCFGStructureEdge supere = (SuperBlockCFGStructureEdge) prede;
                 SuperBlockVertex predv = superg.getVertex(supere.getVertexID());
 
-                if (supere.getEdgeType() == SuperBlockCFGStructureEdgeType.ACYCLIC_IRREDUCIBLE)
+                if (predv.numOfSuccessors() > 1)
                 {
                     final String dummyEdgeVariable = createEdgeVariable(
                             supere.getEdgeID(), headerv.getHeaderID());

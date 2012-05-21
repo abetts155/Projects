@@ -4,7 +4,7 @@ class Debug ():
 		self.verbose = verbose
 		self.debug = debug
 
-	def debugMessage (self, str, debugLevel):
+	def debugMessage (self, str, debugLevel=1):
 		if self.debug > 0 and debugLevel >= self.debug:
 			print(str)
 

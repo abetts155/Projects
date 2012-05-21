@@ -7,29 +7,30 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import adam.betts.outputs.WriteProgram;
+import adam.betts.calculations.CalculationEngineCFG;
+import adam.betts.calculations.Database;
 import adam.betts.programs.Program;
 import adam.betts.utilities.DefaultOptions;
 
-public class MainProgramBuilder
+public class MainIPEAnalyser
 {
 
     private static Options options;
 
-    private static String programFileName;
+    protected static String programFileName;
 
     private static void addOptions ()
     {
         options = new Options();
         DefaultOptions.addDefaultOptions(options);
         DefaultOptions.addProgramOption(options);
-        DefaultOptions.addRootOption(options, true);
         DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addIPEOptions(options);
     }
 
     private static void parseCommandLine (String[] args)
     {
-        final String toolName = "disassemble.jar";
+        final String toolName = "ipe-analyser.jar";
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
         formatter.setWidth(128);
@@ -46,8 +47,8 @@ public class MainProgramBuilder
             else
             {
                 DefaultOptions.setDefaultOptions(line);
-                DefaultOptions.setRootOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
+                DefaultOptions.setIPETOptions(line);
 
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
@@ -65,7 +66,10 @@ public class MainProgramBuilder
     private static void run ()
     {
         Program program = new Program(programFileName);
-        new WriteProgram(program, "program.xml");
+        Database database = new Database(program);
+        database.generateData(false);
+        CalculationEngineCFG calc = new CalculationEngineCFG(program, database);
+        calc.printResults();
     }
 
     public static void main (String[] args)

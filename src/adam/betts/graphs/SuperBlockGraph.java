@@ -40,6 +40,11 @@ public class SuperBlockGraph extends DirectedGraph
     {
         return dominatorg.postdomt;
     }
+    
+    public final FlowGraph getReverseFlowGraph ()
+    {
+        return dominatorg.reverseg;
+    }
 
     public final SuperBlockVertex getVertex (int vertexID)
     {
@@ -133,6 +138,7 @@ public class SuperBlockGraph extends DirectedGraph
 
         protected DominatorTree predomt;
         protected DominatorTree postdomt;
+        protected FlowGraph reverseg;
 
         private DominatorGraph ()
         {
@@ -141,7 +147,7 @@ public class SuperBlockGraph extends DirectedGraph
             predomt = new DominatorTree(flowg, flowg.getEntryID(),
                     DominatorTreeType.PRE_DOMINATOR);
 
-            FlowGraph reverseg = new FlowGraph();
+            reverseg = new FlowGraph();
             flowg.reverseGraph(reverseg);
             postdomt = new DominatorTree(reverseg, flowg.getExitID(),
                     DominatorTreeType.POST_DOMINATOR);

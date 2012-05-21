@@ -1,34 +1,40 @@
 <!-- Authored by Adam Betts -->
-<project name="SimulatorUtils" default="compile" basedir=".">
+<project name="SimulatorUtils" default="all" basedir=".">
 	<property name="src.dir" value="src" />
 	<property name="test.dir" value="test" />
 	<property name="build.dir" value="build" />
 	<property name="lib.dir" value="lib" />
 	<property name="jar.dir" value="bin" />
 	
+	<!-- The execution entry points of the various tools -->
 	<property name="cfg.main.class" value="adam.betts.tools.MainProgramBuilder" />
 	<property name="wcet.main.class" value="adam.betts.tools.MainWCETAnalyser" />
 	<property name="trace-parser.main.class" value="adam.betts.tools.MainTraceParser" />
 	<property name="trace-simplescalar.main.class" value="adam.betts.tools.MainSimpleScalarTraceParser" />
 	<property name="trace-generator.main.class" value="adam.betts.tools.MainTraceGenerator" />
 	<property name="program-analyser.main.class" value="adam.betts.tools.MainProgramAnalyser" />
+	<property name="ipe-analyser.main.class" value="adam.betts.tools.MainIPEAnalyser" />
 	<property name="program-generator.main.class" value="adam.betts.tools.MainProgramGenerator" />
 	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
 	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
+	<property name="ptx.main.class" value="adam.betts.tools.MainPTXAnalyser" />
 	<property name="tests.main.class" value="adam.betts.program.AllTests" />
 	<property name="tv-generator.main.class" value="tvgen.GenerateTestVectors" />
 	<property name="find-wcet.main.class" value="tvgen.FindWCETVector" />
 	<property name="gem5-trace-parser.main.class" value="gem5.ParseGem5Trace" />
 
+	<!-- Names of the jar files -->
 	<property name="disassemble.jar" value="disassemble.jar" />
 	<property name="simplescalar.jar" value="simplescalar.jar" />
 	<property name="wcet.jar" value="wcet.jar" />
 	<property name="trace-parser.jar" value="trace-parser.jar" />
 	<property name="trace-generator.jar" value="trace-generator.jar" />
+	<property name="ipe-analyser.jar" value="ipe-analyser.jar" />
 	<property name="program-analyser.jar" value="program-analyser.jar" />
 	<property name="program-generator.jar" value="program-generator.jar" />
 	<property name="tree.jar" value="tree.jar" />
 	<property name="loop.jar" value="loop.jar" />
+	<property name="ptx-analyser.jar" value="ptx-analyser.jar" />
 	<property name="tv-generator.jar" value="tv-generator.jar" />
 	<property name="find-wcet.jar" value="find-wcet.jar" />
 	<property name="gem5-trace-parser.jar" value="gem5-trace-parser.jar" />
@@ -38,224 +44,80 @@
 		<pathelement location="${lib.dir}/lpsolve55j.jar" />
 	</path>
 
-	<path id="project.classpath.test">
-		<pathelement location="${build.dir}" />
-		<pathelement location="${lib.dir}/junit-4.8.1.jar" />
-	</path>
-
 	<target name="compile">
 		<mkdir dir="${build.dir}" />
 		<echo>Compiling in ${src.dir}</echo>
 		<javac debug="on" srcdir="${src.dir}" destdir="${build.dir}" includes="**/*.java" classpathref="project.classpath" includeantruntime="false" />
 	</target>
 
-	<target name="disassemble" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${disassemble.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${cfg.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${disassemble.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="tree" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${tree.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${tree.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-	                <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
-	        </jar>
-
-		<chmod file="${jar.dir}/${tree.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="loop" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${loop.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${loop.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-	        </jar>
-
-		<chmod file="${jar.dir}/${loop.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="simplescalar" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${simplescalar.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${trace-simplescalar.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${simplescalar.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="wcet" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${wcet.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${wcet.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${wcet.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="trace-parser" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${trace-parser.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${trace-parser.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${trace-parser.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="trace-generator" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${trace-generator.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${trace-generator.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${trace-generator.jar}" perm="+x" verbose="true" />
-	</target>
-
-	<target name="program-analyser" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${program-analyser.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${program-analyser.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${program-analyser.jar}" perm="+x" verbose="true" />
-	</target>
+	<macrodef name="buildStandardJar">
+		<attribute name="jarname"/>
+		<attribute name="mainclass"/>
+		<sequential>
+		<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
+                        <manifest>
+                                <attribute name="Built-By" value="${user.name}" />
+                                <attribute name="Main-Class" value="@{mainclass}" />
+                                <attribute name="Class-Path" value="." />
+                        </manifest>
+                        <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+                </jar>
+		</sequential>
+	</macrodef>
 
 	<target name="program-generator" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${program-generator.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${program-generator.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${program-generator.jar}" perm="+x" verbose="true" />
+		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}"/>
 	</target>
 
-	<target name="tv-generator" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${tv-generator.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${tv-generator.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${tv-generator.jar}" perm="+x" verbose="true" />
+	<target name="standardTools" depends="compile">
+		<buildStandardJar jarname="${disassemble.jar}" mainclass="${cfg.main.class}"/>
+		<buildStandardJar jarname="${loop.jar}" mainclass="${loop.main.class}"/>
+		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}"/>
+		<buildStandardJar jarname="${ptx-analyser.jar}" mainclass="${ptx.main.class}"/>
+		<buildStandardJar jarname="${simplescalar.jar}" mainclass="${trace-simplescalar.main.class}"/>
+		<buildStandardJar jarname="${gem5-trace-parser.jar}" mainclass="${gem5-trace-parser.main.class}"/>
+		<buildStandardJar jarname="${trace-generator.jar}" mainclass="${trace-generator.main.class}"/>
+		<buildStandardJar jarname="${tv-generator.jar}" mainclass="${tv-generator.main.class}"/>
+		<buildStandardJar jarname="${find-wcet.jar}" mainclass="${find-wcet.main.class}"/>
 	</target>
 	
-	<target name="find-wcet" depends="compile">
-		<mkdir dir="${jar.dir}" />
+	<macrodef name="buildLpsolveJar">
+		<attribute name="jarname"/>
+		<attribute name="mainclass"/>
+		<sequential>
+		<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
+                        <manifest>
+                                <attribute name="Built-By" value="${user.name}" />
+                                <attribute name="Main-Class" value="@{mainclass}" />
+                                <attribute name="Class-Path" value="." />
+                        </manifest>
+                        <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+	                <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
+                </jar>
+		</sequential>
+	</macrodef>
 
-		<jar destfile="${jar.dir}/${find-wcet.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${find-wcet.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
+	<target name="program-analyser" depends="compile">
+		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}"/>
+	</target>
 
-		<chmod file="${jar.dir}/${find-wcet.jar}" perm="+x" verbose="true" />
+
+	<target name="lpSolveTools" depends="compile">
+		<buildLpsolveJar jarname="${tree.jar}" mainclass="${tree.main.class}"/>
+		<buildLpsolveJar jarname="${wcet.jar}" mainclass="${wcet.main.class}"/>
+		<buildLpsolveJar jarname="${trace-parser.jar}" mainclass="${trace-parser.main.class}"/>
+		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}"/>
+		<buildLpsolveJar jarname="${ipe-analyser.jar}" mainclass="${ipe-analyser.main.class}"/>
 	</target>
 	
-	<target name="gem5-trace-parser" depends="compile">
-		<mkdir dir="${jar.dir}" />
-
-		<jar destfile="${jar.dir}/${gem5-trace-parser.jar}" basedir="${build.dir}">
-			<manifest>
-				<attribute name="Built-By" value="${user.name}" />
-				<attribute name="Main-Class" value="${gem5-trace-parser.main.class}" />
-				<attribute name="Class-Path" value="." />
-			</manifest>
-			<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-		</jar>
-
-		<chmod file="${jar.dir}/${gem5-trace-parser.jar}" perm="+x" verbose="true" />
+	<target name="all" depends="standardTools, lpSolveTools">
 	</target>
-
-	<target name="jar" depends="disassemble, simplescalar, wcet, trace-parser, trace-generator,
-		program-generator, program-analyser, tree, loop, tv-generator, find-wcet,
-		gem5-trace-parser" />
 
 	<target name="clean">
 		<echo>Removing ${build.dir}</echo>
 		<delete dir="${build.dir}" />
 		<echo>Removing ${jar.dir}</echo>
 		<delete dir="${jar.dir}" />
-	</target>
-
-	<target name="compile-test">
-		<javac srcdir="${test.dir}" destdir="${build.dir}">
-			<classpath refid="project.classpath.test" />
-		</javac>
-	</target>
-
-	<target name="test" depends="compile-test, compile">
-		<junit>
-			<classpath refid="project.classpath.test" />
-			<formatter type="brief" usefile="false" />
-			<test name="${tests.main.class}" />
-		</junit>
 	</target>
 
 </project>

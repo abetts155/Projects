@@ -46,6 +46,30 @@ public class LoopNests extends Tree
         return headerToLoop.containsKey(vertexID);
     }
 
+    public final boolean isLoopTail (int vertexID)
+    {
+        for (int headerID : headerToTails.keySet())
+        {
+            if (headerToTails.get(headerID).contains(vertexID))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public final boolean isLoopExit (int vertexID)
+    {
+        for (int headerID : headerToExits.keySet())
+        {
+            if (headerToExits.get(headerID).contains(vertexID))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public final HeaderVertex getHeaderVertex (int headerID)
     {
         return (HeaderVertex) idToVertex.get(cfgIDToTreeID.get(headerID));

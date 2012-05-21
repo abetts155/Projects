@@ -13,7 +13,6 @@ import org.apache.commons.cli.ParseException;
 import adam.betts.calculations.IPGDatabase;
 import adam.betts.outputs.WCETOutput;
 import adam.betts.programs.Program;
-import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
 
 public class MainWCETAnalyser
@@ -23,6 +22,8 @@ public class MainWCETAnalyser
     private static Option observedWCETOption;
     private static Option expandContextsOption;
     private static Option incrementalWCETOption;
+
+    private static String programFileName;
 
     public static void main (String[] args)
     {
@@ -41,7 +42,7 @@ public class MainWCETAnalyser
         DefaultOptions.addTraceFileOption(options);
         DefaultOptions.addOutFileOption(options);
         DefaultOptions.addUDrawDirectoryOption(options);
-        DefaultOptions.addIPETOptions(options);
+        DefaultOptions.addIPEOptions(options);
 
         observedWCETOption = new Option("O", "observed", false,
                 "Perform a WCET computation of the observed paths in the trace.");
@@ -82,13 +83,16 @@ public class MainWCETAnalyser
                  * parameters
                  */
                 DefaultOptions.setDefaultOptions(line);
-                DefaultOptions.setProgramOption(line);
                 DefaultOptions.setRootOption(line);
                 DefaultOptions.setInstrumentationProfileOption(line);
                 DefaultOptions.setTraceFileOption(line);
                 DefaultOptions.setOutFileOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
                 DefaultOptions.setIPETOptions(line);
+
+                programFileName = line
+                        .getOptionValue(DefaultOptions.programFileOption
+                                .getOpt());
 
                 Globals.observedWCET = line.hasOption(observedWCETOption
                         .getOpt());
@@ -108,11 +112,9 @@ public class MainWCETAnalyser
 
     private static void run ()
     {
-        Debug.verboseMessage("Reading program");
-        Program program = new Program();
+        Program program = new Program(programFileName);
         program.insertVirtualIpoints();
         program.buildIPGS(false);
-        Debug.verboseMessage("Trace parsing");
 
         try
         {
@@ -130,6 +132,7 @@ public class MainWCETAnalyser
 
     public static class Globals
     {
+
         protected static boolean observedWCET;
         protected static boolean expandContexts;
         protected static boolean incrementalWCET;
