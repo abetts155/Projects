@@ -73,19 +73,27 @@ public class InstructionSet
     private final static String jpoInstruction = "jpo";
     private final static String jmpInstruction = "jmp";
     private final static String jsrInstruction = "jsr";
+    private final static String nopInstruction = "nop";
     private final static String retInstruction = "ret";
 
     private final static String bDotnInstruction = "b.n";
     private final static String bDotwInstruction = "b.w";
     private final static String beqDotnInstruction = "beq.n";
+    private final static String beqDotwInstruction = "beq.w";
     private final static String bgeDotnInstruction = "bge.n";
+    private final static String bgeDotwInstruction = "bge.w";
     private final static String bgtDotnInstruction = "bgt.n";
+    private final static String bgtDotwInstruction = "bgt.w";
     private final static String bhiDotnInstruction = "bhi.n";
-    private final static String bleDotnInstruction = "ble.n";
-    private final static String blsDotnInstruction = "bls.n";
-    private final static String bltDotnInstruction = "blt.n";
-    private final static String bneDotnInstruction = "bne.n";
     private final static String bhiDotwInstruction = "bhi.w";
+    private final static String bleDotnInstruction = "ble.n";
+    private final static String bleDotwInstruction = "ble.w";
+    private final static String blsDotnInstruction = "bls.n";
+    private final static String blsDotwInstruction = "bls.w";
+    private final static String bltDotnInstruction = "blt.n";
+    private final static String bltDotwInstruction = "blt.w";
+    private final static String bneDotnInstruction = "bne.n";
+    private final static String bneDotwInstruction = "bne.w";
 
     private final static String bc1fInstruction = "bc1f";
     private final static String bc1tInstruction = "bc1t";
@@ -138,6 +146,11 @@ public class InstructionSet
      */
     private ISA isa = null;
 
+    /*
+     * Directives to ignore inside assembly code
+     */
+    private HashSet <String> ignoreList = new HashSet <String>();
+
     public InstructionSet (String programFileName)
     {
         try
@@ -188,11 +201,14 @@ public class InstructionSet
                         blsInstruction, bltInstruction, bmiInstruction,
                         bneInstruction, bplInstruction, bvsInstruction,
                         bvcInstruction, bDotnInstruction, bDotwInstruction,
-                        beqDotnInstruction, bgeDotnInstruction,
-                        bgtDotnInstruction, bhiDotnInstruction,
-                        bhiDotwInstruction, bleDotnInstruction,
-                        blsDotnInstruction, bltDotnInstruction,
-                        bneDotnInstruction }));
+                        beqDotnInstruction, beqDotwInstruction,
+                        bgeDotnInstruction, bgeDotwInstruction,
+                        bgtDotnInstruction, bgtDotwInstruction,
+                        bhiDotnInstruction, bhiDotwInstruction,
+                        bleDotnInstruction, bleDotwInstruction,
+                        blsDotnInstruction, blsDotwInstruction,
+                        bltDotnInstruction, bltDotwInstruction,
+                        bneDotnInstruction, bneDotwInstruction }));
 
                 unconditionalBranch = new HashSet <String>(
                         Arrays.asList(new String[] { bInstruction,
@@ -203,6 +219,9 @@ public class InstructionSet
                 isa = ISA.ARM;
                 numberOfBytesPerInstruction.add(4);
                 numberOfBytesPerInstruction.add(2);
+
+                ignoreList.add(".word");
+                // ignoreList.add(nopInstruction);
             }
             else if (line.endsWith("elf64-alpha"))
             {
@@ -297,5 +316,10 @@ public class InstructionSet
     public final TreeSet <Integer> getNumberOfBytesPerInstruction ()
     {
         return numberOfBytesPerInstruction;
+    }
+
+    public final Set <String> getIgnoreList ()
+    {
+        return Collections.unmodifiableSet(ignoreList);
     }
 }

@@ -186,8 +186,7 @@ public class ProgramReader
         }
         catch (NoSuchRootException e)
         {
-            System.err.println(e.getMessage());
-            System.exit(1);
+            Debug.errorMessage(getClass(), e.getMessage());
         }
 
         /*
@@ -1080,52 +1079,59 @@ public class ProgramReader
             int opCodeIndex = 3;
             int destinationIndex = 4;
 
-            String addressStr = lexemes[addressIndex].substring(0,
-                    lexemes[addressIndex].length() - 1);
-            StringBuffer buffer = new StringBuffer();
-
-            // Checks whether the instruction has two instructions before the
-            // opcode
-            // If it does then increments the opCode and destination indexes
-            if (lexemes[opCodeIndex].trim().length() == 4)
+            if (instructionSet.getIgnoreList().contains(lexemes[opCodeIndex]) == false)
             {
-                try
+                String addressStr = lexemes[addressIndex].substring(0,
+                        lexemes[addressIndex].length() - 1);
+                StringBuffer buffer = new StringBuffer();
+
+                // Checks whether the instruction has two instructions before
+                // the
+                // opcode
+                // If it does then increments the opCode and destination indexes
+                if (lexemes[opCodeIndex].trim().length() == 4)
                 {
-                    long opCode = Long.parseLong(lexemes[opCodeIndex], 16);
-                    opCodeIndex++;
-                    destinationIndex++;
+                    try
+                    {
+                        opCodeIndex++;
+                        destinationIndex++;
+                    }
+                    catch (NumberFormatException e)
+                    {
+                        Debug.errorMessage(getClass(), "Cannot parse "
+                                + lexemes[opCodeIndex] + " into HEX");
+                    }
                 }
-                catch (NumberFormatException e)
+
+                for (int i = opCodeIndex; i < lexemes.length; ++i)
                 {
+                    buffer.append(lexemes[i] + " ");
                 }
-            }
+                Instruction instr = new Instruction(Long.parseLong(addressStr,
+                        16), buffer.toString());
+                TreeSet <Instruction> instructions = subprogramToInstructions
+                        .get(subprg);
+                instructions.add(instr);
 
-            for (int i = opCodeIndex; i < lexemes.length; ++i)
-            {
-                buffer.append(lexemes[i] + " ");
-            }
-            Instruction instr = new Instruction(Long.parseLong(addressStr, 16),
-                    buffer.toString());
-            TreeSet <Instruction> instructions = subprogramToInstructions
-                    .get(subprg);
-            instructions.add(instr);
+                String opCode = lexemes[opCodeIndex];
 
-            String opCode = lexemes[opCodeIndex];
-            if (instructionSet.getBranches().contains(opCode))
-            {
-                Debug.debugMessage(getClass(), addressStr + " " + opCode
-                        + " is branch/jump instruction", 4);
-
-                long destination = Long
-                        .parseLong(lexemes[destinationIndex], 16);
-                subprogramToBranchTargets.get(subprg).add(destination);
-                subprogramToBranchInstructions.get(subprg).put(
-                        Long.parseLong(addressStr, 16), destination);
-
-                if (instructionSet.getUnconditionalBranches().contains(opCode))
+                if (instructionSet.getBranches().contains(opCode))
                 {
-                    subprogramToUnconditionalBranches.get(subprg).add(
-                            Long.parseLong(addressStr, 16));
+                    Debug.debugMessage(getClass(), addressStr + " " + opCode
+                            + " is branch/jump instruction", 4);
+
+                    long destination = Long.parseLong(
+                            lexemes[destinationIndex], 16);
+                    subprogramToBranchTargets.get(subprg).add(destination);
+                    subprogramToBranchInstructions.get(subprg).put(
+                            Long.parseLong(addressStr, 16), destination);
+
+                    if (instructionSet.getUnconditionalBranches().contains(
+                            opCode))
+                    {
+                        subprogramToUnconditionalBranches.get(subprg).add(
+                                Long.parseLong(addressStr, 16));
+                    }
                 }
             }
         }

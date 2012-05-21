@@ -16,120 +16,131 @@ import adam.betts.vertices.trees.TreeVertex;
 
 public class OutputGraph
 {
-	public static void output (Graph g)
-	{
-		if (g instanceof Tree)
-		{
-			outputTree ((Tree) g);
-		} else if (g instanceof CFGStar)
-		{
-			outputCFGStar ((CFGStar) g);
-		} else if (g instanceof ControlFlowGraph)
-		{
-			outputCFG ((ControlFlowGraph) g);
-		} else if (g instanceof CallGraph)
-		{
-			outputCallGraph ((CallGraph) g);
-		} else
-		{
-			for (Vertex v : g)
-			{
-				System.out.print ("pred(" + v.getVertexID () + ") = {");
-				int i = 1;
-				Iterator <Edge> predIt = v.predecessorIterator ();
-				while (predIt.hasNext ())
-				{
-					Edge e = predIt.next ();
-					System.out.print (e.getVertexID ());
-					if (i++ < v.numOfPredecessors ())
-					{
-						System.out.print (", ");
-					}
-				}
-				System.out.println ("}");
 
-				System.out.print ("succ(" + v.getVertexID () + ") = {");
-				i = 1;
-				Iterator <Edge> succIt = v.successorIterator ();
-				while (succIt.hasNext ())
-				{
-					Edge e = succIt.next ();
-					System.out.print (e.getVertexID ());
-					if (i++ < v.numOfSuccessors ())
-					{
-						System.out.print (", ");
-					}
-				}
-				System.out.println ("}\n");
-			}
-		}
-	}
+    public static void output (Graph g)
+    {
+        if (g instanceof Tree)
+        {
+            outputTree((Tree) g);
+        }
+        else if (g instanceof CFGStar)
+        {
+            outputCFGStar((CFGStar) g);
+        }
+        else if (g instanceof ControlFlowGraph)
+        {
+            outputCFG((ControlFlowGraph) g);
+        }
+        else if (g instanceof CallGraph)
+        {
+            outputCallGraph((CallGraph) g);
+        }
+        else
+        {
+            for (Vertex v : g)
+            {
+                System.err.print("pred(" + v.getVertexID() + ") = {");
+                int i = 1;
+                Iterator <Edge> predIt = v.predecessorIterator();
+                while (predIt.hasNext())
+                {
+                    Edge e = predIt.next();
+                    System.err.print(e.getVertexID());
+                    if (i++ < v.numOfPredecessors())
+                    {
+                        System.err.print(", ");
+                    }
+                }
+                System.err.println("}");
 
-	private static void outputTree (Tree tree)
-	{
-		for (Vertex v : tree)
-		{
-			int vertexID = v.getVertexID ();
+                System.err.print("succ(" + v.getVertexID() + ") = {");
+                i = 1;
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    Edge e = succIt.next();
+                    System.err.print(e.getVertexID());
+                    if (i++ < v.numOfSuccessors())
+                    {
+                        System.err.print(", ");
+                    }
+                }
+                System.err.println("}\n");
+            }
+        }
+    }
 
-			if (tree.getRootID () == vertexID)
-			{
-				System.out.println (vertexID + " is root");
-			} else
-			{
-				TreeVertex treev = (TreeVertex) v;
-				System.out.println ("parent(" + vertexID + ") = " + treev.getParentID ());
-			}
-		}
-	}
+    private static void outputTree (Tree tree)
+    {
+        for (Vertex v : tree)
+        {
+            int vertexID = v.getVertexID();
 
-	private static void outputCFGStar (CFGStar cfgStar)
-	{
-		for (Vertex v : cfgStar)
-		{
-			int vertexID = v.getVertexID ();
-			if (cfgStar.isIpoint (vertexID))
-			{
-				System.out.println (((Ipoint) v).toString ());
-			} else
-			{
-				System.out.println (cfgStar.getCFG ().getBasicBlock (vertexID).toString ());
-			}
-		}
-	}
+            if (tree.getRootID() == vertexID)
+            {
+                System.err.println(vertexID + " is root");
+            }
+            else
+            {
+                TreeVertex treev = (TreeVertex) v;
+                System.err.println("parent(" + vertexID + ") = "
+                        + treev.getParentID());
+            }
+        }
+    }
 
-	private static void outputCFG (ControlFlowGraph cfg)
-	{
-		for (Vertex v : cfg)
-		{
-			int vertexID = v.getVertexID ();
-			System.out.println (cfg.getBasicBlock (vertexID).toString ());
-		}
-	}
+    private static void outputCFGStar (CFGStar cfgStar)
+    {
+        for (Vertex v : cfgStar)
+        {
+            int vertexID = v.getVertexID();
+            if (cfgStar.isIpoint(vertexID))
+            {
+                System.err.println(((Ipoint) v).toString());
+            }
+            else
+            {
+                System.err.println(cfgStar.getCFG().getBasicBlock(vertexID)
+                        .toString());
+            }
+        }
+    }
 
-	private static void outputCallGraph (CallGraph callg)
-	{
-		for (Vertex v : callg)
-		{
-			int vertexID = v.getVertexID ();
-			CallVertex callv = (CallVertex) v;
+    private static void outputCFG (ControlFlowGraph cfg)
+    {
+        for (Vertex v : cfg)
+        {
+            int vertexID = v.getVertexID();
+            System.err.println(cfg.getBasicBlock(vertexID).toString());
+        }
+    }
 
-			String out = callv.getSubprogramName () + " (id = " + vertexID + ")";
-			System.out.println (out);
-			Output.outputPadderString (out.length (), '-');
+    private static void outputCallGraph (CallGraph callg)
+    {
+        for (Vertex v : callg)
+        {
+            int vertexID = v.getVertexID();
+            CallVertex callv = (CallVertex) v;
 
-			if (v.numOfSuccessors () == 0)
-			{
-				System.out.println ("<LEAF>");
-			} else
-			{
-				Iterator <Edge> succIt = v.successorIterator ();
-				while (succIt.hasNext ())
-				{
-					CallEdge e = (CallEdge) succIt.next ();
-					CallVertex w = callg.getVertex (e.getVertexID ());
-					System.out.println (w.getSubprogramName () + " @ " + e.callSites ());
-				}
-			}
-		}
-	}
+            String out = callv.getSubprogramName() + " (id = " + vertexID + ")";
+            System.err.println(out);
+            Output.outputPadderString(out.length(), '-');
+
+            if (v.numOfSuccessors() == 0)
+            {
+                System.err.println("<LEAF>");
+            }
+            else
+            {
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    CallEdge e = (CallEdge) succIt.next();
+                    CallVertex w = callg.getVertex(e.getVertexID());
+                    System.err.println(w.getSubprogramName() + " @ "
+                            + e.callSites());
+                }
+            }
+        }
+    }
 }
