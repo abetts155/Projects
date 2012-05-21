@@ -120,7 +120,7 @@ def run (wcetHome):
 
 	runCommand("%s -o %s %s %s"  % (gcc, opts.program[:-2], opts.program, gccFlags))
 	runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
-	runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))
+	runCommand("%s -p %s.asm -r %s -o %s"  % (disassembler, opts.program[:-2], opts.root, opts.program[:-2] + ".xml"))
 		
 if __name__ == "__main__":
 	wcetHome = "WCET_HOME"
