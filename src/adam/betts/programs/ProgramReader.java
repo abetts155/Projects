@@ -226,7 +226,6 @@ public class ProgramReader
                 cfg.setEntry();
                 cfg.setExit();
                 cfg.addEntryAndExitEdges();
-                cfg.makeVertexAndEdgeNumbersDistinct();
             }
         }
 
@@ -327,7 +326,8 @@ public class ProgramReader
                 cfg.setEntry();
                 cfg.setExit();
                 cfg.addEntryAndExitEdges();
-                cfg.makeVertexAndEdgeNumbersDistinct();
+                cfg.makeVertexAndEdgeNumbersDistinct(program.callg
+                        .getVertex(subprogramID));
             }
         }
 
@@ -389,21 +389,15 @@ public class ProgramReader
             }
             catch (ParserConfigurationException e)
             {
-                Debug.debugMessage(getClass(),
-                        "Error instantiating XML parser", 1);
-                System.exit(1);
+                Debug.errorMessage(getClass(), "Error instantiating XML parser");
             }
             catch (SAXException e)
             {
-                Debug.debugMessage(getClass(), "SAX exception with XML parser",
-                        1);
-                System.exit(1);
+                Debug.errorMessage(getClass(), "SAX exception with XML parser");
             }
             catch (IOException e)
             {
-                Debug.debugMessage(getClass(), "IO exception with XML parser",
-                        1);
-                System.exit(1);
+                Debug.errorMessage(getClass(), "IO exception with XML parser");
             }
         }
 

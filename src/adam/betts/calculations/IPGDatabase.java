@@ -227,8 +227,9 @@ public class IPGDatabase extends Database
 
                         long timeStamp = Long.parseLong(lexemes[1]);
 
-                        Debug.debugMessage(getClass(), "Ipoint = " + ipointID
-                                + ", t = " + timeStamp, 3);
+                        Debug.debugMessage(getClass(),
+                                "Ipoint = 0x" + Long.toHexString(ipointID)
+                                        + ", t = " + timeStamp, 3);
 
                         try
                         {

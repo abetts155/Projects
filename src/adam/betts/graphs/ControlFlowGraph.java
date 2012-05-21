@@ -5,16 +5,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.Stack;
 
+import adam.betts.edges.CallEdge;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.trees.LoopNests;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.vertices.BasicBlock;
 import adam.betts.vertices.Vertex;
+import adam.betts.vertices.call.CallVertex;
 
 public class ControlFlowGraph extends FlowGraph implements Cloneable
 {
@@ -59,8 +61,12 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
         return cfg;
     }
 
-    public void makeVertexAndEdgeNumbersDistinct ()
+    public void makeVertexAndEdgeNumbersDistinct (CallVertex callv)
     {
+        Debug.debugMessage(getClass(),
+                "Renumbering vertices in  " + callv.getSubprogramName() + " "
+                        + callv.numOfSuccessors(), 1);
+
         HashMap <Integer, Integer> oldIdToNewID = new LinkedHashMap <Integer, Integer>();
 
         int newID = 0;
@@ -84,7 +90,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
         for (Vertex v : this)
         {
             newID++;
-            int oldVertexID = v.getVertexID();
+            Integer oldVertexID = v.getVertexID();
             v.setVertexID(newID);
             oldIdToNewID.put(oldVertexID, newID);
 
@@ -98,7 +104,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
             }
 
             Debug.debugMessage(getClass(), "Renumbering vertex " + oldVertexID
-                    + " to new ID " + newID, 4);
+                    + " to new ID " + newID, 1);
         }
 
         HashSet <Vertex> vertices = new HashSet <Vertex>();
@@ -106,6 +112,24 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
         {
             Vertex v = idToVertex.remove(oldVertexID);
             vertices.add(v);
+        }
+
+        // Renumber the call sites on the call graph edges
+        Iterator <Edge> callSuccIt = callv.successorIterator();
+        while (callSuccIt.hasNext())
+        {
+            CallEdge calle = (CallEdge) callSuccIt.next();
+            Set <Integer> newIDs = new HashSet <Integer>();
+
+            for (int oldVertexID : oldIdToNewID.keySet())
+            {
+                if (calle.callSites().contains(oldVertexID))
+                {
+                    newIDs.add(oldIdToNewID.get(oldVertexID));
+                }
+            }
+
+            calle.changeCallSiteIDs(newIDs);
         }
 
         for (int oldVertexID : oldIdToNewID.keySet())

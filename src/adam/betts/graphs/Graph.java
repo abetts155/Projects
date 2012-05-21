@@ -1,7 +1,6 @@
 package adam.betts.graphs;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
@@ -57,6 +56,8 @@ public abstract class Graph implements Iterable <Vertex>
 
     public Vertex getVertex (int vertexID)
     {
+        assert idToVertex.containsKey(vertexID) : "Unable to find vertex "
+                + vertexID;
         return idToVertex.get(vertexID);
     }
 
