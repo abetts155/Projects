@@ -20,11 +20,6 @@ public class DirectedGraph extends Graph
         idToVertex.put(vertexID, new Vertex(vertexID));
     }
 
-    public Vertex getVertex (int vertexID)
-    {
-        return idToVertex.get(vertexID);
-    }
-
     public void addEdge (int sourceID, int destinationID)
     {
         if (!idToVertex.containsKey(sourceID))
@@ -180,7 +175,7 @@ public class DirectedGraph extends Graph
             {
                 Edge e = succIt.next();
                 int succID = e.getVertexID();
-                
+
                 newg.addEdge(vertexID, succID);
             }
         }

@@ -5,72 +5,73 @@ import adam.betts.vertices.Vertex;
 
 public class FlowGraph extends DirectedGraph
 {
-	protected int entryID = Vertex.DUMMY_VERTEX_ID;
-	protected int exitID = Vertex.DUMMY_VERTEX_ID;
 
-	public FlowGraph ()
-	{
-	}
+    protected int entryID = Vertex.DUMMY_VERTEX_ID;
+    protected int exitID = Vertex.DUMMY_VERTEX_ID;
 
-	public void addVertex (int vertexID)
-	{
-		idToVertex.put (vertexID, new FlowVertex (vertexID));
-	}
+    public FlowGraph ()
+    {
+    }
 
-	public FlowVertex getVertex (int vertexID)
-	{
-		return (FlowVertex) idToVertex.get (vertexID);
-	}
+    public void addVertex (int vertexID)
+    {
+        idToVertex.put(vertexID, new FlowVertex(vertexID));
+    }
 
-	public void addEntry (int entryID)
-	{
-		setEntryID (entryID);
-		idToVertex.put (entryID, new FlowVertex (entryID));
-	}
+    public FlowVertex getVertex (int vertexID)
+    {
+        return (FlowVertex) super.getVertex(vertexID);
+    }
 
-	public final void setEntryID (int entryID)
-	{
-		this.entryID = entryID;
-	}
+    public void addEntry (int entryID)
+    {
+        setEntryID(entryID);
+        idToVertex.put(entryID, new FlowVertex(entryID));
+    }
 
-	public final int getEntryID ()
-	{
-		return entryID;
-	}
+    public final void setEntryID (int entryID)
+    {
+        this.entryID = entryID;
+    }
 
-	public final boolean hasEntry ()
-	{
-		return entryID != Vertex.DUMMY_VERTEX_ID;
-	}
+    public final int getEntryID ()
+    {
+        return entryID;
+    }
 
-	public void addExit (int exitID)
-	{
-		setExitID (exitID);
-		idToVertex.put (exitID, new FlowVertex (exitID));
-	}
+    public final boolean hasEntry ()
+    {
+        return entryID != Vertex.DUMMY_VERTEX_ID;
+    }
 
-	public final void setExitID (int exitID)
-	{
-		this.exitID = exitID;
-	}
+    public void addExit (int exitID)
+    {
+        setExitID(exitID);
+        idToVertex.put(exitID, new FlowVertex(exitID));
+    }
 
-	public final int getExitID ()
-	{
-		return exitID;
-	}
+    public final void setExitID (int exitID)
+    {
+        this.exitID = exitID;
+    }
 
-	public final boolean hasExit ()
-	{
-		return exitID != Vertex.DUMMY_VERTEX_ID;
-	}
+    public final int getExitID ()
+    {
+        return exitID;
+    }
 
-	public final void reverseGraph (FlowGraph reverseGraph)
-	{
-		assert entryID != Vertex.DUMMY_VERTEX_ID;
-		assert exitID != Vertex.DUMMY_VERTEX_ID;
+    public final boolean hasExit ()
+    {
+        return exitID != Vertex.DUMMY_VERTEX_ID;
+    }
 
-		reverseGraph.entryID = exitID;
-		reverseGraph.exitID = entryID;
-		super.reverseGraph (reverseGraph);
-	}
+    public final void reverseGraph (FlowGraph reverseGraph)
+    {
+        assert entryID != Vertex.DUMMY_VERTEX_ID;
+        assert exitID != Vertex.DUMMY_VERTEX_ID;
+
+        reverseGraph.entryID = exitID;
+        reverseGraph.exitID = entryID;
+        super.reverseGraph(reverseGraph);
+    }
 }

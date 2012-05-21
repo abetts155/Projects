@@ -113,6 +113,8 @@ public class CFGStar extends ControlFlowGraph
 
     public final void addInline (int siteID, IpointGraph ipg, String calleeName)
     {
+        Debug.debugMessage(getClass(), "Analsying call site " + siteID, 1);
+        
         BasicBlock bb = getBasicBlock(siteID);
         HashSet <Integer> predIDs = new HashSet <Integer>();
         HashSet <Integer> succIDs = new HashSet <Integer>();
