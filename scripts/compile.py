@@ -1,18 +1,13 @@
 #!/usr/bin/python2.6
 
+import sys
 from optparse import OptionParser
-from sys import argv, maxint
 from subprocess import Popen, PIPE
 from os import environ, sep
 
-# These environment variables are needed to compile and disassemble the program under analysis 
-wcetToolsEnvironmentVariable = "WCET_HOME"
-for var in [wcetToolsEnvironmentVariable]:
-    try:
-        environ[var]
-    except KeyError:
-        print ("Cannot find environment variable '" + var + "' which is needed to compile the program.")
-        exit(0)
+# Add the 'src' directory to the module search and PYTHONPATH
+sys.path.append(sys.path[0] + sep + "src")
+from Debug import Debug
  
 # The command-line parser and its options
 parser = OptionParser(add_help_option=False)
@@ -52,13 +47,13 @@ parser.add_option("-f",
                   dest="compFlags",
                   help="Any compiler flags to be used e.g. -O0/1/2, -lm etc. \
 						(surround text with quotes e.g. \"-O2 -lm\")",
+		  default="",	
                   metavar="<NAME>")
-
 
 parser.add_option("-g",
                   "--gem5sim",
                   action="store_true",
-                  dest="gem5sim",
+                  dest="gem5",
                   help="Use gem5 Simulator",
                   default=False)
 
@@ -69,20 +64,32 @@ parser.add_option("-v",
                  help="Be verbose.",
                  default=False)
 
-(opts, args) = parser.parse_args(argv[1:])
+(opts, args) = parser.parse_args(sys.argv[1:])
+debug = Debug(opts.verbose, opts.debug)
 
-# Check that the user has passed the correct options
-if opts.program is None:
-    print("Missing option " + str(parser.get_option("-p")))
-    exit(0)
-if opts.root is None:
-    print("Missing option " + str(parser.get_option("-r")))
-    exit(0)
+def checkOptions ():
+	# Check that the user has passed the correct options
+	if opts.program is None:
+	    debug.exitMessage("Missing option " + str(parser.get_option("-p")))
+	if opts.root is None:
+	    debug.exitMessage("Missing option " + str(parser.get_option("-r")))
+
+def checkEnvironment (wcetHome):
+	# Check these environment variables exist
+	try:
+		environ[wcetHome]
+	except KeyError:
+		debug.exitMessage ("Cannot find environment variable '" + wcetHome + "' which is needed to compile the program.")
+
+	if opts.gem5:
+		armHome = "ARM_GCC_TOOLCHAIN"
+		try:
+			environ[armHome]
+		except KeyError:
+			debug.exitMessage ("Cannot find environment variable '" + armHome + "' which is needed to compile the program for gem5.")
 
 def runCommand (cmd):
-    if opts.debug:
-        print("Running '" + cmd + "'")
-
+    debug.debugMessage("Running '" + cmd + "'")
     proc = Popen(cmd,
                  shell=True,
                  executable="/bin/bash",
@@ -94,30 +101,29 @@ def runCommand (cmd):
         print line
 
     if proc.returncode != 0:
-        print("\nProblem running '" + cmd + "'")
-        exit(0)
+        debug.exitMessage("\nProblem running '" + cmd + "'")
 
-rootPath         = environ[wcetToolsEnvironmentVariable]
-simpleScalarPath = rootPath + sep + "simplescalar" + sep + "bin"
-gcc              = simpleScalarPath + sep + "sslittle-na-sstrix-gcc"
-objdump          = simpleScalarPath + sep + "sslittle-na-sstrix-objdump"
-disassembler     = "java -jar " + rootPath + sep + "bin" + sep + "disassemble.jar"
+def run (wcetHome):
+	gccFlags     = opts.compFlags
+	gcc          = None
+	objdump      = None
+	disassembler = "java -jar " + environ[wcetHome] + sep + "bin" + sep + "disassemble.jar"
 
-if opts.gem5sim:
-    armToolchainVar = "ARM_GCC_TOOLCHAIN"
-    try:
-        armToolchain = environ[armToolchainVar]
-    except KeyError:
-        print ("Cannot find environment variable '" + armToolchainVar + "' which is needed to compile the program for m5.")
-        exit(0)
+	if opts.gem5:
+		gccFlags += " -static"
+		gcc       = "arm-linux-gnueabi-gcc"
+    		objdump   = "arm-linux-gnueabi-objdump"
+	else:
+		simpleScalarPath = environ[wcetHome] + sep + "simplescalar" + sep + "bin"
+		gcc              = simpleScalarPath + sep + "sslittle-na-sstrix-gcc"
+		objdump          = simpleScalarPath + sep + "sslittle-na-sstrix-objdump"
 
-    gcc     = "arm-linux-gnueabi-gcc -static"
-    objdump = "arm-linux-gnueabi-objdump"
-
-compFlags = ""
-if opts.compFlags is not None:
-    compFlags = opts.compFlags
-
-runCommand("%s -o %s %s %s"  % (gcc, opts.program[:-2], opts.program, compFlags))
-runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
-runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))
+	runCommand("%s -o %s %s %s"  % (gcc, opts.program[:-2], opts.program, gccFlags))
+	runCommand("%s -d -j .text %s > %s.asm"  % (objdump, opts.program[:-2], opts.program[:-2]))
+	runCommand("%s -p %s.asm -r %s"  % (disassembler, opts.program[:-2], opts.root))
+		
+if __name__ == "__main__":
+	wcetHome = "WCET_HOME"
+	checkOptions ()
+	checkEnvironment (wcetHome)
+	run (wcetHome)

@@ -18,10 +18,10 @@ import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.LoopNests;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.DFSEdgeType;
 import adam.betts.utilities.Enums.IPGEdgeType;
 import adam.betts.utilities.Enums.IProfile;
+import adam.betts.utilities.Globals;
 import adam.betts.vertices.Ipoint;
 import adam.betts.vertices.Vertex;
 import adam.betts.vertices.trees.HeaderVertex;
@@ -41,113 +41,39 @@ public class IPETModelIPG extends IPETModel
 
         this.ipg = ipg;
 
-        /*
-         * We only need these temporary place holders when we have a LNT from
-         * which all the loops in the IPG can be identified
-         */
+        assert IPETModel.lpSolveDirectorySet() : "ILP directory not set";
+        final String fileName = subprogramName + ".lp";
 
         try
         {
             initialise();
-
-            Debug.debugMessage(getClass(),
-                    "Partitioning IPG edges into loop categories", 3);
             partitionIPGEdges(lnt);
 
-            if (IPETModel.lpSolveDirectorySet())
-            {
-                final String fileName = subprogramName + ".lp"
-                        + Long.toString(database.getTests(subprogramID));
-                final File file = new File(IPETModel.getILPDirectory(),
-                        fileName);
+            final File file = new File(IPETModel.getILPDirectory(), fileName);
+            BufferedWriter out = new BufferedWriter(new FileWriter(
+                    file.getAbsolutePath()));
 
-                try
-                {
-                    BufferedWriter out = new BufferedWriter(new FileWriter(
-                            file.getAbsolutePath()));
+            writeObjectiveFunction(engine, database, subprogramID, out);
+            writeFlowContraints(ipg, out);
+            writeLoopConstraints(database, subprogramID, lnt, out);
+            writeIntegerConstraints(ipg, out);
+            out.close();
 
-                    Debug.debugMessage(getClass(), "Writing ILP model to "
-                            + file.getCanonicalPath(), 3);
-
-                    Debug.debugMessage(getClass(),
-                            "Writing objective function", 3);
-                    writeObjectiveFunction(engine, database, subprogramID, out);
-
-                    Debug.debugMessage(getClass(), "Writing flow constraints",
-                            3);
-                    writeFlowContraints(ipg, out);
-
-                    Debug.debugMessage(getClass(), "Writing loop constraints",
-                            3);
-                    writeLoopConstraints(database, subprogramID, lnt, out);
-
-                    Debug.debugMessage(getClass(),
-                            "Writing integer constraints", 3);
-                    writeIntegerConstraints(ipg, out);
-                    out.close();
-                }
-                catch (IOException e)
-                {
-                    System.err.println("Problem with file " + fileName);
-                    System.exit(1);
-                }
-
-                lp = LpSolve.readLp(file.getAbsolutePath(),
-                        getLpSolveVerbosity(), null);
-                try
-                {
-                    lp = LpSolve.readLp(file.getAbsolutePath(),
-                            getLpSolveVerbosity(), null);
-                    solve();
-                }
-                catch (SolutionException e)
-                {
-                    System.exit(1);
-                }
-            }
-            else
-            {
-                Debug.debugMessage(getClass(), "Adding columns", 3);
-                addColumns();
-
-                lp.setAddRowmode(true);
-
-                Debug.debugMessage(getClass(), "Adding flow constraints", 3);
-                addEdgeContraints();
-
-                Debug.debugMessage(getClass(), "Adding loop constraints", 3);
-                addLoopConstraints(database, subprogramID, lnt);
-
-                lp.setAddRowmode(false);
-
-                Debug.debugMessage(getClass(), "Adding objective function", 3);
-                addObjectiveFunction(engine, database, subprogramID);
-
-                lp.setVerbose(getLpSolveVerbosity());
-
-                lp.setMaxim();
-
-                Debug.debugMessage(getClass(), "Solving linear program", 3);
-                try
-                {
-                    Debug.debugMessage(getClass(), "Solving linear program", 3);
-                    solve();
-                }
-                catch (SolutionException e)
-                {
-                    final String fileName = subprogramName + ".lp"
-                            + Long.toString(database.getTests(subprogramID));
-                    Debug.debugMessage(getClass(), "Writing LP model to "
-                            + fileName, 1);
-                    lp.writeLp(fileName);
-                    System.exit(1);
-                }
-            }
+            lp = LpSolve.readLp(file.getAbsolutePath(), getLpSolveVerbosity(),
+                    null);
+            solve();
+        }
+        catch (IOException e)
+        {
+            Debug.errorMessage(getClass(), "Problem creating file " + fileName);
         }
         catch (LpSolveException e)
         {
-            e.printStackTrace();
-            System.exit(1);
+            Debug.errorMessage(getClass(), e.getMessage());
+        }
+        catch (SolutionException e)
+        {
+            Debug.errorMessage(getClass(), e.getMessage());
         }
     }
 
@@ -294,6 +220,9 @@ public class IPETModelIPG extends IPETModel
 
     private void partitionIPGEdges (LoopNests lnt)
     {
+        Debug.debugMessage(getClass(),
+                "Partitioning IPG edges into loop categories", 3);
+
         for (int level = 0; level < lnt.getHeight(); ++level)
         {
             Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
@@ -361,6 +290,8 @@ public class IPETModelIPG extends IPETModel
     private void writeFlowContraints (IpointGraph ipg, BufferedWriter out)
             throws IOException
     {
+        Debug.debugMessage(getClass(), "Writing flow constraints", 3);
+
         for (Vertex v : ipg)
         {
             /*
@@ -410,6 +341,8 @@ public class IPETModelIPG extends IPETModel
     private void writeIntegerConstraints (IpointGraph ipg, BufferedWriter out)
             throws IOException
     {
+        Debug.debugMessage(getClass(), "Writing integer constraints", 3);
+
         int num = 1;
         int numOfEdges = ipg.numOfEdges();
 
@@ -504,154 +437,6 @@ public class IPETModelIPG extends IPETModel
         }
     }
 
-    private void addLoopConstraints (Database database, int subprogramID,
-            LoopNests lnt) throws LpSolveException
-    {
-        for (int level = lnt.getHeight() - 1; level >= 0; --level)
-        {
-            Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
-            while (levelIt.hasNext())
-            {
-                TreeVertex v = levelIt.next();
-                int vertexID = v.getVertexID();
-
-                if (v.numOfSuccessors() > 0)
-                {
-                    if (backEdges.get(vertexID).size() > 0)
-                    {
-                        if (vertexID == ipg.getEntryID())
-                        {
-                            assert backEdges.size() == 0;
-                            int edgeID = backEdges.get(vertexID).get(0);
-                            lp.setUpbo(edgeID, 1);
-                        }
-                        else
-                        {
-                            addInnerLoopConstraints(database, subprogramID,
-                                    lnt, vertexID);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void addInnerLoopConstraints (Database database, int subprogramID,
-            LoopNests lnt, int headerID) throws LpSolveException
-    {
-        for (int ancestorID : lnt.getProperAncestors(headerID))
-        {
-            if (ancestorID != lnt.getRootID())
-            {
-                int index = 0;
-                int count = 0;
-                int parentID = lnt.getVertex(ancestorID).getParentID();
-
-                TreeVertex h = lnt.getVertex(headerID);
-                TreeVertex p = lnt.getVertex(parentID);
-
-                if (h.getLevel() - p.getLevel() <= loopConstraintLevel)
-                {
-                    int bound = database.getLoopBound(subprogramID, headerID,
-                            parentID);
-
-                    Debug.debugMessage(getClass(), "Adding constraint on loop "
-                            + headerID + " relative to loop " + parentID
-                            + ". Bound = " + bound, 4);
-
-                    count += backEdges.get(headerID).size();
-                    for (int edgeID : backEdges.get(headerID))
-                    {
-                        colArray[index] = unitToColumn.get(edgeID);
-                        rowArray[index] = 1;
-                        index++;
-                    }
-
-                    if (entryEdges.get(ancestorID).size() > 0)
-                    {
-                        Debug.debugMessage(getClass(), "Found entry edges to "
-                                + ancestorID, 4);
-
-                        count += entryEdges.get(ancestorID).size();
-                        for (int edgeID : entryEdges.get(ancestorID))
-                        {
-                            colArray[index] = unitToColumn.get(edgeID);
-                            rowArray[index] = (bound * -1);
-                            index++;
-                        }
-                    }
-                    else if (exitEdges.get(ancestorID).size() > 0)
-                    {
-                        Debug.debugMessage(getClass(), "Found exit edges to "
-                                + ancestorID, 4);
-
-                        count += exitEdges.get(ancestorID).size();
-                        for (int edgeID : exitEdges.get(ancestorID))
-                        {
-                            colArray[index] = unitToColumn.get(edgeID);
-                            rowArray[index] = (bound * -1);
-                            index++;
-                        }
-                    }
-                    else
-                    {
-                        Debug.debugMessage(getClass(),
-                                "Could not find entry/exit edges for "
-                                        + ancestorID, 2);
-                        System.exit(1);
-                    }
-
-                    lp.addConstraintex(count, rowArray, colArray, LpSolve.LE, 0);
-                }
-            }
-        }
-    }
-
-    private void addObjectiveFunction (CalculationEngine engine,
-            Database database, int subprogramID) throws LpSolveException
-    {
-        int index = 0;
-        for (Vertex v : ipg)
-        {
-            Iterator <Edge> succIt = v.successorIterator();
-            while (succIt.hasNext())
-            {
-                IPGEdge e = (IPGEdge) succIt.next();
-                int edgeID = e.getEdgeID();
-                long wcet = 0;
-
-                switch (e.getEdgeType())
-                {
-                    case GHOST_EDGE:
-                        Debug.debugMessage(getClass(), edgeID
-                                + " is ghost edge", 4);
-                        wcet = 0;
-                        break;
-                    case INLINED_EDGE:
-                        Debug.debugMessage(getClass(), edgeID
-                                + " is inlined edge", 4);
-                        Ipoint s = ipg.getVertex(e.getVertexID());
-                        wcet = engine.getWCET(s.getSubprogramName());
-                        break;
-                    case TRACE_EDGE:
-                        Debug.debugMessage(getClass(), edgeID
-                                + " is trace edge", 4);
-                        wcet = database.getUnitWCET(subprogramID, edgeID);
-                        break;
-                }
-
-                Debug.debugMessage(getClass(), "WCET(e_" + edgeID + ") = "
-                        + wcet, 3);
-
-                colArray[index] = unitToColumn.get(edgeID);
-                rowArray[index] = wcet;
-                index++;
-            }
-        }
-
-        lp.setObjFnex(ipg.numOfEdges(), rowArray, colArray);
-    }
-
     private void addObjectiveFunction (DatabaseWithoutProgram database)
             throws LpSolveException
     {
@@ -695,8 +480,10 @@ public class IPETModelIPG extends IPETModel
             Database database, int subprogramID, BufferedWriter out)
             throws IOException
     {
-        out.write("// Objective function\n");
-        out.write("max: ");
+        Debug.debugMessage(getClass(), "Writing objective function", 3);
+
+        out.write(createComment("Objective function"));
+        out.write(maxString);
 
         int num = 1;
         int numOfEdges = ipg.numOfEdges();
@@ -729,15 +516,14 @@ public class IPETModelIPG extends IPETModel
                         break;
                 }
 
-                Debug.debugMessage(getClass(), "WCET(e_" + edgeID + ") = "
-                        + wcet, 3);
+                Debug.debugMessage(getClass(), "WCET("
+                        + createEdgeVariable(edgeID) + ") = " + wcet, 3);
 
-                out.write(Long.toString(wcet) + " " + edgePrefix
-                        + Integer.toString(edgeID));
+                out.write(Long.toString(wcet) + createEdgeVariable(edgeID));
 
                 if (num < numOfEdges)
                 {
-                    out.write(" + ");
+                    out.write(plus);
                 }
                 if (num % 10 == 0)
                 {
@@ -747,14 +533,14 @@ public class IPETModelIPG extends IPETModel
             }
         }
 
-        out.write(";\n\n");
+        out.write(statementTerminator + newLine + newLine);
     }
 
     private void writeObjectiveFunction (DatabaseWithoutProgram database,
             BufferedWriter out) throws IOException
     {
-        out.write("// Objective function\n");
-        out.write("max: ");
+        out.write(createComment("Objective function"));
+        out.write(maxString);
 
         int num = 1;
         int numOfEdges = ipg.numOfEdges();
@@ -781,15 +567,15 @@ public class IPETModelIPG extends IPETModel
                         break;
                 }
 
-                Debug.debugMessage(getClass(), "WCET(e_" + edgeID + ") = "
-                        + wcet, 3);
+                Debug.debugMessage(getClass(), "WCET("
+                        + createEdgeVariable(edgeID) + ") = " + wcet, 3);
 
-                out.write(Long.toString(wcet) + " " + edgePrefix
-                        + Integer.toString(edgeID));
+                out.write(Long.toString(wcet) + " "
+                        + createEdgeVariable(edgeID));
 
                 if (num < numOfEdges)
                 {
-                    out.write(" + ");
+                    out.write(plus);
                 }
                 if (num % 10 == 0)
                 {
@@ -799,12 +585,14 @@ public class IPETModelIPG extends IPETModel
             }
         }
 
-        out.write(";\n\n");
+        out.write(statementTerminator + newLine + newLine);
     }
 
     private void writeLoopConstraints (Database database, int subprogramID,
             LoopNests lnt, BufferedWriter out) throws IOException
     {
+        Debug.debugMessage(getClass(), "Writing loop constraints", 3);
+
         for (int level = lnt.getHeight() - 1; level >= 0; --level)
         {
             Iterator <TreeVertex> levelIt = lnt.levelIterator(level);
