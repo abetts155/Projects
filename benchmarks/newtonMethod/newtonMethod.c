@@ -135,8 +135,8 @@ double* vecfunc(double x[]) {
 	int i;
 	
 	funcValues[0] = (x[0] * 3) - 18;
-	funcValues[1] = pow(x[1], 3) + (-5 * pow(x[1], 2)) + (2 * x[1]) + 8;
-	funcValues[2] = pow(x[2], 2) + (-5 * x[2]) + 6;
+	funcValues[1] = (x[1] * x[1] * x[1]) + (-5 * (x[1] * x[1])) + (2 * x[1]) + 8;
+	funcValues[2] = (x[2] * x[2]) + (-5 * x[2]) + 6;
 	/*for (i = 0; i < XSIZE; i++) {
 		funcValues[i] = (x[i] * (i + 1)) - (i + 1);
 	}*/
@@ -157,7 +157,7 @@ double NRfmin(double x[]) {
 		fvec[i] = fvectmp[i];
 	}
 	for (i = 0; i < n; i++) {
-		//sum += SQR(fvec[i]);
+		//sum += SQR(fvec[i]);	
 		sum += (fvec[i] * fvec[i]);
 	}
 	return 0.5 * sum;
@@ -364,6 +364,7 @@ main (int argc, char *argv[])
 
   newtonMethod(TV, &check);
 
+/*
   printf("Check value = %i\n", check);
 
   for (i = 0; i < argc - 1; ++i)
@@ -371,7 +372,7 @@ main (int argc, char *argv[])
     printf("%lf ", TV[i]);
   }
   printf("\n");
-
+*/
 
   return 0;
 }

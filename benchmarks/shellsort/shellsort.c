@@ -3,8 +3,8 @@
  * using the shell sort algorihtm
  */
 
-const int numGaps = 2;
-const int gaps[2] = {2, 1};
+const int numGaps = 5;
+const int gaps[5] = {16, 8, 4, 2, 1};
 
 void shellsort (int ARRAY_SIZE, int a[])
 {

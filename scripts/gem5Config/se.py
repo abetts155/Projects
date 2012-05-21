@@ -42,7 +42,6 @@
 #
 # "m5 test.py"
 
-import os
 import optparse
 import sys
 from os import environ
@@ -66,8 +65,11 @@ config_root = joinpath(m5_root, "configs")
 addToPath(joinpath(config_root, "common"))
 addToPath(joinpath(config_root, "ruby"))
 
-import Ruby
+#addToPath('../common')
+#addToPath('../ruby')
 
+import Options
+import Ruby
 import Simulation
 import CacheConfig
 from Caches import *
@@ -77,29 +79,17 @@ from cpu2000 import *
 m5.disableAllListeners()
 
 parser = optparse.OptionParser()
-
-# Benchmark options
-parser.add_option("-c", "--cmd",
-    default=joinpath(m5_root, "tests/test-progs/hello/bin/%s/linux/hello" % \
-            buildEnv['TARGET_ISA']),
-    help="The binary to run in syscall emulation mode.")
-parser.add_option("-o", "--options", default="",
-    help='The options to pass to the binary, use " " around the entire string')
-parser.add_option("-i", "--input", default="", help="Read stdin from a file.")
-parser.add_option("--output", default="", help="Redirect stdout to a file.")
-parser.add_option("--errout", default="", help="Redirect stderr to a file.")
-
-execfile(os.path.join(config_root, "common", "Options.py"))
+Options.addCommonOptions(parser)
+Options.addSEOptions(parser)
 
 if '--ruby' in sys.argv:
     Ruby.define_options(parser)
 
 (options, args) = parser.parse_args()
 
-print " ".join(args)
 #if args:
-    #print "Error: script doesn't take any positional arguments"
-    #sys.exit(1)
+#    print "Error: script doesn't take any positional arguments"
+#    sys.exit(1)
 
 multiprocesses = []
 apps = []
@@ -120,12 +110,15 @@ if options.bench:
         except:
             print >>sys.stderr, "Unable to find workload for %s: %s" % (buildEnv['TARGET_ISA'], app)
             sys.exit(1)
-else:
+elif options.cmd:
     process = LiveProcess()
     process.executable = options.cmd
     #process.cmd = [options.cmd] + options.options.split()
     process.cmd = [options.cmd] + args
     multiprocesses.append(process)
+else:
+    print >> sys.stderr, "No workload specified. Exiting!\n"
+    sys.exit(1)
 
 
 if options.input != "":
@@ -160,8 +153,7 @@ if options.cpu_type == "detailed" or options.cpu_type == "inorder":
         for wrkld in workloads:
             smt_process = LiveProcess()
             smt_process.executable = wrkld
-            #smt_process.cmd = wrkld + " " + options.options
-            smt_process.cmd = wrkld + " " + " ".join(args)
+            smt_process.cmd = wrkld + " " + options.options
             if inputs and inputs[smt_idx]:
                 smt_process.input = inputs[smt_idx]
             if outputs and outputs[smt_idx]:
@@ -172,11 +164,6 @@ if options.cpu_type == "detailed" or options.cpu_type == "inorder":
             smt_idx += 1
     numThreads = len(workloads)
 
-if options.ruby:
-    if not (options.cpu_type == "detailed" or options.cpu_type == "timing"):
-        print >> sys.stderr, "Ruby requires TimingSimpleCPU or O3CPU!!"
-        sys.exit(1)
-
 (CPUClass, test_mem_mode, FutureClass) = Simulation.setCPUClass(options)
 CPUClass.clock = '2GHz'
 CPUClass.numThreads = numThreads;
@@ -184,28 +171,50 @@ CPUClass.numThreads = numThreads;
 np = options.num_cpus
 
 system = System(cpu = [CPUClass(cpu_id=i) for i in xrange(np)],
-                physmem = PhysicalMemory(range=AddrRange("512MB")),
+                physmem = SimpleMemory(range=AddrRange("512MB")),
                 membus = Bus(), mem_mode = test_mem_mode)
 
+# Sanity check
+if options.fastmem and (options.caches or options.l2cache):
+    fatal("You cannot use fastmem in combination with caches!")
+
+for i in xrange(np):
+    if len(multiprocesses) == 1:
+        system.cpu[i].workload = multiprocesses[0]
+    else:
+        system.cpu[i].workload = multiprocesses[i]
+
+    if options.fastmem:
+        system.cpu[i].fastmem = True
+
+    if options.checker:
+        system.cpu[i].addCheckerCpu()
+
 if options.ruby:
+    if not (options.cpu_type == "detailed" or options.cpu_type == "timing"):
+        print >> sys.stderr, "Ruby requires TimingSimpleCPU or O3CPU!!"
+        sys.exit(1)
+
     options.use_map = True
     Ruby.create_system(options, system)
     assert(options.num_cpus == len(system.ruby._cpu_ruby_ports))
+
+    for i in xrange(np):
+        ruby_port = system.ruby._cpu_ruby_ports[i]
+
+        # Create the interrupt controller and connect its ports to Ruby
+        system.cpu[i].createInterruptController()
+        system.cpu[i].interrupts.pio = ruby_port.master
+        system.cpu[i].interrupts.int_master = ruby_port.slave
+        system.cpu[i].interrupts.int_slave = ruby_port.master
+
+        # Connect the cpu's cache ports to Ruby
+        system.cpu[i].icache_port = ruby_port.slave
+        system.cpu[i].dcache_port = ruby_port.slave
 else:
     system.system_port = system.membus.slave
     system.physmem.port = system.membus.master
     CacheConfig.config_cache(options, system)
 
-for i in xrange(np):
-    system.cpu[i].workload = multiprocesses[i]
-
-    if options.ruby:
-        system.cpu[i].icache_port = system.ruby._cpu_ruby_ports[i].slave
-        system.cpu[i].dcache_port = system.ruby._cpu_ruby_ports[i].slave
-
-    if options.fastmem:
-        system.cpu[0].physmem_port = system.physmem.port
-
 root = Root(full_system = False, system = system)
-
 Simulation.run(options, root, system, FutureClass)
