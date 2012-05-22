@@ -45,13 +45,13 @@ public class ParseGem5Trace {
 		programOption.setRequired (true);
 		options.addOption (programOption);
 		
-		iprofileOption = new Option ("i", "program", true,
+		iprofileOption = new Option ("i", "instrumentation", true,
 				"The instrumentation level to use (BASIC_BLOCK or BRANCH)");
 		iprofileOption.setRequired (true);
 		options.addOption (iprofileOption);
 		
 		traceFileOption = new Option ("t", "trace-file", true,
-				"The name of the trace file t be parsed");
+				"The name of the trace file to be parsed");
 		traceFileOption.setRequired (true);
 		options.addOption (traceFileOption);
 		
