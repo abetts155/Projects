@@ -55,18 +55,14 @@ public class Program implements Iterable <Subprogram>
             setRootID();
         }
 
+        UDrawGraph.makeUDrawFile(callg, rootID);
+
         for (int subprogramID : idToSubprogram.keySet())
         {
             final Subprogram subprogram = idToSubprogram.get(subprogramID);
             final ControlFlowGraph cfg = subprogram.getCFG();
             cfg.addEntryAndExitEdges();
-        }
-
-        UDrawGraph.makeUDrawFile(callg, rootID);
-        for (String subprogramName : nameToId.keySet())
-        {
-            UDrawGraph.makeUDrawFile(getSubprogram(subprogramName).getCFG(),
-                    subprogramName);
+            UDrawGraph.makeUDrawFile(cfg, subprogram.getSubprogramName());
         }
     }
 
@@ -144,7 +140,7 @@ public class Program implements Iterable <Subprogram>
                 return subprogram;
             }
         }
-        
+
         assert false : "Unable to find subprogram with address " + address;
         return null;
     }
@@ -457,13 +453,13 @@ public class Program implements Iterable <Subprogram>
 
     private final void setRootID ()
     {
-        ArrayList <Integer> rootIDs = new ArrayList <Integer>();
+        ArrayList <String> rootIDs = new ArrayList <String>();
 
         for (Vertex v : callg)
         {
             if (v.numOfPredecessors() == 0)
             {
-                rootIDs.add(v.getVertexID());
+                rootIDs.add(((CallVertex) v).getSubprogramName());
             }
         }
 
@@ -478,7 +474,8 @@ public class Program implements Iterable <Subprogram>
         }
         else
         {
-            this.rootID = rootIDs.get(rootIDs.size() - 1);
+            CallVertex rootv = callg.getVertex(rootIDs.get(rootIDs.size() - 1));
+            this.rootID = rootv.getVertexID();
             Debug.debugMessage(getClass(), "Root ID set to " + this.rootID, 4);
         }
     }

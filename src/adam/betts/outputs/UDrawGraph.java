@@ -978,6 +978,37 @@ public class UDrawGraph
         }
     }
 
+    public final static void makeUDrawFile (CallGraph callg)
+    {
+        if (Globals.uDrawDirectorySet())
+        {
+            try
+            {
+                final File file = new File(Globals.getUDrawDirectory(), "callg"
+                        + fileNameSuffix);
+                BufferedWriter out = new BufferedWriter(new FileWriter(
+                        file.getAbsolutePath()));
+
+                out.write(beginGraph);
+
+                for (Vertex v : callg)
+                {
+                    CallVertex callv = (CallVertex) v;
+
+                    writeCallGraphVertex(out, callv, Vertex.DUMMY_VERTEX_ID);
+                }
+                out.write(endGraph);
+
+                out.close();
+            }
+            catch (IOException e)
+            {
+                System.err.println("Error: " + e.getMessage());
+                System.exit(1);
+            }
+        }
+    }
+
     private static void writeCallGraphVertex (BufferedWriter out, CallVertex v,
             int rootID) throws IOException
     {
