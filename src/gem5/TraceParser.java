@@ -388,7 +388,6 @@ public class TraceParser
 
     private long parseAddr (String addr)
     {
-        SystemOutput.printMessage(addr);
         String hex = addr.substring(2);
         return Long.parseLong(hex, 16);
     }
