@@ -10,8 +10,9 @@ import org.apache.commons.cli.ParseException;
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
 import adam.betts.utilities.DefaultOptions;
+import adam.betts.utilities.Globals;
 
-public class MainProgramBuilder
+public class MainDisassembler
 {
 
     private static Options options;
@@ -25,6 +26,7 @@ public class MainProgramBuilder
         DefaultOptions.addProgramOption(options);
         DefaultOptions.addRootOption(options, true);
         DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addOutFileOption(options);
     }
 
     private static void parseCommandLine (String[] args)
@@ -48,6 +50,7 @@ public class MainProgramBuilder
                 DefaultOptions.setDefaultOptions(line);
                 DefaultOptions.setRootOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
+                DefaultOptions.setOutFileOption(line);
 
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
@@ -65,7 +68,7 @@ public class MainProgramBuilder
     private static void run ()
     {
         Program program = new Program(programFileName);
-        new WriteProgram(program, "program.xml");
+        new WriteProgram(program, Globals.getOutputFileName());
     }
 
     public static void main (String[] args)

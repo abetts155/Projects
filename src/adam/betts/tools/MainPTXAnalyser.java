@@ -8,8 +8,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
 import adam.betts.utilities.DefaultOptions;
+import adam.betts.utilities.Globals;
 
 public class MainPTXAnalyser
 {
@@ -25,6 +27,7 @@ public class MainPTXAnalyser
 
         DefaultOptions.addDefaultOptions(options);
         DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addOutFileOption(options);
 
         ptxFileOption = new Option("p", "ptx", true,
                 "File containing PTX code.");
@@ -52,10 +55,8 @@ public class MainPTXAnalyser
             {
                 DefaultOptions.setDefaultOptions(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
-
-                ptxFileName = line
-                        .getOptionValue(DefaultOptions.programFileOption
-                                .getOpt());
+                DefaultOptions.setOutFileOption(line);
+                ptxFileName = line.getOptionValue(ptxFileOption.getOpt());
             }
         }
         catch (ParseException e)
@@ -68,7 +69,8 @@ public class MainPTXAnalyser
 
     private static void run ()
     {
-        new Program(ptxFileName);
+        Program program = new Program(ptxFileName);
+        new WriteProgram(program, Globals.getOutputFileName());
     }
 
     public static void main (String[] args)

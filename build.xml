@@ -5,9 +5,9 @@
 	<property name="build.dir" value="build" />
 	<property name="lib.dir" value="lib" />
 	<property name="jar.dir" value="bin" />
-	
+
 	<!-- The execution entry points of the various tools -->
-	<property name="cfg.main.class" value="adam.betts.tools.MainProgramBuilder" />
+	<property name="disassemble.main.class" value="adam.betts.tools.MainDisassembler" />
 	<property name="wcet.main.class" value="adam.betts.tools.MainWCETAnalyser" />
 	<property name="trace-parser.main.class" value="adam.betts.tools.MainTraceParser" />
 	<property name="trace-simplescalar.main.class" value="adam.betts.tools.MainSimpleScalarTraceParser" />
@@ -51,65 +51,65 @@
 	</target>
 
 	<macrodef name="buildStandardJar">
-		<attribute name="jarname"/>
-		<attribute name="mainclass"/>
+		<attribute name="jarname" />
+		<attribute name="mainclass" />
 		<sequential>
-		<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
-                        <manifest>
-                                <attribute name="Built-By" value="${user.name}" />
-                                <attribute name="Main-Class" value="@{mainclass}" />
-                                <attribute name="Class-Path" value="." />
-                        </manifest>
-                        <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-                </jar>
+			<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
+				<manifest>
+					<attribute name="Built-By" value="${user.name}" />
+					<attribute name="Main-Class" value="@{mainclass}" />
+					<attribute name="Class-Path" value="." />
+				</manifest>
+				<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+			</jar>
 		</sequential>
 	</macrodef>
 
 	<target name="program-generator" depends="compile">
-		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}"/>
+		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}" />
 	</target>
 
 	<target name="standardTools" depends="compile">
-		<buildStandardJar jarname="${disassemble.jar}" mainclass="${cfg.main.class}"/>
-		<buildStandardJar jarname="${loop.jar}" mainclass="${loop.main.class}"/>
-		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}"/>
-		<buildStandardJar jarname="${ptx-analyser.jar}" mainclass="${ptx.main.class}"/>
-		<buildStandardJar jarname="${simplescalar.jar}" mainclass="${trace-simplescalar.main.class}"/>
-		<buildStandardJar jarname="${gem5-trace-parser.jar}" mainclass="${gem5-trace-parser.main.class}"/>
-		<buildStandardJar jarname="${trace-generator.jar}" mainclass="${trace-generator.main.class}"/>
-		<buildStandardJar jarname="${tv-generator.jar}" mainclass="${tv-generator.main.class}"/>
-		<buildStandardJar jarname="${find-wcet.jar}" mainclass="${find-wcet.main.class}"/>
+		<buildStandardJar jarname="${disassemble.jar}" mainclass="${disassemble.main.class}" />
+		<buildStandardJar jarname="${loop.jar}" mainclass="${loop.main.class}" />
+		<buildStandardJar jarname="${program-generator.jar}" mainclass="${program-generator.main.class}" />
+		<buildStandardJar jarname="${ptx-analyser.jar}" mainclass="${ptx.main.class}" />
+		<buildStandardJar jarname="${simplescalar.jar}" mainclass="${trace-simplescalar.main.class}" />
+		<buildStandardJar jarname="${gem5-trace-parser.jar}" mainclass="${gem5-trace-parser.main.class}" />
+		<buildStandardJar jarname="${trace-generator.jar}" mainclass="${trace-generator.main.class}" />
+		<buildStandardJar jarname="${tv-generator.jar}" mainclass="${tv-generator.main.class}" />
+		<buildStandardJar jarname="${find-wcet.jar}" mainclass="${find-wcet.main.class}" />
 	</target>
-	
+
 	<macrodef name="buildLpsolveJar">
-		<attribute name="jarname"/>
-		<attribute name="mainclass"/>
+		<attribute name="jarname" />
+		<attribute name="mainclass" />
 		<sequential>
-		<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
-                        <manifest>
-                                <attribute name="Built-By" value="${user.name}" />
-                                <attribute name="Main-Class" value="@{mainclass}" />
-                                <attribute name="Class-Path" value="." />
-                        </manifest>
-                        <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
-	                <zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
-                </jar>
+			<jar destfile="${jar.dir}/@{jarname}" basedir="${build.dir}">
+				<manifest>
+					<attribute name="Built-By" value="${user.name}" />
+					<attribute name="Main-Class" value="@{mainclass}" />
+					<attribute name="Class-Path" value="." />
+				</manifest>
+				<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/commons-cli-1.2.jar" />
+				<zipfileset excludes="META-INF/*.SF" src="${lib.dir}/lpsolve55j.jar" />
+			</jar>
 		</sequential>
 	</macrodef>
 
 	<target name="program-analyser" depends="compile">
-		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}"/>
+		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}" />
 	</target>
 
 
 	<target name="lpSolveTools" depends="compile">
-		<buildLpsolveJar jarname="${tree.jar}" mainclass="${tree.main.class}"/>
-		<buildLpsolveJar jarname="${wcet.jar}" mainclass="${wcet.main.class}"/>
-		<buildLpsolveJar jarname="${trace-parser.jar}" mainclass="${trace-parser.main.class}"/>
-		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}"/>
-		<buildLpsolveJar jarname="${ipe-analyser.jar}" mainclass="${ipe-analyser.main.class}"/>
+		<buildLpsolveJar jarname="${tree.jar}" mainclass="${tree.main.class}" />
+		<buildLpsolveJar jarname="${wcet.jar}" mainclass="${wcet.main.class}" />
+		<buildLpsolveJar jarname="${trace-parser.jar}" mainclass="${trace-parser.main.class}" />
+		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}" />
+		<buildLpsolveJar jarname="${ipe-analyser.jar}" mainclass="${ipe-analyser.main.class}" />
 	</target>
-	
+
 	<target name="all" depends="standardTools, lpSolveTools">
 	</target>
 

@@ -421,8 +421,6 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
     public final void removeDeadCode ()
     {
-        OutputGraph.output(this);
-
         HashSet <Integer> toRemove = new HashSet <Integer>(idToVertex.keySet());
         HashSet <Integer> visited = new HashSet <Integer>();
 
