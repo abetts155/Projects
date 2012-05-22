@@ -114,7 +114,7 @@ public class CFGStar extends ControlFlowGraph
     public final void addInline (int siteID, IpointGraph ipg, String calleeName)
     {
         Debug.debugMessage(getClass(), "Analsying call site " + siteID, 1);
-        
+
         BasicBlock bb = getBasicBlock(siteID);
         HashSet <Integer> predIDs = new HashSet <Integer>();
         HashSet <Integer> succIDs = new HashSet <Integer>();
@@ -247,25 +247,17 @@ public class CFGStar extends ControlFlowGraph
 
         for (Vertex v : cfg)
         {
-            /*
-             * Add an ipoint for each basic block, assuming the first address is
-             * what is seen in the trace
-             */
+            BasicBlock bb = (BasicBlock) v;
+            int ipointID = getNextVertexID();
+            addIpoint(ipointID, bb.getFirstAddress());
+            addEdge(ipointID, bb.getVertexID());
 
-            if (lnt.isLoopHeader(v.getVertexID()))
-            {
-                BasicBlock bb = (BasicBlock) v;
-                int ipointID = getNextVertexID();
-                addIpoint(ipointID, bb.getFirstAddress());
-                addEdge(ipointID, bb.getVertexID());
+            instrumented.put(v.getVertexID(), ipointID);
 
-                instrumented.put(v.getVertexID(), ipointID);
-
-                Debug.debugMessage(getClass(), "Adding ipoint " + ipointID
-                        + " for bb " + bb.getVertexID(), 4);
-                Debug.debugMessage(getClass(), "Adding edge " + ipointID
-                        + " => " + bb.getVertexID(), 4);
-            }
+            Debug.debugMessage(getClass(), "Adding ipoint " + ipointID
+                    + " for bb " + bb.getVertexID(), 4);
+            Debug.debugMessage(getClass(), "Adding edge " + ipointID + " => "
+                    + bb.getVertexID(), 4);
         }
 
         instrumentFunctionLimits(instrumented);

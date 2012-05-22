@@ -12,7 +12,6 @@ import adam.betts.edges.CallEdge;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.trees.LoopNests;
-import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.vertices.BasicBlock;
@@ -25,7 +24,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
     /*
      * To ensure edge IDs are unique across all CFGs
      */
-    private static int edgeID = 1;
+    private static int edgeID = Integer.MAX_VALUE;
 
     protected String subprogramName;
     protected Long firstAddress;
@@ -62,115 +61,150 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
         return cfg;
     }
 
-    public void makeVertexAndEdgeNumbersDistinct (CallVertex callv)
+    private boolean renumberingRequired ()
     {
-        Debug.debugMessage(getClass(),
-                "Renumbering vertices in  " + callv.getSubprogramName() + " "
-                        + callv.numOfSuccessors(), 1);
+        Set <Integer> IDs = new HashSet <Integer>();
+        boolean renumbering = false;
 
-        HashMap <Integer, Integer> oldIdToNewID = new LinkedHashMap <Integer, Integer>();
-
-        int newID = 0;
         for (Vertex v : this)
         {
+            if (IDs.contains(v.getVertexID()))
+            {
+                renumbering = true;
+            }
+
+            IDs.add(v.getVertexID());
+
             Iterator <Edge> succIt = v.successorIterator();
             while (succIt.hasNext())
             {
-                newID++;
-
                 FlowEdge succe = (FlowEdge) succIt.next();
-                int succID = succe.getVertexID();
-                FlowEdge prede = (FlowEdge) getVertex(succID).getPredecessor(
-                        v.getVertexID());
 
-                succe.setEdgeID(newID);
-                prede.setEdgeID(newID);
+                if (IDs.contains(succe.getEdgeID()))
+                {
+                    renumbering = true;
+                }
+
+                IDs.add(succe.getEdgeID());
             }
         }
 
-        for (Vertex v : this)
-        {
-            newID++;
-            Integer oldVertexID = v.getVertexID();
-            v.setVertexID(newID);
-            oldIdToNewID.put(oldVertexID, newID);
+        return renumbering;
+    }
 
-            if (oldVertexID == entryID)
+    public void makeVertexAndEdgeNumbersDistinct (CallVertex callv)
+    {
+        if (renumberingRequired())
+        {
+            Debug.debugMessage(getClass(),
+                    "Renumbering vertices in  " + callv.getSubprogramName()
+                            + " " + callv.numOfSuccessors(), 1);
+
+            HashMap <Integer, Integer> oldIdToNewID = new LinkedHashMap <Integer, Integer>();
+
+            int newID = 0;
+            for (Vertex v : this)
             {
-                entryID = newID;
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
+                {
+                    newID++;
+
+                    FlowEdge succe = (FlowEdge) succIt.next();
+                    int succID = succe.getVertexID();
+                    FlowEdge prede = (FlowEdge) getVertex(succID)
+                            .getPredecessor(v.getVertexID());
+
+                    succe.setEdgeID(newID);
+                    prede.setEdgeID(newID);
+                }
             }
-            if (oldVertexID == exitID)
+
+            for (Vertex v : this)
             {
-                exitID = newID;
+                newID++;
+                Integer oldVertexID = v.getVertexID();
+                v.setVertexID(newID);
+                oldIdToNewID.put(oldVertexID, newID);
+
+                if (oldVertexID == entryID)
+                {
+                    entryID = newID;
+                }
+                if (oldVertexID == exitID)
+                {
+                    exitID = newID;
+                }
+
+                Debug.debugMessage(getClass(), "Renumbering vertex "
+                        + oldVertexID + " to new ID " + newID, 1);
             }
 
-            Debug.debugMessage(getClass(), "Renumbering vertex " + oldVertexID
-                    + " to new ID " + newID, 1);
-        }
+            HashSet <Vertex> vertices = new HashSet <Vertex>();
+            for (int oldVertexID : oldIdToNewID.keySet())
+            {
+                Vertex v = idToVertex.remove(oldVertexID);
+                vertices.add(v);
+            }
 
-        HashSet <Vertex> vertices = new HashSet <Vertex>();
-        for (int oldVertexID : oldIdToNewID.keySet())
-        {
-            Vertex v = idToVertex.remove(oldVertexID);
-            vertices.add(v);
-        }
+            // Renumber the call sites on the call graph edges
+            Iterator <Edge> callSuccIt = callv.successorIterator();
+            while (callSuccIt.hasNext())
+            {
+                CallEdge calle = (CallEdge) callSuccIt.next();
+                Set <Integer> newIDs = new HashSet <Integer>();
 
-        // Renumber the call sites on the call graph edges
-        Iterator <Edge> callSuccIt = callv.successorIterator();
-        while (callSuccIt.hasNext())
-        {
-            CallEdge calle = (CallEdge) callSuccIt.next();
-            Set <Integer> newIDs = new HashSet <Integer>();
+                for (int oldVertexID : oldIdToNewID.keySet())
+                {
+                    if (calle.callSites().contains(oldVertexID))
+                    {
+                        newIDs.add(oldIdToNewID.get(oldVertexID));
+                    }
+                }
+
+                calle.changeCallSiteIDs(newIDs);
+            }
 
             for (int oldVertexID : oldIdToNewID.keySet())
             {
-                if (calle.callSites().contains(oldVertexID))
+                int newVertexID = oldIdToNewID.get(oldVertexID);
+                for (Vertex v : vertices)
                 {
-                    newIDs.add(oldIdToNewID.get(oldVertexID));
+                    if (v.getVertexID() == newVertexID)
+                    {
+                        idToVertex.put(newVertexID, v);
+                    }
                 }
             }
 
-            calle.changeCallSiteIDs(newIDs);
-        }
-
-        for (int oldVertexID : oldIdToNewID.keySet())
-        {
-            int newVertexID = oldIdToNewID.get(oldVertexID);
-            for (Vertex v : vertices)
+            for (Vertex v : this)
             {
-                if (v.getVertexID() == newVertexID)
+                Debug.debugMessage(getClass(), "Analysing " + v.getVertexID(),
+                        4);
+
+                Iterator <Edge> succIt = v.successorIterator();
+                while (succIt.hasNext())
                 {
-                    idToVertex.put(newVertexID, v);
+                    FlowEdge succe = (FlowEdge) succIt.next();
+                    int oldSuccID = succe.getVertexID();
+                    int newSuccID = oldIdToNewID.get(oldSuccID);
+                    succe.setVertexID(newSuccID);
+
+                    Debug.debugMessage(getClass(), "Renumbering succ "
+                            + oldSuccID + " to " + newSuccID, 4);
                 }
-            }
-        }
 
-        for (Vertex v : this)
-        {
-            Debug.debugMessage(getClass(), "Analysing " + v.getVertexID(), 4);
+                Iterator <Edge> predIt = v.predecessorIterator();
+                while (predIt.hasNext())
+                {
+                    FlowEdge prede = (FlowEdge) predIt.next();
+                    int oldPredID = prede.getVertexID();
+                    int newPredID = oldIdToNewID.get(oldPredID);
+                    prede.setVertexID(oldIdToNewID.get(oldPredID));
 
-            Iterator <Edge> succIt = v.successorIterator();
-            while (succIt.hasNext())
-            {
-                FlowEdge succe = (FlowEdge) succIt.next();
-                int oldSuccID = succe.getVertexID();
-                int newSuccID = oldIdToNewID.get(oldSuccID);
-                succe.setVertexID(newSuccID);
-
-                Debug.debugMessage(getClass(), "Renumbering succ " + oldSuccID
-                        + " to " + newSuccID, 4);
-            }
-
-            Iterator <Edge> predIt = v.predecessorIterator();
-            while (predIt.hasNext())
-            {
-                FlowEdge prede = (FlowEdge) predIt.next();
-                int oldPredID = prede.getVertexID();
-                int newPredID = oldIdToNewID.get(oldPredID);
-                prede.setVertexID(oldIdToNewID.get(oldPredID));
-
-                Debug.debugMessage(getClass(), "Renumbering pred " + oldPredID
-                        + " to " + newPredID, 4);
+                    Debug.debugMessage(getClass(), "Renumbering pred "
+                            + oldPredID + " to " + newPredID, 4);
+                }
             }
         }
     }
@@ -218,7 +252,7 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
         BasicBlock v = (BasicBlock) idToVertex.get(destinationID);
         u.addSuccessor(destinationID, type, edgeID);
         v.addPredecessor(sourceID, type, edgeID);
-        edgeID++;
+        edgeID--;
 
         Debug.debugMessage(getClass(), "Adding edge " + sourceID + " => "
                 + destinationID + " (" + type + ")", 4);
