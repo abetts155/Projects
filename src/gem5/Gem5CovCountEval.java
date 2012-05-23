@@ -28,8 +28,10 @@ public class Gem5CovCountEval extends Gem5CoverageEvaluator {
 			score += blockCounts.get(bbId);
 		}
 		
+		long entryTime = g5Tools.getInstructionTimeDiff(firstInst, lastInst, traceFile);
+		
 		vector.setScore((double)score);
-		vector.setTime(time);
+		vector.setTime(entryTime);
 		String traceOutput = g5Tools.sanitiseGem5Trace(traceFile, "BASIC_BLOCK");
 		
 		//Append trace to compressed file

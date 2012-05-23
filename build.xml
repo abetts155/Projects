@@ -22,6 +22,7 @@
 	<property name="tv-generator.main.class" value="tvgen.GenerateTestVectors" />
 	<property name="find-wcet.main.class" value="tvgen.FindWCETVector" />
 	<property name="gem5-trace-parser.main.class" value="gem5.ParseGem5Trace" />
+	<property name="run-gem5.main.class" value="gem5.RunGem5Program" />
 
 	<!-- Names of the jar files -->
 	<property name="disassemble.jar" value="disassemble.jar" />
@@ -38,6 +39,7 @@
 	<property name="tv-generator.jar" value="tv-generator.jar" />
 	<property name="find-wcet.jar" value="find-wcet.jar" />
 	<property name="gem5-trace-parser.jar" value="gem5-trace-parser.jar" />
+	<property name="run-gem5.jar" value="run-gem5.jar" />
 
 	<path id="project.classpath">
 		<pathelement location="${lib.dir}/commons-cli-1.2.jar" />
@@ -79,6 +81,7 @@
 		<buildStandardJar jarname="${trace-generator.jar}" mainclass="${trace-generator.main.class}" />
 		<buildStandardJar jarname="${tv-generator.jar}" mainclass="${tv-generator.main.class}" />
 		<buildStandardJar jarname="${find-wcet.jar}" mainclass="${find-wcet.main.class}" />
+		<buildStandardJar jarname="${run-gem5.jar}" mainclass="${run-gem5.main.class}" />
 	</target>
 
 	<macrodef name="buildLpsolveJar">

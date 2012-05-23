@@ -26,7 +26,7 @@ public abstract class Gem5CoverageEvaluator extends Gem5Evaluator {
 	
 	public Gem5CoverageEvaluator(int threadID, String programName, Gem5Tools g5tools,
 			String entryPoint) {
-		super(threadID, programName, g5tools);
+		super(threadID, programName, g5tools, entryPoint);
 		traceFile = "m5out/thread" + threadID + "/trace.out";
 		
 		basicBlocks = new HashSet<Integer>();

@@ -21,8 +21,10 @@ public class Gem5CovFractionEval extends Gem5CoverageEvaluator {
 		blocksCovered.retainAll(basicBlocks);
 		int relevantBlocksCovered = blocksCovered.size();
 		
+		long entryTime = g5Tools.getInstructionTimeDiff(firstInst, lastInst, traceFile);
+		
 		vector.setScore((double)relevantBlocksCovered / (double)basicBlocks.size());
-		vector.setTime(time);
+		vector.setTime(entryTime);
 		String traceOutput = g5Tools.sanitiseGem5Trace(traceFile, "BASIC_BLOCK");
 		
 		//Append trace to compressed file
