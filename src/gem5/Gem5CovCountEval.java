@@ -35,7 +35,7 @@ public class Gem5CovCountEval extends Gem5CoverageEvaluator {
 		String traceOutput = g5Tools.sanitiseGem5Trace(traceFile, "BASIC_BLOCK");
 		
 		//Append trace to compressed file
-		addToTraceOutput(traceOutput);
+		addToTraceOutput(vector, traceOutput);
 	}
 
 }

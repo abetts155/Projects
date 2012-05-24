@@ -23,6 +23,6 @@ public class Gem5TimeEvaluator extends Gem5Evaluator {
 		String traceOutput = g5Tools.sanitiseGem5Trace(traceFile, "BASIC_BLOCK");
 		
 		//Append trace to compressed file
-		addToTraceOutput(traceOutput);
+		addToTraceOutput(vector, traceOutput);
 	}
 }

@@ -70,12 +70,15 @@ public class GaTVGenerator extends TestVectorGenerator {
 			SystemOutput.printMessage("Generation " + i + " Best/Average/Worst Scores: " + 
 					bestScore + " / " + averageScore + " / " + worstScore);
 			
-			// Select which chromosomes will be used to generate next generation
-			TestVector[] selected = selector.selectVectors(generation,
-					(int)(generation.length * selectionRate));
+			if (i < numGenerations - 1)
+			{
+				// Select which chromosomes will be used to generate next generation
+				TestVector[] selected = selector.selectVectors(generation,
+						(int)(generation.length * selectionRate));
 			
-			// Generate the next generation
-			generation = createNextGeneration(selected, rand);
+				// Generate the next generation
+				generation = createNextGeneration(selected, rand);
+			}
 			
 			SystemOutput.debugMessage("End generation " + i);
 			

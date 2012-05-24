@@ -26,7 +26,9 @@ public abstract class Gem5Evaluator extends TVEvaluator {
 	protected int lastInst;
 	
 	private static PrintStream traceOutput = null;
+	private static PrintStream timesOutput = null;
 	private static String traceFileName = "trace.BASIC_BLOCK.GA.gz";
+	private static String timesFileName = "vector-times.txt";
 	
 	public Gem5Evaluator(int threadID, String programName, Gem5Tools g5tools,
 			String entryPoint) {
@@ -49,7 +51,7 @@ public abstract class Gem5Evaluator extends TVEvaluator {
 		}
 	}
 	
-	protected synchronized static void addToTraceOutput(String content) {
+	protected synchronized static void addToTraceOutput(TestVector vector, String content) {
 		if(traceOutput == null) {
 			try {
 				GZIPOutputStream outStream = new GZIPOutputStream(
@@ -65,8 +67,24 @@ public abstract class Gem5Evaluator extends TVEvaluator {
 			}
 		}
 		
+		if(timesOutput == null) {
+			try {
+				FileOutputStream timeOutStream = 
+						new FileOutputStream(timesFileName);
+				timesOutput = new PrintStream(timeOutStream);
+				
+				// Ensure trace output stream is closed at end of execution
+				Runtime.getRuntime().addShutdownHook(new Thread() {
+					public void run() { closeTimesOutput(); }
+				});
+			} catch(Exception e) {
+				SystemOutput.exitWithError("Error creating times output file");
+			}
+		}
+		
 		try {
 			traceOutput.print(content);
+			timesOutput.println(vector.getTime());
 		} catch (Exception e) {
 			SystemOutput.exitWithError("Error wrting to trace output");
 		}
@@ -150,6 +168,12 @@ public abstract class Gem5Evaluator extends TVEvaluator {
 	private static void closeTraceOutput() {
 		if(traceOutput != null) {
 			traceOutput.close();
+		}
+	}
+	
+	private static void closeTimesOutput() {
+		if(timesOutput != null) {
+			timesOutput.close();
 		}
 	}
 
