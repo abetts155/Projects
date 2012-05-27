@@ -28,7 +28,7 @@ public class Gem5CovCountEval extends Gem5CoverageEvaluator {
 			score += blockCounts.get(bbId);
 		}
 		
-		long entryTime = g5Tools.getInstructionTimeDiff(firstInst, lastInst, traceFile);
+		long entryTime = g5Tools.getInstructionTimeDiff(entryBlockInsts, traceFile);
 		
 		vector.setScore((double)score);
 		vector.setTime(entryTime);

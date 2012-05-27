@@ -10,6 +10,7 @@ import org.apache.commons.cli.ParseException;
 
 import gem5.Gem5CovCountEval;
 import gem5.Gem5CovFractionEval;
+import gem5.Gem5Evaluator;
 import gem5.Gem5TimeEvaluator;
 import gem5.Gem5Tools;
 
@@ -26,6 +27,7 @@ public class GenerateTestVectors {
 	private static Option debugOption;
 	private static Option typeOption;
 	private static Option outputOption;
+	private static Option folderOption;
 	private static Option programOption;
 	private static Option entryOption;
 	private static Option vectorLengthOption;
@@ -62,6 +64,11 @@ public class GenerateTestVectors {
 				"The output file to save the vectors to");
 		outputOption.setRequired (true);
 		options.addOption (outputOption);
+		
+		folderOption = new Option ("f", "output-folder", true,
+				"The folder all output files will be saved to");
+		folderOption.setRequired (false);
+		options.addOption (folderOption);
 		
 		programOption = new Option ("p", "program", true,
 				"The name of the program binary to be tested");
@@ -187,8 +194,15 @@ public class GenerateTestVectors {
 		addOptions();
 		CommandLine line = parseCommandLine(args);
 		
+		String outFile = line.getOptionValue(outputOption.getOpt());
+		if (line.hasOption (folderOption.getOpt()))
+		{
+			outFile = line.getOptionValue(folderOption.getOpt()) + "/" +
+						line.getOptionValue(outputOption.getOpt());
+		}
+		
 		TestVectorGenerator generator;
-		File outputFile = new File( line.getOptionValue(outputOption.getOpt()) );
+		File outputFile = new File( outFile );
 		
 		int numVecsOrGens = Integer.parseInt(
 				line.getOptionValue(numGensOption.getOpt()));
@@ -305,7 +319,8 @@ public class GenerateTestVectors {
 				SystemOutput.exitWithError("Error: missing option " +programOption.getOpt());
 			
 			String entryPoint = "";
-			if (!line.hasOption (entryOption.getOpt ())) {
+			if (!line.hasOption (entryOption.getOpt ()))
+			{
 				SystemOutput.exitWithError("Error: missing option " +
 						entryOption.getOpt());
 			}
@@ -314,9 +329,16 @@ public class GenerateTestVectors {
 			String programName = line.getOptionValue(programOption.getOpt());
 			String configFileName = line.getOptionValue(configFlagsOption.getOpt());
 			
+			if (line.hasOption (folderOption.getOpt()))
+			{
+				String outFolder = line.getOptionValue(folderOption.getOpt());
+				Gem5Evaluator.setOutputFolder(outFolder);
+			}
+			
 			Gem5Tools g5tools = new Gem5Tools(programName, configFileName);
 			
-			for(int i = 0; i < numThreads; i++) {
+			for(int i = 0; i < numThreads; i++)
+			{
 				if(type.equals("gem5Time")) {
 					evals[i] = new Gem5TimeEvaluator(i, programName, g5tools, entryPoint);
 				} else if(type.equals("gem5CovFrac")) {
@@ -325,6 +347,7 @@ public class GenerateTestVectors {
 					evals[i] = new Gem5CovCountEval(i, programName, g5tools, entryPoint);
 				}
 			}
+			
 			return new GenerationEvaluator(evals);
 		}
 		else if(type.equals("test"))

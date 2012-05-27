@@ -21,7 +21,7 @@ public class Gem5CovFractionEval extends Gem5CoverageEvaluator {
 		blocksCovered.retainAll(basicBlocks);
 		int relevantBlocksCovered = blocksCovered.size();
 		
-		long entryTime = g5Tools.getInstructionTimeDiff(firstInst, lastInst, traceFile);
+		long entryTime = g5Tools.getInstructionTimeDiff(entryBlockInsts, traceFile);
 		
 		vector.setScore((double)relevantBlocksCovered / (double)basicBlocks.size());
 		vector.setTime(entryTime);

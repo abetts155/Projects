@@ -35,8 +35,7 @@ public class RunGem5Program {
 	private static Option argsOption;
 	private static Option configOption;
 	
-	private int firstInst;
-	private int lastInst;
+	private Set<Long> entryBlockInsts;
 	
 	private Set<Integer> basicBlocks;
 	
@@ -45,6 +44,7 @@ public class RunGem5Program {
 	{
 		Gem5Tools g5Tools = new Gem5Tools(programName, configFile);
 		
+		entryBlockInsts = new HashSet<Long>();
 		findBorderInstructions(programName + ".xml", entryPoint);
 		basicBlocks = new HashSet<Integer>();
 		CFGNode root = buildCFGNodes(programName + ".xml", entryPoint);
@@ -53,7 +53,7 @@ public class RunGem5Program {
 		String traceFile = "m5out/trace.out";
 		double totaltime = g5Tools.runGem5(progArgs, "m5out", "trace.out");
 		double entrytime = g5Tools.getInstructionTimeDiff(
-				firstInst, lastInst, traceFile);
+				entryBlockInsts, traceFile);
 		
 		Map<Integer,Integer> blockCounts = g5Tools.getBlockCoverageCount(traceFile);
 		
@@ -157,7 +157,7 @@ public class RunGem5Program {
 	
 	private void findBorderInstructions(String programXMLFile, String entryPoint)
 	{
-		boolean entryFound = false;
+boolean entryFound = false;
 		
 		File xmlFile = new File(programXMLFile);
 		if(!xmlFile.exists())
@@ -180,38 +180,30 @@ public class RunGem5Program {
 				Node cfgNode = cfgNodes.item(i);
 				if(cfgNode instanceof Element)
 				{
+					// Find correct cfg block
 					if(((Element)cfgNode).getAttribute("name").equals(entryPoint))
 					{
 						entryFound = true;
 						NodeList bbNodes = ((Element)cfgNode).getElementsByTagName("bb");
 						
-						Node bbNode = bbNodes.item(0);
-						if(bbNode instanceof Element)
+						// Find all bb instructions
+						for(int j = 0; j < bbNodes.getLength(); j++)
 						{
-							NodeList bbInsts = ((Element)bbNode).getElementsByTagName("inst");
-							Node firstInstNode = bbInsts.item(0);
-							if(firstInstNode instanceof Element)
+							Node bbNode = bbNodes.item(j);
+							if(bbNode instanceof Element)
 							{
-								String firstAddr = ((Element)firstInstNode).getAttribute("addr");
-								firstInst = Integer.parseInt(firstAddr.substring(2), 16);
-							}
-						}
-						
-						bbNode = bbNodes.item(bbNodes.getLength()-1);
-						if(bbNode instanceof Element)
-						{
-							NodeList bbInsts = ((Element)bbNode).getElementsByTagName("inst");
-							int index = bbInsts.getLength() - 1;
-							Node lastInstNode = bbInsts.item(index);
-							if(lastInstNode instanceof Element)
-							{
-								while(((Element)lastInstNode).getAttribute("instr").equals("nop"))
+								NodeList bbInsts = ((Element)bbNode).getElementsByTagName(
+										"inst");
+								for(int k = 0; k < bbNodes.getLength(); k++)
 								{
-									index--;
-									lastInstNode = bbInsts.item(index);
+									Node InstNode = bbInsts.item(k);
+									if(InstNode instanceof Element)
+									{
+										String addr = ((Element)InstNode).getAttribute("addr");
+										entryBlockInsts.add(Long.parseLong(
+												addr.substring(2), 16));
+									}
 								}
-								String lastAddr = ((Element)lastInstNode).getAttribute("addr");
-								lastInst = Integer.parseInt(lastAddr.substring(2), 16);
 							}
 						}
 					}

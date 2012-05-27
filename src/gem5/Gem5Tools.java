@@ -107,15 +107,19 @@ public class Gem5Tools {
 					line = outputReader.readLine()) {
 				if(line.startsWith("Exiting @ tick")) {
 					String scoreString = line.split("\\s+", 5)[3];
+					outputReader.close();
+					child.destroy();
 					return Double.parseDouble(scoreString);
 				}
 			}
 			
+			outputReader.close();			
 			SystemOutput.exitWithError("Error could not extract score from cmd " + cmd);
 			
 		} catch(NumberFormatException nfe) {
 			SystemOutput.exitWithError("Format error when extracting score from cmd " + cmd);
 		} catch(Exception e) {
+			e.printStackTrace();
 			SystemOutput.exitWithError("Error running command " + cmd + "\n " + e.getMessage());
 		}
 		
@@ -157,9 +161,9 @@ public class Gem5Tools {
 		return traceParser.basicBlocksCount(traceFile);
 	}
 	
-	public long getInstructionTimeDiff(int inst1, int inst2, String traceFile)
+	public long getInstructionTimeDiff(Set<Long> entryBlockInsts, String traceFile)
 	{
-		return traceParser.getInstructionTimeDiff(inst1, inst2, traceFile);
+		return traceParser.getInstructionTimeDiff(entryBlockInsts, traceFile);
 	}
 	
 	private void waitForProcess(Process p, String cmd) {

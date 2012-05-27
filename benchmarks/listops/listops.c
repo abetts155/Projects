@@ -105,7 +105,7 @@ int median(int ARRAY_SIZE, int a[])
 	}
 }
 
-int listOps(int ARRAY_SIZE, int a[])
+int listops(int ARRAY_SIZE, int a[])
 {
 	int n = a[0] % 6;
 	int result = 0;
@@ -119,6 +119,7 @@ int listOps(int ARRAY_SIZE, int a[])
 		case 4 : result = mean(ARRAY_SIZE, a); break;
 		default : result = median(ARRAY_SIZE, a); break;
 	}
+
 	return result;
 }
 
@@ -141,7 +142,7 @@ int main (int argc, char *argv[])
 		TV[i] = atoi (argv[i + 1]);
 	}
 
-	int result = listOps (ARRAY_SIZE, TV);
+	int result = listops (ARRAY_SIZE, TV);
 
 	//printf("%i\n", result);
 

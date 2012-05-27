@@ -223,10 +223,10 @@ public class TraceParser
         return bbcount;
     }
 
-    public long getInstructionTimeDiff (int inst1, int inst2, String traceName)
+    public long getInstructionTimeDiff (Set<Long> entryBlockInsts, String traceName)
     {
-        long time1 = 0;
-        long time2 = 0;
+        long time1 = -1;
+        long time2 = -1;
         try
         {
             InputStream traceFile = new FileInputStream(traceName);
@@ -238,21 +238,26 @@ public class TraceParser
 
             for (InstructionTime instTime : instTimes)
             {
-                if (inst1 == instTime.instruction)
-                {
-                    time1 = instTime.time;
-                }
-                if (inst2 == instTime.instruction)
-                {
-                    time2 = instTime.time;
-                }
+            	if (entryBlockInsts.contains(instTime.instruction));
+            	{
+            		if(time1 == -1)
+            			time1 = instTime.time;
+            		time2 = instTime.time;
+            	}
             }
         }
         catch (Exception e)
         {
             handleException(e, "Error parsing trace file" + traceName);
         }
-        return time2 - time1;
+        
+        long timeDiff = time2 - time1;
+        if(timeDiff < 0)
+        {
+        	SystemOutput.debugMessage("Time between first and last instruction < 0");
+        	timeDiff = 0;
+        }
+        return timeDiff;
     }
 
     public String parseTrace (String traceName, String instrumentation,

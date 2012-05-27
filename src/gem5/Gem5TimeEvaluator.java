@@ -16,7 +16,7 @@ public class Gem5TimeEvaluator extends Gem5Evaluator {
 		double time = g5Tools.runGem5(vector.toString(), "m5out/thread" + getThreadID(),
 				"trace.out");
 
-		long entryTime = g5Tools.getInstructionTimeDiff(firstInst, lastInst, traceFile);
+		long entryTime = g5Tools.getInstructionTimeDiff(entryBlockInsts, traceFile);
 		
 		vector.setScore(entryTime);
 		vector.setTime(entryTime);
