@@ -36,9 +36,6 @@ public class CalculationEngine
                 Subprogram subprogram = program.getSubprogram(subprogramID);
                 String subprogramName = subprogram.getSubprogramName();
 
-                Debug.debugMessage(getClass(), "Building IPET of "
-                        + subprogramName, 3);
-
                 IpointGraph ipg = subprogram.getIPG(Globals
                         .getInstrumentationProfile());
                 IPETModelIPG ipet = new IPETModelIPG(this, database, ipg,
