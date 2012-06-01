@@ -48,7 +48,7 @@ public class RunGem5Program {
 		findBorderInstructions(programName + ".xml", entryPoint);
 		basicBlocks = new HashSet<Integer>();
 		CFGNode root = buildCFGNodes(programName + ".xml", entryPoint);
-		addBasicBlocks(root);
+		addBasicBlocks(root, new HashSet<CFGNode>());
 		
 		String traceFile = "m5out/trace.out";
 		double totaltime = g5Tools.runGem5(progArgs, "m5out", "trace.out");
@@ -157,7 +157,7 @@ public class RunGem5Program {
 	
 	private void findBorderInstructions(String programXMLFile, String entryPoint)
 	{
-boolean entryFound = false;
+		boolean entryFound = false;
 		
 		File xmlFile = new File(programXMLFile);
 		if(!xmlFile.exists())
@@ -222,12 +222,14 @@ boolean entryFound = false;
 		}
 	}
 	
-	private void addBasicBlocks(CFGNode rootNode)
+	private void addBasicBlocks(CFGNode rootNode, Set<CFGNode> visited)
 	{
 		basicBlocks.addAll(rootNode.basicBlocks);
+		visited.add(rootNode);
 		for(CFGNode node : rootNode.successors)
 		{
-			addBasicBlocks(node);
+			if(!visited.contains(node))
+				addBasicBlocks(node, visited);
 		}
 	}
 	

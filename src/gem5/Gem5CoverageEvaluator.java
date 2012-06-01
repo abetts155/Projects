@@ -31,18 +31,20 @@ public abstract class Gem5CoverageEvaluator extends Gem5Evaluator {
 		
 		basicBlocks = new HashSet<Integer>();
 		CFGNode root = buildCFGNodes(programName + ".xml", entryPoint);
-		addBasicBlocks(root);
+		addBasicBlocks(root, new HashSet<CFGNode>());
 	}
 
 	@Override
 	public abstract void evaluate(TestVector vector);
 	
-	private void addBasicBlocks(CFGNode rootNode)
+	private void addBasicBlocks(CFGNode rootNode, Set<CFGNode> visited)
 	{
 		basicBlocks.addAll(rootNode.basicBlocks);
+		visited.add(rootNode);
 		for(CFGNode node : rootNode.successors)
 		{
-			addBasicBlocks(node);
+			if(!visited.contains(node))
+				addBasicBlocks(node, visited);
 		}
 	}
 	

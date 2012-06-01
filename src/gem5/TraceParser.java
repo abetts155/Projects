@@ -235,10 +235,10 @@ public class TraceParser
 
             List <InstructionTime> instTimes = getInstructionTimes(trace);
             trace.close();
-
+            
             for (InstructionTime instTime : instTimes)
             {
-            	if (entryBlockInsts.contains(instTime.instruction));
+            	if (entryBlockInsts.contains(instTime.instruction))
             	{
             		if(time1 == -1)
             			time1 = instTime.time;
@@ -251,6 +251,7 @@ public class TraceParser
             handleException(e, "Error parsing trace file" + traceName);
         }
         
+        SystemOutput.printMessage(time1 + " " + time2);
         long timeDiff = time2 - time1;
         if(timeDiff < 0)
         {

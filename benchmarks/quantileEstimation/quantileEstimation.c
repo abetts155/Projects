@@ -185,7 +185,7 @@ void add(double datum) {
 	if (nd == nbuf) update();
 }
 
-double estimateQuantile(double a[], int ARRAY_SIZE, double quantile) {
+double quantileEstimation(double a[], int ARRAY_SIZE, double quantile) {
 	int i;	
 
 	initialise();
@@ -215,7 +215,7 @@ int main (int argc, char *argv[])
 		TV[i] = atoi (argv[i + 1]);
 	}
 
-	double quantileEstimate = estimateQuantile(TV, ARRAY_SIZE, 0.5);
+	double quantileEstimate = quantileEstimation(TV, ARRAY_SIZE, 0.5);
 
 	printf("%lf\n", quantileEstimate);
 
