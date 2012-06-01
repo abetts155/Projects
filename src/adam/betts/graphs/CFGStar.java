@@ -11,10 +11,8 @@ import java.util.Random;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.trees.DominatorTree;
-import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.IProfile;
@@ -243,8 +241,6 @@ public class CFGStar extends ControlFlowGraph
     {
         HashMap <Integer, Integer> instrumented = new HashMap <Integer, Integer>();
 
-        LoopNests lnt = cfg.getLNT();
-
         for (Vertex v : cfg)
         {
             BasicBlock bb = (BasicBlock) v;
@@ -261,7 +257,6 @@ public class CFGStar extends ControlFlowGraph
         }
 
         instrumentFunctionLimits(instrumented);
-
         addRemainingEdges(instrumented);
     }
 
@@ -305,7 +300,6 @@ public class CFGStar extends ControlFlowGraph
         }
 
         instrumentFunctionLimits(instrumented);
-
         addRemainingEdges(instrumented);
     }
 
@@ -421,7 +415,6 @@ public class CFGStar extends ControlFlowGraph
         }
 
         instrumentFunctionLimits(instrumented);
-
         addRemainingEdges(instrumented);
     }
 
@@ -452,7 +445,6 @@ public class CFGStar extends ControlFlowGraph
         }
 
         instrumentFunctionLimits(instrumented);
-
         addRemainingEdges(instrumented);
     }
 

@@ -308,6 +308,8 @@ public class IPGDatabase extends Database
             {
                 if (MainWCETAnalyser.Globals.doIncrementalWCET())
                 {
+                    Debug.debugMessage(getClass(), "Doing incremental WCET", 1);
+
                     /*
                      * Only do an incremental WCET computation if we have
                      * processed at least one run
