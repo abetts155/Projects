@@ -1,5 +1,6 @@
 package gem5;
 
+import tvgen.util.SystemOutput;
 import tvgen.util.TestVector;
 
 public class Gem5TimeEvaluator extends Gem5Evaluator {

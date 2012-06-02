@@ -233,25 +233,17 @@ public class TraceParser
             BufferedReader trace = new BufferedReader(new InputStreamReader(
                     traceFile));
 
-            List <InstructionTime> instTimes = getInstructionTimes(trace);
+            List <InstructionTime> instTimes = getSelectedInstTimes(trace, entryBlockInsts);
             trace.close();
             
-            for (InstructionTime instTime : instTimes)
-            {
-            	if (entryBlockInsts.contains(instTime.instruction))
-            	{
-            		if(time1 == -1)
-            			time1 = instTime.time;
-            		time2 = instTime.time;
-            	}
-            }
+            time1 = instTimes.get(0).time;
+            time2 = instTimes.get(instTimes.size() - 1).time;
         }
         catch (Exception e)
         {
             handleException(e, "Error parsing trace file" + traceName);
         }
         
-        SystemOutput.printMessage(time1 + " " + time2);
         long timeDiff = time2 - time1;
         if(timeDiff < 0)
         {
@@ -270,16 +262,17 @@ public class TraceParser
             BufferedReader trace = new BufferedReader(new InputStreamReader(
                     traceFile));
 
-            List <InstructionTime> instTimes = getInstructionTimes(trace);
-            trace.close();
-
             String parsedTrace = null;
             if (instrumentation.equals("BASIC_BLOCK"))
             {
+            	List <InstructionTime> instTimes = getSelectedInstTimes(trace, bbAddrs);
+                trace.close();
                 parsedTrace = parseBasicBlockTrace(instTimes, hexAddrs);
             }
             else if (instrumentation.equals("BRANCH"))
             {
+            	List <InstructionTime> instTimes = getInstructionTimes(trace);
+                trace.close();
                 parsedTrace = parseBranchTrace(instTimes, hexAddrs);
             }
 
@@ -318,6 +311,46 @@ public class TraceParser
                     if (microInst[1].equals("0"))
                         times.add(new InstructionTime(parseAddr(microInst[0]
                                 .trim()), time));
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            handleException(e, "Error parsing trace");
+        }
+
+        return times;
+    }
+    
+    private List <InstructionTime> getSelectedInstTimes (BufferedReader trace,
+    		Set<Long> insts)
+    {
+        int timeIndex = 0;
+        int cpuAddrIndex = 1;
+        int addrIndex = 1;
+
+        List <InstructionTime> times = new ArrayList <InstructionTime>();
+
+        try
+        {
+            for (String line = trace.readLine(); line != null; line = trace
+                    .readLine())
+            {
+                String[] splitLine = line.split(":");
+                String[] cpuAddr = splitLine[cpuAddrIndex].trim().split(" ");
+                String addr = cpuAddr[addrIndex];
+
+                String[] microInst = addr.split("\\.");
+                long instruction = 0;
+                if (microInst.length == 1)
+                	instruction = parseAddr(addr.trim());
+                else if (microInst[1].equals("0"))
+                	instruction = parseAddr(microInst[0].trim());
+                
+                if (insts.contains(instruction))
+                {
+                	Long time = Long.parseLong(splitLine[timeIndex].trim());
+                	times.add(new InstructionTime(instruction, time));
                 }
             }
         }
