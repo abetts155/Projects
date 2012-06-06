@@ -5,8 +5,6 @@
  * in the input vector
  */
 
-int result = 0;
-
 int sumArray (int ARRAY_SIZE, int a[])
 {
   int i, sum;
@@ -40,14 +38,16 @@ int calculateResult (int ARRAY_SIZE, int a[], int avg)
   return avg - bAvg;
 }
 
-void datadeploop (int ARRAY_SIZE, int a[])
+int datadeploop (int ARRAY_SIZE, int a[])
 {
   int i, sum, avg;
 
   sum = sumArray (ARRAY_SIZE, a);
   avg = sum / ARRAY_SIZE;
 
-  result = calculateResult (ARRAY_SIZE, a, avg);
+  int result = calculateResult (ARRAY_SIZE, a, avg);
+
+  return result;
 }
 
 int main (int argc, char *argv[])
@@ -69,7 +69,9 @@ int main (int argc, char *argv[])
     TV[i] = atoi (argv[i + 1]);
   }
 
-  datadeploop (ARRAY_SIZE, TV);
+  int result = datadeploop (ARRAY_SIZE, TV);
+
+  printf("%i\n", result);
 
   return 0;
 }
