@@ -24,6 +24,7 @@ import adam.betts.vertices.Vertex;
 public class IPGDatabase extends Database
 {
 
+    final int rootID = 1;
     final protected IpointGraph ipg;
     protected HashMap <Integer, Long> observedWCETs = new HashMap <Integer, Long>();
     protected HashMap <Integer, HashMap <Integer, Integer>> unitBounds = new HashMap <Integer, HashMap <Integer, Integer>>();
@@ -35,7 +36,6 @@ public class IPGDatabase extends Database
         ipg = program.getInlinedIPG(adam.betts.utilities.Globals
                 .getInstrumentationProfile());
 
-        final int rootID = 1;
         TraceParser parser = new TraceParser(rootID, ipg);
         initialise(rootID, parser);
 
@@ -44,13 +44,17 @@ public class IPGDatabase extends Database
         UDrawGraph.makeUDrawFile(Globals.getInstrumentationProfile(), ipg,
                 "inlined");
 
-        new IPETModelIPG(this, ipg, rootID);
-
         if (MainWCETAnalyser.Globals.doObservedWCET())
         {
             Debug.verboseMessage("Reparsing for Observed WCETs");
             parser.doParsing(true);
         }
+    }
+
+    protected long doWCET ()
+    {
+        IPETModelIPG ipet = new IPETModelIPG(this, ipg, rootID);
+        return ipet.wcet;
     }
 
     public final int getBound (int subprogramID, int unitID)
@@ -235,6 +239,13 @@ public class IPGDatabase extends Database
             {
                 Debug.errorMessage(getClass(), e.getMessage());
             }
+
+            if (!doObservedWCET)
+            {
+                long wcet = doWCET();
+                System.out.println("WCET at trace #" + testCounter + " = "
+                        + wcet);
+            }
         }
 
         private void startNewRun (boolean doObservedWCET, long ipointID,
@@ -255,9 +266,11 @@ public class IPGDatabase extends Database
                      * Only do an incremental WCET computation if we have
                      * processed at least one run
                      */
-                    if (tests.get(program.getRootID()) > 0)
+                    if (testCounter > 1)
                     {
-                        engine.calculateWCETWithIPGs();
+                        long wcet = doWCET();
+                        System.out.println("WCET at trace #" + testCounter
+                                + " = " + wcet);
                     }
                 }
 
