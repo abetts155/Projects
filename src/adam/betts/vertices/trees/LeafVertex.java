@@ -1,6 +1,6 @@
 package adam.betts.vertices.trees;
 
-public class LeafVertex extends SyntaxVertex
+public class LeafVertex extends ProgramSyntaxVertex
 {
 	protected int CFGVertexID;
 	protected boolean lamdba = false;

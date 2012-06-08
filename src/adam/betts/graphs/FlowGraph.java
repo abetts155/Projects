@@ -1,5 +1,11 @@
 package adam.betts.graphs;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+import adam.betts.edges.Edge;
+import adam.betts.edges.FlowEdge;
 import adam.betts.vertices.FlowVertex;
 import adam.betts.vertices.Vertex;
 
@@ -73,5 +79,36 @@ public class FlowGraph extends DirectedGraph
         reverseGraph.entryID = exitID;
         reverseGraph.exitID = entryID;
         super.reverseGraph(reverseGraph);
+    }
+
+    public final int getNextEdgeID ()
+    {
+        int nextID = Integer.MAX_VALUE;
+        boolean stop = false;
+
+        Set <Integer> edgeIDs = new HashSet <Integer>();
+        for (Vertex v : this)
+        {
+            Iterator <Edge> succIt = v.successorIterator();
+            while (succIt.hasNext())
+            {
+                FlowEdge e = (FlowEdge) succIt.next();
+                edgeIDs.add(e.getEdgeID());
+            }
+        }
+
+        while (nextID > 1 && !stop)
+        {
+            if (!edgeIDs.contains(nextID))
+            {
+                stop = true;
+            }
+            else
+            {
+                --nextID;
+            }
+        }
+        
+        return nextID;
     }
 }

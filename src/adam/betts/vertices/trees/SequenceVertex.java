@@ -2,7 +2,7 @@ package adam.betts.vertices.trees;
 
 import adam.betts.edges.Edge;
 
-public class SequenceVertex extends SyntaxVertex
+public class SequenceVertex extends ProgramSyntaxVertex
 {
 	public SequenceVertex (int vertexID)
 	{

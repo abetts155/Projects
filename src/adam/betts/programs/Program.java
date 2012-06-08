@@ -19,9 +19,10 @@ import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.trees.LoopNests;
-import adam.betts.graphs.trees.SyntaxTree;
+import adam.betts.graphs.trees.ProgramSyntaxTree;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
+import adam.betts.utilities.Enums;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.utilities.Enums.DominatorTreeType;
 import adam.betts.utilities.Enums.IProfile;
@@ -39,6 +40,8 @@ public class Program implements Iterable <Subprogram>
     protected ContextGraph contextg = null;
     protected CallLoopGraph clg = null;
     protected ControlFlowGraph inlinedCFG = null;
+    protected HashMap <Enums.IProfile, CFGStar> inlinedCFGStars = new LinkedHashMap <Enums.IProfile, CFGStar>();
+    protected HashMap <Enums.IProfile, IpointGraph> inlinedIPGs = new LinkedHashMap <Enums.IProfile, IpointGraph>();
     protected HashMap <Integer, Subprogram> idToSubprogram = new LinkedHashMap <Integer, Subprogram>();
     protected HashMap <String, Integer> nameToId = new LinkedHashMap <String, Integer>();
 
@@ -143,6 +146,45 @@ public class Program implements Iterable <Subprogram>
 
         assert false : "Unable to find subprogram with address " + address;
         return null;
+    }
+
+    public final ControlFlowGraph getInlinedCFG ()
+    {
+        if (inlinedCFG == null)
+        {
+            inline();
+        }
+
+        return inlinedCFG;
+    }
+
+    public final CFGStar getInlinedCFGStar (IProfile iprofile)
+    {
+        if (inlinedCFGStars.containsKey(iprofile) == false)
+        {
+            final CFGStar cfgStar = new CFGStar(inlinedCFG, iprofile, "inlined");
+            UDrawGraph.makeUDrawFile(iprofile, cfgStar, "inlined");
+            inlinedCFGStars.put(iprofile, cfgStar);
+        }
+
+        return inlinedCFGStars.get(iprofile);
+    }
+
+    public final IpointGraph getInlinedIPG (IProfile iprofile)
+    {
+        if (inlinedIPGs.containsKey(iprofile) == false)
+        {
+            final CFGStar cfgStar = getInlinedCFGStar(iprofile);
+
+            final LoopNests lnt = new LoopNests(cfgStar, cfgStar.getEntryID());
+            UDrawGraph.makeUDrawFile(iprofile, lnt, "inlined");
+
+            IpointGraph ipg = new IpointGraph(cfgStar, lnt);
+            UDrawGraph.makeUDrawFile(iprofile, ipg, "inlined");
+            inlinedIPGs.put(iprofile, ipg);
+        }
+
+        return inlinedIPGs.get(iprofile);
     }
 
     public final void inline ()
@@ -264,9 +306,7 @@ public class Program implements Iterable <Subprogram>
 
     public final void buildIPGS (boolean structureOnly)
     {
-        Debug.debugMessage(getClass(), "Building IPGs", 2);
-        Debug.debugMessage(getClass(), "Building DFS tree of call graph", 4);
-
+        Debug.verboseMessage("Building IPGs");
         DepthFirstTree dfs = new DepthFirstTree(callg, rootID);
         for (int i = 1; i <= callg.numOfVertices(); ++i)
         {
@@ -421,7 +461,7 @@ public class Program implements Iterable <Subprogram>
                     + subprogram.getSubprogramName(), Debug.LOOP_LEVEL_1);
 
             final ControlFlowGraph cfg = subprogram.getCFG();
-            final SyntaxTree stree = new SyntaxTree(cfg,
+            final ProgramSyntaxTree stree = new ProgramSyntaxTree(cfg,
                     subprogram.getSubprogramName());
             subprogram.setSyntaxTree(stree);
             stree.outputStats();

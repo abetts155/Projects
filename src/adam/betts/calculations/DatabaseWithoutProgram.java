@@ -390,10 +390,6 @@ public class DatabaseWithoutProgram
 
     private void doWCETComputation ()
     {
-        IPETModelIPG ipet1 = new IPETModelIPG(this, ipg, true);
-        runToWCET_All.put(testCounter, ipet1.wcet);
-        IPETModelIPG ipet2 = new IPETModelIPG(this, ipg, false);
-        runToWCET_DFS.put(testCounter, ipet2.wcet);
     }
 
     private void enforceSingleExit ()

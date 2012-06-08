@@ -12,6 +12,7 @@ import adam.betts.edges.CallEdge;
 import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.trees.LoopNests;
+import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.vertices.BasicBlock;
@@ -455,6 +456,8 @@ public class ControlFlowGraph extends FlowGraph implements Cloneable
 
     public final void removeDeadCode ()
     {
+        OutputGraph.output(this);
+
         HashSet <Integer> toRemove = new HashSet <Integer>(idToVertex.keySet());
         HashSet <Integer> visited = new HashSet <Integer>();
 

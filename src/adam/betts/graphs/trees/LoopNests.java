@@ -471,6 +471,9 @@ public class LoopNests extends Tree
                     if (!workList.contains(repID) && !loopBody.contains(repID)
                             && repID != headerID)
                     {
+                        Debug.debugMessage(getClass(), "Adding " + repID
+                                + " to worklist from edge " + predID + " => "
+                                + v.getVertexID(), 1);
                         workList.add(repID);
                     }
                 }

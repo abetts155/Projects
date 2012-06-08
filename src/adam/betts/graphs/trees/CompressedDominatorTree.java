@@ -12,105 +12,107 @@ import adam.betts.vertices.trees.TreeVertex;
 
 public class CompressedDominatorTree extends Tree
 {
-	protected final FlowGraph flowg;
-	protected final DominatorTree dominatort;
-	protected final LeastCommonAncestor lca;
 
-	public CompressedDominatorTree (FlowGraph flowg,
-			DominatorTree dominatort,
-			LeastCommonAncestor lca,
-			int branchID)
-	{
-		this.flowg = flowg;
-		this.dominatort = dominatort;
-		this.lca = lca;
+    protected final FlowGraph flowg;
+    protected final DominatorTree dominatort;
+    protected final LeastCommonAncestor lca;
 
-		build (branchID);
-		this.rootID = dominatort.getImmediateDominator (branchID);
-		setHeight ();
-	}
+    public CompressedDominatorTree (FlowGraph flowg, DominatorTree dominatort,
+            LeastCommonAncestor lca, int branchID)
+    {
+        Debug.debugMessage(getClass(),
+                "Building compressed dominator tree for branch " + branchID, 4);
 
-	private void build (int branchID)
-	{
-		HashMap<Integer, Integer> vToLca = new HashMap<Integer, Integer> ();
-		HashSet<Integer> querySet = new HashSet<Integer> ();
-		HashSet<Integer> newQuerySet = new HashSet<Integer> ();
-		Iterator<Edge> succIt = flowg.getVertex (branchID).successorIterator ();
-		while (succIt.hasNext ())
-		{
-			Edge succEdge = succIt.next ();
-			int succID = succEdge.getVertexID ();
-			querySet.add (succID);
-		}
+        this.flowg = flowg;
+        this.dominatort = dominatort;
+        this.lca = lca;
 
-		while (!querySet.isEmpty ())
-		{
-			for (int e1: querySet)
-			{
-				for (int e2: querySet)
-				{
-					if (e1 != e2)
-					{
-						int lcaID = lca.getLCA (e1, e2);
-						TreeVertex lcav = dominatort.getVertex (lcaID);
+        build(branchID);
+        this.rootID = dominatort.getImmediateDominator(branchID);
+        setHeight();
+    }
 
-						Debug.debugMessage (getClass (), "lca(" + e1 + "," + e2
-								+ ") = " + lcaID, 4);
+    private void build (int branchID)
+    {
+        HashMap <Integer, Integer> vToLca = new HashMap <Integer, Integer>();
+        HashSet <Integer> querySet = new HashSet <Integer>();
+        HashSet <Integer> newQuerySet = new HashSet <Integer>();
+        Iterator <Edge> succIt = flowg.getVertex(branchID).successorIterator();
+        while (succIt.hasNext())
+        {
+            Edge succEdge = succIt.next();
+            int succID = succEdge.getVertexID();
+            querySet.add(succID);
+        }
 
-						if (vToLca.containsKey (e1))
-						{
-							int oldLcaID = vToLca.get (e1);
-							if (lcav.getLevel () > dominatort.getVertex (
-									oldLcaID).getLevel ()
-									&& lcaID != e1)
-							{
-								vToLca.put (e1, lcaID);
-							}
-						}
-						else
-						{
-							vToLca.put (e1, lcaID);
-						}
+        while (!querySet.isEmpty())
+        {
+            for (int e1 : querySet)
+            {
+                for (int e2 : querySet)
+                {
+                    if (e1 != e2)
+                    {
+                        int lcaID = lca.getLCA(e1, e2);
+                        TreeVertex lcav = dominatort.getVertex(lcaID);
 
-						if (vToLca.containsKey (e2))
-						{
-							int oldLcaID = vToLca.get (e2);
-							if (lcav.getLevel () > dominatort.getVertex (
-									oldLcaID).getLevel ()
-									&& lcaID != e2)
-							{
-								vToLca.put (e2, lcaID);
-							}
-						}
-						else
-						{
-							vToLca.put (e2, lcaID);
-						}
-					}
-				}
-			}
+                        Debug.debugMessage(getClass(), "lca(" + e1 + "," + e2
+                                + ") = " + lcaID, 4);
 
-			newQuerySet.clear ();
-			for (int vertexID: vToLca.keySet ())
-			{
-				int lcaID = vToLca.get (vertexID);
-				if (!querySet.contains (lcaID))
-				{
-					Debug.debugMessage (getClass (), "Adding " + lcaID
-							+ " to query set", 4);
-					newQuerySet.add (lcaID);
-				}
-			}
+                        if (vToLca.containsKey(e1))
+                        {
+                            int oldLcaID = vToLca.get(e1);
+                            if (lcav.getLevel() > dominatort
+                                    .getVertex(oldLcaID).getLevel()
+                                    && lcaID != e1)
+                            {
+                                vToLca.put(e1, lcaID);
+                            }
+                        }
+                        else
+                        {
+                            vToLca.put(e1, lcaID);
+                        }
 
-			querySet.clear ();
-			querySet.addAll (newQuerySet);
-		}
+                        if (vToLca.containsKey(e2))
+                        {
+                            int oldLcaID = vToLca.get(e2);
+                            if (lcav.getLevel() > dominatort
+                                    .getVertex(oldLcaID).getLevel()
+                                    && lcaID != e2)
+                            {
+                                vToLca.put(e2, lcaID);
+                            }
+                        }
+                        else
+                        {
+                            vToLca.put(e2, lcaID);
+                        }
+                    }
+                }
+            }
 
-		for (int vertexID: vToLca.keySet ())
-		{
-			Debug.debugMessage (getClass (), "parent(" + vertexID + ") = "
-					+ vToLca.get (vertexID), 3);
-			addEdge (vToLca.get (vertexID), vertexID);
-		}
-	}
+            newQuerySet.clear();
+            for (int vertexID : vToLca.keySet())
+            {
+                int lcaID = vToLca.get(vertexID);
+                if (!querySet.contains(lcaID))
+                {
+                    Debug.debugMessage(getClass(), "Adding " + lcaID
+                            + " to query set", 4);
+                    newQuerySet.add(lcaID);
+                }
+            }
+
+            querySet.clear();
+            querySet.addAll(newQuerySet);
+        }
+
+        for (int vertexID : vToLca.keySet())
+        {
+            Debug.debugMessage(getClass(), "parent(" + vertexID + ") = "
+                    + vToLca.get(vertexID), 3);
+            addEdge(vToLca.get(vertexID), vertexID);
+        }
+    }
 }

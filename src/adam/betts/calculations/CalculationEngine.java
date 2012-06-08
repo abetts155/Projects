@@ -38,38 +38,6 @@ public class CalculationEngine
 
                 IpointGraph ipg = subprogram.getIPG(Globals
                         .getInstrumentationProfile());
-                IPETModelIPG ipet = new IPETModelIPG(this, database, ipg,
-                        subprogram.getCFGStar(
-                                Globals.getInstrumentationProfile()).getLNT(),
-                        subprogramID, subprogramName);
-                ipetModels.put(subprogramName, ipet);
-
-                Debug.debugMessage(getClass(), "WCET(" + subprogramName
-                        + ") = " + ipet.wcet, 3);
-
-                float edgesCovered = database.unitsCovered(subprogramID);
-                float traceEdges = ipg.numberOfTraceEdges();
-
-                /*
-                 * Some IPGs do not have any trace edges. For example, a CFG*
-                 * with a single basic block. In this case, we have to ensure
-                 * that the divisor is not 0
-                 */
-                if (traceEdges == 0)
-                {
-                    traceEdges = 1;
-                }
-
-                long tests = database.getTests(subprogramID);
-                long MET = ((IPGDatabase) database).getMET(subprogramID);
-
-                WCETOutput.writeTimingData(subprogramName, tests, MET,
-                        ipet.wcet, edgesCovered / traceEdges * 100.0);
-
-                if (subprogramID == program.getRootID())
-                {
-                    WCETOutput.writeToGNUPlotFile(tests, MET, ipet.wcet);
-                }
             }
 
             WCETOutput.writeRunDelimiter();

@@ -1,6 +1,6 @@
 package adam.betts.vertices.trees;
 
-public class LoopVertex extends SyntaxVertex
+public class LoopVertex extends ProgramSyntaxVertex
 {
 	protected int headerID;
 	protected int bound;

@@ -1,7 +1,5 @@
 package adam.betts.tools;
 
-import java.io.IOException;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -11,7 +9,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.calculations.IPGDatabase;
-import adam.betts.outputs.WCETOutput;
 import adam.betts.programs.Program;
 import adam.betts.utilities.DefaultOptions;
 
@@ -113,21 +110,8 @@ public class MainWCETAnalyser
     private static void run ()
     {
         Program program = new Program(programFileName);
-        program.insertVirtualIpoints();
-        program.buildIPGS(false);
-
-        try
-        {
-            WCETOutput.openFileHandles();
-            WCETOutput.writeSubprogramTableHeader();
-            new IPGDatabase(program);
-            WCETOutput.closeFileHandles();
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            System.exit(1);
-        }
+        program.inline();
+        new IPGDatabase(program);
     }
 
     public static class Globals

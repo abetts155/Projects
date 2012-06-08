@@ -24,7 +24,7 @@ import adam.betts.graphs.SuperBlockGraph;
 import adam.betts.graphs.trees.DepthFirstTree;
 import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.trees.LoopNests;
-import adam.betts.graphs.trees.SyntaxTree;
+import adam.betts.graphs.trees.ProgramSyntaxTree;
 import adam.betts.graphs.trees.Tree;
 import adam.betts.instructions.Instruction;
 import adam.betts.utilities.Enums.DominatorTreeType;
@@ -46,7 +46,7 @@ import adam.betts.vertices.trees.AlternativeVertex;
 import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.LeafVertex;
 import adam.betts.vertices.trees.SequenceVertex;
-import adam.betts.vertices.trees.SyntaxVertex;
+import adam.betts.vertices.trees.ProgramSyntaxVertex;
 import adam.betts.vertices.trees.TreeVertex;
 
 public class UDrawGraph
@@ -693,7 +693,7 @@ public class UDrawGraph
         }
     }
 
-    public final static void makeUDrawFile (SyntaxTree syntaxTree,
+    public final static void makeUDrawFile (ProgramSyntaxTree pst,
             String fileNamePrefix)
     {
         if (Globals.uDrawDirectorySet())
@@ -701,7 +701,7 @@ public class UDrawGraph
             try
             {
                 final File file = new File(Globals.getUDrawDirectory(),
-                        fileNamePrefix + ".stree" + fileNameSuffix);
+                        fileNamePrefix + ".pst" + fileNameSuffix);
                 BufferedWriter out = new BufferedWriter(new FileWriter(
                         file.getAbsolutePath()));
 
@@ -711,13 +711,13 @@ public class UDrawGraph
                  * Write the root vertex so it appears at the top of the graph
                  */
                 writeSyntaxTreeVertex(out,
-                        syntaxTree.getVertex(syntaxTree.getRootID()));
+                        pst.getVertex(pst.getRootID()));
 
-                for (Vertex v : syntaxTree)
+                for (Vertex v : pst)
                 {
-                    if (v.getVertexID() != syntaxTree.getRootID())
+                    if (v.getVertexID() != pst.getRootID())
                     {
-                        writeSyntaxTreeVertex(out, (SyntaxVertex) v);
+                        writeSyntaxTreeVertex(out, (ProgramSyntaxVertex) v);
                     }
                 }
                 out.write(endGraph);
@@ -810,7 +810,7 @@ public class UDrawGraph
     }
 
     private static void writeSyntaxTreeVertex (BufferedWriter out,
-            SyntaxVertex v) throws IOException
+            ProgramSyntaxVertex v) throws IOException
     {
         out.write(newVertex(v.getVertexID()));
         out.write(beginAttributes);

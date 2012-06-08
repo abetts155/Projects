@@ -15,7 +15,7 @@
 	<property name="program-analyser.main.class" value="adam.betts.tools.MainProgramAnalyser" />
 	<property name="ipe-analyser.main.class" value="adam.betts.tools.MainIPEAnalyser" />
 	<property name="program-generator.main.class" value="adam.betts.tools.MainProgramGenerator" />
-	<property name="tree.main.class" value="adam.betts.tools.MainTreeAnalysis" />
+	<property name="pst.main.class" value="adam.betts.tools.MainProgramSyntaxTreeAnalysis" />
 	<property name="loop.main.class" value="adam.betts.tools.MainLoopAnalyser" />
 	<property name="ptx.main.class" value="adam.betts.tools.MainPTXAnalyser" />
 	<property name="tests.main.class" value="adam.betts.program.AllTests" />
@@ -33,7 +33,7 @@
 	<property name="ipe-analyser.jar" value="ipe-analyser.jar" />
 	<property name="program-analyser.jar" value="program-analyser.jar" />
 	<property name="program-generator.jar" value="program-generator.jar" />
-	<property name="tree.jar" value="tree.jar" />
+	<property name="pst.jar" value="pst.jar" />
 	<property name="loop.jar" value="loop.jar" />
 	<property name="ptx-analyser.jar" value="ptx-analyser.jar" />
 	<property name="tv-generator.jar" value="tv-generator.jar" />
@@ -82,6 +82,7 @@
 		<buildStandardJar jarname="${tv-generator.jar}" mainclass="${tv-generator.main.class}" />
 		<buildStandardJar jarname="${find-wcet.jar}" mainclass="${find-wcet.main.class}" />
 		<buildStandardJar jarname="${run-gem5.jar}" mainclass="${run-gem5.main.class}" />
+		<buildStandardJar jarname="${pst.jar}" mainclass="${pst.main.class}" />
 	</target>
 
 	<macrodef name="buildLpsolveJar">
@@ -106,7 +107,6 @@
 
 
 	<target name="lpSolveTools" depends="compile">
-		<buildLpsolveJar jarname="${tree.jar}" mainclass="${tree.main.class}" />
 		<buildLpsolveJar jarname="${wcet.jar}" mainclass="${wcet.main.class}" />
 		<buildLpsolveJar jarname="${trace-parser.jar}" mainclass="${trace-parser.main.class}" />
 		<buildLpsolveJar jarname="${program-analyser.jar}" mainclass="${program-analyser.main.class}" />

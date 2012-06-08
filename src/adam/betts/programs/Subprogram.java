@@ -5,7 +5,7 @@ import java.util.HashMap;
 import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.ControlFlowGraph;
 import adam.betts.graphs.IpointGraph;
-import adam.betts.graphs.trees.SyntaxTree;
+import adam.betts.graphs.trees.ProgramSyntaxTree;
 import adam.betts.utilities.Enums.IProfile;
 
 public class Subprogram
@@ -13,7 +13,7 @@ public class Subprogram
 	private int subprogramID;
 	private String subprogramName;
 	private ControlFlowGraph cfg;
-	private SyntaxTree stree;
+	private ProgramSyntaxTree stree;
 	private HashMap <IProfile, CFGStar> cfgStars = new HashMap <IProfile, CFGStar> ();
 	private HashMap <IProfile, IpointGraph> ipgs = new HashMap <IProfile, IpointGraph> ();
 
@@ -47,12 +47,12 @@ public class Subprogram
 		return cfg;
 	}
 
-	public final void setSyntaxTree (SyntaxTree stree)
+	public final void setSyntaxTree (ProgramSyntaxTree stree)
 	{
 		this.stree = stree;
 	}
 
-	public final SyntaxTree getSyntaxTree ()
+	public final ProgramSyntaxTree getSyntaxTree ()
 	{
 		return stree;
 	}
