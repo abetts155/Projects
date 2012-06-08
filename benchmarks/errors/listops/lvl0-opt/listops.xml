@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE program [
+<!ATTLIST program
+   name CDATA #IMPLIED>
+<!ELEMENT program (cfg*)>
+<!ATTLIST cfg
+  id ID #REQUIRED
+  main CDATA #IMPLIED
+  name CDATA #IMPLIED>
+<!ELEMENT cfg (bb+)>
+<!ATTLIST bb
+   id ID #REQUIRED>
+<!ELEMENT bb (prec?,inst*,succ?)>
+<!ELEMENT prec (link+)>
+<!ELEMENT succ (link+)>
+<!ATTLIST link
+  type (taken|nottaken|call) #REQUIRED
+  cfg CDATA #REQUIRED
+  bb IDREF #REQUIRED>
+<!ELEMENT link EMPTY>
+<!ATTLIST inst
+   addr CDATA #REQUIRED
+   instr CDATA #IMPLIED>
+<!ELEMENT inst EMPTY>
+]>
+<program name="listops">
+  <cfg id="14" name="max">
+    <bb id="191">
+      <inst addr="0x8924" instr="{r7}"/>
+      <inst addr="0x8926" instr="sub sp, #20"/>
+      <inst addr="0x8928" instr="add r7, sp, #0"/>
+      <inst addr="0x892a" instr="str r0, [r7, #4]"/>
+      <inst addr="0x892c" instr="str r1, [r7, #0]"/>
+      <inst addr="0x892e" instr="mov.w r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8932" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8934" instr="mov.w r3, #0"/>
+      <inst addr="0x8938" instr="str r3, [r7, #8]"/>
+      <inst addr="0x893a" instr="b.n 8964 max+0x40"/>
+      <succ>
+        <link type="taken" cfg="14" bb="195"/>
+      </succ>
+    </bb>
+    <bb id="192">
+      <inst addr="0x893c" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x893e" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8942" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8944" instr="r3, r2, r3"/>
+      <inst addr="0x8946" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x8948" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x894a" instr="cmp r2, r3"/>
+      <inst addr="0x894c" instr="ble.n 895c max+0x38"/>
+      <succ>
+        <link type="taken" cfg="14" bb="194"/>
+        <link type="nottaken" cfg="14" bb="193"/>
+      </succ>
+    </bb>
+    <bb id="193">
+      <inst addr="0x894e" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8950" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8954" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8956" instr="r3, r2, r3"/>
+      <inst addr="0x8958" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x895a" instr="str r3, [r7, #12]"/>
+      <succ>
+        <link type="nottaken" cfg="14" bb="194"/>
+      </succ>
+    </bb>
+    <bb id="194">
+      <inst addr="0x895c" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x895e" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8962" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="14" bb="195"/>
+      </succ>
+    </bb>
+    <bb id="195">
+      <inst addr="0x8964" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8966" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8968" instr="cmp r2, r3"/>
+      <inst addr="0x896a" instr="blt.n 893c max+0x18"/>
+      <succ>
+        <link type="taken" cfg="14" bb="192"/>
+        <link type="nottaken" cfg="14" bb="196"/>
+      </succ>
+    </bb>
+    <bb id="196">
+      <inst addr="0x896c" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x896e" instr="mov r0, r3"/>
+      <inst addr="0x8970" instr="add.w r7, r7, #20"/>
+      <inst addr="0x8974" instr="mov sp, r7"/>
+      <inst addr="0x8976" instr="pop {r7}"/>
+      <inst addr="0x8978" instr="bx lr"/>
+      <inst addr="0x897a" instr="nop"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="15" name="min">
+    <bb id="197">
+      <inst addr="0x897c" instr="{r7}"/>
+      <inst addr="0x897e" instr="sub sp, #20"/>
+      <inst addr="0x8980" instr="add r7, sp, #0"/>
+      <inst addr="0x8982" instr="str r0, [r7, #4]"/>
+      <inst addr="0x8984" instr="str r1, [r7, #0]"/>
+      <inst addr="0x8986" instr="mov.w r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x898a" instr="str r3, [r7, #12]"/>
+      <inst addr="0x898c" instr="mov.w r3, #0"/>
+      <inst addr="0x8990" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8992" instr="b.n 89c4 min+0x48"/>
+      <succ>
+        <link type="taken" cfg="15" bb="202"/>
+      </succ>
+    </bb>
+    <bb id="198">
+      <inst addr="0x8994" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8996" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x899a" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x899c" instr="r3, r2, r3"/>
+      <inst addr="0x899e" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x89a0" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x89a2" instr="cmp r2, r3"/>
+      <inst addr="0x89a4" instr="blt.n 89ae min+0x32"/>
+      <succ>
+        <link type="taken" cfg="15" bb="200"/>
+        <link type="nottaken" cfg="15" bb="199"/>
+      </succ>
+    </bb>
+    <bb id="199">
+      <inst addr="0x89a6" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x89a8" instr="cmp.w r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x89ac" instr="bne.n 89bc min+0x40"/>
+      <succ>
+        <link type="taken" cfg="15" bb="201"/>
+        <link type="nottaken" cfg="15" bb="200"/>
+      </succ>
+    </bb>
+    <bb id="200">
+      <inst addr="0x89ae" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x89b0" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x89b4" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x89b6" instr="r3, r2, r3"/>
+      <inst addr="0x89b8" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x89ba" instr="str r3, [r7, #12]"/>
+      <succ>
+        <link type="nottaken" cfg="15" bb="201"/>
+      </succ>
+    </bb>
+    <bb id="201">
+      <inst addr="0x89bc" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x89be" instr="add.w r3, r3, #1"/>
+      <inst addr="0x89c2" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="15" bb="202"/>
+      </succ>
+    </bb>
+    <bb id="202">
+      <inst addr="0x89c4" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x89c6" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x89c8" instr="cmp r2, r3"/>
+      <inst addr="0x89ca" instr="blt.n 8994 min+0x18"/>
+      <succ>
+        <link type="taken" cfg="15" bb="198"/>
+        <link type="nottaken" cfg="15" bb="203"/>
+      </succ>
+    </bb>
+    <bb id="203">
+      <inst addr="0x89cc" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x89ce" instr="mov r0, r3"/>
+      <inst addr="0x89d0" instr="add.w r7, r7, #20"/>
+      <inst addr="0x89d4" instr="mov sp, r7"/>
+      <inst addr="0x89d6" instr="pop {r7}"/>
+      <inst addr="0x89d8" instr="bx lr"/>
+      <inst addr="0x89da" instr="nop"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="16" name="sum">
+    <bb id="204">
+      <inst addr="0x89dc" instr="{r7}"/>
+      <inst addr="0x89de" instr="sub sp, #20"/>
+      <inst addr="0x89e0" instr="add r7, sp, #0"/>
+      <inst addr="0x89e2" instr="str r0, [r7, #4]"/>
+      <inst addr="0x89e4" instr="str r1, [r7, #0]"/>
+      <inst addr="0x89e6" instr="mov.w r3, #0"/>
+      <inst addr="0x89ea" instr="str r3, [r7, #12]"/>
+      <inst addr="0x89ec" instr="mov.w r3, #0"/>
+      <inst addr="0x89f0" instr="str r3, [r7, #8]"/>
+      <inst addr="0x89f2" instr="b.n 8a0e sum+0x32"/>
+      <succ>
+        <link type="taken" cfg="16" bb="206"/>
+      </succ>
+    </bb>
+    <bb id="205">
+      <inst addr="0x89f4" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x89f6" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x89fa" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x89fc" instr="r3, r2, r3"/>
+      <inst addr="0x89fe" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8a00" instr="ldr r2, [r7, #12]"/>
+      <inst addr="0x8a02" instr="r3, r2, r3"/>
+      <inst addr="0x8a04" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8a06" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8a08" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8a0c" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="16" bb="206"/>
+      </succ>
+    </bb>
+    <bb id="206">
+      <inst addr="0x8a0e" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8a10" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8a12" instr="cmp r2, r3"/>
+      <inst addr="0x8a14" instr="blt.n 89f4 sum+0x18"/>
+      <succ>
+        <link type="taken" cfg="16" bb="205"/>
+        <link type="nottaken" cfg="16" bb="207"/>
+      </succ>
+    </bb>
+    <bb id="207">
+      <inst addr="0x8a16" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x8a18" instr="mov r0, r3"/>
+      <inst addr="0x8a1a" instr="add.w r7, r7, #20"/>
+      <inst addr="0x8a1e" instr="mov sp, r7"/>
+      <inst addr="0x8a20" instr="pop {r7}"/>
+      <inst addr="0x8a22" instr="bx lr"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="17" name="product">
+    <bb id="208">
+      <inst addr="0x8a24" instr="{r7}"/>
+      <inst addr="0x8a26" instr="sub sp, #20"/>
+      <inst addr="0x8a28" instr="add r7, sp, #0"/>
+      <inst addr="0x8a2a" instr="str r0, [r7, #4]"/>
+      <inst addr="0x8a2c" instr="str r1, [r7, #0]"/>
+      <inst addr="0x8a2e" instr="mov.w r3, #1"/>
+      <inst addr="0x8a32" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8a34" instr="mov.w r3, #0"/>
+      <inst addr="0x8a38" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8a3a" instr="b.n 8a58 product+0x34"/>
+      <succ>
+        <link type="taken" cfg="17" bb="210"/>
+      </succ>
+    </bb>
+    <bb id="209">
+      <inst addr="0x8a3c" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8a3e" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8a42" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8a44" instr="r3, r2, r3"/>
+      <inst addr="0x8a46" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x8a48" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x8a4a" instr="mul.w r3, r2, r3"/>
+      <inst addr="0x8a4e" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8a50" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8a52" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8a56" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="17" bb="210"/>
+      </succ>
+    </bb>
+    <bb id="210">
+      <inst addr="0x8a58" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8a5a" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8a5c" instr="cmp r2, r3"/>
+      <inst addr="0x8a5e" instr="blt.n 8a3c product+0x18"/>
+      <succ>
+        <link type="taken" cfg="17" bb="209"/>
+        <link type="nottaken" cfg="17" bb="211"/>
+      </succ>
+    </bb>
+    <bb id="211">
+      <inst addr="0x8a60" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x8a62" instr="mov r0, r3"/>
+      <inst addr="0x8a64" instr="add.w r7, r7, #20"/>
+      <inst addr="0x8a68" instr="mov sp, r7"/>
+      <inst addr="0x8a6a" instr="pop {r7}"/>
+      <inst addr="0x8a6c" instr="bx lr"/>
+      <inst addr="0x8a6e" instr="nop"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="18" name="mean">
+    <bb id="212">
+      <inst addr="0x8a70" instr="{r7, lr}"/>
+      <inst addr="0x8a72" instr="sub sp, #16"/>
+      <inst addr="0x8a74" instr="add r7, sp, #0"/>
+      <inst addr="0x8a76" instr="str r0, [r7, #4]"/>
+      <inst addr="0x8a78" instr="str r1, [r7, #0]"/>
+      <inst addr="0x8a7a" instr="mov.w r3, #0"/>
+      <inst addr="0x8a7e" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8a80" instr="mov.w r3, #0"/>
+      <inst addr="0x8a84" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8a86" instr="b.n 8aa2 mean+0x32"/>
+      <succ>
+        <link type="taken" cfg="18" bb="214"/>
+      </succ>
+    </bb>
+    <bb id="213">
+      <inst addr="0x8a88" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8a8a" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8a8e" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8a90" instr="r3, r2, r3"/>
+      <inst addr="0x8a92" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8a94" instr="ldr r2, [r7, #12]"/>
+      <inst addr="0x8a96" instr="r3, r2, r3"/>
+      <inst addr="0x8a98" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8a9a" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8a9c" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8aa0" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="18" bb="214"/>
+      </succ>
+    </bb>
+    <bb id="214">
+      <inst addr="0x8aa2" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8aa4" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8aa6" instr="cmp r2, r3"/>
+      <inst addr="0x8aa8" instr="blt.n 8a88 mean+0x18"/>
+      <succ>
+        <link type="taken" cfg="18" bb="213"/>
+        <link type="nottaken" cfg="18" bb="215"/>
+      </succ>
+    </bb>
+    <bb id="215">
+      <inst addr="0x8aaa" instr="ldr r0, [r7, #12]"/>
+      <inst addr="0x8aac" instr="ldr r1, [r7, #4]"/>
+      <inst addr="0x8aae" instr="bl 8d58 __aeabi_idiv"/>
+      <succ>
+        <link type="nottaken" cfg="18" bb="216"/>
+        <link type="call" cfg="22" bb="251"/>
+      </succ>
+    </bb>
+    <bb id="216">
+      <inst addr="0x8ab2" instr="mov r3, r0"/>
+      <inst addr="0x8ab4" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8ab6" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x8ab8" instr="mov r0, r3"/>
+      <inst addr="0x8aba" instr="add.w r7, r7, #16"/>
+      <inst addr="0x8abe" instr="mov sp, r7"/>
+      <inst addr="0x8ac0" instr="pop {r7, pc}"/>
+      <inst addr="0x8ac2" instr="nop"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="19" name="median">
+    <bb id="217">
+      <inst addr="0x8ac4" instr="{r7}"/>
+      <inst addr="0x8ac6" instr="sub sp, #20"/>
+      <inst addr="0x8ac8" instr="add r7, sp, #0"/>
+      <inst addr="0x8aca" instr="str r0, [r7, #4]"/>
+      <inst addr="0x8acc" instr="str r1, [r7, #0]"/>
+      <inst addr="0x8ace" instr="mov.w r3, #1"/>
+      <inst addr="0x8ad2" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8ad4" instr="b.n 8b54 median+0x90"/>
+      <succ>
+        <link type="taken" cfg="19" bb="223"/>
+      </succ>
+    </bb>
+    <bb id="218">
+      <inst addr="0x8ad6" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8ad8" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8adc" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8ade" instr="r3, r2, r3"/>
+      <inst addr="0x8ae0" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x8ae2" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8ae4" instr="add.w r3, r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8ae8" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8aec" instr="ldr r1, [r7, #0]"/>
+      <inst addr="0x8aee" instr="r3, r1, r3"/>
+      <inst addr="0x8af0" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8af2" instr="cmp r2, r3"/>
+      <inst addr="0x8af4" instr="blt.n 8b00 median+0x3c"/>
+      <succ>
+        <link type="taken" cfg="19" bb="220"/>
+        <link type="nottaken" cfg="19" bb="219"/>
+      </succ>
+    </bb>
+    <bb id="219">
+      <inst addr="0x8af6" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8af8" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8afc" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8afe" instr="b.n 8b54 median+0x90"/>
+      <succ>
+        <link type="taken" cfg="19" bb="223"/>
+      </succ>
+    </bb>
+    <bb id="220">
+      <inst addr="0x8b00" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b02" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8b06" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8b08" instr="r3, r2, r3"/>
+      <inst addr="0x8b0a" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8b0c" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8b0e" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b10" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8b14" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8b16" instr="r3, r2, r3"/>
+      <inst addr="0x8b18" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8b1a" instr="add.w r2, r2, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8b1e" instr="mov.w r2, r2, lsl #2"/>
+      <inst addr="0x8b22" instr="ldr r1, [r7, #0]"/>
+      <inst addr="0x8b24" instr="r2, r1, r2"/>
+      <inst addr="0x8b26" instr="ldr r2, [r2, #0]"/>
+      <inst addr="0x8b28" instr="str r2, [r3, #0]"/>
+      <inst addr="0x8b2a" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b2c" instr="add.w r3, r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8b30" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8b34" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8b36" instr="r3, r2, r3"/>
+      <inst addr="0x8b38" instr="ldr r2, [r7, #12]"/>
+      <inst addr="0x8b3a" instr="str r2, [r3, #0]"/>
+      <inst addr="0x8b3c" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b3e" instr="cmp r3, #1"/>
+      <inst addr="0x8b40" instr="ble.n 8b4c median+0x88"/>
+      <succ>
+        <link type="taken" cfg="19" bb="222"/>
+        <link type="nottaken" cfg="19" bb="221"/>
+      </succ>
+    </bb>
+    <bb id="221">
+      <inst addr="0x8b42" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b44" instr="add.w r3, r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8b48" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8b4a" instr="b.n 8b54 median+0x90"/>
+      <succ>
+        <link type="taken" cfg="19" bb="223"/>
+      </succ>
+    </bb>
+    <bb id="222">
+      <inst addr="0x8b4c" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8b4e" instr="add.w r3, r3, #1"/>
+      <inst addr="0x8b52" instr="str r3, [r7, #8]"/>
+      <succ>
+        <link type="nottaken" cfg="19" bb="223"/>
+      </succ>
+    </bb>
+    <bb id="223">
+      <inst addr="0x8b54" instr="ldr r2, [r7, #8]"/>
+      <inst addr="0x8b56" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8b58" instr="cmp r2, r3"/>
+      <inst addr="0x8b5a" instr="blt.n 8ad6 median+0x12"/>
+      <succ>
+        <link type="taken" cfg="19" bb="218"/>
+        <link type="nottaken" cfg="19" bb="224"/>
+      </succ>
+    </bb>
+    <bb id="224">
+      <inst addr="0x8b5c" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8b5e" instr="and.w r3, r3, #1"/>
+      <inst addr="0x8b62" instr="r3, r3"/>
+      <inst addr="0x8b64" instr="cmp r3, #0"/>
+      <inst addr="0x8b66" instr="beq.n 8b80 median+0xbc"/>
+      <succ>
+        <link type="taken" cfg="19" bb="226"/>
+        <link type="nottaken" cfg="19" bb="225"/>
+      </succ>
+    </bb>
+    <bb id="225">
+      <inst addr="0x8b68" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8b6a" instr="mov.w r2, r3, lsr #31"/>
+      <inst addr="0x8b6e" instr="r3, r2, r3"/>
+      <inst addr="0x8b70" instr="mov.w r3, r3, asr #1"/>
+      <inst addr="0x8b74" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8b78" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8b7a" instr="r3, r2, r3"/>
+      <inst addr="0x8b7c" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8b7e" instr="b.n 8bbc median+0xf8"/>
+      <succ>
+        <link type="taken" cfg="19" bb="227"/>
+      </succ>
+    </bb>
+    <bb id="226">
+      <inst addr="0x8b80" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8b82" instr="mov.w r2, r3, lsr #31"/>
+      <inst addr="0x8b86" instr="r3, r2, r3"/>
+      <inst addr="0x8b88" instr="mov.w r3, r3, asr #1"/>
+      <inst addr="0x8b8c" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8b90" instr="ldr r2, [r7, #0]"/>
+      <inst addr="0x8b92" instr="r3, r2, r3"/>
+      <inst addr="0x8b94" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x8b96" instr="ldr r3, [r7, #4]"/>
+      <inst addr="0x8b98" instr="mov.w r1, r3, lsr #31"/>
+      <inst addr="0x8b9c" instr="r3, r1, r3"/>
+      <inst addr="0x8b9e" instr="mov.w r3, r3, asr #1"/>
+      <inst addr="0x8ba2" instr="add.w r3, r3, #4294967295 ; 0xffffffff"/>
+      <inst addr="0x8ba6" instr="mov.w r3, r3, lsl #2"/>
+      <inst addr="0x8baa" instr="ldr r1, [r7, #0]"/>
+      <inst addr="0x8bac" instr="r3, r1, r3"/>
+      <inst addr="0x8bae" instr="ldr r3, [r3, #0]"/>
+      <inst addr="0x8bb0" instr="r3, r2, r3"/>
+      <inst addr="0x8bb2" instr="mov.w r2, r3, lsr #31"/>
+      <inst addr="0x8bb6" instr="r3, r2, r3"/>
+      <inst addr="0x8bb8" instr="mov.w r3, r3, asr #1"/>
+      <succ>
+        <link type="nottaken" cfg="19" bb="227"/>
+      </succ>
+    </bb>
+    <bb id="227">
+      <inst addr="0x8bbc" instr="mov r0, r3"/>
+      <inst addr="0x8bbe" instr="add.w r7, r7, #20"/>
+      <inst addr="0x8bc2" instr="mov sp, r7"/>
+      <inst addr="0x8bc4" instr="pop {r7}"/>
+      <inst addr="0x8bc6" instr="bx lr"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="20" name="listops">
+    <bb id="228">
+      <inst addr="0x8bc8" instr="{r7, lr}"/>
+      <inst addr="0x8bca" instr="sub sp, #16"/>
+      <inst addr="0x8bcc" instr="add r7, sp, #0"/>
+      <inst addr="0x8bce" instr="str r0, [r7, #4]"/>
+      <inst addr="0x8bd0" instr="str r1, [r7, #0]"/>
+      <inst addr="0x8bd2" instr="ldr r3, [r7, #0]"/>
+      <inst addr="0x8bd4" instr="ldr r2, [r3, #0]"/>
+      <inst addr="0x8bd6" instr="movw r3, #43691 ; 0xaaab"/>
+      <inst addr="0x8bda" instr="movt r3, #10922 ; 0x2aaa"/>
+      <inst addr="0x8bde" instr="smull r0, r1, r3, r2"/>
+      <inst addr="0x8be2" instr="mov.w r3, r2, asr #31"/>
+      <inst addr="0x8be6" instr="r1, r1, r3"/>
+      <inst addr="0x8be8" instr="mov r3, r1"/>
+      <inst addr="0x8bea" instr="mov.w r3, r3, lsl #1"/>
+      <inst addr="0x8bee" instr="r3, r3, r1"/>
+      <inst addr="0x8bf0" instr="mov.w r3, r3, lsl #1"/>
+      <inst addr="0x8bf4" instr="r3, r2, r3"/>
+      <inst addr="0x8bf6" instr="str r3, [r7, #12]"/>
+      <inst addr="0x8bf8" instr="mov.w r3, #0"/>
+      <inst addr="0x8bfc" instr="str r3, [r7, #8]"/>
+      <inst addr="0x8bfe" instr="ldr r3, [r7, #12]"/>
+      <inst addr="0x8c00" instr="cmp r3, #4"/>
+      <inst addr="0x8c02" instr="bhi.n 8c5c listops+0x94"/>
+      <succ>
+        <link type="taken" cfg="20" bb="239"/>
+        <link type="nottaken" cfg="20" bb="229"/>
+      </succ>
+    </bb>
+    <bb id="229">
+      <inst addr="0x8c04" instr="add r2, pc, #4 ; (adr r2, 8c0c listops+0x44)"/>
+      <inst addr="0x8c06" instr="ldr.w pc, [r2, r3, lsl #2]"/>
+      <inst addr="0x8c0a" instr="nop"/>
+      <inst addr="0x8c20" instr="ldr r0, [r7, #4]"/>
+      <inst addr="0x8c22" instr="ldr r1, [r7, #0]"/>
+      <inst addr="0x8c24" instr="bl 8924 max"/>
+      <succ>
+        <link type="nottaken" cfg="20" bb="230"/>
+        <link type="call" cfg="14" bb="191"/>
+      </succ>
+    </bb>
+    <bb id="230">
+      <inst addr="0x8c28" instr="str r0, [r7, #8]"/>
+      <inst addr="0x8c2a" instr="b.n 8c68 listops+0xa0"/>
+      <succ>
+        <link type="taken" cfg="20" bb="241"/>
+      </succ>
+    </bb>
+    <bb id="239">
+      <inst addr="0x8c5c" instr="ldr r0, [r7, #4]"/>
+      <inst addr="0x8c5e" instr="ldr r1, [r7, #0]"/>
+      <inst addr="0x8c60" instr="bl 8ac4 median"/>
+      <succ>
+        <link type="nottaken" cfg="20" bb="240"/>
+        <link type="call" cfg="19" bb="217"/>
+      </succ>
+    </bb>
+    <bb id="240">
+      <inst addr="0x8c64" instr="str r0, [r7, #8]"/>
+      <inst addr="0x8c66" instr="nop"/>
+      <succ>
+        <link type="nottaken" cfg="20" bb="241"/>
+      </succ>
+    </bb>
+    <bb id="241">
+      <inst addr="0x8c68" instr="ldr r3, [r7, #8]"/>
+      <inst addr="0x8c6a" instr="mov r0, r3"/>
+      <inst addr="0x8c6c" instr="add.w r7, r7, #16"/>
+      <inst addr="0x8c70" instr="mov sp, r7"/>
+      <inst addr="0x8c72" instr="pop {r7, pc}"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+  <cfg id="22" name="__aeabi_idiv">
+    <bb id="251">
+      <inst addr="0x8d58" instr="cmp r1, #0"/>
+      <inst addr="0x8d5a" instr="beq.w 8fda .divsi3_skip_div0_test+0x27c"/>
+      <succ>
+      </succ>
+    </bb>
+  </cfg>
+</program>
