@@ -9,37 +9,41 @@
 
 /*
  * Swaps the values if the value pointed to by a is greater than the
- * value pointed to by b
+ * value pointed to by b and returns 1 if a swap is performed, 0 otherwise
  */
-void
+int
 swapIfLarger (int *a, int *b)
 {
 	int tmp;
+	int swapped = 0;
 	if (*a > *b)
 	{	
 		tmp = *a;
 		*a = *b;
 		*b = tmp;
+		swapped = 1;
 	}
+	return swapped;
 }
 
 void
 bubblesort (int ARRAY_SIZE, int a[])
 {
   int i, j, tmp;
+  int swapped = 0;
   for (i = 0; i < ARRAY_SIZE - 1; i++)
   {
+    swapped = 0;
     for (j = 0; j < ARRAY_SIZE - 1 - i; j++)
     {
-      swapIfLarger(&a[j], &a[j+1]);
-/*
-      if (a[j + 1] < a[j])
+      if (swapIfLarger(&a[j], &a[j+1]))
       {
-        tmp = a[j];
-        a[j] = a[j + 1];
-        a[j + 1] = tmp;
+        swapped = 1;
       }
-*/
+    }
+	if (swapped == 0)
+    {
+      break;
     }
   }
 }
