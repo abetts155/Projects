@@ -50,10 +50,60 @@ debug = Debug(opts.verbose, opts.debug)
 # Check that the user has passed the correct options
 assert opts.fileName is not None, "You must supply a file name into where the results are stored"
 
+def doPercentageReduction (val1, val2):
+	print(val1, val2)
+	
+	diff = val2 - val1
+	frac = diff/val1
+	per = frac * 100
+	print(per)
+
 def collectResults ():
+	cfgILPConstraints = 0
+	sbcfgILPConstraints = 0
+
+	cfgILPVariables = 0
+	sbcfgILPVariables = 0
+
+	cfgILPSolvingTime = 0
+	sbcfgILPSolvingTime = 0
+
 	f = open(opts.fileName, 'r')
 	for line in f:
-		print (line)
+		line = line.strip()
+		if line.startswith("#Vertices"):
+			pass
+		elif line.startswith("Constraints"):
+			tokens = split("\\s", line)
+			first = True
+			for lexeme in tokens[1:]:
+				if first:
+					first = False
+					cfgILPConstraints += float(lexeme)
+				else:
+					sbcfgILPConstraints += float(lexeme)
+		elif line.startswith("Variables"):
+			tokens = split("\\s", line)
+			first = True
+			for lexeme in tokens[1:]:
+				if first:
+					first = False
+					cfgILPVariables += float(lexeme)
+				else:
+					sbcfgILPVariables += float(lexeme)
+		elif line.startswith("Solving time"):
+			tokens = split("\\s", line)
+			first = True
+			for lexeme in tokens[2:]:
+				if first:
+					first = False
+					cfgILPSolvingTime += float(lexeme)
+				else:
+					sbcfgILPSolvingTime += float(lexeme)
+
+	doPercentageReduction (cfgILPConstraints, sbcfgILPConstraints)
+	doPercentageReduction (cfgILPVariables, sbcfgILPVariables)
+	doPercentageReduction (cfgILPSolvingTime, sbcfgILPSolvingTime)
 
 if __name__ == "__main__":
 	collectResults ()
