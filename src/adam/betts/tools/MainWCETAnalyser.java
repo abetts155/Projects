@@ -10,6 +10,7 @@ import org.apache.commons.cli.ParseException;
 
 import adam.betts.calculations.IPGDatabase;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 
 public class MainWCETAnalyser
@@ -109,8 +110,8 @@ public class MainWCETAnalyser
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
-        program.inline();
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         new IPGDatabase(program);
     }
 

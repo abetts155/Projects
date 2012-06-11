@@ -45,37 +45,14 @@ public class Program implements Iterable <Subprogram>
 	protected HashMap <Integer, Subprogram> idToSubprogram = new LinkedHashMap <Integer, Subprogram> ();
 	protected HashMap <String, Integer> nameToId = new LinkedHashMap <String, Integer> ();
 
-	public Program (String programFileName)
-	{
-		new ProgramReader (this, programFileName);
-
-		if (Globals.hasRoot ())
-		{
-			rootID = nameToId.get (Globals.getRoot ());
-		} else
-		{
-			setRootID ();
-		}
-
-		UDrawGraph.makeUDrawFile (callg, rootID);
-
-		for (int subprogramID : idToSubprogram.keySet ())
-		{
-			final Subprogram subprogram = idToSubprogram.get (subprogramID);
-			final ControlFlowGraph cfg = subprogram.getCFG ();
-			cfg.addEntryAndExitEdges ();
-			UDrawGraph.makeUDrawFile (cfg, subprogram.getSubprogramName ());
-		}
-	}
-
 	public Program ()
 	{
 	}
 
-	public final String getName ()
-	{
-		return programName;
-	}
+    public final String getName ()
+    {
+        return programName;
+    }
 
 	public final void addSubprogram (int subprogramID, String subprogramName)
 	{
@@ -474,7 +451,7 @@ public class Program implements Iterable <Subprogram>
 		return clg;
 	}
 
-	private final void setRootID ()
+	public final void setRootID ()
 	{
 		ArrayList <String> rootIDs = new ArrayList <String> ();
 

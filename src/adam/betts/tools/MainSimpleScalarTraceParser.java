@@ -9,6 +9,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.simplescalar.TraceParser;
 import adam.betts.utilities.DefaultOptions;
 import adam.betts.utilities.Enums.IProfile;
@@ -87,11 +88,11 @@ public class MainSimpleScalarTraceParser
                 DefaultOptions.setInstrumentationProfileOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
                 DefaultOptions.setTraceFileOption(line);
-                
+
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
                                 .getOpt());
-                
+
                 outputBasicBlockIds = line.hasOption(basicBlockIDTraceOption
                         .getOpt());
                 outputHexAddresses = line.hasOption(outputHexAddressesOption
@@ -110,7 +111,8 @@ public class MainSimpleScalarTraceParser
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         program.insertVirtualIpoints();
         program.buildIPGS(true);
         new TraceParser(program);
