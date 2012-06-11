@@ -111,7 +111,7 @@ public class MainWCETAnalyser
     private static void run ()
     {
         Program program = new Program();
-        new ProgramReader(program, programFileName, true);
+        new ProgramReader(program, programFileName, false);
         new IPGDatabase(program);
     }
 

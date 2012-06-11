@@ -324,12 +324,15 @@ public class ProgramReader
                                 + subprogramName, 4);
                 ControlFlowGraph cfg = program.idToSubprogram.get(subprogramID)
                         .getCFG();
-                cfg.addAllPredecessorEdges();
-                cfg.setEntry();
-                cfg.setExit();
-                cfg.addEntryAndExitEdges();
-                cfg.makeVertexAndEdgeNumbersDistinct(program.callg
-                        .getVertex(subprogramID));
+                if (addEdges)
+                {
+                    cfg.addAllPredecessorEdges();
+                    cfg.setEntry();
+                    cfg.setExit();
+                    cfg.addEntryAndExitEdges();
+                    cfg.makeVertexAndEdgeNumbersDistinct(program.callg
+                            .getVertex(subprogramID));
+                }
             }
         }
 
