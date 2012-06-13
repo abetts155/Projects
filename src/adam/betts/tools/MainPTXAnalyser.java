@@ -10,6 +10,7 @@ import org.apache.commons.cli.ParseException;
 
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 import adam.betts.utilities.Globals;
 
@@ -69,7 +70,8 @@ public class MainPTXAnalyser
 
     private static void run ()
     {
-        Program program = new Program(ptxFileName);
+        Program program = new Program();
+        new ProgramReader(program, ptxFileName, true);
         new WriteProgram(program, Globals.getOutputFileName());
     }
 

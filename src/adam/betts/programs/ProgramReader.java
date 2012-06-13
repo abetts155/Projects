@@ -40,13 +40,16 @@ public class ProgramReader
 
     protected final Program program;
     protected final String programFileName;
+    protected final boolean addEdges;
 
     private HashMap <String, String> fileExtensionsRecognised = new LinkedHashMap <String, String>();
 
-    public ProgramReader (Program program, String programFileName)
+    public ProgramReader (Program program, String programFileName,
+            boolean addEdges)
     {
         this.program = program;
         this.programFileName = programFileName;
+        this.addEdges = addEdges;
 
         final String disassemblyExt = ".asm";
         final String yEdExt = ".xgml";
@@ -321,12 +324,15 @@ public class ProgramReader
                                 + subprogramName, 4);
                 ControlFlowGraph cfg = program.idToSubprogram.get(subprogramID)
                         .getCFG();
-                cfg.addAllPredecessorEdges();
-                cfg.setEntry();
-                cfg.setExit();
-                cfg.addEntryAndExitEdges();
-                cfg.makeVertexAndEdgeNumbersDistinct(program.callg
-                        .getVertex(subprogramID));
+                if (addEdges)
+                {
+                    cfg.addAllPredecessorEdges();
+                    cfg.setEntry();
+                    cfg.setExit();
+                    cfg.addEntryAndExitEdges();
+                    cfg.makeVertexAndEdgeNumbersDistinct(program.callg
+                            .getVertex(subprogramID));
+                }
             }
         }
 
@@ -819,29 +825,32 @@ public class ProgramReader
             Debug.verboseMessage("Identifying basic blocks");
             identifyBasicBlocks();
 
-            Debug.verboseMessage("Adding edges to CFGs");
-            addEdges();
-
-            Debug.verboseMessage("Trimming program");
-            trim();
-
-            Debug.verboseMessage("Removing dead code");
-            Debug.debugMessage(getClass(),
-                    "#Subprograms = " + program.nameToId.size(), 2);
-            for (String subprogramName : program.nameToId.keySet())
+            if (addEdges)
             {
-                Debug.debugMessage(getClass(), "In " + subprogramName, 2);
-                int subprogramID = program.nameToId.get(subprogramName);
-                program.idToSubprogram.get(subprogramID).getCFG()
-                        .removeDeadCode();
-            }
+                Debug.verboseMessage("Adding edges to CFGs");
+                addEdges();
 
-            for (String subprogramName : program.nameToId.keySet())
-            {
-                int subprogramID = program.nameToId.get(subprogramName);
-                final ControlFlowGraph cfg = program.idToSubprogram.get(
-                        subprogramID).getCFG();
-                UDrawGraph.makeUDrawFile(cfg, subprogramName);
+                Debug.verboseMessage("Trimming program");
+                trim();
+
+                Debug.verboseMessage("Removing dead code");
+                Debug.debugMessage(getClass(), "#Subprograms = "
+                        + program.nameToId.size(), 2);
+                for (String subprogramName : program.nameToId.keySet())
+                {
+                    Debug.debugMessage(getClass(), "In " + subprogramName, 2);
+                    int subprogramID = program.nameToId.get(subprogramName);
+                    program.idToSubprogram.get(subprogramID).getCFG()
+                            .removeDeadCode();
+                }
+
+                for (String subprogramName : program.nameToId.keySet())
+                {
+                    int subprogramID = program.nameToId.get(subprogramName);
+                    final ControlFlowGraph cfg = program.idToSubprogram.get(
+                            subprogramID).getCFG();
+                    UDrawGraph.makeUDrawFile(cfg, subprogramName);
+                }
             }
         }
 

@@ -8,7 +8,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.programs.Program;
-import adam.betts.utilities.Debug;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 
 public class MainProgramSyntaxTreeAnalysis
@@ -64,7 +64,8 @@ public class MainProgramSyntaxTreeAnalysis
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         program.buildSyntaxTrees();
     }
 

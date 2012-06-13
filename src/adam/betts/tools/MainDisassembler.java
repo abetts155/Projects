@@ -4,11 +4,13 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.outputs.WriteProgram;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 import adam.betts.utilities.Globals;
 
@@ -16,8 +18,10 @@ public class MainDisassembler
 {
 
     private static Options options;
+    private static Option basicBlocksOption;
 
     private static String programFileName;
+    private static boolean basicBlocks;
 
     private static void addOptions ()
     {
@@ -27,6 +31,11 @@ public class MainDisassembler
         DefaultOptions.addRootOption(options, true);
         DefaultOptions.addUDrawDirectoryOption(options);
         DefaultOptions.addOutFileOption(options);
+
+        basicBlocksOption = new Option("B", "basic-blocks", false,
+                "Only output basic blocks and neither edges nor call information.");
+        basicBlocksOption.setRequired(false);
+        options.addOption(basicBlocksOption);
     }
 
     private static void parseCommandLine (String[] args)
@@ -52,6 +61,8 @@ public class MainDisassembler
                 DefaultOptions.setUDrawDirectoryOption(line);
                 DefaultOptions.setOutFileOption(line);
 
+                basicBlocks = line.hasOption(basicBlocksOption.getOpt());
+
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
                                 .getOpt());
@@ -67,7 +78,8 @@ public class MainDisassembler
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, !basicBlocks);
         new WriteProgram(program, Globals.getOutputFileName());
     }
 

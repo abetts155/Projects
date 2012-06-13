@@ -10,6 +10,7 @@ import org.apache.commons.cli.ParseException;
 import adam.betts.calculations.CalculationEngineCFG;
 import adam.betts.calculations.Database;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 
 public class MainIPEAnalyser
@@ -65,7 +66,8 @@ public class MainIPEAnalyser
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         Database database = new Database(program);
         database.generateData(false);
         CalculationEngineCFG calc = new CalculationEngineCFG(program, database);
