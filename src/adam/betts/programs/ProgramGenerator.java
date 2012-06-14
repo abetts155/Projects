@@ -16,7 +16,6 @@ import adam.betts.graphs.trees.LoopNests;
 import adam.betts.outputs.UDrawGraph;
 import adam.betts.tools.MainProgramGenerator;
 import adam.betts.utilities.Debug;
-import adam.betts.utilities.Globals;
 import adam.betts.vertices.Vertex;
 
 public class ProgramGenerator

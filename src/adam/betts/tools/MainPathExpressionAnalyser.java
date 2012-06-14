@@ -11,7 +11,7 @@ import adam.betts.programs.Program;
 import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.DefaultOptions;
 
-public class MainProgramSyntaxTreeAnalysis
+public class MainPathExpressionAnalyser
 {
 
     private static Options options;
@@ -25,11 +25,12 @@ public class MainProgramSyntaxTreeAnalysis
         DefaultOptions.addProgramOption(options);
         DefaultOptions.addRootOption(options, false);
         DefaultOptions.addUDrawDirectoryOption(options);
+        DefaultOptions.addInstrumentationProfileOption(options, true, 1);
     }
 
     private static void parseCommandLine (String[] args)
     {
-        final String toolName = "pst.jar";
+        final String toolName = "path-expression.jar";
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
         formatter.setWidth(128);
@@ -48,6 +49,7 @@ public class MainProgramSyntaxTreeAnalysis
                 DefaultOptions.setDefaultOptions(line);
                 DefaultOptions.setRootOption(line);
                 DefaultOptions.setUDrawDirectoryOption(line);
+                DefaultOptions.setInstrumentationProfileOption(line);
 
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
@@ -66,7 +68,8 @@ public class MainProgramSyntaxTreeAnalysis
     {
         Program program = new Program();
         new ProgramReader(program, programFileName, true);
-        program.buildSyntaxTrees();
+        program.insertVirtualIpoints();
+        program.buildPathExpressions ();
     }
 
     public static void main (String[] args)

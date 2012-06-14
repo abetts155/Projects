@@ -13,6 +13,7 @@ import adam.betts.graphs.trees.Tree;
 import adam.betts.instructions.Instruction;
 import adam.betts.outputs.OutputGraph;
 import adam.betts.tools.MainProgramGenerator;
+import adam.betts.tools.MainProgramGenerator.Globals;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.Enums.BranchType;
 import adam.betts.vertices.BasicBlock;
@@ -150,8 +151,12 @@ public class CFGGenerator
             addSelfLoops();
         }
 
-        addBreaksAndContinues();
-        addUnstructuredEdges();
+        if (Globals.unstructuredEdgesAllowed())
+        {
+            addBreaksAndContinues();
+            addUnstructuredEdges();
+        }
+
         addInstructions();
 
         assert cfg.numOfVertices() == MainProgramGenerator.Globals
@@ -386,7 +391,7 @@ public class CFGGenerator
                     + numberOfIfThenComponents, 1);
         }
 
-        if (random.nextBoolean())
+        if (random.nextBoolean() && Globals.unstructuredEdgesAllowed())
         {
             numberOfShortCircuitedAndComponents = setNumberOfComponents(5);
             Debug.debugMessage(getClass(),
