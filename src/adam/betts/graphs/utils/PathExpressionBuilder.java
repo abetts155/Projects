@@ -8,8 +8,11 @@ import java.util.Set;
 import adam.betts.edges.Edge;
 import adam.betts.graphs.CFGStar;
 import adam.betts.graphs.FlowGraph;
+import adam.betts.graphs.trees.CompressedDominatorTree;
 import adam.betts.graphs.trees.DepthFirstTree;
+import adam.betts.graphs.trees.DominatorTree;
 import adam.betts.graphs.trees.LoopNests;
+import adam.betts.outputs.OutputGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.vertices.Ipoint;
 import adam.betts.vertices.Vertex;
@@ -18,6 +21,15 @@ import adam.betts.vertices.trees.TreeVertex;
 
 public class PathExpressionBuilder
 {
+
+    protected final HashMap <Integer, AuxiliaryData> headerToPathExpressions = new LinkedHashMap <Integer, PathExpressionBuilder.AuxiliaryData>();
+
+    protected AuxiliaryData auxiliaryData;
+    protected FlowGraph flowg;
+    protected AcyclicReducibility acyclicReducibility;
+    protected DominatorTree predomt;
+    protected DominatorTree postdomt;
+    protected LeastCommonAncestor lcaPredomt;
 
     public PathExpressionBuilder (CFGStar cfgStar)
     {
@@ -38,17 +50,51 @@ public class PathExpressionBuilder
                             "Analysing portion of CFG in "
                                     + headerv.getHeaderID(), 1);
 
-                    FlowGraph flowg = lnt.induceSubraph(headerv);
-                    doDataFlowAnalysis(flowg);
+                    flowg = lnt.induceSubraph(headerv);
+                    auxiliaryData = new AuxiliaryData(flowg);
+                    initialise();
+
+                    acyclicReducibility = new AcyclicReducibility(flowg);
+                    predomt = acyclicReducibility.predomt;
+                    postdomt = acyclicReducibility.postdomt;
+                    lcaPredomt = new LeastCommonAncestor(predomt);
+
+                    doDataFlowAnalysis();
+
+                    headerToPathExpressions.put(headerv.getVertexID(),
+                            auxiliaryData);
+
+                    outputPathExpression(flowg.getEntryID(), flowg.getExitID());
                 }
             }
         }
     }
 
-    private void doDataFlowAnalysis (FlowGraph flowg)
+    public void outputPathExpression (int ancestorID, int descendantID)
     {
-        AuxiliaryData auxiliaryData = new AuxiliaryData(flowg);
-        AcyclicReducibility acyclicReducibility = new AcyclicReducibility(flowg);
+        Debug.debugMessage(
+                getClass(),
+                ancestorID
+                        + " => "
+                        + descendantID
+                        + " :: "
+                        + auxiliaryData.getPathExpression(descendantID,
+                                ancestorID).toString(), 1);
+    }
+
+    private void initialise ()
+    {
+        for (Vertex v : flowg)
+        {
+            if (v.getVertexID() == flowg.getEntryID() || v instanceof Ipoint)
+            {
+                auxiliaryData.beginPathExpression(v.getVertexID());
+            }
+        }
+    }
+
+    private void doDataFlowAnalysis ()
+    {
         DepthFirstTree dfs = new DepthFirstTree(flowg, flowg.getEntryID());
 
         for (int postID = flowg.numOfVertices() - 1; postID >= 1; --postID)
@@ -60,11 +106,12 @@ public class PathExpressionBuilder
             {
                 if (acyclicReducibility.isReducibleMerge(vertexID))
                 {
-                    handleAcyclicIrreducibleMerge(auxiliaryData, v);
+                    handleAcyclicReducibleMerge(v);
+
                 }
                 else
                 {
-                    handleAcyclicReducibleMerge(auxiliaryData, v);
+                    handleAcyclicIrreducibleMerge(v);
                 }
             }
             else
@@ -74,83 +121,150 @@ public class PathExpressionBuilder
 
                 if (predv.numOfSuccessors() > 1)
                 {
-                    Debug.debugMessage(getClass(), "Branch edge detected: "
-                            + predID + " => " + vertexID, 2);
-
-                    auxiliaryData.addReachableVertexToVertex(vertexID, predID);
-
-                    PathExpression pathe = auxiliaryData.getPathExpression(
-                            vertexID, predID);
-                    pathe.concatenate(vertexID);
+                    handleBranchEdge(predID, vertexID);
                 }
                 else
                 {
-                    Debug.debugMessage(getClass(), "Sequential composition: "
-                            + predID + " => " + vertexID, 2);
+                    handleSequence(predID, vertexID);
                 }
-            }
-
-            if (v instanceof Ipoint)
-            {
-                auxiliaryData.addReachableVertexToVertex(vertexID, vertexID);
             }
         }
     }
 
-    private void handleAcyclicIrreducibleMerge (AuxiliaryData auxiliaryData,
-            Vertex v)
+    private void handleBranchEdge (int predID, int vertexID)
+    {
+        Debug.debugMessage(getClass(), "Branch edge detected: " + predID
+                + " => " + vertexID, 2);
+
+        PathExpression pathe = new PathExpression();
+        pathe.append(Integer.toString(vertexID));
+        auxiliaryData.addPathExpression(vertexID, predID, pathe);
+    }
+
+    private void handleSequence (int predID, int vertexID)
+    {
+        Debug.debugMessage(getClass(), "Sequential composition: " + predID
+                + " => " + vertexID, 1);
+
+        for (int reachableID : auxiliaryData.getReachableVertices(predID))
+        {
+            PathExpression pathe = auxiliaryData.getPathExpression(predID,
+                    reachableID);
+            PathExpression newe = PathExpression.copy(pathe);
+
+            if (newe.isEmpty() == false)
+            {
+                newe.append(PathExpression.concatenationOperator);
+            }
+            newe.append(Integer.toString(vertexID));
+
+            auxiliaryData.addPathExpression(vertexID, reachableID, newe);
+
+            Debug.debugMessage(getClass(), "Path expression (" + reachableID
+                    + ", " + vertexID + ") = " + newe.toString(), 4);
+        }
+    }
+
+    private void handleAcyclicIrreducibleMerge (Vertex v)
     {
         Debug.debugMessage(getClass(), "Merge " + v.getVertexID()
-                + " is NOT acyclic irreducible", 2);
+                + " is NOT acyclic reducible", 2);
 
     }
 
-    private void handleAcyclicReducibleMerge (AuxiliaryData auxiliaryData,
-            Vertex v)
+    private void handleAcyclicReducibleMerge (Vertex v)
     {
-        Debug.debugMessage(getClass(), "Merge " + v.getVertexID()
-                + " is acyclic irreducible", 2);
-
         int mergeID = v.getVertexID();
 
-        Iterator <Edge> predIt = v.predecessorIterator();
-        while (predIt.hasNext())
+        Debug.debugMessage(getClass(), "Merge " + mergeID
+                + " is acyclic reducible", 2);
+
+        HashMap <Integer, PathExpression> vertexToTempPathExpression = new LinkedHashMap <Integer, PathExpression>();
+
+        CompressedDominatorTree comt = new CompressedDominatorTree(flowg,
+                predomt, lcaPredomt, mergeID, v.predecessorIterator());
+        OutputGraph.output(comt);
+        // Traverse up each level of the compressed tree until the root
+        for (int level = comt.getHeight() - 1; level >= 0; --level)
         {
-            Edge prede = predIt.next();
-            int predID = prede.getVertexID();
-
-            for (int reachableID : auxiliaryData.getReachableVertices(predID))
+            Iterator <TreeVertex> vertexIt = comt.levelIterator(level);
+            while (vertexIt.hasNext())
             {
-                auxiliaryData.addReachableVertexToVertex(mergeID, reachableID);
-                PathExpression pathe = auxiliaryData.getPathExpression(mergeID,
-                        reachableID);
+                TreeVertex comtreev = vertexIt.next();
+                int vertexID = comtreev.getVertexID();
 
-                if (pathe.isEmpty())
+                // If a leaf is found then just buffer its path expression into
+                // the temporary data structure
+                if (comtreev.isLeaf())
                 {
-                    pathe.concatenate(reachableID);
-                    pathe.concatenate(PathExpression.openParenthesis);
+                    for (int reachableID : auxiliaryData
+                            .getReachableVertices(vertexID))
+                    {
+                        vertexToTempPathExpression.put(vertexID, auxiliaryData
+                                .getPathExpression(vertexID, reachableID));
+                    }
                 }
+                // Otherwise build the path expression from the children
+                else
+                {
+                    PathExpression pathe = new PathExpression();
 
-                pathe.concatenate(auxiliaryData.getPathExpression(predID,
-                        reachableID));
-                pathe.concatenate(PathExpression.alernateOperator);
+                    // If this is not the root then start the path expression at
+                    // this level with the branch vertex
+                    if (comtreev.getVertexID() != comt.getRootID())
+                    {
+                        pathe.append(Integer.toString(comtreev.getVertexID()));
+                    }
+
+                    pathe.append(PathExpression.openParenthesis);
+                    Iterator <Edge> succIt = comtreev.successorIterator();
+                    while (succIt.hasNext())
+                    {
+                        Edge succe = succIt.next();
+                        int succID = succe.getVertexID();
+                        
+                        Debug.debugMessage(getClass(), "Vertex " + succID + " at vertex " + comtreev.getVertexID(), 2);  
+
+                        pathe.append(vertexToTempPathExpression.get(succID));
+                        pathe.append(PathExpression.alernateOperator);
+                    }
+
+                    if (flowg.getVertex(comtreev.getVertexID()).hasSuccessor(
+                            mergeID))
+                    {
+                        pathe.append(PathExpression.nullExpression);
+                    }
+                    else
+                    {
+                        pathe.removeLastElement();
+                    }
+
+                    pathe.append(PathExpression.closeParenthesis);
+
+                    vertexToTempPathExpression.put(vertexID, pathe);
+                }
             }
         }
 
-        predIt = v.predecessorIterator();
-        while (predIt.hasNext())
+        int preID = predomt.getImmediateDominator(mergeID);
+        assert vertexToTempPathExpression.containsKey(preID) : "Unable to find key for ipre("
+                + mergeID + ") = " + preID;
+
+        PathExpression pathe = vertexToTempPathExpression.get(preID);
+        for (int reachableID : auxiliaryData.getReachableVertices(preID))
         {
-            Edge prede = predIt.next();
-            int predID = prede.getVertexID();
+            PathExpression newe = new PathExpression();
 
-            for (int reachableID : auxiliaryData.getReachableVertices(predID))
+            if (postdomt.getImmediateDominator(preID) == mergeID)
             {
-                PathExpression pathe = auxiliaryData.getPathExpression(mergeID,
-                        reachableID);
-
-                pathe.concatenate(PathExpression.closeParenthesis);
-                pathe.concatenate(mergeID);
+                newe.append(PathExpression.copy(auxiliaryData
+                        .getPathExpression(preID, reachableID)));
             }
+
+            newe.append(PathExpression.copy(pathe));
+            newe.append(Integer.toString(mergeID));
+
+            auxiliaryData.addPathExpression(mergeID, reachableID, newe);
         }
     }
 
@@ -168,10 +282,17 @@ public class PathExpressionBuilder
             }
         }
 
-        public void addReachableVertexToVertex (int vertexID, int reachableID)
+        public void beginPathExpression (int vertexID)
         {
-            vertexToVertexMap.get(vertexID).put(reachableID,
-                    new PathExpression());
+            PathExpression pathe = new PathExpression();
+            pathe.append(Integer.toString(vertexID));
+            vertexToVertexMap.get(vertexID).put(vertexID, pathe);
+        }
+
+        public void addPathExpression (int vertexID, int reachableID,
+                PathExpression pathe)
+        {
+            vertexToVertexMap.get(vertexID).put(reachableID, pathe);
         }
 
         public PathExpression getPathExpression (int vertexID, int reachableID)

@@ -20,7 +20,7 @@ public final class Enums
 
     public enum IProfile
     {
-        BASIC_BLOCK, BRANCH, FUNCTION, PRE_DOMINATOR, SUPER_BLOCK, RANDOM
+        BASIC_BLOCK, BRANCH, FUNCTION, PRE_DOMINATOR, SUPER_BLOCK, RANDOM, NONE
     };
 
     public enum BranchType

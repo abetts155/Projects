@@ -217,8 +217,6 @@ public class LoopNests extends Tree
 
     public FlowGraph induceSubraph (HeaderVertex headerv)
     {
-        Debug.debugMessage(getClass(), "Inducing subgraph in loop with header "
-                + headerv.getHeaderID(), 2);
         FlowGraph flowg = new FlowGraph();
 
         ArrayList <Integer> workList = new ArrayList <Integer>();
@@ -430,7 +428,7 @@ public class LoopNests extends Tree
             ArrayList <Integer> workList, int headerID)
     {
         Debug.debugMessage(getClass(), "Header " + headerID + " tails = "
-                + workList, 1);
+                + workList, Debug.LOOP_LEVEL_1);
 
         if (headerToTails.containsKey(headerID))
         {
@@ -471,9 +469,6 @@ public class LoopNests extends Tree
                     if (!workList.contains(repID) && !loopBody.contains(repID)
                             && repID != headerID)
                     {
-                        Debug.debugMessage(getClass(), "Adding " + repID
-                                + " to worklist from edge " + predID + " => "
-                                + v.getVertexID(), 1);
                         workList.add(repID);
                     }
                 }

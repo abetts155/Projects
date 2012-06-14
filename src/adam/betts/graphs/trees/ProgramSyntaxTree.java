@@ -15,8 +15,8 @@ import adam.betts.vertices.trees.AlternativeVertex;
 import adam.betts.vertices.trees.HeaderVertex;
 import adam.betts.vertices.trees.LeafVertex;
 import adam.betts.vertices.trees.LoopVertex;
-import adam.betts.vertices.trees.SequenceVertex;
 import adam.betts.vertices.trees.ProgramSyntaxVertex;
+import adam.betts.vertices.trees.SequenceVertex;
 import adam.betts.vertices.trees.TreeVertex;
 
 public class ProgramSyntaxTree extends DirectedGraph
@@ -308,7 +308,8 @@ public class ProgramSyntaxTree extends DirectedGraph
         }
         else
         {
-            comt = new CompressedDominatorTree(flowg, postTree, lca, branchID);
+            comt = new CompressedDominatorTree(flowg, postTree, lca, branchID,
+                    flowg.getVertex(branchID).successorIterator());
             branchToCompressedDominatorTree.put(branchID, comt);
         }
 
