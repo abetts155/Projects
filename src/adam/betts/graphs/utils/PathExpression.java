@@ -7,8 +7,9 @@ public class PathExpression
     public final static String zeroOrMoreOperator = "*";
     public final static String oneOrMoreOperator = "+";
     public final static String concatenationOperator = ".";
-    public final static String openParenthesis = " (";
-    public final static String closeParenthesis = ") ";
+    public final static String openParenthesis = "(";
+    public final static String closeParenthesis = ")";
+    public final static String space = " ";
     public final static String nullExpression = "@";
 
     protected StringBuffer expression = new StringBuffer();
@@ -40,6 +41,16 @@ public class PathExpression
     public void removeLastElement ()
     {
         expression.deleteCharAt(expression.length() - 1);
+    }
+
+    public String getLastNonSpaceElement ()
+    {
+        int index = expression.length() - 1;
+        while (expression.charAt(index) == ' ' && index > 0)
+        {
+            --index;
+        }
+        return String.valueOf(expression.charAt(index));
     }
 
     public boolean isEmpty ()

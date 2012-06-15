@@ -1,7 +1,6 @@
 package adam.betts.graphs.trees;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -189,7 +188,8 @@ public class LoopNests extends Tree
 
     public final boolean isDowhileLoop (int headerID)
     {
-        assert isLoopHeader(headerID);
+        assert isLoopHeader(headerID) : "The vertex " + headerID
+                + " is not a loop header";
 
         Set <Integer> exits = headerToExits.get(headerID);
         Set <Integer> tails = headerToTails.get(headerID);
