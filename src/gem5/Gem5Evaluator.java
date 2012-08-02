@@ -87,7 +87,7 @@ public abstract class Gem5Evaluator extends TVEvaluator {
 		}
 		
 		try {
-			traceOutput.print(content);
+			traceOutput.print(content + "//\n");
 			timesOutput.println(vector.getTime());
 		} catch (Exception e) {
 			SystemOutput.exitWithError("Error wrting to trace output");

@@ -12,6 +12,7 @@ import adam.betts.edges.Edge;
 import adam.betts.edges.FlowEdge;
 import adam.betts.graphs.IpointGraph;
 import adam.betts.graphs.trees.LoopNests;
+import adam.betts.outputs.UDrawGraph;
 import adam.betts.utilities.Debug;
 import adam.betts.vertices.Vertex;
 
@@ -53,13 +54,9 @@ public class IPETModelIPG extends IPETModel
                  * (equivalent to Columns).
                  */
                 numOfColumns = ipg.numOfEdges();
-                Debug.debugMessage(getClass(), "About to solve 1", 1);
                 lp = LpSolve.makeLp(numOfColumns, numOfColumns);
-                Debug.debugMessage(getClass(), "About to solve 2", 1);
-
                 lp = LpSolve.readLp(file.getAbsolutePath(),
                         IPETModel.getLpSolveVerbosity(), null);
-                Debug.debugMessage(getClass(), "About to solve 3", 1);
                 try
                 {
                     solve();
@@ -98,9 +95,8 @@ public class IPETModelIPG extends IPETModel
 
                 break;
             default:
-                Debug.debugMessage(getClass(), "Problem with the LP model: "
-                        + solution, 2);
-                throw new SolutionException(solution);
+                Debug.errorMessage(getClass(), "Problem with the LP model: "
+                        + solution);
         }
     }
 
@@ -213,6 +209,7 @@ public class IPETModelIPG extends IPETModel
         Debug.debugMessage(getClass(), "Writing loop constraints", 3);
 
         LoopNests lnt = new LoopNests(ipg, ipg.getEntryID());
+        UDrawGraph.makeUDrawFile(lnt, "inlined");
 
         for (Vertex v : ipg)
         {
@@ -229,19 +226,11 @@ public class IPETModelIPG extends IPETModel
                     FlowEdge e = (FlowEdge) predIt.next();
                     int edgeID = e.getEdgeID();
 
-                    if (lnt.isLoopHeader(v.getVertexID()))
-                    {
-                        if (lnt.isLoopTail(v.getVertexID(), e.getVertexID()))
-                        {
-                            int bound = database.getBound(subprogramID, edgeID);
+                    int bound = database.getBound(subprogramID, edgeID);
 
-                            out.write(createEdgeVariable(edgeID)
-                                    + lessThanOrEquals
-                                    + Integer.toString(bound)
-                                    + statementTerminator + newLine);
-
-                        }
-                    }
+                    out.write(createEdgeVariable(edgeID) + lessThanOrEquals
+                            + Integer.toString(bound) + statementTerminator
+                            + newLine);
                 }
 
             }

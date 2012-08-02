@@ -9,6 +9,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.traces.GenerateTrace;
 import adam.betts.utilities.DefaultOptions;
 import adam.betts.utilities.Globals;
@@ -138,7 +139,8 @@ public class MainTraceGenerator
 
     private static void run ()
     {
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         new GenerateTrace(program);
     }
 

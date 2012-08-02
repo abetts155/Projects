@@ -11,6 +11,7 @@ import org.apache.commons.cli.ParseException;
 import adam.betts.calculations.LoopBoundDatabase;
 import adam.betts.outputs.AnalysisOutput;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
 
@@ -123,7 +124,8 @@ public class MainLoopAnalyser
     private static void run ()
     {
         Debug.verboseMessage("Reading program");
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
         program.insertVirtualIpoints();
         program.buildIPGS(true);
         LoopBoundDatabase database = new LoopBoundDatabase(program);

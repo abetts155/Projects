@@ -28,6 +28,7 @@ public class MainProgramGenerator
     private static Option indirectRecursionOption;
     private static Option directRecursionOption;
     private static Option numberOfVerticesOption;
+    private static Option unstructuredOption;
 
     private final static int minVertices = 10;
     private final static int maxVertices = Integer.MAX_VALUE;
@@ -112,6 +113,11 @@ public class MainProgramGenerator
         continuesOption.setRequired(false);
         options.addOption(continuesOption);
 
+        unstructuredOption = new Option("u", "unstructured", false,
+                "Add unstructured edges to the control flow graphs.");
+        unstructuredOption.setRequired(false);
+        options.addOption(unstructuredOption);
+
         numberOfVerticesOption = new Option("V", "vertices", true,
                 "Maximum number of vertices in a control flow graph. Default is "
                         + Globals.vertices + ".");
@@ -144,6 +150,8 @@ public class MainProgramGenerator
 
                 Globals.breaks = line.hasOption(breaksOption.getOpt());
                 Globals.continues = line.hasOption(continuesOption.getOpt());
+                Globals.unstructuredEdges = line.hasOption(unstructuredOption
+                        .getOpt());
 
                 if (line.hasOption(numberOfVerticesOption.getOpt()))
                 {
@@ -453,6 +461,7 @@ public class MainProgramGenerator
         protected static int depth = 7;
         protected static boolean breaks = false;
         protected static boolean continues = false;
+        protected static boolean unstructuredEdges = false;
         protected static int vertices = 50;
         protected static int directRecursiveCalls = 0;
         protected static int indirectRecursiveCalls = 0;
@@ -495,6 +504,11 @@ public class MainProgramGenerator
         public final static boolean continuesAllowed ()
         {
             return continues;
+        }
+
+        public final static boolean unstructuredEdgesAllowed ()
+        {
+            return unstructuredEdges;
         }
 
         public final static int getNumberOfVerticesInCFG ()

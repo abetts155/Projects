@@ -70,6 +70,11 @@ public class CFGStar extends ControlFlowGraph
             case RANDOM:
                 instrumentRandomly();
                 break;
+            case NONE:
+                HashMap <Integer, Integer> instrumented = new HashMap <Integer, Integer>();
+                addRemainingEdges(instrumented);
+               // addEntryAndExitEdges();
+                break;
             default:
                 Debug.errorMessage(getClass(), "Unhandled CFG* instrumentation");
         }

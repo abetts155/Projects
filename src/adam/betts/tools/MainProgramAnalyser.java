@@ -11,6 +11,7 @@ import org.apache.commons.cli.ParseException;
 import adam.betts.calculations.CalculationEngineCFG;
 import adam.betts.calculations.Database;
 import adam.betts.programs.Program;
+import adam.betts.programs.ProgramReader;
 import adam.betts.utilities.Debug;
 import adam.betts.utilities.DefaultOptions;
 
@@ -97,7 +98,7 @@ public class MainProgramAnalyser
                 programFileName = line
                         .getOptionValue(DefaultOptions.programFileOption
                                 .getOpt());
-                
+
                 inline = line.hasOption(inlineOption.getOpt());
                 LNTs = line.hasOption(loopsOption.getOpt());
                 ASTs = line.hasOption(syntaxTreesOption.getOpt());
@@ -119,7 +120,8 @@ public class MainProgramAnalyser
     {
         Debug.verboseMessage("Reading program");
 
-        Program program = new Program(programFileName);
+        Program program = new Program();
+        new ProgramReader(program, programFileName, true);
 
         if (LNTs)
         {

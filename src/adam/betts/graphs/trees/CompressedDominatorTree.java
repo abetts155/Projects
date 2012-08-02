@@ -18,29 +18,29 @@ public class CompressedDominatorTree extends Tree
     protected final LeastCommonAncestor lca;
 
     public CompressedDominatorTree (FlowGraph flowg, DominatorTree dominatort,
-            LeastCommonAncestor lca, int branchID)
+            LeastCommonAncestor lca, int vertexID, Iterator <Edge> edgeIt)
     {
         Debug.debugMessage(getClass(),
-                "Building compressed dominator tree for branch " + branchID, 4);
+                "Building compressed dominator tree for vertex " + vertexID, 4);
 
         this.flowg = flowg;
         this.dominatort = dominatort;
         this.lca = lca;
 
-        build(branchID);
-        this.rootID = dominatort.getImmediateDominator(branchID);
+        build(edgeIt);
+        this.rootID = dominatort.getImmediateDominator(vertexID);
         setHeight();
     }
 
-    private void build (int branchID)
+    private void build (Iterator <Edge> edgeIt)
     {
         HashMap <Integer, Integer> vToLca = new HashMap <Integer, Integer>();
         HashSet <Integer> querySet = new HashSet <Integer>();
         HashSet <Integer> newQuerySet = new HashSet <Integer>();
-        Iterator <Edge> succIt = flowg.getVertex(branchID).successorIterator();
-        while (succIt.hasNext())
+
+        while (edgeIt.hasNext())
         {
-            Edge succEdge = succIt.next();
+            Edge succEdge = edgeIt.next();
             int succID = succEdge.getVertexID();
             querySet.add(succID);
         }
@@ -112,7 +112,11 @@ public class CompressedDominatorTree extends Tree
         {
             Debug.debugMessage(getClass(), "parent(" + vertexID + ") = "
                     + vToLca.get(vertexID), 3);
-            addEdge(vToLca.get(vertexID), vertexID);
+            int parentID = vToLca.get(vertexID);
+            if (parentID != vertexID)
+            {
+                addEdge(vToLca.get(vertexID), vertexID);
+            }
         }
     }
 }
