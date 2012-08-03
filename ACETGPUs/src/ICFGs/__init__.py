@@ -8,18 +8,18 @@ class ICFG (CFGs.CFG):
         for bb in cfg:
             bbID = bb.getVertexID()
             self.vertices[bbID] = copy.deepcopy(bb)
-        self.addIpoints()
+        self.__addIpoints()
     
-    def addIpoints (self):
+    def __addIpoints (self):
         for bb in self:
             address, instr = bb.getFirstInstruction()
             vertexID = self.getNextVertexID ()
             ipoint = Vertices.Ipoint(vertexID, address)
             self.vertices[vertexID] = ipoint
             Debug.debugMessage("Adding Ipoint %s with ID %s" % (vertexID, address), 4)
-            self.linkIpoint(bb, ipoint)
+            self.__linkIpoint(bb, ipoint)
             
-    def linkIpoint (self, bb, ipoint):
+    def __linkIpoint (self, bb, ipoint):
         for predID in bb.getPredecessorIDs():
             predv = self.getVertex(predID)
             self.addEdge(predID, ipoint.getVertexID())
@@ -27,3 +27,11 @@ class ICFG (CFGs.CFG):
             bb.removePredecessor(predID)
         self.addEdge(ipoint.getVertexID(), bb.getVertexID())
         
+    def isIpoint (self, vertexID):
+        v = self.getVertex(vertexID)
+        return isinstance(v, Vertices.Ipoint)
+    
+    def getIpoint (self, vertexID):
+        v = self.getVertex(vertexID)
+        assert isinstance(v, Vertices.Ipoint), "Vertex %s is not an Ipoint" % vertexID
+        return v

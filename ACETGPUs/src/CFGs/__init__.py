@@ -28,7 +28,7 @@ class BasicBlock (Vertices.Vertex):
     
     def addInstruction (self, instr):
         address = instr.getAddress()
-        assert address not in self.instructions, "Basic block " + str(self.vertexID) + " already has instruction with address " + str(address)
+        assert address not in self.instructions, "Basic block " + str(self._vertexID) + " already has instruction with address " + str(address)
         self.instructions[address] = instr
         
     def getFirstInstruction (self):
@@ -44,7 +44,7 @@ class BasicBlock (Vertices.Vertex):
         return sorted(self.instructions.iteritems())
         
     def __str__ (self):
-        string = "Vertex ID = " + str(self.vertexID) + "\n"
+        string = "Vertex ID = " + str(self._vertexID) + "\n"
         string += "\t" + Vertices.Vertex.predecessorStr(self)
         string += "\t" + Vertices.Vertex.successorStr(self)
         string += "\t" + 40 * "=" + "\n"   
@@ -56,8 +56,8 @@ class BasicBlock (Vertices.Vertex):
 class CFG (DirectedGraph.DirectedGraph):    
     def __init__ (self):
         DirectedGraph.DirectedGraph.__init__(self)
-        self.entryID = DirectedGraph.dummyVertexID
-        self.exitID = DirectedGraph.dummyVertexID
+        self.__entryID = DirectedGraph.dummyVertexID
+        self.__exitID = DirectedGraph.dummyVertexID
         
     def addVertex (self, bbID):
         assert bbID not in self.vertices, "Adding basic block %s which is already in graph" % bbID
@@ -66,45 +66,53 @@ class CFG (DirectedGraph.DirectedGraph):
         
     def getVertex (self, bbID):
         return DirectedGraph.DirectedGraph.getVertex(self, bbID)
+    
+    def getEntryID (self):
+        assert self.__entryID != DirectedGraph.dummyVertexID, "Entry ID not set" 
+        return self.__entryID
         
     def setEntryID (self, entryID=None):
         if entryID is None:
             for bb in self.vertices.values():
                 if bb.numberOfPredecessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self.entryID == DirectedGraph.dummyVertexID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self.entryID, bbID)
-                    self.entryID = bbID
-            assert self.entryID != DirectedGraph.dummyVertexID, "Unable to find a vertex without predecessors to set as the entry"
+                    assert self.__entryID == DirectedGraph.dummyVertexID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self.__entryID, bbID)
+                    self.__entryID = bbID
+            assert self.__entryID != DirectedGraph.dummyVertexID, "Unable to find a vertex without predecessors to set as the entry"
         else:
             assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
             assert entryID > DirectedGraph.dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
-            self.entryID = entryID
+            self.__entryID = entryID
+            
+    def getExitID (self):
+        assert self.__exitID != DirectedGraph.dummyVertexID, "Exit ID not set" 
+        return self.__exitID
         
     def setExitID (self, exitID=None):
         if exitID is None:
             for bb in self.vertices.values():
                 if bb.numberOfSuccessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self.exitID == DirectedGraph.dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self.entryID, bbID)
-                    self.exitID = bbID
-            assert self.exitID != DirectedGraph.dummyVertexID, "Unable to find a vertex without successors to set as the entry"
+                    assert self.__exitID == DirectedGraph.dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self.__entryID, bbID)
+                    self.__exitID = bbID
+            assert self.__exitID != DirectedGraph.dummyVertexID, "Unable to find a vertex without successors to set as the entry"
         else:
             assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
             assert exitID > DirectedGraph.dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
-            self.exitID = exitID
+            self.__exitID = exitID
             
     def addExitEntryEdge (self):
-        assert self.entryID != DirectedGraph.dummyVertexID, "Entry ID not set"
-        assert self.exitID != DirectedGraph.dummyVertexID, "Exit ID not set"
-        entryv = self.getVertex(self.entryID)
-        exitv = self.getVertex(self.exitID)
-        entryv.addPredecessor(self.exitID)
-        exitv.addSuccessor(self.entryID)
+
+        assert self.__exitID != DirectedGraph.dummyVertexID, "Exit ID not set"
+        entryv = self.getVertex(self.__entryID)
+        exitv = self.getVertex(self.__exitID)
+        entryv.addPredecessor(self.__exitID)
+        exitv.addSuccessor(self.__entryID)
         
     def __str__ (self):
         string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
-        "Entry ID = %s\n" % str(self.entryID) + \
-        "Exit ID  = %s\n" % str(self.exitID) + "\n"
+        "Entry ID = %s\n" % str(self.__entryID) + \
+        "Exit ID  = %s\n" % str(self.__exitID) + "\n"
         for bb in self.vertices.values():
             string += bb.__str__()
         return string

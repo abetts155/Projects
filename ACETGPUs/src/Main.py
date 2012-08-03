@@ -1,11 +1,11 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python2.6
 
-import sys, shlex
+import sys, shlex, optparse
 import ICFGs, CFGs, ParseCFG, Debug, Trees, GraphVisualisation, Traces
-from optparse import OptionParser
+import IPGs
 
 # The command-line parser and its options
-parser = OptionParser(add_help_option=False)
+parser = optparse.OptionParser(add_help_option=False)
 
 parser.add_option("-d",
                   "--debug",
@@ -50,7 +50,6 @@ def createCFGs ():
             else:
                 if cfgInput:
                     ParseCFG.parseLine(line, cfg)
-    f.closed
     return cfg 
 
 def doAnalysis (cfg):
@@ -59,8 +58,9 @@ def doAnalysis (cfg):
     icfg.setExitID()
     icfg.addExitEntryEdge()
     GraphVisualisation.makeUdrawFile (icfg, "icfg")
-    lnt = Trees.LoopNests(icfg, icfg.entryID)
+    lnt = Trees.LoopNests(icfg, icfg.getEntryID())
     GraphVisualisation.makeUdrawFile (lnt, "lnt")
+    ipg = IPGs.IPG(icfg, lnt)
     
 def getLineOfTimingTrace (line):
     lexemes                 = shlex.split(line)
@@ -100,12 +100,11 @@ def splitTraces ():
                 if outcome:
                     w = getWarp (allWarps, SMAndWarp)
                     w.appendToTrace(timingTuple)
-    f.closed
-    
+                       
     for w in allWarps:
-        print "\nSM %s, WARP %s" % (w.getMultiprocessorID(), w.getWarpID()),
+        Debug.debugMessage("\nSM %s, WARP %s" % (w.getMultiprocessorID(), w.getWarpID()), 10)
         for t in w.getTrace():
-            print "\n\t %s %s" % (t[0], t[1]),
+            Debug.debugMessage("\n\t %s %s" % (t[0], t[1]), 10)
         
 if __name__ == "__main__":
     checkCommandLine ()

@@ -1,23 +1,23 @@
 
 class Warp ():
     def __init__(self, multiprocessorID, warpID):
-        self.multiprocessorID = multiprocessorID
-        self.warpID = warpID
-        self.trace = []
+        self.__multiprocessorID = multiprocessorID
+        self.__warpID = warpID
+        self.__trace = []
                 
     def getWarpID (self):
-        return self.warpID
+        return self.__warpID
     
     def getMultiprocessorID (self):
-        return self.multiprocessorID
+        return self.__multiprocessorID
     
     def appendToTrace (self, traceTuple):
-        self.trace.append(traceTuple)
+        self.__trace.append(traceTuple)
     
     def getTrace (self):
-        return self.trace
+        return self.__trace
     
 class TraceParser ():
     def __init__(self, warp):
-        self.warp = warp
+        self.__warp = warp
     

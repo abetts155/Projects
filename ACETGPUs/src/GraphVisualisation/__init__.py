@@ -1,4 +1,4 @@
-import ICFGs, Trees, CFGs, Vertices
+import ICFGs, IPGs, Trees, CFGs, Vertices
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"
@@ -58,16 +58,19 @@ def makeUdrawFile (g, fileNamePrefix):
         f.write(beginGraph)
         # Instrumented CFG
         if isinstance(g, ICFGs.ICFG):
-            dfs = Trees.DepthFirstSearch(g, g.entryID)
-            for vertexID in dfs.preorder:
+            dfs = Trees.DepthFirstSearch(g, g.getEntryID())
+            for vertexID in dfs.getPreorder():
                     writeICFGVertex(g, vertexID, f)
         # Loop-Nesting Tree
         elif isinstance(g, Trees.LoopNests):
             for v in g:
                     vertexID = v.getVertexID()
                     writeTreeVertex(g, vertexID, f)
+        # IPG
+        elif isinstance(g, IPGs.IPG):
+            for v in g:
+                writeIPGVertex(g, vertexID, f)
         f.write(endGraph) 
-    f.closed
     
 def writeICFGVertex (icfg, vertexID, f):
     v = icfg.getVertex(vertexID)
@@ -98,7 +101,7 @@ def writeICFGVertex (icfg, vertexID, f):
     
 def writeTreeVertex (tree, vertexID, f):
     v = tree.getVertex(vertexID)
-        
+    # Vertex attributes
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -106,6 +109,32 @@ def writeTreeVertex (tree, vertexID, f):
         f.write(setShape(SHAPE.CIRCLE))
         f.write(setColor(COLOR.YELLOW))
         f.write(setToolTip("Header ID = %s" % v.getHeaderID()))
+    if isinstance(tree, Trees.LoopNests):
+        if tree.isLoopExit(vertexID):
+            f.write(setShape(SHAPE.TRIANGLE))
+            f.write(setColor(COLOR.RED))
+            f.write(setToolTip("Loop Exit"))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
+        f.write(setName(str(succID)))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
+
+def writeIPGVertex (ipg, vertexID, f): 
+    v = ipg.getVertex(vertexID)
+        
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    f.write(setName(str(vertexID)))
+    f.write(setShape(SHAPE.CIRCLE))
+    f.write(setColor(COLOR.YELLOW))
+    f.write(setToolTip("Ipoint ID = %s" % v.getIpointID()))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
