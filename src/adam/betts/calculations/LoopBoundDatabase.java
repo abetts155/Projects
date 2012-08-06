@@ -173,7 +173,6 @@ public class LoopBoundDatabase extends Database
                         Globals.getTraceFileName()));
 
                 String str;
-
                 while ((str = in.readLine()) != null)
                 {
                     if (str.startsWith("//") == false

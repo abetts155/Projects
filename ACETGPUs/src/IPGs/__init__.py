@@ -4,15 +4,31 @@ import copy
 class IPG (DirectedGraph.DirectedGraph):
     def __init__(self, icfg, lnt=None):
         DirectedGraph.DirectedGraph.__init__(self)
+        self.__entryID = DirectedGraph.dummyVertexID
+        self.__exitID = DirectedGraph.dummyVertexID
         self.__icfg = icfg
         self.__lnt = lnt
+        self.__ipointIDToVertex = {}
         self.__auxiliaryData = _AuxiliaryData()
         self.__visited = {}
         self.__initialise()
         self.__doDepthFirstSearch(self.__icfg.getEntryID())
         self.__addEdgesUsingLNT()
+        self.__setEntryAndExit()
         del self.__visited
         del self.__auxiliaryData
+        
+    def getIpointVertex (self, ipointID):
+        assert ipointID in self.__ipointIDToVertex, "Unable to find Ipoint with trace ID %s" % ipointID
+        return self.__ipointIDToVertex[ipointID]
+    
+    def getEntryID (self):
+        assert self.__entryID != DirectedGraph.dummyVertexID, "Entry to IPG not found"
+        return self.__entryID
+    
+    def getExitID (self):
+        assert self.__exitID != DirectedGraph.dummyVertexID, "Exit to IPG not found"
+        return self.__exitID
     
     def __initialise (self):
         for v in self.__icfg:
@@ -23,6 +39,7 @@ class IPG (DirectedGraph.DirectedGraph):
             if self.__icfg.isIpoint(vertexID):
                 ipointv = Vertices.Ipoint(vertexID, v.getIpointID())
                 self.vertices[vertexID] = ipointv
+                self.__ipointIDToVertex[v.getIpointID()] = ipointv
                 if self.__lnt.isLoopHeader(vertexID):
                     self.__auxiliaryData.ipointToHeader[vertexID] = vertexID
                 else:
@@ -72,7 +89,7 @@ class IPG (DirectedGraph.DirectedGraph):
                         self.__collapseInnerLoops(headerID)
     
     def __solveDFF (self, headerID):
-        Debug.debugMessage("Building IPG in CFG* loop %s" % headerID, 1)
+        Debug.debugMessage("Building IPG in CFG* loop %s" % headerID, 5)
         self.__auxiliaryData.changed = True
         self.__auxiliaryData.iteration = 0
         
@@ -94,7 +111,8 @@ class IPG (DirectedGraph.DirectedGraph):
                         analyseEdge = True
                         
                     if analyseEdge:
-                        Debug.debugMessage("Iteration %s, edge %s => %s" % (self.__auxiliaryData.iteration, predID, vertexID), 1)
+                        Debug.debugMessage("Iteration %s, edge %s => %s" 
+                                           % (self.__auxiliaryData.iteration, predID, vertexID), 15)
                         if self.__icfg.isIpoint(predID):
                             self.__update(predID, vertexID, headerID, predID)
                         else:
@@ -115,6 +133,9 @@ class IPG (DirectedGraph.DirectedGraph):
                 if ipointID != predID:
                     self.__updateEdgeLabel(ipointID, vertexID,
                                            self.__auxiliaryData.vertexToReachable[predID][ipointID])
+                
+                if self.__auxiliaryData.iteration == 2:
+                    self.__setIterationEdge(ipointID, vertexID)
             elif ipointID != predID:
                 self.__updateEdgeLabel(ipointID, vertexID,
                                        self.__auxiliaryData.vertexToReachable[predID][ipointID])
@@ -163,25 +184,38 @@ class IPG (DirectedGraph.DirectedGraph):
     def __addLoopEntryEdges (self, sourceID, headerID, predID):
         sourcev = self.getVertex(sourceID)
         for destinationID in self.__auxiliaryData.headerToReachable[headerID].keys():
-            if sourcev.hasSuccessor(destinationID):
+            if not sourcev.hasSuccessor(destinationID):
                 self.__auxiliaryData.changed = True
                 self.__addEdge(sourceID, destinationID)
                 if sourceID != predID:
                     self.__updateEdgeLabel(sourceID, destinationID,
                                            self.__auxiliaryData.vertexToReachable[predID][sourceID])
                 self.__updateEdgeLabel(sourceID, destinationID, 
-                                       self.__auxiliaryData.headerToReachable[headerID][destinationID])   
+                                       self.__auxiliaryData.headerToReachable[headerID][destinationID])
+                if self.__auxiliaryData.iteration == 2:
+                    self.__setIterationEdge(sourceID, destinationID) 
+            elif self.__auxiliaryData.iteration == 2:
+                self.__setIterationEdge(sourceID, destinationID)
     
     def __addEdge (self, predID, succID):
-        Debug.debugMessage("Adding IPG Edge %s => %s" % (predID, succID), 1)
+        Debug.debugMessage("Adding IPG Edge %s => %s" % (predID, succID), 10)
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
+        predv.addIpointSuccessor (succv.getIpointID(), succID)
         succe = Edges.IPGEdge(succID, self.__auxiliaryData.edgeID)
         prede = Edges.IPGEdge(predID, self.__auxiliaryData.edgeID)
         predv.addSuccessorEdge(succe)
         succv.addPredecessorEdge(prede) 
         self.__auxiliaryData.edgeID += 1
         
+    def __setIterationEdge (self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        succe = predv.getSuccessorEdge(succID)
+        prede = succv.getPredecessorEdge(predID)
+        succe.setIterationEdge()
+        prede.setIterationEdge()
+                
     def __updateEdgeLabel (self, predID, succID, extraElements):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
@@ -192,6 +226,8 @@ class IPG (DirectedGraph.DirectedGraph):
         assert size1 == size2, "Discrepancy between size of edge labels for %s => %s. Found both %s and %s" % (predID, succID, size1, size2)
         succe.addToEdgeLabel(extraElements)
         prede.addToEdgeLabel(extraElements)
+        succe.addToEdgeLabel([predID, succID])
+        prede.addToEdgeLabel([predID, succID])
         newSize = succe.getEdgeLabelSize()
         if newSize != size1:
             self.__auxiliaryData.changed = True
@@ -204,6 +240,13 @@ class IPG (DirectedGraph.DirectedGraph):
                 self.__auxiliaryData.headerToIpoints[headerID].extend(ipoints)
                 for ipointID in ipoints:
                     self.__auxiliaryData.ipointToHeader[ipointID] = headerID
+                    
+    def __setEntryAndExit (self):
+        entryv = self.vertices[self.__icfg.getEntryID()]
+        self.__entryID = entryv.getVertexID()
+        assert entryv.numberOfPredecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self.__entryID
+        for predID in entryv.getPredecessorIDs():
+            self.__exitID = predID
 
 class _AuxiliaryData ():
     def __init__(self):

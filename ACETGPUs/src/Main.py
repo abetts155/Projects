@@ -61,6 +61,8 @@ def doAnalysis (cfg):
     lnt = Trees.LoopNests(icfg, icfg.getEntryID())
     GraphVisualisation.makeUdrawFile (lnt, "lnt")
     ipg = IPGs.IPG(icfg, lnt)
+    GraphVisualisation.makeUdrawFile (ipg, "ipg")
+    return ipg
     
 def getLineOfTimingTrace (line):
     lexemes                 = shlex.split(line)
@@ -76,20 +78,20 @@ def getLineOfTimingTrace (line):
         timingTuple = lexemes[PCIndex], int(lexemes[cycleIndex])
         return True, SMAndWarp, timingTuple
 
-def getWarp (allWarps, SMAndWarp):
+def getWarp (allWarpTraces, SMAndWarp):
     SMID   = SMAndWarp[0]
     warpID = SMAndWarp[1]
-    for w in allWarps:
+    for w in allWarpTraces:
         if w.getMultiprocessorID() == SMID and w.getWarpID() == warpID:
             return w
     
-    w = Traces.Warp(SMID, warpID)
-    allWarps.append(w)
+    w = Traces.WarpTrace(SMID, warpID)
+    allWarpTraces.append(w)
     return w
 
-def splitTraces ():
+def splitTraces (ipg):
     traceDetected = False
-    allWarps = []
+    allWarpTraces = []
     with open(args[0], 'r') as f:
         for line in f:
             if not traceDetected:
@@ -98,16 +100,14 @@ def splitTraces ():
             if traceDetected:
                 outcome, SMAndWarp, timingTuple = getLineOfTimingTrace(line)
                 if outcome:
-                    w = getWarp (allWarps, SMAndWarp)
+                    w = getWarp (allWarpTraces, SMAndWarp)
                     w.appendToTrace(timingTuple)
-                       
-    for w in allWarps:
-        Debug.debugMessage("\nSM %s, WARP %s" % (w.getMultiprocessorID(), w.getWarpID()), 10)
-        for t in w.getTrace():
-            Debug.debugMessage("\n\t %s %s" % (t[0], t[1]), 10)
+    return allWarpTraces
         
 if __name__ == "__main__":
     checkCommandLine ()
     cfg = createCFGs()
-    doAnalysis(cfg)
-    splitTraces ()
+    ipg = doAnalysis(cfg)
+    allWarpTraces = splitTraces (ipg)
+    allData = Traces.TraceData(allWarpTraces, ipg)
+    allData.output()

@@ -14,7 +14,7 @@ class ICFG (CFGs.CFG):
         for bb in self:
             address, instr = bb.getFirstInstruction()
             vertexID = self.getNextVertexID ()
-            ipoint = Vertices.Ipoint(vertexID, address)
+            ipoint = Vertices.Ipoint(vertexID, int(address, 16))
             self.vertices[vertexID] = ipoint
             Debug.debugMessage("Adding Ipoint %s with ID %s" % (vertexID, address), 4)
             self.__linkIpoint(bb, ipoint)

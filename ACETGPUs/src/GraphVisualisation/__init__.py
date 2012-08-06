@@ -64,12 +64,11 @@ def makeUdrawFile (g, fileNamePrefix):
         # Loop-Nesting Tree
         elif isinstance(g, Trees.LoopNests):
             for v in g:
-                    vertexID = v.getVertexID()
-                    writeTreeVertex(g, vertexID, f)
+                    writeTreeVertex(g, v.getVertexID(), f)
         # IPG
         elif isinstance(g, IPGs.IPG):
             for v in g:
-                writeIPGVertex(g, vertexID, f)
+                writeIPGVertex(g, v.getVertexID(), f)
         f.write(endGraph) 
     
 def writeICFGVertex (icfg, vertexID, f):
@@ -101,7 +100,6 @@ def writeICFGVertex (icfg, vertexID, f):
     
 def writeTreeVertex (tree, vertexID, f):
     v = tree.getVertex(vertexID)
-    # Vertex attributes
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -128,7 +126,6 @@ def writeTreeVertex (tree, vertexID, f):
 
 def writeIPGVertex (ipg, vertexID, f): 
     v = ipg.getVertex(vertexID)
-        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -139,9 +136,13 @@ def writeIPGVertex (ipg, vertexID, f):
     
     f.write(beginAttributes)
     for succID in v.getSuccessorIDs():
+        succe = v.getSuccessorEdge(succID)
         f.write(newEdge)
         f.write(beginAttributes)
-        f.write(setName(str(succID)))
+        f.write(setName(str(succe.getEdgeID())))
+        f.write(setToolTip(', '.join(str(v) for v in succe.getEdgeLabel())))
+        if succe.isIterationEdge():
+            f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

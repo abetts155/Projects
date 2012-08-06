@@ -131,14 +131,23 @@ class HeaderVertex (TreeVertex):
 class Ipoint (Vertex):
     def __init__ (self, vertexID, IpointID):
         Vertex.__init__(self, vertexID)
-        self.IpointID = IpointID
+        self.__IpointID = IpointID
+        self.__succIpointIDToVertexID = {}
         
     def getIpointID (self):
-        return self.IpointID
+        return self.__IpointID
+    
+    def addIpointSuccessor (self, succIpointID, succID):
+        self.__succIpointIDToVertexID[succIpointID] = succID
+    
+    def getIpointSuccessor (self, succIpointID):
+        assert succIpointID in self.__succIpointIDToVertexID, "Unable to find successor of %s with Ipoint ID %s" % (self.vertexID, succIpointID)
+        return self.__succIpointIDToVertexID[succIpointID]
     
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "\tIpoint ID = " + str(self.IpointID) + "\n"
+        string += "\tIpoint ID = " + str(self.__IpointID) + "\n"
         string += "\t" + Vertex.predecessorStr(self)
         string += "\t" + Vertex.successorStr(self)    
         return string
+    
