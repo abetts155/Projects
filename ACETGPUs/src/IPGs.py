@@ -259,4 +259,8 @@ class _AuxiliaryData ():
         self.headerToIterationEdges = {}
         self.headerToIpoints        = {}
         self.ipointToHeader         = {}
+        
+class SuperBlockIPG ():
+    def __init__(self):
+        pass
     
