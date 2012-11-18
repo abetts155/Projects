@@ -1,4 +1,5 @@
-import Edges, DirectedGraph
+from Edges import Edge
+from DirectedGraphs import dummyVertexID
 
 class Vertex ():
     def __init__ (self, vertexID):
@@ -11,7 +12,7 @@ class Vertex ():
     
     def addPredecessor (self, predID, edgeID=None):
         assert predID not in self._predecessors, "Vertex %s already has predecessor %s" % (self._vertexID, predID)
-        e = Edges.Edge(predID, edgeID)
+        e = Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
@@ -41,7 +42,7 @@ class Vertex ():
     
     def addSuccessor (self, succID,edgeID=None):
         assert succID not in self._successors, "Vertex %s already has successor %s" % (self._vertexID, succID)
-        e = Edges.Edge(succID, edgeID)
+        e = Edge(succID, edgeID)
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
@@ -94,14 +95,14 @@ class Vertex ():
 class TreeVertex (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.__parentID = DirectedGraph.dummyVertexID
+        self.__parentID = dummyVertexID
         self.__level = -1
         
     def setParentID (self, parentID):
         self.__parentID = parentID
         
     def getParentID (self):
-        assert self.__parentID != DirectedGraph.dummyVertexID, "Parent ID of %s has not been set" % self.parentID
+        assert self.__parentID != dummyVertexID, "Parent ID of %s has not been set" % self.parentID
         return self.__parentID
     
     def setLevel (self, level):
@@ -112,7 +113,7 @@ class TreeVertex (Vertex):
         return self.__level     
     
     def __str__ (self):
-        if self.__parentID == DirectedGraph.dummyVertexID:
+        if self.__parentID == dummyVertexID:
             return "parent(%s) = <>\n" % self._vertexID
         else:
             return "parent(%s) = %s\n" % (self._vertexID, self.__parentID)

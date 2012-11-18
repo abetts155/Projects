@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, shlex, optparse
-import ICFGs, CFGs, ParseCFG, Debug, Trees, GraphVisualisation, Traces
+import ICFGs, CFGs, ParseCFGs, Debug, Trees, GraphVisualisations, Traces
 import IPGs
 
 # The command-line parser and its options
@@ -49,7 +49,7 @@ def createCFGs ():
                     break
             else:
                 if cfgInput:
-                    ParseCFG.parseLine(line, cfg)
+                    ParseCFGs.parseLine(line, cfg)
     return cfg 
 
 def doAnalysis (cfg):
@@ -57,26 +57,22 @@ def doAnalysis (cfg):
     icfg.setEntryID()
     icfg.setExitID()
     icfg.addExitEntryEdge()
-    GraphVisualisation.makeUdrawFile (icfg, "icfg")
+    GraphVisualisations.makeUdrawFile (icfg, "icfg")
     lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-    GraphVisualisation.makeUdrawFile (lnt, "lnt")
+    GraphVisualisations.makeUdrawFile (lnt, "lnt")
     ipg = IPGs.IPG(icfg, lnt)
-    GraphVisualisation.makeUdrawFile (ipg, "ipg")
+    GraphVisualisations.makeUdrawFile (ipg, "ipg")
     return ipg
     
 def getLineOfTimingTrace (line):
-    lexemes                 = shlex.split(line)
-    expectedNumberOfLexemes = 13
+    lexemes     = shlex.split(line)
     PCIndex     = 3 
     warpIndex   = 6
     SMIndex     = 9
     cycleIndex  = 12
-    if len(lexemes) != expectedNumberOfLexemes:
-        return False, None, None
-    else:
-        SMAndWarp   = int(lexemes[SMIndex]), int(lexemes[warpIndex])
-        timingTuple = lexemes[PCIndex], int(lexemes[cycleIndex])
-        return True, SMAndWarp, timingTuple
+    SMAndWarp   = int(lexemes[SMIndex]), int(lexemes[warpIndex])
+    timingTuple = lexemes[PCIndex], int(lexemes[cycleIndex])
+    return SMAndWarp, timingTuple
 
 def getWarp (allWarpTraces, SMAndWarp):
     SMID   = SMAndWarp[0]
@@ -90,18 +86,13 @@ def getWarp (allWarpTraces, SMAndWarp):
     return w
 
 def splitTraces (ipg):
-    traceDetected = False
     allWarpTraces = []
     with open(args[0], 'r') as f:
         for line in f:
-            if not traceDetected:
-                if "Issued" in line and "PC" in line and "Warp" in line and "SM" in line and "cycle" in line:
-                    traceDetected = True
-            if traceDetected:
-                outcome, SMAndWarp, timingTuple = getLineOfTimingTrace(line)
-                if outcome:
-                    w = getWarp (allWarpTraces, SMAndWarp)
-                    w.appendToTrace(timingTuple)
+            if "Issued" in line and "PC" in line and "Warp" in line and "SM" in line and "cycle" in line:
+                SMAndWarp, timingTuple = getLineOfTimingTrace(line)
+                w = getWarp (allWarpTraces, SMAndWarp)
+                w.appendToTrace(timingTuple)
     return allWarpTraces
         
 if __name__ == "__main__":

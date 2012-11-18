@@ -1,4 +1,4 @@
-import ICFGs, IPGs, Trees, CFGs, Vertices
+import ICFGs, IPGs, Trees, Vertices
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"

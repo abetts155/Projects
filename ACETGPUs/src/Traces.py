@@ -1,4 +1,4 @@
-import IPGs, Vertices, Edges, Debug
+import Debug
 import sys
 
 class WarpTrace ():

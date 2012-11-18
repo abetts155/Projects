@@ -1,7 +1,7 @@
-class Edge ():
+class Edge ():    
     dummyEdgeID = -1
     
-    def __init__ (self, vertexID, edgeID=None):
+    def __init__ (self, vertexID, edgeID=None):        
         self._vertexID = vertexID
         if edgeID is None:
             self.__edgeID = Edge.dummyEdgeID

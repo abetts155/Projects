@@ -1,31 +1,33 @@
-import DirectedGraph, Debug, Vertices
+from DirectedGraphs import DirectedGraph, dummyVertexID
+from Vertices import TreeVertex, HeaderVertex, Ipoint
+import Debug
 
-class Tree (DirectedGraph.DirectedGraph):
+class Tree (DirectedGraph):
     def __init__ (self):
-        DirectedGraph.DirectedGraph.__init__(self)
-        self._rootID = DirectedGraph.dummyVertexID 
+        DirectedGraph.__init__(self)
+        self._rootID = dummyVertexID
         
     def setRootID (self, rootID):
-        assert rootID > DirectedGraph.dummyVertexID, "Invalid root ID %s. It must be a positive integer" % rootID
+        assert rootID > dummyVertexID, "Invalid root ID %s. It must be a positive integer" % rootID
         assert rootID in self.vertices, "Cannot find vertex %s"
         self._rootID = rootID
         
     def getRootID (self):
-        assert self._rootID != DirectedGraph.dummyVertexID, "Root ID has not yet been set"
+        assert self._rootID != dummyVertexID, "Root ID has not yet been set"
         return self._rootID
         
     def addVertex (self, vertexID):
         assert vertexID not in self.vertices, "Adding vertex %s which is already in tree" % vertexID
-        treev = Vertices.TreeVertex(vertexID)
+        treev = TreeVertex(vertexID)
         self.vertices[vertexID] = treev
         
     def addEdge (self, predID, succID):
-        DirectedGraph.DirectedGraph.addEdge(self, predID, succID)
+        DirectedGraph.addEdge(self, predID, succID)
         succv = self.getVertex(succID)
         succv.setParentID(predID)
         
     def isInternalVertex (self, vertexID):
-        return self.getVertex(_vertexID).numberOfSuccessors() > 0
+        return self.getVertex(vertexID).numberOfSuccessors() > 0
         
     def levelIterator (self, up=True):
         rootv = self.getVertex(self.getRootID())
@@ -71,7 +73,7 @@ class DepthFirstSearch (Tree):
     def initialise (self, directedg):
         for v in directedg:
             vertexID = v.getVertexID()
-            self.vertices[vertexID] = Vertices.TreeVertex(vertexID)
+            self.vertices[vertexID] = TreeVertex(vertexID)
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
         
@@ -125,7 +127,7 @@ class LoopNests (Tree):
         for v in self.__directedg:
             vertexID = v.getVertexID()
             self.__parent[vertexID] = vertexID
-            self.vertices[vertexID] = Vertices.TreeVertex(vertexID)
+            self.vertices[vertexID] = TreeVertex(vertexID)
             
     def _findLoops (self, rootID):
         dfs = DepthFirstSearch (self.__directedg, rootID)
@@ -146,7 +148,7 @@ class LoopNests (Tree):
                 
     def _addSelfLoop (self, headerID):
         newVertexID = self.getNextVertexID()
-        headerv = Vertices.HeaderVertex(newVertexID, headerID)
+        headerv = HeaderVertex(newVertexID, headerID)
         self.vertices[newVertexID] = headerv
         self.__headerVertices[headerID] = newVertexID
         self.__loopTails[headerID] = [headerID]
@@ -157,7 +159,7 @@ class LoopNests (Tree):
     def _findLoop (self, dfs, worklist, headerID):
         if headerID not in self.__headerVertices.keys():
             newVertexID = self.getNextVertexID()
-            headerv     = Vertices.HeaderVertex(newVertexID, headerID)
+            headerv     = HeaderVertex(newVertexID, headerID)
             self.vertices[newVertexID] = headerv
             self.__headerVertices[headerID] = newVertexID
             self.__loopTails[headerID] = [t for t in worklist]
@@ -215,7 +217,7 @@ class LoopNests (Tree):
     
     def getInternalHeaderVertex (self, vertexID):
         v = self.getVertex(vertexID)
-        assert isinstance(v, Vertices.HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
+        assert isinstance(v, HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
         return v
     
     def isSelfLoopHeader (self, vertexID):
@@ -252,7 +254,7 @@ class LoopNests (Tree):
     def getIpointsInLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return [vertexID for vertexID in self.__loopBodies[headerID] 
-                if isinstance(self.__directedg.getVertex(vertexID), Vertices.Ipoint)]
+                if isinstance(self.__directedg.getVertex(vertexID), Ipoint)]
     
     def isLoopBackEdge (self, sourceID, destinationID):
         if destinationID not in self.__headerVertices.keys():

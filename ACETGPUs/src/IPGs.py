@@ -1,11 +1,13 @@
-import DirectedGraph, Trees, Vertices, Edges, Debug
-import copy
+from DirectedGraphs import DirectedGraph, dummyVertexID
+from Vertices import HeaderVertex, Ipoint
+from Edges import IPGEdge
+import Debug
 
-class IPG (DirectedGraph.DirectedGraph):
+class IPG (DirectedGraph):
     def __init__(self, icfg, lnt=None):
-        DirectedGraph.DirectedGraph.__init__(self)
-        self.__entryID = DirectedGraph.dummyVertexID
-        self.__exitID = DirectedGraph.dummyVertexID
+        DirectedGraph.__init__(self)
+        self.__entryID = dummyVertexID
+        self.__exitID = dummyVertexID
         self.__icfg = icfg
         self.__lnt = lnt
         self.__ipointIDToVertex = {}
@@ -23,11 +25,11 @@ class IPG (DirectedGraph.DirectedGraph):
         return self.__ipointIDToVertex[ipointID]
     
     def getEntryID (self):
-        assert self.__entryID != DirectedGraph.dummyVertexID, "Entry to IPG not found"
+        assert self.__entryID != dummyVertexID, "Entry to IPG not found"
         return self.__entryID
     
     def getExitID (self):
-        assert self.__exitID != DirectedGraph.dummyVertexID, "Exit to IPG not found"
+        assert self.__exitID != dummyVertexID, "Exit to IPG not found"
         return self.__exitID
     
     def __initialise (self):
@@ -37,7 +39,7 @@ class IPG (DirectedGraph.DirectedGraph):
             self.__auxiliaryData.vertexToReachable[vertexID] = {}            
             # Ipoint actions
             if self.__icfg.isIpoint(vertexID):
-                ipointv = Vertices.Ipoint(vertexID, v.getIpointID())
+                ipointv = Ipoint(vertexID, v.getIpointID())
                 self.vertices[vertexID] = ipointv
                 self.__ipointIDToVertex[v.getIpointID()] = ipointv
                 if self.__lnt.isLoopHeader(vertexID):
@@ -79,10 +81,10 @@ class IPG (DirectedGraph.DirectedGraph):
     def __addEdgesUsingLNT (self):
         for level, vertices in self.__lnt.levelIterator():
             for v in vertices:
-                if isinstance(v, Vertices.HeaderVertex):
+                if isinstance(v, HeaderVertex):
                     headerID = v.getHeaderID()
                     if not self.__lnt.isSelfLoopHeader(headerID):
-                        if not isinstance(v, Vertices.Ipoint):
+                        if not isinstance(v, Ipoint):
                             self.__auxiliaryData.vertexToReachable[headerID][headerID] = [headerID]
                         self.__auxiliaryData.headerID = headerID
                         self.__solveDFF(headerID)
@@ -202,8 +204,8 @@ class IPG (DirectedGraph.DirectedGraph):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
         predv.addIpointSuccessor (succv.getIpointID(), succID)
-        succe = Edges.IPGEdge(succID, self.__auxiliaryData.edgeID)
-        prede = Edges.IPGEdge(predID, self.__auxiliaryData.edgeID)
+        succe = IPGEdge(succID, self.__auxiliaryData.edgeID)
+        prede = IPGEdge(predID, self.__auxiliaryData.edgeID)
         predv.addSuccessorEdge(succe)
         succv.addPredecessorEdge(prede) 
         self.__auxiliaryData.edgeID += 1
