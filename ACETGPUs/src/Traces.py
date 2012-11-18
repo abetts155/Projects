@@ -69,7 +69,6 @@ class _TraceParser ():
                     self.totalEnd2End += runTime
                     if runTime > self.highWaterMark:
                         self.highWaterMark = runTime
-                    print runTime
                     self.__analyseWorstCaseExecutionCounts()
                     
     def __analyseEdgeTime (self, succe, time):
@@ -182,6 +181,9 @@ class TraceData ():
             return self.__edgeIDToExecutionCounts[edgeID]
         else:
             return 0
+        
+    def getEdgeIDs (self):
+        return self.__edgeIDToWCET.keys()
     
     def output (self):
         print "ACET = %d" % self.__end2endACET

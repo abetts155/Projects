@@ -38,14 +38,6 @@ parser.add_option("--non-negative",
                  help="Generate non-negative data.",
                  default=False)
 
-parser.add_option("-o",
-                 "--out",
-                 action="store",
-                 type="string",
-                 dest="outFile",
-                 help="Specify output file.",
-                 default="arguments.txt")
-
 parser.add_option("-T",
                   "--tests",
                   action="store",
@@ -64,15 +56,18 @@ lowerBound = -(2**31)
 
 def checkCommandLine ():
     # Check that the user has passed the correct options
-    if len(args) == 0:
-        Debug.exitMessage("You need to specify how many arguments should be generated")
-    elif len(args) > 1:
-        Debug.exitMessage("Too many arguments given")
-    try:
+    if len(args) != 2:
+        Debug.exitMessage("You need to specify the name of the CUDA binary and how many arguments the kernel expects")
+        
+    tvLength   = None
+    cudaBinary = None
+    if args[0].isdigit():
         tvLength = int(args[0])
-        return tvLength
-    except:
-        Debug.exitMessage("The argument must be an integer")
+        cudaBinary = args[1]
+    elif args[1].isdigit():
+        tvLength = int(args[1])
+        cudaBinary = args[0]
+    return tvLength, cudaBinary
             
 def generateTestVector (tvLength):
     import random
@@ -84,16 +79,27 @@ def generateTestVector (tvLength):
             num = random.randint(lowerBound, upperBound)
         tv.append(num)
     return tv
-          
+
+def runProgram (tv, cudaBinary, f):
+    from subprocess import Popen, PIPE
+    commandLine = ' '.join(str(elem) for elem in tv)
+    command     = "./%s %s" % (cudaBinary, commandLine)
+    proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+    stdoutdata, stderrdata = proc.communicate()
+    
+    f.write(stdoutdata)
+    
+    if proc.returncode != 0:
+        Debug.exitMessage("Running '%s' failed" % command)
+      
 if __name__ == "__main__":    
-    tvLength = checkCommandLine ()
+    tvLength, cudaBinary = checkCommandLine ()
+    print tvLength, cudaBinary
     if opts.nonNegative:
         lowerBound = 0
-    with open(opts.outFile, 'w') as f:
+    with open(cudaBinary + ".gpgpusim", 'w') as f:
         for i in range(1, opts.tests+1):
             Debug.debugMessage("Test vector #%d" % i, 1)
-            tv   = generateTestVector(tvLength)
-            text = ','.join(str(elem) for elem in tv)
-            f.write(text)
-            f.write("\n")
+            tv = generateTestVector(tvLength)
+            runProgram(tv, cudaBinary, f)
     

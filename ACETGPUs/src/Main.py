@@ -2,7 +2,7 @@
 
 import sys, shlex, optparse
 import ICFGs, CFGs, ParseCFGs, Debug, Trees, GraphVisualisations, Traces
-import IPGs
+import IPGs, WCET
 
 # The command-line parser and its options
 parser = optparse.OptionParser(add_help_option=False)
@@ -102,3 +102,4 @@ if __name__ == "__main__":
     allWarpTraces = splitTraces (ipg)
     allData = Traces.TraceData(allWarpTraces, ipg)
     allData.output()
+    WCET.LinearProgram(ipg, allData, args[0])
