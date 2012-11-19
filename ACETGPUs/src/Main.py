@@ -33,13 +33,25 @@ Debug.debug = opts.debug
 
 def checkCommandLine ():
     # Check that the user has passed the correct options
-    if len(args) == 0:
-        Debug.exitMessage("You need to pass a file containing output from GPGPU-sim")
+    if len(args) != 2:
+        Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
+        
+    numOfTVs   = None
+    cudaBinary = None
+    if args[0].isdigit():
+        numOfTVs = int(args[0])
+        cudaBinary = args[1]
+    elif args[1].isdigit():
+        numOfTVs = int(args[1])
+        cudaBinary = args[0]
+        
+    assert numOfTVs > 0, "The number of test vectors has to be a non-negative integer"
+    return numOfTVs, cudaBinary
             
-def createCFGs ():
+def createCFGs (outfile):
     cfg = CFGs.CFG()
     cfgInput = False
-    with open(args[0], 'r') as f:
+    with open(outfile, 'r') as f:
         for line in f:
             if "*** CFG ***" in line:
                 if not cfgInput:
@@ -85,21 +97,35 @@ def getWarp (allWarpTraces, SMAndWarp):
     allWarpTraces.append(w)
     return w
 
-def splitTraces (ipg):
+def splitTraces (ipg, outfile):
     allWarpTraces = []
-    with open(args[0], 'r') as f:
+    with open(outfile, 'r') as f:
         for line in f:
             if "Issued" in line and "PC" in line and "Warp" in line and "SM" in line and "cycle" in line:
                 SMAndWarp, timingTuple = getLineOfTimingTrace(line)
                 w = getWarp (allWarpTraces, SMAndWarp)
                 w.appendToTrace(timingTuple)
     return allWarpTraces
-        
+
+def runProgram (numOfTVs, cudaBinary):
+    from subprocess import Popen, PIPE
+    outputFilename = cudaBinary + ".gpgpusim"
+    with open(outputFilename, 'w') as outfile:
+        command = "%s %d" % (cudaBinary, numOfTVs)
+        Debug.debugMessage("Running '%s'" % command, 1)
+        proc = Popen(command, shell=True, executable="/bin/bash", stdout=outfile, stderr=PIPE)
+        returnCode = proc.wait()
+        if returnCode != 0:
+            Debug.exitMessage("Running '%s' failed" % command)
+        outfile.flush()
+    return outputFilename
+    
 if __name__ == "__main__":
-    checkCommandLine ()
-    cfg = createCFGs()
+    numOfTVs, cudaBinary = checkCommandLine ()
+    outfile = runProgram(numOfTVs, cudaBinary)
+    cfg = createCFGs(outfile)
     ipg = doAnalysis(cfg)
-    allWarpTraces = splitTraces (ipg)
+    allWarpTraces = splitTraces (ipg, outfile)
     allData = Traces.TraceData(allWarpTraces, ipg)
     allData.output()
-    WCET.LinearProgram(ipg, allData, args[0])
+    WCET.LinearProgram(ipg, allData, outfile)

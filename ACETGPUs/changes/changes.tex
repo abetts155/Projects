@@ -53,6 +53,19 @@ it means that particular warp is in flight. To produce a trace of when this even
   }
 \end{lstlisting}       
 
+\textbf{ptx_ir.cc::function_info::connect_basic_blocks()} There is a bug in CFG generation when the last 
+instruction of a basic block is a predicated return operation. In the original source code we have:
+
+\begin{lstlisting}
+  unsigned next_addr = pI->get_m_instr_mem_index() + 1;
+\end{lstlisting}
+
+which tries to find the address of the next instruction in the sequence. That is wrong as we have to 
+add the instruction width instead as follows:
+\begin{lstlisting}
+  unsigned next_addr = pI->get_m_instr_mem_index() + pI->inst_size();
+\end{lstlisting}
+
 \subsection{Running}
 
 Running \gpusim is a bit awkward. It consists of several steps:
