@@ -1,13 +1,13 @@
 #!/usr/bin/python2.6
 
-import sys, shlex, optparse
+import sys, shlex, optparse, os
 import ICFGs, CFGs, ParseCFGs, Debug, Trees, GraphVisualisations, Traces
 import IPGs, WCET
 
 # The command-line parser and its options
-parser = optparse.OptionParser(add_help_option=False)
+cmdline = optparse.OptionParser(add_help_option=False)
 
-parser.add_option("-d",
+cmdline.add_option("-d",
                   "--debug",
                   action="store",
                   dest="debug",
@@ -15,19 +15,26 @@ parser.add_option("-d",
                   help="Debug mode.",
                   default=False)
 
-parser.add_option("-h",
+cmdline.add_option("-h",
                   "--help",
                   action="help",
                   help="Display this help message.")
 
-parser.add_option("-v",
+cmdline.add_option("-v",
                  "--verbose",
                  action="store_true",
                  dest="verbose",
                  help="Be verbose.",
                  default=False)
 
-(opts, args) = parser.parse_args(sys.argv[1:])
+cmdline.add_option("-u",
+                 "--udraw",
+                 action="store_true",
+                 dest="udraw",
+                 help="Generate uDrawGraph files.",
+                 default=False)
+
+(opts, args) = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug = opts.debug
 
@@ -64,16 +71,19 @@ def createCFGs (outfile):
                     ParseCFGs.parseLine(line, cfg)
     return cfg 
 
-def doAnalysis (cfg):
+def doAnalysis (cfg, basename):
     icfg = ICFGs.ICFG(cfg)
     icfg.setEntryID()
     icfg.setExitID()
     icfg.addExitEntryEdge()
-    GraphVisualisations.makeUdrawFile (icfg, "icfg")
+    if opts.udraw:
+        GraphVisualisations.makeUdrawFile (icfg, "%s.%s" % (basename, "icfg"))
     lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-    GraphVisualisations.makeUdrawFile (lnt, "lnt")
+    if opts.udraw:
+        GraphVisualisations.makeUdrawFile (lnt, "%s.%s" % (basename, "lnt"))
     ipg = IPGs.IPG(icfg, lnt)
-    GraphVisualisations.makeUdrawFile (ipg, "ipg")
+    if opts.udraw:
+        GraphVisualisations.makeUdrawFile (ipg, "%s.%s" % (basename, "ipg"))
     return ipg
     
 def getLineOfTimingTrace (line):
@@ -109,8 +119,9 @@ def splitTraces (ipg, outfile):
 
 def runProgram (numOfTVs, cudaBinary):
     from subprocess import Popen, PIPE
-    outputFilename = cudaBinary + ".gpgpusim"
-    with open(outputFilename, 'w') as outfile:
+    outfilename = cudaBinary + ".gpgpusim"
+    Debug.debugMessage("Creating file '%s' for GPGPU-sim output" % outfilename, 1)
+    with open(outfilename, 'w') as outfile:
         command = "%s %d" % (cudaBinary, numOfTVs)
         Debug.debugMessage("Running '%s'" % command, 1)
         proc = Popen(command, shell=True, executable="/bin/bash", stdout=outfile, stderr=PIPE)
@@ -118,14 +129,33 @@ def runProgram (numOfTVs, cudaBinary):
         if returnCode != 0:
             Debug.exitMessage("Running '%s' failed" % command)
         outfile.flush()
-    return outputFilename
+    return outfilename
     
+def cleanUp (abspath):
+    for paths, dirs, files in os.walk(abspath):
+        files.sort()
+        for filename in files:
+            if filename.startswith('_cuobjdump_') or filename.startswith('_ptxplus_'):
+                fullPath = os.path.join(paths, filename)
+                Debug.debugMessage("Removing '%s'" % fullPath, 5)
+                os.remove(fullPath)
+                
 if __name__ == "__main__":
+    # Remove files created from previous runs
+    cleanUp (os.path.abspath(os.curdir))
+    # Get the CUDA binary name and number of test vectors
     numOfTVs, cudaBinary = checkCommandLine ()
+    # Get the filename of the binary without the path
+    basename = os.path.basename(cudaBinary)
+    # Run the program on GPGPU-sim and get generated output
     outfile = runProgram(numOfTVs, cudaBinary)
+    # Create the CFGs
     cfg = createCFGs(outfile)
-    ipg = doAnalysis(cfg)
+    # Create the IPG
+    ipg = doAnalysis(cfg, basename)
+    # Split into warp-specific traces
     allWarpTraces = splitTraces (ipg, outfile)
     allData = Traces.TraceData(allWarpTraces, ipg)
     allData.output()
+    # Create an ILP from the IPG and the parsed data
     WCET.LinearProgram(ipg, allData, outfile)

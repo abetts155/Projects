@@ -1,3 +1,5 @@
+import Debug
+
 edgePrefix = "e_"
 endStmt    = ";"
 plus       = " + "
@@ -9,6 +11,7 @@ newLine    = "\n"
 class LinearProgram ():
     
     def __init__(self, ipg, traceData, inputFilename):
+        self.__wcet    = 0
         index          = inputFilename.find('.')
         outputFilename = inputFilename[:index] + ".ilp"
         with open(outputFilename, 'w') as f:
@@ -16,6 +19,23 @@ class LinearProgram ():
             self.__writeStructuralConstraints(f, ipg)
             self.__writeCountConstraints(f, traceData, ipg)
             self.__writeNonNegativeConstraints(f, traceData)
+        self.__solve(outputFilename)
+        
+    def __solve(self, ilpFile):
+        from subprocess import Popen, PIPE
+        import shlex
+        Debug.debugMessage("Solving ILP", 1)
+        command = "lp_solve %s" % ilpFile 
+        proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        returnCode = proc.wait()
+        if returnCode != 0:
+            Debug.exitMessage("Running '%s' failed" % command)
+        for line in proc.stdout.readlines():
+            if line.startswith("Value of objective function"):
+                lexemes  = shlex.split(line)
+                wcet     = long(lexemes[-1])
+                self.__wcet = wcet
+                print "WCET = %ld" % wcet
             
     def __writeObjectiveFunction(self, f, traceData):
         f.write("max: ")
