@@ -3,6 +3,8 @@ from Vertices import HeaderVertex, Ipoint
 from Edges import IPGEdge
 import Debug
 
+edgeID = 1
+
 class IPG (DirectedGraph):
     def __init__(self, icfg, lnt=None):
         DirectedGraph.__init__(self)
@@ -17,7 +19,7 @@ class IPG (DirectedGraph):
         self.__doDepthFirstSearch(self.__icfg.getEntryID())
         self.__addEdgesUsingLNT()
         self.__setEntryAndExit()
-        self.__name = icfg.getName()
+        self.setName(icfg.getName())
         del self.__visited
         del self.__auxiliaryData
         
@@ -201,15 +203,16 @@ class IPG (DirectedGraph):
                 self.__setIterationEdge(sourceID, destinationID)
     
     def __addEdge (self, predID, succID):
+        global edgeID
         Debug.debugMessage("Adding IPG Edge %s => %s" % (predID, succID), 10)
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
         predv.addIpointSuccessor (succv.getIpointID(), succID)
-        succe = IPGEdge(succID, self.__auxiliaryData.edgeID)
-        prede = IPGEdge(predID, self.__auxiliaryData.edgeID)
+        succe = IPGEdge(succID, edgeID)
+        prede = IPGEdge(predID, edgeID)
         predv.addSuccessorEdge(succe)
         succv.addPredecessorEdge(prede) 
-        self.__auxiliaryData.edgeID += 1
+        edgeID += 1
         
     def __setIterationEdge (self, predID, succID):
         predv = self.getVertex(predID)
@@ -255,7 +258,6 @@ class _AuxiliaryData ():
     def __init__(self):
         self.changed   = False
         self.iteration = 0
-        self.edgeID    = 1
         self.vertexToReachable      = {}
         self.headerToReachable      = {}
         self.headerToTopSorts       = {}

@@ -21,11 +21,11 @@ class WarpTrace ():
     
 class _TraceParser ():
     def __init__(self, warpTrace, program):
-        Debug.debugMessage("SM %s, WARP %s" % (warpTrace.getMultiprocessorID(), warpTrace.getWarpID()), 10)
-        self.numberOfTraces = 0
+        Debug.debugMessage("Parsing traces in SM %s, WARP %s" % (warpTrace.getMultiprocessorID(), warpTrace.getWarpID()), 5)
+        self.numberOfTraces = {}
         # High water mark time
-        self.highWaterMark = 0
-        self.totalEnd2End = 0
+        self.highWaterMark = {}
+        self.totalEnd2End = {}
         # Best-case execution time
         self.edgeIDToBCET = {}
         # Worst-case execution time
@@ -44,6 +44,11 @@ class _TraceParser ():
         for ipg in program.getIPGs():
             startv = ipg.getVertex(ipg.getEntryID())
             if startv.getIpointID() == ipointID:
+                functionName = ipg.getName()
+                if functionName not in self.highWaterMark:
+                    self.highWaterMark[functionName] = 0
+                    self.totalEnd2End[functionName] = 0
+                    self.numberOfTraces[functionName] = 0
                 return ipg
         assert False, "Cannot find IPG whose entry Ipoint ID is %d" % ipointID
         
@@ -58,8 +63,9 @@ class _TraceParser ():
             ipointID = int(t[0], 0)
             time     = long(t[1])
             if newTrace:
-                ipg = self.__getIPG(program, ipointID)
-                self.numberOfTraces += 1
+                ipg          = self.__getIPG(program, ipointID)
+                functionName = ipg.getName()
+                self.numberOfTraces[functionName] += 1
                 newTrace = False
                 currentv = ipg.getVertex(ipg.getEntryID())
                 assert currentv.getIpointID () == ipointID
@@ -73,13 +79,14 @@ class _TraceParser ():
                 lastTime = time
                 currentv = ipg.getVertex(succID)
                 if succID == ipg.getExitID():
-                    newTrace = True
-                    ipg      = None
-                    runTime  = lastTime - startTime
-                    self.totalEnd2End += runTime
-                    if runTime > self.highWaterMark:
-                        self.highWaterMark = runTime
+                    newTrace     = True
+                    runTime      = lastTime - startTime
+                    functionName = ipg.getName()
+                    self.totalEnd2End[functionName] += runTime
+                    if runTime > self.highWaterMark[functionName]:
+                        self.highWaterMark[functionName] = runTime
                     self.__analyseWorstCaseExecutionCounts()
+                    ipg = None
                     
     def __analyseEdgeTime (self, succe, time):
         edgeID = succe.getEdgeID()
@@ -110,8 +117,8 @@ class _TraceParser ():
 
 class TraceData ():
     def __init__(self, allWarpTraces, program):
-        self.__highWaterMark = 0
-        self.__end2endACET = 0
+        self.__highWaterMark = {}
+        self.__end2endACET = {}
         self.__edgeIDToBCET = {}
         self.__edgeIDToWCET = {}
         self.__edgeIDToWCEC = {}
@@ -121,9 +128,9 @@ class TraceData ():
         self.__SMTOWarps = {}
         self.__edgeIDToWorstCaseWarpTrace = {}
         self.__edgeIDToBestCaseWarpTrace = {}
+        self.__program = program
         
-        Debug.debugMessage("Total number of warps = %d" % self.__numberOfWarps, 1)
-        
+        # Parse each warp-specific trace
         self.tps = set([])          
         for w in allWarpTraces.values():
             self.tps.add(_TraceParser(w, program))
@@ -132,18 +139,26 @@ class TraceData ():
                 self.__SMTOWarps[SMID] = [w.getWarpID()]
             else:
                 self.__SMTOWarps[SMID].append(w.getWarpID())
-        
-        averageDividend = 0
-        averageDivisor  = 0
-        for t in self.tps:
-            if t.highWaterMark > self.__highWaterMark:
-                self.__highWaterMark = t.highWaterMark
-            averageDividend += t.totalEnd2End
-            averageDivisor  += t.numberOfTraces
-        assert averageDivisor > 0
-        self.__end2endACET = averageDividend/averageDivisor
-        
+                
         for ipg in program.getIPGs():
+            functionName = ipg.getName()
+            self.__highWaterMark[functionName] = 0
+            self.__end2endACET[functionName] = 0
+            
+            # First work out the HWMT for each kernel and its average end-to-end
+            # execution time
+            averageDividend = 0
+            averageDivisor  = 0
+            for t in self.tps:
+                if functionName in t.highWaterMark:
+                    if t.highWaterMark[functionName] > self.__highWaterMark[functionName]:
+                        self.__highWaterMark[functionName] = t.highWaterMark[functionName]
+                    averageDividend += t.totalEnd2End[functionName]
+                    averageDivisor  += t.numberOfTraces[functionName]
+                    assert averageDivisor > 0
+                    self.__end2endACET[functionName] = averageDividend/averageDivisor
+            
+            # Now work out timing information related to each edge
             for v in ipg:
                 for succe in v.getSuccessorEdges():
                     edgeID = succe.getEdgeID()
@@ -196,9 +211,16 @@ class TraceData ():
     def getEdgeIDs (self):
         return self.__edgeIDToWCET.keys()
     
-    def output (self):        
-        print "ACET = %d" % self.__end2endACET
-        print "HWMT = %d" % self.__highWaterMark
+    def getHWMT(self, functionName):
+        assert functionName in self.__highWaterMark, "Unable to find HWMT for '%s'" % functionName
+        return self.__highWaterMark[functionName]
+    
+    def getACET(self, functionName):
+        assert functionName in self.__end2endACET, "Unable to find ACET for '%s'" % functionName
+        return self.__end2endACET[functionName]
+    
+    def output (self):
+        print "%s IPG edge data %s" % ("=" * 11, "=" * 11)
         for edgeID, WCET in self.__edgeIDToWCET.iteritems():
             executionCount = self.__edgeIDToExecutionCounts[edgeID]
             print "%s Edge %d %s" % ("=" * 22, edgeID, "=" * 22)
@@ -218,4 +240,5 @@ class TraceData ():
         print "%s Streaming Multiprocessor data %s" % ("=" * 11, "=" * 11)
         for SMID, warps in self.__SMTOWarps.iteritems():
             print "SM %d had %d warps" % (SMID, len(warps))
+
             

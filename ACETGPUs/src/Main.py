@@ -48,6 +48,7 @@ def createGraphs (program, basename):
         icfg.setExitID()
         icfg.addExitEntryEdge()
         program.addICFG(icfg)
+        print icfg.getName()
         if opts.udraw:
             UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
         lnt = Trees.LoopNests(icfg, icfg.getEntryID())
@@ -113,11 +114,17 @@ def doAnalysis (outfile, basename):
     allWarpTraces = splitTraces (outfile)
     if Debug.debug >= 5:
         writeTraces(allWarpTraces, basename)
-    allData = Traces.TraceData(allWarpTraces, program)
-    allData.output()
-    # Create an ILP from the IPG and the parsed data
+    traceData = Traces.TraceData(allWarpTraces, program)
+    traceData.output()
+    
+    print "%s End-to-end timing data %s" % ("=" * 11, "=" * 11)
     for ipg in program.getIPGs():
-        WCET.LinearProgram(ipg, allData, outfile)
+        functionName = ipg.getName()
+        print "ACET(%s) = %ld" % (functionName, traceData.getACET(functionName))
+        print "HWMT(%s) = %ld" % (functionName, traceData.getHWMT(functionName))
+        # Create an ILP from the IPG and the parsed data
+        ilp = WCET.LinearProgram(ipg, traceData, outfile)
+        print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
 
 def checkCommandLineForAction ():
     # Check that the user has passed the correct options

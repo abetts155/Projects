@@ -59,13 +59,6 @@ class CFG (DirectedGraph):
         DirectedGraph.__init__(self)
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
-        self.__name = None
-        
-    def setName (self, name):
-        self.__name = name
-        
-    def getName (self):
-        return self.__name
         
     def addVertex (self, bbID):
         assert bbID not in self.vertices, "Adding basic block %s which is already in graph" % bbID

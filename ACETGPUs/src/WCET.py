@@ -15,13 +15,16 @@ class LinearProgram ():
         index          = inputFilename.find('.')
         outputFilename = inputFilename[:index] + ".ilp"
         with open(outputFilename, 'w') as f:
-            self.__writeObjectiveFunction(f, traceData)
+            self.__writeObjectiveFunction(f, ipg, traceData)
             self.__writeStructuralConstraints(f, ipg)
-            self.__writeCountConstraints(f, traceData, ipg)
-            self.__writeNonNegativeConstraints(f, traceData)
-        self.__solve(outputFilename)
+            self.__writeCountConstraints(f, ipg, traceData)
+            self.__writeNonNegativeConstraints(f, ipg)
+        self.__solve(ipg, outputFilename)
+    
+    def getWCET (self):
+        return self.__wcet
         
-    def __solve(self, ilpFile):
+    def __solve(self, ipg, ilpFile):
         from subprocess import Popen, PIPE
         import shlex
         Debug.debugMessage("Solving ILP", 1)
@@ -35,18 +38,20 @@ class LinearProgram ():
                 lexemes  = shlex.split(line)
                 wcet     = long(decimal.Decimal(lexemes[-1]))
                 self.__wcet = wcet
-                print "WCET = %ld" % wcet
             
-    def __writeObjectiveFunction(self, f, traceData):
+    def __writeObjectiveFunction(self, f, ipg, traceData):
         f.write("max: ")
         count = 0
-        numOfEdges = len(traceData.getEdgeIDs())
-        for edgeID in traceData.getEdgeIDs():
-            count += 1
-            wcet = traceData.getWCETOfEdge(edgeID)
-            f.write("%d %s%d" % (wcet, edgePrefix, edgeID))
-            if count < numOfEdges:
-                f.write(plus)
+        numOfEdges = ipg.numOfEdges()
+        for vertexID in ipg.vertices:
+            v  = ipg.getVertex(vertexID)
+            for succe in v.getSuccessorEdges ():
+                count += 1
+                edgeID = succe.getEdgeID()
+                wcet   = traceData.getWCETOfEdge(edgeID)
+                f.write("%d %s%d" % (wcet, edgePrefix, edgeID))
+                if count < numOfEdges:
+                    f.write(plus)
         f.write("%s%s" % (endStmt, newLine))
     
     def __writeStructuralConstraints(self, f, ipg):
@@ -71,26 +76,30 @@ class LinearProgram ():
                 
             f.write("%s%s" % (endStmt, newLine))
             
-    def __writeCountConstraints(self, f, traceData, ipg):
+    def __writeCountConstraints(self, f, ipg, traceData):
         f.write(newLine)
-        startv = ipg.getVertex(ipg.getEntryID())
-        for edgeID in traceData.getEdgeIDs():
-            wcec = traceData.getWCECOfEdge(edgeID)
-            for prede in startv.getPredecessorEdges():
-                if edgeID == prede.getEdgeID():
+        for vertexID in ipg.vertices:
+            v  = ipg.getVertex(vertexID)
+            for succe in v.getSuccessorEdges ():
+                edgeID = succe.getEdgeID()
+                wcec = traceData.getWCECOfEdge(edgeID)
+                if vertexID == ipg.getExitID():
                     wcec = 1
-            f.write("%s%d%s%d" % (edgePrefix, edgeID, ltOrEqual, wcec))
-            f.write("%s%s" % (endStmt, newLine))
+                f.write("%s%d%s%d" % (edgePrefix, edgeID, ltOrEqual, wcec))
+                f.write("%s%s" % (endStmt, newLine))
     
-    def __writeNonNegativeConstraints(self, f, traceData):
+    def __writeNonNegativeConstraints(self, f, ipg):
         f.write(newLine)
         f.write("int ")
         count = 0
-        numOfEdges = len(traceData.getEdgeIDs())
-        for edgeID in traceData.getEdgeIDs():
-            count += 1
-            f.write("%s%d" % (edgePrefix, edgeID))
-            if count < numOfEdges:
-                f.write(comma)
+        numOfEdges = ipg.numOfEdges()
+        for vertexID in ipg.vertices:
+            v  = ipg.getVertex(vertexID)
+            for succe in v.getSuccessorEdges ():
+                edgeID = succe.getEdgeID()
+                count += 1
+                f.write("%s%d" % (edgePrefix, edgeID))
+                if count < numOfEdges:
+                    f.write(comma)
         f.write("%s%s" % (endStmt, newLine))
     

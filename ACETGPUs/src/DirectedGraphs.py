@@ -3,6 +3,13 @@ dummyVertexID = -1
 class DirectedGraph ():        
     def __init__ (self):
         self.vertices = {}
+        self.__name = None
+    
+    def setName (self, name):
+        self.__name = name
+        
+    def getName (self):
+        return self.__name
     
     def getVertex (self, vertexID):
         assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
@@ -22,6 +29,12 @@ class DirectedGraph ():
         while nextID in self.vertices.keys():
             nextID = nextID + 1 
         return nextID
+    
+    def numOfEdges(self):
+        total = 0
+        for v in self.vertices.values():
+            total += v.numberOfSuccessors()
+        return total
     
     def __iter__ (self):
         return self.vertices.values().__iter__()    

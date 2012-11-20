@@ -5,11 +5,11 @@ class ICFG (CFGs.CFG):
     def __init__ (self, cfg):
         Debug.debugMessage(cfg, 10)
         CFGs.CFG.__init__(self)
+        self.setName(cfg.getName())
         for bb in cfg:
             bbID = bb.getVertexID()
             self.vertices[bbID] = copy.deepcopy(bb)
         self.__addIpoints()
-        self.__name = cfg.getName()
     
     def __addIpoints (self):
         for bb in self:
