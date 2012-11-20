@@ -1,4 +1,5 @@
 import Debug
+import decimal
 
 edgePrefix = "e_"
 endStmt    = ";"
@@ -32,7 +33,7 @@ class LinearProgram ():
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes  = shlex.split(line)
-                wcet     = long(lexemes[-1])
+                wcet     = long(decimal.Decimal(lexemes[-1]))
                 self.__wcet = wcet
                 print "WCET = %ld" % wcet
             

@@ -92,6 +92,18 @@ def splitTraces (outfile):
                 w.appendToTrace(timingTuple)
     return allWarpTraces
 
+def writeTraces (allWarpTraces, basename):
+    traceFileName = basename + ".warps.trace"
+    with open(traceFileName, 'w') as f:
+        for w in allWarpTraces.values(): 
+            f.write("\n%s\n" % ('=' * 20))
+            f.write("SM = %d WARP = %d\n" % (w.getMultiprocessorID(), w.getWarpID()))
+            f.write("%s\n" % ('=' * 20))
+            for t in w.getTrace():
+                ipointID = int(t[0], 0)
+                time     = long(t[1])
+                f.write("0x%04X %d\n" % (ipointID, time))
+
 def doAnalysis (outfile, basename): 
     # Create the CFGs
     program = createCFGs(outfile)
@@ -99,6 +111,8 @@ def doAnalysis (outfile, basename):
     createGraphs(program, basename)
     # Split into warp-specific traces
     allWarpTraces = splitTraces (outfile)
+    if Debug.debug >= 5:
+        writeTraces(allWarpTraces, basename)
     allData = Traces.TraceData(allWarpTraces, program)
     allData.output()
     # Create an ILP from the IPG and the parsed data
