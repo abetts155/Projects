@@ -59,6 +59,13 @@ class CFG (DirectedGraph):
         DirectedGraph.__init__(self)
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
+        self.__name = None
+        
+    def setName (self, name):
+        self.__name = name
+        
+    def getName (self):
+        return self.__name
         
     def addVertex (self, bbID):
         assert bbID not in self.vertices, "Adding basic block %s which is already in graph" % bbID
@@ -117,4 +124,35 @@ class CFG (DirectedGraph):
         for bb in self.vertices.values():
             string += bb.__str__()
         return string
+    
+class Program():
+    def __init__(self):
+        self.__cfgs = []
+        self.__icfgs = []
+        self.__ipgs = []
+        self.__lnts = []
+        
+    def addCFG (self, cfg):
+        self.__cfgs.append(cfg)
+       
+    def addICFG (self, icfg):
+        self.__icfgs.append(icfg)
+        
+    def addIPG (self, ipg):
+        self.__ipgs.append(ipg)
+        
+    def addLNT (self, lnt):
+        self.__lnts.append(lnt)
+     
+    def getCFGs (self):
+        return self.__cfgs.__iter__()   
+
+    def getICFGs (self):
+        return self.__icfgs.__iter__() 
+
+    def getIPGs (self):
+        return self.__ipgs.__iter__() 
+    
+    def getLNTs (self):
+        return self.__lnts.__iter__() 
     

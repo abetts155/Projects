@@ -17,6 +17,7 @@ class IPG (DirectedGraph):
         self.__doDepthFirstSearch(self.__icfg.getEntryID())
         self.__addEdgesUsingLNT()
         self.__setEntryAndExit()
+        self.__name = icfg.getName()
         del self.__visited
         del self.__auxiliaryData
         

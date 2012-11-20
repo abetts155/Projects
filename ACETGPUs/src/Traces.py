@@ -20,7 +20,7 @@ class WarpTrace ():
         return self.__theTrace
     
 class _TraceParser ():
-    def __init__(self, warpTrace, ipg):
+    def __init__(self, warpTrace, program):
         Debug.debugMessage("SM %s, WARP %s" % (warpTrace.getMultiprocessorID(), warpTrace.getWarpID()), 10)
         self.numberOfTraces = 0
         # High water mark time
@@ -38,18 +38,27 @@ class _TraceParser ():
         # Total execution time consumed
         self.edgeIDToTotalTime = {}
         self.warpTrace = warpTrace
-        self.__doParsing(ipg)
+        self.__doParsing(program)
         
-    def __doParsing (self, ipg):
+    def __getIPG (self, program, ipointID):
+        for ipg in program.getIPGs():
+            startv = ipg.getVertex(ipg.getEntryID())
+            if startv.getIpointID() == ipointID:
+                return ipg
+        assert False, "Cannot find IPG whose entry Ipoint ID is %d" % ipointID
+        
+    def __doParsing (self, program):
         newTrace  = True
         currentv  = None
         lastTime  = 0
         startTime = 0
+        ipg       = None
         
         for t in self.warpTrace.getTrace():
             ipointID = int(t[0], 0)
             time     = long(t[1])
             if newTrace:
+                ipg = self.__getIPG(program, ipointID)
                 self.numberOfTraces += 1
                 newTrace = False
                 currentv = ipg.getVertex(ipg.getEntryID())
@@ -65,6 +74,7 @@ class _TraceParser ():
                 currentv = ipg.getVertex(succID)
                 if succID == ipg.getExitID():
                     newTrace = True
+                    ipg      = None
                     runTime  = lastTime - startTime
                     self.totalEnd2End += runTime
                     if runTime > self.highWaterMark:
@@ -99,7 +109,7 @@ class _TraceParser ():
             self.edgeIDToWCECInRun[edgeID] = 0
 
 class TraceData ():
-    def __init__(self, allWarpTraces, ipg):
+    def __init__(self, allWarpTraces, program):
         self.__highWaterMark = 0
         self.__end2endACET = 0
         self.__edgeIDToBCET = {}
@@ -114,9 +124,9 @@ class TraceData ():
         
         Debug.debugMessage("Total number of warps = %d" % self.__numberOfWarps, 1)
         
-        tps = set([])          
-        for w in allWarpTraces:
-            tps.add(_TraceParser(w, ipg))
+        self.tps = set([])          
+        for w in allWarpTraces.values():
+            self.tps.add(_TraceParser(w, program))
             SMID = w.getMultiprocessorID()
             if SMID not in self.__SMTOWarps.keys():
                 self.__SMTOWarps[SMID] = [w.getWarpID()]
@@ -125,7 +135,7 @@ class TraceData ():
         
         averageDividend = 0
         averageDivisor  = 0
-        for t in tps:
+        for t in self.tps:
             if t.highWaterMark > self.__highWaterMark:
                 self.__highWaterMark = t.highWaterMark
             averageDividend += t.totalEnd2End
@@ -133,29 +143,30 @@ class TraceData ():
         assert averageDivisor > 0
         self.__end2endACET = averageDividend/averageDivisor
         
-        for v in ipg:
-            for succe in v.getSuccessorEdges():
-                edgeID = succe.getEdgeID()
-                self.__edgeIDToBCET[edgeID]            = sys.maxint
-                self.__edgeIDToWCET[edgeID]            = 0
-                self.__edgeIDToWCEC[edgeID]            = 0
-                self.__edgeIDToTotalTime[edgeID]       = 0
-                self.__edgeIDToExecutionCounts[edgeID] = 0
-                for tp in tps:
-                    if edgeID in tp.edgeIDToWCET.keys():
-                        wcet = tp.edgeIDToWCET[edgeID]
-                        wcec = tp.edgeIDToWCEC[edgeID]
-                        bcet = tp.edgeIDToBCET[edgeID]
-                        if wcet > self.__edgeIDToWCET[edgeID]:
-                            self.__edgeIDToWCET[edgeID] = wcet
-                            self.__edgeIDToWorstCaseWarpTrace[edgeID] = tp.warpTrace
-                        if wcec > self.__edgeIDToWCEC[edgeID]:
-                            self.__edgeIDToWCEC[edgeID] = wcec
-                        if bcet < self.__edgeIDToBCET[edgeID]:
-                            self.__edgeIDToBCET[edgeID] = bcet
-                            self.__edgeIDToBestCaseWarpTrace[edgeID] = tp.warpTrace
-                        self.__edgeIDToTotalTime[edgeID] += tp.edgeIDToTotalTime[edgeID]
-                        self.__edgeIDToExecutionCounts[edgeID] += tp.edgeIDToExecutionCounts[edgeID]
+        for ipg in program.getIPGs():
+            for v in ipg:
+                for succe in v.getSuccessorEdges():
+                    edgeID = succe.getEdgeID()
+                    self.__edgeIDToBCET[edgeID]            = sys.maxint
+                    self.__edgeIDToWCET[edgeID]            = 0
+                    self.__edgeIDToWCEC[edgeID]            = 0
+                    self.__edgeIDToTotalTime[edgeID]       = 0
+                    self.__edgeIDToExecutionCounts[edgeID] = 0
+                    for tp in self.tps:
+                        if edgeID in tp.edgeIDToWCET.keys():
+                            wcet = tp.edgeIDToWCET[edgeID]
+                            wcec = tp.edgeIDToWCEC[edgeID]
+                            bcet = tp.edgeIDToBCET[edgeID]
+                            if wcet > self.__edgeIDToWCET[edgeID]:
+                                self.__edgeIDToWCET[edgeID] = wcet
+                                self.__edgeIDToWorstCaseWarpTrace[edgeID] = tp.warpTrace
+                            if wcec > self.__edgeIDToWCEC[edgeID]:
+                                self.__edgeIDToWCEC[edgeID] = wcec
+                            if bcet < self.__edgeIDToBCET[edgeID]:
+                                self.__edgeIDToBCET[edgeID] = bcet
+                                self.__edgeIDToBestCaseWarpTrace[edgeID] = tp.warpTrace
+                            self.__edgeIDToTotalTime[edgeID] += tp.edgeIDToTotalTime[edgeID]
+                            self.__edgeIDToExecutionCounts[edgeID] += tp.edgeIDToExecutionCounts[edgeID]
                         
     def getWCETOfEdge (self, edgeID):
         if edgeID in self.__edgeIDToWCET.keys():
@@ -185,7 +196,7 @@ class TraceData ():
     def getEdgeIDs (self):
         return self.__edgeIDToWCET.keys()
     
-    def output (self):
+    def output (self):        
         print "ACET = %d" % self.__end2endACET
         print "HWMT = %d" % self.__highWaterMark
         for edgeID, WCET in self.__edgeIDToWCET.iteritems():

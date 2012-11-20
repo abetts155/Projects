@@ -9,7 +9,6 @@ comma      = ", "
 newLine    = "\n"
 
 class LinearProgram ():
-    
     def __init__(self, ipg, traceData, inputFilename):
         self.__wcet    = 0
         index          = inputFilename.find('.')
@@ -93,5 +92,4 @@ class LinearProgram ():
             if count < numOfEdges:
                 f.write(comma)
         f.write("%s%s" % (endStmt, newLine))
-    
     

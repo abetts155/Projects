@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
-import sys, shlex, optparse, os
-import ICFGs, CFGs, ParseCFGs, Debug, Trees, GraphVisualisations, Traces
+import sys, optparse, os
+import ICFGs, CFGs, ParseCFGs, Debug, Trees, UDrawGraph, Traces
 import IPGs, WCET
 
 # The command-line parser and its options
@@ -37,89 +37,131 @@ cmdline.add_option("-u",
 (opts, args) = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug = opts.debug
+gpgpuFileExt = '.gpgpusim'
 
-def checkCommandLine ():
-    # Check that the user has passed the correct options
-    if len(args) != 2:
-        Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
-        
-    numOfTVs   = None
-    cudaBinary = None
-    if args[0].isdigit():
-        numOfTVs = int(args[0])
-        cudaBinary = args[1]
-    elif args[1].isdigit():
-        numOfTVs = int(args[1])
-        cudaBinary = args[0]
-        
-    assert numOfTVs > 0, "The number of test vectors has to be a non-negative integer"
-    return numOfTVs, cudaBinary
-            
-def createCFGs (outfile):
-    cfg = CFGs.CFG()
-    cfgInput = False
-    with open(outfile, 'r') as f:
-        for line in f:
-            if "*** CFG ***" in line:
-                if not cfgInput:
-                    cfgInput = True
-                else:
-                    cfgInput = False
-                    break
-            else:
-                if cfgInput:
-                    ParseCFGs.parseLine(line, cfg)
-    return cfg 
-
-def doAnalysis (cfg, basename):
-    icfg = ICFGs.ICFG(cfg)
-    icfg.setEntryID()
-    icfg.setExitID()
-    icfg.addExitEntryEdge()
-    if opts.udraw:
-        GraphVisualisations.makeUdrawFile (icfg, "%s.%s" % (basename, "icfg"))
-    lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-    if opts.udraw:
-        GraphVisualisations.makeUdrawFile (lnt, "%s.%s" % (basename, "lnt"))
-    ipg = IPGs.IPG(icfg, lnt)
-    if opts.udraw:
-        GraphVisualisations.makeUdrawFile (ipg, "%s.%s" % (basename, "ipg"))
-    return ipg
+def createGraphs (program, basename):
+    Debug.debugMessage("Creating data structures", 1)
+    for cfg in program.getCFGs():
+        functionName = cfg.getName()
+        icfg = ICFGs.ICFG(cfg)
+        icfg.setEntryID()
+        icfg.setExitID()
+        icfg.addExitEntryEdge()
+        program.addICFG(icfg)
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+        lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+        program.addLNT(lnt)
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+        ipg = IPGs.IPG(icfg, lnt)
+        program.addIPG(ipg)
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (ipg, "%s.%s.%s" % (basename, functionName, "ipg"))
     
 def getLineOfTimingTrace (line):
-    lexemes     = shlex.split(line)
-    PCIndex     = 3 
-    warpIndex   = 6
-    SMIndex     = 9
-    cycleIndex  = 12
+    import shlex
+    tokenizer = shlex.shlex(line, posix=True)
+    tokenizer.whitespace += ','
+    lexemes = list(tokenizer)
+    PCIndex     = 0 
+    warpIndex   = 1
+    SMIndex     = 2
+    cycleIndex  = 3
     SMAndWarp   = int(lexemes[SMIndex]), int(lexemes[warpIndex])
     timingTuple = lexemes[PCIndex], int(lexemes[cycleIndex])
     return SMAndWarp, timingTuple
 
 def getWarp (allWarpTraces, SMAndWarp):
-    SMID   = SMAndWarp[0]
-    warpID = SMAndWarp[1]
-    for w in allWarpTraces:
-        if w.getMultiprocessorID() == SMID and w.getWarpID() == warpID:
-            return w
-    
-    w = Traces.WarpTrace(SMID, warpID)
-    allWarpTraces.append(w)
+    key = (SMAndWarp[0], SMAndWarp[1])
+    if key in allWarpTraces:
+        return allWarpTraces[key]
+        
+    w = Traces.WarpTrace(SMAndWarp[0], SMAndWarp[1])
+    allWarpTraces[key] = w
     return w
 
-def splitTraces (ipg, outfile):
-    allWarpTraces = []
+def splitTraces (outfile):
+    Debug.debugMessage("Splitting traces", 1)
+    allWarpTraces = {}
     with open(outfile, 'r') as f:
         for line in f:
-            if "Issued" in line and "PC" in line and "Warp" in line and "SM" in line and "cycle" in line:
+            if line.startswith('0x'):
                 SMAndWarp, timingTuple = getLineOfTimingTrace(line)
                 w = getWarp (allWarpTraces, SMAndWarp)
                 w.appendToTrace(timingTuple)
     return allWarpTraces
 
+def doAnalysis (outfile, basename): 
+    # Create the CFGs
+    program = createCFGs(outfile)
+    # Create the IPG
+    createGraphs(program, basename)
+    # Split into warp-specific traces
+    allWarpTraces = splitTraces (outfile)
+    allData = Traces.TraceData(allWarpTraces, program)
+    allData.output()
+    # Create an ILP from the IPG and the parsed data
+    for ipg in program.getIPGs():
+        WCET.LinearProgram(ipg, allData, outfile)
+
+def checkCommandLineForAction ():
+    # Check that the user has passed the correct options
+    if len(args) == 2:
+        numOfTVs   = None
+        cudaBinary = None
+        if args[0].isdigit():
+            numOfTVs = int(args[0])
+            cudaBinary = args[1]
+        elif args[1].isdigit():
+            numOfTVs = int(args[1])
+            cudaBinary = args[0]
+        assert numOfTVs > 0, "The number of test vectors has to be a non-negative integer"
+        # Get the filename of the binary without the path
+        basename = os.path.basename(cudaBinary)
+        # Run the program on GPGPU-sim and get generated output
+        outfile = runProgram(numOfTVs, cudaBinary)
+        doAnalysis(outfile, basename)
+    elif len(args) == 1:
+        outfile = args[0]
+        file
+        assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
+        basename = os.path.splitext(os.path.basename(outfile))[0]
+        doAnalysis(outfile, basename)
+    else:
+        Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
+            
+def createCFGs (outfile):
+    import shlex
+    program = CFGs.Program()
+    cfg = None
+    cfgInput = False
+    with open(outfile, 'r') as f:
+        for line in f:
+            if line.startswith('0x'):
+                break
+            if "*** CFG ***" in line:
+                if not cfgInput:
+                    Debug.debugMessage("New CFG found", 1)
+                    cfg = CFGs.CFG()
+                    program.addCFG(cfg)
+                    cfgInput = True
+                else:
+                    cfgInput = False
+            else:
+                if cfgInput:
+                    if line.startswith("Printing basic blocks for function"):
+                        lexemes = shlex.split(line)
+                        functionName = lexemes[-1][:-1]
+                        cfg.setName(functionName)
+                        Debug.debugMessage("Setting CFG name to '%s'" % functionName, 1)
+                    else:
+                        ParseCFGs.parseLine(line, cfg)
+    return program 
+
 def runProgram (numOfTVs, cudaBinary):
     from subprocess import Popen, PIPE
-    outfilename = cudaBinary + ".gpgpusim"
+    outfilename = cudaBinary + gpgpuFileExt
     Debug.debugMessage("Creating file '%s' for GPGPU-sim output" % outfilename, 1)
     with open(outfilename, 'w') as outfile:
         command = "%s %d" % (cudaBinary, numOfTVs)
@@ -143,19 +185,5 @@ def cleanUp (abspath):
 if __name__ == "__main__":
     # Remove files created from previous runs
     cleanUp (os.path.abspath(os.curdir))
-    # Get the CUDA binary name and number of test vectors
-    numOfTVs, cudaBinary = checkCommandLine ()
-    # Get the filename of the binary without the path
-    basename = os.path.basename(cudaBinary)
-    # Run the program on GPGPU-sim and get generated output
-    outfile = runProgram(numOfTVs, cudaBinary)
-    # Create the CFGs
-    cfg = createCFGs(outfile)
-    # Create the IPG
-    ipg = doAnalysis(cfg, basename)
-    # Split into warp-specific traces
-    allWarpTraces = splitTraces (ipg, outfile)
-    allData = Traces.TraceData(allWarpTraces, ipg)
-    allData.output()
-    # Create an ILP from the IPG and the parsed data
-    WCET.LinearProgram(ipg, allData, outfile)
+    # What to do depends on which parameters were parameters on the command line
+    checkCommandLineForAction ()

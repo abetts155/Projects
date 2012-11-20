@@ -9,6 +9,7 @@ class ICFG (CFGs.CFG):
             bbID = bb.getVertexID()
             self.vertices[bbID] = copy.deepcopy(bb)
         self.__addIpoints()
+        self.__name = cfg.getName()
     
     def __addIpoints (self):
         for bb in self:
