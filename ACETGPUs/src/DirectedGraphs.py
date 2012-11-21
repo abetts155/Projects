@@ -30,6 +30,9 @@ class DirectedGraph ():
             nextID = nextID + 1 
         return nextID
     
+    def numOfVertices (self):
+        return len(self.vertices)
+    
     def numOfEdges(self):
         total = 0
         for v in self.vertices.values():

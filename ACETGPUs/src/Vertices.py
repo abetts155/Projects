@@ -11,17 +11,17 @@ class Vertex ():
         return self._vertexID
     
     def addPredecessor (self, predID, edgeID=None):
-        assert predID not in self._predecessors, "Vertex %s already has predecessor %s" % (self._vertexID, predID)
+        assert predID not in self._predecessors, "Vertex %d already has predecessor %d" % (self._vertexID, predID)
         e = Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
         predID = prede.getVertexID()
-        assert predID not in self._predecessors, "Vertex %s already has predecessor %s" % (self._vertexID, predID)
+        assert predID not in self._predecessors, "Vertex %d already has predecessor %d" % (self._vertexID, predID)
         self._predecessors[predID] = prede
             
     def removePredecessor (self, predID):
-        assert predID in self._predecessors, "Cannot remove %s as it is not in predecessor of %s" % (predID, self._vertexID)
+        assert predID in self._predecessors, "Cannot remove %d as it is not in predecessor of %d" % (predID, self._vertexID)
         del self._predecessors[predID]
     
     def getPredecessorIDs (self):
@@ -37,21 +37,21 @@ class Vertex ():
         return predID in self._predecessors.keys()
     
     def getPredecessorEdge (self, predID):
-        assert predID in self._predecessors, "%s as is not a predecessor of %s" % (predID, self._vertexID)
+        assert predID in self._predecessors, "Vertex %d is not a predecessor of %d" % (predID, self._vertexID)
         return self._predecessors[predID]
     
     def addSuccessor (self, succID,edgeID=None):
-        assert succID not in self._successors, "Vertex %s already has successor %s" % (self._vertexID, succID)
+        assert succID not in self._successors, "Vertex %d already has successor %d" % (self._vertexID, succID)
         e = Edge(succID, edgeID)
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
         succID = succe.getVertexID()
-        assert succID not in self._successors, "Vertex %s already has successor %s" % (self._vertexID, succID)
+        assert succID not in self._successors, "Vertex %d already has successor %d" % (self._vertexID, succID)
         self._successors[succID] = succe
         
     def removeSuccessor (self, succID):
-        assert succID in self._successors, "Cannot remove %s as it is not in _successors of %s" % (succID, self._vertexID)
+        assert succID in self._successors, "Cannot remove %d as it is not in _successors of %d" % (succID, self._vertexID)
         del self._successors[succID]
         
     def getSuccessorIDs (self):
@@ -67,7 +67,7 @@ class Vertex ():
         return succID in self._successors.keys()
     
     def getSuccessorEdge (self, succID):
-        assert succID in self._successors, "%s as is not a successor of %s" % (succID, self._vertexID)
+        assert succID in self._successors, "Vertex %d is not a successor of %d" % (succID, self._vertexID)
         return self._successors[succID]
     
     def predecessorStr (self):
@@ -102,11 +102,11 @@ class TreeVertex (Vertex):
         self.__parentID = parentID
         
     def getParentID (self):
-        assert self.__parentID != dummyVertexID, "Parent ID of %s has not been set" % self.parentID
+        assert self.__parentID != dummyVertexID, "Parent ID of %d has not been set" % self.parentID
         return self.__parentID
     
     def setLevel (self, level):
-        assert level >= 0, "The level of a vertex cannot be less than 0. You gave %s" % level
+        assert level >= 0, "The level of a vertex cannot be less than 0. You gave %d" % level
         self.__level = level
     
     def getLevel (self):
@@ -114,9 +114,9 @@ class TreeVertex (Vertex):
     
     def __str__ (self):
         if self.__parentID == dummyVertexID:
-            return "parent(%s) = <>\n" % self._vertexID
+            return "parent(%d) = <>\n" % self._vertexID
         else:
-            return "parent(%s) = %s\n" % (self._vertexID, self.__parentID)
+            return "parent(%d) = %d\n" % (self._vertexID, self.__parentID)
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):

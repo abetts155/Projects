@@ -3,6 +3,7 @@
 import sys, optparse, os
 import ICFGs, CFGs, ParseCFGs, Debug, Trees, UDrawGraph, Traces
 import IPGs, WCET
+from Trees import Dominators
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -45,6 +46,12 @@ def createGraphs (program, basename):
         functionName = cfg.getName()
         if opts.udraw:
             UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
+        predomTree  = Dominators(cfg, cfg.getEntryID())
+        reverseg    = cfg.getReverseCFG()
+        postdomTree = Dominators(reverseg, reverseg.getEntryID())
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (predomTree, "%s.%s.%s" % (basename, functionName, "pre"))
+            UDrawGraph.makeUdrawFile (postdomTree, "%s.%s.%s" % (basename, functionName, "post"))
         icfg = ICFGs.ICFG(cfg)
         icfg.setEntryID()
         icfg.setExitID()

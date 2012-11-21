@@ -8,8 +8,8 @@ class Tree (DirectedGraph):
         self._rootID = dummyVertexID
         
     def setRootID (self, rootID):
-        assert rootID > dummyVertexID, "Invalid root ID %s. It must be a positive integer" % rootID
-        assert rootID in self.vertices, "Cannot find vertex %s"
+        assert rootID > dummyVertexID, "Invalid root ID %d. It must be a positive integer" % rootID
+        assert rootID in self.vertices, "Cannot find vertex %d"
         self._rootID = rootID
         
     def getRootID (self):
@@ -17,7 +17,7 @@ class Tree (DirectedGraph):
         return self._rootID
         
     def addVertex (self, vertexID):
-        assert vertexID not in self.vertices, "Adding vertex %s which is already in tree" % vertexID
+        assert vertexID not in self.vertices, "Adding vertex %d which is already in tree" % vertexID
         treev = TreeVertex(vertexID)
         self.vertices[vertexID] = treev
         
@@ -57,7 +57,7 @@ class Tree (DirectedGraph):
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %s from which to initiate depth-first search" % rootID
+        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
         self.__preorder = []
         self.__postorder = []
@@ -102,12 +102,93 @@ class DepthFirstSearch (Tree):
     def getPostorder (self):
         return self.__postorder
     
+    def getPreorderVertexID (self, preID):
+        assert preID - 1 < len(self.__postorder), "Pre-order number %d too high" % preID
+        return self.__preorder[preID-1]
+    
+    def getPostorderVertexID (self, postID):
+        assert postID - 1 < len(self.__postorder), "Post-order number %d too high" % postID
+        return self.__postorder[postID-1]
+    
+    def getPreID (self, vertexID):
+        assert vertexID in self.__vertexID2PreID, "Unable to find pre-order numbering for vertex %d" % vertexID
+        return self.__vertexID2PreID[vertexID]
+    
+    def getPostID (self, vertexID):
+        assert vertexID in self.__vertexID2PostID, "Unable to find post-order numbering for vertex %d" % vertexID
+        return self.__vertexID2PostID[vertexID]
+    
     def isDFSBackedge (self, sourceID, destinationID):
         return [sourceID, destinationID] in self.__backedges
     
+class Dominators (Tree):
+    def __init__(self, directedg, rootID):
+        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
+        Tree.__init__(self)
+        self.__directedg = directedg
+        self.__immediateDom = {}
+        self._initialise (rootID)
+        self._solveDFF ()
+        self._addEdges ()
+    
+    def _initialise (self, rootID):
+        for v in self.__directedg:
+            vertexID = v.getVertexID()            
+            self.vertices[vertexID] = TreeVertex(vertexID)
+            if vertexID == rootID:
+                self.__immediateDom[vertexID] = vertexID
+            else:
+                self.__immediateDom[vertexID] = dummyVertexID
+        self.setRootID(rootID)
+    
+    def _solveDFF (self):
+        dfs = DepthFirstSearch(self.__directedg, self._rootID)
+        changed = True
+        while changed:
+            changed = False
+            postID = self.__directedg.numOfVertices()
+            while postID >= 1:
+                vertexID = dfs.getPostorderVertexID(postID)
+                if vertexID != self._rootID:
+                    v               = self.__directedg.getVertex(vertexID)
+                    processedPredID = dummyVertexID
+                    newIdomID       = dummyVertexID
+                    
+                    for predID in v.getPredecessorIDs():
+                        if self.__immediateDom[predID] != dummyVertexID:
+                            processedPredID = predID
+                            newIdomID       = processedPredID
+                    for predID in v.getPredecessorIDs():
+                        if predID != processedPredID:
+                            if self.__immediateDom[predID] != dummyVertexID:
+                                newIdomID = self._intersect(dfs, predID, newIdomID)
+                    
+                    if newIdomID != dummyVertexID:
+                        if self.__immediateDom[vertexID] != newIdomID:
+                            changed = True
+                            self.__immediateDom[vertexID] = newIdomID
+                postID -= 1
+    
+    def _intersect (self, dfs, left, right):
+        uID = left
+        vID = right
+        while (dfs.getPostID(uID) != dfs.getPostID(vID)):
+            while (dfs.getPostID(uID) < dfs.getPostID(vID)):
+                uID = self.__immediateDom[uID]
+            while (dfs.getPostID(vID) < dfs.getPostID(uID)):
+                vID = self.__immediateDom[vID]
+        return uID
+    
+    def _addEdges (self):
+        for v in self.__directedg:
+            vertexID = v.getVertexID()
+            if vertexID != self._rootID:
+                assert self.__immediateDom[vertexID] != dummyVertexID, "Immediate dominator of %d not set" % vertexID
+                self.addEdge(self.__immediateDom[vertexID], vertexID)
+    
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %s from which to initiate depth-first search" % rootID
+        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
         self.__directedg = directedg
         self.__parent = {}

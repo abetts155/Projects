@@ -1,5 +1,6 @@
 from DirectedGraphs import dummyVertexID, DirectedGraph
 from Vertices import Vertex
+from hgext.graphlog import revset
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
@@ -16,7 +17,10 @@ class Instruction ():
     def containsLabel (self, label):
         import shlex
         lexemes = shlex.split(self.instrString)
-        return label == lexemes[0][:-1]
+        if lexemes[0].startswith('l0x'):
+            assert lexemes[0].endswith(':'), "Instruction '%s' does not contain a valid label" % self
+            return label == lexemes[0][:-1]
+        return False
      
     def __str__(self):
         return self.address + " : " + self.instrString
@@ -58,6 +62,29 @@ class CFG (DirectedGraph):
         DirectedGraph.__init__(self)
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
+        
+    def getReverseCFG (self):
+        reverseg = CFG()
+        
+        # Add vertices
+        for v in self:
+            copyv = BasicBlock(v.getVertexID())
+            copyv.instructions = v.instructions
+            reverseg.addVertex(copyv)
+    
+        # Add edges
+        for v in self:
+            predID = v.getVertexID()
+            predv  = reverseg.getVertex(predID)
+            for succID in v.getSuccessorIDs():
+                succv = reverseg.getVertex(succID)
+                predv.addPredecessor(succID)
+                succv.addSuccessor(predID)
+                
+        # Set the entry and exit IDs
+        reverseg.setEntryID(self.getExitID())
+        reverseg.setExitID(self.getExitID())
+        return reverseg
         
     def addVertex (self, bb):
         bbID = bb.getVertexID()

@@ -36,6 +36,11 @@ def getBasicBlockWithNextAddress (cfg, addr):
             return bb
     assert False, "Unable to find basic block with next address of %s" % addr
     
+def addEdgeToBasicBlockWithNextAddress (cfg, bb, lastAddr):
+    succ = getBasicBlockWithNextAddress(cfg, lastAddr)
+    bb.addSuccessor(succ.getVertexID())
+    succ.addPredecessor(bb.getVertexID())
+    
 def addEdges (cfg):
     for bb in cfg:
         lastAddr, lastInstr = bb.getLastInstruction()
@@ -49,13 +54,17 @@ def addEdges (cfg):
             succ.addPredecessor(bb.getVertexID())
             if predicated in lastStr:
                 # Add successor with next address
-                succ2 = getBasicBlockWithNextAddress(cfg, lastAddr)
-                bb.addSuccessor(succ2.getVertexID())
-                succ2.addPredecessor(bb.getVertexID())
-        elif exitOP not in lastStr:
-            succ = getBasicBlockWithNextAddress(cfg, lastAddr)
+                addEdgeToBasicBlockWithNextAddress(cfg, bb, lastAddr)
+        elif callOP in lastStr or callpOP in lastStr:
+            lexemes = shlex.split(lastStr)
+            label   = lexemes[-1]
+            succ    = getBasicBlockWithLabel(cfg, label)
             bb.addSuccessor(succ.getVertexID())
             succ.addPredecessor(bb.getVertexID())
+            # Add successor with next address
+            addEdgeToBasicBlockWithNextAddress(cfg, bb, lastAddr)
+        elif exitOP not in lastStr:
+            addEdgeToBasicBlockWithNextAddress(cfg, bb, lastAddr)
                     
 def createBasicBlocks (cfg, instructions):
     global vertexID
@@ -103,6 +112,35 @@ def analyseLine (line, cfg):
             instruction = CFGs.Instruction (address, instrString)
             return instruction
         
+def setEntryAndExit (cfg):
+    withoutPred = []
+    withoutSucc = []
+    for bb in cfg:
+        if bb.numberOfSuccessors() == 0:
+            withoutSucc.append(bb.getVertexID())
+        elif bb.numberOfSuccessors() == 1:
+            if bb.hasSuccessor(bb.getVertexID()):
+                withoutSucc.append(bb.getVertexID())
+        if bb.numberOfPredecessors() == 0:
+            withoutPred.append(bb.getVertexID())
+        elif bb.numberOfPredecessors() == 1:
+            if bb.hasPredecessor(bb.getVertexID()):
+                withoutPred.append(bb.getVertexID())
+    
+    if len(withoutPred) == 0:
+        Debug.exitMessage("CFG '%s' does not an entry point" % cfg.getName())
+    elif len(withoutPred) > 1:
+        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), withoutPred))
+    else:
+        cfg.setEntryID(withoutPred[0])
+        
+    if len(withoutSucc) == 0:
+        Debug.exitMessage("CFG '%s' does not an exit point" % cfg.getName())
+    elif len(withoutSucc) > 1:
+        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), withoutSucc))
+    else:
+        cfg.setExitID(withoutSucc[0])    
+        
 def createProgram (cfgLines):
     program      = CFGs.Program()
     cfg          = None
@@ -115,6 +153,7 @@ def createProgram (cfgLines):
             assert instructions  
             createBasicBlocks(cfg, instructions)
             addEdges(cfg)
+            setEntryAndExit(cfg)
             instructions = []   
         if analyse:
             instr = analyseLine(line, cfg)

@@ -1,5 +1,4 @@
 import CFGs, IPGs, Trees, Vertices
-from DirectedGraphs import dummyVertexID
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"
@@ -69,7 +68,28 @@ def makeUdrawFile (g, fileNamePrefix):
         elif isinstance(g, IPGs.IPG):
             for v in g:
                 writeIPGVertex(g, v.getVertexID(), f)
+        else:
+            for v in g:
+                writeVertex(g, v.getVertexID(), f)
         f.write(endGraph) 
+        
+def writeVertex (g, vertexID, f):
+    v = g.getVertex(vertexID)
+        
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    f.write(setName(str(vertexID)))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
+        f.write(setName(str(succID)))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
     
 def writeICFGVertex (icfg, vertexID, f):
     v = icfg.getVertex(vertexID)
@@ -80,7 +100,7 @@ def writeICFGVertex (icfg, vertexID, f):
     if isinstance(v, Vertices.Ipoint):
         f.write(setShape(SHAPE.CIRCLE))
         f.write(setColor(COLOR.YELLOW))
-        f.write(setToolTip("Ipoint ID = %s" % v.getIpointID()))
+        f.write(setToolTip("Ipoint ID = 0x%04X" % v.getIpointID()))
     else:
         string = ""
         for address, instr in v.getInstructions ():
@@ -131,7 +151,7 @@ def writeIPGVertex (ipg, vertexID, f):
     f.write(setName(str(vertexID)))
     f.write(setShape(SHAPE.CIRCLE))
     f.write(setColor(COLOR.YELLOW))
-    f.write(setToolTip("Ipoint ID = %s" % v.getIpointID()))
+    f.write(setToolTip("Ipoint ID = 0x%04X" % v.getIpointID()))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
