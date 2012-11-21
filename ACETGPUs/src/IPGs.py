@@ -24,7 +24,7 @@ class IPG (DirectedGraph):
         del self.__auxiliaryData
         
     def getIpointVertex (self, ipointID):
-        assert ipointID in self.__ipointIDToVertex, "Unable to find Ipoint with trace ID %s" % ipointID
+        assert ipointID in self.__ipointIDToVertex, "Unable to find Ipoint with trace ID 0x%04X" % ipointID
         return self.__ipointIDToVertex[ipointID]
     
     def getEntryID (self):

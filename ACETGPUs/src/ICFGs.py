@@ -17,7 +17,7 @@ class ICFG (CFGs.CFG):
             vertexID = self.getNextVertexID ()
             ipoint = Vertices.Ipoint(vertexID, int(address, 16))
             self.vertices[vertexID] = ipoint
-            Debug.debugMessage("Adding Ipoint %s with ID %s" % (vertexID, address), 4)
+            Debug.debugMessage("Adding Ipoint %d with ID %s" % (vertexID, address), 4)
             self.__linkIpoint(bb, ipoint)
             
     def __linkIpoint (self, bb, ipoint):
@@ -34,5 +34,6 @@ class ICFG (CFGs.CFG):
     
     def getIpoint (self, vertexID):
         v = self.getVertex(vertexID)
-        assert isinstance(v, Vertices.Ipoint), "Vertex %s is not an Ipoint" % vertexID
+        assert isinstance(v, Vertices.Ipoint), "Vertex %d is not an Ipoint" % vertexID
         return v
+    

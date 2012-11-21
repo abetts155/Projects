@@ -35,6 +35,12 @@ cmdline.add_option("-u",
                  help="Generate uDrawGraph files.",
                  default=False)
 
+cmdline.add_option("--no-parsing",
+                 action="store_true",
+                 dest="noParse",
+                 help="Do not parse traces.",
+                 default=False)
+
 (opts, args) = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug = opts.debug
@@ -44,8 +50,6 @@ def createGraphs (program, basename):
     Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
         functionName = cfg.getName()
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
         predomTree  = Dominators(cfg, cfg.getEntryID())
         reverseg    = cfg.getReverseCFG()
         postdomTree = Dominators(reverseg, reverseg.getEntryID())
@@ -67,6 +71,9 @@ def createGraphs (program, basename):
         program.addIPG(ipg)
         if opts.udraw:
             UDrawGraph.makeUdrawFile (ipg, "%s.%s.%s" % (basename, functionName, "ipg"))
+        cfg.addBranchDivergenceEdges()    
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
     
 def getLineOfTimingTrace (line):
     import shlex
@@ -118,21 +125,22 @@ def doAnalysis (outfile, basename):
     program = createCFGs(outfile)
     # Create the IPG
     createGraphs(program, basename)
-    # Split into warp-specific traces
-    allWarpTraces = splitTraces (outfile)
-    if Debug.debug >= 5:
-        writeTraces(allWarpTraces, basename)
-    traceData = Traces.TraceData(allWarpTraces, program)
-    traceData.output()
+    if not opts.noParse:
+        # Split into warp-specific traces
+        allWarpTraces = splitTraces (outfile)
+        if Debug.debug >= 5:
+            writeTraces(allWarpTraces, basename)
+        traceData = Traces.TraceData(allWarpTraces, program)
+        traceData.output()
     
-    print "%s End-to-end timing data %s" % ("=" * 11, "=" * 11)
-    for ipg in program.getIPGs():
-        functionName = ipg.getName()
-        print "ACET(%s) = %ld" % (functionName, traceData.getACET(functionName))
-        print "HWMT(%s) = %ld" % (functionName, traceData.getHWMT(functionName))
-        # Create an ILP from the IPG and the parsed data
-        ilp = WCET.LinearProgram(ipg, traceData, outfile)
-        print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
+        print "%s End-to-end timing data %s" % ("=" * 11, "=" * 11)
+        for ipg in program.getIPGs():
+            functionName = ipg.getName()
+            print "ACET(%s) = %ld" % (functionName, traceData.getACET(functionName))
+            print "HWMT(%s) = %ld" % (functionName, traceData.getHWMT(functionName))
+            # Create an ILP from the IPG and the parsed data
+            ilp = WCET.LinearProgram(ipg, traceData, outfile)
+            print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
 
 def checkCommandLineForAction ():
     # Check that the user has passed the correct options

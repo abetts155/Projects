@@ -1,6 +1,6 @@
 from DirectedGraphs import dummyVertexID, DirectedGraph
 from Vertices import Vertex
-from hgext.graphlog import revset
+import Trees, Debug
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
@@ -63,9 +63,57 @@ class CFG (DirectedGraph):
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
         
+    def addBranchDivergenceEdges (self):
+        # Ensure the CFG is strongly connected
+        self.addExitEntryEdge()
+        # Create the LNT
+        lnt = Trees.LoopNests(self, self.getEntryID())
+        # Look for forward branches
+        forwardBranches = []
+        for v in self:
+            vertexID = v.getVertexID()
+            if v.numberOfSuccessors () > 1:
+                if not lnt.isLoopHeader(vertexID):
+                    backEdge = False
+                    for succID in v.getSuccessorIDs():
+                        if lnt.isLoopBackEdge(vertexID, succID):
+                            backEdge = True
+                    if not backEdge:
+                        Debug.debugMessage("Vertex %d is a forward branch" % vertexID, 1)
+                        forwardBranches.append(vertexID)
+                else:
+                    forLoop  = False
+                    loopBody = lnt.getLoopBody(vertexID)
+                    for succID in v.getSuccessorIDs():
+                        if succID not in loopBody:
+                            forLoop = True
+                    if not forLoop:
+                        Debug.debugMessage("Vertex %d is a forward branch" % vertexID, 1)
+                        forwardBranches.append(vertexID)                    
+        if forwardBranches:
+            self.__solveDFF(forwardBranches)        
+    
+    def __solveDFF (self, forwardBranches):
+        vertexToBranch = {}
+        for v in self:
+            vertexToBranch[v] = []
+        
+        reverseg    = self.getReverseCFG()
+        postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
+        dfs    = Trees.DepthFirstSearch(self, self.__entryID)
+        postID = self.numOfVertices()
+        while postID >= 1:
+            vertexID = dfs.getPostorderVertexID(postID)
+            v        = self.getVertex(vertexID)
+            for predID in v.getPredecessorIDs():
+                predv = self.getVertex(predID)
+                if predID in forwardBranches:
+                    vertexToBranch[v].append(predv)
+                vertexToBranch[v].extend(vertexToBranch[predv])
+            postID -= 1 
+        
     def getReverseCFG (self):
         reverseg = CFG()
-        
         # Add vertices
         for v in self:
             copyv = BasicBlock(v.getVertexID())
