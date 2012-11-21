@@ -62,6 +62,7 @@ class _TraceParser ():
         for t in self.warpTrace.getTrace():
             ipointID = int(t[0], 0)
             time     = long(t[1])
+            Debug.debugMessage("Trace tuple (0x%04X, %d)" % (ipointID, time), 10)
             if newTrace:
                 ipg          = self.__getIPG(program, ipointID)
                 functionName = ipg.getName()
@@ -90,7 +91,6 @@ class _TraceParser ():
                     
     def __analyseEdgeTime (self, succe, time):
         edgeID = succe.getEdgeID()
-        Debug.debugMessage("Time for edge %s = %s" % (edgeID, time), 10)
         if edgeID not in self.edgeIDToWCET.keys():
             self.edgeIDToBCET[edgeID]            = time
             self.edgeIDToWCET[edgeID]            = time

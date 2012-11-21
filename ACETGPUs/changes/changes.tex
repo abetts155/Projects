@@ -53,7 +53,7 @@ it means that particular warp is in flight. To produce a trace of when this even
   }
 \end{lstlisting}       
 
-\textbf{ptx_ir.cc::function_info::connect_basic_blocks()} There is a bug in CFG generation when the last 
+\textbf{ptx\_ir.cc::function\_info::connect\_basic\_blocks()} There is a bug in CFG generation when the last 
 instruction of a basic block is a predicated return operation. In the original source code we have:
 
 \begin{lstlisting}
@@ -65,6 +65,15 @@ add the instruction width instead as follows:
 \begin{lstlisting}
   unsigned next_addr = pI->get_m_instr_mem_index() + pI->inst_size();
 \end{lstlisting}
+
+Also, there is a curious conditional:
+\begin{lstlisting}
+  if( pI->has_pred() )
+\end{lstlisting}
+which is checked before searching for a successor. I am unable to find a rationale for this 
+check and, in fact, it fails to build the CFG properly in cases where there is only one
+predicated instruction in a basic block. Therefore, that line has to be commented out together
+with its enclosing brace. 
 
 \subsection{Running}
 

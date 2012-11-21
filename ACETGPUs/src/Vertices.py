@@ -142,7 +142,8 @@ class Ipoint (Vertex):
         self.__succIpointIDToVertexID[succIpointID] = succID
     
     def getIpointSuccessor (self, succIpointID):
-        assert succIpointID in self.__succIpointIDToVertexID, "Unable to find successor of %s with Ipoint ID %s" % (self.vertexID, succIpointID)
+        assert succIpointID in self.__succIpointIDToVertexID, \
+        "Unable to find successor of %s with Ipoint ID 0x%04X" % (self._vertexID, succIpointID)
         return self.__succIpointIDToVertexID[succIpointID]
     
     def __str__ (self):

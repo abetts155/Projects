@@ -1,4 +1,5 @@
-import ICFGs, IPGs, Trees, Vertices
+import CFGs, IPGs, Trees, Vertices
+from DirectedGraphs import dummyVertexID
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"
@@ -56,11 +57,10 @@ def setEdgeColor (color):
 def makeUdrawFile (g, fileNamePrefix):
     with open(fileNamePrefix + fileNameSuffix, 'w') as f:
         f.write(beginGraph)
-        # Instrumented CFG
-        if isinstance(g, ICFGs.ICFG):
-            dfs = Trees.DepthFirstSearch(g, g.getEntryID())
-            for vertexID in dfs.getPreorder():
-                    writeICFGVertex(g, vertexID, f)
+        # CFG or Instrumented CFG
+        if isinstance(g, CFGs.CFG):
+            for v in g:
+                writeICFGVertex(g, v.getVertexID(), f)           
         # Loop-Nesting Tree
         elif isinstance(g, Trees.LoopNests):
             for v in g:

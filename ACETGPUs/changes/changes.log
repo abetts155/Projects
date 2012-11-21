@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.21)  31 JUL 2012 15:38
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.21)  20 NOV 2012 17:48
 entering extended mode
  %&-line parsing enabled.
 **changes.tex
@@ -120,7 +120,7 @@ LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
 Here is how much of TeX's memory you used:
  2121 strings out of 495061
  29077 string characters out of 1182621
- 100516 words of memory out of 3000000
+ 104516 words of memory out of 3000000
  5329 multiletter control sequences out of 15000+50000
  8670 words of font info for 31 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
@@ -134,7 +134,7 @@ ts/cm/cmr12.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.
 pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/sha
 re/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-te
 xlive/fonts/type1/public/amsfonts/cm/cmtt8.pfb>
-Output written on changes.pdf (2 pages, 116312 bytes).
+Output written on changes.pdf (2 pages, 117927 bytes).
 PDF statistics:
  45 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)

@@ -43,12 +43,13 @@ def createGraphs (program, basename):
     Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
         functionName = cfg.getName()
+        if opts.udraw:
+            UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
         icfg = ICFGs.ICFG(cfg)
         icfg.setEntryID()
         icfg.setExitID()
         icfg.addExitEntryEdge()
         program.addICFG(icfg)
-        print icfg.getName()
         if opts.udraw:
             UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
         lnt = Trees.LoopNests(icfg, icfg.getEntryID())
@@ -145,7 +146,6 @@ def checkCommandLineForAction ():
         doAnalysis(outfile, basename)
     elif len(args) == 1:
         outfile = args[0]
-        file
         assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
         basename = os.path.splitext(os.path.basename(outfile))[0]
         doAnalysis(outfile, basename)
@@ -153,9 +153,7 @@ def checkCommandLineForAction ():
         Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
             
 def createCFGs (outfile):
-    import shlex
-    program = CFGs.Program()
-    cfg = None
+    cfgLines = []
     cfgInput = False
     with open(outfile, 'r') as f:
         for line in f:
@@ -163,21 +161,12 @@ def createCFGs (outfile):
                 break
             if "*** CFG ***" in line:
                 if not cfgInput:
-                    Debug.debugMessage("New CFG found", 1)
-                    cfg = CFGs.CFG()
-                    program.addCFG(cfg)
                     cfgInput = True
                 else:
                     cfgInput = False
-            else:
-                if cfgInput:
-                    if line.startswith("Printing basic blocks for function"):
-                        lexemes = shlex.split(line)
-                        functionName = lexemes[-1][:-1]
-                        cfg.setName(functionName)
-                        Debug.debugMessage("Setting CFG name to '%s'" % functionName, 1)
-                    else:
-                        ParseCFGs.parseLine(line, cfg)
+            if cfgInput:
+                cfgLines.append(line)
+    program = ParseCFGs.createProgram(cfgLines)
     return program 
 
 def runProgram (numOfTVs, cudaBinary):

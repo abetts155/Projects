@@ -3,24 +3,23 @@ from Vertices import Vertex
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
-    def __init__ (self, address, string):
-        self.address = address
-        self.string = string
+    def __init__ (self, address, instrString):
+        self.address     = address
+        self.instrString = instrString
         
     def getAddress (self):
         return self.address
     
     def getString (self):
-        return self.string
+        return self.instrString
     
-    def containsLabel (self):
-        return ":" in self.string
-    
-    def isNop (self):
-        return "nop" in self.string
-    
+    def containsLabel (self, label):
+        import shlex
+        lexemes = shlex.split(self.instrString)
+        return label == lexemes[0][:-1]
+     
     def __str__(self):
-        return self.address + " : " + self.string
+        return self.address + " : " + self.instrString
 
 class BasicBlock (Vertex):
     def __init__ (self, vertexID):
@@ -60,9 +59,10 @@ class CFG (DirectedGraph):
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
         
-    def addVertex (self, bbID):
-        assert bbID not in self.vertices, "Adding basic block %s which is already in graph" % bbID
-        bb = BasicBlock(bbID)
+    def addVertex (self, bb):
+        bbID = bb.getVertexID()
+        assert bbID not in self.vertices, \
+        "Adding basic block %d which is already in graph" % bbID
         self.vertices[bbID] = bb
         
     def getVertex (self, bbID):
