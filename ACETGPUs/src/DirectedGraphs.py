@@ -40,4 +40,5 @@ class DirectedGraph ():
         return total
     
     def __iter__ (self):
-        return self.vertices.values().__iter__()    
+        return self.vertices.values().__iter__()
+    

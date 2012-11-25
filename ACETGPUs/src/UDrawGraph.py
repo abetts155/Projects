@@ -1,4 +1,5 @@
-import CFGs, IPGs, Trees, Vertices
+import CFGs, IPGs, Trees, Vertices, ICFGs
+from Main import opts
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"
@@ -54,25 +55,26 @@ def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
 def makeUdrawFile (g, fileNamePrefix):
-    with open(fileNamePrefix + fileNameSuffix, 'w') as f:
-        f.write(beginGraph)
-        # CFG or Instrumented CFG
-        if isinstance(g, CFGs.CFG):
-            for v in g:
-                writeICFGVertex(g, v.getVertexID(), f)           
-        # Loop-Nesting Tree
-        elif isinstance(g, Trees.LoopNests):
-            for v in g:
-                    writeTreeVertex(g, v.getVertexID(), f)
-        # IPG
-        elif isinstance(g, IPGs.IPG):
-            for v in g:
-                writeIPGVertex(g, v.getVertexID(), f)
-        else:
-            for v in g:
-                writeVertex(g, v.getVertexID(), f)
-        f.write(endGraph) 
-        
+    if opts.udraw:
+        with open(fileNamePrefix + fileNameSuffix, 'w') as f:
+            f.write(beginGraph)
+            # CFG or Instrumented CFG
+            if isinstance(g, CFGs.CFG):
+                for v in g:
+                    writeCFGVertex(g, v.getVertexID(), f)           
+            # Loop-Nesting Tree
+            elif isinstance(g, Trees.LoopNests):
+                for v in g:
+                        writeTreeVertex(g, v.getVertexID(), f)
+            # IPG
+            elif isinstance(g, IPGs.IPG):
+                for v in g:
+                    writeIPGVertex(g, v.getVertexID(), f)
+            else:
+                for v in g:
+                    writeVertex(g, v.getVertexID(), f)
+            f.write(endGraph) 
+            
 def writeVertex (g, vertexID, f):
     v = g.getVertex(vertexID)
         
@@ -91,8 +93,8 @@ def writeVertex (g, vertexID, f):
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
     
-def writeICFGVertex (icfg, vertexID, f):
-    v = icfg.getVertex(vertexID)
+def writeCFGVertex (cfg, vertexID, f):
+    v = cfg.getVertex(vertexID)
         
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
@@ -112,6 +114,11 @@ def writeICFGVertex (icfg, vertexID, f):
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
+        if isinstance(cfg, ICFGs.ICFG):
+            if cfg.isBranchDivergentEdge(vertexID, succID):
+                f.write(setEdgePattern(EDGESHAPE.DASHED, 4))
+                f.write(setEdgeColor(COLOR.RED))
+                f.write(setToolTip("Branch divergent edge"))
         f.write(setName(str(succID)))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
@@ -163,6 +170,10 @@ def writeIPGVertex (ipg, vertexID, f):
         f.write(setToolTip(', '.join(str(v) for v in succe.getEdgeLabel())))
         if succe.isIterationEdge():
             f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
+        if ipg.isBranchDivergentEdge(vertexID, succID):
+            f.write(setEdgePattern(EDGESHAPE.DASHED, 4))
+            f.write(setEdgeColor(COLOR.RED))
+            f.write(setToolTip("Branch divergent edge")) 
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

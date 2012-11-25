@@ -1,9 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse, os
-import ICFGs, CFGs, ParseCFGs, Debug, Trees, UDrawGraph, Traces
-import IPGs, WCET
-from Trees import Dominators
+import ICFGs, ParseCFGs, Debug, Trees, UDrawGraph, Traces, IPGs, WCET
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -50,31 +48,28 @@ def createGraphs (program, basename):
     Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
         functionName = cfg.getName()
-        predomTree  = Dominators(cfg, cfg.getEntryID())
+        UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
+        predomTree  = Trees.Dominators(cfg, cfg.getEntryID())
         reverseg    = cfg.getReverseCFG()
-        postdomTree = Dominators(reverseg, reverseg.getEntryID())
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (predomTree, "%s.%s.%s" % (basename, functionName, "pre"))
-            UDrawGraph.makeUdrawFile (postdomTree, "%s.%s.%s" % (basename, functionName, "post"))
+        postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
+        UDrawGraph.makeUdrawFile (predomTree, "%s.%s.%s" % (basename, functionName, "pre"))
+        UDrawGraph.makeUdrawFile (postdomTree, "%s.%s.%s" % (basename, functionName, "post"))
         icfg = ICFGs.ICFG(cfg)
         icfg.setEntryID()
         icfg.setExitID()
         icfg.addExitEntryEdge()
         program.addICFG(icfg)
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+        UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
         lnt = Trees.LoopNests(icfg, icfg.getEntryID())
         program.addLNT(lnt)
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+        UDrawGraph.makeUdrawFile (lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
         ipg = IPGs.IPG(icfg, lnt)
         program.addIPG(ipg)
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (ipg, "%s.%s.%s" % (basename, functionName, "ipg"))
-        cfg.addBranchDivergenceEdges()    
-        if opts.udraw:
-            UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
-    
+        icfg.addBranchDivergenceEdges(lnt)
+        ipg.updateWithBranchDivergentPaths()
+        UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+        UDrawGraph.makeUdrawFile (ipg, "%s.%s.%s" % (basename, functionName, "ipg"))
+        
 def getLineOfTimingTrace (line):
     import shlex
     tokenizer = shlex.shlex(line, posix=True)

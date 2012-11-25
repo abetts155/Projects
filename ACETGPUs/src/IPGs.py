@@ -8,6 +8,8 @@ edgeID = 1
 class IPG (DirectedGraph):
     def __init__(self, icfg, lnt=None):
         DirectedGraph.__init__(self)
+        self.__branchDivergence = False
+        self.__branchDivergentEdges = []
         self.__entryID = dummyVertexID
         self.__exitID = dummyVertexID
         self.__icfg = icfg
@@ -21,7 +23,19 @@ class IPG (DirectedGraph):
         self.__setEntryAndExit()
         self.setName(icfg.getName())
         del self.__visited
-        del self.__auxiliaryData
+        
+    def updateWithBranchDivergentPaths (self):
+        self.__branchDivergence = True
+        for level, vertices in self.__lnt.levelIterator():
+            for v in vertices:
+                if isinstance(v, HeaderVertex):
+                    headerID = v.getHeaderID()
+                    if not self.__lnt.isSelfLoopHeader(headerID):
+                        if not isinstance(v, Ipoint):
+                            self.__auxiliaryData.vertexToReachable[headerID][headerID] = [headerID]
+                        self.__auxiliaryData.headerID = headerID
+                        self.__solveDFF(headerID)
+                        self.__collapseInnerLoops(headerID)
         
     def getIpointVertex (self, ipointID):
         assert ipointID in self.__ipointIDToVertex, "Unable to find Ipoint with trace ID 0x%04X" % ipointID
@@ -34,6 +48,9 @@ class IPG (DirectedGraph):
     def getExitID (self):
         assert self.__exitID != dummyVertexID, "Exit to IPG not found"
         return self.__exitID
+    
+    def isBranchDivergentEdge (self, predID, succID):
+        return (predID, succID) in self.__branchDivergentEdges
     
     def __initialise (self):
         for v in self.__icfg:
@@ -213,6 +230,8 @@ class IPG (DirectedGraph):
         predv.addSuccessorEdge(succe)
         succv.addPredecessorEdge(prede) 
         edgeID += 1
+        if self.__branchDivergence:
+            self.__branchDivergentEdges.append((predID, succID))
         
     def __setIterationEdge (self, predID, succID):
         predv = self.getVertex(predID)
@@ -264,8 +283,4 @@ class _AuxiliaryData ():
         self.headerToIterationEdges = {}
         self.headerToIpoints        = {}
         self.ipointToHeader         = {}
-        
-class SuperBlockIPG ():
-    def __init__(self):
-        pass
     

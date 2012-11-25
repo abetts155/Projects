@@ -1,6 +1,5 @@
 from DirectedGraphs import dummyVertexID, DirectedGraph
-from Vertices import Vertex
-import Trees, Debug
+from Vertices import Vertex, Ipoint
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
@@ -60,64 +59,19 @@ class BasicBlock (Vertex):
 class CFG (DirectedGraph):    
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self.__entryID = dummyVertexID
-        self.__exitID = dummyVertexID
-        
-    def addBranchDivergenceEdges (self):
-        # Ensure the CFG is strongly connected
-        self.addExitEntryEdge()
-        # Create the LNT
-        lnt = Trees.LoopNests(self, self.getEntryID())
-        # Look for forward branches
-        forwardBranches = []
-        for v in self:
-            vertexID = v.getVertexID()
-            if v.numberOfSuccessors () > 1:
-                if not lnt.isLoopHeader(vertexID):
-                    backEdge = False
-                    for succID in v.getSuccessorIDs():
-                        if lnt.isLoopBackEdge(vertexID, succID):
-                            backEdge = True
-                    if not backEdge:
-                        Debug.debugMessage("Vertex %d is a forward branch" % vertexID, 1)
-                        forwardBranches.append(vertexID)
-                else:
-                    forLoop  = False
-                    loopBody = lnt.getLoopBody(vertexID)
-                    for succID in v.getSuccessorIDs():
-                        if succID not in loopBody:
-                            forLoop = True
-                    if not forLoop:
-                        Debug.debugMessage("Vertex %d is a forward branch" % vertexID, 1)
-                        forwardBranches.append(vertexID)                    
-        if forwardBranches:
-            self.__solveDFF(forwardBranches)        
-    
-    def __solveDFF (self, forwardBranches):
-        vertexToBranch = {}
-        for v in self:
-            vertexToBranch[v] = []
-        
-        reverseg    = self.getReverseCFG()
-        postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
-        dfs    = Trees.DepthFirstSearch(self, self.__entryID)
-        postID = self.numOfVertices()
-        while postID >= 1:
-            vertexID = dfs.getPostorderVertexID(postID)
-            v        = self.getVertex(vertexID)
-            for predID in v.getPredecessorIDs():
-                predv = self.getVertex(predID)
-                if predID in forwardBranches:
-                    vertexToBranch[v].append(predv)
-                vertexToBranch[v].extend(vertexToBranch[predv])
-            postID -= 1 
+        self._entryID = dummyVertexID
+        self._exitID = dummyVertexID
         
     def getReverseCFG (self):
         reverseg = CFG()
         # Add vertices
         for v in self:
-            copyv = BasicBlock(v.getVertexID())
-            copyv.instructions = v.instructions
+            copyv = None
+            if isinstance(v, BasicBlock):
+                copyv = BasicBlock(v.getVertexID())
+            else:
+                assert isinstance(v, Ipoint)
+                copyv = Ipoint(v.getVertexID(), v.getIpointID())
             reverseg.addVertex(copyv)
     
         # Add edges
@@ -144,51 +98,51 @@ class CFG (DirectedGraph):
         return DirectedGraph.getVertex(self, bbID)
     
     def getEntryID (self):
-        assert self.__entryID != dummyVertexID, "Entry ID not set" 
-        return self.__entryID
+        assert self._entryID != dummyVertexID, "Entry ID not set" 
+        return self._entryID
         
     def setEntryID (self, entryID=None):
         if entryID is None:
             for bb in self.vertices.values():
                 if bb.numberOfPredecessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self.__entryID == dummyVertexID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self.__entryID, bbID)
-                    self.__entryID = bbID
-            assert self.__entryID != dummyVertexID, "Unable to find a vertex without predecessors to set as the entry"
+                    assert self._entryID == dummyVertexID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
+                    self._entryID = bbID
+            assert self._entryID != dummyVertexID, "Unable to find a vertex without predecessors to set as the entry"
         else:
             assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
             assert entryID > dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
-            self.__entryID = entryID
+            self._entryID = entryID
             
     def getExitID (self):
-        assert self.__exitID != dummyVertexID, "Exit ID not set" 
-        return self.__exitID
+        assert self._exitID != dummyVertexID, "Exit ID not set" 
+        return self._exitID
         
     def setExitID (self, exitID=None):
         if exitID is None:
             for bb in self.vertices.values():
                 if bb.numberOfSuccessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self.__exitID == dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self.__entryID, bbID)
-                    self.__exitID = bbID
-            assert self.__exitID != dummyVertexID, "Unable to find a vertex without successors to set as the entry"
+                    assert self._exitID == dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
+                    self._exitID = bbID
+            assert self._exitID != dummyVertexID, "Unable to find a vertex without successors to set as the entry"
         else:
             assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
             assert exitID > dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
-            self.__exitID = exitID
+            self._exitID = exitID
             
     def addExitEntryEdge (self):
 
-        assert self.__exitID != dummyVertexID, "Exit ID not set"
-        entryv = self.getVertex(self.__entryID)
-        exitv = self.getVertex(self.__exitID)
-        entryv.addPredecessor(self.__exitID)
-        exitv.addSuccessor(self.__entryID)
+        assert self._exitID != dummyVertexID, "Exit ID not set"
+        entryv = self.getVertex(self._entryID)
+        exitv = self.getVertex(self._exitID)
+        entryv.addPredecessor(self._exitID)
+        exitv.addSuccessor(self._entryID)
         
     def __str__ (self):
         string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
-        "Entry ID = %s\n" % str(self.__entryID) + \
-        "Exit ID  = %s\n" % str(self.__exitID) + "\n"
+        "Entry ID = %s\n" % str(self._entryID) + \
+        "Exit ID  = %s\n" % str(self._exitID) + "\n"
         for bb in self.vertices.values():
             string += bb.__str__()
         return string

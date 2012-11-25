@@ -130,14 +130,22 @@ def setEntryAndExit (cfg):
     if len(withoutPred) == 0:
         Debug.exitMessage("CFG '%s' does not an entry point" % cfg.getName())
     elif len(withoutPred) > 1:
-        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), withoutPred))
+        debugStr = ""
+        for bbID in withoutPred:
+            bb       = cfg.getVertex(bbID)
+            debugStr += bb.__str__()
+        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), debugStr))
     else:
         cfg.setEntryID(withoutPred[0])
         
     if len(withoutSucc) == 0:
         Debug.exitMessage("CFG '%s' does not an exit point" % cfg.getName())
     elif len(withoutSucc) > 1:
-        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), withoutSucc))
+        debugStr = ""
+        for bbID in withoutSucc:
+            bb       = cfg.getVertex(bbID)
+            debugStr += bb.__str__()
+        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
     else:
         cfg.setExitID(withoutSucc[0])    
         
