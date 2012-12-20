@@ -130,6 +130,10 @@ class Dominators (Tree):
         self._initialise (rootID)
         self._solveDFF ()
         self._addEdges ()
+        
+    def getImmediateDominator (self, vertexID):
+        assert vertexID != self._rootID, "Vertex %d does not have an immediate dominator as it is the root" % vertexID
+        return self.getVertex(vertexID).getParentID()
     
     def _initialise (self, rootID):
         for v in self.__directedg:

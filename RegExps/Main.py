@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse
-import ICFGs, ParseCFGs, Debug, Trees, UDrawGraph, IPGs
+import ParseCFGs, Debug, Trees, UDrawGraph, AcyclicReducibility
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -47,6 +47,7 @@ def createGraphs (program):
         postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
         UDrawGraph.makeUdrawFile (predomTree, "%s.%s" % (functionName, "pre"))
         UDrawGraph.makeUdrawFile (postdomTree, "%s.%s" % (functionName, "post"))
+        AcyclicReducibility.AcyclicReducibility(cfg, reverseg, predomTree, postdomTree)
                 
 if __name__ == "__main__":
     if len(args) == 1:
