@@ -138,6 +138,7 @@ def doAnalysis (outfile, basename):
             print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
 
 def checkCommandLineForAction ():
+    from threading import Thread
     # Check that the user has passed the correct options
     if len(args) == 2:
         numOfTVs   = None
@@ -152,8 +153,11 @@ def checkCommandLineForAction ():
         # Get the filename of the binary without the path
         basename = os.path.basename(cudaBinary)
         # Run the program on GPGPU-sim and get generated output
-        outfile = runProgram(numOfTVs, cudaBinary)
-        doAnalysis(outfile, basename)
+        for i in range(0, numOfTVs):
+            outfilename = cudaBinary + gpgpuFileExt + str(i)
+            t = Thread(runProgram(outfilename, cudaBinary))
+            t.start()
+        #doAnalysis(outfile, basename)
     elif len(args) == 1:
         outfile = args[0]
         assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
@@ -179,19 +183,17 @@ def createCFGs (outfile):
     program = ParseCFGs.createProgram(cfgLines)
     return program 
 
-def runProgram (numOfTVs, cudaBinary):
+def runProgram (outfilename, cudaBinary):
     from subprocess import Popen, PIPE
-    outfilename = cudaBinary + gpgpuFileExt
+    
     Debug.debugMessage("Creating file '%s' for GPGPU-sim output" % outfilename, 1)
     with open(outfilename, 'w') as outfile:
-        command = "%s %d" % (cudaBinary, numOfTVs)
-        Debug.debugMessage("Running '%s'" % command, 1)
-        proc = Popen(command, shell=True, executable="/bin/bash", stdout=outfile, stderr=PIPE)
+        Debug.debugMessage("Running '%s'" % cudaBinary, 1)
+        proc = Popen(cudaBinary, shell=True, executable="/bin/bash", stdout=outfile, stderr=PIPE)
         returnCode = proc.wait()
         if returnCode != 0:
-            Debug.exitMessage("Running '%s' failed" % command)
+            Debug.exitMessage("Running '%s' failed" % cudaBinary)
         outfile.flush()
-    return outfilename
     
 def cleanUp (abspath):
     for paths, dirs, files in os.walk(abspath):
@@ -203,6 +205,8 @@ def cleanUp (abspath):
                 os.remove(fullPath)
                 
 if __name__ == "__main__":
+    import multiprocessing
+    print multiprocessing.cpu_count()
     # Remove files created from previous runs
     cleanUp (os.path.abspath(os.curdir))
     # What to do depends on which parameters were parameters on the command line

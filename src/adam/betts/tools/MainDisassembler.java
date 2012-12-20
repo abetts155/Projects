@@ -80,7 +80,7 @@ public class MainDisassembler
     {
         Program program = new Program();
         new ProgramReader(program, programFileName, !basicBlocks);
-        new WriteProgram(program, Globals.getOutputFileName());
+        new WriteProgram(program, Globals.getOutputFileName(), true);
     }
 
     public static void main (String[] args)

@@ -142,9 +142,8 @@ int fft1(int n, int flag)
 	 if(n < 2) return(999);
 	 iter = log((double)n)/log(2.0);
 	 j = 1;
-#ifdef DEBUG 
+	printf("n=%d\n",n);
 	printf("iter=%d\n",iter);
-#endif
 	 for(i = 0; i < iter; i++)
 	   j *= 2;
 	 if(fabs(n-j) > 1.0e-6)

@@ -72,7 +72,7 @@ public class MainPTXAnalyser
     {
         Program program = new Program();
         new ProgramReader(program, ptxFileName, true);
-        new WriteProgram(program, Globals.getOutputFileName());
+        new WriteProgram(program, Globals.getOutputFileName(), true);
     }
 
     public static void main (String[] args)

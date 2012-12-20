@@ -8,13 +8,6 @@
 long int
 expint (int n, int x)
 {
-  /*
-   * Counters added to record loop iterations. Used by GA to evaluate fitness
-   */
-  int counter1 = 0;
-  int counter2 = 0;
-  int counter3 = 0;
-
   int i, ii, nm1;
   long int a, b, c, d, del, fact, h, psi, ans;
   
@@ -31,7 +24,7 @@ expint (int n, int x)
     /* MAXIT is 100 */
     for (i = 1; i <= 100; i++)
     {
-      counter1++;
+	printf("HERE 1\n");
       a = -i * (nm1 + i);
       b += 2;
       d = 10* (a *d+b);
@@ -54,7 +47,7 @@ expint (int n, int x)
     fact=1;
     for (i=1;i<=100;i++)
     {
-      counter2++;
+printf("HERE 2\n");
       fact *= -x/i;
       if (i != nm1)
       {
@@ -70,8 +63,7 @@ expint (int n, int x)
          */
         psi = 0x00FF;
         for (ii=1; ii <= nm1; ii++)
-        {
-          counter3++;         
+        {       
           psi += ii + nm1;
         }
         del = psi + fact * x * x + (8* x ) << 4 - x;
@@ -80,6 +72,9 @@ expint (int n, int x)
     }
 
   }
+
+  printf("Returning %d\n", ans);
+
   return ans;
 }
 

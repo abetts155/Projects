@@ -169,42 +169,45 @@ def run ():
 	
 	chdir(topLevelDir)
 
-	javaPrefix = "java -ea -jar -Xss4m "
-	for numOfVertices in range(opts.minVertices, opts.maxVertices + 1):
-		debug.verboseMessage("Now generating CFG with " + str(numOfVertices) + " vertices")
-		for variation in range(1, opts.variations + 1):
-			debug.verboseMessage("Variation #" + str(variation) + " " + ctime())
-			programFileName = "program" + str(numOfVertices) + ".xml"
-			cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices) + " -o " + programFileName
+	try:
+		javaPrefix = "java -ea -jar -Xss4m "
+		for numOfVertices in range(opts.minVertices, opts.maxVertices + 1):
+			debug.verboseMessage("Now generating CFG with " + str(numOfVertices) + " vertices")
+			for variation in range(1, opts.variations + 1):
+				debug.verboseMessage("Variation #" + str(variation) + " " + ctime())
+				programFileName = "program" + str(numOfVertices) + ".xml"
+				cmd1 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "program-generator.jar -s 1 -F 6 -V " + str(numOfVertices) + " -o " + programFileName
 
-			if opts.loops:
-				numOfLoops   = randint(1, 10)
-				nestingLevel = 1
-				if numOfLoops > 1:
-					nestingLevel = randint(1, numOfLoops - 1)
-				cmd1 += " -l " + str(numOfLoops) + " -L " + str(nestingLevel)
+				if opts.loops:
+					numOfLoops   = randint(1, 10)
+					nestingLevel = 1
+					if numOfLoops > 1:
+						nestingLevel = randint(1, numOfLoops - 1)
+					cmd1 += " -l " + str(numOfLoops) + " -L " + str(nestingLevel)
 
-			debug.debugMessage("Running '" + cmd1 + "'")
-			proc1 = Popen(cmd1, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
-			stdoutdata, stderrdata = proc1.communicate()
-			if proc1.returncode:
-				debug.exitMessage("Problem running " + cmd1)
+				debug.debugMessage("Running '" + cmd1 + "'")
+				proc1 = Popen(cmd1, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
+				stdoutdata, stderrdata = proc1.communicate()
+				if proc1.returncode:
+					debug.exitMessage("Problem running " + cmd1)
 
-			for run in range(1, opts.runs + 1):
-				debug.debugMessage("Run #" + str(run))
-				cmd2Options = " -p " + programFileName
-			    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "ipe-analyser.jar" + cmd2Options
-				proc2 = Popen(cmd2, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
-				stdoutdata, stderrdata = proc2.communicate()
-				if proc2.returncode != 0:
-					debug.exitMessage("Problem running " + cmd2)
+				for run in range(1, opts.runs + 1):
+					debug.debugMessage("Run #" + str(run))
+					cmd2Options = " -p " + programFileName
+				    	cmd2 = javaPrefix + environ[WCET_HOME] + sep + "bin" + sep + "ipe-analyser.jar" + cmd2Options
+					proc2 = Popen(cmd2, shell=True, executable="/bin/bash", stderr=PIPE, stdout=PIPE)
+					stdoutdata, stderrdata = proc2.communicate()
+					if proc2.returncode != 0:
+						debug.exitMessage("Problem running " + cmd2)
 
-				firstLine = True
-				for line in stdoutdata.splitlines():
-					if line.startswith("|F"):
-						parseMeasurements (numOfVertices, line, firstLine)
-						if firstLine:
-							firstLine = False
+					firstLine = True
+					for line in stdoutdata.splitlines():
+						if line.startswith("|F"):
+							parseMeasurements (numOfVertices, line, firstLine)
+							if firstLine:
+								firstLine = False
+	except KeyboardInterrupt:
+		pass
 
 def generateGraph (fileName, yLabel, xAxis, curve1, curve2, yLim=0, logScale=False):
 	figConstraints = plt.figure()
@@ -242,32 +245,33 @@ def showResults ():
 		f = open(opts.fileName, 'w')
 		# Collate the data
 		for numOfVertices in wcetData:
-			xAxis.append(numOfVertices)
 			f.write("#Vertices " + str(numOfVertices) + "\n")
 			f.write("WCET " + str(wcetData[numOfVertices]) + " " +  str(wcetData2[numOfVertices]) + "\n")
 
-			cfgConstraints   = ceil(constraintData[numOfVertices]/(opts.runs*opts.variations))
-			sbcfgConstraints = ceil(constraintData2[numOfVertices]/(opts.runs*opts.variations))
-			f.write("Constraints " + str(cfgConstraints) + " " + str(sbcfgConstraints) + "\n")
-			cfgConstraintsCurve.append(cfgConstraints)
-			sbcfgConstraintsCurve.append(sbcfgConstraints)
+			if constraintData[numOfVertices] > 0:
+				xAxis.append(numOfVertices)
+				cfgConstraints   = ceil(constraintData[numOfVertices]/(opts.runs*opts.variations))
+				sbcfgConstraints = ceil(constraintData2[numOfVertices]/(opts.runs*opts.variations))
+				f.write("Constraints " + str(cfgConstraints) + " " + str(sbcfgConstraints) + "\n")
+				cfgConstraintsCurve.append(cfgConstraints)
+				sbcfgConstraintsCurve.append(sbcfgConstraints)
 
-			cfgVariables  = ceil(variablesData[numOfVertices]/(opts.runs*opts.variations))
-			sbcfgVariables = ceil(variablesData2[numOfVertices]/(opts.runs*opts.variations))
-			f.write("Variables " + str(cfgVariables) + " " + str(sbcfgVariables) + "\n")
-			cfgVariablesCurve.append(cfgVariables)
-			sbcfgVariablesCurve.append(sbcfgVariables)
+				cfgVariables  = ceil(variablesData[numOfVertices]/(opts.runs*opts.variations))
+				sbcfgVariables = ceil(variablesData2[numOfVertices]/(opts.runs*opts.variations))
+				f.write("Variables " + str(cfgVariables) + " " + str(sbcfgVariables) + "\n")
+				cfgVariablesCurve.append(cfgVariables)
+				sbcfgVariablesCurve.append(sbcfgVariables)
 
-			cfgSolveTime   = ceil(solvingTimeData[numOfVertices]/(opts.runs*opts.variations))
-			sbcfgSolveTime = ceil(solvingTimeData2[numOfVertices]/(opts.runs*opts.variations))
-			f.write("Solving time " + str(cfgSolveTime) + " " + str(sbcfgSolveTime) + "\n")
-			cfgTimeCurve.append(cfgSolveTime)
-			sbcfgTimeCurve.append(sbcfgSolveTime)
+				cfgSolveTime   = ceil(solvingTimeData[numOfVertices]/(opts.runs*opts.variations))
+				sbcfgSolveTime = ceil(solvingTimeData2[numOfVertices]/(opts.runs*opts.variations))
+				f.write("Solving time " + str(cfgSolveTime) + " " + str(sbcfgSolveTime) + "\n")
+				cfgTimeCurve.append(cfgSolveTime)
+				sbcfgTimeCurve.append(sbcfgSolveTime)
 
-			f.write("\n")
+				f.write("\n")
 
-			if sbcfgSolveTime < timeCurveMin:
-				timeCurveMin = sbcfgSolveTime
+				if sbcfgSolveTime < timeCurveMin:
+					timeCurveMin = sbcfgSolveTime
 
 		# Generate the graphs
 		generateGraph("constraints.png", "#Constraints", xAxis, cfgConstraintsCurve, sbcfgConstraintsCurve)
