@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse
-import ParseCFGs, Debug, Trees, UDrawGraph, AcyclicReducibility
+import ParseCFGs, Debug, RegularExpressions
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -38,16 +38,8 @@ Debug.verbose = opts.verbose
 Debug.debug = opts.debug
 
 def createGraphs (program):
-    Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
-        functionName = cfg.getName()
-        UDrawGraph.makeUdrawFile (cfg, "%s.%s" % (functionName, "cfg"))
-        predomTree  = Trees.Dominators(cfg, cfg.getEntryID())
-        reverseg    = cfg.getReverseCFG()
-        postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
-        UDrawGraph.makeUdrawFile (predomTree, "%s.%s" % (functionName, "pre"))
-        UDrawGraph.makeUdrawFile (postdomTree, "%s.%s" % (functionName, "post"))
-        AcyclicReducibility.AcyclicReducibility(cfg, reverseg, predomTree, postdomTree)
+        RegularExpressions.RegularExpressions(cfg)
                 
 if __name__ == "__main__":
     if len(args) == 1:

@@ -28,6 +28,23 @@ class Tree (DirectedGraph):
         
     def isInternalVertex (self, vertexID):
         return self.getVertex(vertexID).numberOfSuccessors() > 0
+    
+    def getHeight (self):
+        maxHeight = 0
+        height = {}
+        stack  = []
+        rootv = self.getVertex(self.getRootID())
+        stack.append(rootv)
+        height[rootv] = 0
+        while stack:
+            v = stack.pop()
+            for succID in v.getSuccessorIDs():
+                succv = self.getVertex(succID)
+                stack.append(succv)
+                height[succv] = height[v] + 1
+                if height[succv] > maxHeight:
+                    maxHeight = height[succv]
+        return maxHeight
         
     def levelIterator (self, up=True):
         rootv = self.getVertex(self.getRootID())
@@ -120,6 +137,101 @@ class DepthFirstSearch (Tree):
     
     def isDFSBackedge (self, sourceID, destinationID):
         return [sourceID, destinationID] in self.__backedges
+    
+class CompressedDominatorTree (Tree):
+    def __init__(self, domTree, lca, vertexID, neighbourIDs):
+        self.__vToLCA  = {}
+        self.__computeParents(lca, neighbourIDs)
+        self.__addEdges()
+        
+    def __computeParents(self, lca, querySet):      
+        while querySet:
+            for e1 in querySet:
+                for e2 in querySet:
+                    if e1 != e2:
+                        lcaID = lca.getLCA(e1, e2)
+                        # Update for e1
+                        if e1 in self.__vToLCA:
+                            oldlcaID = self.__vToLCA[e1]
+                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e1:
+                                self.__vToLCA[e1] = lcaID
+                        else:
+                            self.__vToLCA[e1] = lcaID
+                        # Update for e2
+                        if e2 in self.__vToLCA:
+                            oldlcaID = self.__vToLCA[e2]
+                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e2:
+                                self.__vToLCA[e2] = lcaID
+                        else:
+                            self.__vToLCA[e2] = lcaID
+            newQuerySet = []
+            for lcaID in self.__vToLCA.values():
+                if lcaID not in querySet:
+                    newQuerySet.append(lcaID)
+            querySet = newQuerySet
+        
+    def __addEdges(self):        
+        for vertexID, parentID in self.__vToLCA:
+            if not self.hasVertex(vertexID):
+                self.addVertex(vertexID)                
+            if not self.hasVertex(parentID):
+                self.addVertex(parentID)
+            if parentID != vertexID:
+                self.addEdge(parentID, vertexID)
+    
+class LeastCommonAncestor ():
+    def __init__(self, tree):
+        self.__tree = tree
+        self.__euler = {}
+        self.__level = {}
+        self.__representative = {}
+        self.__eulerIndex = 0
+        self.__dummyLevel = 0
+        self.__level[self.__tree.getRootID()] = 0
+        self.__doDFS(self.__tree.getRootID())
+        self.__dummyLevel += 1
+        self.__computeRepresentativeIndices()
+        
+    def __doDFS (self, vertexID):
+        v = self.__tree.getVertex(vertexID)
+        self.__euler[self.__eulerIndex] = vertexID
+        self.__eulerIndex += 1
+        for succID in v.getSuccessorIDs():
+            self.__level[succID] = self.__level[vertexID] + 1
+            if self.__level[succID] > self.__dummyLevel:
+                self.__dummyLevel = self.__level[succID]
+            self.__doDFS(succID)
+            self.__euler[self.__eulerIndex] = vertexID
+            self.__eulerIndex += 1
+    
+    def __computeRepresentativeIndices (self):
+        for index, vertexID in self.__euler:
+            self.__representative[vertexID] = index
+            
+    def getLevel (self, vertexID):
+        assert vertexID in self.__level, "Cannot find vertex %d" % vertexID
+        return self.__level[vertexID]
+            
+    def getLCA (self, left, right):        
+        repID1      = self.__representative[left]
+        repID2      = self.__representative[right]
+        lowestLevel = self.__dummyLevel
+        startIndex  = None
+        endIndex    = None
+        levelIndex  = 2 * self.__tree.numOfVertices()
+        
+        if repID1 < repID2:
+            startIndex = repID1
+            endIndex   = repID2
+        else:
+            startIndex = repID2
+            endIndex   = repID1
+        for i in range (startIndex, endIndex+1):
+            if self.__level[i] < lowestLevel:
+                lowestLevel = self.__level[i]
+                levelIndex  = i
+        Debug.debugMessage("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 1)
+        return self.__euler[levelIndex]
     
 class Dominators (Tree):
     def __init__(self, directedg, rootID):

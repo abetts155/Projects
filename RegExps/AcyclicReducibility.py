@@ -47,24 +47,27 @@ class AcyclicReducibility:
         self.__postdomTree = postdomTree
         self.__irreducibleBranches = set([])
         self.__irreducibleMerges   = set([])
+        self.__preDF  = DominanceFrontiers(self.__cfg, self.__predomTree)
+        self.__postDF = DominanceFrontiers(self.__reversecfg, self.__postdomTree)
         self.__compute()
         self.output()
     
-    def output (self):    
+    def output (self):
+        print "%s%s%s" % ('*' * 5, 'BRANCHES', '*' * 5)
+        for vertexID in self.__irreducibleBranches:
+            print "%d is IRREDUCIBLE" % vertexID
         for v in self.__cfg:
             vertexID = v.getVertexID()
-            if v.numberOfSuccessors() > 1:
-                if vertexID in self.__irreducibleBranches:
-                    print "%d is an IRREDUCIBLE branch" % vertexID
-                else:
-                    print "%d is a REDUCIBLE branch" % vertexID
+            if v.numberOfSuccessors() > 1 and vertexID not in self.__irreducibleBranches:
+                    print "%d is reducible" % vertexID
+                    
+        print "\n%s%s%s" % ('*' * 5, 'MERGES', '*' * 5)
+        for vertexID in self.__irreducibleMerges:
+            print "%d is IRREDUCIBLE" % vertexID
         for v in self.__cfg:
             vertexID = v.getVertexID()
-            if v.numberOfPredecessors() > 1:
-                if vertexID in self.__irreducibleMerges:
-                    print "%d is an IRREDUCIBLE merge" % vertexID
-                else:
-                    print "%d is a REDUCIBLE merge" % vertexID
+            if v.numberOfPredecessors() > 1 and vertexID not in self.__irreducibleMerges:
+                    print "%d is reducible" % vertexID
     
     def isReducible (self):
         return len(self.__irreducibleBranches) == 0 and len(self.__irreducibleMerges) == 0
@@ -76,9 +79,6 @@ class AcyclicReducibility:
         return mergeID not in self.__irreducibleMerges
     
     def __compute(self):
-        preDF  = DominanceFrontiers(self.__cfg, self.__predomTree)
-        postDF = DominanceFrontiers(self.__reversecfg, self.__postdomTree)
-        
         for v in self.__cfg:
             vertexID = v.getVertexID()
             # Check for acyclic irreducible branch
@@ -87,7 +87,7 @@ class AcyclicReducibility:
                 ipreID  = self.__predomTree.getImmediateDominator(ipostID)
                  
                 if ipreID != vertexID:
-                    if preDF.size(vertexID) > 1:
+                    if self.__preDF.size(vertexID) > 1:
                         self.__irreducibleBranches.add(vertexID)
                         
             # Check for acyclic irreducible merge
@@ -96,6 +96,6 @@ class AcyclicReducibility:
                 ipostID = self.__postdomTree.getImmediateDominator(ipreID)
                  
                 if ipostID != vertexID:
-                    if postDF.size(vertexID) > 1:
+                    if self.__postDF.size(vertexID) > 1:
                         self.__irreducibleMerges.add(vertexID)
                     
