@@ -33,6 +33,15 @@ cmdline.add_option("-u",
                  help="Generate uDrawGraph files.",
                  default=False)
 
+cmdline.add_option("-T",
+                  "--number-of-tests",
+                  action="store",
+                  type="int",
+                  dest="tests",
+                  help="The number of times to run the kernel. [Default is %default].",
+                  default=0,
+                  metavar="<INT>")
+
 cmdline.add_option("--no-parsing",
                  action="store_true",
                  dest="noParse",
@@ -95,12 +104,20 @@ def getWarp (allWarpTraces, SMAndWarp):
 def splitTraces (outfile):
     Debug.debugMessage("Splitting traces", 1)
     allWarpTraces = {}
+    traceFound = False
     with open(outfile, 'r') as f:
         for line in f:
-            if line.startswith('0x'):
-                SMAndWarp, timingTuple = getLineOfTimingTrace(line)
-                w = getWarp (allWarpTraces, SMAndWarp)
-                w.appendToTrace(timingTuple)
+            if not traceFound:
+                if line.startswith('0x'):
+                    traceFound = True
+            if traceFound:
+                try:
+                    SMAndWarp, timingTuple = getLineOfTimingTrace(line)
+                    w = getWarp (allWarpTraces, SMAndWarp)
+                    w.appendToTrace(timingTuple)
+                except ValueError:
+                    # Line found which is not a trace tuple
+                    break
     return allWarpTraces
 
 def writeTraces (allWarpTraces, basename):
@@ -140,24 +157,29 @@ def doAnalysis (outfile, basename):
 def checkCommandLineForAction ():
     from threading import Thread
     # Check that the user has passed the correct options
-    if len(args) == 2:
-        numOfTVs   = None
-        cudaBinary = None
-        if args[0].isdigit():
-            numOfTVs = int(args[0])
-            cudaBinary = args[1]
-        elif args[1].isdigit():
-            numOfTVs = int(args[1])
-            cudaBinary = args[0]
-        assert numOfTVs > 0, "The number of test vectors has to be a non-negative integer"
+    if opts.tests > 0:
+        cudaBinary = args[0]
+        if not os.path.exists(cudaBinary):
+            Debug.exitMessage("The argument '%s' does not exist" % cudaBinary)
+        elif not os.path.isfile(cudaBinary):
+            Debug.exitMessage("The argument '%s' is not a file" % cudaBinary)
+        elif not os.access(cudaBinary, os.X_OK):
+            Debug.exitMessage("The argument '%s' does not have execute permission" % cudaBinary)
         # Get the filename of the binary without the path
         basename = os.path.basename(cudaBinary)
         # Run the program on GPGPU-sim and get generated output
-        for i in range(0, numOfTVs):
+        theThreads     = []
+        generatedFiles = []
+        for i in range(0, opts.tests):
             outfilename = cudaBinary + gpgpuFileExt + str(i)
+            generatedFiles.append(outfilename)
             t = Thread(runProgram(outfilename, cudaBinary))
+            theThreads.append(t)
             t.start()
-        #doAnalysis(outfile, basename)
+        for t in theThreads:
+            t.join()
+        for outfile in generatedFiles:
+            doAnalysis(outfile, basename)
     elif len(args) == 1:
         outfile = args[0]
         assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
@@ -207,7 +229,7 @@ def cleanUp (abspath):
 if __name__ == "__main__":
     import multiprocessing
     print multiprocessing.cpu_count()
-    # Remove files created from previous runs
-    cleanUp (os.path.abspath(os.curdir))
     # What to do depends on which parameters were parameters on the command line
     checkCommandLineForAction ()
+    # Remove temporarily generated files
+    cleanUp (os.path.abspath(os.curdir))
