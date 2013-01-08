@@ -54,9 +54,11 @@ def setEdgePattern (shape, width):
 def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
-def makeUdrawFile (g, fileNamePrefix):
-    if opts.udraw:
-        with open(fileNamePrefix + fileNameSuffix, 'w') as f:
+def makeUdrawFile (g, basepath, fileNamePrefix):
+    import os
+    if opts.udraw: 
+        filename = basepath + os.sep + fileNamePrefix + fileNameSuffix
+        with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
             if isinstance(g, CFGs.CFG):

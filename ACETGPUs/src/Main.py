@@ -1,6 +1,6 @@
 #!/usr/bin/python2.6
 
-import sys, optparse, os
+import sys, optparse, os, time
 import Debug
 
 # The command-line parser and its options
@@ -48,37 +48,37 @@ cmdline.add_option("--no-parsing",
                  help="Do not parse traces.",
                  default=False)
 
-(opts, args) = cmdline.parse_args(sys.argv[1:])
+(opts, args)  = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
-Debug.debug = opts.debug
-gpgpuFileExt = '.gpgpusim'
+Debug.debug   = opts.debug
+gpgpuFileExt  = '.gpgpusim'
 
-def createGraphs (program, basename):
+def createGraphs (program, basepath):
     import UDrawGraph, ICFGs, Trees, IPGs
     Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
         functionName = cfg.getName()
-        UDrawGraph.makeUdrawFile (cfg, "%s.%s.%s" % (basename, functionName, "cfg"))
+        UDrawGraph.makeUdrawFile (cfg, basepath, "%s.%s" % (functionName, "cfg"))
         predomTree  = Trees.Dominators(cfg, cfg.getEntryID())
         reverseg    = cfg.getReverseCFG()
         postdomTree = Trees.Dominators(reverseg, reverseg.getEntryID())
-        UDrawGraph.makeUdrawFile (predomTree, "%s.%s.%s" % (basename, functionName, "pre"))
-        UDrawGraph.makeUdrawFile (postdomTree, "%s.%s.%s" % (basename, functionName, "post"))
+        UDrawGraph.makeUdrawFile (predomTree, basepath, "%s.%s" % (functionName, "pre"))
+        UDrawGraph.makeUdrawFile (postdomTree, basepath, "%s.%s" % (functionName, "post"))
         icfg = ICFGs.ICFG(cfg)
         icfg.setEntryID()
         icfg.setExitID()
         icfg.addExitEntryEdge()
         program.addICFG(icfg)
-        UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+        UDrawGraph.makeUdrawFile (icfg, basepath, "%s.%s" % (functionName, "icfg"))
         lnt = Trees.LoopNests(icfg, icfg.getEntryID())
         program.addLNT(lnt)
-        UDrawGraph.makeUdrawFile (lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+        UDrawGraph.makeUdrawFile (lnt, basepath, "%s.%s" % (functionName, "lnt"))
         ipg = IPGs.IPG(icfg, lnt)
         program.addIPG(ipg)
         icfg.addBranchDivergenceEdges(lnt)
         ipg.updateWithBranchDivergentPaths()
-        UDrawGraph.makeUdrawFile (icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
-        UDrawGraph.makeUdrawFile (ipg, "%s.%s.%s" % (basename, functionName, "ipg"))
+        UDrawGraph.makeUdrawFile (icfg, basepath, "%s.%s" % (functionName, "icfg"))
+        UDrawGraph.makeUdrawFile (ipg, basepath, "%s.%s" % (functionName, "ipg"))
         
 def getLineOfTimingTrace (line):
     import shlex
@@ -142,7 +142,7 @@ def doAnalysis (generatedFiles, basename, basepath):
     # Create the CFGs
     program = createCFGs(generatedFiles[0])
     # Create the IPG
-    createGraphs(program, basename)
+    createGraphs(program, basepath)
     if not opts.noParse:
         # Split into warp-specific traces
         allWarpTraces = splitTraces (generatedFiles)
@@ -160,8 +160,8 @@ def doAnalysis (generatedFiles, basename, basepath):
             ilp = WCET.LinearProgram(ipg, traceData, basename, basepath)
             print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
 
-def checkCommandLineForAction ():
-    from threading import Thread
+def checkCommandLineForAction ():    
+    from subprocess import Popen, PIPE
     # Check that the user has passed the correct options
     if opts.tests > 0:
         cudaBinary = args[0]
@@ -175,24 +175,44 @@ def checkCommandLineForAction ():
         basename = os.path.basename(cudaBinary)
         basepath = os.path.abspath(os.path.dirname(cudaBinary))
         # Run the program on GPGPU-sim and get generated output
-        theThreads     = []
+        outfiles       = []
         generatedFiles = []
-        for i in range(0, opts.tests):
+        for i in xrange(opts.tests):
             outfilename = cudaBinary + gpgpuFileExt + str(i)
             generatedFiles.append(outfilename)
-            t = Thread(runProgram(outfilename, cudaBinary))
-            theThreads.append(t)
-            t.start()
-        for t in theThreads:
-            t.join()
+            outfiles.append(outfilename)
+        processes    = []
+        pidToOutFile = {}
+        while True:
+            while outfiles and len(processes) < multiprocessing.cpu_count():
+                outfilename = outfiles.pop()
+                outfile = open(outfilename, 'w')
+                Debug.debugMessage("Spawning new process for '%s'" % outfilename, 1)
+                proc = Popen(cudaBinary, shell=True, stdout=outfile, stderr=PIPE)
+                processes.append(proc)
+                pidToOutFile[proc.pid] = outfilename
+            for p in processes:
+                if p.poll() is not None:
+                    processes.remove(p)
+                    if p.returncode != 0:
+                        Debug.debugMessage("Process failed for output file '%s' with return code %d" % (pidToOutFile[p.pid], p.returncode), 1)
+                        outfiles.append(pidToOutFile[p.pid])
+            if not processes and not outfiles:
+                break
+            else:
+                time.sleep(0.05)
         doAnalysis(generatedFiles, basename, basepath)
-    elif len(args) == 1:
-        outfile = args[0]
-        assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
-        basename = os.path.splitext(os.path.basename(outfile))[0]
-        doAnalysis(outfile, basename)
+    elif len(args) > 0:
+        for arg in args:
+            if arg.count(gpgpuFileExt) != 1:
+                Debug.exitMessage("Each file must contain '%s' in its suffix. You passed '%s'." % (gpgpuFileExt, arg))
+        basename = os.path.splitext(os.path.basename(args[0]))[0]
+        basepath = os.path.abspath(os.path.dirname(args[0]))
+        doAnalysis(args, basename, basepath)
     else:
-        Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
+        Debug.exitMessage("""There are two ways to run this script:
+    1) Either pass a CUDA binary as an argument and the number of times you want to run the kernel with the -T option; or
+    2) Pass a number of files that were generated by GPGPU-sim from a previous testing run""")
             
 def createCFGs (outfile):
     import ParseCFGs
@@ -211,20 +231,13 @@ def createCFGs (outfile):
                 cfgLines.append(line)
     program = ParseCFGs.createProgram(cfgLines)
     return program 
-
-def runProgram (outfilename, cudaBinary):
-    from subprocess import Popen, PIPE
-    
-    Debug.debugMessage("Creating file '%s' for GPGPU-sim output" % outfilename, 1)
-    with open(outfilename, 'w') as outfile:
-        Debug.debugMessage("Running '%s'" % cudaBinary, 1)
-        proc = Popen(cudaBinary, shell=True, executable="/bin/bash", stdout=outfile, stderr=PIPE)
-        returnCode = proc.wait()
-        if returnCode != 0:
-            Debug.exitMessage("Running '%s' failed" % cudaBinary)
-        outfile.flush()
     
 def cleanUp (abspath):
+    # The following file is generated by GPGPU-sim on every execution.
+    # It includes stats about each instruction execution
+    gpgpuInstrStats = abspath + os.sep + 'gpgpu_inst_stats.txt'
+    if os.path.exists(gpgpuInstrStats):
+        os.remove(gpgpuInstrStats)
     for paths, dirs, files in os.walk(abspath):
         files.sort()
         for filename in files:
@@ -235,8 +248,10 @@ def cleanUp (abspath):
                 
 if __name__ == "__main__":
     import multiprocessing
-    print multiprocessing.cpu_count()
-    # What to do depends on which parameters were parameters on the command line
-    checkCommandLineForAction ()
-    # Remove temporarily generated files
-    cleanUp (os.path.abspath(os.curdir))
+    Debug.verboseMessage("You have %d CPUs on your system" % multiprocessing.cpu_count())
+    try:
+        # What to do depends on which parameters were parameters on the command line
+        checkCommandLineForAction ()
+    finally:
+        # Remove temporarily generated files
+        cleanUp (os.path.abspath(os.curdir))
