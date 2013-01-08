@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse, os
-import ICFGs, ParseCFGs, Debug, Trees, UDrawGraph, Traces, IPGs, WCET
+import Debug
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -54,6 +54,7 @@ Debug.debug = opts.debug
 gpgpuFileExt = '.gpgpusim'
 
 def createGraphs (program, basename):
+    import UDrawGraph, ICFGs, Trees, IPGs
     Debug.debugMessage("Creating data structures", 1)
     for cfg in program.getCFGs():
         functionName = cfg.getName()
@@ -93,35 +94,39 @@ def getLineOfTimingTrace (line):
     return SMAndWarp, timingTuple
 
 def getWarp (allWarpTraces, SMAndWarp):
+    import Traces
     key = (SMAndWarp[0], SMAndWarp[1])
     if key in allWarpTraces:
         return allWarpTraces[key]
-        
     w = Traces.WarpTrace(SMAndWarp[0], SMAndWarp[1])
     allWarpTraces[key] = w
     return w
 
-def splitTraces (outfile):
+def splitTraces (generatedFiles):
     Debug.debugMessage("Splitting traces", 1)
     allWarpTraces = {}
     traceFound = False
-    with open(outfile, 'r') as f:
-        for line in f:
-            if not traceFound:
-                if line.startswith('0x'):
-                    traceFound = True
-            if traceFound:
-                try:
-                    SMAndWarp, timingTuple = getLineOfTimingTrace(line)
-                    w = getWarp (allWarpTraces, SMAndWarp)
-                    w.appendToTrace(timingTuple)
-                except ValueError:
-                    # Line found which is not a trace tuple
-                    break
+    for outfile in generatedFiles:
+        Debug.debugMessage("Analysing file '%s'" % outfile, 1)
+        with open(outfile, 'r') as f:
+            for line in f:
+                if not traceFound:
+                    if line.startswith('0x'):
+                        traceFound = True
+                if traceFound:
+                    try:
+                        SMAndWarp, timingTuple = getLineOfTimingTrace(line)
+                        w = getWarp (allWarpTraces, SMAndWarp)
+                        w.appendToTrace(timingTuple)
+                    except ValueError:
+                        # Line found which is not a trace tuple;
+                        # therefore finished processing this file
+                        traceFound = False
+                        break
     return allWarpTraces
 
-def writeTraces (allWarpTraces, basename):
-    traceFileName = basename + ".warps.trace"
+def writeTraces (allWarpTraces, basename, basepath):
+    traceFileName = basepath + os.sep + basename + ".warps.trace"
     with open(traceFileName, 'w') as f:
         for w in allWarpTraces.values(): 
             f.write("\n%s\n" % ('=' * 20))
@@ -132,16 +137,17 @@ def writeTraces (allWarpTraces, basename):
                 time     = long(t[1])
                 f.write("0x%04X %d\n" % (ipointID, time))
 
-def doAnalysis (outfile, basename): 
+def doAnalysis (generatedFiles, basename, basepath): 
+    import Traces, WCET
     # Create the CFGs
-    program = createCFGs(outfile)
+    program = createCFGs(generatedFiles[0])
     # Create the IPG
     createGraphs(program, basename)
     if not opts.noParse:
         # Split into warp-specific traces
-        allWarpTraces = splitTraces (outfile)
+        allWarpTraces = splitTraces (generatedFiles)
         if Debug.debug >= 5:
-            writeTraces(allWarpTraces, basename)
+            writeTraces(allWarpTraces, basename, basepath)
         traceData = Traces.TraceData(allWarpTraces, program)
         traceData.output()
     
@@ -151,7 +157,7 @@ def doAnalysis (outfile, basename):
             print "ACET(%s) = %ld" % (functionName, traceData.getACET(functionName))
             print "HWMT(%s) = %ld" % (functionName, traceData.getHWMT(functionName))
             # Create an ILP from the IPG and the parsed data
-            ilp = WCET.LinearProgram(ipg, traceData, outfile)
+            ilp = WCET.LinearProgram(ipg, traceData, basename, basepath)
             print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
 
 def checkCommandLineForAction ():
@@ -167,6 +173,7 @@ def checkCommandLineForAction ():
             Debug.exitMessage("The argument '%s' does not have execute permission" % cudaBinary)
         # Get the filename of the binary without the path
         basename = os.path.basename(cudaBinary)
+        basepath = os.path.abspath(os.path.dirname(cudaBinary))
         # Run the program on GPGPU-sim and get generated output
         theThreads     = []
         generatedFiles = []
@@ -178,8 +185,7 @@ def checkCommandLineForAction ():
             t.start()
         for t in theThreads:
             t.join()
-        for outfile in generatedFiles:
-            doAnalysis(outfile, basename)
+        doAnalysis(generatedFiles, basename, basepath)
     elif len(args) == 1:
         outfile = args[0]
         assert outfile.endswith(gpgpuFileExt), "Please pass a file with a '%s' suffix" % (gpgpuFileExt)
@@ -189,6 +195,7 @@ def checkCommandLineForAction ():
         Debug.exitMessage("You need to specify the name of the CUDA binary and how many test vectors to generate")
             
 def createCFGs (outfile):
+    import ParseCFGs
     cfgLines = []
     cfgInput = False
     with open(outfile, 'r') as f:

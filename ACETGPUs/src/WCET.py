@@ -1,5 +1,5 @@
 import Debug
-import decimal
+import decimal, os
 
 edgePrefix = "e_"
 endStmt    = ";"
@@ -10,10 +10,9 @@ comma      = ", "
 newLine    = "\n"
 
 class LinearProgram ():
-    def __init__(self, ipg, traceData, inputFilename):
+    def __init__(self, ipg, traceData, basename, basepath):
         self.__wcet    = 0
-        index          = inputFilename.find('.')
-        outputFilename = inputFilename[:index] + ".ilp"
+        outputFilename = basepath + os.sep + basename + ".ilp"
         with open(outputFilename, 'w') as f:
             self.__writeObjectiveFunction(f, ipg, traceData)
             self.__writeStructuralConstraints(f, ipg)
