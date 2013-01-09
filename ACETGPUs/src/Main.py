@@ -162,6 +162,7 @@ def doAnalysis (generatedFiles, basename, basepath):
 
 def checkCommandLineForAction ():    
     from subprocess import Popen, PIPE
+    import signal
     # Check that the user has passed the correct options
     if opts.tests > 0:
         cudaBinary = args[0]
@@ -181,26 +182,37 @@ def checkCommandLineForAction ():
             outfilename = cudaBinary + gpgpuFileExt + str(i)
             generatedFiles.append(outfilename)
             outfiles.append(outfilename)
-        processes    = []
-        pidToOutFile = {}
+        processes        = []
+        pidToOutFilename = {}
+        pidToOutFile     = {}
         while True:
-            while outfiles and len(processes) < multiprocessing.cpu_count():
+            while outfiles and len(processes) < multiprocessing.cpu_count()/2:
                 outfilename = outfiles.pop()
                 outfile = open(outfilename, 'w')
                 Debug.debugMessage("Spawning new process for '%s'" % outfilename, 1)
-                proc = Popen(cudaBinary, shell=True, stdout=outfile, stderr=PIPE)
+                proc = Popen(args, shell=True, stdout=outfile)
                 processes.append(proc)
-                pidToOutFile[proc.pid] = outfilename
+                pidToOutFile[proc.pid]     = outfile
+                pidToOutFilename[proc.pid] = outfilename
             for p in processes:
                 if p.poll() is not None:
                     processes.remove(p)
+                    pidToOutFile[p.pid].close()
                     if p.returncode != 0:
-                        Debug.debugMessage("Process failed for output file '%s' with return code %d" % (pidToOutFile[p.pid], p.returncode), 1)
-                        outfiles.append(pidToOutFile[p.pid])
+                        Debug.debugMessage("Process failed for output file '%s' with return code %d" % (pidToOutFilename[p.pid], p.returncode), 1)
+                        outfiles.append(pidToOutFilename[p.pid])
             if not processes and not outfiles:
                 break
             else:
-                time.sleep(0.05)
+                time.sleep(1)
+                p = Popen(['ps', '-A'], stdout=PIPE)
+                out, err = p.communicate()
+                for line in out.splitlines():
+                    if 'cuobjdump_to_pt' in line:
+                        pid = int(line.split(None, 1)[0])
+                        os.kill(pid, signal.SIGKILL)
+                        Debug.debugMessage("Killing stray CUDA-to-PTXPlus process", 1)
+ 
         doAnalysis(generatedFiles, basename, basepath)
     elif len(args) > 0:
         for arg in args:
