@@ -71,6 +71,17 @@ class Tree (DirectedGraph):
         else:
             for level in sorted(levelToVertices.keys()):
                 yield level, levelToVertices[level]
+                
+    def __str__ (self):
+        str = ""
+        for level, vertices in self.levelIterator(False):
+            str += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
+            for v in vertices:
+                if level == 0:
+                    str += "%d (root)\n" % (v.getVertexID())
+                else:
+                    str += "%d (parent = %d)\n" % (v.getVertexID(), v.getParentID())
+        return str
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):
@@ -140,9 +151,13 @@ class DepthFirstSearch (Tree):
     
 class CompressedDominatorTree (Tree):
     def __init__(self, domTree, lca, vertexID, neighbourIDs):
+        Debug.debugMessage("Building compressed dominator tree for %d using %s" \
+                           % (vertexID, neighbourIDs), 20)
+        Tree.__init__(self)
         self.__vToLCA  = {}
         self.__computeParents(lca, neighbourIDs)
         self.__addEdges()
+        self._rootID = domTree.getImmediateDominator(vertexID)
         
     def __computeParents(self, lca, querySet):      
         while querySet:
@@ -171,7 +186,7 @@ class CompressedDominatorTree (Tree):
             querySet = newQuerySet
         
     def __addEdges(self):        
-        for vertexID, parentID in self.__vToLCA:
+        for vertexID, parentID in self.__vToLCA.items():
             if not self.hasVertex(vertexID):
                 self.addVertex(vertexID)                
             if not self.hasVertex(parentID):
@@ -184,10 +199,11 @@ class LeastCommonAncestor ():
         self.__tree = tree
         self.__euler = {}
         self.__level = {}
+        self.__vertexToLevel = {}
         self.__representative = {}
         self.__eulerIndex = 0
         self.__dummyLevel = 0
-        self.__level[self.__tree.getRootID()] = 0
+        self.__vertexToLevel[self.__tree.getRootID()] = 0
         self.__doDFS(self.__tree.getRootID())
         self.__dummyLevel += 1
         self.__computeRepresentativeIndices()
@@ -197,22 +213,24 @@ class LeastCommonAncestor ():
         self.__euler[self.__eulerIndex] = vertexID
         self.__eulerIndex += 1
         for succID in v.getSuccessorIDs():
-            self.__level[succID] = self.__level[vertexID] + 1
-            if self.__level[succID] > self.__dummyLevel:
-                self.__dummyLevel = self.__level[succID]
+            self.__vertexToLevel[succID] = self.__vertexToLevel[vertexID] + 1
+            if self.__vertexToLevel[succID] > self.__dummyLevel:
+                self.__dummyLevel = self.__vertexToLevel[succID]
             self.__doDFS(succID)
             self.__euler[self.__eulerIndex] = vertexID
             self.__eulerIndex += 1
     
     def __computeRepresentativeIndices (self):
-        for index, vertexID in self.__euler:
+        for index, vertexID in self.__euler.items():
             self.__representative[vertexID] = index
+            self.__level[index] = self.__vertexToLevel[vertexID]
             
     def getLevel (self, vertexID):
-        assert vertexID in self.__level, "Cannot find vertex %d" % vertexID
-        return self.__level[vertexID]
+        assert vertexID in self.__vertexToLevel, "Cannot find vertex %d" % vertexID
+        return self.__vertexToLevel[vertexID]
             
-    def getLCA (self, left, right):        
+    def getLCA (self, left, right):    
+        Debug.debugMessage("Computing lca(%d, %d)" % (left, right), 20) 
         repID1      = self.__representative[left]
         repID2      = self.__representative[right]
         lowestLevel = self.__dummyLevel
@@ -230,7 +248,7 @@ class LeastCommonAncestor ():
             if self.__level[i] < lowestLevel:
                 lowestLevel = self.__level[i]
                 levelIndex  = i
-        Debug.debugMessage("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 1)
+        Debug.debugMessage("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 15)
         return self.__euler[levelIndex]
     
 class Dominators (Tree):
