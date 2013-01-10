@@ -134,13 +134,13 @@ def writeTreeVertex (tree, vertexID, f):
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
     if isinstance(v, Vertices.HeaderVertex):
-        f.write(setShape(SHAPE.CIRCLE))
-        f.write(setColor(COLOR.YELLOW))
+        f.write(setShape(SHAPE.TRIANGLE))
+        f.write(setColor(COLOR.RED))
         f.write(setToolTip("Header ID = %s" % v.getHeaderID()))
     if isinstance(tree, Trees.LoopNests):
         if tree.isLoopExit(vertexID):
-            f.write(setShape(SHAPE.TRIANGLE))
-            f.write(setColor(COLOR.RED))
+            f.write(setShape(SHAPE.CIRCLE))
+            f.write(setColor(COLOR.YELLOW))
             f.write(setToolTip("Loop Exit"))
     f.write(endAttibutes)
     

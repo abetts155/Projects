@@ -50,7 +50,7 @@ class Tree (DirectedGraph):
         if left == right:
             return False
         else:
-            self.isAncestor(left, right)
+            return self.isAncestor(left, right)
     
     def getHeight (self):
         maxHeight = 0
