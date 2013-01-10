@@ -1,6 +1,7 @@
 from DirectedGraphs import DirectedGraph, dummyVertexID
 from Vertices import TreeVertex, HeaderVertex, Ipoint
 import Debug
+import CFGs
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -28,6 +29,28 @@ class Tree (DirectedGraph):
         
     def isInternalVertex (self, vertexID):
         return self.getVertex(vertexID).numberOfSuccessors() > 0
+    
+    def isAncestor (self, left, right):
+        if left == right:
+            return True
+        elif right == self._rootID:
+            return False
+        else:
+            vertexID = right
+            parentID = self.getVertex(vertexID).getParentID()
+            while parentID != self._rootID and parentID != left:
+                vertexID = parentID
+                parentID = self.getVertex(vertexID).getParentID()
+            if parentID == left:
+                return True
+            else:
+                return False
+    
+    def isProperAncestor (self, left, right):
+        if left == right:
+            return False
+        else:
+            self.isAncestor(left, right)
     
     def getHeight (self):
         maxHeight = 0
@@ -345,12 +368,12 @@ class LoopNests (Tree):
             self.vertices[vertexID] = TreeVertex(vertexID)
             
     def _findLoops (self, rootID):
-        dfs = DepthFirstSearch (self.__directedg, rootID)
-        for vertexID in reversed(dfs.getPreorder()):
+        self.__dfs = DepthFirstSearch (self.__directedg, rootID)
+        for vertexID in reversed(self.__dfs.getPreorder()):
             v = self.__directedg.getVertex(vertexID)
             worklist = []
             for predID in v.getPredecessorIDs():
-                if dfs.isDFSBackedge(predID, vertexID):
+                if self.__dfs.isDFSBackedge(predID, vertexID):
                     if predID == vertexID:
                         Debug.debugMessage("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 3)
                         self._addSelfLoop (vertexID)
@@ -359,7 +382,7 @@ class LoopNests (Tree):
                         worklist.append(self.__parent[predID])
             
             if worklist:
-                self._findLoop (dfs, worklist, vertexID)
+                self._findLoop (worklist, vertexID)
                 
     def _addSelfLoop (self, headerID):
         newVertexID = self.getNextVertexID()
@@ -371,7 +394,7 @@ class LoopNests (Tree):
         self.__selfLoopHeaders.append(headerID)
         self.addEdge(newVertexID, headerID)
             
-    def _findLoop (self, dfs, worklist, headerID):
+    def _findLoop (self, worklist, headerID):
         if headerID not in self.__headerVertices.keys():
             newVertexID = self.getNextVertexID()
             headerv     = HeaderVertex(newVertexID, headerID)
@@ -389,7 +412,7 @@ class LoopNests (Tree):
             
             v = self.__directedg.getVertex(listID)
             for predID in v.getPredecessorIDs():
-                if not dfs.isDFSBackedge(predID, listID):
+                if not self.__dfs.isDFSBackedge(predID, listID):
                     repID = self.__parent[predID]
                     if repID not in worklist and repID not in loopBody and repID != headerID:
                         worklist.append(repID)
@@ -486,4 +509,69 @@ class LoopNests (Tree):
             if self.isLoopExitOfLoop(vertexID, headerID):
                 return True
         return False
+    
+    def isDoWhileLoop (self, headerID):
+        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
+        return set(self.__loopTails[headerID]) == set(self.__loopExits[headerID])
+    
+    def isNested (self, left, right):
+        return self.isProperAncestor(right, left)
+    
+    def induceSubgraph (self, headerv):
+        assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
+        flowg    = CFGs.CFG()
+        edges    = {}
+        worklist = []
+        worklist.extend(self.getLoopTails(headerv.getHeaderID()))
+        while worklist:
+            vertexID = worklist.pop()
+            if not flowg.hasVertex(vertexID):
+                bb = CFGs.BasicBlock(vertexID)
+                flowg.addVertex(bb)
+                edges[vertexID] = set([])
+                if self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
+                    if self.isDoWhileLoop(vertexID):
+                        flowg.getVertex(vertexID).setDummy()
+                        
+                originalv = self.__directedg.getVertex(vertexID)
+                for predID in originalv.getPredecessorIDs():
+                    treePredv    = self.getVertex(predID)
+                    headerPredv  = self.getVertex(treePredv.getParentID())
+                    predHeaderID = headerPredv.getHeaderID()
+                    if not self.__dfs.isDFSBackedge(predID, vertexID):
+                        if predHeaderID == headerv.getHeaderID():
+                            worklist.append(predID)
+                            edges[vertexID].add(predID)
+                        elif self.isNested(headerPredv.getVertexID(), headerv.getVertexID()):
+                            if self.isDoWhileLoop(predHeaderID):
+                                worklist.append(predHeaderID)
+                                edges[vertexID].add(predHeaderID)
+                            else:
+                                worklist.append(predID)
+                                edges[vertexID].add(predID)
+        
+        # Add edges in induced subgraph
+        for vertexID, predIDs in edges.items():
+            for predID in predIDs:
+                flowg.addEdge(predID, vertexID) 
+        # Add exit vertex to induced subgraph
+        noSuccs = []
+        for v in flowg:
+            if v.numberOfSuccessors() == 0:
+                noSuccs.append(v.getVertexID())
+        if len(noSuccs) != 1:
+            exitID = flowg.getNextVertexID()
+            bb = CFGs.BasicBlock(exitID)
+            flowg.addVertex(bb)
+            flowg.setExitID(exitID)
+            flowg.getVertex(exitID).setDummy()
+            for predID in noSuccs:
+                flowg.addEdge(predID, exitID)
+        else:
+            exitID = noSuccs[0]
+            flowg.setExitID(exitID)
+        # Add entry vertex to induced subgraph
+        flowg.setEntryID(headerv.getHeaderID())
+        return flowg
+    
     

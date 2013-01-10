@@ -60,8 +60,11 @@ def makeUdrawFile (g, fileNamePrefix):
             f.write(beginGraph)
             # CFG or Instrumented CFG
             if isinstance(g, CFGs.CFG):
+                writeCFGVertex(g, g.getEntryID(), f)
                 for v in g:
-                    writeCFGVertex(g, v.getVertexID(), f)           
+                    vertexID = v.getVertexID()
+                    if vertexID != g.getEntryID():
+                        writeCFGVertex(g, vertexID, f)           
             # Loop-Nesting Tree
             elif isinstance(g, Trees.LoopNests):
                 for v in g:

@@ -28,6 +28,13 @@ class BasicBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.instructions = {}
+        self.__dummy = False
+        
+    def setDummy (self):
+        self.__dummy = True
+        
+    def isDummy (self):
+        return self.__dummy
     
     def addInstruction (self, instr):
         address = instr.getAddress()

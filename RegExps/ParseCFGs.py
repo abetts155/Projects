@@ -36,8 +36,9 @@ def setEntryAndExit (cfg):
             debugStr += bb.__str__()
         Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
     else:
-        cfg.setExitID(withoutSucc[0])    
-        
+        cfg.setExitID(withoutSucc[0])
+    cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
+    
 def createProgram (outfile):
     program = CFGs.Program()
     cfg     = None
