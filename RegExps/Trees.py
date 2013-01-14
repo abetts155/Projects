@@ -1,7 +1,6 @@
 from DirectedGraphs import DirectedGraph, dummyVertexID
 from Vertices import TreeVertex, HeaderVertex, Ipoint
-import Debug
-import CFGs
+import Debug, CFGs, ICFGs
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -524,15 +523,21 @@ class LoopNests (Tree):
     
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
-        flowg    = CFGs.CFG()
+        flowg    = ICFGs.ICFG()
         edges    = {}
         worklist = []
         worklist.extend(self.getLoopTails(headerv.getHeaderID()))
         while worklist:
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID):
-                bb = CFGs.BasicBlock(vertexID)
-                flowg.addVertex(bb)
+                # Add the correct vertex type to the induced graph
+                if isinstance(self.__directedg.getVertex(vertexID), CFGs.BasicBlock):
+                    bb = CFGs.BasicBlock(vertexID)
+                    flowg.addVertex(bb)
+                else:
+                    ipoint = CFGs.Ipoint(vertexID, vertexID)
+                    flowg.addIpoint(ipoint)
+                # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])
                 if self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
                     if self.isDoWhileLoop(vertexID):

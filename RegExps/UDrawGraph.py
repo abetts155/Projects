@@ -105,7 +105,6 @@ def writeCFGVertex (cfg, vertexID, f):
     if isinstance(v, Vertices.Ipoint):
         f.write(setShape(SHAPE.CIRCLE))
         f.write(setColor(COLOR.YELLOW))
-        f.write(setToolTip("Ipoint ID = 0x%04X" % v.getIpointID()))
     else:
         string = ""
         for address, instr in v.getInstructions ():

@@ -45,5 +45,4 @@ class ICFG (CFGs.CFG):
                     self.addEdge(ipoint.getVertexID(), succID)
                     self.removeEdge(bb.getVertexID(), succID)
                 self.addEdge(bb.getVertexID(), ipoint.getVertexID())
-        print self
             
