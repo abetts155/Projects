@@ -23,19 +23,32 @@ class Instruction ():
      
     def __str__(self):
         return self.address + " : " + self.instrString
+    
+class Enum(set):
+    def __getattr__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
 
 class BasicBlock (Vertex):
+    IpointPosition = Enum(['start', 'end'])
+    
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.instructions = {}
         self.__dummy = False
-        self.__hasIpoint = False
+        self.__ipointPosition = None
     
-    def setIpoint (self):
-        self.__hasIpoint = True
+    def setIpoint (self, position):
+        assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
+        self.__ipointPosition = position
         
     def hasIpoint (self):
-        return self.__hasIpoint
+        return self.__ipointPosition
+    
+    def ipointPosition (self):
+        assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self._vertexID
+        return self.__ipointPosition
        
     def setDummy (self):
         self.__dummy = True

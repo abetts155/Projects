@@ -39,7 +39,7 @@ class DirectedGraph ():
                     succv.addPredecessor(vertexID)
     
     def getNextVertexID (self):
-        nextID = 0
+        nextID = 1
         while nextID in self.vertices.keys():
             nextID = nextID + 1 
         return nextID

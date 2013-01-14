@@ -47,6 +47,9 @@ def setEntryAndExit (icfg):
         icfg.addIpoint(ipoint)
         icfg.setExitID(exitID)
         icfg.addEdge(withoutSucc[0], exitID)
+        
+    assert entryID, "Unable to set entry ID"
+    assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
     
 def createProgram (outfile):
@@ -55,7 +58,8 @@ def createProgram (outfile):
     bb      = None
     with open(outfile, 'r') as f:
         for line in f:
-            if line.startswith('CFG:'):
+            line = line.lower()
+            if line.startswith('cfg:'):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 icfg         = ICFGs.ICFG()
@@ -71,10 +75,11 @@ def createProgram (outfile):
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
                 bb = CFGs.BasicBlock(int(vertexID))
                 icfg.addVertex(bb)
-            elif line.startswith('Ipoint'):
+            elif line.startswith('ipoint'):
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
-                Debug.debugMessage("Adding Ipoint to %d" % bb.getVertexID(), 10)
-                bb.setIpoint()
+                index = line.index(':')
+                position = line[index+1:].replace(' ', '').strip()
+                bb.setIpoint(position)
             elif line.startswith('succ:'):
                 import string
                 assert bb, "Found edge but current basic block is null"
@@ -97,7 +102,7 @@ def createProgram (outfile):
                             assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
                             bb.addSuccessor(int(succID))
                         index += 1                        
-        assert icfg, "Attempting to add predecessor edges but current CFG is null"
+        assert icfg, "Attempting to analyse CFG but current CFG is null"
         icfg.addPredecessorEdges()
         icfg.addIpointEdges()
         setEntryAndExit(icfg)

@@ -15,6 +15,10 @@ class DominanceFrontiers:
         assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
         return len(self.__vToDF[vertexID])
     
+    def isEmpty (self, vertexID):
+        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
+        return len(self.__vToDF[vertexID]) == 0
+    
     def set (self, vertexID):
         assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
         return self.__vToDF[vertexID]
