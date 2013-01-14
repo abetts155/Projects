@@ -102,10 +102,10 @@ class RegularExpressions:
         Debug.debugMessage("Analysing merge %d" % mergev.getVertexID(), 1)
         vToTempRegExp = {}
         comPreTree    = Trees.CompressedDominatorTree(self.__predomTree, self.__lca, mergev.getVertexID(), mergev.getPredecessorIDs())
-        print comPreTree
         for level, vertices in comPreTree.levelIterator(True):
             for v in vertices:
                 vertexID = v.getVertexID()
+                # Leaf vertex
                 if v.numberOfSuccessors() == 0:
                     vToTempRegExp[vertexID] = self.__vToRegExp[vertexID]
                 else:
@@ -131,7 +131,8 @@ class RegularExpressions:
         if self.__postdomTree.getImmediateDominator(rootID) == mergeID: 
             self.__vToRegExp[mergeID].append(self.__vToRegExp[rootID])
         self.__vToRegExp[mergeID].append(vToTempRegExp[rootID])
-        self.__vToRegExp[mergeID].append(mergeID) 
+        if not mergev.isDummy():
+            self.__vToRegExp[mergeID].append(mergeID) 
         
     def __handleLoopHeader (self, pathExp, headerID):
         if self.__lnt.isDoWhileLoop(headerID):

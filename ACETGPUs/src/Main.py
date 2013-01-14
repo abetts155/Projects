@@ -48,7 +48,7 @@ cmdline.add_option("--no-parsing",
                  help="Do not parse traces.",
                  default=False)
 
-(opts, args)  = cmdline.parse_args(sys.argv[1:])
+opts, args    = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug   = opts.debug
 gpgpuFileExt  = '.gpgpusim'
@@ -159,27 +159,29 @@ def doAnalysis (generatedFiles, basename, basepath):
             # Create an ILP from the IPG and the parsed data
             ilp = WCET.LinearProgram(ipg, traceData, basename, basepath)
             print "WCET(%s) = %ld" % (ipg.getName(), ilp.getWCET())
-
-def checkCommandLineForAction ():    
-    from subprocess import Popen, PIPE
-    import signal
-    # Check that the user has passed the correct options
-    if opts.tests > 0:
-        cudaBinary = args[0]
-        if not os.path.exists(cudaBinary):
-            Debug.exitMessage("The argument '%s' does not exist" % cudaBinary)
-        elif not os.path.isfile(cudaBinary):
-            Debug.exitMessage("The argument '%s' is not a file" % cudaBinary)
-        elif not os.access(cudaBinary, os.X_OK):
-            Debug.exitMessage("The argument '%s' does not have execute permission" % cudaBinary)
-        # Get the filename of the binary without the path
-        basename = os.path.basename(cudaBinary)
-        basepath = os.path.abspath(os.path.dirname(cudaBinary))
+            
+def runCUDAKernel (basepath):
+        from subprocess import Popen, PIPE
+        import signal
+        global args
+        
+        newargs = []
+        for arg in args:
+            if arg.startswith('MACRO'):
+                index = arg.index('=')
+                newarg = '-D' + arg[index+1:]
+                newargs.append(newarg)
+            else:
+                newargs.append(arg)
+                
+        args = newargs
+        Debug.debugMessage("CUDA application command '%s'" % args, 1)
+        
         # Run the program on GPGPU-sim and get generated output
         outfiles       = []
         generatedFiles = []
         for i in xrange(opts.tests):
-            outfilename = cudaBinary + gpgpuFileExt + str(i)
+            outfilename = basepath + os.sep + 'run' + str(i) + gpgpuFileExt
             generatedFiles.append(outfilename)
             outfiles.append(outfilename)
         processes        = []
@@ -212,12 +214,27 @@ def checkCommandLineForAction ():
                         pid = int(line.split(None, 1)[0])
                         os.kill(pid, signal.SIGKILL)
                         Debug.debugMessage("Killing stray CUDA-to-PTXPlus process", 1)
- 
+        return generatedFiles
+
+def checkCommandLineForAction ():    
+    # Check that the user has passed the correct options
+    if opts.tests > 0:
+        cudaBinary = args[0]
+        if not os.path.exists(cudaBinary):
+            Debug.exitMessage("The argument '%s' does not exist" % cudaBinary)
+        elif not os.path.isfile(cudaBinary):
+            Debug.exitMessage("The argument '%s' is not a file" % cudaBinary)
+        elif not os.access(cudaBinary, os.X_OK):
+            Debug.exitMessage("The argument '%s' does not have execute permission" % cudaBinary)
+        # Get the filename of the binary without the path
+        basename = os.path.basename(cudaBinary)
+        basepath = os.path.abspath(os.path.dirname(cudaBinary))
+        generatedFiles = runCUDAKernel(basepath)
         doAnalysis(generatedFiles, basename, basepath)
     elif len(args) > 0:
         for arg in args:
-            if arg.count(gpgpuFileExt) != 1:
-                Debug.exitMessage("Each file must contain '%s' in its suffix. You passed '%s'." % (gpgpuFileExt, arg))
+            if not arg.endswith(gpgpuFileExt):
+                Debug.exitMessage("Each file must end with a '%s' suffix. You passed '%s'." % (gpgpuFileExt, arg))
         basename = os.path.splitext(os.path.basename(args[0]))[0]
         basepath = os.path.abspath(os.path.dirname(args[0]))
         doAnalysis(args, basename, basepath)

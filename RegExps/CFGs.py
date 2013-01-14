@@ -29,7 +29,14 @@ class BasicBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.instructions = {}
         self.__dummy = False
+        self.__hasIpoint = False
+    
+    def setIpoint (self):
+        self.__hasIpoint = True
         
+    def hasIpoint (self):
+        return self.__hasIpoint
+       
     def setDummy (self):
         self.__dummy = True
         

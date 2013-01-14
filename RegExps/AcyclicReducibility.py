@@ -53,6 +53,7 @@ class AcyclicReducibility:
         self.output()
     
     def output (self):
+        print '-' * 18
         print "%s%s%s" % ('*' * 5, 'BRANCHES', '*' * 5)
         for vertexID in self.__irreducibleBranches:
             print "%d is IRREDUCIBLE" % vertexID
@@ -68,6 +69,7 @@ class AcyclicReducibility:
             vertexID = v.getVertexID()
             if v.numberOfPredecessors() > 1 and vertexID not in self.__irreducibleMerges:
                     print "%d is reducible" % vertexID
+        print '-' * 18
     
     def isReducible (self):
         return len(self.__irreducibleBranches) == 0 and len(self.__irreducibleMerges) == 0

@@ -175,47 +175,52 @@ class DepthFirstSearch (Tree):
 class CompressedDominatorTree (Tree):
     def __init__(self, domTree, lca, vertexID, neighbourIDs):
         Debug.debugMessage("Building compressed dominator tree for %d using %s" \
-                           % (vertexID, neighbourIDs), 20)
+                           % (vertexID, neighbourIDs), 10)
         Tree.__init__(self)
-        self.__vToLCA  = {}
         self.__computeParents(lca, neighbourIDs)
         self.__addEdges()
         self._rootID = domTree.getImmediateDominator(vertexID)
         
-    def __computeParents(self, lca, querySet):      
-        while querySet:
+    def __computeParents(self, lca, edges):
+        querySet = set(edges)      
+        while len(querySet) > 1:
+            vToLCA  = {}
             for e1 in querySet:
                 for e2 in querySet:
                     if e1 != e2:
                         lcaID = lca.getLCA(e1, e2)
                         # Update for e1
-                        if e1 in self.__vToLCA:
-                            oldlcaID = self.__vToLCA[e1]
+                        if e1 in vToLCA:
+                            oldlcaID = vToLCA[e1]
                             if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e1:
-                                self.__vToLCA[e1] = lcaID
+                                vToLCA[e1] = lcaID
                         else:
-                            self.__vToLCA[e1] = lcaID
+                            vToLCA[e1] = lcaID
                         # Update for e2
-                        if e2 in self.__vToLCA:
-                            oldlcaID = self.__vToLCA[e2]
+                        if e2 in vToLCA:
+                            oldlcaID = vToLCA[e2]
                             if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e2:
-                                self.__vToLCA[e2] = lcaID
+                                vToLCA[e2] = lcaID
                         else:
-                            self.__vToLCA[e2] = lcaID
+                            vToLCA[e2] = lcaID
+            # Add edge links                
+            for vertexID, parentID in vToLCA.items():
+                if not self.hasVertex(vertexID):
+                    self.addVertex(vertexID)                
+                if not self.hasVertex(parentID):
+                    self.addVertex(parentID)
+                if parentID != vertexID:
+                    Debug.debugMessage("Adding edge (%d, %d)" % (parentID, vertexID), 10)
+                    self.addEdge(parentID, vertexID)
+            # Any vertex without a predecessor goes into the query set
             newQuerySet = []
-            for lcaID in self.__vToLCA.values():
-                if lcaID not in querySet:
-                    newQuerySet.append(lcaID)
-            querySet = newQuerySet
+            for v in self:
+                if v.numberOfPredecessors() == 0:
+                    newQuerySet.append(v.getVertexID())
+            querySet = set(newQuerySet)
         
     def __addEdges(self):        
-        for vertexID, parentID in self.__vToLCA.items():
-            if not self.hasVertex(vertexID):
-                self.addVertex(vertexID)                
-            if not self.hasVertex(parentID):
-                self.addVertex(parentID)
-            if parentID != vertexID:
-                self.addEdge(parentID, vertexID)
+        pass
     
 class LeastCommonAncestor ():
     def __init__(self, tree):

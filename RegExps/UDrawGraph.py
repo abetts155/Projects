@@ -117,11 +117,6 @@ def writeCFGVertex (cfg, vertexID, f):
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
-        if isinstance(cfg, ICFGs.ICFG):
-            if cfg.isBranchDivergentEdge(vertexID, succID):
-                f.write(setEdgePattern(EDGESHAPE.DASHED, 4))
-                f.write(setEdgeColor(COLOR.RED))
-                f.write(setToolTip("Branch divergent edge"))
         f.write(setName(str(succID)))
         f.write(endAttibutes)
         f.write(edgeLink(succID))

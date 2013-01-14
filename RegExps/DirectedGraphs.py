@@ -23,6 +23,12 @@ class DirectedGraph ():
         succv = self.getVertex(succID)
         predv.addSuccessor(succID)
         succv.addPredecessor(predID)
+    
+    def removeEdge (self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        predv.removeSuccessor(succID)
+        succv.removePredecessor(predID)
         
     def addPredecessorEdges (self):
         for v in self:

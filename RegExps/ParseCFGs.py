@@ -1,10 +1,10 @@
 import shlex
-import CFGs, Debug
+import CFGs, ICFGs, Debug, Vertices
         
-def setEntryAndExit (cfg):
+def setEntryAndExit (icfg):
     withoutPred = []
     withoutSucc = []
-    for bb in cfg:
+    for bb in icfg:
         if bb.numberOfSuccessors() == 0:
             withoutSucc.append(bb.getVertexID())
         elif bb.numberOfSuccessors() == 1:
@@ -16,70 +16,89 @@ def setEntryAndExit (cfg):
             if bb.hasPredecessor(bb.getVertexID()):
                 withoutPred.append(bb.getVertexID())
     
+    entryID = None
     if len(withoutPred) == 0:
-        Debug.exitMessage("CFG '%s' does not an entry point" % cfg.getName())
+        Debug.exitMessage("CFG '%s' does not an entry point" % icfg.getName())
     elif len(withoutPred) > 1:
         debugStr = ""
         for bbID in withoutPred:
-            bb       = cfg.getVertex(bbID)
+            bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), debugStr))
+        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
     else:
-        cfg.setEntryID(withoutPred[0])
-        
+        entryID = icfg.getNextVertexID()
+        ipoint  = Vertices.Ipoint(entryID, entryID)
+        icfg.addIpoint(ipoint)
+        icfg.setEntryID(entryID)
+        icfg.addEdge(entryID, withoutPred[0])
+    
+    exitID = None
     if len(withoutSucc) == 0:
-        Debug.exitMessage("CFG '%s' does not an exit point" % cfg.getName())
+        Debug.exitMessage("CFG '%s' does not an exit point" % icfg.getName())
     elif len(withoutSucc) > 1:
         debugStr = ""
         for bbID in withoutSucc:
-            bb       = cfg.getVertex(bbID)
+            bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
+        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
     else:
-        cfg.setExitID(withoutSucc[0])
-    cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
+        exitID = icfg.getNextVertexID()
+        ipoint = Vertices.Ipoint(exitID, exitID)
+        icfg.addIpoint(ipoint)
+        icfg.setExitID(exitID)
+        icfg.addEdge(withoutSucc[0], exitID)
+    icfg.addEdge(exitID, entryID)
     
 def createProgram (outfile):
     program = CFGs.Program()
-    cfg     = None
+    icfg    = None
     bb      = None
     with open(outfile, 'r') as f:
         for line in f:
             if line.startswith('CFG:'):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                cfg          = CFGs.CFG()
+                icfg         = ICFGs.ICFG()
                 functionName = lexemes[-1]
-                cfg.setName(functionName)
-                program.addCFG(cfg)
+                icfg.setName(functionName)
+                program.addCFG(icfg)
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
             elif line.startswith('bb:'):
-                assert cfg, "Found basic block but current CFG is null"
+                assert icfg, "Found basic block but current CFG is null"
                 lexemes = shlex.split(line) 
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
                 vertexID = lexemes[-1]
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
                 bb = CFGs.BasicBlock(int(vertexID))
-                cfg.addVertex(bb) 
+                icfg.addVertex(bb)
+            elif line.startswith('Ipoint'):
+                assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
+                Debug.debugMessage("Adding Ipoint to %d" % bb.getVertexID(), 10)
+                bb.setIpoint()
             elif line.startswith('succ:'):
                 import string
                 assert bb, "Found edge but current basic block is null"
-                lexemes = shlex.split(line) 
+                index = line.index(':')
+                line = line[index+1:]
+                splitter = shlex.shlex(line)
+                splitter.whitespace += ')'
+                splitter.whitespace += '('
+                splitter.whitespace_split = False
+                lexemes = list(splitter)
+                assert len(lexemes) % 3 == 0, "Unable to parse edge information '%s'" % line
                 if len(lexemes) > 1:
-                    for edgeStr in lexemes[1:]:
-                        # Translate the characters in the first argument to the character in
-                        # the corresponding position in the second argument. Basically stripping out
-                        # '(', ')', and ','
-                        transtab    = string.maketrans('(),', '   ')
-                        edgeStr     = edgeStr.translate(transtab)
-                        edgeLexemes = shlex.split(edgeStr)
-                        assert len(edgeLexemes) == 2, "Unable to parse edge tuple %s" % edgeStr
-                        functionName = edgeLexemes[0]
-                        assert functionName == cfg.getName(), "Call edge found which is currently not handled"
-                        succID = edgeLexemes[1]
-                        assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
-                        bb.addSuccessor(int(succID))
-        assert cfg, "Attempting to add predecessor edges but current CFG is null"
-        cfg.addPredecessorEdges()
-        setEntryAndExit(cfg)
+                    index = 0
+                    for lex in lexemes:
+                        if index % 3 == 0:
+                            functionName = lexemes[index]
+                            assert functionName == icfg.getName(), "Call edge found which is currently not handled"
+                        elif index % 3 == 2:
+                            succID = lexemes[index]
+                            assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
+                            bb.addSuccessor(int(succID))
+                        index += 1                        
+        assert icfg, "Attempting to add predecessor edges but current CFG is null"
+        icfg.addPredecessorEdges()
+        icfg.addIpointEdges()
+        setEntryAndExit(icfg)
     return program     
