@@ -112,7 +112,7 @@ class CFG (DirectedGraph):
                 
         # Set the entry and exit IDs
         reverseg.setEntryID(self.getExitID())
-        reverseg.setExitID(self.getExitID())
+        reverseg.setExitID(self.getEntryID())
         return reverseg
         
     def addVertex (self, bb):

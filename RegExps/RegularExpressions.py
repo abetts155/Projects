@@ -52,62 +52,72 @@ class RegularExpressions:
             for v in vertices:
                 if isinstance(v, Vertices.HeaderVertex):
                     self.__currentHeaderID = v.getHeaderID()
-                    self.__currentICFG = self.__lnt.induceSubgraph(v)
-                    self.__predomTree  = Trees.Dominators(self.__currentICFG, self.__currentICFG.getEntryID())
-                    self.__lca         = Trees.LeastCommonAncestor(self.__predomTree)
-                    self.__reversecfg  = self.__currentICFG.getReverseCFG()
-                    self.__postdomTree = Trees.Dominators(self.__reversecfg, self.__reversecfg.getEntryID())
-                    UDrawGraph.makeUdrawFile (self.__currentICFG, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "icfg"))
-                    UDrawGraph.makeUdrawFile (self.__predomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "pre"))
-                    UDrawGraph.makeUdrawFile (self.__postdomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "post"))
-                    self.__acyclicReducibility  = AcyclicReducibility.AcyclicReducibility(self.__currentICFG, self.__reversecfg, self.__predomTree, self.__postdomTree)
-                    self.__initialise()
-                    self.__compute()
-                    entryID = self.__currentICFG.getEntryID()
-                    exitID  = self.__currentICFG.getExitID()
+                    forwardICFG = self.__lnt.induceSubgraph(v)
+                    predomTree  = Trees.Dominators(forwardICFG, forwardICFG.getEntryID())
+                    reverseICFG = forwardICFG.getReverseCFG()
+                    postdomTree = Trees.Dominators(reverseICFG, reverseICFG.getEntryID())
+                    UDrawGraph.makeUdrawFile (forwardICFG, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "icfg"))
+                    UDrawGraph.makeUdrawFile (reverseICFG, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "icfg.reverse"))
+                    UDrawGraph.makeUdrawFile (predomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "pre"))
+                    UDrawGraph.makeUdrawFile (postdomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "post"))
+                    self.__acyclicReducibility  = AcyclicReducibility.AcyclicReducibility(forwardICFG, reverseICFG, predomTree, postdomTree)
+                    self.__initialise(forwardICFG)
+                    self.__compute(forwardICFG, predomTree, postdomTree, Trees.LeastCommonAncestor(predomTree))
+                    entryID = forwardICFG.getEntryID()
+                    exitID  = forwardICFG.getExitID()
                     self.__headerToPathExp[entryID]= self.__vToRegExp[exitID]
+                    self.__initialise(reverseICFG)
+                    self.__compute(reverseICFG, postdomTree, predomTree, Trees.LeastCommonAncestor(postdomTree))
                     
-    def __initialise (self):
+    def __initialise (self, icfg):
         self.__vToRegExp = {}
-        for v in self.__currentICFG:
+        for v in icfg:
             vertexID = v.getVertexID()
             self.__vToRegExp[vertexID] = {}
+            
+    def __output (self, vertexID, reverse=False):
+        for keyID in self.__vToRegExp[vertexID]:
+            Debug.debugMessage("RegExp(%d@%d) = %s" % (keyID, vertexID, self.__vToRegExp[vertexID][keyID]), 10)
         
-    def __compute (self):
-        dfs = Trees.DepthFirstSearch(self.__currentICFG, self.__currentICFG.getEntryID())
+    def __compute (self, icfg, domTree, reverseDomTree, lcaQuery):
+        dfs = Trees.DepthFirstSearch(icfg, icfg.getEntryID())
         for vertexID in reversed(dfs.getPostorder()):
-            v = self.__currentICFG.getVertex(vertexID)
-            if vertexID == self.__currentICFG.getEntryID():
+            v = icfg.getVertex(vertexID)
+            if vertexID == icfg.getEntryID():
                 self.__vToRegExp[vertexID][vertexID] = RegExp() 
                 self.__vToRegExp[vertexID][vertexID].append(vertexID)
             else:
                 if v.numberOfPredecessors() == 1:
-                    self.__handleNonMerge(v)
+                    self.__handleNonMerge(icfg, v)
                 else:
-                    self.__handleMerge(v)
-            for keyID in self.__vToRegExp[vertexID]:
-                print "RegExp(%d@%d) = %s" % (keyID, vertexID, self.__vToRegExp[vertexID][keyID])
+                    self.__handleMerge(icfg, domTree, reverseDomTree, lcaQuery, v)
+            self.__output(vertexID, self.__lnt.isLoopHeader(icfg.getEntryID()))
             
-    def __handleNonMerge (self, v):
+    def __handleNonMerge (self, icfg, v):
         vertexID = v.getVertexID()
         predID   = v.getPredecessorIDs()[0]
-        predv    = self.__currentICFG.getVertex(predID)
-        if (predv.numberOfSuccessors() > 1 and not self.__acyclicReducibility.isReducibleBranch(predID)) \
-        or predv.numberOfSuccessors() == 1:
-            for keyID in self.__vToRegExp[predID]:
-                self.__vToRegExp[vertexID][keyID] = RegExp() 
-                self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID], RegExp.concatenation)
-        if self.__lnt.isLoopHeader(vertexID):
+        predv    = icfg.getVertex(predID)
+        for keyID in self.__vToRegExp[predID]:
+            self.__vToRegExp[vertexID][keyID] = RegExp() 
+            if (predv.numberOfSuccessors() > 1 and not self.__acyclicReducibility.isReducibleBranch(predID)) \
+            or predv.numberOfSuccessors() == 1:
+                self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID], \
+                                                         RegExp.concatenation)
+        # Keys added to vertex from predecessor. Now decide what to append to these
+        # path expressions depending on the type of vertex
+        if self.__lnt.isLoopHeader(vertexID) and vertexID != icfg.getExitID():
             for keyID in self.__vToRegExp[predID]:
                 self.__handleLoopHeader(self.__vToRegExp[vertexID][keyID], vertexID)
         else:
             for keyID in self.__vToRegExp[vertexID]:
                 self.__vToRegExp[vertexID][keyID].append(vertexID)
                 
-    def __handleMerge (self, mergev):
-        Debug.debugMessage("Analysing merge %d" % mergev.getVertexID(), 1)
+    def __handleMerge (self, icfg, domTree, reverseDomTree, lcaQuery, mergev):
+        mergeID = mergev.getVertexID()
+        Debug.debugMessage("Analysing merge %d" % mergeID, 15)
+        comPreTree    = Trees.CompressedDominatorTree(domTree, lcaQuery, mergeID, mergev.getPredecessorIDs())
+        rootID        = comPreTree.getRootID()
         vToTempRegExp = {}
-        comPreTree = Trees.CompressedDominatorTree(self.__predomTree, self.__lca, mergev.getVertexID(), mergev.getPredecessorIDs())
         for v in comPreTree:
             vToTempRegExp[v.getVertexID()] = {}
         # Now do bottom-up traversal
@@ -117,37 +127,32 @@ class RegularExpressions:
                 # Leaf vertex
                 if v.numberOfSuccessors() == 0:
                     for keyID in self.__vToRegExp[vertexID]:
-                        vToTempRegExp[vertexID][keyID] = self.__vToRegExp[vertexID][keyID]
-                    vToTempRegExp[v.getParentID()].keys().extend(vToTempRegExp[vertexID].keys())
+                        vToTempRegExp[vertexID][keyID] = self.__vToRegExp[vertexID][keyID]  
+                        vToTempRegExp[v.getParentID()][keyID] = RegExp()
+                        self.__vToRegExp[mergeID][keyID] = RegExp()
                 else:
-                    for keyID in vToTempRegExp[vertexID].keys():
-                        newExp = RegExp()
-                        if vertexID != comPreTree.getRootID():
-                            newExp.append(vertexID)
-                        newExp.append(RegExp.lParen())
+                    for keyID in vToTempRegExp[vertexID]:
+                        if vertexID != rootID:
+                            vToTempRegExp[vertexID][keyID].append(vertexID)
+                        vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
                         
                         for succID in v.getSuccessorIDs():
-                            newExp.append(vToTempRegExp[succID][keyID])
-                            newExp.append(RegExp.union)
+                            vToTempRegExp[vertexID][keyID].append(vToTempRegExp[succID][keyID])
+                            vToTempRegExp[vertexID][keyID].append(RegExp.union)
                         
-                        if self.__currentICFG.getVertex(vertexID).hasSuccessor(mergev.getVertexID()):
-                            newExp.append(RegExp.lambda_)
+                        if icfg.getVertex(vertexID).hasSuccessor(mergeID):
+                            vToTempRegExp[vertexID][keyID].append(RegExp.lambda_)
                         else:
-                            newExp.pop()
-                            
-                        newExp.append(RegExp.rParen())
-                        vToTempRegExp[vertexID][keyID] = newExp
+                            vToTempRegExp[vertexID][keyID].pop()
+                        vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
         # End of compressed dominator tree traversal
-        mergeID = mergev.getVertexID()
-        rootID  = comPreTree.getRootID()
-        if self.__postdomTree.getImmediateDominator(rootID) == mergeID:
-            for keyID in self.__vToRegExp[rootID]:
-                self.__vToRegExp[mergeID][keyID] = RegExp() 
-                self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[rootID][keyID])
         for keyID in self.__vToRegExp[mergeID]:
-            pass#self.__vToRegExp[mergeID][keyID].append(vToTempRegExp[rootID][keyID])
-        if not mergev.isDummy():
-            pass#self.__vToRegExp[mergeID][mergeID].append(mergeID) 
+            if keyID in vToTempRegExp[rootID]:
+                if reverseDomTree.getImmediateDominator(rootID) == mergeID:
+                    self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[rootID][keyID])
+                self.__vToRegExp[mergeID][keyID].append(vToTempRegExp[rootID][keyID])
+            if not mergev.isDummy():
+                self.__vToRegExp[mergeID][keyID].append(mergeID) 
         
     def __handleLoopHeader (self, pathExp, headerID):
         if self.__lnt.isDoWhileLoop(headerID):

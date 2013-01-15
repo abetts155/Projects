@@ -174,13 +174,12 @@ class DepthFirstSearch (Tree):
 class CompressedDominatorTree (Tree):
     def __init__(self, domTree, lca, vertexID, neighbourIDs):
         Debug.debugMessage("Building compressed dominator tree for %d using %s" \
-                           % (vertexID, neighbourIDs), 10)
+                           % (vertexID, neighbourIDs), 20)
         Tree.__init__(self)
-        self.__computeParents(lca, neighbourIDs)
-        self.__addEdges()
+        self.__build(lca, neighbourIDs)
         self._rootID = domTree.getImmediateDominator(vertexID)
         
-    def __computeParents(self, lca, edges):
+    def __build(self, lca, edges):
         querySet = set(edges)      
         while len(querySet) > 1:
             vToLCA  = {}
@@ -209,7 +208,7 @@ class CompressedDominatorTree (Tree):
                 if not self.hasVertex(parentID):
                     self.addVertex(parentID)
                 if parentID != vertexID:
-                    Debug.debugMessage("Adding edge (%d, %d)" % (parentID, vertexID), 10)
+                    Debug.debugMessage("Adding edge (%d, %d)" % (parentID, vertexID), 20)
                     self.addEdge(parentID, vertexID)
             # Any vertex without a predecessor goes into the query set
             newQuerySet = []
@@ -217,9 +216,6 @@ class CompressedDominatorTree (Tree):
                 if v.numberOfPredecessors() == 0:
                     newQuerySet.append(v.getVertexID())
             querySet = set(newQuerySet)
-        
-    def __addEdges(self):        
-        pass
     
 class LeastCommonAncestor ():
     def __init__(self, tree):
