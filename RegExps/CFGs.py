@@ -1,5 +1,6 @@
 from DirectedGraphs import dummyVertexID, DirectedGraph
 from Vertices import Vertex, Ipoint
+import Debug
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
@@ -90,7 +91,9 @@ class CFG (DirectedGraph):
         self._exitID = dummyVertexID
         
     def getReverseCFG (self):
-        reverseg = CFG()
+        reverseg = CFG() 
+        if isinstance(self, ICFG):
+            reverseg = ICFG()
         # Add vertices
         for v in self:
             copyv = None
@@ -173,6 +176,52 @@ class CFG (DirectedGraph):
         for bb in self.vertices.values():
             string += bb.__str__()
         return string
+    
+class ICFG (CFG):
+    def __init__ (self):
+        CFG.__init__(self)
+    
+    def addBasicBlock (self, bb):
+        bbID = bb.getVertexID()
+        assert bbID not in self.vertices, \
+        "Adding basic block %d which is already in graph" % bbID
+        self.vertices[bbID] = bb
+
+    def addIpoint (self, ipoint):
+        vertexID = ipoint.getVertexID()
+        assert vertexID not in self.vertices, \
+        "Adding Ipoint %d which is already in graph" % vertexID
+        self.vertices[vertexID] = ipoint
+        
+    def isIpoint (self, vertexID):
+        return isinstance(self.getVertex(vertexID), Ipoint)
+    
+    def isBasicBlock (self, vertexID):
+        return isinstance(self.getVertex(vertexID), BasicBlock)
+    
+    def addIpointEdges (self):
+        bbToIpoint = {}
+        bbToPosition = {}
+        for v in self:
+            if isinstance(v, BasicBlock):
+                if v.hasIpoint():
+                    vertexID = self.getNextVertexID()
+                    ipoint   = Ipoint(vertexID, vertexID)
+                    self.vertices[ipoint.getVertexID()] = ipoint
+                    bbToIpoint[v] = ipoint
+                    bbToPosition[v] = v.ipointPosition()
+                    Debug.debugMessage("Adding Ipoint %d for basic block %d" % (vertexID, v.getVertexID()), 10)
+        for bb, ipoint in bbToIpoint.items():
+            if bbToPosition[bb] == BasicBlock.IpointPosition.start:
+                for predID in bb.getPredecessorIDs():
+                    self.addEdge(predID, ipoint.getVertexID())
+                    self.removeEdge(predID, bb.getVertexID())
+                self.addEdge(ipoint.getVertexID(), bb.getVertexID())
+            else:
+                for succID in bb.getSuccessorIDs():
+                    self.addEdge(ipoint.getVertexID(), succID)
+                    self.removeEdge(bb.getVertexID(), succID)
+                self.addEdge(bb.getVertexID(), ipoint.getVertexID())
     
 class Program():
     def __init__(self):

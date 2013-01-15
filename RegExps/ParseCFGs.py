@@ -1,5 +1,5 @@
 import shlex
-import CFGs, ICFGs, Debug, Vertices
+import CFGs, Debug, Vertices
         
 def setEntryAndExit (icfg):
     withoutPred = []
@@ -62,7 +62,7 @@ def createProgram (outfile):
             if line.startswith('cfg:'):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                icfg         = ICFGs.ICFG()
+                icfg         = CFGs.ICFG()
                 functionName = lexemes[-1]
                 icfg.setName(functionName)
                 program.addCFG(icfg)

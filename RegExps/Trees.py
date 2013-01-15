@@ -519,7 +519,7 @@ class LoopNests (Tree):
     
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
-        flowg    = ICFGs.ICFG()
+        flowg    = CFGs.ICFG()
         edges    = {}
         worklist = []
         worklist.extend(self.getLoopTails(headerv.getHeaderID()))

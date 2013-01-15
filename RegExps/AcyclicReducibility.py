@@ -55,6 +55,12 @@ class AcyclicReducibility:
         self.__postDF = DominanceFrontiers(self.__reversecfg, self.__postdomTree)
         self.__compute()
         self.output()
+        
+    def getPreDF (self):
+        return self.__preDF
+    
+    def getPostDF (self):
+        return self.__postDF
     
     def output (self):
         print '-' * 18
