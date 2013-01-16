@@ -36,10 +36,6 @@ cmdline.add_option("-u",
 (opts, args) = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug = opts.debug
-
-def createGraphs (program):
-    for cfg in program.getCFGs():
-        RegularExpressions.RegularExpressions(cfg)
                 
 if __name__ == "__main__":
     if len(args) == 1:
@@ -47,6 +43,7 @@ if __name__ == "__main__":
         assert outfile.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
         # Create the CFGs
         program = ParseCFGs.createProgram(outfile)
-        createGraphs(program)
+        for cfg in program.getCFGs():
+            RegularExpressions.RegularExpressions(cfg)
     else:
         Debug.exitMessage("You need to specify the name of a file containing CFGs")

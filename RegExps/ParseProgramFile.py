@@ -65,7 +65,7 @@ def createProgram (outfile):
                 icfg         = CFGs.ICFG()
                 functionName = lexemes[-1]
                 icfg.setName(functionName)
-                program.addCFG(icfg)
+                program.addICFG(icfg)
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
             elif line.startswith('bb:'):
                 assert icfg, "Found basic block but current CFG is null"
