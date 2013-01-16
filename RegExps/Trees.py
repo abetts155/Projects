@@ -1,6 +1,6 @@
 from DirectedGraphs import DirectedGraph, dummyVertexID
 from Vertices import TreeVertex, HeaderVertex, Ipoint
-import Debug, CFGs, ICFGs
+import Debug, CFGs
 
 class Tree (DirectedGraph):
     def __init__ (self):

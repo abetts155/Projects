@@ -180,6 +180,13 @@ class CFG (DirectedGraph):
 class ICFG (CFG):
     def __init__ (self):
         CFG.__init__(self)
+        
+    def numberOfIpoints (self):
+        count = 0
+        for v in self:
+            if isinstance(v, Ipoint):
+                count+=1
+        return count
     
     def addBasicBlock (self, bb):
         bbID = bb.getVertexID()

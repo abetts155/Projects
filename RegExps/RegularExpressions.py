@@ -1,5 +1,4 @@
 import UDrawGraph, Debug, AcyclicReducibility, Trees, Vertices
-from matplotlib.pyparsing import Regex
 
 class RegExp:
     lambda_       = '@'
@@ -131,8 +130,8 @@ class RegularExpressions:
                 self.__vToRegExp[vertexID][keyID] = RegExp(self.__reverse) 
                 if (predv.numberOfSuccessors() > 1 and not acyclicReducibility.isReducibleBranch(predID)) \
                 or predv.numberOfSuccessors() == 1:
-                    self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID], \
-                                                             RegExp.concatenation)
+                    self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID]) 
+                    self.__vToRegExp[vertexID][keyID].append(RegExp.concatenation)
         # Keys added to vertex from predecessor. Now decide what to append to these
         # path expressions depending on the type of vertex
         if self.__lnt.isLoopHeader(vertexID) and vertexID != icfg.getExitID():
@@ -171,48 +170,54 @@ class RegularExpressions:
                 else:
                     # Internal vertex
                     for keyID in vToTempRegExp[vertexID]:
+                        # Calculate how many alternative paths there are from this vertex to the merge
+                        vToAlternatives[vertexID][keyID] = 0
+                        if icfg.getVertex(vertexID).hasSuccessor(mergeID):
+                            vToAlternatives[vertexID][keyID] += 1
                         for succID in v.getSuccessorIDs():
                             if keyID in vToTempRegExp[succID]:
-                                if keyID not in vToAlternatives[vertexID]:
-                                    vToAlternatives[vertexID][keyID] = False
-                                else:
-                                    vToAlternatives[vertexID][keyID] = True
+                                vToAlternatives[vertexID][keyID] += 1
                    
+                        Debug.debugMessage("v=%d key=%d alternatives=%d" % (vertexID, keyID, vToAlternatives[vertexID][keyID]), 20)
+                                           
                         if vertexID != rootID:
                             vToTempRegExp[vertexID][keyID].append(self.__vToRegExp[vertexID][keyID])
                                   
-                        if vToAlternatives[vertexID][keyID]:
+                        if vToAlternatives[vertexID][keyID] > 1:
                             if self.__reverse:
                                 vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
                             else:
                                 vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
-                        else:
-                                vToTempRegExp[vertexID][keyID].append(RegExp.concatenation)
-                            
+                        
+                        temp = vToAlternatives[vertexID][keyID]   
                         for succID in v.getSuccessorIDs():
                             if keyID in vToTempRegExp[succID]:
+                                if vToAlternatives[vertexID][keyID] == 1:
+                                    if vertexID != rootID \
+                                    or (vertexID == rootID and reverseDomTree.getImmediateDominator(rootID) == mergeID): 
+                                        vToTempRegExp[vertexID][keyID].append(RegExp.concatenation)
                                 vToTempRegExp[vertexID][keyID].append(vToTempRegExp[succID][keyID])
-                                vToTempRegExp[vertexID][keyID].append(RegExp.union)
+                                if temp > 1:
+                                    vToTempRegExp[vertexID][keyID].append(RegExp.union)
+                                    temp -= 1
                              
                         if icfg.getVertex(vertexID).hasSuccessor(mergeID):
                             vToTempRegExp[vertexID][keyID].append(RegExp.lambda_)
-                        else:
-                            vToTempRegExp[vertexID][keyID].pop()
                             
-                        if vToAlternatives[vertexID][keyID]:
+                        if vToAlternatives[vertexID][keyID] > 1:
                             if self.__reverse:
                                 vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
                             else:
                                 vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
-                        else:
-                            vToTempRegExp[vertexID][keyID].append(RegExp.concatenation)
 
         # End of compressed dominator tree traversal
         for keyID in self.__vToRegExp[mergeID]:
             if keyID in vToTempRegExp[rootID]:
                 if reverseDomTree.getImmediateDominator(rootID) == mergeID:
                     self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[rootID][keyID])  
-                self.__vToRegExp[mergeID][keyID].append(vToTempRegExp[rootID][keyID])
+                self.__vToRegExp[mergeID][keyID].append(vToTempRegExp[rootID][keyID])                
+                if vToAlternatives[rootID][keyID] == 1:
+                    self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation)
             if not mergev.isDummy():
                 self.__vToRegExp[mergeID][keyID].append(mergeID) 
         
@@ -265,7 +270,7 @@ class RegularExpressionsWithoutIpoints:
         self.__vToRegExp = {}
         for v in self.__currentCFG:
             vertexID = v.getVertexID()
-            self.__vToRegExp[vertexID] = RegExp() 
+            self.__vToRegExp[vertexID] = RegExp(False) 
         
     def __compute (self):
         dfs = Trees.DepthFirstSearch(self.__currentCFG, self.__currentCFG.getEntryID())
@@ -303,7 +308,7 @@ class RegularExpressionsWithoutIpoints:
                 if v.numberOfSuccessors() == 0:
                     vToTempRegExp[vertexID] = self.__vToRegExp[vertexID]
                 else:
-                    newExp = RegExp()
+                    newExp = RegExp(False)
                     if vertexID != comPreTree.getRootID():
                         newExp.append(vertexID)
                     newExp.append(RegExp.lParen())

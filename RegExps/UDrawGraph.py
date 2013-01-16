@@ -1,4 +1,4 @@
-import CFGs, IPGs, Trees, Vertices, ICFGs
+import CFGs, IPGs, Trees, Vertices
 from Main import opts
 
 fileNameSuffix = ".udraw"

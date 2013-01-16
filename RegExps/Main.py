@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse
-import ParseCFGs, Debug, RegularExpressions
+import ParseProgramFile, Debug, RegularExpressions
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -42,8 +42,11 @@ if __name__ == "__main__":
         outfile = args[0]
         assert outfile.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
         # Create the CFGs
-        program = ParseCFGs.createProgram(outfile)
-        for cfg in program.getCFGs():
-            RegularExpressions.RegularExpressions(cfg)
+        program = ParseProgramFile.createProgram(outfile)
+        for icfg in program.getICFGs():
+            if icfg.numberOfIpoints() == 2:
+                RegularExpressions.RegularExpressionsWithoutIpoints(icfg)
+            else:
+                RegularExpressions.RegularExpressions(icfg)
     else:
         Debug.exitMessage("You need to specify the name of a file containing CFGs")
