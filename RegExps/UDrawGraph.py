@@ -105,11 +105,6 @@ def writeCFGVertex (cfg, vertexID, f):
     if isinstance(v, Vertices.Ipoint):
         f.write(setShape(SHAPE.CIRCLE))
         f.write(setColor(COLOR.YELLOW))
-    else:
-        string = ""
-        for address, instr in v.getInstructions ():
-            string += instr.__str__() + newLine
-        f.write(setToolTip(string[:-len(newLine)]))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
@@ -167,10 +162,6 @@ def writeIPGVertex (ipg, vertexID, f):
         f.write(setToolTip(', '.join(str(v) for v in succe.getEdgeLabel())))
         if succe.isIterationEdge():
             f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
-        if ipg.isBranchDivergentEdge(vertexID, succID):
-            f.write(setEdgePattern(EDGESHAPE.DASHED, 4))
-            f.write(setEdgeColor(COLOR.RED))
-            f.write(setToolTip("Branch divergent edge")) 
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

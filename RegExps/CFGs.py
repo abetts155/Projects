@@ -36,7 +36,6 @@ class BasicBlock (Vertex):
     
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.instructions = {}
         self.__dummy = False
         self.__ipointPosition = None
     
@@ -56,31 +55,11 @@ class BasicBlock (Vertex):
         
     def isDummy (self):
         return self.__dummy
-    
-    def addInstruction (self, instr):
-        address = instr.getAddress()
-        assert address not in self.instructions, "Basic block " + str(self._vertexID) + " already has instruction with address " + str(address)
-        self.instructions[address] = instr
-        
-    def getFirstInstruction (self):
-        return sorted(self.instructions.iteritems())[0]
-    
-    def getLastInstruction (self):
-        return sorted(self.instructions.iteritems())[len(self.instructions) - 1]
-    
-    def numberOfInstructions (self):
-        return len(self.instructions)
-    
-    def getInstructions (self):
-        return sorted(self.instructions.iteritems())
         
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
         string += "\t" + Vertex.predecessorStr(self)
         string += "\t" + Vertex.successorStr(self)
-        string += "\t" + 40 * "=" + "\n"   
-        for address, instr in sorted(self.instructions.iteritems()):
-            string += "\t" + instr.__str__() + "\n"   
         string += "\t" + 40 * "=" + "\n"      
         return string
         
@@ -180,6 +159,11 @@ class CFG (DirectedGraph):
 class ICFG (CFG):
     def __init__ (self):
         CFG.__init__(self)
+        
+    def getIpoints (self):
+        for v in self:
+            if isinstance(v, Ipoint):
+                yield v
         
     def numberOfIpoints (self):
         count = 0

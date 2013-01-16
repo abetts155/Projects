@@ -51,13 +51,28 @@ class RegExp:
         return self.__elements[-1] 
 
 class RegularExpressions:
-    def __init__(self, icfg):
-        self.__lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-        functionName = icfg.getName()
-        Debug.debugMessage("Doing regular expression analysis of CFG '%s'" % functionName, 1)        
-        UDrawGraph.makeUdrawFile (icfg, "%s.%s" % (functionName, "icfg"))
-        UDrawGraph.makeUdrawFile (self.__lnt, "%s.%s" % (functionName, "lnt"))
+    def __init__(self, icfg):        
+        Debug.debugMessage("Doing regular expression analysis of ICFG '%s'" % icfg.getName(), 1) 
+        self.__icfg = icfg
+        self.__lnt  = Trees.LoopNests(icfg, icfg.getEntryID())       
+        UDrawGraph.makeUdrawFile (icfg, "%s.%s" % (icfg.getName(), "icfg"))
+        UDrawGraph.makeUdrawFile (self.__lnt, "%s.%s" % (icfg.getName(), "lnt"))
+        self.__traverseLNT()
+        self.__outputIpointTransitions()
+
+    def __outputIpointTransitions (self):
+        debugLevel = 1
+        for v in self.__icfg.getIpoints():
+            vertexID = v.getVertexID()
+            Debug.debugMessage("%sIPOINT %d%s" % ('*' * 3, vertexID, '*' * 3), debugLevel)
+            Debug.debugMessage("%sFORWARD%s" % ('-' * 5, '-' * 5), debugLevel)
+            for keyID, pathExp in self.__forwardVToRegExp[vertexID].iteritems():
+                Debug.debugMessage("%d=>%d = %s" % (keyID, vertexID, pathExp), debugLevel)
+            Debug.debugMessage("%sREVERSE%s" % ('-' * 5, '-' * 5), debugLevel)
+            for keyID, pathExp in self.__reverseVToRegExp[vertexID].iteritems():
+                Debug.debugMessage("%d=>%d = %s" % (keyID, vertexID, pathExp), debugLevel)
         
+    def __traverseLNT (self):
         self.__headerToPathExp = {}
         self.__headerToDFList  = {}
         for level, vertices in self.__lnt.levelIterator(True):
@@ -67,10 +82,10 @@ class RegularExpressions:
                     predomTree  = Trees.Dominators(forwardICFG, forwardICFG.getEntryID())
                     reverseICFG = forwardICFG.getReverseCFG()
                     postdomTree = Trees.Dominators(reverseICFG, reverseICFG.getEntryID())
-                    UDrawGraph.makeUdrawFile (forwardICFG, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "icfg"))
-                    UDrawGraph.makeUdrawFile (reverseICFG, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "icfg.reverse"))
-                    UDrawGraph.makeUdrawFile (predomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "pre"))
-                    UDrawGraph.makeUdrawFile (postdomTree, "%s.Header%d.%s" % (functionName, v.getHeaderID(), "post"))
+                    UDrawGraph.makeUdrawFile (forwardICFG, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "icfg"))
+                    UDrawGraph.makeUdrawFile (reverseICFG, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "icfg.reverse"))
+                    UDrawGraph.makeUdrawFile (predomTree,  "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "pre"))
+                    UDrawGraph.makeUdrawFile (postdomTree, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "post"))
                     acyclicReducibility = AcyclicReducibility.AcyclicReducibility(forwardICFG, reverseICFG, predomTree, postdomTree)
                     dfs                 = Trees.DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
                     # Compute pre-dominance frontier list
@@ -80,6 +95,7 @@ class RegularExpressions:
                     self.__reverse = False
                     self.__initialise(forwardICFG)
                     self.__compute(forwardICFG, dfs, predomTree, postdomTree, Trees.LeastCommonAncestor(predomTree), acyclicReducibility)
+                    self.__forwardVToRegExp = self.__vToRegExp
                     self.__headerToPathExp[forwardICFG.getEntryID()]= self.__vToRegExp[forwardICFG.getExitID()]
                     # Compute path expressions inside REVERSED induced acyclic loop subgraph 
                     Debug.debugMessage("Analysing reverse induced subgraph of loop header %d" % v.getHeaderID(), 10)
@@ -87,6 +103,7 @@ class RegularExpressions:
                     self.__reverse = True
                     self.__initialise(reverseICFG)
                     self.__compute(reverseICFG, dfs, postdomTree, predomTree, Trees.LeastCommonAncestor(postdomTree), acyclicReducibility)
+                    self.__reverseVToRegExp = self.__vToRegExp
                     
     def __initialise (self, icfg):
         self.__vToRegExp = {}
@@ -143,7 +160,7 @@ class RegularExpressions:
                 
     def __handleMerge (self, icfg, domTree, reverseDomTree, lcaQuery, mergev):
         mergeID = mergev.getVertexID()
-        Debug.debugMessage("Analysing merge %d" % mergeID, 10)
+        Debug.debugMessage("Analysing merge %d" % mergeID, 20)
         comPreTree      = Trees.CompressedDominatorTree(domTree, lcaQuery, mergeID, mergev.getPredecessorIDs())
         rootID          = comPreTree.getRootID()
         vToTempRegExp   = {}
@@ -167,6 +184,10 @@ class RegularExpressions:
                                 vToTempRegExp[vertexID][keyID]   = self.__vToRegExp[vertexID][keyID]  
                                 vToTempRegExp[parentID][keyID]   = RegExp(self.__reverse)
                                 self.__vToRegExp[mergeID][keyID] = RegExp(self.__reverse)
+                            else:
+                                self.__vToRegExp[mergeID][keyID] = RegExp(self.__reverse)
+                                self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[vertexID][keyID])
+                                self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation) 
                 else:
                     # Internal vertex
                     for keyID in vToTempRegExp[vertexID]:
@@ -217,7 +238,7 @@ class RegularExpressions:
                     self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[rootID][keyID])  
                 self.__vToRegExp[mergeID][keyID].append(vToTempRegExp[rootID][keyID])                
                 if vToAlternatives[rootID][keyID] == 1:
-                    self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation)
+                    self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation)                
             if not mergev.isDummy():
                 self.__vToRegExp[mergeID][keyID].append(mergeID) 
         
