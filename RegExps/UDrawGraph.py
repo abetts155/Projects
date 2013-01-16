@@ -1,4 +1,4 @@
-import CFGs, IPGs, Trees, Vertices
+import CFGs, IPGs, Trees, Vertices, FiniteAutomatons
 from Main import opts
 
 fileNameSuffix = ".udraw"
@@ -73,6 +73,9 @@ def makeUdrawFile (g, fileNamePrefix):
             elif isinstance(g, IPGs.IPG):
                 for v in g:
                     writeIPGVertex(g, v.getVertexID(), f)
+            elif isinstance(g, FiniteAutomatons.GeneralisedAutomaton):
+                for v in g:
+                    writeAutomatonVertex(g, v, f)
             else:
                 for v in g:
                     writeVertex(g, v.getVertexID(), f)
@@ -84,6 +87,30 @@ def writeVertex (g, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
+        f.write(setName(str(succID)))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
+
+def writeAutomatonVertex(g, v, f):
+    vertexID = v.getVertexID()
+        
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    f.write(setName(str(vertexID)))
+    if isinstance (v, FiniteAutomatons.RegExpVertex):
+        f.write(setToolTip(g.__str__(vertexID)))
+    else:
+        f.write(setName(str(vertexID)))
+        f.write(setShape(SHAPE.CIRCLE))
+        f.write(setColor(COLOR.YELLOW))
     f.write(endAttibutes)
     
     f.write(beginAttributes)

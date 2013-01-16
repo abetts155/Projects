@@ -1,54 +1,6 @@
 import UDrawGraph, Debug, AcyclicReducibility, Trees, Vertices
-
-class RegExp:
-    lambda_       = '@'
-    union         = ' | '
-    kleeneStar    = '*'
-    kleenePlus    = '+'
-    concatenation = '.'
-    
-    def __init__(self, reverse):
-        self.__reverse = reverse
-        self.__elements = []
-        
-    def __str__ (self):
-        if self.__reverse:
-            copy = list(self.__elements)
-            copy.reverse()
-            return ''.join(copy)
-        return ''.join(self.__elements)
-        
-    @staticmethod
-    def lParen (space=True):
-        if space:
-            return ' ('
-        else:
-            return '('
-    
-    @staticmethod
-    def rParen (space=True):
-        if space:
-            return ') '
-        else:
-            return ')'
-        
-    def append (self, *args):
-        for arg in args:
-            if isinstance(arg, RegExp):
-                self.__elements.extend(arg.__elements)
-            elif isinstance(arg, int):
-                self.__elements.append(str(arg))
-            else:
-                self.__elements.append(arg)
-    
-    def pop (self):
-        del self.__elements[-1] 
-    
-    def first (self):
-        return self.__elements[0] 
-
-    def last (self):
-        return self.__elements[-1] 
+from FiniteAutomatons import RegExp, GeneralisedAutomaton
+import FiniteAutomatons
 
 class RegularExpressions:
     def __init__(self, icfg):        
@@ -58,26 +10,12 @@ class RegularExpressions:
         UDrawGraph.makeUdrawFile (icfg, "%s.%s" % (icfg.getName(), "icfg"))
         UDrawGraph.makeUdrawFile (self.__lnt, "%s.%s" % (icfg.getName(), "lnt"))
         self.__traverseLNT()
-        self.__outputIpointTransitions()
-
-    def __outputIpointTransitions (self):
-        debugLevel = 1
-        for v in self.__icfg.getIpoints():
-            vertexID = v.getVertexID()
-            Debug.debugMessage("%sIPOINT %d%s" % ('*' * 3, vertexID, '*' * 3), debugLevel)
-            Debug.debugMessage("%sFORWARD%s" % ('-' * 5, '-' * 5), debugLevel)
-            for keyID, pathExp in self.__forwardVToRegExp[vertexID].iteritems():
-                Debug.debugMessage("%d=>%d = %s" % (keyID, vertexID, pathExp), debugLevel)
-            Debug.debugMessage("%sREVERSE%s" % ('-' * 5, '-' * 5), debugLevel)
-            for keyID, pathExp in self.__reverseVToRegExp[vertexID].iteritems():
-                Debug.debugMessage("%d=>%d = %s" % (keyID, vertexID, pathExp), debugLevel)
         
     def __traverseLNT (self):
-        self.__headerToPathExp = {}
-        self.__headerToDFList  = {}
         for level, vertices in self.__lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, Vertices.HeaderVertex):
+                    self.__loopAutomaton = GeneralisedAutomaton()
                     forwardICFG = self.__lnt.induceSubgraph(v)
                     predomTree  = Trees.Dominators(forwardICFG, forwardICFG.getEntryID())
                     reverseICFG = forwardICFG.getReverseCFG()
@@ -86,36 +24,22 @@ class RegularExpressions:
                     UDrawGraph.makeUdrawFile (reverseICFG, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "icfg.reverse"))
                     UDrawGraph.makeUdrawFile (predomTree,  "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "pre"))
                     UDrawGraph.makeUdrawFile (postdomTree, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "post"))
-                    acyclicReducibility = AcyclicReducibility.AcyclicReducibility(forwardICFG, reverseICFG, predomTree, postdomTree)
-                    dfs                 = Trees.DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
-                    # Compute pre-dominance frontier list
-                    self.__computeDFList(dfs, acyclicReducibility.getPreDF(), v.getHeaderID())
+                    acyclicReducibility      = AcyclicReducibility.AcyclicReducibility(forwardICFG, reverseICFG, predomTree, postdomTree)
+                    self.__dominanceFrontier = acyclicReducibility.getPreDF()
+                    dfs                      = Trees.DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
                     # Compute path expressions inside induced acyclic loop subgraph     
                     Debug.debugMessage("Analysing forward induced subgraph of loop header %d" % v.getHeaderID(), 10)
-                    self.__reverse = False
                     self.__initialise(forwardICFG)
                     self.__compute(forwardICFG, dfs, predomTree, postdomTree, Trees.LeastCommonAncestor(predomTree), acyclicReducibility)
-                    self.__forwardVToRegExp = self.__vToRegExp
-                    self.__headerToPathExp[forwardICFG.getEntryID()]= self.__vToRegExp[forwardICFG.getExitID()]
-                    # Compute path expressions inside REVERSED induced acyclic loop subgraph 
-                    Debug.debugMessage("Analysing reverse induced subgraph of loop header %d" % v.getHeaderID(), 10)
-                    dfs            = Trees.DepthFirstSearch(reverseICFG, reverseICFG.getEntryID())
-                    self.__reverse = True
-                    self.__initialise(reverseICFG)
-                    self.__compute(reverseICFG, dfs, postdomTree, predomTree, Trees.LeastCommonAncestor(postdomTree), acyclicReducibility)
-                    self.__reverseVToRegExp = self.__vToRegExp
+                    UDrawGraph.makeUdrawFile (self.__loopAutomaton, "%s.Header%d.%s" % (self.__icfg.getName(), v.getHeaderID(), "automaton"))
                     
     def __initialise (self, icfg):
         self.__vToRegExp = {}
         for v in icfg:
             vertexID = v.getVertexID()
             self.__vToRegExp[vertexID] = {}
-            
-    def __computeDFList (self, dfs, preDF, headerID):
-        self.__headerToDFList[headerID] = [] 
-        for vertexID in reversed(dfs.getPostorder()):
-            if preDF.isEmpty(vertexID):
-                self.__headerToDFList[headerID].append(vertexID)
+            if icfg.isIpoint(vertexID):
+                self.__loopAutomaton.addVertex(Vertices.Ipoint(vertexID, vertexID))
             
     def __output (self, vertexID):
         for keyID in self.__vToRegExp[vertexID]:
@@ -124,14 +48,31 @@ class RegularExpressions:
     def __compute (self, icfg, dfs, domTree, reverseDomTree, lcaQuery, acyclicReducibility):
         for vertexID in reversed(dfs.getPostorder()):
             v = icfg.getVertex(vertexID)
-            if vertexID == icfg.getEntryID():
-                self.__vToRegExp[vertexID][vertexID] = RegExp(self.__reverse) 
-                self.__vToRegExp[vertexID][vertexID].append(vertexID)
+            if self.__dominanceFrontier.isEmpty(vertexID):
+                if vertexID == icfg.getEntryID(): 
+                    self.__currentRegExpVertex = self.__loopAutomaton.createRegExpVertex()
+                    if icfg.isIpoint(vertexID):   
+                        self.__loopAutomaton.addEdge(vertexID, self.__currentRegExpVertex.getVertexID())  
+                
+                if not icfg.isIpoint(vertexID):   
+                    if v.numberOfPredecessors() > 1:
+                        self.__handleMerge(icfg, domTree, reverseDomTree, lcaQuery, v)
+                        # A new region has just been discovered and collapsed. 
+                        # Create a new regular expression vertex in preparation for basic blocks in a
+                        # new region
+                        self.__currentRegExpVertex = self.__loopAutomaton.createRegExpVertex()
+                    # Add the basic block to the current regular expression vertex as it
+                    # always executed, i.e. size(DF) == 0, in this induced subgraph
+                    self.__loopAutomaton.addBasicBlockToVertex(self.__currentRegExpVertex, vertexID)  
+                elif vertexID != icfg.getEntryID(): 
+                    self.__loopAutomaton.addEdge(self.__currentRegExpVertex.getVertexID(), vertexID)                      
+                    if v.numberOfSuccessors() == 1:  
+                        self.__currentRegExpVertex = self.__loopAutomaton.createRegExpVertex()            
             else:
                 if v.numberOfPredecessors() == 1:
                     self.__handleNonMerge(icfg, acyclicReducibility, v)
                 else:
-                    self.__handleMerge(icfg, domTree, reverseDomTree, lcaQuery, v)
+                    self.__handleMerge(icfg, domTree, reverseDomTree, lcaQuery, v)                   
             self.__output(vertexID)
             
     def __handleNonMerge (self, icfg, acyclicReducibility, v):
@@ -139,24 +80,17 @@ class RegularExpressions:
         predID   = v.getPredecessorIDs()[0]
         predv    = icfg.getVertex(predID)
         if icfg.isIpoint(predID):
-            self.__vToRegExp[vertexID][predID] = RegExp(self.__reverse)
-            self.__vToRegExp[vertexID][predID].append(predID)
-            self.__vToRegExp[vertexID][predID].append(RegExp.concatenation)
-        else:  
-            for keyID in self.__vToRegExp[predID]:
-                self.__vToRegExp[vertexID][keyID] = RegExp(self.__reverse) 
-                if (predv.numberOfSuccessors() > 1 and not acyclicReducibility.isReducibleBranch(predID)) \
-                or predv.numberOfSuccessors() == 1:
-                    self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID]) 
-                    self.__vToRegExp[vertexID][keyID].append(RegExp.concatenation)
-        # Keys added to vertex from predecessor. Now decide what to append to these
-        # path expressions depending on the type of vertex
-        if self.__lnt.isLoopHeader(vertexID) and vertexID != icfg.getExitID():
-            for keyID in self.__vToRegExp[predID]:
-                self.__handleLoopHeader(self.__vToRegExp[vertexID][keyID], vertexID)
+            self.__vToRegExp[vertexID][predID] = RegExp()
         else:
-            for keyID in self.__vToRegExp[vertexID]:
-                self.__vToRegExp[vertexID][keyID].append(vertexID)
+            if predv.numberOfSuccessors () > 1:   
+                self.__vToRegExp[vertexID][self.__currentRegExpVertex.getVertexID()] = RegExp()
+            for keyID in self.__vToRegExp[predID]:
+                self.__vToRegExp[vertexID][keyID] = RegExp()
+                self.__vToRegExp[vertexID][keyID].append(self.__vToRegExp[predID][keyID])
+                self.__vToRegExp[vertexID][keyID].append(RegExp.concatenation)
+                
+        for keyID in self.__vToRegExp[vertexID]:
+            self.__vToRegExp[vertexID][keyID].append(vertexID)
                 
     def __handleMerge (self, icfg, domTree, reverseDomTree, lcaQuery, mergev):
         mergeID = mergev.getVertexID()
@@ -176,16 +110,16 @@ class RegularExpressions:
                     # Leaf vertex
                     if icfg.isIpoint(vertexID):
                         Debug.debugMessage("%d is an Ipoint leaf in the compressed pre-dominator tree" % vertexID, 20)
-                        self.__vToRegExp[mergeID][vertexID] = RegExp(self.__reverse)
+                        self.__vToRegExp[mergeID][vertexID] = RegExp()
                     else:
                         parentID = v.getParentID()
                         for keyID in self.__vToRegExp[vertexID]:
                             if keyID in self.__vToRegExp[parentID]:
                                 vToTempRegExp[vertexID][keyID]   = self.__vToRegExp[vertexID][keyID]  
-                                vToTempRegExp[parentID][keyID]   = RegExp(self.__reverse)
-                                self.__vToRegExp[mergeID][keyID] = RegExp(self.__reverse)
+                                vToTempRegExp[parentID][keyID]   = RegExp()
+                                self.__vToRegExp[mergeID][keyID] = RegExp()
                             else:
-                                self.__vToRegExp[mergeID][keyID] = RegExp(self.__reverse)
+                                self.__vToRegExp[mergeID][keyID] = RegExp()
                                 self.__vToRegExp[mergeID][keyID].append(self.__vToRegExp[vertexID][keyID])
                                 self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation) 
                 else:
@@ -205,10 +139,7 @@ class RegularExpressions:
                             vToTempRegExp[vertexID][keyID].append(self.__vToRegExp[vertexID][keyID])
                                   
                         if vToAlternatives[vertexID][keyID] > 1:
-                            if self.__reverse:
-                                vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
-                            else:
-                                vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
+                            vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
                         
                         temp = vToAlternatives[vertexID][keyID]   
                         for succID in v.getSuccessorIDs():
@@ -226,10 +157,7 @@ class RegularExpressions:
                             vToTempRegExp[vertexID][keyID].append(RegExp.lambda_)
                             
                         if vToAlternatives[vertexID][keyID] > 1:
-                            if self.__reverse:
-                                vToTempRegExp[vertexID][keyID].append(RegExp.lParen())
-                            else:
-                                vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
+                            vToTempRegExp[vertexID][keyID].append(RegExp.rParen())
 
         # End of compressed dominator tree traversal
         for keyID in self.__vToRegExp[mergeID]:
@@ -241,23 +169,6 @@ class RegularExpressions:
                     self.__vToRegExp[mergeID][keyID].append(RegExp.concatenation)                
             if not mergev.isDummy():
                 self.__vToRegExp[mergeID][keyID].append(mergeID) 
-        
-    def __handleLoopHeader (self, pathExp, headerID):
-        if self.__lnt.isDoWhileLoop(headerID):
-            pathExp.append(RegExp.lParen(False))
-            pathExp.append(RegExp.lParen(False))
-            pathExp.append(self.__headerToPathExp[headerID])
-            pathExp.append(RegExp.rParen(False))
-            pathExp.append(RegExp.kleenePlus)
-            pathExp.append(RegExp.rParen(False))
-        else:
-            pathExp.append(RegExp.lParen(False))
-            pathExp.append(RegExp.lParen(False))
-            pathExp.append(self.__headerToPathExp[headerID])
-            pathExp.append(RegExp.rParen(False))
-            pathExp.append(RegExp.kleeneStar)
-            pathExp.append(RegExp.rParen(False))
-            pathExp.append(headerID)
             
 class RegularExpressionsWithoutIpoints:
     def __init__(self, cfg):
