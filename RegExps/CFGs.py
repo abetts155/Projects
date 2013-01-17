@@ -141,7 +141,6 @@ class CFG (DirectedGraph):
             self._exitID = exitID
             
     def addExitEntryEdge (self):
-
         assert self._exitID != dummyVertexID, "Exit ID not set"
         entryv = self.getVertex(self._entryID)
         exitv = self.getVertex(self._exitID)

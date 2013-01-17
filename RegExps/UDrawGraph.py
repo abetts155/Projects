@@ -101,7 +101,6 @@ def writeVertex (g, vertexID, f):
 
 def writeAutomatonVertex(g, v, f):
     vertexID = v.getVertexID()
-        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -115,9 +114,11 @@ def writeAutomatonVertex(g, v, f):
     
     f.write(beginAttributes)
     for succID in v.getSuccessorIDs():
+        succe = v.getSuccessorEdge(succID)
         f.write(newEdge)
         f.write(beginAttributes)
         f.write(setName(str(succID)))
+        f.write(setToolTip(succe.getExpr().__str__()))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
