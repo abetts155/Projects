@@ -264,7 +264,7 @@ class RegularExpressionsWithoutIpoints:
         self.__vToRegExp = {}
         for v in self.__currentCFG:
             vertexID = v.getVertexID()
-            self.__vToRegExp[vertexID] = RegExp(False) 
+            self.__vToRegExp[vertexID] = RegExp() 
         
     def __compute (self):
         dfs = Trees.DepthFirstSearch(self.__currentCFG, self.__currentCFG.getEntryID())
@@ -295,6 +295,7 @@ class RegularExpressionsWithoutIpoints:
         Debug.debugMessage("Analysing merge %d" % mergev.getVertexID(), 1)
         vToTempRegExp = {}
         comPreTree    = Trees.CompressedDominatorTree(self.__predomTree, self.__lca, mergev.getVertexID(), mergev.getPredecessorIDs())
+        print comPreTree
         for level, vertices in comPreTree.levelIterator(True):
             for v in vertices:
                 vertexID = v.getVertexID()
@@ -302,9 +303,9 @@ class RegularExpressionsWithoutIpoints:
                 if v.numberOfSuccessors() == 0:
                     vToTempRegExp[vertexID] = self.__vToRegExp[vertexID]
                 else:
-                    newExp = RegExp(False)
+                    newExp = RegExp()
                     if vertexID != comPreTree.getRootID():
-                        newExp.append(vertexID)
+                        newExp.append(self.__vToRegExp[vertexID])
                     newExp.append(RegExp.lParen())
                     
                     for succID in v.getSuccessorIDs():

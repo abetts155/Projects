@@ -31,6 +31,9 @@ class RegExp:
     def isEmpty (self):
         return len(self.__elements) == 0
     
+    def pop (self):
+        self.__elements.pop()
+    
     def last (self):
         return self.__elements[-1]
     
