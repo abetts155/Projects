@@ -3,6 +3,8 @@ from Vertices import Vertex, Ipoint
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
+    labelPrefix = "$L"
+    
     def __init__ (self, address, instrString):
         self.address     = address
         self.instrString = instrString
@@ -16,7 +18,7 @@ class Instruction ():
     def containsLabel (self, label):
         import shlex
         lexemes = shlex.split(self.instrString)
-        if lexemes[0].startswith('l0x'):
+        if lexemes[0].startswith(Instruction.labelPrefix):
             assert lexemes[0].endswith(':'), "Instruction '%s' does not contain a valid label" % self
             return label == lexemes[0][:-1]
         return False

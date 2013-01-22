@@ -1,5 +1,6 @@
 from Edges import Edge
 from DirectedGraphs import dummyVertexID
+import Debug
 
 class Vertex ():
     def __init__ (self, vertexID):
@@ -142,8 +143,9 @@ class Ipoint (Vertex):
         self.__succIpointIDToVertexID[succIpointID] = succID
     
     def getIpointSuccessor (self, succIpointID):
-        assert succIpointID in self.__succIpointIDToVertexID, \
-        "Unable to find successor of %s with Ipoint ID 0x%04X" % (self._vertexID, succIpointID)
+        if succIpointID not in self.__succIpointIDToVertexID:
+            Debug.debugMessage("Unable to find successor of %s with Ipoint ID 0x%04X" % (self._vertexID, succIpointID), 1)
+            return None
         return self.__succIpointIDToVertexID[succIpointID]
     
     def __str__ (self):

@@ -74,20 +74,23 @@ class _TraceParser ():
                 startTime = time
             else:
                 succID = currentv.getIpointSuccessor(ipointID)
-                succe  = currentv.getSuccessorEdge(succID)
-                self.__analyseEdgeTime(succe, time - lastTime)
-                # Advance transition
-                lastTime = time
-                currentv = ipg.getVertex(succID)
-                if succID == ipg.getExitID():
-                    newTrace     = True
-                    runTime      = lastTime - startTime
-                    functionName = ipg.getName()
-                    self.totalEnd2End[functionName] += runTime
-                    if runTime > self.highWaterMark[functionName]:
-                        self.highWaterMark[functionName] = runTime
-                    self.__analyseWorstCaseExecutionCounts()
-                    ipg = None
+                if succID:
+                    succe  = currentv.getSuccessorEdge(succID)
+                    self.__analyseEdgeTime(succe, time - lastTime)
+                    # Advance transition
+                    lastTime = time
+                    currentv = ipg.getVertex(succID)
+                    if succID == ipg.getExitID():
+                        newTrace     = True
+                        runTime      = lastTime - startTime
+                        functionName = ipg.getName()
+                        self.totalEnd2End[functionName] += runTime
+                        if runTime > self.highWaterMark[functionName]:
+                            self.highWaterMark[functionName] = runTime
+                        self.__analyseWorstCaseExecutionCounts()
+                        ipg = None
+                else:
+                    Debug.exitMessage("Giving up")
                     
     def __analyseEdgeTime (self, succe, time):
         edgeID = succe.getEdgeID()
@@ -107,13 +110,40 @@ class _TraceParser ():
             self.edgeIDToWCECInRun[edgeID]       += 1
              
     def __analyseWorstCaseExecutionCounts (self):
+        Debug.debugMessage("Analysing worst-case execution counts in run", 1)
         for edgeID, WCEC in self.edgeIDToWCECInRun.iteritems():
+            print "%d %d" % (edgeID, WCEC)
             if edgeID not in self.edgeIDToWCEC.keys():
                 self.edgeIDToWCEC[edgeID] = WCEC
             else:
                 if WCEC > self.edgeIDToWCEC[edgeID]:
                     self.edgeIDToWCEC[edgeID] = WCEC
             self.edgeIDToWCECInRun[edgeID] = 0
+            
+    def getWCEC (self, edgeID):
+        if edgeID in self.edgeIDToWCEC:
+            return self.edgeIDToWCEC[edgeID]
+        return 0
+
+    def getWCET (self, edgeID):
+        if edgeID in self.edgeIDToWCET:
+            return self.edgeIDToWCET[edgeID]
+        return 0
+
+    def getBCET (self, edgeID):
+        if edgeID in self.edgeIDToBCET:
+            return self.edgeIDToBCET[edgeID]
+        return 0    
+
+    def getTotalTime (self, edgeID):
+        if edgeID in self.edgeIDToTotalTime:
+            return self.edgeIDToTotalTime[edgeID]
+        return 0
+
+    def getTotalExecutionCounts (self, edgeID):
+        if edgeID in self.edgeIDToExecutionCounts:
+            return self.edgeIDToExecutionCounts[edgeID]
+        return 0  
 
 class TraceData ():
     def __init__(self, allWarpTraces, program):
@@ -168,20 +198,19 @@ class TraceData ():
                     self.__edgeIDToTotalTime[edgeID]       = 0
                     self.__edgeIDToExecutionCounts[edgeID] = 0
                     for tp in self.tps:
-                        if edgeID in tp.edgeIDToWCET.keys():
-                            wcet = tp.edgeIDToWCET[edgeID]
-                            wcec = tp.edgeIDToWCEC[edgeID]
-                            bcet = tp.edgeIDToBCET[edgeID]
-                            if wcet > self.__edgeIDToWCET[edgeID]:
-                                self.__edgeIDToWCET[edgeID] = wcet
-                                self.__edgeIDToWorstCaseWarpTrace[edgeID] = tp.warpTrace
-                            if wcec > self.__edgeIDToWCEC[edgeID]:
-                                self.__edgeIDToWCEC[edgeID] = wcec
-                            if bcet < self.__edgeIDToBCET[edgeID]:
-                                self.__edgeIDToBCET[edgeID] = bcet
-                                self.__edgeIDToBestCaseWarpTrace[edgeID] = tp.warpTrace
-                            self.__edgeIDToTotalTime[edgeID] += tp.edgeIDToTotalTime[edgeID]
-                            self.__edgeIDToExecutionCounts[edgeID] += tp.edgeIDToExecutionCounts[edgeID]
+                        wcet = tp.getWCET(edgeID)
+                        wcec = tp.getWCEC(edgeID)
+                        bcet = tp.getBCET(edgeID)
+                        if wcet > self.__edgeIDToWCET[edgeID]:
+                            self.__edgeIDToWCET[edgeID] = wcet
+                            self.__edgeIDToWorstCaseWarpTrace[edgeID] = tp.warpTrace
+                        if wcec > self.__edgeIDToWCEC[edgeID]:
+                            self.__edgeIDToWCEC[edgeID] = wcec
+                        if bcet < self.__edgeIDToBCET[edgeID]:
+                            self.__edgeIDToBCET[edgeID] = bcet
+                            self.__edgeIDToBestCaseWarpTrace[edgeID] = tp.warpTrace
+                        self.__edgeIDToTotalTime[edgeID]       += tp.getTotalTime(edgeID)
+                        self.__edgeIDToExecutionCounts[edgeID] += tp.getTotalExecutionCounts(edgeID)
                         
     def getWCETOfEdge (self, edgeID):
         if edgeID in self.__edgeIDToWCET.keys():

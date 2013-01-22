@@ -3,7 +3,6 @@ import CFGs, Debug
 
 vertexID    = 0
 PCPrefix    = "PC=0x"
-labelPrefix = "l0x"
 braOP       = "bra"
 callOP      = "call"
 callpOP     = "callp"
@@ -11,7 +10,7 @@ retOP       = "ret"
 retpOP      = "retp"
 exitOP      = "exit"
 breakOP     = "break"
-predicated  = "@$p"
+predicated  = "@%p"
 
 def getAddress (string):
     return string[len(PCPrefix):]
@@ -42,6 +41,7 @@ def addEdgeToBasicBlockWithNextAddress (cfg, bb, lastAddr):
     succ.addPredecessor(bb.getVertexID())
     
 def addEdges (cfg):
+    import re
     for bb in cfg:
         lastAddr, lastInstr = bb.getLastInstruction()
         lastStr = lastInstr.getString()
@@ -52,7 +52,9 @@ def addEdges (cfg):
             succ    = getBasicBlockWithLabel(cfg, label)
             bb.addSuccessor(succ.getVertexID())
             succ.addPredecessor(bb.getVertexID())
-            if predicated in lastStr:
+            # The regular expression pattern matches predicated instructions
+            match = re.search(r'@\!?%p', lastStr)
+            if match:
                 # Add successor with next address
                 addEdgeToBasicBlockWithNextAddress(cfg, bb, lastAddr)
         elif callOP in lastStr or callpOP in lastStr:
@@ -73,12 +75,11 @@ def createBasicBlocks (cfg, instructions):
     # First identify the leaders
     for instr in instructions:
         if instr == instructions[0] \
-        or instr.getString().startswith(labelPrefix) \
-        or exitOP in instr.getString() \
+        or instr.getString().startswith(CFGs.Instruction.labelPrefix) \
         or branch:
             leaders.append(instr)
             branch = False
-        elif braOP in instr.getString() \
+        if braOP in instr.getString() \
         or retOP in instr.getString() \
         or retpOP in instr.getString() \
         or callOP in instr.getString() \
@@ -97,20 +98,6 @@ def createBasicBlocks (cfg, instructions):
         else:
             assert bb, "Basic block is currently null"
             bb.addInstruction(instr)
-
-def getInstructionString (lexemes):
-    return ' '.join(lexemes)
-        
-def analyseLine (line, cfg):
-    lexemes = shlex.split(line)
-    if len(lexemes) > 0:
-        PCIndex         = 2
-        startInstrIndex = 4
-        if lexemes[PCIndex].startswith(PCPrefix):
-            address     = getAddress(lexemes[PCIndex])
-            instrString = getInstructionString(lexemes[startInstrIndex:]) 
-            instruction = CFGs.Instruction (address, instrString)
-            return instruction
         
 def setEntryAndExit (cfg):
     withoutPred = []
@@ -149,11 +136,32 @@ def setEntryAndExit (cfg):
     else:
         cfg.setExitID(withoutSucc[0])    
         
+def getInstructionString (lexemes):
+    return ' '.join(lexemes)
+        
+def analyseLine (line, instructions, labels):
+    lexemes = shlex.split(line)
+    if len(lexemes) > 0:
+        PCIndex         = 2
+        startInstrIndex = 4
+        if lexemes[PCIndex].startswith(PCPrefix):
+            address     = getAddress(lexemes[PCIndex])
+            instrString = getInstructionString(lexemes[startInstrIndex:]) 
+            if labels:
+                labelString = getInstructionString(labels)
+                instrString = labelString + " " + instrString
+                labels[:] = []
+            instruction = CFGs.Instruction (address, instrString)
+            instructions.append(instruction)
+        else:
+            labels.append(lexemes[-1])
+        
 def createProgram (cfgLines):
     program      = CFGs.Program()
     cfg          = None
     analyse      = False
     instructions = []
+    labels       = []
     for line in cfgLines:
         if "Summary of basic blocks for" in line:
             analyse = False
@@ -164,9 +172,8 @@ def createProgram (cfgLines):
             setEntryAndExit(cfg)
             instructions = []   
         if analyse:
-            instr = analyseLine(line, cfg)
-            if instr:
-                instructions.append(instr)
+            print line,
+            analyseLine(line, instructions, labels)    
         if "Printing basic blocks for function" in line:
             analyse      = True
             lexemes      = shlex.split(line)

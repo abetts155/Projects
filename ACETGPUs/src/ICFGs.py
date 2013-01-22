@@ -95,15 +95,15 @@ class ICFG (CFGs.CFG):
             parentID = treev.getParentID()
             mergev   = self.getVertex(parentID)
             Debug.debugMessage("Analysing region (%d, %d)" % (vertexID, parentID), 5)
-            for succID in branchv.getSuccessorIDs():
-                if succID != parentID:
-                    self.addEdge(parentID, succID)
-                    self.__branchDivergentEdges.append((parentID, succID))
-#            for predID in mergev.getPredecessorIDs():
-#                predv    = self.getVertex(predID)
-#                newsuccs = set.difference(succSet, vertexToReachable[predv]) 
-#                for newsuccID in newsuccs:
-#                    if newsuccID not in predv.getSuccessorIDs() and newsuccID != predID:
-#                        self.addEdge(predID, newsuccID)
-#                        self.__branchDivergentEdges.append((predID, newsuccID))
+#            for succID in branchv.getSuccessorIDs():
+#                if succID != parentID:
+#                    self.addEdge(parentID, succID)
+#                    self.__branchDivergentEdges.append((parentID, succID))
+            for predID in mergev.getPredecessorIDs():
+                predv    = self.getVertex(predID)
+                newsuccs = set.difference(succSet, vertexToReachable[predv]) 
+                for newsuccID in newsuccs:
+                    if newsuccID not in predv.getSuccessorIDs() and newsuccID != predID:
+                        self.addEdge(predID, newsuccID)
+                        self.__branchDivergentEdges.append((predID, newsuccID))
     

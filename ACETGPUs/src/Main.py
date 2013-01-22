@@ -163,19 +163,9 @@ def doAnalysis (generatedFiles, basename, basepath):
 def runCUDAKernel (basepath):
         from subprocess import Popen, PIPE
         import signal
-        global args
         
-        newargs = []
-        for arg in args:
-            if arg.startswith('MACRO'):
-                index = arg.index('=')
-                newarg = '-D' + arg[index+1:]
-                newargs.append(newarg)
-            else:
-                newargs.append(arg)
-                
-        args = newargs
-        Debug.debugMessage("CUDA application command '%s'" % args, 1)
+        cmd = args[0]
+        Debug.debugMessage("CUDA application command '%s'" % cmd, 1)
         
         # Run the program on GPGPU-sim and get generated output
         outfiles       = []
@@ -192,7 +182,7 @@ def runCUDAKernel (basepath):
                 outfilename = outfiles.pop()
                 outfile = open(outfilename, 'w')
                 Debug.debugMessage("Spawning new process for '%s'" % outfilename, 1)
-                proc = Popen(args, shell=True, stdout=outfile)
+                proc = Popen(cmd, shell=True, stdout=outfile)
                 processes.append(proc)
                 pidToOutFile[proc.pid]     = outfile
                 pidToOutFilename[proc.pid] = outfilename
