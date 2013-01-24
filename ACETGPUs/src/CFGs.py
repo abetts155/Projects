@@ -155,6 +155,34 @@ class Program():
         self.__icfgs = []
         self.__ipgs = []
         self.__lnts = []
+        self.__hwmts = {}
+        self.__wcets = {}
+        
+    def getIPGWithEntryIpointID (self, ipointID):
+        for ipg in self.__ipgs:
+            startv = ipg.getVertex(ipg.getEntryID())
+            if startv.getIpointID() == ipointID:
+                return ipg
+        assert False, "Unable to find IPG whose entry Ipoint ID is %d" % ipointID
+        
+    def updateHWMT (self, functionName, time):
+        if functionName not in self.__hwmts:
+            self.__hwmts[functionName] = time
+        else:
+            if time > self.__hwmts[functionName]:
+                self.__hwmts[functionName] = time
+                
+    def getHWMT (self, functionName):
+        assert functionName in self.__hwmts, "Unable to find a HWMT value for %s" % (functionName)
+        return self.__hwmts[functionName]
+    
+    def updateWCET (self, functionName, time):
+        assert functionName not in self.__wcets, "Already have a WCET value for %s which is %d" % (functionName, time)
+        self.__wcets[functionName] = time
+        
+    def getWCET (self, functionName):
+        assert functionName in self.__wcets, "Unable to find a WCET value for %s" % (functionName)
+        return self.__wcets[functionName]
         
     def addCFG (self, cfg):
         self.__cfgs.append(cfg)
