@@ -26,7 +26,7 @@ class LinearProgram ():
     def __solve(self, ipg, ilpFile):
         from subprocess import Popen, PIPE
         import shlex
-        Debug.debugMessage("Solving ILP", 1)
+        Debug.debugMessage("Solving ILP", 10)
         command = "lp_solve %s" % ilpFile 
         proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
         returnCode = proc.wait()

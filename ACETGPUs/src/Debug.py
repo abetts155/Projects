@@ -6,7 +6,7 @@ def debugMessage (string, debugLevel=1):
         print(string)
 
 def verboseMessage (string):
-    if verbose:
+    if verbose or debug > 0:
         print(string)
 
 def exitMessage(string):

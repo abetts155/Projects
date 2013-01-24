@@ -13,7 +13,7 @@ breakOP     = "break"
 predicated  = "@%p"
 
 def getAddress (string):
-    return string[len(PCPrefix):]
+    return int(string[len("PC="):], 0)
 
 def getBasicBlockWithLabel (cfg, label):
     for bb in cfg:
@@ -27,11 +27,11 @@ def getBasicBlockWithNextAddress (cfg, addr):
     # 8 bytes away from the last instruction of the current block
     for bb in cfg:
         firstAddr, firstInstr = bb.getFirstInstruction()
-        if int(firstAddr, 16) == int(addr, 16) + 8:
+        if firstAddr == addr + 8:
             return bb
     for bb in cfg:
         firstAddr, firstInstr = bb.getFirstInstruction()
-        if int(firstAddr, 16) == int(addr, 16) + 4:
+        if firstAddr == addr + 4:
             return bb
     assert False, "Unable to find basic block with next address of %s" % addr
     
@@ -172,7 +172,6 @@ def createProgram (cfgLines):
             setEntryAndExit(cfg)
             instructions = []   
         if analyse:
-            print line,
             analyseLine(line, instructions, labels)    
         if "Printing basic blocks for function" in line:
             analyse      = True

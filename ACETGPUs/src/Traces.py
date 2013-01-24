@@ -110,9 +110,7 @@ class _TraceParser ():
             self.edgeIDToWCECInRun[edgeID]       += 1
              
     def __analyseWorstCaseExecutionCounts (self):
-        Debug.debugMessage("Analysing worst-case execution counts in run", 1)
         for edgeID, WCEC in self.edgeIDToWCECInRun.iteritems():
-            print "%d %d" % (edgeID, WCEC)
             if edgeID not in self.edgeIDToWCEC.keys():
                 self.edgeIDToWCEC[edgeID] = WCEC
             else:

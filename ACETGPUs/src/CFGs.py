@@ -24,7 +24,7 @@ class Instruction ():
         return False
      
     def __str__(self):
-        return self.address + " : " + self.instrString
+        return hex(self.address) + " : " + self.instrString
 
 class BasicBlock (Vertex):
     def __init__ (self, vertexID):
