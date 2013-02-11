@@ -99,15 +99,26 @@ class DoCalculation:
         for vertexID in reversed(dfs.getPostorder()):
             self.__vertexToWCETValues[vertexID] = []
             v = forwardIPG.getVertex(vertexID)
-            if v.numberOfPredecessors() == 1:
+            if v.numberOfPredecessors() == 0:
+                self.__vertexToWCETValues[vertexID].append(0)
+            elif v.numberOfPredecessors() == 1:
                 predID = v.getPredecessorIDs()[0]
-                self.__vertexToWCETValues[vertexID] = self.__vertexToWCETValues[predID]
-                transitionWCET                      = data.getTransitionWCET(predID, vertexID)
-                self.__vertexToWCETValues[vertexID] = [x + transitionWCET for x in self.__vertexToWCETValues[vertexID]]
+                transitionWCET = data.getTransitionWCET(predID, vertexID)
+                Debug.debugMessage("WCET(%d, %d) = %d" % (predID, vertexID, transitionWCET), 1)
+                values         = [transitionWCET + x for x in self.__vertexToWCETValues[predID]]
+                self.__vertexToWCETValues[vertexID].extend(values)
             else:
+                allValues = []
                 for predID in v.getPredecessorIDs():
                     transitionWCET = data.getTransitionWCET(predID, vertexID)
-               
+                    Debug.debugMessage("WCET(%d, %d) = %d" % (predID, vertexID, transitionWCET), 1)
+                    values         = [transitionWCET + x for x in self.__vertexToWCETValues[predID]]
+                    allValues.extend(values)
+                maxValue = max(allValues)
+                self.__vertexToWCETValues[vertexID].append(maxValue)
+            
+            print self.__vertexToWCETValues[vertexID]        
+            
 class CreateWCETData:    
     def __init__ (self, ipg):
         import random 
