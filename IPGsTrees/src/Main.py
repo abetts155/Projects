@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse
-import ParseProgramFile, Debug
+import ParseProgramFile, Debug, IPGs, Trees, UDrawGraph, IPGTrees
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -44,9 +44,13 @@ if __name__ == "__main__":
         # Create the CFGs
         program = ParseProgramFile.createProgram(outfile)
         for icfg in program.getICFGs():
-            if icfg.numberOfIpoints() == 2:
-                RegularExpressions.RegularExpressionsWithoutIpoints(icfg)
-            else:
-                RegularExpressions.RegularExpressions(icfg)
+            UDrawGraph.makeUdrawFile(icfg, "%s.%s" % (icfg.getName(), "icfg"))
+            lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+            UDrawGraph.makeUdrawFile(lnt, "%s.%s" % (icfg.getName(), "lnt"))
+            ipg = IPGs.IPG(icfg, lnt)
+            UDrawGraph.makeUdrawFile(ipg, "%s.%s" % (icfg.getName(), "ipg"))
+            itree = IPGTrees.IPGTree(icfg, lnt)
+            data  = IPGTrees.CreateWCETData(ipg)
+            IPGTrees.DoCalculation(itree, lnt, data)
     else:
         Debug.exitMessage("You need to specify the name of a file containing CFGs")

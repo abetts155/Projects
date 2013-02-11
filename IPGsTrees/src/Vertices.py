@@ -95,28 +95,28 @@ class Vertex ():
 class TreeVertex (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.__parentID = dummyVertexID
-        self.__level = -1
+        self._parentID = dummyVertexID
+        self._level    = -1
         
     def setParentID (self, parentID):
-        self.__parentID = parentID
+        self._parentID = parentID
         
     def getParentID (self):
-        assert self.__parentID != dummyVertexID, "Parent ID of %d has not been set" % self.parentID
-        return self.__parentID
+        assert self._parentID != dummyVertexID, "Parent ID of %d has not been set" % self._parentID
+        return self._parentID
     
     def setLevel (self, level):
         assert level >= 0, "The level of a vertex cannot be less than 0. You gave %d" % level
-        self.__level = level
+        self._level = level
     
     def getLevel (self):
-        return self.__level     
+        return self._level     
     
     def __str__ (self):
-        if self.__parentID == dummyVertexID:
+        if self._parentID == dummyVertexID:
             return "parent(%d) = <>\n" % self._vertexID
         else:
-            return "parent(%d) = %d\n" % (self._vertexID, self.__parentID)
+            return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):

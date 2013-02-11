@@ -1,4 +1,4 @@
-import CFGs, IPGs, Trees, Vertices, FiniteAutomatons
+import CFGs, IPGs, IPGTrees, Trees, Vertices
 from Main import opts
 
 fileNameSuffix = ".udraw"
@@ -69,13 +69,14 @@ def makeUdrawFile (g, fileNamePrefix):
             elif isinstance(g, Trees.LoopNests):
                 for v in g:
                         writeTreeVertex(g, v.getVertexID(), f)
+            # IPG Tree
+            elif isinstance(g, IPGTrees.IPGTree):
+                for v in g:
+                        writeIPGTreeVertex(g, v.getVertexID(), f)
             # IPG
-            elif isinstance(g, IPGs.IPG):
+            elif isinstance(g, IPGs.IPG) or isinstance(g, IPGTrees.AcyclicIPG):
                 for v in g:
                     writeIPGVertex(g, v.getVertexID(), f)
-            elif isinstance(g, FiniteAutomatons.GeneralisedAutomaton):
-                for v in g:
-                    writeAutomatonVertex(g, v, f)
             else:
                 for v in g:
                     writeVertex(g, v.getVertexID(), f)
@@ -94,31 +95,6 @@ def writeVertex (g, vertexID, f):
         f.write(newEdge)
         f.write(beginAttributes)
         f.write(setName(str(succID)))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-
-def writeAutomatonVertex(g, v, f):
-    vertexID = v.getVertexID()
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    f.write(setName(str(vertexID)))
-    if isinstance (v, FiniteAutomatons.RegExpVertex):
-        f.write(setToolTip(g.__str__(vertexID)))
-    else:
-        f.write(setName(str(vertexID)))
-        f.write(setShape(SHAPE.CIRCLE))
-        f.write(setColor(COLOR.YELLOW))
-    f.write(endAttibutes)
-    
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        succe = v.getSuccessorEdge(succID)
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setName(str(succID)))
-        f.write(setToolTip(succe.getExpr().__str__()))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
@@ -150,13 +126,13 @@ def writeTreeVertex (tree, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
-    if isinstance(v, Vertices.HeaderVertex):
-        f.write(setShape(SHAPE.TRIANGLE))
-        f.write(setColor(COLOR.RED))
-        f.write(setToolTip("Header ID = %s" % v.getHeaderID()))
     if isinstance(tree, Trees.LoopNests):
-        if tree.isLoopExit(vertexID):
-            f.write(setShape(SHAPE.CIRCLE))
+        if isinstance(v, Vertices.HeaderVertex):
+            f.write(setShape(SHAPE.TRIANGLE))
+            f.write(setColor(COLOR.RED))
+            f.write(setToolTip("Header ID = %s" % v.getHeaderID()))
+        elif tree.isLoopExit(vertexID):
+            f.write(setShape(SHAPE.ELLIPSE))
             f.write(setColor(COLOR.YELLOW))
             f.write(setToolTip("Loop Exit"))
     f.write(endAttibutes)
@@ -170,6 +146,26 @@ def writeTreeVertex (tree, vertexID, f):
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
+    
+def writeIPGTreeVertex(ipgTree, vertexID, f):
+    v = ipgTree.getVertex(vertexID)
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    if isinstance(v, Vertices.Ipoint):
+        f.write(setShape(SHAPE.CIRCLE))
+        f.write(setColor(COLOR.YELLOW))
+        f.write(setName(str(vertexID)))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
+        f.write(setName(str(succID)))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")    
 
 def writeIPGVertex (ipg, vertexID, f): 
     v = ipg.getVertex(vertexID)
@@ -190,6 +186,8 @@ def writeIPGVertex (ipg, vertexID, f):
         f.write(setToolTip(', '.join(str(v) for v in succe.getEdgeLabel())))
         if succe.isIterationEdge():
             f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
+        elif succe.isDummyEdge():
+            f.write(setEdgePattern(EDGESHAPE.DASHED, 2))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

@@ -19,10 +19,11 @@ class Edge ():
         return self.__edgeID
     
 class IPGEdge (Edge):
-    def __init__ (self, vertexID, edgeID=None):
+    def __init__ (self, vertexID, edgeID=None, dummyEdge=False):
         Edge.__init__(self, vertexID, edgeID)
         self.__edgeLabel = set()
         self.__iterationEdge = False
+        self.__dummyEdge = dummyEdge
         
     def addToEdgeLabel (self, vertices):
         self.__edgeLabel.update(set(vertices))
@@ -38,4 +39,7 @@ class IPGEdge (Edge):
     
     def isIterationEdge (self):
         return self.__iterationEdge
+    
+    def isDummyEdge (self):
+        return self.__dummyEdge
     

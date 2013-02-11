@@ -55,4 +55,26 @@ class DirectedGraph ():
     
     def __iter__ (self):
         return self.vertices.values().__iter__()
+
+class FlowGraph (DirectedGraph):
+    def __init__ (self):
+        DirectedGraph.__init__(self)
+        self._entryID = dummyVertexID
+        self._exitID = dummyVertexID
+        
+    def getEntryID (self):
+        assert self._entryID != dummyVertexID, "Entry to flow graph not found"
+        return self._entryID
     
+    def getExitID (self):
+        assert self._exitID != dummyVertexID, "Exit to flow graph not found"
+        return self._exitID
+    
+    def __str__ (self):
+        string = "*" * 40 + "\n" + \
+        "Entry ID = %s\n" % str(self._entryID) + \
+        "Exit ID  = %s\n" % str(self._exitID) + "\n"
+        for v in self.vertices.values():
+            string += v.__str__()
+        string += "*" * 40 + "\n"
+        return string

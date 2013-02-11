@@ -1,4 +1,4 @@
-from DirectedGraphs import dummyVertexID, DirectedGraph
+from DirectedGraphs import dummyVertexID, FlowGraph, DirectedGraph
 from Vertices import Vertex, Ipoint
 import Debug
 
@@ -63,11 +63,9 @@ class BasicBlock (Vertex):
         string += "\t" + 40 * "=" + "\n"      
         return string
         
-class CFG (DirectedGraph):    
+class CFG (FlowGraph):    
     def __init__ (self):
-        DirectedGraph.__init__(self)
-        self._entryID = dummyVertexID
-        self._exitID = dummyVertexID
+        FlowGraph.__init__(self)
         
     def getReverseCFG (self):
         reverseg = CFG() 
@@ -105,10 +103,6 @@ class CFG (DirectedGraph):
         
     def getVertex (self, bbID):
         return DirectedGraph.getVertex(self, bbID)
-    
-    def getEntryID (self):
-        assert self._entryID != dummyVertexID, "Entry ID not set" 
-        return self._entryID
         
     def setEntryID (self, entryID=None):
         if entryID is None:
@@ -122,10 +116,6 @@ class CFG (DirectedGraph):
             assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
             assert entryID > dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
             self._entryID = entryID
-            
-    def getExitID (self):
-        assert self._exitID != dummyVertexID, "Exit ID not set" 
-        return self._exitID
         
     def setExitID (self, exitID=None):
         if exitID is None:
