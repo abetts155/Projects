@@ -15,6 +15,10 @@ class DirectedGraph ():
         assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
         return self.vertices[vertexID]
     
+    def removeVertex (self, vertexID):
+        assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
+        del self.vertices[vertexID]
+    
     def hasVertex (self, vertexID):
         return vertexID in self.vertices
     

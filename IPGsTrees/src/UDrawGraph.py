@@ -70,11 +70,14 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                         writeTreeVertex(g, v.getVertexID(), f)
             # IPG Tree
-            elif isinstance(g, IPGTrees.IPGTree):
+            elif isinstance(g, IPGTrees.IterationEdgeTree):
                 for v in g:
+                    if isinstance(v, Vertices.Ipoint):
+                        writeIPGVertex(g, v.getVertexID(), f)
+                    else:
                         writeIPGTreeVertex(g, v.getVertexID(), f)
             # IPG
-            elif isinstance(g, IPGs.IPG) or isinstance(g, IPGTrees.AcyclicIPG):
+            elif isinstance(g, IPGs.IPG) or isinstance(g, IPGTrees.ForwardIPG):
                 for v in g:
                     writeIPGVertex(g, v.getVertexID(), f)
             else:
@@ -145,16 +148,26 @@ def writeTreeVertex (tree, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
+    f.write(endVertex + "\n")   
     
-def writeIPGTreeVertex(ipgTree, vertexID, f):
-    v = ipgTree.getVertex(vertexID)
+def writeIPGTreeVertex (ipg, vertexID, f): 
+    v = ipg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    if isinstance(v, Vertices.Ipoint):
-        f.write(setShape(SHAPE.CIRCLE))
-        f.write(setColor(COLOR.YELLOW))
-        f.write(setName(str(vertexID)))
+    if isinstance(v, IPGTrees.IterationEdgeVertex):
+        f.write(setShape(SHAPE.BOX))
+        f.write(setColor(COLOR.RED))
+        f.write(setName("(%d, %d)" % (v.getSourceID(), v.getDestinationID())))
+    elif isinstance(v, IPGTrees.LoopBoundVertex):
+        f.write(setShape(SHAPE.BOX))
+        f.write(setColor("#99CCFF"))
+        f.write(setName(v.getExpr()))
+    elif isinstance(v, IPGTrees.MaxVertex):
+        f.write(setShape(SHAPE.RHOMBUS))
+        f.write(setColor("#009999"))
+        f.write(setName("MAX"))
+    else:
+        assert False, "Unrecognised vertex type in IPG tree"
     f.write(endAttibutes)
     
     f.write(beginAttributes)
@@ -165,16 +178,21 @@ def writeIPGTreeVertex(ipgTree, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")    
+    f.write(endVertex + "\n")
 
 def writeIPGVertex (ipg, vertexID, f): 
     v = ipg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    f.write(setName(str(vertexID)))
-    f.write(setShape(SHAPE.CIRCLE))
-    f.write(setColor(COLOR.YELLOW))
-    f.write(setToolTip("Ipoint ID = 0x%04X" % v.getIpointID()))
+    f.write(setName(str(v.getRealID())))
+    if v.isGhost():
+        f.write(setShape(SHAPE.CIRCLE))
+        f.write(setColor(COLOR.RED))
+        f.write(setToolTip("GHOST"))
+    else:
+        f.write(setShape(SHAPE.CIRCLE))
+        f.write(setColor(COLOR.YELLOW))
+        f.write(setToolTip("Ipoint ID = 0x%04X" % v.getIpointID()))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
@@ -183,11 +201,13 @@ def writeIPGVertex (ipg, vertexID, f):
         f.write(newEdge)
         f.write(beginAttributes)
         f.write(setName(str(succe.getEdgeID())))
-        f.write(setToolTip(', '.join(str(v) for v in succe.getEdgeLabel())))
+        toolTip = ', '.join(str(v) for v in succe.getEdgeLabel())
         if succe.isIterationEdge():
             f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
         elif succe.isDummyEdge():
             f.write(setEdgePattern(EDGESHAPE.DASHED, 2))
+            toolTip += "DUMMY EDGE"
+        f.write(setToolTip(toolTip))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

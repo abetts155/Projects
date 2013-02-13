@@ -130,13 +130,27 @@ class HeaderVertex (TreeVertex):
         return TreeVertex.__str__(self)[:-1] + " (" + "*" * 3 + " HEADER " + "*" * 3 + ")\n" 
     
 class Ipoint (Vertex):
-    def __init__ (self, vertexID, IpointID):
+    def __init__ (self, vertexID, IpointID, realID=None):
         Vertex.__init__(self, vertexID)
         self.__IpointID = IpointID
         self.__succIpointIDToVertexID = {}
+        self.__isGhost = False
+        if realID:
+            self.__realID = realID
+        else:
+            self.__realID = vertexID
+    
+    def setGhost (self):
+        self.__isGhost = True
+        
+    def isGhost (self):
+        return self.__isGhost
         
     def getIpointID (self):
         return self.__IpointID
+    
+    def getRealID (self):
+        return self.__realID
     
     def addIpointSuccessor (self, succIpointID, succID):
         self.__succIpointIDToVertexID[succIpointID] = succID
