@@ -29,6 +29,14 @@ class Tree (DirectedGraph):
     def isInternalVertex (self, vertexID):
         return self.getVertex(vertexID).numberOfSuccessors() > 0
     
+    def getAllProperAncestors (self, vertexID):
+        ancestors = set([])
+        while vertexID != self._rootID:
+            parentID = self.getVertex(vertexID).getParentID()
+            ancestors.add(self.getVertex(parentID))
+            vertexID = parentID
+        return ancestors
+    
     def isAncestor (self, left, right):
         if left == right:
             return True

@@ -16,17 +16,23 @@ class CreateWCETData:
             for v in vertices:
                 if isinstance(v, Vertices.HeaderVertex):
                     if level > 0:
-                        bound = random.randint(5, 20)
-                        self.__headerToBound[v.getHeaderID()] = bound
-                        Debug.debugMessage("Bound(%d) = %d" % (v.getHeaderID(), bound), 1)
+                        headerID                       = v.getHeaderID()
+                        self.__headerToBound[headerID] = {}
+                        for ancestorv in lnt.getAllProperAncestors(v.getVertexID()):
+                            ancestorHeaderID = ancestorv.getHeaderID()
+                            bound            = random.randint(5, 20)
+                            self.__headerToBound[headerID][ancestorHeaderID] = bound
+                            Debug.debugMessage("Bound(%d w.r.t %d) = %d" % (headerID, ancestorHeaderID, bound), 1)
     
     def getTransitionWCET (self, predID, succID):
         if (predID, succID) in self.__transitionWCET:
             return self.__transitionWCET[(predID, succID)]
         else:
+            Debug.verboseMessage("WARNING: returning WCET of 0 for edge (%d, %d)" % (predID, succID))
             return 0
         
-    def getLoopBound (self, headerID):
+    def getLoopBound (self, headerID, ancestorID):
         assert headerID in self.__headerToBound, "Unable to find bound for header %d" % headerID
-        return self.__headerToBound[headerID]
+        assert ancestorID in self.__headerToBound[headerID], "Unable to find bound for header %d w.r.t. header %d" % (headerID, ancestorID)
+        return self.__headerToBound[headerID][ancestorID]
     

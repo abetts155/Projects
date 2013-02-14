@@ -7,6 +7,7 @@ succ: (F1, 3) (F1, 9)
 
 bb: 3
 succ: (F1, 4)
+Ipoint: start
 
 bb: 4
 succ: (F1, 5) (F1, 6)
@@ -27,6 +28,7 @@ succ: (F1, 2) (F1, 14)
 
 bb: 9
 succ: (F1, 10)
+Ipoint: start
 
 bb: 10
 succ: (F1, 11) (F1, 12)
