@@ -96,11 +96,17 @@ class MiniIPG (DirectedGraphs.FlowGraph):
                         ipointv = Vertices.Ipoint(vertexID, v.getIpointID())
                         self.vertices[vertexID] = ipointv
                 for exitID in self.__lnt.getLoopExits(innerheaderID):
-                    for keyID in innerMiniIPG.getReachableSet(exitID):
-                        if not self.hasVertex(keyID) and self.__ipg.hasVertex(keyID):
-                            v       = self.__ipg.getVertex(keyID)
-                            ipointv = Vertices.Ipoint(keyID, v.getIpointID())
-                            self.vertices[keyID] = ipointv
+                    if self.__ipg.hasVertex(exitID):
+                        if not self.hasVertex(exitID):
+                            v       = self.__ipg.getVertex(exitID)
+                            ipointv = Vertices.Ipoint(exitID, v.getIpointID())
+                            self.vertices[exitID] = ipointv
+                    else:
+                        for keyID in innerMiniIPG.getReachableSet(exitID):
+                            if not self.hasVertex(keyID) and self.__ipg.hasVertex(keyID):
+                                v       = self.__ipg.getVertex(keyID)
+                                ipointv = Vertices.Ipoint(keyID, v.getIpointID())
+                                self.vertices[keyID] = ipointv
                 
     def __addAcyclicEdges (self):
         # Compute a topological sort on the ICFG
@@ -161,9 +167,12 @@ class MiniIPG (DirectedGraphs.FlowGraph):
         innerheaderID = v.getVertexID()
         innerMiniIPG  = self.__headerToMiniIPG[innerheaderID]       
         for exitID in self.__lnt.getLoopExits(innerheaderID):
-            for keyID in innerMiniIPG.getReachableSet(exitID):
-                if self.__ipg.hasVertex(keyID):
-                    self.__vertexToReachable[innerheaderID].add(keyID)
+            if self.__ipg.hasVertex(exitID):
+                self.__vertexToReachable[innerheaderID].add(exitID)
+            else:
+                for keyID in innerMiniIPG.getReachableSet(exitID):
+                    if self.__ipg.hasVertex(keyID):
+                        self.__vertexToReachable[innerheaderID].add(keyID)
                             
     def __addIterationEdges (self):
         Debug.debugMessage("Iteration edge SOURCEs      = %s" % self.__iterationEdgeSources, 1)
@@ -203,13 +212,12 @@ class MiniIPG (DirectedGraphs.FlowGraph):
         return self.__iterationEdgeDestinations    
     
     def isIterationEdge (self, predID, succID):
-        return predID in self.__iterationEdgeSources and succID in self.__iterationEdgeDestinations   
-    
+        return predID in self.__iterationEdgeSources and succID in self.__iterationEdgeDestinations
     
 class CreateILP ():
     comma     = ","
     equals    = " = "
-    ltorequal = " <= "
+    ltOrEqual = " <= "
     plus      = " + "
     semiColon = ";"
     
@@ -281,7 +289,7 @@ class CreateILP ():
                             if counter > 1:
                                 self.__outfile.write(CreateILP.plus)
                             counter -= 1
-                        self.__outfile.write(CreateILP.equals)
+                        self.__outfile.write(CreateILP.ltOrEqual)
                         # Write out the relative edges
                         counter = len(relativeEdgeIDs)
                         for edgeID in relativeEdgeIDs:

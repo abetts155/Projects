@@ -6,77 +6,35 @@ bb: 2
 succ: (F1, 3)
 
 bb: 3
-succ: (F1, 4) (F1, 5) (F1, 6)
+succ: (F1, 4) 
 
 bb: 4
-succ: (F1, 9)
+succ: (F1, 5) (F1, 6)
 
 bb: 5
-succ: (F1, 7)
+succ: (F1, 11)
+Ipoint: start
 
 bb: 6
 succ: (F1, 7)
-Ipoint: end
+Ipoint: start
 
 bb: 7
-succ: (F1, 8)
+succ: (F1, 8) (F1, 9)
 
 bb: 8 
-succ: (F1, 9)
+succ: (F1, 10)
+Ipoint: start
 
 bb: 9
 succ: (F1, 10)
 
 bb: 10
-succ: (F1, 11) (F1, 12)
+succ: (F1, 11) (F1, 7)
+Ipoint: end
 
 bb: 11
-succ: (F1, 13)
+succ: (F1, 12) (F1, 3)
 
 bb: 12
-succ: (F1, 14) (F1, 15)
-
-bb: 13
-succ: (F1, 17)
-Ipoint: end
-
-bb: 14
-succ: (F1, 16) 
-
-bb: 15
-succ: (F1, 16)
-
-bb: 16
-succ: (F1, 17)
-
-bb: 17
-succ: (F1, 18)
-
-bb: 18
-succ: (F1, 19)
-
-bb: 19
-succ: (F1, 20) (F1, 23) (F1, 24)
-Ipoint: end
-
-bb: 20
-succ: (F1, 21) (F1, 22)
-
-bb: 21
-succ: (F1, 26)
-
-bb: 22
-succ: (F1, 26)
-Ipoint: end
-
-bb: 23
-succ: (F1, 25)
-
-bb: 24
-succ: (F1, 25)
-
-bb: 25
-succ: (F1, 26)
-
-bb: 26
 succ:
