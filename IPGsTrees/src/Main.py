@@ -26,6 +26,13 @@ cmdline.add_option("-v",
                  help="Be verbose.",
                  default=False)
 
+cmdline.add_option("-C",
+                  "--deep-clean",
+                  action="store_true",
+                  dest="deepclean",
+                  help="Clean previous runs of GPGPU-sim and uDrawgraph files.",
+                  default=False)
+
 cmdline.add_option("-u",
                  "--udraw",
                  action="store_true",
@@ -36,8 +43,21 @@ cmdline.add_option("-u",
 (opts, args) = cmdline.parse_args(sys.argv[1:])
 Debug.verbose = opts.verbose
 Debug.debug = opts.debug
+
+def removeFile (fullPath):
+    Debug.verboseMessage("Removing '%s'" % fullPath)
+    os.remove(fullPath)
+
+def preClean (abspath):
+    for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
+        files.sort()
+        for filename in files:
+            if filename.endswith('.udraw') or filename.endswith('.ilp'):
+                removeFile(os.path.join(paths, filename))
                 
 if __name__ == "__main__":
+    if opts.deepclean:
+        preClean(os.path.abspath(os.curdir))
     if len(args) == 1:
         infile = args[0]
         assert infile.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
@@ -52,8 +72,8 @@ if __name__ == "__main__":
             UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, icfg.getName(), "lnt"))
             ipg = IPGs.IPG(icfg)
             UDrawGraph.makeUdrawFile(ipg, "%s.%s.%s" % (basename, icfg.getName(), "ipg"))
-            data  = Database.CreateWCETData(ipg, lnt)
-            relativeCapacityConstraints = IPGCalculations.RelativeCapacityConstraints(basename, icfg, lnt, ipg)
-            IPGCalculations.CreateILP(basepath, basename, data, ipg, lnt, relativeCapacityConstraints)
+            data     = Database.CreateWCETData(ipg, lnt)
+            miniIPGs = IPGCalculations.BuildMiniIPGs(basename, icfg, lnt, ipg)
+            IPGCalculations.CreateILP(basepath, basename, data, ipg, lnt, miniIPGs)
     else:
         Debug.exitMessage("You need to specify the name of a file containing CFGs")

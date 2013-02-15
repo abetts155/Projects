@@ -9,7 +9,7 @@ class CreateWCETData:
             for succID in v.getSuccessorIDs():
                 succe = v.getSuccessorEdge(succID)
                 if not succe.isDummyEdge():
-                    transitionWCET = random.randint(1, 100)
+                    transitionWCET = random.randint(1, 10)
                     self.__transitionWCET[(v.getVertexID(), succID)] = transitionWCET
                     Debug.debugMessage("WCET(%d, %d) = %d" % (v.getVertexID(), succID, transitionWCET), 1)
         for level, vertices in lnt.levelIterator(True):
@@ -20,7 +20,7 @@ class CreateWCETData:
                         self.__headerToBound[headerID] = {}
                         for ancestorv in lnt.getAllProperAncestors(v.getVertexID()):
                             ancestorHeaderID = ancestorv.getHeaderID()
-                            bound            = random.randint(5, 20)
+                            bound            = random.randint(3, 10)
                             self.__headerToBound[headerID][ancestorHeaderID] = bound
                             Debug.debugMessage("Bound(%d w.r.t %d) = %d" % (headerID, ancestorHeaderID, bound), 1)
     
