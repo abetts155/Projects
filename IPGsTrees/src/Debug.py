@@ -8,6 +8,9 @@ def debugMessage (string, debugLevel=1):
 def verboseMessage (string):
     if verbose:
         print(string)
+        
+def warningMessage(string):
+    print("*** WARNING: %s ***" % string)
 
 def exitMessage(string):
     print(string)

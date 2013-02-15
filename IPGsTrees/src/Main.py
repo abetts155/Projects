@@ -72,8 +72,9 @@ if __name__ == "__main__":
             UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, icfg.getName(), "lnt"))
             ipg = IPGs.IPG(icfg)
             UDrawGraph.makeUdrawFile(ipg, "%s.%s.%s" % (basename, icfg.getName(), "ipg"))
-            data     = Database.CreateWCETData(ipg, lnt)
             miniIPGs = IPGCalculations.BuildMiniIPGs(basename, icfg, lnt, ipg)
-            IPGCalculations.CreateILP(basepath, basename, data, ipg, lnt, miniIPGs)
+            data     = Database.CreateWCETData(icfg, lnt, ipg)
+            IPGCalculations.CreateIPGILP(basepath, basename, data, ipg, lnt, miniIPGs)
+            IPGCalculations.CreateICFGILP(basepath, basename, data, icfg, lnt)
     else:
         Debug.exitMessage("You need to specify the name of a file containing CFGs")

@@ -30,10 +30,10 @@ class Tree (DirectedGraph):
         return self.getVertex(vertexID).numberOfSuccessors() > 0
     
     def getAllProperAncestors (self, vertexID):
-        ancestors = set([])
+        ancestors = []
         while vertexID != self._rootID:
             parentID = self.getVertex(vertexID).getParentID()
-            ancestors.add(self.getVertex(parentID))
+            ancestors.append(self.getVertex(parentID))
             vertexID = parentID
         return ancestors
     

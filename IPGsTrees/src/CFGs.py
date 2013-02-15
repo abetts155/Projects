@@ -137,6 +137,17 @@ class CFG (FlowGraph):
         entryv.addPredecessor(self._exitID)
         exitv.addSuccessor(self._entryID)
         
+    def setEdgeIDs (self):
+        edgeID = 1
+        for v in self:
+            for succID in v.getSuccessorIDs():
+                succe = v.getSuccessorEdge(succID)
+                succe.setEdgeID(edgeID)
+                succv = self.getVertex(succID)
+                prede = succv.getPredecessorEdge(v.getVertexID())
+                prede.setEdgeID(edgeID)
+                edgeID += 1
+        
     def __str__ (self):
         string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
         "Entry ID = %s\n" % str(self._entryID) + \

@@ -106,4 +106,5 @@ def createProgram (outfile):
         icfg.addPredecessorEdges()
         icfg.addIpointEdges()
         setEntryAndExit(icfg)
+        icfg.setEdgeIDs()
     return program     

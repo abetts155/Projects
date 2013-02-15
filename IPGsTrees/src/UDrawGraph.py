@@ -71,16 +71,18 @@ def makeUdrawFile (g, fileNamePrefix):
                         writeTreeVertex(g, v.getVertexID(), f)
             # IPG
             elif isinstance(g, IPGs.IPG) or isinstance(g, IPGCalculations.MiniIPG):
+                writeIPGVertex(g, g.getEntryID(), f)
                 for v in g:
-                    writeIPGVertex(g, v.getVertexID(), f)
+                    vertexID = v.getVertexID()
+                    if vertexID != g.getEntryID():
+                        writeIPGVertex(g, vertexID, f)
             else:
                 for v in g:
                     writeVertex(g, v.getVertexID(), f)
             f.write(endGraph) 
             
 def writeVertex (g, vertexID, f):
-    v = g.getVertex(vertexID)
-        
+    v = g.getVertex(vertexID)        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -98,7 +100,6 @@ def writeVertex (g, vertexID, f):
     
 def writeCFGVertex (cfg, vertexID, f):
     v = cfg.getVertex(vertexID)
-        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
@@ -111,7 +112,8 @@ def writeCFGVertex (cfg, vertexID, f):
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
-        f.write(setName(str(succID)))
+        succe = v.getSuccessorEdge(succID)
+        f.write(setName(str(succe.getEdgeID())))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
