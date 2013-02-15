@@ -1,6 +1,35 @@
 from Edges import Edge
 from DirectedGraphs import dummyVertexID
 
+class UndirectedVertex ():
+    def __init__ (self, vertexID):
+        self._vertexID = vertexID
+        self._edges = []
+    
+    def getVertexID (self):
+        return self._vertexID
+    
+    def addEdge (self, vertexID, edgeID=None):
+        self._edges.append(vertexID)
+        
+    def getVertexIDs (self):
+        return self._edges
+    
+    def degree (self):
+        return len(self._edges)
+    
+    def __str__ (self):
+        string = "Vertex ID = " + str(self._vertexID) + "\n"
+        string += "pred = {"
+        count = 1
+        for vertexID in sorted(self._edges):
+            string += str(vertexID)
+            if count < len(self._edges):
+                string += ","
+                count = count + 1
+        string += "}\n"
+        return string
+
 class Vertex ():
     def __init__ (self, vertexID):
         self._vertexID = vertexID

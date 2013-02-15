@@ -3,22 +3,29 @@ import os
 
 class BuildMiniIPGs ():    
     def __init__ (self, basename, icfg, lnt, ipg):
-        self.__headerToMiniIPG        = {}
-        self.__headerIterationEdgeIDs = {}
-        self.__headerRelativeEdgeIDs  = {}
+        self.__headerToMiniIPG         = {}
+        self.__headerIterationEdgeIDs  = {}
+        self.__headerRelativeEdgeIDs   = {}
+        self.__headerToReconstructible = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, Vertices.HeaderVertex):
                     headerID = v.getHeaderID()
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    forwardICFG = lnt.induceSubgraph(v)
+                    forwardICFG = lnt.induceSubgraph(v, self.__headerToReconstructible)
+                    self.__headerToReconstructible[headerID] = forwardICFG.isPathReconstructible()
+                    Debug.debugMessage("Region in %d is %spath reconstructible" % (headerID, "" if self.__headerToReconstructible[headerID] else "NOT "), 1)
                     UDrawGraph.makeUdrawFile (forwardICFG, "%s.%s.Header%d.%s" % (basename, icfg.getName(), headerID, "icfg"))
                     miniIPG = MiniIPG(headerID, self.__headerToMiniIPG, forwardICFG, lnt, ipg)
                     self.__headerToMiniIPG[headerID] = miniIPG 
                     UDrawGraph.makeUdrawFile (miniIPG, "%s.%s.Header%d.%s" % (basename, icfg.getName(), headerID, "ipg"))
             
+    def isPathReconstructible (self, headerID):
+        assert headerID in self.__headerToReconstructible, "Unable to find whether loop with header %d is path reconstructible" % (headerID)
+        return self.__headerToReconstructible[headerID]
+    
     def getMiniIPG (self, headerID):
-        assert headerID in self.__headerToMiniIPG, "Unable to find mini IPG region of loop %d" % (headerID)
+        assert headerID in self.__headerToMiniIPG, "Unable to find the mini IPG of the loop with header %d" % (headerID)
         return self.__headerToMiniIPG[headerID]
     
 class MiniIPG (DirectedGraphs.FlowGraph):    
@@ -228,19 +235,24 @@ class MiniIPG (DirectedGraphs.FlowGraph):
         return self.__innerLoopExitEdgeIDs[innerheaderID]
     
 class CreateILP ():
-    comma     = ","
-    equals    = " = "
-    ltOrEqual = " <= "
-    plus      = " + "
-    semiColon = ";"
+    comma      = ","
+    equals     = " = "
+    ltOrEqual  = " <= "
+    plus       = " + "
+    semiColon  = ";"
+    edgePrefix = "e_"
     
     def __init__ (self, basepath, basename, data, ipg, lnt, miniIPGs):
         filename = "%s.%s.%s" % (basepath + os.sep + basename, ipg.getName(), "ilp")
+        self.__wcet                   = -1
+        self.__edgeIDToExecutionCount = {}
         with open(filename, 'w') as self.__outfile:
             self.__createObjectiveFunction(data, ipg)
             self.__createStructuralConstraints(ipg)
             self.__createRelativeCapacityConstraints(data, lnt, miniIPGs)
             self.__createIntegerConstraints(ipg)
+        self.__solve(ipg, filename)
+        Debug.debugMessage("WCET = %d" % self.__wcet, 1)
 
     def __createObjectiveFunction (self, data, ipg):
         self.__outfile.write("max: ")
@@ -321,7 +333,13 @@ class CreateILP ():
         self.__outfile.write(CreateILP.ltOrEqual)
         # Write out the relative edges
         outerMiniIPG    = miniIPGs.getMiniIPG(parentHeaderID)
-        relativeEdgeIDs = outerMiniIPG.getInnerLoopEntryEdgeIDs(headerID)
+        entryEdgeIDs    = outerMiniIPG.getInnerLoopEntryEdgeIDs(headerID)
+        relativeEdgeIDs = entryEdgeIDs
+        exitEdgeIDs     = outerMiniIPG.getInnerLoopExitEdgeIDs(headerID)
+        for edgeID in relativeEdgeIDs:
+            if outerMiniIPG.isIterationEdgeID(edgeID):
+                Debug.debugMessage("Loop-entry edge %d is also an iteration edge in %d" % (edgeID, parentHeaderID), 1)
+                relativeEdgeIDs = exitEdgeIDs
         counter = len(relativeEdgeIDs)
         for edgeID in relativeEdgeIDs:
             self.__outfile.write("%d %s" % (bound, self.__getEdgeVariable(edgeID)))
@@ -346,11 +364,32 @@ class CreateILP ():
         self.__outfile.write(self.__getNewLine())
             
     def __getEdgeVariable (self, edgeID):
-        return "e_%d" % edgeID
+        return "%s%d" % (CreateILP.edgePrefix, edgeID)
     
     def __getComment (self, comment):
         return "// " + comment + "\n"
     
     def __getNewLine (self, num=1):
         return "\n" * num        
+    
+    def __solve(self, ipg, filename):
+        from subprocess import Popen, PIPE
+        import shlex, decimal
+        Debug.debugMessage("Solving ILP", 10)
+        command = "lp_solve %s" % filename 
+        proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        returnCode = proc.wait()
+        if returnCode != 0:
+            Debug.exitMessage("Running '%s' failed" % command)
+        for line in proc.stdout.readlines():
+            if line.startswith("Value of objective function"):
+                lexemes     = shlex.split(line)
+                self.__wcet = long(decimal.Decimal(lexemes[-1])) 
+            elif line.startswith(CreateILP.edgePrefix):
+                lexemes = shlex.split(line)
+                assert len(lexemes) == 2, "Incorrectly detected edge execution count line '%s'" % line
+                edgeID = int(lexemes[0][len(CreateILP.edgePrefix):])
+                count  = int(lexemes[1]) 
+                self.__edgeIDToExecutionCount[edgeID] = count
+                Debug.debugMessage("Execution count of edge %d = %d" % (edgeID, count), 1)
         

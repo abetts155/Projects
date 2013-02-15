@@ -202,6 +202,45 @@ class ICFG (CFG):
                     self.addEdge(ipoint.getVertexID(), succID)
                     self.removeEdge(bb.getVertexID(), succID)
                 self.addEdge(bb.getVertexID(), ipoint.getVertexID())
+                
+    def isPathReconstructible (self):
+        # First create a subgraph without Ipoints
+        subgraph = ICFG()
+        for v in self:
+            vertexID = v.getVertexID()
+            if not self.isIpoint(vertexID):
+                bb = BasicBlock(vertexID)
+                subgraph.vertices[vertexID] = bb
+        for v in self:
+            vertexID = v.getVertexID()
+            if not self.isIpoint(vertexID):
+                v = self.getVertex(vertexID)
+                for succID in v.getSuccessorIDs():
+                    if not self.isIpoint(succID):
+                        subgraph.addEdge(vertexID, succID)
+        # Now do a depth-first search to try and find DFS back edges
+        reconstructible = True
+        vertices = []
+        for v in subgraph:
+            if v.numberOfPredecessors() == 0:
+                vertices.append(v.getVertexID())            
+        for vertexID in vertices:
+            visited  = {}
+            for v in subgraph:
+                visited[v.getVertexID()] = False
+            stack = []
+            stack.append(vertexID)
+            while stack:
+                poppedID          = stack.pop()
+                visited[poppedID] = True
+                poppedv           = subgraph.getVertex(poppedID)
+                for succID in poppedv.getSuccessorIDs():
+                    if not visited[succID]:
+                        stack.append(succID)
+                    else:
+                        Debug.debugMessage("Visiting %d, which has already been visited. ICFG is NOT path reconstructible" % succID, 1)
+                        reconstructible = False
+        return reconstructible
     
 class Program():
     def __init__(self):

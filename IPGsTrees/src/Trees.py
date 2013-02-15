@@ -525,7 +525,7 @@ class LoopNests (Tree):
     def isNested (self, left, right):
         return self.isProperAncestor(right, left)
     
-    def induceSubgraph (self, headerv):
+    def induceSubgraph (self, headerv, headerToReconstructible):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         flowg    = CFGs.ICFG()
         edges    = {}
@@ -535,18 +535,15 @@ class LoopNests (Tree):
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID):
                 # Add the correct vertex type to the induced graph
-                if isinstance(self.__directedg.getVertex(vertexID), CFGs.BasicBlock):
-                    bb = CFGs.BasicBlock(vertexID)
-                    flowg.addVertex(bb)
-                else:
+                if isinstance(self.__directedg.getVertex(vertexID), Ipoint) \
+                or (self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID() and headerToReconstructible[vertexID]):
                     ipoint = CFGs.Ipoint(vertexID, vertexID)
                     flowg.addIpoint(ipoint)
+                else:
+                    bb = CFGs.BasicBlock(vertexID)
+                    flowg.addVertex(bb)
                 # Now discover which edges are incident to this vertex
-                edges[vertexID] = set([])
-                if self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
-                    if self.isDoWhileLoop(vertexID):
-                        flowg.getVertex(vertexID).setDummy()
-                        
+                edges[vertexID] = set([])                        
                 originalv = self.__directedg.getVertex(vertexID)
                 for predID in originalv.getPredecessorIDs():
                     treePredv    = self.getVertex(predID)
