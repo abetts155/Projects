@@ -185,6 +185,9 @@ class SuperBlock (Vertex):
     def addBasicBlock (self, vertexID):
         self.__basicBlocks.add(vertexID)
         
+    def addBasicBlocks (self, basicBlocks):
+        self.__basicBlocks.update(basicBlocks)
+        
     def containsBasicBlock (self, vertexID):
         return vertexID in self.__basicBlocks
     

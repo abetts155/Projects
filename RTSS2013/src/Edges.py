@@ -29,6 +29,14 @@ class CallGraphEdge (Edge):
     def getCallSites (self):
         return self.__callSites
     
+class SuperBlockEdge (Edge):
+    def __init__ (self, vertexID, bbID):
+        Edge.__init__(self, vertexID)
+        self.__bbID = bbID
+        
+    def getBasicBlockID (self):
+        return self.__bbID
+    
 class IPGEdge (Edge):
     def __init__ (self, vertexID, edgeID=None, dummyEdge=False):
         Edge.__init__(self, vertexID, edgeID)

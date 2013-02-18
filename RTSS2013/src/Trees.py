@@ -427,10 +427,10 @@ class LoopNests (Tree):
             for predID in v.getPredecessorIDs():
                 if self.__dfs.isDFSBackedge(predID, vertexID):
                     if predID == vertexID:
-                        Debug.debugMessage("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 3)
+                        Debug.debugMessage("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 15)
                         self._addSelfLoop (vertexID)
                     else:
-                        Debug.debugMessage("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), 3)
+                        Debug.debugMessage("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), 15)
                         worklist.append(self.__parent[predID])
             
             if worklist:
@@ -494,7 +494,7 @@ class LoopNests (Tree):
                                 self.__loopExits[headerID].append(vertexID)
                         else:
                             self.__loopExits[headerID].append(vertexID)
-            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID]), 4)
+            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID]), 15)
             
     def __str__ (self):
         string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"

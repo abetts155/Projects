@@ -1,39 +1,101 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import Vertex, HeaderVertex, SuperBlock
+from Edges import SuperBlockEdge
 from Trees import Dominators, DominanceFrontiers
 import Debug
 
 class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
         DirectedGraph.__init__(self)
+        self.__headerToRootSuperBlock = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
                     headerID = v.getHeaderID()
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    forwardICFG = lnt.induceSubgraph(v)
-                    predomTree  = Dominators(forwardICFG, forwardICFG.getEntryID())
-                    reverseICFG = forwardICFG.getReverseCFG()
-                    postdomTree = Dominators(reverseICFG, reverseICFG.getEntryID())
-                    preDF       = DominanceFrontiers(forwardICFG, predomTree)
-                    postDF      = DominanceFrontiers(reverseICFG, postdomTree)    
-                    dominatorg  = DominatorGraph(predomTree, postdomTree)  
-                    sccs        = StrongComponents(dominatorg)
-                    self.__addSuperBlocks(forwardICFG, sccs)
+                    forwardICFG        = lnt.induceSubgraph(v)
+                    predomTree         = Dominators(forwardICFG, forwardICFG.getEntryID())
+                    reverseICFG        = forwardICFG.getReverseCFG()
+                    postdomTree        = Dominators(reverseICFG, reverseICFG.getEntryID())
+                    postDF             = DominanceFrontiers(reverseICFG, postdomTree)    
+                    dominatorg         = DominatorGraph(predomTree, postdomTree)  
+                    sccs               = StrongComponents(dominatorg)
+                    disconnected       = []
+                    vertexToSuperBlock = {}
+                    self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, disconnected, vertexToSuperBlock, headerID)
+                    self.__addEdges(forwardICFG, predomTree, postdomTree, postDF, disconnected, vertexToSuperBlock)
+                    assert not disconnected, "Added empty super blocks in loop region with header %d but some remain disconnected" % headerID
+                    self.__headerToRootSuperBlock[headerID] = self.__findRootSuperBlock(headerID)
     
-    def __addSuperBlocks (self, forwardICFG, sccs):
+    def __findRootSuperBlock (self, headerID):
+        for v in self:
+            if v.containsBasicBlock(headerID):
+                return v 
+        assert False, "Unable to find super block with header %d" % headerID
+                    
+    def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, disconnected, vertexToSuperBlock, headerID):
         sccIDToVertex = {}
         for sccID in xrange(1, sccs.numberOfSCCs()+1):
-            vertexID                = self.getNextVertexID()
-            superv                  = SuperBlock(vertexID)
-            self.vertices[vertexID] = superv
-            sccIDToVertex[sccID]    = superv
+            superVertexID                = self.getNextVertexID()
+            superv                       = SuperBlock(superVertexID)
+            self.vertices[superVertexID] = superv
+            sccIDToVertex[sccID]         = superv
         for v in forwardICFG:
-            vertexID = v.getVertexID()
+            vertexID = v.getVertexID()     
             sccID    = sccs.getSCCID(vertexID)
             superv   = sccIDToVertex[sccID]
             superv.addBasicBlock(vertexID)
-        
+            vertexToSuperBlock[vertexID] = superv
+            if v.numberOfSuccessors() > 1:
+                ipostID = postdomTree.getVertex(vertexID).getParentID()
+                if v.hasSuccessor(ipostID):
+                    superVertexID = self.getNextVertexID()
+                    superv        = SuperBlock(superVertexID)
+                    self.vertices[superVertexID] = superv
+                    disconnected.append(superv)
+        for v in forwardICFG:
+            vertexID = v.getVertexID()     
+            if lnt.isLoopHeader(vertexID) and vertexID != headerID:
+                superv     = self.__headerToRootSuperBlock[vertexID]
+                redundantv = vertexToSuperBlock[vertexID]
+                superv.addBasicBlocks(redundantv.getBasicBlockIDs())
+                for bbID in redundantv.getBasicBlockIDs():
+                    vertexToSuperBlock[bbID] = superv
+                self.removeVertex(redundantv.getVertexID())
+                
+    def __addEdges (self, forwardICFG, predomTree, postdomTree, postDF, disconnected, vertexToSuperBlock):
+        for v in forwardICFG:
+            vertexID = v.getVertexID()
+            if v.numberOfSuccessors() > 1:
+                sourcev = vertexToSuperBlock[vertexID]
+                for succID in v.getSuccessorIDs():
+                    if not postdomTree.isAncestor(succID, vertexID):
+                        destinationv = vertexToSuperBlock[succID]
+                        if not sourcev.hasSuccessor(destinationv.getVertexID()):
+                            self.__addEdge(sourcev, destinationv, vertexID)
+                    else:
+                        destinationv = disconnected.pop()
+                        self.__addEdge(sourcev, destinationv, vertexID)
+            if v.numberOfPredecessors() > 1:
+                ipreID = predomTree.getVertex(vertexID).getParentID()
+                if postdomTree.getVertex(ipreID).getParentID() != vertexID:
+                    destinationv = vertexToSuperBlock[vertexID]
+                    for predID in v.getPredecessorIDs():
+                        sourcev = vertexToSuperBlock[predID]
+                        if not sourcev.hasSuccessor(destinationv.getVertexID()):
+                            self.__addEdge(sourcev, destinationv, predID)    
+                    if postDF.size(vertexID) > 1:
+                        Debug.debugMessage("Acyclic IRREDUCIBLE merge %d found" % vertexID, 1)
+                        destinationv.setUnstructuredMerge()
+                    else:
+                        Debug.debugMessage("Acyclic REDUCIBLE merge %d found" % vertexID, 1)
+    
+    def __addEdge (self, sourcev, destinationv, branchID):
+        succe = SuperBlockEdge(destinationv.getVertexID(), branchID)
+        sourcev.addSuccessorEdge(succe)
+        prede = SuperBlockEdge(sourcev.getVertexID(), branchID)
+        destinationv.addPredecessorEdge(prede)
+    
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):
         DirectedGraph.__init__(self)
@@ -58,7 +120,7 @@ class DominatorGraph (DirectedGraph):
             vertexID = v.getVertexID()
             if vertexID != postdomTree.getRootID(): 
                 parentID = v.getParentID()
-                if not v.hasPredecessor(parentID):
+                if not self.getVertex(vertexID).hasPredecessor(parentID):
                     self.addEdge(v.getParentID(), vertexID)
                 
 def enum(*sequential, **named):
@@ -89,12 +151,12 @@ class StrongComponents ():
         # Depth-first search on reverse graph
         self.__sccCounter = 0
         self.__reverseg   = directedg.getReverseGraph()
-        for vertexID in vertexList:
+        for vertexID in reversed(vertexList):
             if self.__vertexToColour[vertexID] == Colors.BLACK:
                 self.__sccCounter += 1
                 # The vertex v is from the forward directed graph.
                 # Need to get the vertex from the reverse graph instead
-                self.__visit2(self.__reverseg .getVertex(vertexID))
+                self.__visit2(self.__reverseg.getVertex(vertexID))
     
     def __visit1 (self, v, vertexList):
         stack = []
@@ -119,7 +181,7 @@ class StrongComponents ():
             poppedv = stack.pop()
             vertexID = poppedv.getVertexID()
             self.__vertexToSCC[vertexID] = self.__sccCounter
-            Debug.debugMessage("Vertex %d is in SCC %d" % (vertexID, self.__sccCounter), 1)
+            Debug.debugMessage("Vertex %d is in SCC %d" % (vertexID, self.__sccCounter), 15)
             if self.__vertexToColour[vertexID] == Colors.BLACK:
                 self.__vertexToColour[vertexID] = Colors.BLUE
                 stack.append(poppedv)

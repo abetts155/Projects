@@ -156,6 +156,8 @@ def writeSuperBlockVertex (superg, vertexID, f):
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
+        succe = v.getSuccessorEdge(succID)
+        f.write(setName(str(succe.getBasicBlockID())))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

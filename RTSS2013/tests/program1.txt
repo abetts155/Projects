@@ -15,7 +15,7 @@ bb: 5
 succ: (F1, 11)
 
 bb: 6
-succ: (F1, 7)
+succ: (F1, 7) (F1, 11)
 
 bb: 7
 succ: (F1, 8) (F1, 9)
