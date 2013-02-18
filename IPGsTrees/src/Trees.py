@@ -536,7 +536,7 @@ class LoopNests (Tree):
             if not flowg.hasVertex(vertexID):
                 # Add the correct vertex type to the induced graph
                 if isinstance(self.__directedg.getVertex(vertexID), Ipoint) \
-                or (self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID() and headerToReconstructible[vertexID]):
+                or (self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID() and headerToReconstructible[vertexID] and self.isDoWhileLoop(vertexID)):
                     ipoint = CFGs.Ipoint(vertexID, vertexID)
                     flowg.addIpoint(ipoint)
                 else:
@@ -554,13 +554,8 @@ class LoopNests (Tree):
                             worklist.append(predID)
                             edges[vertexID].add(predID)
                         elif self.isNested(headerPredv.getVertexID(), headerv.getVertexID()):
-                            if self.isDoWhileLoop(predHeaderID):
-                                worklist.append(predHeaderID)
-                                edges[vertexID].add(predHeaderID)
-                            else:
-                                worklist.append(predID)
-                                edges[vertexID].add(predID)
-        
+                            worklist.append(predHeaderID)
+                            edges[vertexID].add(predHeaderID)
         # Add edges in induced subgraph
         for vertexID, predIDs in edges.items():
             for predID in predIDs:
