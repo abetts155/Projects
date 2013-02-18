@@ -1,5 +1,5 @@
-from DirectedGraphs import DirectedGraph, dummyVertexID
-from Vertices import TreeVertex, HeaderVertex, Ipoint
+from DirectedGraphs import DirectedGraph
+from Vertices import TreeVertex, HeaderVertex, Ipoint, dummyVertexID
 import Debug, CFGs
 
 class Tree (DirectedGraph):
@@ -350,6 +350,50 @@ class Dominators (Tree):
             if vertexID != self._rootID:
                 assert self.__immediateDom[vertexID] != dummyVertexID, "Immediate dominator of %d not set" % vertexID
                 self.addEdge(self.__immediateDom[vertexID], vertexID)
+                
+class DominanceFrontiers:
+    def __init__(self, cfg, domTree):
+        self.__cfg     = cfg
+        self.__domTree = domTree
+        self.__initialise()
+        self.__compute()
+        
+    def output(self):
+        for v in self.__cfg:
+            vertexID = v.getVertexID()
+            print "DF(%d) = %s" % (vertexID, self.__vToDF[vertexID])
+        
+    def size (self, vertexID):
+        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
+        return len(self.__vToDF[vertexID])
+    
+    def isEmpty (self, vertexID):
+        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
+        return len(self.__vToDF[vertexID]) == 0
+    
+    def set (self, vertexID):
+        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
+        return self.__vToDF[vertexID]
+    
+    def contains (self, vertexID, elementID):
+        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
+        return elementID in self.__vToDF[vertexID]
+    
+    def __initialise(self):
+        self.__vToDF = {}
+        for v in self.__cfg:
+            self.__vToDF[v.getVertexID()] = set([])
+    
+    def __compute(self):
+        for v in self.__cfg:
+            vertexID = v.getVertexID()    
+            if v.numberOfPredecessors() > 1: 
+                idomID = self.__domTree.getImmediateDominator(vertexID)
+                for predID in v.getPredecessorIDs():
+                    runnerID = predID
+                    while runnerID != idomID:
+                        self.__vToDF[runnerID].add(vertexID)
+                        runnerID = self.__domTree.getImmediateDominator(runnerID)
     
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
@@ -531,7 +575,7 @@ class LoopNests (Tree):
     def isNested (self, left, right):
         return self.isProperAncestor(right, left)
     
-    def induceSubgraph (self, headerv, headerToReconstructible):
+    def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         flowg    = CFGs.ICFG()
         edges    = {}
@@ -541,8 +585,7 @@ class LoopNests (Tree):
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID):
                 # Add the correct vertex type to the induced graph
-                if isinstance(self.__directedg.getVertex(vertexID), Ipoint) \
-                or (self.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID() and headerToReconstructible[vertexID]):
+                if isinstance(self.__directedg.getVertex(vertexID), Ipoint):
                     ipoint = CFGs.Ipoint(vertexID, vertexID)
                     flowg.addIpoint(ipoint)
                 else:

@@ -1,7 +1,7 @@
 #!/usr/bin/python2.6
 
 import sys, optparse, os
-import ParseProgramFile, Debug, Trees, Traces, UDrawGraph
+import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks
 
 # The command-line parser and its options
 cmdline = optparse.OptionParser(add_help_option=False)
@@ -82,6 +82,8 @@ if __name__ == "__main__":
             lnt = Trees.LoopNests(icfg, icfg.getEntryID())
             program.addLNT(lnt, functionName)
             UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+            superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
+            UDrawGraph.makeUdrawFile(superg, "%s.%s.%s" % (basename, functionName, "superg"))
         if opts.traces:
             Traces.GenerateTraces(basepath, basename, program, opts.traces)
     else:

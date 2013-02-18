@@ -1,5 +1,5 @@
-from DirectedGraphs import dummyVertexID, FlowGraph, DirectedGraph
-from Vertices import Vertex, Ipoint
+from DirectedGraphs import FlowGraph, DirectedGraph
+from Vertices import Vertex, Ipoint, dummyVertexID
 import Debug
 
 # Class to mode instructions inside basic blocks

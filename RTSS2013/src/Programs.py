@@ -1,5 +1,5 @@
-from DirectedGraphs import DirectedGraph, dummyVertexID
-from Vertices import CallGraphVertex
+from DirectedGraphs import DirectedGraph
+from Vertices import CallGraphVertex, dummyVertexID
 import Debug
 
 class CallGraph (DirectedGraph):   

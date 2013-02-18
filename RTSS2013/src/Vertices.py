@@ -1,5 +1,6 @@
 from Edges import Edge, CallGraphEdge
-from DirectedGraphs import dummyVertexID
+
+dummyVertexID = -1
 
 class Vertex ():
     def __init__ (self, vertexID):
@@ -92,6 +93,12 @@ class Vertex ():
         string += "}\n"
         return string
     
+    def __str__ (self):
+        string = "Vertex ID = " + str(self._vertexID) + "\n"
+        string += "\t" + Vertex.predecessorStr(self)
+        string += "\t" + Vertex.successorStr(self)    
+        return string
+    
 class TreeVertex (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
@@ -162,6 +169,30 @@ class CallGraphVertex (Vertex):
     
     def __str__ (self):
         return "%s (vertex id=%d)" % (self.__name, self._vertexID)
+    
+class SuperBlock (Vertex):
+    def __init__ (self, vertexID):
+        Vertex.__init__(self, vertexID)
+        self.__unstructuredMerge = False
+        self.__basicBlocks = set([])
+        
+    def setUnstructuredMerge (self):
+        self.__unstructuredMerge = True
+        
+    def isUnstructuredMerge (self):
+        return self.__unstructuredMerge
+    
+    def addBasicBlock (self, vertexID):
+        self.__basicBlocks.add(vertexID)
+        
+    def containsBasicBlock (self, vertexID):
+        return vertexID in self.__basicBlocks
+    
+    def numberOfBasicBlocks (self):
+        return len(self.__basicBlocks)
+    
+    def getBasicBlockIDs (self):
+        return self.__basicBlocks
     
 class Ipoint (Vertex):
     def __init__ (self, vertexID, IpointID, realID=None):

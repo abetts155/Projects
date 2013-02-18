@@ -1,4 +1,4 @@
-import Programs, CFGs, Trees, Vertices
+import Programs, CFGs, Trees, Vertices, SuperBlocks
 from Main import opts
 
 fileNameSuffix = ".udraw"
@@ -64,7 +64,11 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                     vertexID = v.getVertexID()
                     if vertexID != g.getEntryID():
-                        writeCFGVertex(g, vertexID, f)      
+                        writeCFGVertex(g, vertexID, f)   
+            elif isinstance(g, SuperBlocks.SuperBlockGraph):
+                for v in g:
+                    vertexID = v.getVertexID()
+                    writeSuperBlockVertex(g, vertexID, f)   
             elif isinstance(g, Programs.CallGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
@@ -135,6 +139,23 @@ def writeCallGraphVertex (callg, vertexID, f):
         calle   = v.getSuccessorEdge(succID)
         tooltip = ', '.join(str(vertexID) for vertexID in calle.getCallSites())
         f.write(setToolTip(tooltip))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
+    
+def writeSuperBlockVertex (superg, vertexID, f):
+    v = superg.getVertex(vertexID)
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    name = ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
+    f.write(setName(name))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
