@@ -1,6 +1,6 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import Vertex, HeaderVertex, SuperBlock
-from Edges import SuperBlockEdge
+from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers
 import Debug
 
@@ -53,6 +53,7 @@ class SuperBlockGraph (DirectedGraph):
                     superv        = SuperBlock(superVertexID)
                     self.vertices[superVertexID] = superv
                     disconnected.append(superv)
+        # Merge super blocks from nested loops
         for v in forwardICFG:
             vertexID = v.getVertexID()     
             if lnt.isLoopHeader(vertexID) and vertexID != headerID:
@@ -91,9 +92,9 @@ class SuperBlockGraph (DirectedGraph):
                         Debug.debugMessage("Acyclic REDUCIBLE merge %d found" % vertexID, 1)
     
     def __addEdge (self, sourcev, destinationv, branchID):
-        succe = SuperBlockEdge(destinationv.getVertexID(), branchID)
+        succe = SuperBlockControlFlowEdge(destinationv.getVertexID(), branchID)
         sourcev.addSuccessorEdge(succe)
-        prede = SuperBlockEdge(sourcev.getVertexID(), branchID)
+        prede = SuperBlockControlFlowEdge(sourcev.getVertexID(), branchID)
         destinationv.addPredecessorEdge(prede)
     
 class DominatorGraph (DirectedGraph):

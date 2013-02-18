@@ -1,4 +1,4 @@
-import Programs, CFGs, Trees, Vertices, SuperBlocks
+import Programs, CFGs, Trees, Vertices, SuperBlocks, Edges
 from Main import opts
 
 fileNameSuffix = ".udraw"
@@ -157,7 +157,8 @@ def writeSuperBlockVertex (superg, vertexID, f):
         f.write(newEdge)
         f.write(beginAttributes)
         succe = v.getSuccessorEdge(succID)
-        f.write(setName(str(succe.getBasicBlockID())))
+        if isinstance(succe, Edges.SuperBlockControlFlowEdge):
+            f.write(setName(str(succe.getBasicBlockID())))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
