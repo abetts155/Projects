@@ -33,6 +33,7 @@ class BasicBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.__dummy = False
         self.__ipointPosition = None
+        self.__instructions = []
     
     def setIpoint (self, position):
         assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
@@ -50,9 +51,14 @@ class BasicBlock (Vertex):
         
     def isDummy (self):
         return self.__dummy
+    
+    def addInstruction (self, instruction):
+        self.__instructions.append(instruction)
         
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
+        for instruction in self.__instructions:
+            string += instruction.__str__()
         string += "\t" + Vertex.predecessorStr(self)
         string += "\t" + Vertex.successorStr(self)
         string += "\t" + 40 * "=" + "\n"      

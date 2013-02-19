@@ -1,4 +1,4 @@
-import Debug, CFGs
+import Debug, CFGs, Programs, Vertices
 import re, shlex
 
 class ARMInstructionSet:
@@ -37,9 +37,14 @@ class ARMInstructionSet:
                            'blt.w',
                            'bne.n',
                            'bne.w']
+    Instructions         = []
+    Instructions.extend(BranchInstrunctions)
+    
 
 startAddressToFunction = {}
 functionToInstructions = {}
+functionToLeaders      = {}
+program                = Programs.Program()
 
 def getInstruction (lexemes):
     comment     = ';'
@@ -53,15 +58,19 @@ def getInstruction (lexemes):
             if lex == comment:
                 break
             if not opCodeFound:
-                try:
-                    int(lex, 16)
-                except ValueError:
+                if len(lex) != 4:
+                    # Some instruction ops can be hexadecimal numbers.
                     opCodeFound = True
+                else:
+                    try:
+                        int(lex, 16)
+                    except ValueError:
+                        opCodeFound = True
             if opCodeFound:
                 instruction.append(lex)
     return CFGs.Instruction(address, instruction)
     
-def getInstructions (filename):
+def extractInstructions (filename):
     Debug.verboseMessage("Extracting instructions")
     with open(filename, 'r') as f:
         parse = False
@@ -108,26 +117,49 @@ def identifyCallGraph ():
     return analysed            
 
 def identifyLeaders (functions):
-    functionToLeaders = {}
+    functionToBranchTargets = {}
     for functionName in functions:
         Debug.debugMessage("Identifying leaders in '%s'" % functionName, 1)
-        functionToLeaders[functionName] = set([])
-        firstInstruction                = True
+        functionToLeaders[functionName]       = set([])
+        functionToBranchTargets[functionName] = set([])
+        newLeader                       = True
         for instruction in functionToInstructions[functionName]:
-            if firstInstruction:
-                functionToLeaders[functionName].add(instruction.getAddress())
-                firstInstruction = False
+            if newLeader:
+                functionToLeaders[functionName].add(instruction)
+                newLeader = False
+                print instruction
             else:
-                print instruction.getOp()
+                address = instruction.getAddress()
+                if address in functionToBranchTargets[functionName]:
+                    functionToLeaders[functionName].add(instruction)
+                op = instruction.getOp()
+                if op in ARMInstructionSet.BranchInstrunctions:
+                    newLeader         = True
+                    instructionFields = instruction.getInstructionFields()
+                    addressTarget     = int(instructionFields[1], 16) 
+                    functionToBranchTargets[functionName].add(addressTarget)
+        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), 1)
         
-
-def identifyBasicBlocks ():
-    Debug.verboseMessage("Identifying basic blocks")
-    pass
+def identifyBasicBlocks (functions):
+    for functionName in functions:
+        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 1)
+        icfg = CFGs.ICFG()
+        icfg.setName(functionName)
+        program.addICFG(icfg, functionName)
+        bb = None
+        for instruction in functionToInstructions[functionName]:
+            if instruction in functionToLeaders[functionName]:
+                vertexID = icfg.getNextVertexID()
+                bb       = CFGs.BasicBlock(vertexID)
+                icfg.addVertex(bb)
+                bb.addInstruction(instruction)
+            else:
+                assert bb, "Basic block is currently null"
+                bb.addInstruction(instruction)
 
 def readARMDisassembly (filename):
-    instructions = getInstructions(filename)
-    functions    = identifyCallGraph()
+    extractInstructions(filename)
+    functions = identifyCallGraph()
     identifyLeaders(functions)
-    identifyBasicBlocks()
+    identifyBasicBlocks(functions)
     
