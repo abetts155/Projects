@@ -2,6 +2,7 @@ from DirectedGraphs import DirectedGraph
 from Vertices import Vertex, HeaderVertex, SuperBlock
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers
+from Main import enum
 import Debug
 
 class SuperBlockGraph (DirectedGraph):
@@ -123,12 +124,6 @@ class DominatorGraph (DirectedGraph):
                 parentID = v.getParentID()
                 if not self.getVertex(vertexID).hasPredecessor(parentID):
                     self.addEdge(v.getParentID(), vertexID)
-                
-def enum(*sequential, **named):
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    reverse = dict((value, key) for key, value in enums.iteritems())
-    enums['reverse_mapping'] = reverse
-    return type('Enum', (), enums)
 
 Colors = enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
 

@@ -1,8 +1,14 @@
 #!/usr/bin/python2.6
 
-from optparse import OptionParser
 import sys, os
+
+# Add parent directory to the module search
+parentdir = os.path.dirname(sys.path[0])
+sys.path.append(parentdir)
+
+from optparse import OptionParser
 from distutils.spawn import find_executable
+import src.Debug as Debug
 
 # The command-line parser and its options
 cmdline = OptionParser(add_help_option=False)
@@ -19,10 +25,23 @@ cmdline.add_option("-C",
                   help="Compile the given program and then simulate. [The program must have a '.c' extension].",
                   default=False)
 
-(opts, args) = cmdline.parse_args(sys.argv[1:])
-armGCC     = "arm-linux-gnueabi-gcc"
-armObjdump = "arm-linux-gnueabi-objdump"
+cmdline.add_option("-d",
+                  "--debug",
+                  action="store",
+                  dest="debug",
+                  type="int",
+                  help="Debug mode.",
+                  default=0)
 
+(opts, args) = cmdline.parse_args(sys.argv[1:])
+Debug.debug  = opts.debug
+armGCC       = "arm-linux-gnueabi-gcc"
+armObjdump   = "arm-linux-gnueabi-objdump"
+
+def extractCFGs (disassembly):
+    from src.ARM import readARMDisassembly
+    readARMDisassembly (disassembly)
+    
 def runGem5 (gem5base, armSimulator, binary):
     from subprocess import Popen, PIPE
     gem5ConfigFile = gem5base + os.sep + 'configs' + os.sep + 'example' + os.sep + 'se.py'
@@ -43,6 +62,7 @@ def disassembleProgram (binary):
         returncode = proc.wait()
         if returncode:
             sys.exit("Disassembling '%s' failed" % binary) 
+    return filename
         
 def compileProgram (program):
     from subprocess import Popen
@@ -99,7 +119,8 @@ if __name__ == "__main__":
     program                = checkArguments()
     binary                 = program
     if opts.compile:
-        binary = compileProgram(program)
-        disassembleProgram(binary)
+        binary      = compileProgram(program)
+        disassembly = disassembleProgram(binary)
+        extractCFGs(disassembly)
     runGem5(gem5base, armSimulator, binary)
 

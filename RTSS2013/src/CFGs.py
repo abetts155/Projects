@@ -4,26 +4,21 @@ import Debug
 
 # Class to mode instructions inside basic blocks
 class Instruction ():    
-    def __init__ (self, address, instrString):
-        self.address     = address
-        self.instrString = instrString
+    def __init__ (self, address, instruction):
+        self.__address     = address
+        self.__instruction = instruction
         
     def getAddress (self):
-        return self.address
+        return self.__address
     
-    def getString (self):
-        return self.instrString
+    def getInstructionFields (self):
+        return self.__instruction
     
-    def containsLabel (self, label):
-        import shlex
-        lexemes = shlex.split(self.instrString)
-        if lexemes[0].startswith('l0x'):
-            assert lexemes[0].endswith(':'), "Instruction '%s' does not contain a valid label" % self
-            return label == lexemes[0][:-1]
-        return False
+    def getOp (self):
+        return self.__instruction[0]
      
     def __str__(self):
-        return self.address + " : " + self.instrString
+        return "%s : %s" % (hex(self.__address), ' '.join(self.__instruction))
     
 class Enum(set):
     def __getattr__(self, name):
