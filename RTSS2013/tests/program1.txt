@@ -1,43 +1,43 @@
 CFG: F1
 bb: 1
-succ: (F1, 2)
+succ: 2
 
 bb: 2
-succ: (F1, 3) (F2, 1)
+succ: 3, F2
 
 bb: 3
-succ: (F1, 4) 
+succ: 4 
 
 bb: 4
-succ: (F1, 5) (F1, 6)
+succ: 5,6
 
 bb: 5
-succ: (F1, 11)
+succ: 11
 
 bb: 6
-succ: (F1, 7) (F1, 11)
+succ: 7,  11
 
 bb: 7
-succ: (F1, 8) (F1, 9)
+succ: 8, 9
 
 bb: 8 
-succ: (F1, 10)
+succ: 10
 
 bb: 9
-succ: (F1, 10)
+succ: 10
 
 bb: 10
-succ: (F1, 11) (F1, 7)
+succ: 7, 11
 
 bb: 11
-succ: (F1, 12) (F1, 3)
+succ: 3, 12
 
 bb: 12
 succ:
 
 CFG: F2
 bb: 13
-succ: (F2, 14)
+succ: 14
 
 bb: 14
 succ:

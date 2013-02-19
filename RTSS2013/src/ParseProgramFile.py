@@ -66,6 +66,7 @@ def setCallGraphRoot (callg):
     assert rootID, "Unable to set root ID of call graph"
     
 def createProgram (outfile):
+    import re
     program = Programs.Program()
     # First parse the file for functions to partially build call graph
     with open(outfile, 'r') as f:
@@ -76,6 +77,11 @@ def createProgram (outfile):
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 icfg         = CFGs.ICFG()
                 functionName = lexemes[-1]
+                # Make sure that the first characters of the function name are non-digits
+                # Otherwise function calls will be ambiguous with successor IDs inside a function
+                match = re.match(r'\D+', functionName)
+                if not match: 
+                    Debug.exitMessage("Function name '%s' is disallowed. Every name must start with a non-digit character" % functionName)
                 icfg.setName(functionName)
                 program.addICFG(icfg, functionName)
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
@@ -115,21 +121,17 @@ def createProgram (outfile):
                 index = line.index(':')
                 line = line[index+1:]
                 splitter = shlex.shlex(line)
-                splitter.whitespace += ')'
-                splitter.whitespace += '('
+                splitter.whitespace += ','
                 splitter.whitespace_split = False
                 lexemes = list(splitter)
-                assert len(lexemes) % 3 == 0, "Unable to parse edge information '%s'" % line
-                if len(lexemes) > 1:
-                    for i in xrange(0, len(lexemes)/3):
-                        functionName = lexemes[i*3]
-                        succID       = lexemes[i*3+2]
-                        assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
-                        succID = int(succID)
-                        if functionName != icfg.getName():
-                            program.getCallGraph().addEdge(icfg.getName(), functionName, bb.getVertexID())
+                if len(lexemes):
+                    for lex in lexemes:
+                        if lex.isdigit():
+                            succID = int(lex)
+                            bb.addSuccessor(succID)
                         else:
-                            bb.addSuccessor(int(succID))                      
+                            functionName = lex
+                            program.getCallGraph().addEdge(icfg.getName(), functionName, bb.getVertexID())                                    
     
     setCallGraphRoot (program.getCallGraph())
     for icfg in program.getICFGs():
