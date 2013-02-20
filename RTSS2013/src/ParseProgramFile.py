@@ -52,11 +52,11 @@ def setEntryAndExit (icfg):
     assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
     
-def readInProgram (outfile):
+def readInProgram (programFile):
     import re
     program = Programs.Program()
     # First parse the file for functions to partially build call graph
-    with open(outfile, 'r') as f:
+    with open(programFile, 'r') as f:
         for line in f:
             line = line.lower()
             if line.startswith(cfgIndicator):
@@ -73,7 +73,7 @@ def readInProgram (outfile):
                 program.addICFG(icfg, functionName)
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
     # Now add the relevant edges to the CFGs and the call graph
-    with open(outfile, 'r') as f: 
+    with open(programFile, 'r') as f: 
         bbIDs        = set([]) 
         icfg         = None
         bb           = None   
@@ -142,8 +142,8 @@ def readInProgram (outfile):
                 bb.addInstruction(instruction)
     return program
     
-def createProgram (outfile):
-    program = readInProgram(outfile)
+def createProgram (programFile):
+    program = readInProgram(programFile)
     program.getCallGraph().findAndSetRoot()
     for icfg in program.getICFGs():
         icfg.addPredecessorEdges()

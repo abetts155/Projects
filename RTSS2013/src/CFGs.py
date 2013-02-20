@@ -57,8 +57,13 @@ class BasicBlock (Vertex):
         self.__instructions.append(instruction)
         self.__addresses.add(instruction.getAddress())
         
-    def isLastInstruction (self, instruction):
-        return instruction == self.__instructions[-1]
+    def getFirstInstruction (self):
+        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
+        return self.__instructions[0]
+        
+    def getLastInstruction (self):
+        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
+        return self.__instructions[-1]
     
     def hasInstructions (self):
         return len(self.__instructions) != 0
@@ -161,6 +166,14 @@ class CFG (FlowGraph):
         exitv = self.getVertex(self._exitID)
         entryv.addPredecessor(self._exitID)
         exitv.addSuccessor(self._entryID)
+        
+    def getFirstInstruction (self):
+        v = self.getVertex(self._entryID)
+        return v.getFirstInstruction()
+    
+    def getLastInstruction (self):
+        v = self.getVertex(self._exitID)
+        return v.getFirstInstruction()
         
     def setEdgeIDs (self):
         edgeID = 1

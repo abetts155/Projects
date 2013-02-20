@@ -1,9 +1,9 @@
 #!/usr/bin/python2.6
 
+import Debug, UDrawGraph
 import sys, os
 from optparse import OptionParser
 from distutils.spawn import find_executable
-import Debug, UDrawGraph
 
 # The command-line parser and its options
 cmdline = OptionParser(add_help_option=False)
@@ -40,10 +40,6 @@ Debug.debug        = opts.debug
 UDrawGraph.enabled = opts.udraw
 armGCC       = "arm-linux-gnueabi-gcc"
 armObjdump   = "arm-linux-gnueabi-objdump"
-
-def extractCFGs (disassembly):
-    from ARM import readARMDisassembly
-    readARMDisassembly (disassembly)
     
 def runGem5 (gem5base, armSimulator, binary):
     from subprocess import Popen, PIPE
@@ -55,6 +51,9 @@ def runGem5 (gem5base, armSimulator, binary):
     returncode = proc.wait()
     if returncode:
         sys.exit("Running '%s' failed" % cmd)
+    gem5Trace = os.path.abspath(os.getcwd()) + os.sep + 'm5out' + os.sep + traceFile
+    assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
+    return gem5Trace
         
 def disassembleProgram (binary):
     from subprocess import Popen
@@ -118,12 +117,20 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
         
 if __name__ == "__main__":
+    from ARM import readARMDisassembly
+    from ParseProgramFile import createProgram
+    from ParseGem5Trace import parse
     gem5base, armSimulator = checkEnvironment()
-    program                = checkArguments()
-    binary                 = program
+    filename               = checkArguments()
+    binary                 = filename
     if opts.compile:
-        binary      = compileProgram(program)
+        binary      = compileProgram(filename)
         disassembly = disassembleProgram(binary)
-        extractCFGs(disassembly)
-    runGem5(gem5base, armSimulator, binary)
+        program     = readARMDisassembly (disassembly)
+    else:
+        programFile = binary + '.txt'
+        assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
+        program     = createProgram(programFile)
+    gem5Trace = runGem5(gem5base, armSimulator, binary)
+    parse(program, gem5Trace)
 

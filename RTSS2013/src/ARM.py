@@ -81,7 +81,7 @@ def extractInstructions (filename):
                     assert len(lexemes) == 2, "Unable to handle disassembly line %s" % line
                     address      = int(lexemes[0], 16)
                     functionName = lexemes[1][1:-2]
-                    Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), 5)
+                    Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), 20)
                     startAddressToFunction[address]         = functionName
                     currentFunction                         = functionName
                     functionToInstructions[currentFunction] = []
@@ -103,7 +103,7 @@ def identifyCallGraph ():
     while functions:
         functionName = functions.pop()
         analysed.add(functionName)
-        Debug.debugMessage("Analysing function '%s'" % functionName, 1)
+        Debug.debugMessage("Analysing function '%s'" % functionName, 20)
         assert functionName in functionToInstructions, "No instructions for '%s' discovered" % functionName
         for instruction in functionToInstructions[functionName]:
             instructionFields = instruction.getInstructionFields()
@@ -119,7 +119,7 @@ def identifyCallGraph ():
 def identifyLeaders (functions):
     functionToBranchTargets = {}
     for functionName in functions:
-        Debug.debugMessage("Identifying leaders in '%s'" % functionName, 1)
+        Debug.debugMessage("Identifying leaders in '%s'" % functionName, 20)
         functionToLeaders[functionName]       = set([])
         functionToBranchTargets[functionName] = set([])
         newLeader                       = True
@@ -127,7 +127,6 @@ def identifyLeaders (functions):
             if newLeader:
                 functionToLeaders[functionName].add(instruction)
                 newLeader = False
-                print instruction
             else:
                 address = instruction.getAddress()
                 if address in functionToBranchTargets[functionName]:
@@ -138,12 +137,12 @@ def identifyLeaders (functions):
                     instructionFields = instruction.getInstructionFields()
                     addressTarget     = int(instructionFields[1], 16) 
                     functionToBranchTargets[functionName].add(addressTarget)
-        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), 1)
+        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), 20)
         
 def identifyBasicBlocks (functions):
     global newVertexID
     for functionName in functions:
-        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 1)
+        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 20)
         icfg = CFGs.ICFG()
         icfg.setName(functionName)
         program.addICFG(icfg, functionName)
@@ -160,7 +159,7 @@ def identifyBasicBlocks (functions):
             
 def addEdges (functions):
     for functionName in functions:
-        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 1)
+        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 20)
         icfg   = program.getICFG(functionName)
         predID = Vertices.dummyVertexID
         for instruction in functionToInstructions[functionName]:
@@ -168,8 +167,7 @@ def addEdges (functions):
             if predID != Vertices.dummyVertexID:
                 icfg.addEdge(predID, v.getVertexID())
                 predID = Vertices.dummyVertexID
-            if v.isLastInstruction(instruction):
-                print "%s is last instruction in %d" % (instruction, v.getVertexID())
+            if v.getLastInstruction() == instruction:
                 if instruction.getOp() == ARMInstructionSet.Call:
                     instructionFields = instruction.getInstructionFields()
                     startAddress      = int(instructionFields[1], 16)
@@ -230,4 +228,5 @@ def readARMDisassembly (filename):
     identifyBasicBlocks(functions)
     addEdges(functions)
     generateInternalFile(filename)
+    return program
     

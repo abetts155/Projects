@@ -21,6 +21,10 @@ class CallGraph (DirectedGraph):
         assert functionName in self.__functionNameToVertex, "Unable to find call graph vertex for function '%s'" % functionName
         return self.__functionNameToVertex[functionName]
     
+    def getRootVertex (self):
+        assert self.__rootID != dummyVertexID, "The root of the call graph has not been set"
+        return self.getVertex(self.__rootID)
+    
     def findAndSetRoot (self):
         withoutPred = []
         for v in self:
@@ -68,6 +72,10 @@ class Program():
         self.__icfgs = {}
         self.__ipgs = {}
         self.__lnts = {}
+        
+    def getRootICFG (self):
+        rootcallv = self.__callg.getRootVertex()
+        return self.__icfgs[rootcallv.getName()]
         
     def getCallGraph (self):
         return self.__callg
