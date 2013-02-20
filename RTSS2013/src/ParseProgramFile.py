@@ -46,25 +46,6 @@ def setEntryAndExit (icfg):
     assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
     
-def setCallGraphRoot (callg):
-    withoutPred = []
-    for v in callg:
-        if v.numberOfPredecessors() == 0:
-            withoutPred.append(v.getVertexID())
-    rootID = None
-    if len(withoutPred) == 0:
-        Debug.exitMessage("Could not find program entry point as there are no functions without predecessors")
-    elif len(withoutPred) > 1:
-        debugStr = ""
-        for vertexID in withoutPred:
-            callv    = callg.getVertex(vertexID)
-            debugStr += callv.__str__()
-        Debug.exitMessage("Call graph has too many entry points: %s" % debugStr)
-    else:
-        rootID = withoutPred[0]
-        callg.setRootID(rootID)
-    assert rootID, "Unable to set root ID of call graph"
-    
 def createProgram (outfile):
     import re
     program = Programs.Program()
@@ -133,7 +114,7 @@ def createProgram (outfile):
                             functionName = lex
                             program.getCallGraph().addEdge(icfg.getName(), functionName, bb.getVertexID())                                    
     
-    setCallGraphRoot (program.getCallGraph())
+    program.getCallGraph().findAndSetRoot()
     for icfg in program.getICFGs():
         icfg.addPredecessorEdges()
         icfg.addIpointEdges()

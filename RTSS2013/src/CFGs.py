@@ -34,6 +34,7 @@ class BasicBlock (Vertex):
         self.__dummy = False
         self.__ipointPosition = None
         self.__instructions = []
+        self.__addresses = set([])
     
     def setIpoint (self, position):
         assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
@@ -54,11 +55,24 @@ class BasicBlock (Vertex):
     
     def addInstruction (self, instruction):
         self.__instructions.append(instruction)
+        self.__addresses.add(instruction.getAddress())
+        
+    def isLastInstruction (self, instruction):
+        return instruction == self.__instructions[-1]
+    
+    def hasInstructions (self):
+        return len(self.__instructions) != 0
+    
+    def getInstructions (self):
+        return self.__instructions
+    
+    def hasAddress (self, address):
+        return address in self.__addresses
         
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
         for instruction in self.__instructions:
-            string += instruction.__str__()
+            string += instruction.__str__() + '\n'
         string += "\t" + Vertex.predecessorStr(self)
         string += "\t" + Vertex.successorStr(self)
         string += "\t" + 40 * "=" + "\n"      
@@ -67,6 +81,7 @@ class BasicBlock (Vertex):
 class CFG (FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
+        self.__addressToVertex = {}
         
     def getReverseCFG (self):
         reverseg = CFG() 
@@ -104,6 +119,15 @@ class CFG (FlowGraph):
         
     def getVertex (self, bbID):
         return DirectedGraph.getVertex(self, bbID)
+    
+    def getVertexWithAddress (self, address):
+        if address in self.__addressToVertex:
+            return self.__addressToVertex[address]
+        for v in self:
+            if v.hasAddress(address):
+                self.__addressToVertex[address] = v
+                return v
+        assert False, "Unable to find basic block with address %s" % hex(address) 
         
     def setEntryID (self, entryID=None):
         if entryID is None:

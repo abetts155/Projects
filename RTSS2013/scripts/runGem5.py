@@ -9,6 +9,7 @@ sys.path.append(parentdir)
 from optparse import OptionParser
 from distutils.spawn import find_executable
 import src.Debug as Debug
+import src.UDrawGraph as UDrawGraph
 
 # The command-line parser and its options
 cmdline = OptionParser(add_help_option=False)
@@ -33,8 +34,16 @@ cmdline.add_option("-d",
                   help="Debug mode.",
                   default=0)
 
-(opts, args) = cmdline.parse_args(sys.argv[1:])
-Debug.debug  = opts.debug
+cmdline.add_option("-u",
+                 "--udraw",
+                 action="store_true",
+                 dest="udraw",
+                 help="Generate uDrawGraph files.",
+                 default=False)
+
+(opts, args)       = cmdline.parse_args(sys.argv[1:])
+Debug.debug        = opts.debug
+UDrawGraph.enabled = opts.udraw
 armGCC       = "arm-linux-gnueabi-gcc"
 armObjdump   = "arm-linux-gnueabi-objdump"
 

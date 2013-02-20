@@ -1,5 +1,6 @@
 import Programs, CFGs, Trees, Vertices, SuperBlocks, Edges
-from Main import opts
+
+enabled = False
 
 fileNameSuffix = ".udraw"
 beginGraph = "[\n"
@@ -55,7 +56,7 @@ def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
 def makeUdrawFile (g, fileNamePrefix):
-    if opts.udraw:
+    if enabled:
         with open(fileNamePrefix + fileNameSuffix, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
@@ -109,14 +110,19 @@ def writeCFGVertex (cfg, vertexID, f):
     if isinstance(v, Vertices.Ipoint):
         f.write(setShape(SHAPE.CIRCLE))
         f.write(setColor(COLOR.YELLOW))
+    else:
+        if v.hasInstructions():
+            tooltip = ""
+            for instruction in v.getInstructions():
+                tooltip += instruction.__str__() + newLine
+            tooltip = tooltip.rstrip(newLine)
+            f.write(setToolTip(tooltip))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
-        succe = v.getSuccessorEdge(succID)
-        f.write(setName(str(succe.getEdgeID())))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

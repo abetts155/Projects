@@ -19,6 +19,25 @@ class CallGraph (DirectedGraph):
     def getVertexWithName (self, functionName):
         assert functionName in self.__functionNameToVertex, "Unable to find call graph vertex for function '%s'" % functionName
         return self.__functionNameToVertex[functionName]
+    
+    def findAndSetRoot (self):
+        withoutPred = []
+        for v in self:
+            if v.numberOfPredecessors() == 0:
+                withoutPred.append(v.getVertexID())
+        rootID = None
+        if len(withoutPred) == 0:
+            Debug.exitMessage("Could not find program entry point as there are no functions without predecessors")
+        elif len(withoutPred) > 1:
+            debugStr = ""
+            for vertexID in withoutPred:
+                callv    = self.getVertex(vertexID)
+                debugStr += callv.__str__()
+            Debug.exitMessage("Call graph has too many entry points: %s" % debugStr)
+        else:
+            rootID = withoutPred[0]
+            self.setRootID(rootID)
+        assert rootID, "Unable to set root ID of call graph"
         
     def setRootID (self, rootID):
         self.__rootID = rootID

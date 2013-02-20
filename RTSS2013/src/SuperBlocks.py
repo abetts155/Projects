@@ -2,7 +2,7 @@ from DirectedGraphs import DirectedGraph
 from Vertices import Vertex, HeaderVertex, SuperBlock
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers
-from Main import enum
+from Utils import enum
 import Debug
 
 class SuperBlockGraph (DirectedGraph):

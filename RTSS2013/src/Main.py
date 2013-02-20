@@ -49,9 +49,10 @@ cmdline.add_option("-u",
                  help="Generate uDrawGraph files.",
                  default=False)
 
-(opts, args) = cmdline.parse_args(sys.argv[1:])
-Debug.verbose = opts.verbose
-Debug.debug = opts.debug
+(opts, args)       = cmdline.parse_args(sys.argv[1:])
+Debug.verbose      = opts.verbose
+Debug.debug        = opts.debug
+UDrawGraph.enabled = opts.udraw
 
 def removeFile (fullPath):
     Debug.verboseMessage("Removing '%s'" % fullPath)

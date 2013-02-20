@@ -1,50 +1,50 @@
-import Debug, CFGs, Programs, Vertices
+import Debug, CFGs, Programs, UDrawGraph, Vertices
 import re, shlex
 
 class ARMInstructionSet:
-    CallInstruction     = 'bl'
-    BranchInstrunctions = ['b',
-                           'bl',
-                           'bcc',
-                           'bcs',
-                           'beq',
-                           'bge',
-                           'bgt',
-                           'bhi',
-                           'ble',
-                           'bls',
-                           'blt',
-                           'bmi',
-                           'bne',
-                           'bpl',
-                           'bvs',
-                           'bvc',
-                           'b.n',
-                           'b.w',
-                           'beq.n',
-                           'beq.w',
-                           'bge.n',
-                           'bge.w',
-                           'bgt.n',
-                           'bgt.w',
-                           'bhi.n',
-                           'bhi.w',
-                           'ble.n',
-                           'ble.w',
-                           'bls.n',
-                           'bls.w',
-                           'blt.n',
-                           'blt.w',
-                           'bne.n',
-                           'bne.w']
-    Instructions         = []
-    Instructions.extend(BranchInstrunctions)
-    
+    Call               = 'bl'
+    UnconditionalJumps = ['b', 'b.n', 'b.w']
+    Branches           = ['b',
+                          'bl',
+                          'bcc',
+                          'bcs',
+                          'beq',
+                          'bge',
+                          'bgt',
+                          'bhi',
+                          'ble',
+                          'bls',
+                          'blt',
+                          'bmi',
+                          'bne',
+                          'bpl',
+                          'bvs',
+                          'bvc',
+                          'b.n',
+                          'b.w',
+                          'beq.n',
+                          'beq.w',
+                          'bge.n',
+                          'bge.w',
+                          'bgt.n',
+                          'bgt.w',
+                          'bhi.n',
+                          'bhi.w',
+                          'ble.n',
+                          'ble.w',
+                          'bls.n',
+                          'bls.w',
+                          'blt.n',
+                          'blt.w',
+                          'bne.n',
+                          'bne.w']
 
-startAddressToFunction = {}
-functionToInstructions = {}
-functionToLeaders      = {}
-program                = Programs.Program()
+startAddressToFunction  = {}
+functionToInstructions  = {}
+functionToLeaders       = {}
+instructionToBasicBlock = {}
+program                 = Programs.Program()
+newVertexID             = 1
 
 def getInstruction (lexemes):
     comment     = ';'
@@ -107,7 +107,7 @@ def identifyCallGraph ():
         assert functionName in functionToInstructions, "No instructions for '%s' discovered" % functionName
         for instruction in functionToInstructions[functionName]:
             instructionFields = instruction.getInstructionFields()
-            if ARMInstructionSet.CallInstruction in instructionFields:
+            if ARMInstructionSet.Call in instructionFields:
                 assert len(instructionFields) == 3, "Unable to handle call instruction '%s' since it does not have 3 fields exactly" % instructionFields
                 startAddress = int(instructionFields[1], 16)
                 assert startAddress in startAddressToFunction, "Unable to find function with start address %s (it should be %s)" % (hex(startAddress), instructionFields[2])
@@ -133,7 +133,7 @@ def identifyLeaders (functions):
                 if address in functionToBranchTargets[functionName]:
                     functionToLeaders[functionName].add(instruction)
                 op = instruction.getOp()
-                if op in ARMInstructionSet.BranchInstrunctions:
+                if op in ARMInstructionSet.Branches:
                     newLeader         = True
                     instructionFields = instruction.getInstructionFields()
                     addressTarget     = int(instructionFields[1], 16) 
@@ -141,6 +141,7 @@ def identifyLeaders (functions):
         Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), 1)
         
 def identifyBasicBlocks (functions):
+    global newVertexID
     for functionName in functions:
         Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 1)
         icfg = CFGs.ICFG()
@@ -149,17 +150,56 @@ def identifyBasicBlocks (functions):
         bb = None
         for instruction in functionToInstructions[functionName]:
             if instruction in functionToLeaders[functionName]:
-                vertexID = icfg.getNextVertexID()
+                vertexID = newVertexID
                 bb       = CFGs.BasicBlock(vertexID)
                 icfg.addVertex(bb)
-                bb.addInstruction(instruction)
-            else:
-                assert bb, "Basic block is currently null"
-                bb.addInstruction(instruction)
+                newVertexID += 1
+            assert bb, "Basic block is currently null"
+            bb.addInstruction(instruction)
+            instructionToBasicBlock[instruction] = bb
+            
+def addEdges (functions):
+    for functionName in functions:
+        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 1)
+        icfg   = program.getICFG(functionName)
+        predID = Vertices.dummyVertexID
+        for instruction in functionToInstructions[functionName]:
+            v = instructionToBasicBlock[instruction]
+            if predID != Vertices.dummyVertexID:
+                icfg.addEdge(predID, v.getVertexID())
+                predID = Vertices.dummyVertexID
+            if v.isLastInstruction(instruction):
+                print "%s is last instruction in %d" % (instruction, v.getVertexID())
+                if instruction.getOp() == ARMInstructionSet.Call:
+                    instructionFields = instruction.getInstructionFields()
+                    startAddress      = int(instructionFields[1], 16)
+                    calleeName        = startAddressToFunction[startAddress]
+                    program.getCallGraph().addEdge(icfg.getName(), calleeName, v.getVertexID())
+                    predID = v.getVertexID()
+                elif instruction.getOp() in ARMInstructionSet.UnconditionalJumps:
+                    instructionFields = instruction.getInstructionFields()
+                    jumpAddress       = int(instructionFields[1], 16)
+                    succv             = icfg.getVertexWithAddress(jumpAddress)
+                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                elif instruction.getOp() in ARMInstructionSet.Branches:
+                    instructionFields = instruction.getInstructionFields()
+                    branchAddress     = int(instructionFields[1], 16)
+                    succv             = icfg.getVertexWithAddress(branchAddress)
+                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    predID = v.getVertexID()
+                else:
+                    predID = v.getVertexID()
 
 def readARMDisassembly (filename):
     extractInstructions(filename)
     functions = identifyCallGraph()
     identifyLeaders(functions)
     identifyBasicBlocks(functions)
+    addEdges (functions)
+    program.getCallGraph().findAndSetRoot()
+    for icfg in program.getICFGs():
+        icfg.setEntryID()
+        icfg.setExitID()
+        functionName = icfg.getName()
+        UDrawGraph.makeUdrawFile(icfg, "%s.%s" % (functionName, "icfg"))
     
