@@ -2,62 +2,65 @@
 
 import Debug, UDrawGraph
 import sys, os
-from optparse import OptionParser
+from argparse import ArgumentParser
 from distutils.spawn import find_executable
 
 # The command-line parser and its options
-cmdline = OptionParser(add_help_option=False)
+def csv(value):
+    return map(int, value.split(","))
 
-cmdline.add_option("-h",
-                  "--help",
-                  action="help",
-                  help="Display this help message.")
+cmdline = ArgumentParser()
 
-cmdline.add_option("-C",
-                  "--compile",
-                  action="store_true",
-                  dest="compile",
-                  help="Compile the given program and then simulate. [The program must have a '.c' extension].",
-                  default=False)
+cmdline.add_argument("program",
+                     help="Either a program to compile (with '.c.' extension) or a pre-compiled binary.")
 
-cmdline.add_option("-d",
-                  "--debug",
-                  action="store",
-                  dest="debug",
-                  type="int",
-                  metavar="<INT>",
-                  help="Debug mode.",
-                  default=0)
+cmdline.add_argument("-C",
+                     "--compile",
+                      action="store_true",
+                      dest="compile",
+                      help="Compile the given program and then simulate. [The program must have a '.c' extension].",
+                      default=False)
 
-cmdline.add_option("-T",
-                  "--number-of-tests",
-                  action="store",
-                  type="int",
-                  dest="tests",
-                  help="The number of times to run the application. [Default is %default].",
-                  default=1,
-                  metavar="<INT>")
+cmdline.add_argument("--compiler-flags",
+                      type=csv,
+                      dest="flags",
+                      help="Flags to be passed to the compiler.",
+                      default=False)
 
-cmdline.add_option("-r",
-                  "--root",
-                  action="store",
-                  type="string",
-                  dest="root",
-                  help="The function that is the entry point of the analysis. [This should not be 'main'].",
-                  metavar="<STRING>")
+cmdline.add_argument("-d",
+                      "--debug",
+                      action="store",
+                      dest="debug",
+                      type=int,
+                      help="Debug mode.",
+                      default=0)
 
-cmdline.add_option("-u",
-                 "--udraw",
-                 action="store_true",
-                 dest="udraw",
-                 help="Generate uDrawGraph files.",
-                 default=False)
+cmdline.add_argument("-T",
+                      "--number-of-tests",
+                      action="store",
+                      type=int,
+                      dest="tests",
+                      help="The number of times to run the application.",
+                      default=1)
 
-(opts, args)       = cmdline.parse_args(sys.argv[1:])
-Debug.debug        = opts.debug
-UDrawGraph.enabled = opts.udraw
-armGCC       = "arm-linux-gnueabi-gcc"
-armObjdump   = "arm-linux-gnueabi-objdump"
+cmdline.add_argument("-r",
+                      "--root",
+                      action="store",
+                      dest="root",
+                      help="The function that is the entry point of the analysis. [This should not be 'main'].")
+
+cmdline.add_argument("-u",
+                     "--udraw",
+                     action="store_true",
+                     dest="udraw",
+                     help="Generate uDrawGraph files.",
+                     default=False)
+
+args               = cmdline.parse_args()
+Debug.debug        = args.debug
+UDrawGraph.enabled = args.udraw
+armGCC     = "arm-linux-gnueabi-gcc"
+armObjdump = "arm-linux-gnueabi-objdump"
 
 def runGem5 (gem5base, armSimulator, binary, testSpecification):
     from TestHarness import RandomGeneration
@@ -67,7 +70,7 @@ def runGem5 (gem5base, armSimulator, binary, testSpecification):
     # Now run the program n times
     randomTVs  = RandomGeneration(testSpecification)
     gem5Traces = []
-    for i in xrange(1,opts.tests+1):
+    for i in xrange(1, args.tests+1):
         nextTV     = randomTVs.nextTestVector()
         traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", i)
         cmd        = '%s --debug-flags=Fetch --trace-file=%s %s -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
@@ -140,28 +143,25 @@ def compileProgram (program):
     return binary  
 
 def checkArguments ():
-    if len(args) > 0:
-        program = args[0]
-        if not os.path.exists(program):
-            sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
-        elif not os.path.isfile(program):
-            sys.exit("The first command-line argument must be a file: '%s' is not a file" % program)
-        else:
-            if not opts.compile:
-                if not os.access(program, os.X_OK):
-                    sys.exit("The argument '%s' does not have execute permissions" % program)
-            else:
-                ext  = os.path.splitext(program)[1]
-                cExt = '.c'
-                if ext != cExt:
-                    sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
-                if not find_executable(armGCC):
-                    sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
-                if not find_executable(armObjdump):
-                    sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
-        return os.path.abspath(program)
+    program = args.program
+    if not os.path.exists(program):
+        sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
+    elif not os.path.isfile(program):
+        sys.exit("The first command-line argument must be a file: '%s' is not a file" % program)
     else:
-        sys.exit("Only provide a single argument to the script: the name of the binary or the program to compile")
+        if not args.compile:
+            if not os.access(program, os.X_OK):
+                sys.exit("The argument '%s' does not have execute permissions" % program)
+        else:
+            ext  = os.path.splitext(program)[1]
+            cExt = '.c'
+            if ext != cExt:
+                sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
+            if not find_executable(armGCC):
+                sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
+            if not find_executable(armObjdump):
+                sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
+    return os.path.abspath(program)
         
 def checkEnvironment ():
     # Need a gem5 environment variable 
@@ -179,19 +179,19 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
     except KeyError:
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
         
-if __name__ == "__main__":
+if __name__ == "__main__":    
     from ARM import readARMDisassembly
     from ParseProgramFile import createProgram
     from ParseGem5Trace import parse
     gem5base, armSimulator = checkEnvironment()
     filename               = checkArguments()
     binary                 = filename
-    if opts.compile:
-        if not opts.root:
+    if args.compile:
+        if not args.root:
             sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
         binary      = compileProgram(filename)
         disassembly = disassembleProgram(binary)
-        program     = readARMDisassembly (disassembly, opts.root)
+        program     = readARMDisassembly (disassembly, args.root)
     else:
         programFile = binary + '.txt'
         assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
