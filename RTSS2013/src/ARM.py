@@ -94,12 +94,12 @@ def extractInstructions (filename):
             elif line.startswith('Disassembly of section'):
                 parse = '.text' in line
 
-def identifyCallGraph ():
+def identifyCallGraph (rootFunction):
     Debug.verboseMessage("Identifying call graph under analysis (stripping away linked-in functions")
-    mainFunction = 'main'
+    assert rootFunction in functionToInstructions, "Unable to locate root function '%s' in disassembly" % rootFunction
     functions    = []
     analysed     = set([])
-    functions.append(mainFunction)
+    functions.append(rootFunction)
     while functions:
         functionName = functions.pop()
         analysed.add(functionName)
@@ -221,12 +221,18 @@ def generateInternalFile (filename):
                 f.write("\n")
             f.write("\n")
     
-def readARMDisassembly (filename):
+def readARMDisassembly (filename, rootFunction):
     extractInstructions(filename)
-    functions = identifyCallGraph()
+    functions = identifyCallGraph(rootFunction)
     identifyLeaders(functions)
     identifyBasicBlocks(functions)
     addEdges(functions)
     generateInternalFile(filename)
+    # Program created
+    # Now compute entry and exit IDs of functions and root of call graph
+    program.getCallGraph().findAndSetRoot()
+    for icfg in program.getICFGs():
+        icfg.setEntryID()
+        icfg.setExitID()
     return program
     
