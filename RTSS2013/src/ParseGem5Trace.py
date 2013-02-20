@@ -31,6 +31,7 @@ def parse (program, traceFiles):
     for filename in traceFiles:
         parsing = False 
         with open(filename, 'r') as f:
+            Debug.debugMessage("Analysing gem5 trace file '%s'" % filename, 1)
             for line in f:
                 lexemes  = shlex.split(line)
                 PCLexeme = lexemes[-1]
@@ -45,4 +46,4 @@ def parse (program, traceFiles):
                     if PC == lastAddress:
                         parsing = False
                 except ValueError:
-                    Debug.exitMessage("Cannot cast %s into an integer. It is not a hexadecimal string." % PCLexeme)
+                    Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string." % PCLexeme)

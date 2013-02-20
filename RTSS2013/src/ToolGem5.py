@@ -84,11 +84,11 @@ def runGem5 (gem5base, armSimulator, binary, testSpecification):
 def getTestSpecification (binary):
     import TestHarness
     programTestFile = binary + '.test'
-    assert os.path.exists(programTestFile), "Expected to find the file '%s' containing test input specification but it is not there" % programTestFile
-    type   = None
-    length = None
-    lower  = None
-    upper  = None
+    assert os.path.exists(programTestFile), "Expected to find the test specification file '%s' but it is not there" % programTestFile
+    basetype = None
+    length   = None
+    lower    = None
+    upper    = None
     with open(programTestFile, 'r') as f:
         for line in f:
             index = line.find('=')
@@ -98,7 +98,7 @@ def getTestSpecification (binary):
                 lhs = line[:index].strip()
                 rhs = line[index+1:].strip()
                 if lhs.lower() == 'type':
-                    type = rhs
+                    basetype = rhs
                 elif lhs.lower() == 'length':
                     try:
                         length = int(rhs)
@@ -115,8 +115,8 @@ def getTestSpecification (binary):
                     except:
                         sys.exit("The upper bound on the range of elements in the test vector must be an integer. It is %s." % rhs) 
                 else:
-                    sys.exit("Do not understand the line '%s' in the test specification" % line)   
-    return TestHarness.TestVectorProperties(length, type, lower, upper)
+                    sys.exit("Do not understand the line '%s' in the test specification file" % line)   
+    return TestHarness.TestVectorProperties(length, basetype, lower, upper)
         
 def disassembleProgram (binary):
     from subprocess import Popen
