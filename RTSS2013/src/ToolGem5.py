@@ -1,15 +1,9 @@
 #!/usr/bin/python2.6
 
 import sys, os
-
-# Add parent directory to the module search
-parentdir = os.path.dirname(sys.path[0])
-sys.path.append(parentdir)
-
 from optparse import OptionParser
 from distutils.spawn import find_executable
-import src.Debug as Debug
-import src.UDrawGraph as UDrawGraph
+import Debug, UDrawGraph
 
 # The command-line parser and its options
 cmdline = OptionParser(add_help_option=False)
@@ -48,7 +42,7 @@ armGCC       = "arm-linux-gnueabi-gcc"
 armObjdump   = "arm-linux-gnueabi-objdump"
 
 def extractCFGs (disassembly):
-    from src.ARM import readARMDisassembly
+    from ARM import readARMDisassembly
     readARMDisassembly (disassembly)
     
 def runGem5 (gem5base, armSimulator, binary):

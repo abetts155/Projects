@@ -1,4 +1,4 @@
-import Debug, CFGs, Programs, UDrawGraph, Vertices
+import Debug, CFGs, Programs, Vertices, ParseProgramFile
 import re, shlex
 
 class ARMInstructionSet:
@@ -189,17 +189,45 @@ def addEdges (functions):
                     predID = v.getVertexID()
                 else:
                     predID = v.getVertexID()
-
+                    
+def generateInternalFile (filename):
+    outfilename = filename[:-4] + ".txt"
+    Debug.debugMessage("Outputting program to %s" % outfilename, 20)
+    with open(outfilename, 'w') as f:
+        for icfg in program.getICFGs():
+            functionName = icfg.getName()
+            f.write("%s %s\n" % (ParseProgramFile.cfgIndicator, functionName))
+            for v in icfg:
+                vertexID = v.getVertexID()
+                counter  = v.numberOfSuccessors()
+                if program.getCallGraph().isCallSite(vertexID):
+                    counter += 1
+                f.write("%s %d\n" %  (ParseProgramFile.bbIndicator, vertexID))
+                f.write("%s " % ParseProgramFile.successorsIndicator)
+                for succID in v.getSuccessorIDs():
+                    f.write("%d" % succID)
+                    if counter > 1:
+                        f.write(", ")
+                    counter -= 1
+                if program.getCallGraph().isCallSite(vertexID):
+                    callNames = program.getCallGraph().getCallEdgeNames(vertexID)
+                    assert callNames[0] == functionName, "The function name '%s' of the ICFG and the caller name '%s' do not match" % (functionName, callNames[0])
+                    f.write("%s" % callNames[1])
+                f.write("\n")
+                f.write("%s\n" % ParseProgramFile.instructionsIndicator)
+                for instruction in v.getInstructions():
+                    f.write("[%s]" % hex(instruction.getAddress()))
+                    for field in instruction.getInstructionFields():
+                        f.write(" [%s] " % field)
+                    f.write("\n")
+                f.write("\n")
+            f.write("\n")
+    
 def readARMDisassembly (filename):
     extractInstructions(filename)
     functions = identifyCallGraph()
     identifyLeaders(functions)
     identifyBasicBlocks(functions)
-    addEdges (functions)
-    program.getCallGraph().findAndSetRoot()
-    for icfg in program.getICFGs():
-        icfg.setEntryID()
-        icfg.setExitID()
-        functionName = icfg.getName()
-        UDrawGraph.makeUdrawFile(icfg, "%s.%s" % (functionName, "icfg"))
+    addEdges(functions)
+    generateInternalFile(filename)
     

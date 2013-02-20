@@ -7,6 +7,7 @@ class CallGraph (DirectedGraph):
         DirectedGraph.__init__(self)
         self.__rootID = dummyVertexID
         self.__functionNameToVertex = {}
+        self.__callSites = {}
         
     def addVertex (self, functionName):
         assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
@@ -52,6 +53,14 @@ class CallGraph (DirectedGraph):
         succv = self.getVertexWithName(succName)
         predv.addSuccessor(succv.getVertexID(), callSiteID)            
         succv.addPredecessor(predv.getVertexID(), callSiteID)
+        self.__callSites[callSiteID] = (predName, succName)
+        
+    def isCallSite (self, vertexID):
+        return vertexID in self.__callSites
+    
+    def getCallEdgeNames (self, callSiteID):
+        assert callSiteID in self.__callSites, "Unable to find call information for call site %d" % callSiteID
+        return self.__callSites[callSiteID]
     
 class Program():
     def __init__(self):

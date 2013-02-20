@@ -1,5 +1,11 @@
 import CFGs, Debug, Programs
 import shlex
+
+cfgIndicator          = 'cfg:'
+bbIndicator           = 'bb:'
+ipointIndicator       = 'ipoint:'
+successorsIndicator   = 'succ:'
+instructionsIndicator = 'instructions:'
         
 def setEntryAndExit (icfg):
     withoutPred = []
@@ -46,14 +52,14 @@ def setEntryAndExit (icfg):
     assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
     
-def createProgram (outfile):
+def readInProgram (outfile):
     import re
     program = Programs.Program()
     # First parse the file for functions to partially build call graph
     with open(outfile, 'r') as f:
         for line in f:
             line = line.lower()
-            if line.startswith('cfg:'):
+            if line.startswith(cfgIndicator):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 icfg         = CFGs.ICFG()
@@ -68,18 +74,21 @@ def createProgram (outfile):
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
     # Now add the relevant edges to the CFGs and the call graph
     with open(outfile, 'r') as f: 
-        bbIDs = set([]) 
-        icfg  = None
-        bb    = None   
+        bbIDs        = set([]) 
+        icfg         = None
+        bb           = None   
+        instructions = False
         for line in f:
             line = line.lower()
-            if line.startswith('cfg:'):
+            if line.startswith(cfgIndicator):
+                instructions = False
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 functionName = lexemes[-1]
                 icfg         = program.getICFG(functionName)
                 Debug.debugMessage("Retrieved CFG for '%s'" % functionName, 1)
-            elif line.startswith('bb:'):
+            elif line.startswith(bbIndicator):
+                instructions = False
                 assert icfg, "Found basic block but current CFG is null"
                 lexemes = shlex.split(line) 
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
@@ -92,12 +101,14 @@ def createProgram (outfile):
                     bbIDs.add(vertexID)
                 bb = CFGs.BasicBlock(vertexID)
                 icfg.addVertex(bb)
-            elif line.startswith('ipoint'):
+            elif line.startswith(ipointIndicator):
+                instructions = False
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
                 index = line.index(':')
                 position = line[index+1:].replace(' ', '').strip()
                 bb.setIpoint(position)
-            elif line.startswith('succ:'):
+            elif line.startswith(successorsIndicator):
+                instructions = False
                 assert bb, "Found edge but current basic block is null"
                 index = line.index(':')
                 line = line[index+1:]
@@ -113,7 +124,26 @@ def createProgram (outfile):
                         else:
                             functionName = lex
                             program.getCallGraph().addEdge(icfg.getName(), functionName, bb.getVertexID())                                    
+            elif line.startswith(instructionsIndicator):
+                instructions = True
+            # Ignore lines consisting of whitespace only
+            elif instructions and not re.match(r'\s+', line):
+                assert bb, "Found instruction but current basic block is null"
+                lexemes = shlex.split(line)
+                address = None
+                fields  = []
+                for index, lex in enumerate(lexemes):
+                    if index == 0:
+                        address = int(lex[1:-1], 16)
+                    else:
+                        fields.append(lex[1:-1])
+                assert address, "No address found in instruction %s" % line
+                instruction = CFGs.Instruction(address, fields)
+                bb.addInstruction(instruction)
+    return program
     
+def createProgram (outfile):
+    program = readInProgram(outfile)
     program.getCallGraph().findAndSetRoot()
     for icfg in program.getICFGs():
         icfg.addPredecessorEdges()
