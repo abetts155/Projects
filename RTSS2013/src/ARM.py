@@ -1,6 +1,8 @@
 import Debug, CFGs, Programs, Vertices, ParseProgramFile
 import re, shlex
 
+debugLevel = 20
+
 class ARMInstructionSet:
     Nop                = 'nop'
     PCRegister         = 'pc'
@@ -44,6 +46,8 @@ class ARMInstructionSet:
 
 startAddressToFunction          = {}
 functionToInstructions          = {}
+functionToStartAddress          = {}
+functionToLastAddress           = {}
 functionToLeaders               = {}
 functionToDirectives            = {}
 functionToJumpTableInstructions = {}
@@ -78,26 +82,34 @@ def getInstruction (lexemes):
 def extractInstructions (filename):
     Debug.verboseMessage("Extracting instructions")
     with open(filename, 'r') as f:
-        parse = False
+        parse           = False
+        lastInstruction = None
+        currentFunction = None
         for line in f:
             if parse:
                 if re.match(r'[0-9a-fA-F]+\s<.*>.*', line):
+                    if lastInstruction:
+                        assert currentFunction, "No function detected yet"
+                        functionToLastAddress[currentFunction] = lastInstruction.getAddress()
+                        Debug.debugMessage("Last address of function '%s' is %s" % (currentFunction, hex(functionToLastAddress[currentFunction])), debugLevel)
                     lexemes = shlex.split(line)
                     assert len(lexemes) == 2, "Unable to handle disassembly line %s" % line
                     address      = int(lexemes[0], 16)
                     functionName = lexemes[1][1:-2]
-                    Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), 20)
+                    Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), debugLevel)
                     startAddressToFunction[address]                  = functionName
                     currentFunction                                  = functionName
                     functionToInstructions[currentFunction]          = []
                     functionToDirectives[currentFunction]            = []
                     functionToJumpTableInstructions[currentFunction] = []
+                    functionToStartAddress[currentFunction]          = address
                 elif re.match(r'\s*[0-9a-fA-F]+:.*', line):
                     # Ignore directives reserving space for data
                     if '.word' not in line:                  
                         lexemes     = shlex.split(line.strip())
                         instruction = getInstruction(lexemes)
                         functionToInstructions[currentFunction].append(instruction)
+                        lastInstruction = instruction
                     else:
                         functionToDirectives[currentFunction].append(line)
             elif line.startswith('Disassembly of section'):
@@ -112,7 +124,7 @@ def identifyCallGraph (rootFunction):
     while functions:
         functionName = functions.pop()
         analysed.add(functionName)
-        Debug.debugMessage("Analysing function '%s'" % functionName, 20)
+        Debug.debugMessage("Analysing function '%s'" % functionName, debugLevel)
         assert functionName in functionToInstructions, "No instructions for '%s' discovered" % functionName
         for instruction in functionToInstructions[functionName]:
             instructionFields = instruction.getInstructionFields()
@@ -122,7 +134,15 @@ def identifyCallGraph (rootFunction):
                 assert startAddress in startAddressToFunction, "Unable to find function with start address %s (it should be %s)" % (hex(startAddress), instructionFields[2])
                 calleeName = startAddressToFunction[startAddress]
                 if calleeName not in analysed:
-                    functions.append(calleeName)    
+                    functions.append(calleeName)
+            elif instruction.getOp() in ARMInstructionSet.Branches:
+                assert len(instructionFields) == 3, "Unable to handle branch instruction '%s' since it does not have 3 fields exactly" % instructionFields
+                startAddress = int(instructionFields[1], 16)
+                if startAddress < functionToStartAddress[functionName] or startAddress > functionToLastAddress[functionName]:
+                    assert startAddress in startAddressToFunction, "Unable to find function with start address %s (it should be %s)" % (hex(startAddress), instructionFields[2])
+                    calleeName = startAddressToFunction[startAddress]
+                    if calleeName not in analysed:
+                        functions.append(calleeName)
     return analysed
 
 def isJumpTableInstruction (instruction):
@@ -137,7 +157,7 @@ def isJumpTableInstruction (instruction):
 def identifyLeaders (functions):
     functionToBranchTargets = {}
     for functionName in functions:
-        Debug.debugMessage("Identifying leaders in '%s'" % functionName, 20)
+        Debug.debugMessage("Identifying leaders in '%s'" % functionName, debugLevel)
         functionToLeaders[functionName]       = set([])
         functionToBranchTargets[functionName] = set([])
         newLeader                             = True
@@ -157,15 +177,15 @@ def identifyLeaders (functions):
                     functionToBranchTargets[functionName].add(addressTarget)
                 elif isJumpTableInstruction(instruction):
                     # Look for instructions with an explicit load into the PC
-                    Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, 10)
+                    Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, debugLevel)
                     functionToJumpTableInstructions[functionName].append(instruction)
                     newLeader = True
-        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), 20)
+        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), debugLevel)
         
 def identifyBasicBlocks (functions):
     global newVertexID
     for functionName in functions:
-        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, 20)
+        Debug.debugMessage("Identifying basic blocks in '%s'" % functionName, debugLevel)
         icfg = CFGs.ICFG()
         icfg.setName(functionName)
         program.addICFG(icfg, functionName)
@@ -182,7 +202,7 @@ def identifyBasicBlocks (functions):
             
 def addEdges (functions):
     for functionName in functions:
-        Debug.debugMessage("Adding edges in '%s'" % functionName, 20)
+        Debug.debugMessage("Adding edges in '%s'" % functionName, debugLevel)
         icfg   = program.getICFG(functionName)
         predID = Vertices.dummyVertexID
         for instruction in functionToInstructions[functionName]:
@@ -195,18 +215,27 @@ def addEdges (functions):
                     instructionFields = instruction.getInstructionFields()
                     startAddress      = int(instructionFields[1], 16)
                     calleeName        = startAddressToFunction[startAddress]
-                    program.getCallGraph().addEdge(icfg.getName(), calleeName, v.getVertexID())
+                    program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
                 elif instruction.getOp() in ARMInstructionSet.UnconditionalJumps:
                     instructionFields = instruction.getInstructionFields()
                     jumpAddress       = int(instructionFields[1], 16)
-                    succv             = icfg.getVertexWithAddress(jumpAddress)
-                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    if jumpAddress >= functionToStartAddress[functionName] and jumpAddress <= functionToLastAddress[functionName]:
+                        succv = icfg.getVertexWithAddress(jumpAddress)
+                        icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    else:
+                        calleeName = startAddressToFunction[jumpAddress]
+                        program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
+                        predID = v.getVertexID()
                 elif instruction.getOp() in ARMInstructionSet.Branches:
                     instructionFields = instruction.getInstructionFields()
                     branchAddress     = int(instructionFields[1], 16)
-                    succv             = icfg.getVertexWithAddress(branchAddress)
-                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    if branchAddress >= functionToStartAddress[functionName] and branchAddress <= functionToLastAddress[functionName]:
+                        succv = icfg.getVertexWithAddress(branchAddress)
+                        icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    else:
+                        calleeName = startAddressToFunction[branchAddress]
+                        program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
                 elif isJumpTableInstruction(instruction):
                     # Do not add any edges out of these basic blocks as they will be handled
@@ -232,7 +261,7 @@ def getSourceVertex (sourceVertices, address):
 def addJumpTableEdges (functions):
     for functionName in functions:
         icfg  = program.getICFG(functionName)
-        Debug.debugMessage("Adding jump table edges in '%s'" % functionName, 10)
+        Debug.debugMessage("Adding jump table edges in '%s'" % functionName, debugLevel)
         # First scan the instructions looking for change of PC through explicit load
         sourceVertices = []
         for instruction in functionToJumpTableInstructions[functionName]:
@@ -251,7 +280,7 @@ def addJumpTableEdges (functions):
                     
 def generateInternalFile (filename):
     outfilename = filename[:-4] + ".txt"
-    Debug.debugMessage("Outputting program to %s" % outfilename, 20)
+    Debug.debugMessage("Outputting program to %s" % outfilename, debugLevel)
     with open(outfilename, 'w') as f:
         for icfg in program.getICFGs():
             functionName = icfg.getName()

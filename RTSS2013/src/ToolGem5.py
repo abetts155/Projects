@@ -1,66 +1,56 @@
 #!/usr/bin/python2.6
 
-import Debug, UDrawGraph
+import Debug
 import sys, os
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, ArgumentTypeError
 from distutils.spawn import find_executable
 
-# The command-line parser and its options
-def csv(value):
-    return map(int, value.split(","))
+def commaSeparatedList (s):
+    try:
+        return s.split(',')
+    except:
+        raise ArgumentTypeError("Invalid compiler flags")
 
-cmdline = ArgumentParser()
+# The command-line parser and its options
+cmdline = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
+                         description="Run C programs on gem5 and analyse traces")
 
 cmdline.add_argument("program",
                      help="Either a program to compile (with '.c.' extension) or a pre-compiled binary.")
 
-cmdline.add_argument("-C",
-                     "--compile",
-                      action="store_true",
-                      dest="compile",
-                      help="Compile the given program and then simulate. [The program must have a '.c' extension].",
-                      default=False)
-
 cmdline.add_argument("--compiler-flags",
-                      type=csv,
+                      type=commaSeparatedList,
+                      help="flags to be passed to the compiler",
                       dest="flags",
-                      help="Flags to be passed to the compiler.",
-                      default=False)
+                      metavar="<FLAGS>")
 
 cmdline.add_argument("-d",
                       "--debug",
                       action="store",
-                      dest="debug",
                       type=int,
-                      help="Debug mode.",
+                      help="debug mode",
+                      metavar="<INT>",
                       default=0)
+
+cmdline.add_argument("-r",
+                      "--root",
+                      action="store",
+                      help="the function that is the entry point of the analysis. [This should not be 'main']",
+                      metavar="<FUNCTION>")
 
 cmdline.add_argument("-T",
                       "--number-of-tests",
                       action="store",
                       type=int,
                       dest="tests",
-                      help="The number of times to run the application.",
+                      help="the number of times to run the application",
+                      metavar="<INT>",
                       default=1)
 
-cmdline.add_argument("-r",
-                      "--root",
-                      action="store",
-                      dest="root",
-                      help="The function that is the entry point of the analysis. [This should not be 'main'].")
-
-cmdline.add_argument("-u",
-                     "--udraw",
-                     action="store_true",
-                     dest="udraw",
-                     help="Generate uDrawGraph files.",
-                     default=False)
-
-args               = cmdline.parse_args()
-Debug.debug        = args.debug
-UDrawGraph.enabled = args.udraw
-armGCC     = "arm-linux-gnueabi-gcc"
-armObjdump = "arm-linux-gnueabi-objdump"
+args        = cmdline.parse_args()
+Debug.debug = args.debug
+armGCC      = "arm-linux-gnueabi-gcc"
+armObjdump  = "arm-linux-gnueabi-objdump"
 
 def runGem5 (gem5base, armSimulator, binary, testSpecification):
     from TestHarness import RandomGeneration
@@ -134,34 +124,47 @@ def disassembleProgram (binary):
         
 def compileProgram (program):
     from subprocess import Popen
+    extraFlags = ""
+    if args.flags:
+        for flag in args.flags:
+            extraFlags += "-%s " % flag
     binary     = program[:-2]
-    cmd        = "%s -static %s -o %s" % (armGCC, program, binary)
+    cmd        = "%s -static %s -o %s %s" % (armGCC, program, binary, extraFlags)
     proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()
     if returncode:
-        sys.exit("Compiling '%s' failed" % program)
+        sys.exit("Compiling '%s' with '%s' failed" % (program, cmd))
     return binary  
 
 def checkArguments ():
-    program = args.program
+    from ParseProgramFile import createProgram
+    program = os.path.abspath(args.program)
     if not os.path.exists(program):
         sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
     elif not os.path.isfile(program):
         sys.exit("The first command-line argument must be a file: '%s' is not a file" % program)
     else:
-        if not args.compile:
+        ext  = os.path.splitext(program)[1]
+        cExt = '.c'
+        if ext:
+            if ext == cExt:
+                if not find_executable(armGCC):
+                    sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
+                if not find_executable(armObjdump):
+                    sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
+                if not args.root:
+                    sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
+                program     = compileProgram(program)
+                disassembly = disassembleProgram(program)
+                return program, readARMDisassembly(disassembly, args.root)
+            else:
+                sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
+        else:
             if not os.access(program, os.X_OK):
                 sys.exit("The argument '%s' does not have execute permissions" % program)
-        else:
-            ext  = os.path.splitext(program)[1]
-            cExt = '.c'
-            if ext != cExt:
-                sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
-            if not find_executable(armGCC):
-                sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
-            if not find_executable(armObjdump):
-                sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
-    return os.path.abspath(program)
+            programFile = program + '.txt'
+            assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
+            return program, createProgram(programFile)
         
 def checkEnvironment ():
     # Need a gem5 environment variable 
@@ -181,21 +184,9 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
         
 if __name__ == "__main__":    
     from ARM import readARMDisassembly
-    from ParseProgramFile import createProgram
     from ParseGem5Trace import parse
     gem5base, armSimulator = checkEnvironment()
-    filename               = checkArguments()
-    binary                 = filename
-    if args.compile:
-        if not args.root:
-            sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
-        binary      = compileProgram(filename)
-        disassembly = disassembleProgram(binary)
-        program     = readARMDisassembly (disassembly, args.root)
-    else:
-        programFile = binary + '.txt'
-        assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
-        program     = createProgram(programFile)
-    testSpecification = getTestSpecification(binary)
-    gem5Traces        = runGem5(gem5base, armSimulator, binary, testSpecification)
+    binary, program        = checkArguments()
+    testSpecification      = getTestSpecification(binary)
+    gem5Traces             = runGem5(gem5base, armSimulator, binary, testSpecification)
     parse(program, gem5Traces)

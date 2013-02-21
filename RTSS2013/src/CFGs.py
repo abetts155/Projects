@@ -173,7 +173,7 @@ class CFG (FlowGraph):
     
     def getLastInstruction (self):
         v = self.getVertex(self._exitID)
-        return v.getFirstInstruction()
+        return v.getLastInstruction()
         
     def setEdgeIDs (self):
         edgeID = 1

@@ -1,6 +1,6 @@
 
 class TestVectorProperties:
-    Type = ['int', 'float']
+    Type = ['int', 'double']
     
     def __init__ (self, vectorLength, vectorBaseType, vectorLowerBound, vectorUpperBound):
         assert vectorLength > 0, "The length of the test vector must be greater than zero"
