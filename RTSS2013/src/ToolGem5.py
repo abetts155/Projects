@@ -1,71 +1,11 @@
 #!/usr/bin/python2.6
 
-import Debug
-import sys, os
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, ArgumentTypeError
-from distutils.spawn import find_executable
-
-def commaSeparatedList (s):
-    try:
-        return s.split(',')
-    except:
-        raise ArgumentTypeError("Invalid compiler flags")
-
-# The command-line parser and its options
-cmdline = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
-                         description="Run C programs on gem5 and analyse traces")
-
-cmdline.add_argument("program",
-                     help="Either a program to compile (with '.c.' extension) or a pre-compiled binary.",
-                     nargs='?')
-
-cmdline.add_argument("--compiler-flags",
-                      type=commaSeparatedList,
-                      help="flags to be passed to the compiler",
-                      dest="flags",
-                      metavar="<FLAGS>")
-
-cmdline.add_argument("--clean",
-                     action="store_true",
-                     help="Clean out temporary files.",
-                     default=False)
-
-cmdline.add_argument("-d",
-                      "--debug",
-                      action="store",
-                      type=int,
-                      help="debug mode",
-                      metavar="<INT>",
-                      default=0)
-
-cmdline.add_argument("-r",
-                      "--root",
-                      action="store",
-                      help="the function that is the entry point of the analysis. [This should not be 'main']",
-                      metavar="<FUNCTION>")
-
-cmdline.add_argument("-T",
-                      "--number-of-tests",
-                      action="store",
-                      type=int,
-                      dest="tests",
-                      help="the number of times to run the application",
-                      metavar="<INT>",
-                      default=1)
-
-cmdline.add_argument("-v",
-                     "--verbose",
-                     action="store_true",
-                     help="Be verbose.",
-                     default=False)
-
-args          = cmdline.parse_args()
-Debug.debug   = args.debug
-Debug.verbose = args.verbose
-armGCC        = "arm-linux-gnueabi-gcc"
-armObjdump    = "arm-linux-gnueabi-objdump"
+armGCC     = "arm-linux-gnueabi-gcc"
+armObjdump = "arm-linux-gnueabi-objdump"
 
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
+    import os, sys
+    import Debug
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
     # Now run the program n times
@@ -86,6 +26,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     return gem5Traces
     
 def getTestSpecification (testSpecFile):
+    import sys
     import locale
     import TestHarness
     basetype = None
@@ -123,6 +64,7 @@ def getTestSpecification (testSpecFile):
     return TestHarness.TestVectorProperties(length, basetype, lower, upper)
         
 def disassembleProgram (binary):
+    import sys
     from subprocess import Popen
     filename = binary + ".dis"
     with open(filename, 'w') as disassembly:
@@ -134,6 +76,7 @@ def disassembleProgram (binary):
     return filename
         
 def compileProgram (program):
+    import sys
     from subprocess import Popen
     extraFlags = ""
     if args.flags:
@@ -148,8 +91,12 @@ def compileProgram (program):
     return binary  
 
 def checkProgramFiles ():
+    import os, sys
+    from distutils.spawn import find_executable
     from ParseProgramFile import createProgram
-    program = os.path.abspath(args.program)
+    from ARM import readARMDisassembly
+    
+    program  = os.path.abspath(args.program)
     if not os.path.exists(program):
         sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
     elif not os.path.isfile(program):
@@ -181,6 +128,7 @@ def checkProgramFiles ():
             return program, createProgram(programFile), testSpecFile
         
 def checkGem5Settings ():
+    import os, sys
     # Need a gem5 environment variable 
     gem5Home = "GEM5_HOME"
     try:
@@ -200,7 +148,8 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
         
 def clean (abspath):
-    import shutil
+    import Debug
+    import shutil, os
     for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
         files.sort()
         for filename in files:
@@ -217,10 +166,76 @@ def clean (abspath):
                 fullPath = os.path.join(paths, directory)
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 shutil.rmtree(fullPath)
-        
-if __name__ == "__main__":    
-    from ARM import readARMDisassembly
+
+def commaSeparatedList (s):
+    from argparse import ArgumentTypeError
+    try:
+        return s.split(',')
+    except:
+        raise ArgumentTypeError("Invalid compiler flags")
+
+def commandLine ():
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+    
+    # The command-line parser and its options
+    cmdline = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
+                             description="Run C programs on gem5 and analyse traces")
+    
+    cmdline.add_argument("program",
+                         help="either a program to compile (with '.c.' extension) or a pre-compiled binary",
+                         nargs='?')
+    
+    cmdline.add_argument("--compiler-flags",
+                          type=commaSeparatedList,
+                          help="flags to be passed to the compiler",
+                          dest="flags",
+                          metavar="<FLAGS>")
+    
+    cmdline.add_argument("--clean",
+                         action="store_true",
+                         help="clean out temporary files",
+                         default=False)
+    
+    cmdline.add_argument("-d",
+                          "--debug",
+                          action="store",
+                          type=int,
+                          help="debug mode",
+                          metavar="<INT>",
+                          default=0)
+    
+    cmdline.add_argument("-r",
+                          "--root",
+                          action="store",
+                          help="the function that is the entry point of the analysis. [This should not be 'main']",
+                          metavar="<FUNCTION>")
+    
+    cmdline.add_argument("-T",
+                          "--number-of-tests",
+                          action="store",
+                          type=int,
+                          dest="tests",
+                          help="the number of times to run the application",
+                          metavar="<INT>",
+                          default=1)
+    
+    cmdline.add_argument("-v",
+                         "--verbose",
+                         action="store_true",
+                         help="be verbose",
+                         default=False)
+    
+    return cmdline.parse_args()
+
+if __name__ == "__main__":   
+    import Debug
+    import os 
     from ParseGem5Trace import parse
+
+    args          = commandLine()
+    Debug.debug   = args.debug
+    Debug.verbose = args.verbose
+    
     if args.clean:
         clean(os.path.abspath(os.curdir))
     else:
@@ -229,3 +244,4 @@ if __name__ == "__main__":
         testSpecification                      = getTestSpecification(testSpecFile)
         gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
         parse(program, gem5Traces)
+        
