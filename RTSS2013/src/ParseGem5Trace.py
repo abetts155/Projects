@@ -18,12 +18,12 @@ def buildAddressInformation (program):
     firstAddress = rootICFG.getFirstInstruction().getAddress()
     lastbb       = rootICFG.getVertex(rootICFG.getExitID())
     for instruction in reversed(lastbb.getInstructions()):
-        if instruction.getOp() != ARM.ARMInstructionSet.Nop:
+        if instruction.getOp() not in ARM.ARMInstructionSet.Nops:
             lastAddress = instruction.getAddress()
             break
     assert lastAddress, "Unable to find last address"
-    Debug.debugMessage("Start address of main function is %s" % hex(firstAddress), 1)    
-    Debug.debugMessage("End address of main function is %s" % hex(lastAddress), 1)
+    Debug.debugMessage("Start address of root function '%s' is %s" % (rootICFG.getName(), hex(firstAddress)), 1)    
+    Debug.debugMessage("End address of root function '%s' is %s" % (rootICFG.getName(), hex(lastAddress)), 1)
     for icfg in program.getICFGs():
         for v in icfg:
             for instruction in v.getInstructions():

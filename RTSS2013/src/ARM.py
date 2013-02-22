@@ -4,7 +4,7 @@ import re, shlex
 debugLevel = 20
 
 class ARMInstructionSet:
-    Nop                = 'nop'
+    Nops               = ['nop', 'nop.n', 'nop.w']
     PCRegister         = 'pc'
     Call               = 'bl'
     UnconditionalJumps = ['b', 'b.n', 'b.w']
@@ -276,7 +276,8 @@ def addJumpTableEdges (functions):
                 succv   = icfg.getVertexWithAddress(address)
                 icfg.addEdge(predv.getVertexID(), succv.getVertexID())
         else:
-            assert not functionToDirectives[functionName], "Found directives in %s but no jump table instructions" % functionName
+            if functionToDirectives[functionName]:
+                Debug.warningMessage("Found directives in %s but no jump table instructions" % functionName)
                     
 def generateInternalFile (filename):
     outfilename = filename[:-4] + ".txt"

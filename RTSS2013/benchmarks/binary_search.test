@@ -1,0 +1,4 @@
+type=int
+length=1
+lower=-2,147,483,648
+upper=2,147,483,647

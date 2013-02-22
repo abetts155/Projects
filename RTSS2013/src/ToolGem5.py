@@ -65,11 +65,9 @@ Debug.verbose = args.verbose
 armGCC        = "arm-linux-gnueabi-gcc"
 armObjdump    = "arm-linux-gnueabi-objdump"
 
-def runGem5 (gem5base, armSimulator, binary, testSpecification):
+def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
-    gem5ConfigFile  = gem5base + os.sep + 'configs' + os.sep + 'example' + os.sep + 'se.py'
-    assert os.path.exists(gem5ConfigFile), sys.exit("The gem5 configuration file '%s' does not exist" % gem5ConfigFile)
     # Now run the program n times
     randomTVs  = RandomGeneration(testSpecification)
     gem5Traces = []
@@ -87,15 +85,15 @@ def runGem5 (gem5base, armSimulator, binary, testSpecification):
         gem5Traces.append(gem5Trace)
     return gem5Traces
     
-def getTestSpecification (binary):
+def getTestSpecification (testSpecFile):
+    import locale
     import TestHarness
-    programTestFile = binary + '.test'
-    assert os.path.exists(programTestFile), "Expected to find the test specification file '%s' but it is not there" % programTestFile
     basetype = None
     length   = None
     lower    = None
     upper    = None
-    with open(programTestFile, 'r') as f:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF8')
+    with open(testSpecFile, 'r') as f:
         for line in f:
             index = line.find('=')
             if index == -1:
@@ -112,12 +110,12 @@ def getTestSpecification (binary):
                         sys.exit("The length of the test vector must be a non-negative integer. It is %s." % rhs) 
                 elif lhs.lower() == 'lower':
                     try:
-                        lower = int(rhs)
+                        lower = locale.atoi(rhs)
                     except:
                         sys.exit("The lower bound on the range of elements in the test vector must be an integer. It is %s." % rhs) 
                 elif lhs.lower() == 'upper':
                     try:
-                        upper = int(rhs)
+                        upper = locale.atoi(rhs)
                     except:
                         sys.exit("The upper bound on the range of elements in the test vector must be an integer. It is %s." % rhs) 
                 else:
@@ -149,7 +147,7 @@ def compileProgram (program):
         sys.exit("Compiling '%s' with '%s' failed" % (program, cmd))
     return binary  
 
-def checkArguments ():
+def checkProgramFiles ():
     from ParseProgramFile import createProgram
     program = os.path.abspath(args.program)
     if not os.path.exists(program):
@@ -157,10 +155,13 @@ def checkArguments ():
     elif not os.path.isfile(program):
         sys.exit("The first command-line argument must be a file: '%s' is not a file" % program)
     else:
-        ext  = os.path.splitext(program)[1]
+        fileStem, fileExt = os.path.splitext(program)
+        testSpecFile      = fileStem + '.test'
+        if not os.path.exists(testSpecFile):
+            sys.exit("Expected to find the test specification file '%s' but it is not there" % testSpecFile)
         cExt = '.c'
-        if ext:
-            if ext == cExt:
+        if fileExt:
+            if fileExt == cExt:
                 if not find_executable(armGCC):
                     sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
                 if not find_executable(armObjdump):
@@ -169,7 +170,7 @@ def checkArguments ():
                     sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
                 program     = compileProgram(program)
                 disassembly = disassembleProgram(program)
-                return program, readARMDisassembly(disassembly, args.root)
+                return program, readARMDisassembly(disassembly, args.root), testSpecFile
             else:
                 sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
         else:
@@ -177,9 +178,9 @@ def checkArguments ():
                 sys.exit("The argument '%s' does not have execute permissions" % program)
             programFile = program + '.txt'
             assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
-            return program, createProgram(programFile)
+            return program, createProgram(programFile), testSpecFile
         
-def checkEnvironment ():
+def checkGem5Settings ():
     # Need a gem5 environment variable 
     gem5Home = "GEM5_HOME"
     try:
@@ -191,7 +192,10 @@ def checkEnvironment ():
             sys.exit("""Unable to find '%s' in your gem5 distribution, which is the optimised ARM configuration of gem5. 
 Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'""" \
                      % (armSimulator, path))
-        return path, armSimulator
+        gem5ConfigFile  = path + os.sep + 'configs' + os.sep + 'example' + os.sep + 'se.py'
+        if not os.path.exists(gem5ConfigFile):
+            sys.exit("The gem5 configuration file '%s' does not exist" % gem5ConfigFile)
+        return path, armSimulator, gem5ConfigFile
     except KeyError:
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
         
@@ -220,8 +224,8 @@ if __name__ == "__main__":
     if args.clean:
         clean(os.path.abspath(os.curdir))
     else:
-        gem5base, armSimulator = checkEnvironment()
-        binary, program        = checkArguments()
-        testSpecification      = getTestSpecification(binary)
-        gem5Traces             = runGem5(gem5base, armSimulator, binary, testSpecification)
+        gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
+        binary, program, testSpecFile          = checkProgramFiles()
+        testSpecification                      = getTestSpecification(testSpecFile)
+        gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
         parse(program, gem5Traces)
