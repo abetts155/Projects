@@ -16,13 +16,19 @@ cmdline = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
                          description="Run C programs on gem5 and analyse traces")
 
 cmdline.add_argument("program",
-                     help="Either a program to compile (with '.c.' extension) or a pre-compiled binary.")
+                     help="Either a program to compile (with '.c.' extension) or a pre-compiled binary.",
+                     nargs='?')
 
 cmdline.add_argument("--compiler-flags",
                       type=commaSeparatedList,
                       help="flags to be passed to the compiler",
                       dest="flags",
                       metavar="<FLAGS>")
+
+cmdline.add_argument("--clean",
+                     action="store_true",
+                     help="Clean out temporary files.",
+                     default=False)
 
 cmdline.add_argument("-d",
                       "--debug",
@@ -47,10 +53,17 @@ cmdline.add_argument("-T",
                       metavar="<INT>",
                       default=1)
 
-args        = cmdline.parse_args()
-Debug.debug = args.debug
-armGCC      = "arm-linux-gnueabi-gcc"
-armObjdump  = "arm-linux-gnueabi-objdump"
+cmdline.add_argument("-v",
+                     "--verbose",
+                     action="store_true",
+                     help="Be verbose.",
+                     default=False)
+
+args          = cmdline.parse_args()
+Debug.debug   = args.debug
+Debug.verbose = args.verbose
+armGCC        = "arm-linux-gnueabi-gcc"
+armObjdump    = "arm-linux-gnueabi-objdump"
 
 def runGem5 (gem5base, armSimulator, binary, testSpecification):
     from TestHarness import RandomGeneration
@@ -182,11 +195,33 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
     except KeyError:
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
         
+def clean (abspath):
+    import shutil
+    for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
+        files.sort()
+        for filename in files:
+            if filename.endswith('.udraw') or filename.endswith('.dis'):
+                fullPath = os.path.join(paths, filename)
+                Debug.verboseMessage("Removing '%s'" % fullPath)
+                os.remove(fullPath)
+            if os.access(filename, os.X_OK) and os.path.exists(filename + '.c'):
+                fullPath = os.path.join(paths, filename)
+                Debug.verboseMessage("Removing '%s'" % fullPath)
+                os.remove(fullPath)
+        for directory in dirs:
+            if directory == 'm5out':
+                fullPath = os.path.join(paths, directory)
+                Debug.verboseMessage("Removing '%s'" % fullPath)
+                shutil.rmtree(fullPath)
+        
 if __name__ == "__main__":    
     from ARM import readARMDisassembly
     from ParseGem5Trace import parse
-    gem5base, armSimulator = checkEnvironment()
-    binary, program        = checkArguments()
-    testSpecification      = getTestSpecification(binary)
-    gem5Traces             = runGem5(gem5base, armSimulator, binary, testSpecification)
-    parse(program, gem5Traces)
+    if args.clean:
+        clean(os.path.abspath(os.curdir))
+    else:
+        gem5base, armSimulator = checkEnvironment()
+        binary, program        = checkArguments()
+        testSpecification      = getTestSpecification(binary)
+        gem5Traces             = runGem5(gem5base, armSimulator, binary, testSpecification)
+        parse(program, gem5Traces)
