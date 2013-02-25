@@ -1,17 +1,32 @@
 #!/usr/bin/python2.6
 
-armGCC     = "arm-linux-gnueabi-gcc"
-armObjdump = "arm-linux-gnueabi-objdump"
+armGCC      = 'arm-linux-gnueabi-gcc'
+armObjdump  = 'arm-linux-gnueabi-objdump'
+m5Directory = 'm5out'
 
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
-    import os, sys
+    import os, sys, re
     import Debug
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
+    
+    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + m5Directory
+    
+    # Carry on from previous executions
+    run = 0
+    for filename in os.listdir(gem5TraceDirectory):
+        match = re.match(r'%s' % os.path.basename(binary), filename)
+        if match:
+            index = filename.rfind('.')
+            num   = int(filename[index+1:])
+            if num > run:
+                run = num
+    run += 1
+    
     # Now run the program n times
     randomTVs  = RandomGeneration(testSpecification)
     gem5Traces = []
-    for i in xrange(1, args.tests+1):
+    for i in xrange(run, args.tests + run):
         nextTV     = randomTVs.nextTestVector()
         traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", i)
         cmd        = '%s --debug-flags=Fetch --trace-file=%s %s -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
@@ -20,7 +35,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
         returncode = proc.wait()
         if returncode:
             sys.exit("Running '%s' failed" % cmd)
-        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + 'm5out' + os.sep + traceFile
+        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + m5Directory + os.sep + traceFile
         assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
         gem5Traces.append(gem5Trace)
     return gem5Traces
@@ -84,6 +99,7 @@ def compileProgram (program):
             extraFlags += "-%s " % flag
     binary     = program[:-2]
     cmd        = "%s -static %s -o %s %s" % (armGCC, program, binary, extraFlags)
+    Debug.debugMessage("Compiling with command '%s'" % cmd, 1)
     proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()
     if returncode:
@@ -162,7 +178,7 @@ def clean (abspath):
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 os.remove(fullPath)
         for directory in dirs:
-            if directory == 'm5out':
+            if directory == m5Directory:
                 fullPath = os.path.join(paths, directory)
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 shutil.rmtree(fullPath)
@@ -182,8 +198,7 @@ def commandLine ():
                              description="Run C programs on gem5 and analyse traces")
     
     cmdline.add_argument("program",
-                         help="either a program to compile (with '.c.' extension) or a pre-compiled binary",
-                         nargs='?')
+                         help="either a program to compile (with '.c.' extension) or a pre-compiled binary")
     
     cmdline.add_argument("--compiler-flags",
                           type=commaSeparatedList,
@@ -238,10 +253,9 @@ if __name__ == "__main__":
     
     if args.clean:
         clean(os.path.abspath(os.curdir))
-    elif args.program:
-        gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
-        binary, program, testSpecFile          = checkProgramFiles()
-        testSpecification                      = getTestSpecification(testSpecFile)
-        gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
-        parse(program, gem5Traces)
-        
+    gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
+    binary, program, testSpecFile          = checkProgramFiles()
+    testSpecification                      = getTestSpecification(testSpecFile)
+    gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+    parse(program, gem5Traces)
+    

@@ -113,8 +113,8 @@ def readInProgram (programFile):
                 line = line[index+1:]
                 splitter = shlex.shlex(line)
                 splitter.whitespace += ','
-                splitter.whitespace_split = False
-                lexemes = list(splitter)
+                splitter.whitespace_split = True
+                lexemes = list(splitter)  
                 if len(lexemes):
                     for lex in lexemes:
                         if lex.isdigit():

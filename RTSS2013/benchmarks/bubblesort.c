@@ -14,16 +14,15 @@
 int
 swapIfLarger (int *a, int *b)
 {
-	int tmp;
-	int swapped = 0;
-	if (*a > *b)
-	{	
-		tmp = *a;
-		*a = *b;
-		*b = tmp;
-		swapped = 1;
-	}
-	return swapped;
+  int tmp;
+  if (*a > *b)
+  {	
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+    return 1;
+  }
+  return 0;
 }
 
 void

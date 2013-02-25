@@ -42,6 +42,12 @@ class CallGraph (DirectedGraph):
             self.__rootID = withoutPred[0]
         assert self.__rootID, "Unable to set root ID of call graph"
         
+    def setRoot (self, functionName):
+        rootv = self.getVertexWithName(functionName)
+        if rootv.numberOfPredecessors() > 0:
+            Debug.warningMessage("Root function '%s' has incoming function calls" % functionName)
+        self.__rootID = rootv.getVertexID()
+        
     def setRootID (self, rootID):
         self.__rootID = rootID
     

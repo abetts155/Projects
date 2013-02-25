@@ -360,10 +360,9 @@ def readARMDisassembly (filename, rootFunction):
     generateInternalFile(filename)
     # Program created
     # Now compute entry and exit IDs of functions and root of call graph
-    program.getCallGraph().findAndSetRoot()
+    program.getCallGraph().setRoot(rootFunction)
     for icfg in program.getICFGs():
         Debug.debugMessage("Setting entry and exit in %s" % icfg.getName(), debugLevel)
-        print icfg
         icfg.setEntryID()
         icfg.setExitID()
     return program
