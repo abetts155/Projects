@@ -399,6 +399,7 @@ class LoopNests (Tree):
     def __init__(self, directedg, rootID):
         assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
+        self.__predomTree = Dominators(directedg, rootID)
         self.__directedg = directedg
         self.__parent = {}
         self.__loopBodies = {}
@@ -426,6 +427,7 @@ class LoopNests (Tree):
             worklist = []
             for predID in v.getPredecessorIDs():
                 if self.__dfs.isDFSBackedge(predID, vertexID):
+                    assert self.__predomTree.isAncestor(vertexID, predID), "Non-reducible loop found with DFS backedge %d => %d" % (predID, vertexID)
                     if predID == vertexID:
                         Debug.debugMessage("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 15)
                         self._addSelfLoop (vertexID)

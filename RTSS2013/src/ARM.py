@@ -1,4 +1,4 @@
-import Debug, CFGs, Programs, Vertices, ParseProgramFile
+import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils
 import re, shlex
 
 debugLevel = 20
@@ -49,12 +49,14 @@ class ARMInstructionSet:
                           'bne.w']
 
 startAddressToFunction          = {}
+lastAddressToFunction           = {}
 functionToInstructions          = {}
 functionToStartAddress          = {}
 functionToLastAddress           = {}
 functionToLeaders               = {}
 functionToDirectives            = {}
 functionToJumpTableInstructions = {}
+functionToJumpTableBasicBlocks  = {}
 instructionToBasicBlock         = {}
 program                         = Programs.Program()
 newVertexID                     = 1
@@ -94,7 +96,9 @@ def extractInstructions (filename):
                 if re.match(r'[0-9a-fA-F]+\s<.*>.*', line):
                     if lastInstruction:
                         assert currentFunction, "No function detected yet"
-                        functionToLastAddress[currentFunction] = lastInstruction.getAddress()
+                        lastAddress                            = lastInstruction.getAddress()
+                        functionToLastAddress[currentFunction] = lastAddress
+                        lastAddressToFunction[lastAddress]     = currentFunction 
                         Debug.debugMessage("Last address of function '%s' is %s" % (currentFunction, hex(functionToLastAddress[currentFunction])), debugLevel)
                     lexemes = shlex.split(line)
                     assert len(lexemes) == 2, "Unable to handle disassembly line %s" % line
@@ -107,6 +111,7 @@ def extractInstructions (filename):
                     functionToDirectives[currentFunction]            = []
                     functionToJumpTableInstructions[currentFunction] = []
                     functionToStartAddress[currentFunction]          = address
+                    functionToJumpTableBasicBlocks[currentFunction]  = []
                 elif re.match(r'\s*[0-9a-fA-F]+:.*', line):
                     # Ignore directives reserving space for data
                     if '.word' not in line:                  
@@ -118,6 +123,18 @@ def extractInstructions (filename):
                         functionToDirectives[currentFunction].append(line)
             elif line.startswith('Disassembly of section'):
                 parse = '.text' in line
+                
+def getCalleeName (instructionFields):
+    # The callee name should be delimited by '<' and '>'
+    assert instructionFields[2].startswith('<') and instructionFields[2].endswith('>'), "Unable to parse callee name %s" % instructionFields[2]
+    calleeName = instructionFields[2][1:-1]
+    # Some of the target addresses are NOT the callee start address. In those cases it is an offset from the base address indicated by '+'
+    index = calleeName.find('+')
+    if index != -1:
+        calleeName = calleeName[:index]
+    startAddress = int(instructionFields[1], 16)            
+    assert startAddress >= functionToStartAddress[calleeName] and startAddress <= functionToLastAddress[calleeName], "The address %d is outside the legal range of addresses for %s" % (startAddress, calleeName)
+    return calleeName
 
 def identifyCallGraph (rootFunction):
     Debug.verboseMessage("Identifying call graph under analysis (stripping away linked-in functions")
@@ -143,35 +160,67 @@ def identifyCallGraph (rootFunction):
                 assert len(instructionFields) == 3, "Unable to handle branch instruction '%s' since it does not have 3 fields exactly" % instructionFields
                 startAddress = int(instructionFields[1], 16)
                 if startAddress < functionToStartAddress[functionName] or startAddress > functionToLastAddress[functionName]:
-                    assert startAddress in startAddressToFunction, "Unable to find function with start address %s (it should be %s)" % (hex(startAddress), instructionFields[2])
-                    calleeName = startAddressToFunction[startAddress]
+                    calleeName = getCalleeName(instructionFields)
                     if calleeName not in analysed:
                         functions.append(calleeName)
     return analysed
 
-def isJumpTableInstruction (instruction):
+def isJumpTableBranch (instruction):
     op = instruction.getOp()
     if op in ARMInstructionSet.LoadInstructions: 
         fields      = instruction.getInstructionFields()
         destination = fields[1] 
         if re.match(r'%s' % ARMInstructionSet.PCRegister, destination):
             return True
-    return False         
+    return False
 
-def identifyLeaders (functions):
+def getAddressFromDirectiveLine (line):
+    lexemes = shlex.split(line.strip())
+    address = int(lexemes[1], 16)
+    return address
+
+def identifyJumpTableTargets (functions):
+    functionToJumpTableTargets = {}
+    for functionName in functions:
+        Debug.debugMessage("Computing jump table targets in '%s'" % functionName, debugLevel)
+        jumpTableBranches                        = set([])
+        functionToJumpTableTargets[functionName] = set([])
+        # First scan the instructions looking for change of PC through explicit load
+        for instruction in functionToInstructions[functionName]:
+            if isJumpTableBranch(instruction):
+                jumpTableBranches.add(instruction)
+        if jumpTableBranches:
+            for line in functionToDirectives[functionName]:
+                # We minus one from the address here because the jump table address in the disassembly
+                # always appears one byte away from the actual address
+                address = getAddressFromDirectiveLine(line) - 1
+                functionToJumpTableTargets[functionName].add(address)
+        else:
+            if functionToDirectives[functionName]:
+                Debug.warningMessage("Found directives in %s but no jump table instructions" % functionName)
+    return functionToJumpTableTargets
+
+def identifyLeaders (functions, functionToJumpTableTargets):
     functionToBranchTargets = {}
     for functionName in functions:
         Debug.debugMessage("Identifying leaders in '%s'" % functionName, debugLevel)
         functionToLeaders[functionName]       = set([])
         functionToBranchTargets[functionName] = set([])
         newLeader                             = True
-        for instruction in functionToInstructions[functionName]:
+        noopAfterJumpTableBranch              = False
+        for instruction, nextInstruction in Utils.peekaheadIterator(functionToInstructions[functionName]):
             if newLeader:
                 functionToLeaders[functionName].add(instruction)
                 newLeader = False
+            elif noopAfterJumpTableBranch:
+                assert instruction.getOp() in ARMInstructionSet.Nops, "Did not find an no-op after jump table branch. Instead found %s" % instruction
+                noopAfterJumpTableBranch = False
+                newLeader                = True
             else:
                 address = instruction.getAddress()
                 if address in functionToBranchTargets[functionName]:
+                    functionToLeaders[functionName].add(instruction)
+                elif address in functionToJumpTableTargets[functionName]:
                     functionToLeaders[functionName].add(instruction)
                 op = instruction.getOp()
                 if op in ARMInstructionSet.Branches:
@@ -179,12 +228,14 @@ def identifyLeaders (functions):
                     fields        = instruction.getInstructionFields()
                     addressTarget = int(fields[1], 16) 
                     functionToBranchTargets[functionName].add(addressTarget)
-                elif isJumpTableInstruction(instruction):
+                elif isJumpTableBranch(instruction):
                     # Look for instructions with an explicit load into the PC
                     Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, debugLevel)
                     functionToJumpTableInstructions[functionName].append(instruction)
-                    newLeader = True
-        Debug.debugMessage("Leaders in '%s' are %s" % (functionName,functionToLeaders[functionName]), debugLevel)
+                    if nextInstruction and nextInstruction.getOp() in ARMInstructionSet.Nops:
+                        noopAfterJumpTableBranch = True
+                    else:
+                        newLeader = True
         
 def identifyBasicBlocks (functions):
     global newVertexID
@@ -196,6 +247,7 @@ def identifyBasicBlocks (functions):
         bb = None
         for instruction in functionToInstructions[functionName]:
             if instruction in functionToLeaders[functionName]:
+                Debug.debugMessage("Instruction @ %s is a leader" % hex(instruction.getAddress()), debugLevel)
                 vertexID = newVertexID
                 bb       = CFGs.BasicBlock(vertexID)
                 icfg.addVertex(bb)
@@ -203,8 +255,25 @@ def identifyBasicBlocks (functions):
             assert bb, "Basic block is currently null"
             bb.addInstruction(instruction)
             instructionToBasicBlock[instruction] = bb
+            if isJumpTableBranch(instruction):
+                functionToJumpTableBasicBlocks[functionName].append(bb)
             
-def addEdges (functions):
+def addJumpTableEdges (functionToJumpTableTargets, functionName, icfg):
+    for jumpTableTarget in functionToJumpTableTargets[functionName]:
+        succv          = icfg.getVertexWithAddress(jumpTableTarget)
+        predv          = None
+        highestAddress = 0
+        for instruction in functionToJumpTableInstructions[functionName]:
+            candidatev = instructionToBasicBlock[instruction] 
+            address    = instruction.getAddress()
+            if address > highestAddress and address < jumpTableTarget:
+                predv          = candidatev
+                highestAddress = address
+        assert predv, "Unable to find source vertex for address %s" % hex(address)
+        Debug.debugMessage("Adding jump table edge %d => %d" % (predv.getVertexID(), succv.getVertexID()), 1)
+        icfg.addEdge(predv.getVertexID(), succv.getVertexID())
+            
+def addEdges (functions, functionToJumpTableTargets):
     for functionName in functions:
         Debug.debugMessage("Adding edges in '%s'" % functionName, debugLevel)
         icfg   = program.getICFG(functionName)
@@ -217,8 +286,7 @@ def addEdges (functions):
             if v.getLastInstruction() == instruction:
                 if instruction.getOp() == ARMInstructionSet.Call:
                     instructionFields = instruction.getInstructionFields()
-                    startAddress      = int(instructionFields[1], 16)
-                    calleeName        = startAddressToFunction[startAddress]
+                    calleeName        = getCalleeName(instructionFields)
                     program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
                 elif instruction.getOp() in ARMInstructionSet.UnconditionalJumps:
@@ -238,50 +306,16 @@ def addEdges (functions):
                         succv = icfg.getVertexWithAddress(branchAddress)
                         icfg.addEdge(v.getVertexID(), succv.getVertexID())
                     else:
-                        calleeName = startAddressToFunction[branchAddress]
+                        calleeName = getCalleeName(instructionFields)
                         program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
-                elif isJumpTableInstruction(instruction):
-                    # Do not add any edges out of these basic blocks as they will be handled
-                    # later on
+                elif v in functionToJumpTableBasicBlocks[functionName]:
                     pass
                 else:
                     predID = v.getVertexID()
-                    
-def getAddressFromDirectiveLine (line):
-    lexemes = shlex.split(line.strip())
-    address = int(lexemes[1], 16)
-    return address
-
-def getSourceVertex (sourceVertices, address):
-    sourcev = None
-    for v in sourceVertices:
-        lastInstruction = v.getLastInstruction()
-        if lastInstruction.getAddress() < address:
-            sourcev = v
-    assert sourcev, "Unable to find source vertex for address %s" % hex(address)
-    return sourcev
-            
-def addJumpTableEdges (functions):
-    for functionName in functions:
-        icfg  = program.getICFG(functionName)
-        Debug.debugMessage("Adding jump table edges in '%s'" % functionName, debugLevel)
-        # First scan the instructions looking for change of PC through explicit load
-        sourceVertices = []
-        for instruction in functionToJumpTableInstructions[functionName]:
-            v = instructionToBasicBlock[instruction] 
-            sourceVertices.append(v)
-        if sourceVertices:
-            for line in functionToDirectives[functionName]:
-                # We minus one from the address here because the jump table address in the disassembly
-                # always appears one byte away from the actual address
-                address = getAddressFromDirectiveLine(line) - 1
-                predv   = getSourceVertex(sourceVertices, address)
-                succv   = icfg.getVertexWithAddress(address)
-                icfg.addEdge(predv.getVertexID(), succv.getVertexID())
-        else:
-            if functionToDirectives[functionName]:
-                Debug.warningMessage("Found directives in %s but no jump table instructions" % functionName)
+        for instruction in functionToInstructions[functionName]:
+            if isJumpTableBranch(instruction):
+                addJumpTableEdges(functionToJumpTableTargets, functionName, icfg)
                     
 def generateInternalFile (filename):
     outfilename = filename[:-4] + ".txt"
@@ -319,16 +353,17 @@ def generateInternalFile (filename):
 def readARMDisassembly (filename, rootFunction):
     extractInstructions(filename)
     functions = identifyCallGraph(rootFunction)
-    identifyLeaders(functions)
+    functionToJumpTableTargets = identifyJumpTableTargets(functions)
+    identifyLeaders(functions, functionToJumpTableTargets)
     identifyBasicBlocks(functions)
-    addEdges(functions)
-    addJumpTableEdges(functions)
+    addEdges(functions, functionToJumpTableTargets)
     generateInternalFile(filename)
     # Program created
     # Now compute entry and exit IDs of functions and root of call graph
     program.getCallGraph().findAndSetRoot()
     for icfg in program.getICFGs():
         Debug.debugMessage("Setting entry and exit in %s" % icfg.getName(), debugLevel)
+        print icfg
         icfg.setEntryID()
         icfg.setExitID()
     return program

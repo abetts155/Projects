@@ -3,13 +3,13 @@ from Vertices import Vertex, dummyVertexID
 class DirectedGraph ():        
     def __init__ (self):
         self.vertices = {}
-        self.__name = None
+        self._name = None
     
     def setName (self, name):
-        self.__name = name
+        self._name = name
         
     def getName (self):
-        return self.__name
+        return self._name
     
     def getVertex (self, vertexID):
         assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
@@ -91,7 +91,6 @@ class FlowGraph (DirectedGraph):
         return self._entryID
     
     def getExitID (self):
-        assert self._exitID != dummyVertexID, "Exit to flow graph not found"
         return self._exitID
     
     def __str__ (self):

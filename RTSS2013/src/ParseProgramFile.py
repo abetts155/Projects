@@ -37,7 +37,7 @@ def setEntryAndExit (icfg):
     
     exitID = None
     if len(withoutSucc) == 0:
-        Debug.exitMessage("CFG '%s' does not an exit point" % icfg.getName())
+        Debug.warningMessage("CFG '%s' does not an exit point" % icfg.getName())
     elif len(withoutSucc) > 1:
         debugStr = ""
         for bbID in withoutSucc:
@@ -47,10 +47,9 @@ def setEntryAndExit (icfg):
     else:
         exitID = withoutSucc[0]
         icfg.setExitID(exitID)
-        
-    assert entryID, "Unable to set entry ID"
-    assert exitID, "Unable to set exit ID"
-    icfg.addEdge(exitID, entryID)
+    
+    if entryID and exitID:
+        icfg.addEdge(exitID, entryID)
     
 def readInProgram (programFile):
     import re

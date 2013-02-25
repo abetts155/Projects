@@ -52,7 +52,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -66,15 +66,18 @@ if __name__ == "__main__":
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
-    program = ParseProgramFile.createProgram(args.program)
+    program  = ParseProgramFile.createProgram(args.program)
     UDrawGraph.makeUdrawFile(program.getCallGraph(), "%s.%s" % (basename, "callg"))
     for icfg in program.getICFGs():
         functionName = icfg.getName()
-        UDrawGraph.makeUdrawFile(icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
-        lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-        program.addLNT(lnt, functionName)
-        UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
-        superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
-        UDrawGraph.makeUdrawFile(superg, "%s.%s.%s" % (basename, functionName, "superg"))
+        if icfg.getExitID() != Vertices.dummyVertexID:
+            UDrawGraph.makeUdrawFile(icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+            lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+            program.addLNT(lnt, functionName)
+            UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+            superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
+            UDrawGraph.makeUdrawFile(superg, "%s.%s.%s" % (basename, functionName, "superg"))
+        else:
+            Debug.warningMessage("Not analysing function %s because it does not have an exit point set" % functionName)
     if args.traces:
         Traces.GenerateTraces(basepath, basename, program, args.traces)

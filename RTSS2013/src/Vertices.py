@@ -12,13 +12,11 @@ class Vertex ():
         return self._vertexID
     
     def addPredecessor (self, predID, edgeID=None):
-        assert predID not in self._predecessors, "Vertex %d already has predecessor %d" % (self._vertexID, predID)
         e = Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
         predID = prede.getVertexID()
-        assert predID not in self._predecessors, "Vertex %d already has predecessor %d" % (self._vertexID, predID)
         self._predecessors[predID] = prede
             
     def removePredecessor (self, predID):
@@ -42,13 +40,11 @@ class Vertex ():
         return self._predecessors[predID]
     
     def addSuccessor (self, succID,edgeID=None):
-        assert succID not in self._successors, "Vertex %d already has successor %d" % (self._vertexID, succID)
         e = Edge(succID, edgeID)
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
         succID = succe.getVertexID()
-        assert succID not in self._successors, "Vertex %d already has successor %d" % (self._vertexID, succID)
         self._successors[succID] = succe
         
     def removeSuccessor (self, succID):

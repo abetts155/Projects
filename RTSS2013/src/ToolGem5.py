@@ -238,7 +238,7 @@ if __name__ == "__main__":
     
     if args.clean:
         clean(os.path.abspath(os.curdir))
-    else:
+    elif args.program:
         gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
         binary, program, testSpecFile          = checkProgramFiles()
         testSpecification                      = getTestSpecification(testSpecFile)

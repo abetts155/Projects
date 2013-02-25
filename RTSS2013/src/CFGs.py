@@ -154,7 +154,8 @@ class CFG (FlowGraph):
                     bbID = bb.getVertexID()
                     assert self._exitID == dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
                     self._exitID = bbID
-            assert self._exitID != dummyVertexID, "Unable to find a vertex without successors to set as the entry"
+            if self._exitID == dummyVertexID:
+                Debug.warningMessage("Unable to find a vertex without successors to set as the exit in %s" % self._name)
         else:
             assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
             assert exitID > dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
