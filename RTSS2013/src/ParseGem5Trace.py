@@ -10,7 +10,7 @@ def parseAddress (program, address):
     assert address in addressToBasicBlock, "Unable to find basic block for address %s" % hex(address)
     icfg = addressToICFG[address]
     v    = addressToBasicBlock[address]
-    Debug.debugMessage("Now in CFG %s at basic block %d" % (icfg.getName(), v.getVertexID()), 1)
+    Debug.debugMessage("Now in CFG %s at basic block %d" % (icfg.getName(), v.getVertexID()), 20)
     
 def buildAddressInformation (program):
     global firstAddress, lastAddress
