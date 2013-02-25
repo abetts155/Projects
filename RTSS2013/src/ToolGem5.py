@@ -2,7 +2,6 @@
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
-m5Directory = 'm5out'
 
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     import os, sys, re
@@ -10,17 +9,17 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
     
-    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + m5Directory
-    
-    # Carry on from previous executions
-    run = 0
-    for filename in os.listdir(gem5TraceDirectory):
-        match = re.match(r'%s' % os.path.basename(binary), filename)
-        if match:
-            index = filename.rfind('.')
-            num   = int(filename[index+1:])
-            if num > run:
-                run = num
+    run = 0    
+    # Carry on from previous executions (if they exist)
+    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
+    if os.path.exists(gem5TraceDirectory):
+        for filename in os.listdir(gem5TraceDirectory):
+            match = re.match(r'%s' % os.path.basename(binary), filename)
+            if match:
+                index = filename.rfind('.')
+                num   = int(filename[index+1:])
+                if num > run:
+                    run = num
     run += 1
     
     # Now run the program n times
@@ -35,7 +34,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
         returncode = proc.wait()
         if returncode:
             sys.exit("Running '%s' failed" % cmd)
-        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + m5Directory + os.sep + traceFile
+        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + traceFile
         assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
         gem5Traces.append(gem5Trace)
     return gem5Traces
@@ -162,26 +161,6 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
         return path, armSimulator, gem5ConfigFile
     except KeyError:
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
-        
-def clean (abspath):
-    import Debug
-    import shutil, os
-    for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
-        files.sort()
-        for filename in files:
-            if filename.endswith('.udraw') or filename.endswith('.dis'):
-                fullPath = os.path.join(paths, filename)
-                Debug.verboseMessage("Removing '%s'" % fullPath)
-                os.remove(fullPath)
-            if os.access(filename, os.X_OK) and os.path.exists(filename + '.c'):
-                fullPath = os.path.join(paths, filename)
-                Debug.verboseMessage("Removing '%s'" % fullPath)
-                os.remove(fullPath)
-        for directory in dirs:
-            if directory == m5Directory:
-                fullPath = os.path.join(paths, directory)
-                Debug.verboseMessage("Removing '%s'" % fullPath)
-                shutil.rmtree(fullPath)
 
 def commaSeparatedList (s):
     from argparse import ArgumentTypeError
@@ -243,7 +222,7 @@ def commandLine ():
     return cmdline.parse_args()
 
 if __name__ == "__main__":   
-    import Debug
+    import Debug, Utils
     import os 
     from ParseGem5Trace import parse
 
@@ -252,7 +231,7 @@ if __name__ == "__main__":
     Debug.verbose = args.verbose
     
     if args.clean:
-        clean(os.path.abspath(os.curdir))
+        Utils.clean()
     gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
     binary, program, testSpecFile          = checkProgramFiles()
     testSpecification                      = getTestSpecification(testSpecFile)

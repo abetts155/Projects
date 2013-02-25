@@ -103,15 +103,15 @@ class Tree (DirectedGraph):
                 yield level, levelToVertices[level]
                 
     def __str__ (self):
-        str = ""
+        string = ""
         for level, vertices in self.levelIterator(False):
-            str += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
+            string += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
             for v in vertices:
                 if level == 0:
-                    str += "%d (root)\n" % (v.getVertexID())
+                    string += "%d (root)\n" % (v.getVertexID())
                 else:
-                    str += "%d (parent = %d)\n" % (v.getVertexID(), v.getParentID())
-        return str
+                    string += "%d (parent = %d)\n" % (v.getVertexID(), v.getParentID())
+        return string
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):

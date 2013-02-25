@@ -1,14 +1,5 @@
 #!/usr/bin/python2.6
 
-def preClean (abspath):
-    for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
-        files.sort()
-        for filename in files:
-            if filename.endswith('.udraw'):
-                fullPath = os.path.join(paths, filename)
-                Debug.verboseMessage("Removing '%s'" % fullPath)
-                os.remove(fullPath)
-                
 def commandLine ():
     from argparse import ArgumentParser
     
@@ -52,7 +43,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices, Utils
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -60,7 +51,7 @@ if __name__ == "__main__":
     UDrawGraph.enabled = args.udraw
     
     if args.clean:
-        preClean(os.path.abspath(os.curdir))
+        Utils.clean()
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
     # Create the CFGs
     filename = os.path.basename(args.program)

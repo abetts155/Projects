@@ -2,15 +2,15 @@ import Programs, CFGs, Trees, Vertices, SuperBlocks, Edges
 
 enabled = False
 
-fileNameSuffix = ".udraw"
-beginGraph = "[\n"
-endGraph = "]\n"
-endVertex = "])),"
-newEdge = "\ne(\"tEdge\","
-endEdge = ")"
 beginAttributes = "["
-endAttibutes = "],"
-newLine = "\\n"
+beginGraph      = "[\n"
+endAttibutes    = "],"
+endEdge         = ")"
+endGraph        = "]\n"
+endVertex       = "])),"
+fileNameSuffix  = ".udraw"
+newEdge         = "\ne(\"tEdge\","
+newLine         = "\\n"
 
 class COLOR:
     RED    = "red"
