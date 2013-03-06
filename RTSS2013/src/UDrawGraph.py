@@ -30,6 +30,12 @@ class EDGESHAPE:
     SOLID  = "solid"
     DASHED = "dashed"
     DOTTED = "dotted"
+    
+class DIRECTION:
+    DESTINATION = "last"
+    SOURCE      = "first"
+    BOTH        = "both"
+    NONE        = "none"
 
 def newVertex (vertexID):
     return "l(\"v" + str(vertexID) + "\",n(\"tVertex\","
@@ -45,6 +51,9 @@ def setColor (color):
 
 def setShape (shape):
     return "a(\"_GO\", \"" + shape + "\"),"
+
+def setEdgeDirection (direction):
+    return "a(\"_DIR\", \"" + direction + "\"),"
 
 def setToolTip (tooltip):
     return "a(\"INFO\", \"" + tooltip + "\"),"
@@ -155,6 +164,7 @@ def writeSuperBlockVertex (superg, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     name = ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
+    name += "%ssuper ID = %d" % (newLine, vertexID)
     f.write(setName(name))
     f.write(endAttibutes)
     
@@ -168,6 +178,18 @@ def writeSuperBlockVertex (superg, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
+    
+    for succe in v.getPathRelationEdges():
+        succID = succe.getVertexID()
+        f.write(newEdge)
+        f.write(beginAttributes)
+        f.write(setEdgeColor("#CC6600"))
+        f.write(setEdgeDirection(DIRECTION.DESTINATION))
+        f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")  
+    
     f.write(endVertex + "\n")
 
 def writeTreeVertex (tree, vertexID, f):

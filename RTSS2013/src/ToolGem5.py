@@ -1,11 +1,12 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
+
+import Debug
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
 
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     import os, sys, re
-    import Debug
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
     
@@ -78,6 +79,7 @@ def getTestSpecification (testSpecFile):
     return TestHarness.TestVectorProperties(length, basetype, lower, upper)
         
 def disassembleProgram (binary):
+    Debug.verboseMessage("Disassembling program")
     import sys
     from subprocess import Popen
     filename = binary + ".dis"
@@ -90,6 +92,7 @@ def disassembleProgram (binary):
     return filename
         
 def compileProgram (program):
+    Debug.verboseMessage("Compiling program")
     import sys
     from subprocess import Popen
     extraFlags = ""
@@ -111,7 +114,7 @@ def checkProgramFiles ():
     from ParseProgramFile import createProgram
     from ARM import readARMDisassembly
     
-    program  = os.path.abspath(args.program)
+    program = os.path.abspath(args.program)
     if not os.path.exists(program):
         sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
     elif not os.path.isfile(program):
@@ -222,8 +225,7 @@ def commandLine ():
     return cmdline.parse_args()
 
 if __name__ == "__main__":   
-    import Debug, Utils
-    import os 
+    import Utils
     from ParseGem5Trace import parse
 
     args          = commandLine()
@@ -232,9 +234,18 @@ if __name__ == "__main__":
     
     if args.clean:
         Utils.clean()
+        
+    Debug.verboseMessage("Checking gem5 configuration...")
     gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
+    Debug.verboseMessage("...all good")
+    Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
+    Debug.verboseMessage("...all good")
+    Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
+    Debug.verboseMessage("...all good")
+    Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+    Debug.verboseMessage("Parsing gem5 traces")
     parse(program, gem5Traces)
     

@@ -86,7 +86,6 @@ def getInstruction (lexemes):
     return CFGs.Instruction(address, instruction)
     
 def extractInstructions (filename):
-    Debug.verboseMessage("Extracting instructions")
     with open(filename, 'r') as f:
         parse           = False
         lastInstruction = None
@@ -137,7 +136,6 @@ def getCalleeName (instructionFields):
     return calleeName
 
 def identifyCallGraph (rootFunction):
-    Debug.verboseMessage("Identifying call graph under analysis (stripping away linked-in functions")
     assert rootFunction in functionToInstructions, "Unable to locate root function '%s' in disassembly" % rootFunction
     functions    = []
     analysed     = set([])

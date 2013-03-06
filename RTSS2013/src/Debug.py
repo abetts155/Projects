@@ -6,8 +6,7 @@ def debugMessage (string, debugLevel=1):
         print(string)
 
 def verboseMessage (string):
-    if verbose:
-        print(string)
+    print(string)
         
 def warningMessage(string):
     print("*** WARNING: %s ***" % string)

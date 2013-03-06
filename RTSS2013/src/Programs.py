@@ -72,10 +72,11 @@ class CallGraph (DirectedGraph):
     
 class Program():
     def __init__(self):
-        self.__callg = CallGraph()
-        self.__icfgs = {}
-        self.__ipgs = {}
-        self.__lnts = {}
+        self.__callg          = CallGraph()
+        self.__icfgs          = {}
+        self.__ipgs           = {}
+        self.__lnts           = {}
+        self.__superblockcfgs = {}
         
     def getRootICFG (self):
         rootcallv = self.__callg.getRootVertex()
@@ -89,6 +90,10 @@ class Program():
         self.__callg.addVertex(functionName)
         self.__icfgs[functionName] = icfg
         
+    def addSuperBlockCFG (self, superg, functionName):
+        assert functionName not in self.__superblockcfgs, "Trying to add duplicate super block CFG for function '%s'" % functionName
+        self.__superblockcfgs[functionName] = superg
+        
     def addIPG (self, ipg, functionName):
         assert functionName not in self.__ipgs, "Trying to add duplicate IPG for function '%s'" % functionName
         self.__ipgs[functionName] = ipg
@@ -100,6 +105,10 @@ class Program():
     def getICFG (self, functionName):
         assert functionName in self.__icfgs, "Unable to find ICFG for function '%s'" % functionName
         return self.__icfgs[functionName]
+    
+    def getSuperBlockCFG (self, functionName):
+        assert functionName in self.__superblockcfgs, "Unable to find super block CFG for function '%s'" % functionName
+        return self.__superblockcfgs[functionName]
     
     def getIPG (self, functionName):
         assert functionName in self.__ipgs, "Unable to find IPG for function '%s'" % functionName

@@ -1,4 +1,5 @@
 from Edges import Edge, CallGraphEdge
+import itertools
 
 dummyVertexID = -1
 
@@ -67,32 +68,10 @@ class Vertex ():
         assert succID in self._successors, "Vertex %d is not a successor of %d" % (succID, self._vertexID)
         return self._successors[succID]
     
-    def predecessorStr (self):
-        string = "pred = {"
-        count = 1
-        for predID in sorted(self._predecessors.keys()):
-            string += str(predID)
-            if count < len(self._predecessors):
-                string += ","
-                count = count + 1
-        string += "}\n"
-        return string
-    
-    def successorStr (self):        
-        string = "succ = {"
-        count = 1
-        for succID in sorted(self._successors.keys()):
-            string += str(succID)
-            if count < len(self._successors):
-                string += ","
-                count = count + 1
-        string += "}\n"
-        return string
-    
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "\t" + Vertex.predecessorStr(self)
-        string += "\t" + Vertex.successorStr(self)    
+        string += "pred     = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ     = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string
     
 class TreeVertex (Vertex):
@@ -170,7 +149,17 @@ class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.__unstructuredMerge = False
-        self.__basicBlocks = set([])
+        self.__basicBlocks       = set([])
+        self.__pathNeighbours    = {}
+        
+    def addPathRelationEdge (self, e):
+        ID = e.getVertexID()
+        if ID not in self.__pathNeighbours:
+            self.__pathNeighbours[ID] = []
+        self.__pathNeighbours[ID].append(e)
+    
+    def getPathRelationEdges (self):
+        return list(itertools.chain.from_iterable(self.__pathNeighbours.values()))
         
     def setUnstructuredMerge (self):
         self.__unstructuredMerge = True
@@ -192,6 +181,18 @@ class SuperBlock (Vertex):
     
     def getBasicBlockIDs (self):
         return self.__basicBlocks
+    
+    def getRepresentativeID (self):
+        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
+        return list(self.__basicBlocks)[0]
+    
+    def __str__ (self):
+        string =  "Vertex ID    = %d\n" % self._vertexID
+        string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
+        string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())   
+        string += "relational   = {%s}\n" % ', '.join(str(succID) for succID in self.__pathNeighbours.keys())
+        return string
     
 class Ipoint (Vertex):
     def __init__ (self, vertexID, IpointID, realID=None):

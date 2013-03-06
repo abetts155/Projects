@@ -1,7 +1,7 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import Vertex, HeaderVertex, SuperBlock
-from Edges import SuperBlockControlFlowEdge
-from Trees import Dominators, DominanceFrontiers
+from Vertices import Vertex, HeaderVertex, SuperBlock, dummyVertexID
+from Edges import SuperBlockControlFlowEdge, SuperBlockPathRelationEdge
+from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
 import Debug
 
@@ -9,6 +9,7 @@ class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
         DirectedGraph.__init__(self)
         self.__headerToRootSuperBlock = {}
+        self.__basicBlockToSuperBlock = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
@@ -21,20 +22,13 @@ class SuperBlockGraph (DirectedGraph):
                     postDF             = DominanceFrontiers(reverseICFG, postdomTree)    
                     dominatorg         = DominatorGraph(predomTree, postdomTree)  
                     sccs               = StrongComponents(dominatorg)
-                    disconnected       = []
-                    vertexToSuperBlock = {}
-                    self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, disconnected, vertexToSuperBlock, headerID)
-                    self.__addEdges(forwardICFG, predomTree, postdomTree, postDF, disconnected, vertexToSuperBlock)
-                    assert not disconnected, "Added empty super blocks in loop region with header %d but some remain disconnected" % headerID
-                    self.__headerToRootSuperBlock[headerID] = self.__findRootSuperBlock(headerID)
-    
-    def __findRootSuperBlock (self, headerID):
-        for v in self:
-            if v.containsBasicBlock(headerID):
-                return v 
-        assert False, "Unable to find super block with header %d" % headerID
+                    emptySuperBlocks   = []
+                    self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, emptySuperBlocks, headerID)
+                    self.__addEdges(forwardICFG, predomTree, postdomTree, postDF, emptySuperBlocks, headerID)
+                    assert not emptySuperBlocks, "Added empty super blocks in loop region with header %d but some remain disconnected" % headerID
+                    self.__headerToRootSuperBlock[headerID] = self.getSuperBlock(headerID)
                     
-    def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, disconnected, vertexToSuperBlock, headerID):
+    def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, emptySuperBlocks, headerID):
         sccIDToVertex = {}
         for sccID in xrange(1, sccs.numberOfSCCs()+1):
             superVertexID                = self.getNextVertexID()
@@ -46,57 +40,73 @@ class SuperBlockGraph (DirectedGraph):
             sccID    = sccs.getSCCID(vertexID)
             superv   = sccIDToVertex[sccID]
             superv.addBasicBlock(vertexID)
-            vertexToSuperBlock[vertexID] = superv
+            self.__basicBlockToSuperBlock[vertexID] = superv
             if v.numberOfSuccessors() > 1:
                 ipostID = postdomTree.getVertex(vertexID).getParentID()
                 if v.hasSuccessor(ipostID):
                     superVertexID = self.getNextVertexID()
                     superv        = SuperBlock(superVertexID)
                     self.vertices[superVertexID] = superv
-                    disconnected.append(superv)
+                    emptySuperBlocks.append(superv)
         # Merge super blocks from nested loops
         for v in forwardICFG:
             vertexID = v.getVertexID()     
             if lnt.isLoopHeader(vertexID) and vertexID != headerID:
                 superv     = self.__headerToRootSuperBlock[vertexID]
-                redundantv = vertexToSuperBlock[vertexID]
+                redundantv = self.__basicBlockToSuperBlock[vertexID]
                 superv.addBasicBlocks(redundantv.getBasicBlockIDs())
                 for bbID in redundantv.getBasicBlockIDs():
-                    vertexToSuperBlock[bbID] = superv
+                    self.__basicBlockToSuperBlock[bbID] = superv
                 self.removeVertex(redundantv.getVertexID())
                 
-    def __addEdges (self, forwardICFG, predomTree, postdomTree, postDF, disconnected, vertexToSuperBlock):
-        for v in forwardICFG:
-            vertexID = v.getVertexID()
+    def __addEdges (self, forwardICFG, predomTree, postdomTree, postDF, emptySuperBlocks, headerID):
+        rootSuperv              = self.__basicBlockToSuperBlock[headerID]
+        branchToLeafSuperBlocks = {}
+        dfs                     = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
+        currentBranchID         = dummyVertexID
+        # Process vertices in topological order
+        for vertexID in reversed(dfs.getPostorder()):
+            v = forwardICFG.getVertex(vertexID)
             if v.numberOfSuccessors() > 1:
-                sourcev = vertexToSuperBlock[vertexID]
+                if vertexID in rootSuperv.getBasicBlockIDs():
+                    currentBranchID = vertexID
+                    branchToLeafSuperBlocks[currentBranchID] = set([])
+                sourcev = self.__basicBlockToSuperBlock[vertexID]                
                 for succID in v.getSuccessorIDs():
                     if not postdomTree.isAncestor(succID, vertexID):
-                        destinationv = vertexToSuperBlock[succID]
+                        destinationv = self.__basicBlockToSuperBlock[succID]
                         if not sourcev.hasSuccessor(destinationv.getVertexID()):
                             self.__addEdge(sourcev, destinationv, vertexID)
                     else:
-                        destinationv = disconnected.pop()
+                        destinationv = emptySuperBlocks.pop()
                         self.__addEdge(sourcev, destinationv, vertexID)
-            if v.numberOfPredecessors() > 1:
-                ipreID = predomTree.getVertex(vertexID).getParentID()
-                if postdomTree.getVertex(ipreID).getParentID() != vertexID:
-                    destinationv = vertexToSuperBlock[vertexID]
-                    for predID in v.getPredecessorIDs():
-                        sourcev = vertexToSuperBlock[predID]
-                        if not sourcev.hasSuccessor(destinationv.getVertexID()):
-                            self.__addEdge(sourcev, destinationv, predID)    
-                    if postDF.size(vertexID) > 1:
-                        Debug.debugMessage("Acyclic IRREDUCIBLE merge %d found" % vertexID, 1)
-                        destinationv.setUnstructuredMerge()
-                    else:
-                        Debug.debugMessage("Acyclic REDUCIBLE merge %d found" % vertexID, 1)
+            elif v.numberOfPredecessors() == 1:
+                destinationv = self.__basicBlockToSuperBlock[vertexID]
+                assert currentBranchID != dummyVertexID, "Current branch in root super block not found"
+                branchToLeafSuperBlocks[currentBranchID].add(destinationv)
+          
+        for i in range(len(branchToLeafSuperBlocks.keys())):
+            branchID1 = branchToLeafSuperBlocks.keys()[i]
+            for branchID2 in branchToLeafSuperBlocks.keys()[i+1:]:
+                Debug.debugMessage("Analysing region (%d, %d)" % (branchID1, branchID2), 10)
+                for sourcev in branchToLeafSuperBlocks[branchID1]:
+                    for destinationv in branchToLeafSuperBlocks[branchID2]:
+                        self.__addPathRelationEdgeEdge(sourcev, destinationv, SuperBlockPathRelationEdge.PathRelations.MUTUAL_EXCLUSION)
+                        self.__addPathRelationEdgeEdge(sourcev, destinationv, SuperBlockPathRelationEdge.PathRelations.MUTUAL_INCLUSION)
     
     def __addEdge (self, sourcev, destinationv, branchID):
         succe = SuperBlockControlFlowEdge(destinationv.getVertexID(), branchID)
-        sourcev.addSuccessorEdge(succe)
         prede = SuperBlockControlFlowEdge(sourcev.getVertexID(), branchID)
+        sourcev.addSuccessorEdge(succe)
         destinationv.addPredecessorEdge(prede)
+        
+    def __addPathRelationEdgeEdge (self, sourcev, destinationv, relationType):
+        e = SuperBlockPathRelationEdge(sourcev.getVertexID(), relationType)
+        destinationv.addPathRelationEdge(e)
+    
+    def getSuperBlock (self, basicBlockID):
+        assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
+        return self.__basicBlockToSuperBlock[basicBlockID]
     
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):
