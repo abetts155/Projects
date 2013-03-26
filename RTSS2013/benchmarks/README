@@ -1,0 +1,24 @@
+The following shows how our file names map to the Malardalen file names
+
+binary_search.c			bs  
+bubblesort.c			bsort100
+cover.c 			cover
+duffsdevice.c			duff
+edn.c				edn
+embedded.c			ndes
+exponential_integral.c		expint
+factorial.c			fac
+fibonacci.c			fibcall
+fft.c				fft1
+insertsort.c			insertsort
+janne_complex.c 		janne_complex
+lcdnum.c			lcdnum
+LUdecomposition.c		ludcmp
+matrix_count.c			cnt
+matrix_inverse.c		minver
+matrixmultiply.c		matmult
+prime.c				prime
+select.c			select
+squareroot.c			sqrt
+statistics.c			st
+
