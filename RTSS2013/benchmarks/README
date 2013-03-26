@@ -13,10 +13,11 @@ fft.c				fft1
 insertsort.c			insertsort
 janne_complex.c 		janne_complex
 lcdnum.c			lcdnum
-LUdecomposition.c		ludcmp
+LUdecomposition.c		ud
 matrix_count.c			cnt
 matrix_inverse.c		minver
 matrixmultiply.c		matmult
+petri.c				nsichneu
 prime.c				prime
 select.c			select
 squareroot.c			sqrt

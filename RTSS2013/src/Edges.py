@@ -38,24 +38,11 @@ class SuperBlockControlFlowEdge (Edge):
         
     def getBasicBlockID (self):
         return self.__bbID
-
-class SuperBlockPathRelationEdge (Edge):
-    PathRelations = Utils.enum('MUTUAL_EXCLUSION', 'MUTUAL_INCLUSION')
     
-    def __init__ (self, vertexID, pathRelation):
-        Edge.__init__(self, vertexID)
-        assert pathRelation in SuperBlockPathRelationEdge.PathRelations.reverse_mapping, "Unrecognised path relation %s" % pathRelation
-        self.__pathRelation = pathRelation
-        self.__observed     = False
-       
-    def getPathRelation (self):
-        return self.__pathRelation
-     
-    def serObserved (self):
-        self.__observed = True
-    
-    def isObserved (self):
-        return self.__observed
+class SuperBlockLoopEdge (SuperBlockControlFlowEdge):
+    def __init__ (self, vertexID, headerID):
+        SuperBlockControlFlowEdge.__init__(self, vertexID, headerID)
+        self.__bbID = headerID
     
 class IPGEdge (Edge):
     def __init__ (self, vertexID, edgeID=None, dummyEdge=False):

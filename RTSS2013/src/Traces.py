@@ -1,6 +1,5 @@
-import Debug
+import Debug, SuperBlocks
 import random, os, hashlib, shlex
-from Edges import SuperBlockPathRelationEdge
 
 newTrace = "=>"
 endTrace = "<="
@@ -12,7 +11,7 @@ class GenerateTraces:
     def __init__ (self, basepath, basename, program, numberOfTraces=1):
         self.__program = program
         filename       = basepath + os.sep + basename + ".traces"
-        with open(filename, 'w') as self.__outfile:  
+        with open(filename, 'w') as self.__outfile:
             self.__outfile.write("%s\n" % hashlib.sha1(basename).hexdigest())
             for trace in xrange(1, numberOfTraces+1):
                 Debug.debugMessage("Generating trace #%d" % trace, 1)
@@ -120,7 +119,11 @@ class ParseTraces:
                         nextID = int(lex)
                         superv = self.__currentSuperg.getSuperBlock(nextID)
                         if superv.numberOfSuccessors() == 0 and nextID == superv.getRepresentativeID():
-                            self.__on.append(superv)        
+                            self.__on.append(superv)      
+        for (superv1, superv2, pathRelation) in self.__currentSuperg.getTruePathRelationEdges():
+            print "(%s %s %s) is TRUE" % (superv1.getVertexID(), superv2.getVertexID(), pathRelation) 
+        for (superv1, superv2, pathRelation) in self.__currentSuperg.getFalsePathRelationEdges():
+            print "(%s %s %s) is FALSE" % (superv1.getVertexID(), superv2.getVertexID(), pathRelation)  
     
     def __resetToRoot (self):
         self.__callStack     = []
@@ -129,11 +132,16 @@ class ParseTraces:
     
     def __analysePathInformation (self):
         Debug.debugMessage("*** End of program run ***", 10)
-        for v in self.__on:
-            for e in v.getPathRelationEdges():
-                pathRelation = e.getPathRelation()
-                if pathRelation == SuperBlockPathRelationEdge.PathRelations.MUTUAL_EXCLUSION:
-                    print "Mutual exclusion edge %d => %d falsified" % (e.getVertexID(), v.getVertexID())
+        falsifySet = set([])
+        for (superv1, superv2, pathRelation) in self.__currentSuperg.getTruePathRelationEdges():
+            if pathRelation == SuperBlocks.PATHRELATION.MUTUAL_EXCLUSION \
+            and superv1 in self.__on and superv2 in self.__on:
+                falsifySet.add((superv1, superv2, pathRelation))    
+            if pathRelation == SuperBlocks.PATHRELATION.MUTUAL_INCLUSION \
+            and ((superv1 in self.__on and superv2 not in self.__on) or (superv1 not in self.__on and superv2 in self.__on)):
+                falsifySet.add((superv1, superv2, pathRelation))
+        for pathTuple in falsifySet:
+            self.__currentSuperg.falsify(pathTuple)
         self.__on = []
         
         

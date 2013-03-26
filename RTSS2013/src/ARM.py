@@ -216,9 +216,7 @@ def identifyLeaders (functions, functionToJumpTableTargets):
                 newLeader                = True
             else:
                 address = instruction.getAddress()
-                if address in functionToBranchTargets[functionName]:
-                    functionToLeaders[functionName].add(instruction)
-                elif address in functionToJumpTableTargets[functionName]:
+                if address in functionToJumpTableTargets[functionName]:
                     functionToLeaders[functionName].add(instruction)
                 op = instruction.getOp()
                 if op in ARMInstructionSet.Branches:
@@ -234,6 +232,9 @@ def identifyLeaders (functions, functionToJumpTableTargets):
                         noopAfterJumpTableBranch = True
                     else:
                         newLeader = True
+        for instruction in functionToInstructions[functionName]:
+            if instruction.getAddress() in functionToBranchTargets[functionName]:
+                functionToLeaders[functionName].add(instruction)
         
 def identifyBasicBlocks (functions):
     global newVertexID

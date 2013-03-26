@@ -173,22 +173,13 @@ def writeSuperBlockVertex (superg, vertexID, f):
         f.write(newEdge)
         f.write(beginAttributes)
         succe = v.getSuccessorEdge(succID)
-        if isinstance(succe, Edges.SuperBlockControlFlowEdge):
-            f.write(setName(str(succe.getBasicBlockID())))
+        f.write(setName(str(succe.getBasicBlockID())))
+        if isinstance(succe, Edges.SuperBlockLoopEdge):
+            f.write(setEdgePattern(EDGESHAPE.DOTTED, 4))
+            f.write(setEdgeColor("#339999"))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    
-    for succe in v.getPathRelationEdges():
-        succID = succe.getVertexID()
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setEdgeColor("#CC6600"))
-        f.write(setEdgeDirection(DIRECTION.DESTINATION))
-        f.write(setEdgePattern(EDGESHAPE.SOLID, 2))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")  
     
     f.write(endVertex + "\n")
 

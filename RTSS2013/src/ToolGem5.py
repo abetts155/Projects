@@ -63,17 +63,17 @@ def getTestSpecification (testSpecFile):
                     try:
                         length = int(rhs)
                     except:
-                        sys.exit("The length of the test vector must be a non-negative integer. It is %s." % rhs) 
+                        sys.exit("The length of the test vector must be a non-negative integer. It is '%s'." % rhs) 
                 elif lhs.lower() == 'lower':
                     try:
                         lower = locale.atoi(rhs)
                     except:
-                        sys.exit("The lower bound on the range of elements in the test vector must be an integer. It is %s." % rhs) 
+                        sys.exit("The lower bound on the range of elements in the test vector must be an integer. It is '%s'." % rhs) 
                 elif lhs.lower() == 'upper':
                     try:
                         upper = locale.atoi(rhs)
                     except:
-                        sys.exit("The upper bound on the range of elements in the test vector must be an integer. It is %s." % rhs) 
+                        sys.exit("The upper bound on the range of elements in the test vector must be an integer. It is '%s'." % rhs) 
                 else:
                     sys.exit("Do not understand the line '%s' in the test specification file" % line)   
     return TestHarness.TestVectorProperties(length, basetype, lower, upper)
@@ -100,7 +100,7 @@ def compileProgram (program):
         for flag in args.flags:
             extraFlags += "-%s " % flag
     binary     = program[:-2]
-    cmd        = "%s -static %s -o %s %s" % (armGCC, program, binary, extraFlags)
+    cmd        = "%s -fno-stack-protector -static %s -o %s %s" % (armGCC, program, binary, extraFlags)
     Debug.debugMessage("Compiling with command '%s'" % cmd, 1)
     proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()

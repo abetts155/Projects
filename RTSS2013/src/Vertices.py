@@ -1,5 +1,4 @@
 from Edges import Edge, CallGraphEdge
-import itertools
 
 dummyVertexID = -1
 
@@ -150,16 +149,6 @@ class SuperBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.__unstructuredMerge = False
         self.__basicBlocks       = set([])
-        self.__pathNeighbours    = {}
-        
-    def addPathRelationEdge (self, e):
-        ID = e.getVertexID()
-        if ID not in self.__pathNeighbours:
-            self.__pathNeighbours[ID] = []
-        self.__pathNeighbours[ID].append(e)
-    
-    def getPathRelationEdges (self):
-        return list(itertools.chain.from_iterable(self.__pathNeighbours.values()))
         
     def setUnstructuredMerge (self):
         self.__unstructuredMerge = True
@@ -190,8 +179,7 @@ class SuperBlock (Vertex):
         string =  "Vertex ID    = %d\n" % self._vertexID
         string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
         string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())   
-        string += "relational   = {%s}\n" % ', '.join(str(succID) for succID in self.__pathNeighbours.keys())
+        string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string
     
 class Ipoint (Vertex):
