@@ -1,0 +1,4 @@
+type=int
+length=6
+lower=0
+upper=1000
