@@ -131,8 +131,9 @@ def getCalleeName (instructionFields):
     index = calleeName.find('+')
     if index != -1:
         calleeName = calleeName[:index]
-    startAddress = int(instructionFields[1], 16)            
-    assert startAddress >= functionToStartAddress[calleeName] and startAddress <= functionToLastAddress[calleeName], "The address %d is outside the legal range of addresses for %s" % (startAddress, calleeName)
+    startAddress = int(instructionFields[1], 16) 
+    assert startAddress >= functionToStartAddress[calleeName] and startAddress <= functionToLastAddress[calleeName], \
+    "The address %s is outside the legal range of addresses for %s" % (hex(startAddress), calleeName)
     return calleeName
 
 def identifyCallGraph (rootFunction):
@@ -214,24 +215,24 @@ def identifyLeaders (functions, functionToJumpTableTargets):
                 assert instruction.getOp() in ARMInstructionSet.Nops, "Did not find an no-op after jump table branch. Instead found %s" % instruction
                 noopAfterJumpTableBranch = False
                 newLeader                = True
-            else:
-                address = instruction.getAddress()
-                if address in functionToJumpTableTargets[functionName]:
-                    functionToLeaders[functionName].add(instruction)
-                op = instruction.getOp()
-                if op in ARMInstructionSet.Branches:
-                    newLeader     = True
-                    fields        = instruction.getInstructionFields()
-                    addressTarget = int(fields[1], 16) 
-                    functionToBranchTargets[functionName].add(addressTarget)
-                elif isJumpTableBranch(instruction):
-                    # Look for instructions with an explicit load into the PC
-                    Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, debugLevel)
-                    functionToJumpTableInstructions[functionName].append(instruction)
-                    if nextInstruction and nextInstruction.getOp() in ARMInstructionSet.Nops:
-                        noopAfterJumpTableBranch = True
-                    else:
-                        newLeader = True
+            
+            address = instruction.getAddress()
+            if address in functionToJumpTableTargets[functionName]:
+                functionToLeaders[functionName].add(instruction)
+            op = instruction.getOp()
+            if op in ARMInstructionSet.Branches:
+                newLeader     = True
+                fields        = instruction.getInstructionFields()
+                addressTarget = int(fields[1], 16) 
+                functionToBranchTargets[functionName].add(addressTarget)
+            elif isJumpTableBranch(instruction):
+                # Look for instructions with an explicit load into the PC
+                Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, debugLevel)
+                functionToJumpTableInstructions[functionName].append(instruction)
+                if nextInstruction and nextInstruction.getOp() in ARMInstructionSet.Nops:
+                    noopAfterJumpTableBranch = True
+                else:
+                    newLeader = True
         for instruction in functionToInstructions[functionName]:
             if instruction.getAddress() in functionToBranchTargets[functionName]:
                 functionToLeaders[functionName].add(instruction)

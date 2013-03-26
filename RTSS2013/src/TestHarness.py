@@ -2,13 +2,14 @@ class TestVectorProperties:
     Type = ['int', 'double', 'char']
     
     def __init__ (self, vectorLength, vectorBaseType, vectorLowerBound, vectorUpperBound):
-        assert vectorLength > 0, "The length of the test vector must be greater than zero"
-        assert vectorBaseType in TestVectorProperties.Type, "Invalid test vector base type"
-        assert vectorUpperBound >= vectorLowerBound, "The range [%d..%d] is not permissible" % (vectorLowerBound, vectorUpperBound)
-        self.length     = vectorLength
-        self.baseType   = vectorBaseType
-        self.lowerBound = vectorLowerBound
-        self.upperBound = vectorUpperBound
+        assert vectorLength >= 0, "The length of the test vector must be greater than or equal to zero"
+        self.length = vectorLength
+        if self.length > 0:
+            assert vectorBaseType in TestVectorProperties.Type, "Invalid test vector base type"
+            assert vectorUpperBound >= vectorLowerBound, "The range [%d..%d] is not permissible" % (vectorLowerBound, vectorUpperBound)
+            self.baseType   = vectorBaseType
+            self.lowerBound = vectorLowerBound
+            self.upperBound = vectorUpperBound
 
 class GeneticAlgorithm:
     def __init__ (self, vectorProperties, fitnessFunction, generations=100, populationSize=100, crossoverRate=0.9, mutationRate=0.01):

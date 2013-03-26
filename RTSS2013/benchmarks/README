@@ -10,6 +10,7 @@ edn.c				edn
 embedded.c			ndes
 exponential_integral.c		expint
 factorial.c			fac
+fastDiscreteCosineTransform.c	fdct
 fft.c				fft1
 fibonacci.c			fibcall
 insertsort.c			insertsort
@@ -24,5 +25,6 @@ prime.c				prime
 quadraticroots.c		qurt
 select.c			select
 squareroot.c			sqrt
+statemate.c			statemate
 statistics.c			st
 
