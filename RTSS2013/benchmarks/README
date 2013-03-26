@@ -2,14 +2,16 @@ The following shows how our file names map to the Malardalen file names
 
 binary_search.c			bs  
 bubblesort.c			bsort100
+compress.c			compress
 cover.c 			cover
+crc.c				crc
 duffsdevice.c			duff
 edn.c				edn
 embedded.c			ndes
 exponential_integral.c		expint
 factorial.c			fac
-fibonacci.c			fibcall
 fft.c				fft1
+fibonacci.c			fibcall
 insertsort.c			insertsort
 janne_complex.c 		janne_complex
 lcdnum.c			lcdnum
@@ -19,6 +21,7 @@ matrix_inverse.c		minver
 matrixmultiply.c		matmult
 petri.c				nsichneu
 prime.c				prime
+quadraticroots.c		qurt
 select.c			select
 squareroot.c			sqrt
 statistics.c			st
