@@ -234,7 +234,8 @@ if __name__ == "__main__":
     
     if args.clean:
         Utils.clean()
-        
+    
+    Debug.verboseMessage("%s Analysing program '%s' %s" % ('*' * 10, args.program, '*' * 10))
     Debug.verboseMessage("Checking gem5 configuration...")
     gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
     Debug.verboseMessage("...all good")

@@ -59,12 +59,13 @@ if __name__ == "__main__":
         Utils.clean()
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
     # Create the CFGs
-    Debug.verboseMessage("Reading in program file")
+    Debug.verboseMessage("Reading in program file to do super block CFG analysis")
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
     program  = ParseProgramFile.createProgram(args.program)
     UDrawGraph.makeUdrawFile(program.getCallGraph(), "%s.%s" % (basename, "callg"))
+    program.inlineCalls()
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()

@@ -31,6 +31,9 @@ class CallGraphEdge (Edge):
     def getCallSites (self):
         return self.__callSites
     
+    def numberOfCallSites (self):
+        return len(self.__callSites)
+    
 class SuperBlockControlFlowEdge (Edge):
     def __init__ (self, vertexID, bbID):
         Edge.__init__(self, vertexID)

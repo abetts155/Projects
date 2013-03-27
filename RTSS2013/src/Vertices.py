@@ -19,6 +19,9 @@ class Vertex ():
         predID = prede.getVertexID()
         self._predecessors[predID] = prede
             
+    def removeAllPredecessors (self):
+        self._predecessors = {}
+    
     def removePredecessor (self, predID):
         assert predID in self._predecessors, "Cannot remove %d as it is not in predecessor of %d" % (predID, self._vertexID)
         del self._predecessors[predID]
@@ -46,6 +49,9 @@ class Vertex ():
     def addSuccessorEdge (self, succe):
         succID = succe.getVertexID()
         self._successors[succID] = succe
+    
+    def removeAllSuccessors (self):
+        self._successors = {}
         
     def removeSuccessor (self, succID):
         assert succID in self._successors, "Cannot remove %d as it is not in _successors of %d" % (succID, self._vertexID)

@@ -1,5 +1,6 @@
 The following shows how our file names map to the Malardalen file names
 
+adpcm.c				adpcm
 binary_search.c			bs  
 bubblesort.c			bsort100
 compress.c			compress

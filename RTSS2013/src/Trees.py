@@ -624,6 +624,7 @@ class LoopNests (Tree):
         if len(noSuccs) != 1:
             exitID = flowg.getNextVertexID()
             bb = CFGs.BasicBlock(exitID)
+            bb.setDummy()
             flowg.addVertex(bb)
             flowg.setExitID(exitID)
             flowg.getVertex(exitID).setDummy()

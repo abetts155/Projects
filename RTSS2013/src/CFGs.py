@@ -135,12 +135,36 @@ class CFG (FlowGraph):
         
     def setEntryID (self, entryID=None):
         if entryID is None:
+            candidates = []
+            toRemove   = []
             for bb in self.vertices.values():
                 if bb.numberOfPredecessors() == 0:
-                    bbID = bb.getVertexID()
-                    assert self._entryID == dummyVertexID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
+                    candidates.append(bb)
+            for bb in candidates:
+                bbID  = bb.getVertexID()
+                if self._entryID != dummyVertexID:
+                    Debug.warningMessage("The entry ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID))
+                    currentEntryv = self.getVertex(self._entryID)
+                    entryAddress  = currentEntryv.getFirstInstruction().getAddress()
+                    firstAddress  = bb.getFirstInstruction().getAddress()
+                    if firstAddress < entryAddress:
+                        self._entryID = bbID
+                        Debug.warningMessage("Resetting entry vertex to %d" % bbID)
+                        toRemove.append(currentEntryv)
+                    else:
+                        toRemove.append(bb)
+                else:
                     self._entryID = bbID
-            assert self._entryID != dummyVertexID, "Unable to find a vertex without predecessors to set as the entry"
+            for bb in toRemove:
+                bbID = bb.getVertexID()
+                for predID in bb.getPredecessorIDs():
+                    predv = self.getVertex(predID)
+                    predv.removeSuccessor(bbID)
+                for succID in bb.getSuccessorIDs():
+                    succv = self.getVertex(succID)
+                    succv.removePredecessor(bbID)
+                self.removeVertex(bbID)
+            assert self._entryID != dummyVertexID, "Unable to find a vertex without predecessors to set as the exit in '%s'" % self._name
         else:
             assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
             assert entryID > dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
@@ -151,10 +175,10 @@ class CFG (FlowGraph):
             for bb in self.vertices.values():
                 if bb.numberOfSuccessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self._exitID == dummyVertexID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
+                    assert self._exitID == dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID)
                     self._exitID = bbID
             if self._exitID == dummyVertexID:
-                Debug.warningMessage("Unable to find a vertex without successors to set as the exit in %s" % self._name)
+                Debug.warningMessage("Unable to find a vertex without successors to set as the exit in '%s'" % self._name)
         else:
             assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
             assert exitID > dummyVertexID, "Exit ID " + str(exitID) + " is not positive"

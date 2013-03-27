@@ -1,5 +1,6 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
+from copy import deepcopy
 import Debug
 
 class CallGraph (DirectedGraph):   
@@ -126,3 +127,43 @@ class Program():
     
     def getLNTs (self):
         return self.__lnts.values().__iter__() 
+    
+    def inlineCalls (self):
+        for callv in self.__callg:
+            if callv.numberOfPredecessors() == 1:
+                for calle in callv.getPredecessorEdges():
+                    if calle.numberOfCallSites() == 1:
+                        for callSiteID in calle.getCallSites():
+                            (callerName, calleeName) = self.__callg.getCallEdgeNames(callSiteID)
+                            self.__doInline(callerName, calleeName, callSiteID)
+                    
+    def __doInline (self, callerName, calleeName, callSiteID):
+        Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
+        callerICFG = self.getICFG(callerName)
+        callSitev  = callerICFG.getVertex(callSiteID)
+        assert callSitev.numberOfSuccessors() == 1, "The call site %d in '%s' does not have one successor exactly" % (callSiteID, callerName)
+        returnv    = callerICFG.getVertex(callSitev.getSuccessorIDs()[0])
+        calleeICFG = self.getICFG(calleeName)
+        self.__duplicateCFG(callerICFG, calleeICFG)
+        self.__linkDuplicate(callerICFG, calleeICFG, callSitev, returnv)
+        
+    def __duplicateCFG (self, callerICFG, calleeICFG):
+        for v in calleeICFG:
+            clonev = deepcopy(v)
+            clonev.removeAllPredecessors()
+            clonev.removeAllSuccessors()
+            callerICFG.addVertex(clonev)
+        for v in calleeICFG:
+            predID = v.getVertexID()
+            for succID in v.getSuccessorIDs():
+                if predID != calleeICFG.getExitID() and succID != calleeICFG.getEntryID():
+                    print "(%d, %d)" % (predID, succID)
+                    callerICFG.addEdge(predID, succID)
+    
+    def __linkDuplicate (self, callerICFG, calleeICFG, callSitev, returnv):
+        entryv = calleeICFG.getVertex(calleeICFG.getEntryID())
+        exitv  = calleeICFG.getVertex(calleeICFG.getExitID())     
+        callerICFG.addEdge(callSitev.getVertexID(), entryv.getVertexID())
+        callerICFG.addEdge(exitv.getVertexID(), returnv.getVertexID())
+        callerICFG.removeEdge(callSitev.getVertexID(), returnv.getVertexID())
+        

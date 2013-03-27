@@ -357,13 +357,13 @@ def readARMDisassembly (filename, rootFunction):
     identifyLeaders(functions, functionToJumpTableTargets)
     identifyBasicBlocks(functions)
     addEdges(functions, functionToJumpTableTargets)
-    generateInternalFile(filename)
-    # Program created
     # Now compute entry and exit IDs of functions and root of call graph
     program.getCallGraph().setRoot(rootFunction)
     for icfg in program.getICFGs():
-        Debug.debugMessage("Setting entry and exit in %s" % icfg.getName(), debugLevel)
+        Debug.debugMessage("Setting entry and exit in '%s'" % icfg.getName(), debugLevel)
         icfg.setEntryID()
         icfg.setExitID()
+    # Dump program to file
+    generateInternalFile(filename)
     return program
     

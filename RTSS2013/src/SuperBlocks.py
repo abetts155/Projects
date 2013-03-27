@@ -1,10 +1,9 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import Vertex, HeaderVertex, SuperBlock, dummyVertexID
+from Vertices import Vertex, HeaderVertex, SuperBlock
 from Edges import SuperBlockControlFlowEdge, SuperBlockLoopEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
 import Debug
-from collections import OrderedDict
 
 class PATHRELATION:
     MUTUAL_EXCLUSION = "MUTUAL_EXCLUSION"
@@ -62,7 +61,7 @@ class SuperBlockGraph (DirectedGraph):
         for vertexID in dfs.getPostorder():
             v = forwardICFG.getVertex(vertexID)
             # Found a nested loop header
-            if lnt.isLoopHeader(vertexID) and vertexID != headerID:
+            if not v.isDummy() and lnt.isLoopHeader(vertexID) and vertexID != headerID:
                 sourcev      = self.__basicBlockToSuperBlock[headerID]
                 destinationv = self.__headerToRootSuperBlock[vertexID]
                 self.__addEdge(sourcev, destinationv, headerID, SuperBlockLoopEdge)
@@ -87,7 +86,7 @@ class SuperBlockGraph (DirectedGraph):
             vertexID = v.getVertexID()
             if v.numberOfSuccessors() > 1:
                 for branchID in reachableBranches[vertexID]:
-                    print "%d, %d" % (vertexID, branchID)
+                    pass #print "%d, %d" % (vertexID, branchID)
         
         pathRelationEdges = set([])         
         self.__truePathRelationEdges.update(pathRelationEdges)
