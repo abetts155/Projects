@@ -82,6 +82,10 @@ class Program():
     def getRootICFG (self):
         rootcallv = self.__callg.getRootVertex()
         return self.getICFG(rootcallv.getName())
+    
+    def getRootSuperBlockCFG (self):
+        rootcallv = self.__callg.getRootVertex()
+        return self.getSuperBlockCFG(rootcallv.getName())
         
     def getCallGraph (self):
         return self.__callg
@@ -117,9 +121,13 @@ class Program():
     def getLNTs (self):
         return self.__LNTs.values().__iter__() 
     
+    def getSuperBlockCFGs (self):
+        return self.__superblockcfgs.values().__iter__() 
+    
     def inlineCalls (self, inliningCapacity):
         self.__inlineNonUniqueCalls(inliningCapacity)
         self.__inlineUniqueCalls(inliningCapacity)
+        print self.__ICFGs.keys()
         
     def __inlineNonUniqueCalls (self, inliningCapacity):
         for callv in self.__callg:

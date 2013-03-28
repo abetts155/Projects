@@ -1,5 +1,18 @@
 #!/usr/bin/python2.7
 
+def parseGem5Traces (filestem, program):
+    import ParseGem5Trace
+    import re    
+    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
+    assert os.path.exists(gem5TraceDirectory), "Unable to find directory '%s' which should contain the gem5 traces" % gem5TraceDirectory
+    gem5Traces = []
+    for filename in os.listdir(gem5TraceDirectory):
+        match = re.match(r'%s' % os.path.basename(filestem), filename)
+        if match:
+            tracefile = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + filename
+            gem5Traces.append(tracefile)
+    ParseGem5Trace.parse(program, gem5Traces)
+
 def commandLine ():
     from argparse import ArgumentParser
     
@@ -24,6 +37,12 @@ def commandLine ():
                          "--udraw",
                          action="store_true",
                          help="generate uDrawGraph files",
+                         default=False)
+    
+    cmdline.add_argument("--gem5-traces",
+                         dest="gem5traces",
+                         action="store_true",
+                         help="parse gem5 traces",
                          default=False)
     
     cmdline.add_argument("-I",
@@ -95,4 +114,7 @@ if __name__ == "__main__":
         tracefile = os.path.abspath(args.tracefile)
         assert os.path.exists(tracefile), "Trace file '%s' does not exist" % tracefile
         Traces.ParseTraces(basename, tracefile, program)
+    if args.gem5traces:
+        print "Parse gem5 traces"
+        parseGem5Traces (basename, program)
         

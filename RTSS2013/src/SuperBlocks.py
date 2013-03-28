@@ -8,6 +8,13 @@ import Debug
 class PATHRELATION:
     MUTUAL_EXCLUSION = "MUTUAL_EXCLUSION"
     MUTUAL_INCLUSION = "MUTUAL_INCLUSION"
+    PRECEDENCE       = "PRECEDENCE"
+    ALTERNATION      = "ALTERNATION"
+
+class LOOPRELATION:
+    LESS_THAN    = "<"
+    EQUAL        = "=="
+    GREATER_THAN = ">"
 
 class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
