@@ -26,6 +26,13 @@ def commandLine ():
                          help="generate uDrawGraph files",
                          default=False)
     
+    cmdline.add_argument("-I",
+                         "--inlining-capacity",
+                         dest="inliningCapacity",
+                         type=int,
+                         help="inlining capacity beyond which the size of each CFG will not exceed",
+                         metavar="<INT>")
+    
     cmdline.add_argument("-t",
                          "--traces",
                          type=int,
@@ -55,6 +62,8 @@ if __name__ == "__main__":
     Debug.debug        = args.debug
     UDrawGraph.enabled = args.udraw
     
+    if args.inliningCapacity:
+        assert args.inliningCapacity > 0, "The inlining capacity must be a positive integer"            
     if args.clean:
         Utils.clean()
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
@@ -65,7 +74,7 @@ if __name__ == "__main__":
     basename = os.path.splitext(filename)[0]
     program  = ParseProgramFile.createProgram(args.program)
     UDrawGraph.makeUdrawFile(program.getCallGraph(), "%s.%s" % (basename, "callg"))
-    program.inlineCalls()
+    program.inlineCalls(args.inliningCapacity)
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()

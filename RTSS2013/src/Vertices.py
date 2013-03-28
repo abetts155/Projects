@@ -8,6 +8,9 @@ class Vertex ():
         self._predecessors = {}
         self._successors = {}
         
+    def setVertexID (self, vertexID):
+        self._vertexID = vertexID
+    
     def getVertexID (self):
         return self._vertexID
     
@@ -115,6 +118,72 @@ class HeaderVertex (TreeVertex):
     
     def __str__ (self):
         return TreeVertex.__str__(self)[:-1] + " (" + "*" * 3 + " HEADER " + "*" * 3 + ")\n" 
+    
+class Enum(set):
+    def __getattr__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
+
+class BasicBlock (Vertex):
+    IpointPosition = Enum(['start', 'end'])
+    
+    def __init__ (self, vertexID, name=None):
+        Vertex.__init__(self, vertexID)
+        self.__name = name
+        self.__dummy = False
+        self.__ipointPosition = None
+        self.__instructions = []
+        self.__addresses = set([])
+    
+    def getName (self):
+        return self.__name
+    
+    def setIpoint (self, position):
+        assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
+        self.__ipointPosition = position
+        
+    def hasIpoint (self):
+        return self.__ipointPosition
+    
+    def ipointPosition (self):
+        assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self._vertexID
+        return self.__ipointPosition
+       
+    def setDummy (self):
+        self.__dummy = True
+        
+    def isDummy (self):
+        return self.__dummy
+    
+    def addInstruction (self, instruction):
+        self.__instructions.append(instruction)
+        self.__addresses.add(instruction.getAddress())
+        
+    def getFirstInstruction (self):
+        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
+        return self.__instructions[0]
+        
+    def getLastInstruction (self):
+        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
+        return self.__instructions[-1]
+    
+    def hasInstructions (self):
+        return len(self.__instructions) != 0
+    
+    def getInstructions (self):
+        return self.__instructions
+    
+    def hasAddress (self, address):
+        return address in self.__addresses
+        
+    def __str__ (self):
+        string =  "Vertex ID = " + str(self._vertexID) + "\n"
+        string += "pred      = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ      = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
+        for instruction in self.__instructions:
+            string += instruction.__str__() + '\n'    
+        return string
     
 class CallGraphVertex (Vertex):
     def __init__ (self, vertexID, name):

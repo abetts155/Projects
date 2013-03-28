@@ -70,11 +70,14 @@ def makeUdrawFile (g, fileNamePrefix):
             f.write(beginGraph)
             # CFG or Instrumented CFG
             if isinstance(g, CFGs.CFG):
-                writeCFGVertex(g, g.getEntryID(), f)
+                colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
+                colorsIterator = iter(colors) 
+                colorMapping   = {}
+                writeCFGVertex(colorMapping, colorsIterator, g, g.getEntryID(), f)
                 for v in g:
                     vertexID = v.getVertexID()
                     if vertexID != g.getEntryID():
-                        writeCFGVertex(g, vertexID, f)   
+                        writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
             elif isinstance(g, SuperBlocks.SuperBlockGraph):
                 for v in g:
                     vertexID = v.getVertexID()
@@ -109,23 +112,25 @@ def writeVertex (g, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
+    f.write(endVertex + "\n") 
     
-def writeCFGVertex (cfg, vertexID, f):
+def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     v = cfg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
-    if isinstance(v, Vertices.Ipoint):
-        f.write(setShape(SHAPE.CIRCLE))
-        f.write(setColor(COLOR.YELLOW))
-    else:
-        if v.hasInstructions():
-            tooltip = ""
-            for instruction in v.getInstructions():
-                tooltip += instruction.__str__() + newLine
-            tooltip = tooltip.rstrip(newLine)
-            f.write(setToolTip(tooltip))
+    tooltip = ""
+    if v.getName():
+        if v.getName() not in colorMapping:
+            colorMapping[v.getName()] = colorsIterator.next()
+        f.write(setColor(colorMapping[v.getName()]))
+        if v.getName() != cfg.getName():
+            tooltip += "Callee basic block for %s%s" % (v.getName(), newLine)
+    if v.hasInstructions():
+        for instruction in v.getInstructions():
+            tooltip += instruction.__str__() + newLine
+        tooltip = tooltip.rstrip(newLine)
+    f.write(setToolTip(tooltip))
     f.write(endAttibutes)
     
     f.write(beginAttributes)

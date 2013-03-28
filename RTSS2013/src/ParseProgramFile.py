@@ -98,7 +98,7 @@ def readInProgram (programFile):
                     Debug.exitMessage("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, icfg.getName()))
                 else:
                     bbIDs.add(vertexID)
-                bb = CFGs.BasicBlock(vertexID)
+                bb = CFGs.BasicBlock(vertexID, functionName)
                 icfg.addVertex(bb)
             elif line.startswith(ipointIndicator):
                 instructions = False
@@ -121,8 +121,8 @@ def readInProgram (programFile):
                             succID = int(lex)
                             bb.addSuccessor(succID)
                         else:
-                            functionName = lex
-                            program.getCallGraph().addEdge(icfg.getName(), functionName, bb.getVertexID())                                    
+                            calleeName = lex
+                            program.getCallGraph().addEdge(icfg.getName(), calleeName, bb.getVertexID())                                    
             elif line.startswith(instructionsIndicator):
                 instructions = True
             # Ignore lines consisting of whitespace only

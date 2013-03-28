@@ -1,8 +1,7 @@
 from DirectedGraphs import FlowGraph, DirectedGraph
-from Vertices import Vertex, Ipoint, dummyVertexID
+from Vertices import BasicBlock, Ipoint, dummyVertexID
 import Debug
 
-# Class to mode instructions inside basic blocks
 class Instruction ():    
     def __init__ (self, address, instruction):
         self.__address     = address
@@ -19,68 +18,6 @@ class Instruction ():
      
     def __str__(self):
         return "%s : %s" % (hex(self.__address), ' '.join(self.__instruction))
-    
-class Enum(set):
-    def __getattr__(self, name):
-        if name in self:
-            return name
-        raise AttributeError
-
-class BasicBlock (Vertex):
-    IpointPosition = Enum(['start', 'end'])
-    
-    def __init__ (self, vertexID):
-        Vertex.__init__(self, vertexID)
-        self.__dummy = False
-        self.__ipointPosition = None
-        self.__instructions = []
-        self.__addresses = set([])
-    
-    def setIpoint (self, position):
-        assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
-        self.__ipointPosition = position
-        
-    def hasIpoint (self):
-        return self.__ipointPosition
-    
-    def ipointPosition (self):
-        assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self._vertexID
-        return self.__ipointPosition
-       
-    def setDummy (self):
-        self.__dummy = True
-        
-    def isDummy (self):
-        return self.__dummy
-    
-    def addInstruction (self, instruction):
-        self.__instructions.append(instruction)
-        self.__addresses.add(instruction.getAddress())
-        
-    def getFirstInstruction (self):
-        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
-        return self.__instructions[0]
-        
-    def getLastInstruction (self):
-        assert self.__instructions, "Basic block %d does not have instructions" % self._vertexID
-        return self.__instructions[-1]
-    
-    def hasInstructions (self):
-        return len(self.__instructions) != 0
-    
-    def getInstructions (self):
-        return self.__instructions
-    
-    def hasAddress (self, address):
-        return address in self.__addresses
-        
-    def __str__ (self):
-        string =  "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "pred      = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ      = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
-        for instruction in self.__instructions:
-            string += instruction.__str__() + '\n'    
-        return string
         
 class CFG (FlowGraph):    
     def __init__ (self):
