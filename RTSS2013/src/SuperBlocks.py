@@ -89,13 +89,20 @@ class SuperBlockGraph (DirectedGraph):
                 if forwardICFG.getVertex(succID).numberOfSuccessors() > 1 and succID not in rootSuperv.getBasicBlockIDs():
                     reachableBranches[vertexID].add(succID)    
         
+        pathRelationEdges = set([])  
         for v in forwardICFG:            
             vertexID = v.getVertexID()
-            if v.numberOfSuccessors() > 1:
+            if v.numberOfSuccessors() > 1 and v.getVertexID() != forwardICFG.getEntryID():
                 for branchID in reachableBranches[vertexID]:
-                    pass #print "%d, %d" % (vertexID, branchID)
-        
-        pathRelationEdges = set([])         
+                    branchsuperv1 = self.__basicBlockToSuperBlock[vertexID]
+                    branchsuperv2 = self.__basicBlockToSuperBlock[branchID]
+                    for succID1 in branchsuperv1.getSuccessorIDs():
+                        succv1 = self.getVertex(succID1)
+                        for succID2 in branchsuperv2.getSuccessorIDs():
+                            succv2 = self.getVertex(succID2)
+                            pathRelationEdges.add((succv1, succv2, PATHRELATION.MUTUAL_INCLUSION))
+                            pathRelationEdges.add((succv1, succv2, PATHRELATION.MUTUAL_EXCLUSION))
+                            
         self.__truePathRelationEdges.update(pathRelationEdges)
         return rootSuperv
     

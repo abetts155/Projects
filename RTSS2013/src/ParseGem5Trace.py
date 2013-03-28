@@ -40,7 +40,6 @@ def parseAddress (program, address):
                 assert currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (currentICFG.getName(), hex(address))      
     currentSuperBB = currentSuperg.getSuperBlock(currentBB.getVertexID())
     if currentSuperBB.numberOfSuccessors() == 0 and currentBB.getVertexID() == currentSuperBB.getRepresentativeID():
-        print currentSuperBB
         liveSuperBBs.add(currentSuperBB)    
     Debug.debugMessage("Now in CFG '%s' at basic block %d" % (currentICFG.getName(), currentBB.getVertexID()), 20)    
     
