@@ -1,4 +1,5 @@
 from Vertices import HeaderVertex
+from Edges import SuperBlockLoopEdge
 from Trees import DepthFirstSearch
 import Debug
 import os
@@ -12,19 +13,19 @@ class WCETCalculation:
             lnt    = program.getLNT(callv.getName())
             superg = program.getSuperBlockCFG(callv.getName())
             CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
-            TreeBasedCalculation(superg)
+            TreeBasedCalculation(superg, lnt)
             
 class TreeBasedCalculation:
-    def __init__ (self, superg, longestPaths=1):
+    def __init__ (self, superg, lnt, longestPaths=1):
         self.__longestPaths  = longestPaths
         self.__supervToWCETs = {}
         for superv in superg:
             self.__supervToWCETs[superv] = set([])
-        self.__doCalculation(superg)
+        self.__doCalculation(superg, lnt)
         rootSuperv = superg.getRootSuperBlock()
         Debug.verboseMessage("TREE:: WCET(%s) = %s" % (superg.getName(), sorted(self.__supervToWCETs[rootSuperv])))
         
-    def __doCalculation (self, superg):
+    def __doCalculation (self, superg, lnt):
         rootSuperv = superg.getRootSuperBlock()
         dfs        = DepthFirstSearch(superg, rootSuperv.getVertexID())
         for vertexID in dfs.getPostorder():
@@ -33,28 +34,40 @@ class TreeBasedCalculation:
                 self.__supervToWCETs[superv].add(0)
             else:
                 intraBlockWCET = self.__calculateIntraBlockValue(superv)
-                if superv.numberOfSuccessors() > 1:
-                    self.__calculateBranchVertex(superg, superv, intraBlockWCET)
-                elif superv.numberOfSuccessors() == 1:
-                    self.__calculateSingletonVertex(superg, superv, intraBlockWCET)
-                else:
+                forwardPartitions = superv.getBranchPartitions()
+                loopPartitions    = superv.getLoopPartition()
+                if forwardPartitions:
+                    self.__calculateForwardControlFlow(superg, superv, forwardPartitions, intraBlockWCET)
+                if loopPartitions:
+                    self.__calculateLoopControlFlow(lnt, superg, superv, loopPartitions)
+                if not forwardPartitions and not loopPartitions:
                     self.__supervToWCETs[superv] = set([intraBlockWCET])
-    
+                        
+    def __calculateLoopControlFlow (self, lnt, superg, superv, loopPartitions):
+        for supere in loopPartitions:
+            succSuperv = superg.getVertex(supere.getVertexID())
+            headerIDs  = succSuperv.getBasicBlockIDs().intersection(lnt.getHeaderIDs())
+            assert len(headerIDs) == 1, "Header ID not found in super block %d" % (succSuperv.getVertexID())
+            headerID = list(headerIDs)[0]
+            treev    = lnt.getVertex(lnt.getVertex(headerID).getParentID())
+            parentv  = lnt.getVertex(treev.getParentID())
+            bound    = parentv.getLevel() * 10 + 1
+            self.__supervToWCETs[succSuperv] = set([val * bound for val in self.__supervToWCETs[succSuperv]])
+            values = set([])
+            for val1 in self.__supervToWCETs[superv]:
+                for val2 in self.__supervToWCETs[succSuperv]:
+                    values.add(val1+val2)
+            self.__supervToWCETs[superv] = values
+                    
     def __calculateIntraBlockValue (self, superv):
         intraBlockWCET = 0
         for basicBlockID in superv.getBasicBlockIDs():
             intraBlockWCET += basicBlockID
         return intraBlockWCET
     
-    def __calculateSingletonVertex (self, superg, superv, intraBlockWCET):
-        succID = superv.getSuccessorIDs()[0]
-        succSuperv = superg.getVertex(succID)
-        for val in self.__supervToWCETs[succSuperv]:
-            self.__supervToWCETs[superv].add(val+intraBlockWCET)
-    
-    def __calculateBranchVertex (self, superg, superv, intraBlockWCET):
+    def __calculateForwardControlFlow (self, superg, superv, forwardPartitions, intraBlockWCET):
         values = set([])
-        for branchID, superedges in superv.getBranchPartitions().iteritems():
+        for branchID, superedges in forwardPartitions.iteritems():
             if not values:
                 for supere in superedges:
                     succSuperv = superg.getVertex(supere.getVertexID())
@@ -117,7 +130,7 @@ class ILP ():
         returnCode = proc.wait()
         if returnCode != 0:
             Debug.warningMessage("Running '%s' failed" % command)
-            return returnCode
+            return False
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes     = shlex.split(line)
@@ -128,7 +141,7 @@ class ILP ():
                 variable = lexemes[0]
                 count    = int(lexemes[1]) 
                 self._variableToExecutionCount[variable] = count
-        return None
+        return True
                     
 class CreateSuperBlockCFGILP (ILP):
     def __init__ (self, basepath, basename, superg, lnt):
@@ -139,16 +152,16 @@ class CreateSuperBlockCFGILP (ILP):
         self.__createObjectiveFunction()
         self.__createIntegerConstraint()
         filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, superg.getName(), "superg", LpSolve.fileSuffix)
-        while True:
+        solution = True
+        while solution:
             if self._wcet != -1:
                 self.__addMaximumWCETConstraint()
             with open(filename, 'w') as ilpFile:
                 for constraint in self.__constraints:
                     ilpFile.write(constraint)        
-            if not self._solve(filename):
+            solution = self._solve(filename)
+            if solution:
                 Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self._wcet))
-            else:
-                break
             
     def __addMaximumWCETConstraint (self):
         intConstraint = self.__constraints.pop()
@@ -180,6 +193,18 @@ class CreateSuperBlockCFGILP (ILP):
             constraint += LpSolve.semiColon
             constraint += LpSolve.getNewLine(2)
             self.__constraints.append(constraint)
+        else:
+            for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
+                if ancestorv.getVertexID() == treev.getParentID():
+                    constraint = LpSolve.getVertexVariable(treev.getHeaderID(), treev.getHeaderID())
+                    constraint += LpSolve.ltOrEqual
+                    constraint += "%d " % (ancestorv.getLevel() * 10 + 1)
+                    constraint += LpSolve.getVertexVariable(treev.getHeaderID(), ancestorv.getHeaderID())
+                    constraint += LpSolve.semiColon
+                    constraint += LpSolve.getNewLine(2)
+                    self.__constraints.append(constraint)
+                else:
+                    pass
          
     def __createFlowConstraints (self, headerID, supergRegion):
         for superv in supergRegion:

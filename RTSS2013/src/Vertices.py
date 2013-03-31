@@ -251,7 +251,6 @@ class SuperBlock (Vertex):
         return list(self.__basicBlocks)[0]
     
     def getBranchPartitions (self):
-        assert len(self._successors) > 1, "The super block %d does not have multiple successors" % self._vertexID
         partitions = {}
         for succe in self._successors.values():
             if not isinstance(succe, SuperBlockLoopEdge):
@@ -260,6 +259,13 @@ class SuperBlock (Vertex):
                     partitions[branchID] = set([])
                 partitions[branchID].add(succe)
         return partitions
+    
+    def getLoopPartition (self):
+        partition = set([])
+        for succe in self._successors.values():
+            if isinstance(succe, SuperBlockLoopEdge):
+                partition.add(succe)
+        return partition
     
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID
