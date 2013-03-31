@@ -94,6 +94,17 @@ class SuperBlockGraph (DirectedGraph):
                     else:
                         destinationv = emptySuperBlocks.pop()
                         self.__addEdge(sourcev, destinationv, vertexID)
+            # Found a merge
+            if v.numberOfPredecessors() > 1:
+                ipreID = predomTree.getImmediateDominator(vertexID)
+                if postdomTree.getImmediateDominator(ipreID) != vertexID:
+                    destinationv = self.__basicBlockToSuperBlock[vertexID]
+                    if postDF.size(vertexID) > 1:
+                        destinationv.setUnstructuredMerge()
+                    for predID in v.getPredecessorIDs():
+                        sourcev = self.__basicBlockToSuperBlock[predID]
+                        self.__addEdge(sourcev, destinationv, predID)
+                     
             reachableBranches[vertexID] = set([])
             for succID in v.getSuccessorIDs():
                 reachableBranches[vertexID].update(reachableBranches[succID])

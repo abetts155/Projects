@@ -15,11 +15,14 @@ class WCETCalculation:
             TreeBasedCalculation(superg)
             
 class TreeBasedCalculation:
-    def __init__ (self, superg):
-        self.__supervToWCET = {}
+    def __init__ (self, superg, longestPaths=1):
+        self.__longestPaths  = longestPaths
+        self.__supervToWCETs = {}
+        for superv in superg:
+            self.__supervToWCETs[superv] = set([])
         self.__doCalculation(superg)
         rootSuperv = superg.getRootSuperBlock()
-        Debug.verboseMessage("TREE:: WCET(%s) = %d" % (superg.getName(), self.__supervToWCET[rootSuperv]))
+        Debug.verboseMessage("TREE:: WCET(%s) = %s" % (superg.getName(), sorted(self.__supervToWCETs[rootSuperv])))
         
     def __doCalculation (self, superg):
         rootSuperv = superg.getRootSuperBlock()
@@ -27,34 +30,53 @@ class TreeBasedCalculation:
         for vertexID in dfs.getPostorder():
             superv = superg.getVertex(vertexID)
             if superv.numberOfBasicBlocks() == 0:
-                self.__supervToWCET[superv] = 0
+                self.__supervToWCETs[superv].add(0)
             else:
-                self.__supervToWCET[superv] = self.__calculateIntraSuperBlockWCET(superv)
+                intraBlockWCET = self.__calculateIntraBlockValue(superv)
                 if superv.numberOfSuccessors() > 1:
-                    self.__calculateMaximumOfBranches(superg, superv)
+                    self.__calculateBranchVertex(superg, superv, intraBlockWCET)
+                elif superv.numberOfSuccessors() == 1:
+                    self.__calculateSingletonVertex(superg, superv, intraBlockWCET)
+                else:
+                    self.__supervToWCETs[superv] = set([intraBlockWCET])
     
-    def __calculateIntraSuperBlockWCET (self, superv):
-        wcet = 0
+    def __calculateIntraBlockValue (self, superv):
+        intraBlockWCET = 0
         for basicBlockID in superv.getBasicBlockIDs():
-            wcet += 1
-        return wcet 
+            intraBlockWCET += basicBlockID
+        return intraBlockWCET
     
-    def __calculateMaximumOfBranches (self, superg, superv):
+    def __calculateSingletonVertex (self, superg, superv, intraBlockWCET):
+        succID = superv.getSuccessorIDs()[0]
+        succSuperv = superg.getVertex(succID)
+        for val in self.__supervToWCETs[succSuperv]:
+            self.__supervToWCETs[superv].add(val+intraBlockWCET)
+    
+    def __calculateBranchVertex (self, superg, superv, intraBlockWCET):
+        values = set([])
         for branchID, superedges in superv.getBranchPartitions().iteritems():
-            maximum = 0
-            for supere in superedges:
-                succSuperv = superg.getVertex(supere.getVertexID())
-                wcet       = self.__supervToWCET[succSuperv]
-                if wcet > maximum:
-                    maximum = wcet
-            self.__supervToWCET[superv] += maximum
-
+            if not values:
+                for supere in superedges:
+                    succSuperv = superg.getVertex(supere.getVertexID())
+                    values.update(self.__supervToWCETs[succSuperv])
+            else:
+                newValues = set([])
+                for supere in superedges:
+                    succSuperv = superg.getVertex(supere.getVertexID())
+                    for val1 in self.__supervToWCETs[succSuperv]:
+                        for val2 in values:
+                            newValues.add(val1+val2)
+                values = newValues
+        for val in values:
+            self.__supervToWCETs[superv].add(val+intraBlockWCET)
+            
 class LpSolve:
     comma        = ","
     edgePrefix   = "e_"
     equals       = " = "
     fileSuffix   = "ilp"
     int_         = "int"
+    lt           = " < "
     ltOrEqual    = " <= "
     max_         = "max: "
     plus         = " + "
@@ -86,15 +108,16 @@ class ILP ():
         self._wcet = -1
         self._variableToExecutionCount = {}
         
-    def _solve(self, filename, variablePrefix):
+    def _solve(self, filename):
         from subprocess import Popen, PIPE
         import shlex, decimal
         Debug.debugMessage("Solving ILP", 10)
-        command = "lp_solve %s" % filename 
-        proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        command    = "lp_solve %s" % filename 
+        proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
         returnCode = proc.wait()
         if returnCode != 0:
-            Debug.exitMessage("Running '%s' failed" % command)
+            Debug.warningMessage("Running '%s' failed" % command)
+            return returnCode
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes     = shlex.split(line)
@@ -105,6 +128,7 @@ class ILP ():
                 variable = lexemes[0]
                 count    = int(lexemes[1]) 
                 self._variableToExecutionCount[variable] = count
+        return None
                     
 class CreateSuperBlockCFGILP (ILP):
     def __init__ (self, basepath, basename, superg, lnt):
@@ -113,13 +137,28 @@ class CreateSuperBlockCFGILP (ILP):
         self.__variables   = set([])
         self.__createConstraints(superg, lnt)
         self.__createObjectiveFunction()
-        self.__createIntegerConstraints()
+        self.__createIntegerConstraint()
         filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, superg.getName(), "superg", LpSolve.fileSuffix)
-        with open(filename, 'w') as ilpFile:
-            for constraint in self.__constraints:
-                ilpFile.write(constraint)
-        self._solve(filename, LpSolve.edgePrefix)
-        Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self._wcet))
+        while True:
+            if self._wcet != -1:
+                self.__addMaximumWCETConstraint()
+            with open(filename, 'w') as ilpFile:
+                for constraint in self.__constraints:
+                    ilpFile.write(constraint)        
+            if not self._solve(filename):
+                Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self._wcet))
+            else:
+                break
+            
+    def __addMaximumWCETConstraint (self):
+        intConstraint = self.__constraints.pop()
+        constraint    = self.__constraints[0][len(LpSolve.max_):-self.__endOfObjectiveFunction]
+        constraint    += LpSolve.ltOrEqual
+        constraint    += str(self._wcet - 1)
+        constraint    += LpSolve.semiColon
+        constraint    += LpSolve.getNewLine()
+        self.__constraints.append(constraint)
+        self.__constraints.append(intConstraint)
         
     def __createConstraints(self, superg, lnt):
         for level, vertices in lnt.levelIterator(True):
@@ -159,6 +198,7 @@ class CreateSuperBlockCFGILP (ILP):
                         constraint += LpSolve.semiColon
                         constraint += LpSolve.getNewLine()
                         self.__constraints.append(constraint)
+                self.__constraints.append(LpSolve.getNewLine())
                         
             # Handle super blocks with more than one successor
             if superv.numberOfSuccessors() > 1:
@@ -212,7 +252,7 @@ class CreateSuperBlockCFGILP (ILP):
             predSuperv = superg.getVertex(supere.getVertexID())
             if predSuperv.numberOfSuccessors() > 1:
                 dummyvar = LpSolve.getEdgeVariable(supere.getEdgeID(), headerID)
-                self.__variables.append(dummyvar)    
+                self.__variables.add(dummyvar)    
                 constraint += dummyvar
             else:
                 predRepID = predSuperv.getRepresentativeID()
@@ -229,7 +269,10 @@ class CreateSuperBlockCFGILP (ILP):
         num        = 1
         for var in self.__variables:
             if var.startswith(LpSolve.vertexPrefix):
-                constraint += "%d %s" % (1, var)
+                lIndex       = var.find('_')
+                rIndex       = var.rfind('_')
+                basicBlockID = var[lIndex+1:rIndex]
+                constraint += "%s %s" % (basicBlockID, var)
             else:
                 constraint += "%d %s" % (0, var)
             if num < len(self.__variables):
@@ -239,11 +282,10 @@ class CreateSuperBlockCFGILP (ILP):
             num += 1
         constraint += LpSolve.semiColon 
         constraint += LpSolve.getNewLine(2)
-        self.__constraints.insert(0, constraint)                
+        self.__constraints.insert(0, constraint)
+        self.__endOfObjectiveFunction = 3            
     
-    def __createIntegerConstraints (self):
-        comment = LpSolve.getComment("Integer constraints")
-        self.__constraints.append(comment)
+    def __createIntegerConstraint (self):
         constraint = LpSolve.int_ + " "
         num        = 1
         for var in self.__variables:
