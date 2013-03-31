@@ -45,6 +45,11 @@ def commandLine ():
                          help="parse gem5 traces",
                          default=False)
     
+    cmdline.add_argument("--calculation",
+                         action="store_true",
+                         help="do WCET calculation",
+                         default=False)
+    
     cmdline.add_argument("-I",
                          "--inlining-capacity",
                          dest="inliningCapacity",
@@ -74,7 +79,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices, Utils
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices, Utils, Calculations
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -115,6 +120,8 @@ if __name__ == "__main__":
         assert os.path.exists(tracefile), "Trace file '%s' does not exist" % tracefile
         Traces.ParseTraces(basename, tracefile, program)
     if args.gem5traces:
-        print "Parse gem5 traces"
         parseGem5Traces (basename, program)
+    if args.calculation:
+        Calculations.WCETCalculation(program, basepath, basename)
+        
         

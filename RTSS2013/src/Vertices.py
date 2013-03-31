@@ -1,4 +1,4 @@
-from Edges import Edge, CallGraphEdge
+from Edges import Edge, CallGraphEdge, SuperBlockLoopEdge
 
 dummyVertexID = -1
 
@@ -249,6 +249,17 @@ class SuperBlock (Vertex):
     def getRepresentativeID (self):
         assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
         return list(self.__basicBlocks)[0]
+    
+    def getBranchPartitions (self):
+        assert len(self._successors) > 1, "The super block %d does not have multiple successors" % self._vertexID
+        partitions = {}
+        for succe in self._successors.values():
+            if not isinstance(succe, SuperBlockLoopEdge):
+                branchID = succe.getBasicBlockID()
+                if branchID not in partitions:
+                    partitions[branchID] = set([])
+                partitions[branchID].add(succe)
+        return partitions
     
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID
