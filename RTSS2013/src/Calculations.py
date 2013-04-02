@@ -1,5 +1,4 @@
 from Vertices import HeaderVertex
-from Edges import SuperBlockLoopEdge
 from Trees import DepthFirstSearch
 import Debug
 import os
@@ -42,6 +41,7 @@ class TreeBasedCalculation:
                     self.__calculateLoopControlFlow(lnt, superg, superv, loopPartitions)
                 if not forwardPartitions and not loopPartitions:
                     self.__supervToWCETs[superv] = set([intraBlockWCET])
+                print "%d %s" % (superv.getVertexID(), self.__supervToWCETs[superv])
                         
     def __calculateLoopControlFlow (self, lnt, superg, superv, loopPartitions):
         for supere in loopPartitions:
@@ -52,12 +52,7 @@ class TreeBasedCalculation:
             treev    = lnt.getVertex(lnt.getVertex(headerID).getParentID())
             parentv  = lnt.getVertex(treev.getParentID())
             bound    = parentv.getLevel() * 10 + 1
-            self.__supervToWCETs[succSuperv] = set([val * bound for val in self.__supervToWCETs[succSuperv]])
-            values = set([])
-            for val1 in self.__supervToWCETs[superv]:
-                for val2 in self.__supervToWCETs[succSuperv]:
-                    values.add(val1+val2)
-            self.__supervToWCETs[superv] = values
+            self.__supervToWCETs[superv] = set([val * bound for val in self.__supervToWCETs[succSuperv]])
                     
     def __calculateIntraBlockValue (self, superv):
         intraBlockWCET = 0
@@ -139,7 +134,7 @@ class ILP ():
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
                 variable = lexemes[0]
-                count    = int(lexemes[1]) 
+                count    = lexemes[1]
                 self._variableToExecutionCount[variable] = count
         return True
                     
@@ -197,7 +192,7 @@ class CreateSuperBlockCFGILP (ILP):
             for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
                 if ancestorv.getVertexID() == treev.getParentID():
                     constraint = LpSolve.getVertexVariable(treev.getHeaderID(), treev.getHeaderID())
-                    constraint += LpSolve.ltOrEqual
+                    constraint += LpSolve.equals
                     constraint += "%d " % (ancestorv.getLevel() * 10 + 1)
                     constraint += LpSolve.getVertexVariable(treev.getHeaderID(), ancestorv.getHeaderID())
                     constraint += LpSolve.semiColon

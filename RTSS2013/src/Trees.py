@@ -397,8 +397,8 @@ class DominanceFrontiers:
     
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
+        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         self.__predomTree = Dominators(directedg, rootID)
         self.__directedg = directedg
         self.__parent = {}

@@ -80,7 +80,7 @@ class SuperBlockGraph (DirectedGraph):
             v = forwardICFG.getVertex(vertexID)
             # Found a nested loop header
             if not v.isDummy() and lnt.isLoopHeader(vertexID) and vertexID != headerID:
-                sourcev      = self.__basicBlockToSuperBlock[headerID]
+                sourcev      = self.__basicBlockToSuperBlock[vertexID]
                 destinationv = self.__headerToRootSuperBlock[vertexID]
                 self.__addEdge(sourcev, destinationv, headerID, SuperBlockLoopEdge)
             # Found a branch
