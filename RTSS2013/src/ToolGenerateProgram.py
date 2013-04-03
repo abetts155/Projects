@@ -95,7 +95,7 @@ if __name__ == "__main__":
     assert args.fan_out > 1, "The maximum fan out of a basic block must be at least two to allow branches"
     assert args.loops <= (args.basic_blocks - 2)/2, "You need at least %d basic blocks in the CFG to have %d loops" % (2+(args.loops*2), args.loops)
     if args.loops:
-        assert args.nesting_depth >= args.loops, "The loop-nesting depth must be lower than the number of loops"
+        assert args.nesting_depth <= args.loops, "The loop-nesting depth must be lower than the number of loops"
     
     program = GenerateProgram.generate(args.subprograms, 
                                        args.basic_blocks, 

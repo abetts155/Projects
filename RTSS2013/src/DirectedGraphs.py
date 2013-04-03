@@ -11,6 +11,9 @@ class DirectedGraph ():
     def getName (self):
         return self._name
     
+    def getVertexIDs (self):
+        return set(self.vertices.keys())
+    
     def getVertex (self, vertexID):
         assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
         return self.vertices[vertexID]
