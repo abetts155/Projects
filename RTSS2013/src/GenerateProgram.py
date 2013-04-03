@@ -416,8 +416,7 @@ def cutEdgesFromCallGraph (program):
             predIDs = callv.getPredecessorIDs()
             index   = random.randint(0,len(predIDs)-1)
             predID  = predIDs[index]
-            callg.removeEdge(predID, callv.getVertexID())
-                             
+            callg.removeEdge(predID, callv.getVertexID())    
     
 def generate (subprograms, 
               cfgVertices, 

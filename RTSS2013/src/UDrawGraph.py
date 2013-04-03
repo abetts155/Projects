@@ -134,11 +134,12 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     f.write(endAttibutes)
     
     f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
+    for succe in v.getSuccessorEdges():
         f.write(newEdge)
         f.write(beginAttributes)
+        f.write(setName("%d" % succe.getEdgeID()))
         f.write(endAttibutes)
-        f.write(edgeLink(succID))
+        f.write(edgeLink(succe.getVertexID()))
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
     
