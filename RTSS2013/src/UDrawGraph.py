@@ -185,7 +185,6 @@ def writeSuperBlockVertex (superg, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    
     f.write(endVertex + "\n")
 
 def writeTreeVertex (tree, vertexID, f):

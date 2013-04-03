@@ -149,7 +149,6 @@ class DepthFirstSearch (Tree):
                 pass
             elif self.__vertexID2PostID[succID] == 0:
                 self.__backedges.append([vertexID, succID])
-        
         self.__vertexID2PostID[vertexID] = self.__postorderID
         self.__postorder.append(vertexID)
         self.__postorderID += 1

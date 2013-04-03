@@ -202,7 +202,7 @@ class CallGraphVertex (Vertex):
         e.addCallSite(callSiteID)
     
     def addSuccessor (self, succID, callSiteID):
-        if succID not in self._predecessors:
+        if succID not in self._successors:
             e = CallGraphEdge(succID)
             self._successors[succID] = e
         e = self._successors[succID]

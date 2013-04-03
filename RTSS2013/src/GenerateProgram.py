@@ -349,6 +349,76 @@ def isConnected ():
     assert not currentCFG.getVertexIDs().difference(visited), "The CFG is not connected"
     return visited
 
+def setCallGraphRoot (program, candidateCallSites):
+    maxCallSites   = 0
+    totalCallSites = 0
+    rootName       = None
+    for subprogramName, vertices in candidateCallSites.iteritems():
+        if len(vertices) > maxCallSites:
+            maxCallSites = len(vertices)
+            rootName     = subprogramName
+        totalCallSites += len(vertices)
+    assert rootName, "Unable to find root for call graph"
+    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).getVertexID())
+    assert totalCallSites >= program.getCallGraph().numOfVertices()-1, "Unable to link the call graph because there are %d subprograms but only %d call sites" % (program.getCallGraph().numOfVertices()-1, totalCallSites)  
+
+def addTreeEdgesToCallGraph (program, candidateCallSites):
+    disconnected = []
+    for callv in program.getCallGraph():
+        if callv.numberOfPredecessors() == 0 and callv.getVertexID() != program.getCallGraph().getRootID():
+            disconnected.append(callv)
+    callerv = program.getCallGraph().getVertex(program.getCallGraph().getRootID())
+    while disconnected:
+        callerName = callerv.getName()
+        calleev    = disconnected.pop()
+        index      = random.randint(0,len(candidateCallSites[callerName])-1)
+        callSiteID = candidateCallSites[callerName][index].getVertexID()
+        del candidateCallSites[callerName][index]
+        program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
+        if not candidateCallSites[callv.getName()] or bool(random.getrandbits(1)):
+            for callv in program.getCallGraph():
+                if callv not in disconnected and candidateCallSites[callv.getName()]:
+                    callerv = callv
+                    
+def addOtherEdgesToCallGraph (program, candidateCallSites):
+    callg = program.getCallGraph()
+    dfs   = Trees.DepthFirstSearch(callg, callg.getRootID())
+    for vertexID in dfs.getPostorder():
+        calleev          = callg.getVertex(vertexID)
+        candidateCallers = []
+        for callv in callg:
+            if dfs.getPostID(callv.getVertexID()) > dfs.getPostID(vertexID) \
+            and candidateCallSites[callv.getName()] \
+            and not calleev.hasPredecessor(callv.getVertexID()):
+                candidateCallers.append(callv)
+        if candidateCallers:
+            numOfCallers = random.randint(1,len(candidateCallers))
+            for i in xrange(1,numOfCallers+1):
+                index   = random.randint(0,len(candidateCallers)-1)
+                callerv = candidateCallers[index]
+                del candidateCallers[index]
+                callerName     = callerv.getName()
+                numOfCallSites = random.randint(1,len(candidateCallSites[callerName]))
+                for j in xrange(1,numOfCallSites+1):
+                    index2     = random.randint(0,len(candidateCallSites[callerName])-1)
+                    callSiteID = candidateCallSites[callerName][index2].getVertexID()
+                    del candidateCallSites[callerName][index2]
+                    program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
+
+def cutEdgesFromCallGraph (program):
+    callg      = program.getCallGraph()
+    candidates = []
+    for callv in callg:
+        if callv.numberOfPredecessors() > 1:
+            candidates.append(callv) 
+    for callv in candidates:  
+        if bool(random.getrandbits(1)):
+            predIDs = callv.getPredecessorIDs()
+            index   = random.randint(0,len(predIDs)-1)
+            predID  = predIDs[index]
+            callg.removeEdge(predID, callv.getVertexID())
+                             
+    
 def generate (subprograms, 
               cfgVertices, 
               fanOut, 
@@ -363,7 +433,7 @@ def generate (subprograms,
     program            = Programs.Program()
     for subprogramID in xrange(1, subprograms+1):
         subprogramName                     = "F%d" % subprogramID
-        candidateCallSites[subprogramName] = set([])
+        candidateCallSites[subprogramName] = []
         levelInCallgraph[subprogramName]   = 0
         Debug.debugMessage("Generating subprogram %s" % subprogramName, 1)
         generateCFG (cfgVertices, loops, selfLoops, nestingDepth, breaks, continues)
@@ -372,5 +442,10 @@ def generate (subprograms,
         isConnected()
         for v in currentCFG:
             if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
-                candidateCallSites[subprogramName].add(v)
+                candidateCallSites[subprogramName].append(v)
+    setCallGraphRoot(program, candidateCallSites)
+    addTreeEdgesToCallGraph(program, candidateCallSites)
+    addOtherEdgesToCallGraph(program, candidateCallSites)
+    cutEdgesFromCallGraph(program)
+    UDrawGraph.makeUdrawFile(program.getCallGraph(), "callg")
     return program
