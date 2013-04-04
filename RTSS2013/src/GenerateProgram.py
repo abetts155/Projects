@@ -218,6 +218,31 @@ def decideWhichAcyclicComponents (verticesInLoop):
         verticesInLoop, numberOfSwitches = setNumberOfComponents(2 + maxFanOut, verticesInLoop)
     return verticesInLoop, numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches 
 
+def addContinues (loopComponent):
+    global currentCFG
+    extraTails = 1
+    for vertexID in loopComponent.vertices:
+        if vertexID not in loopComponent.exitIDs \
+        and vertexID not in loopComponent.tailIDs \
+        and vertexID != loopComponent.headerID:
+            v = currentCFG.getVertex(vertexID)
+            if v.numberOfSuccessors() == 1 and bool(random.getrandbits(1)) and extraTails:
+                currentCFG.addEdge(vertexID, loopComponent.headerID)
+                loopComponent.tailIDs.add(vertexID)
+                extraTails -= 1
+
+def addBreaks (loopComponent):
+    global currentCFG
+    extraBreaks = 1
+    for vertexID in loopComponent.vertices:
+        if vertexID not in loopComponent.exitIDs \
+        and vertexID not in loopComponent.tailIDs \
+        and vertexID != loopComponent.headerID:
+            v = currentCFG.getVertex(vertexID)
+            if v.numberOfSuccessors() == 1 and bool(random.getrandbits(1)) and extraBreaks:
+                loopComponent.exitIDs.add(vertexID)
+                extraBreaks -= 1
+
 def generateLNT (loops, nestingDepth):
     lnt = Trees.Tree()
     # Add vertices to the tree, including one extra for the dummy outer loop
@@ -330,6 +355,11 @@ def generateCFG (cfgVertices,
             if level == 0:
                 currentCFG.setEntryID(sese.entryID)
                 currentCFG.setExitID(sese.exitID)
+            else:
+                if continues:
+                    addContinues(loopRegions[treev])
+                if breaks:
+                    addBreaks(loopRegions[treev])
     for level, vertices in lnt.levelIterator(True):
         for treev in vertices:
             if treev.numberOfSuccessors() > 0:

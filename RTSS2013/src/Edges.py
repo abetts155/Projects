@@ -1,5 +1,3 @@
-import Utils
-
 class Edge ():    
     dummyEdgeID = -1
     
@@ -15,6 +13,9 @@ class Edge ():
     
     def setEdgeID (self, edgeID):
         self.__edgeID = edgeID
+        
+    def hasEdgeID (self):
+        return self.__edgeID != Edge.dummyEdgeID
         
     def getEdgeID (self):
         assert self.__edgeID != Edge.dummyEdgeID, "The edge ID has not been set"

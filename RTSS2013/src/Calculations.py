@@ -146,7 +146,7 @@ class CreateSuperBlockCFGILP (ILP):
         self.__constraints = []
         self.__variables   = set([])
         self.__createConstraints(superg, lnt)
-        self.__createObjectiveFunction()
+        self.__createObjectiveFunction(lnt)
         self.__createIntegerConstraint()
         filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, superg.getName(), "superg", LpSolve.fileSuffix)
         solution = True
@@ -287,15 +287,24 @@ class CreateSuperBlockCFGILP (ILP):
         constraint += LpSolve.getNewLine(2)
         self.__constraints.append(constraint)
        
-    def __createObjectiveFunction (self):
+    def __createObjectiveFunction (self, lnt):
         constraint = LpSolve.max_
         num        = 1
         for var in self.__variables:
             if var.startswith(LpSolve.vertexPrefix):
                 lIndex       = var.find('_')
                 rIndex       = var.rfind('_')
-                basicBlockID = var[lIndex+1:rIndex]
-                constraint += "%s %s" % (basicBlockID, var)
+                basicBlockID = int(var[lIndex+1:rIndex])
+                if lnt.isLoopHeader(basicBlockID):
+                    headerID = int(var[rIndex+1:])       
+                    if not lnt.isDoWhileLoop(basicBlockID):
+                        constraint += "%d %s" % (basicBlockID, var)
+                    elif basicBlockID == headerID:
+                        constraint += "%d %s" % (basicBlockID, var)
+                    else:
+                        constraint += "%d %s" % (0, var)
+                else:
+                    constraint += "%d %s" % (basicBlockID, var)
             else:
                 constraint += "%d %s" % (0, var)
             if num < len(self.__variables):
@@ -392,7 +401,6 @@ class CreateCFGILP (ILP):
                         self.__constraints.append(constraint)
                     else:
                         headerv = cfg.getVertex(headerID)
-                        print headerID
                         for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
                             if ancestorv.getVertexID() == treev.getParentID():
                                 forwardPredIDs = []
