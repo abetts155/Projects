@@ -43,6 +43,7 @@ class SuperBlockGraph (DirectedGraph):
                     emptySuperBlocks   = []
                     self.__headerToSuperBlockSubgraph[headerID] = self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, emptySuperBlocks, headerID)
                     self.__headerToRootSuperBlock[headerID]     = self.__addEdges(lnt, forwardICFG, predomTree, postdomTree, postDF, emptySuperBlocks, headerID)
+                    self.__headerToRootSuperBlock[headerID].setLoopHeader(headerID)
                     if v.getVertexID() == lnt.getRootID():
                         self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
                     

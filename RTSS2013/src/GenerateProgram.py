@@ -102,16 +102,21 @@ def createSESEComponent ():
     global currentCFG
     global freeVertices    
     global singleVertices
-    sese    = SESEComponent()
+    global freeSESEs
+    SESE    = SESEComponent()
     startID = freeVertices.pop()
-    sese.entryID = startID
-    sese.exitID  = startID
+    SESE.entryID = startID
+    SESE.exitID  = startID
     if singleVertices and bool(random.getrandbits(1)):
         singleVertices -= 1
         vertexID = freeVertices.pop()
-        currentCFG.addEdge(sese.exitID, vertexID)
-        sese.exitID = vertexID
-    return sese
+        currentCFG.addEdge(SESE.exitID, vertexID)
+        SESE.exitID = vertexID
+    elif freeSESEs and bool(random.getrandbits(1)):
+        nestedSESE = freeSESEs.pop()
+        currentCFG.addEdge(SESE.exitID, nestedSESE.entryID)
+        SESE.exitID = nestedSESE.exitID
+    return SESE
 
 def createSwitch ():
     global currentCFG

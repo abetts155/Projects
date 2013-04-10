@@ -224,7 +224,14 @@ class SuperBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.__unstructuredMerge = False
         self.__basicBlocks       = set([])
+        self.__loopHeader        = None
+    
+    def setLoopHeader (self, headerID):
+        self.__loopHeader = headerID
         
+    def getLoopHeader (self):
+        return self.__loopHeader
+    
     def setUnstructuredMerge (self):
         self.__unstructuredMerge = True
         

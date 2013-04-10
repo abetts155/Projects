@@ -34,18 +34,18 @@ class TreeBasedCalculation:
             if superv.numberOfBasicBlocks() == 0:
                 self.__supervToWCETs[superv].add(0)
             else:
-                intraBlockWCET = self.__calculateIntraBlockValue(superv)
+                intraBlockWCET = self.__calculateIntraBlockValue(superv, lnt)
                 forwardPartitions = superv.getBranchPartitions()
                 loopPartitions    = superv.getLoopPartition()
                 if forwardPartitions:
                     self.__calculateForwardControlFlow(superg, superv, forwardPartitions, intraBlockWCET)
                 if loopPartitions:
-                    self.__calculateLoopControlFlow(lnt, superg, superv, loopPartitions)
+                    self.__calculateLoopControlFlow(lnt, superg, superv, loopPartitions,intraBlockWCET)
                 if not forwardPartitions and not loopPartitions:
                     self.__supervToWCETs[superv] = set([intraBlockWCET])
                 print "%d %s" % (superv.getVertexID(), self.__supervToWCETs[superv])
                         
-    def __calculateLoopControlFlow (self, lnt, superg, superv, loopPartitions):
+    def __calculateLoopControlFlow (self, lnt, superg, superv, loopPartitions,intraBlockWCET):
         for supere in loopPartitions:
             succSuperv = superg.getVertex(supere.getVertexID())
             headerIDs  = succSuperv.getBasicBlockIDs().intersection(lnt.getHeaderIDs())
@@ -54,12 +54,24 @@ class TreeBasedCalculation:
             treev    = lnt.getVertex(lnt.getVertex(headerID).getParentID())
             parentv  = lnt.getVertex(treev.getParentID())
             bound    = parentv.getLevel() * 10 + 1
-            self.__supervToWCETs[superv] = set([val * bound for val in self.__supervToWCETs[succSuperv]])
+            self.__supervToWCETs[superv] = set([intraBlockWCET + val * bound for val in self.__supervToWCETs[succSuperv]])
                     
-    def __calculateIntraBlockValue (self, superv):
+    def __calculateIntraBlockValue (self, superv, lnt):
         intraBlockWCET = 0
         for basicBlockID in superv.getBasicBlockIDs():
-            intraBlockWCET += basicBlockID
+            # Since every header except the dummy header appears in 2 super blocks we need to decide when to add
+            # its contribution to the super block. 
+            # In a for loop, we add it BOTH times. 
+            # In a do-while loop, we only add it when the root super block obtained during construction of its loop subgraph is analysed
+            if lnt.isLoopHeader(basicBlockID):
+                if not lnt.isDoWhileLoop(basicBlockID):
+                    intraBlockWCET += basicBlockID
+                else:
+                    headerID = superv.getLoopHeader()
+                    if headerID and headerID == basicBlockID:
+                        intraBlockWCET += basicBlockID
+            else:
+                intraBlockWCET += basicBlockID
         return intraBlockWCET
     
     def __calculateForwardControlFlow (self, superg, superv, forwardPartitions, intraBlockWCET):
