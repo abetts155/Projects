@@ -92,7 +92,9 @@ class ParseTraces:
         self.__program = program
         self.__callg   = self.__program.getCallGraph()
         self.__rootv   = self.__callg.getVertex(self.__callg.getRootID())
+        self.__bbToCFG = {}
         self.__verifyMagicNumber(basename, tracefile)
+        self.__buildCFGMap()
         self.__parse(tracefile)
     
     def __verifyMagicNumber (self, basename, tracefile):
@@ -102,6 +104,11 @@ class ParseTraces:
             line = f.readline()
             fileMagicNumber = line.strip()
             assert fileMagicNumber == magicNumber, "The magic number of the trace file does not compute"
+    
+    def __buildCFGMap (self):
+        for icfg in self.__program.getICFGs():
+            for v in icfg:
+                self.__bbToCFG[v.getVertexID()] = icfg
     
     def __parse (self, tracefile):
         self.__on = []
@@ -115,11 +122,16 @@ class ParseTraces:
                     self.__analysePathInformation()
                 else:
                     lexemes = shlex.split(line)
+                    lastID = None
                     for lex in lexemes:
                         nextID = int(lex)
-                        superv = self.__currentSuperg.getSuperBlock(nextID)
-                        if superv.numberOfSuccessors() == 0 and nextID == superv.getRepresentativeID():
-                            self.__on.append(superv)      
+                        if self.__currentCFG.hasVertex(nextID):
+                            superv = self.__currentSuperg.getSuperBlock(nextID)
+                            if superv.numberOfSuccessors() == 0 and nextID == superv.getRepresentativeID():
+                                self.__on.append(superv)      
+                        else:
+                            self.__handleCallAndReturn(lastID, nextID)
+                        lastID = nextID
         for (superv1, superv2, pathRelation) in self.__currentSuperg.getTruePathRelationEdges():
             print "(%s %s %s) is TRUE" % (superv1.getVertexID(), superv2.getVertexID(), pathRelation) 
         for (superv1, superv2, pathRelation) in self.__currentSuperg.getFalsePathRelationEdges():
@@ -128,7 +140,20 @@ class ParseTraces:
     def __resetToRoot (self):
         self.__callStack     = []
         self.__currentCallv  = self.__rootv
+        self.__currentCFG    = self.__program.getICFG(self.__rootv.getName())
         self.__currentSuperg = self.__program.getSuperBlockCFG(self.__rootv.getName())
+        
+    def __handleCallAndReturn (self, lastID, nextID):
+        assert lastID, "The last ID was not set"
+        if self.__currentCFG.getExitID() == lastID:
+            Debug.debugMessage("Returning because of basic block %d" % lastID, 1)
+            self.__currentCallv, self.__currentCFG, self.__currentSuperg = self.__callStack.pop()
+        else:
+            callerFrame = (self.__currentCallv, self.__currentCFG, self.__currentSuperg)
+            self.__callStack.append(callerFrame)
+            self.__currentCFG    = self.__bbToCFG[nextID]
+            self.__currentCallv  = self.__callg.getVertexWithName(self.__currentCFG.getName())
+            self.__currentSuperg = self.__program.getSuperBlockCFG(self.__currentCFG.getName())
     
     def __analysePathInformation (self):
         Debug.debugMessage("*** End of program run ***", 10)

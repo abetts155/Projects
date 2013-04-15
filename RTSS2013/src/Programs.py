@@ -78,6 +78,7 @@ class Program():
         self.__ICFGs          = {}
         self.__LNTs           = {}
         self.__superblockcfgs = {}
+        self.__bbIDToICFG     = {}
         
     def getRootICFG (self):
         rootcallv = self.__callg.getRootVertex()
