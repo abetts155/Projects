@@ -5,11 +5,16 @@ from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
 import Debug
 
-class PATHRELATION:
+class PathRelation:
     MUTUAL_EXCLUSION = "MUTUAL_EXCLUSION"
     MUTUAL_INCLUSION = "MUTUAL_INCLUSION"
     PRECEDENCE       = "PRECEDENCE"
     ALTERNATION      = "ALTERNATION"
+    
+    def __init__ (self, superBlockSet, relation):
+        print superBlockSet
+        self.__superBlockSet = superBlockSet
+        self.__relation      = relation
 
 class LOOPRELATION:
     LESS_THAN    = "<"
@@ -22,6 +27,7 @@ class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
         DirectedGraph.__init__(self)
         self._name = icfg.getName()
+        self.__lnt = lnt
         self.__headerToSuperBlockSubgraph = {}
         self.__headerToRootSuperBlock = {}
         self.__basicBlockToSuperBlock = {}
@@ -46,9 +52,8 @@ class SuperBlockGraph (DirectedGraph):
                     self.__headerToRootSuperBlock[headerID].setLoopHeader(headerID)
                     if v.getVertexID() == lnt.getRootID():
                         self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
-        for superv1, superv2, pathrelation in self.__truePathRelationEdges:
-            Debug.debugMessage("super(%d), super(%d), %s" % (superv1.getVertexID(), superv2.getVertexID(), pathrelation), 10)
-                    
+        self.__computeUnknownPathRelations(icfg)
+                        
     def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, emptySuperBlocks, headerID):
         subgraph      = DirectedGraph()
         sccIDToVertex = {}
@@ -109,40 +114,40 @@ class SuperBlockGraph (DirectedGraph):
                         sourcev = self.__basicBlockToSuperBlock[predID]
                         self.__addEdge(sourcev, destinationv, predID)
   
-        reachableSuperBlocks = {}
-        superBlocksToAnalyse = set([])
-        for vertexID in dfs.getPostorder():
-            v = forwardICFG.getVertex(vertexID)
-            reachableSuperBlocks[vertexID] = set([])
-            superv = self.__basicBlockToSuperBlock[vertexID]
-            for succID in v.getSuccessorIDs():
-                reachableSuperBlocks[vertexID].update(reachableSuperBlocks[succID])
-            if not branches.intersection(superv.getBasicBlockIDs()):
-                superBlocksToAnalyse.add(superv)
-                reachableSuperBlocks[vertexID].add(superv)
-        
-        # Add mutual exclusion and mutual inclusion
-        pathRelationEdges = set([])  
-        for superv1 in superBlocksToAnalyse:
-            vertexID = superv1.getRepresentativeID()
-            for superv2 in reachableSuperBlocks[vertexID]:
-                if superv1 != superv2:
-                    pathRelationEdges.add((superv1, superv2, PATHRELATION.MUTUAL_INCLUSION))
-                    pathRelationEdges.add((superv1, superv2, PATHRELATION.MUTUAL_EXCLUSION))
-                    
-        # Add precedence and alternation
-        for branchID in branches:
-            superv1 = self.__basicBlockToSuperBlock[branchID]
-            for superEdges in superv1.getBranchPartitions().values():
-                for supere1 in superEdges:
-                    for supere2 in superEdges:
-                        superv1 = self.getVertex(supere1.getVertexID())
-                        superv2 = self.getVertex(supere2.getVertexID())
-                        if superv1 != superv2:
-                            pathRelationEdges.add((superv1, superv2, PATHRELATION.ALTERNATION))
-                            pathRelationEdges.add((superv1, superv2, PATHRELATION.PRECEDENCE))
-                            
-        self.__truePathRelationEdges.update(pathRelationEdges)
+#        reachableSuperBlocks = {}
+#        superBlocksToAnalyse = set([])
+#        for vertexID in dfs.getPostorder():
+#            v = forwardICFG.getVertex(vertexID)
+#            reachableSuperBlocks[vertexID] = set([])
+#            superv = self.__basicBlockToSuperBlock[vertexID]
+#            for succID in v.getSuccessorIDs():
+#                reachableSuperBlocks[vertexID].update(reachableSuperBlocks[succID])
+#            if not branches.intersection(superv.getBasicBlockIDs()):
+#                superBlocksToAnalyse.add(superv)
+#                reachableSuperBlocks[vertexID].add(superv)
+#        
+#        # Add mutual exclusion and mutual inclusion
+#        pathRelationEdges = set([])  
+#        for superv1 in superBlocksToAnalyse:
+#            vertexID = superv1.getRepresentativeID()
+#            for superv2 in reachableSuperBlocks[vertexID]:
+#                if superv1 != superv2:
+#                    pathRelationEdges.add((superv1, superv2, PATHRELATION.MUTUAL_INCLUSION))
+#                    pathRelationEdges.add((superv1, superv2, PATHRELATION.MUTUAL_EXCLUSION))
+#                    
+#        # Add precedence and alternation
+#        for branchID in branches:
+#            superv1 = self.__basicBlockToSuperBlock[branchID]
+#            for superEdges in superv1.getBranchPartitions().values():
+#                for supere1 in superEdges:
+#                    for supere2 in superEdges:
+#                        superv1 = self.getVertex(supere1.getVertexID())
+#                        superv2 = self.getVertex(supere2.getVertexID())
+#                        if superv1 != superv2:
+#                            pathRelationEdges.add((superv1, superv2, PATHRELATION.ALTERNATION))
+#                            pathRelationEdges.add((superv1, superv2, PATHRELATION.PRECEDENCE))
+#                            
+#        self.__truePathRelationEdges.update(pathRelationEdges)
         return rootSuperv
     
     def __addEdge (self, sourcev, destinationv, branchID, edgeType=SuperBlockControlFlowEdge):
@@ -153,6 +158,64 @@ class SuperBlockGraph (DirectedGraph):
         succe.setEdgeID(SuperBlockGraph.edgeID)
         prede.setEdgeID(SuperBlockGraph.edgeID)
         SuperBlockGraph.edgeID += 1
+        
+    def __computeUnknownPathRelations (self, icfg):
+        supervToSupervs = {}
+        for superv in self:
+            supervToSupervs[superv] = set([])
+        dfs = DepthFirstSearch(self, self.__rootSuperv.getVertexID())
+        for vertexID in dfs.getPostorder():
+            superv = self.getVertex(vertexID)
+            if vertexID == self.__rootSuperv.getVertexID():
+                self.__addPathRelationEdges(icfg, supervToSupervs)
+            else:
+                alive = True
+                for bbID in superv.getBasicBlockIDs():
+                    bb = icfg.getVertex(bbID)
+                    if self.__lnt.isLoopHeader(bbID) or  bb.numberOfSuccessors() > 1:
+                        alive = False
+                if alive: 
+                    supervToSupervs[superv].add(superv)
+                else:
+                    for succID in superv.getSuccessorIDs():
+                        succv = self.getVertex(succID)
+                        supervToSupervs[superv].update(supervToSupervs[succv])
+                        
+    def __addPathRelationEdges (self, icfg, supervToSupervs):
+        branchToSuperBlocks = {}
+        for branchID, superEdges in self.__rootSuperv.getBranchPartitions().iteritems():
+            branchToSuperBlocks[branchID] = set([])
+            for supere in superEdges:
+                succv = self.getVertex(supere.getVertexID())
+                branchToSuperBlocks[branchID].update(supervToSupervs[succv])
+        branchID1 = None
+        branchID2 = None
+        # Process branches in reverse post order
+        # If the branch belongs to the root super block, add cross edges
+        branchToSuperBlockSets = {}
+        dfs = DepthFirstSearch(icfg, icfg.getEntryID())
+        for vertexID in reversed(dfs.getPostorder()):
+            if vertexID in branchToSuperBlocks:
+                if not branchID1:
+                    branchID1 = vertexID
+                    branchToSuperBlockSets[branchID1] = set([])
+                    for superv in branchToSuperBlocks[branchID1]:
+                        newSet = frozenset([superv.getVertexID()])
+                        branchToSuperBlockSets[branchID1].add(newSet)
+                else:
+                    branchID2 = vertexID
+                    print branchID1, branchID2
+                    branchToSuperBlockSets[branchID2] = set([])
+                    for superv in branchToSuperBlocks[branchID2]:
+                        for superBlockSet in branchToSuperBlockSets[branchID1]:
+                            newSet = set([superv.getVertexID()])
+                            newSet.update(superBlockSet)
+                            branchToSuperBlockSets[branchID2].add(frozenset(newSet))
+                    branchID1 = branchID2
+        if branchID2:
+            for superBlockSet in branchToSuperBlockSets[branchID2]:
+                self.__truePathRelationEdges.add(PathRelation(superBlockSet, PathRelation.MUTUAL_INCLUSION))
+                self.__truePathRelationEdges.add(PathRelation(superBlockSet, PathRelation.MUTUAL_EXCLUSION))
     
     def getSuperBlock (self, basicBlockID):
         assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
