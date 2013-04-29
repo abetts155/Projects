@@ -1,5 +1,7 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
+from SuperBlocks import SuperBlockGraph
+from Trees import LoopNests
 from copy import deepcopy
 import Debug
 
@@ -109,11 +111,18 @@ class Program():
         return self.__ICFGs[functionName]
     
     def getSuperBlockCFG (self, functionName):
-        assert functionName in self.__superblockcfgs, "Unable to find super block CFG for function '%s'" % functionName
+        if functionName not in self.__superblockcfgs:
+            icfg   = self.getICFG(functionName)
+            lnt    = self.getLNT(functionName)
+            superg = SuperBlockGraph(icfg, lnt)
+            self.__superblockcfgs[functionName] = superg
         return self.__superblockcfgs[functionName]
 
     def getLNT (self, functionName):
-        assert functionName in self.__LNTs, "Unable to find LNT for function '%s'" % functionName
+        if functionName not in self.__LNTs:
+            icfg = self.getICFG(functionName)
+            lnt  = LoopNests(icfg, icfg.getEntryID())
+            self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
 
     def getICFGs (self):

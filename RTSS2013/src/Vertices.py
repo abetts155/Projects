@@ -107,6 +107,11 @@ class TreeVertex (Vertex):
             return "parent(%d) = <>\n" % self._vertexID
         else:
             return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
+
+class PathInformationVertex (Vertex):
+    def __init__ (self, vertexID):
+        Vertex.__init__(self, vertexID)
+        self.setsToRuns = {}
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):

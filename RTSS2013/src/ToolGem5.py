@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-import Debug
+import Debug, UDrawGraph
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
@@ -216,6 +216,12 @@ def commandLine ():
                           metavar="<INT>",
                           default=1)
     
+    cmdline.add_argument("-u",
+                         "--udraw",
+                         action="store_true",
+                         help="generate uDrawGraph files",
+                         default=False)
+    
     cmdline.add_argument("-v",
                          "--verbose",
                          action="store_true",
@@ -226,11 +232,12 @@ def commandLine ():
 
 if __name__ == "__main__":   
     import Utils
-    from ParseGem5Trace import parse
+    from ParseGem5Trace import SuperBlockParser
 
-    args          = commandLine()
-    Debug.debug   = args.debug
-    Debug.verbose = args.verbose
+    args               = commandLine()
+    Debug.debug        = args.debug
+    Debug.verbose      = args.verbose
+    UDrawGraph.enabled = args.udraw
     
     if args.clean:
         Utils.clean()
@@ -248,5 +255,5 @@ if __name__ == "__main__":
     Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     Debug.verboseMessage("Parsing gem5 traces")
-    parse(program, gem5Traces)
+    SuperBlockParser(program, gem5Traces)
     

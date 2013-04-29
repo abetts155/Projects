@@ -66,7 +66,8 @@ def setEdgeColor (color):
 
 def makeUdrawFile (g, fileNamePrefix):
     if enabled:
-        with open(fileNamePrefix + fileNameSuffix, 'w') as f:
+        filename = fileNamePrefix + fileNameSuffix
+        with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
             if isinstance(g, CFGs.CFG):
@@ -82,6 +83,10 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                     vertexID = v.getVertexID()
                     writeSuperBlockVertex(g, vertexID, f)   
+            elif isinstance(g, SuperBlocks.PathInformationGraph):
+                for v in g:
+                    vertexID = v.getVertexID()
+                    writePathInformationVertex(g, vertexID, f)   
             elif isinstance(g, Programs.CallGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
@@ -184,6 +189,26 @@ def writeSuperBlockVertex (superg, vertexID, f):
         if isinstance(succe, Edges.SuperBlockLoopEdge):
             f.write(setEdgePattern(EDGESHAPE.DOTTED, 4))
             f.write(setEdgeColor("#339999"))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
+    
+def writePathInformationVertex (pathg, vertexID, f):
+    v = pathg.getVertex(vertexID)
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    name = ""
+    for theSet, runs in v.setsToRuns.iteritems():
+        line = "{%s} = {%s}" % (', '.join(str(vertexID) for vertexID in theSet), ', '.join(str(runID) for runID in runs))
+        name += line + newLine
+    f.write(setName(name))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succID in v.getSuccessorIDs():
+        f.write(newEdge)
+        f.write(beginAttributes)
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

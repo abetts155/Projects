@@ -1,4 +1,4 @@
-import Debug, SuperBlocks
+import Debug, SuperBlocks, Vertices, UDrawGraph
 import random, os, hashlib, shlex
 
 newTrace = "=>"
@@ -90,13 +90,61 @@ class GenerateTraces:
 class ParseTraces:
     def __init__ (self, basename, tracefile, program):
         self.__program = program
+        self.__allruns = set([])
+        self.__superblockToRuns = {}
         self.__callg   = self.__program.getCallGraph()
         self.__rootv   = self.__callg.getVertex(self.__callg.getRootID())
         self.__bbToCFG = {}
         self.__verifyMagicNumber(basename, tracefile)
         self.__buildCFGMap()
         self.__parse(tracefile)
-    
+        self.__computePathInformation(basename)
+        
+    def __computePathInformation (self, basename):
+        for superg in self.__program.getSuperBlockCFGs():
+            pathg    = SuperBlocks.PathInformationGraph()
+            vertices = superg.getBottomLayer()
+            for pathv in vertices:
+                pathg.vertices[pathv.getVertexID()] = pathv
+                for theSet in pathv.setsToRuns.keys():
+                    assert len(theSet) == 1
+                    superVertexID = list(theSet)[0]
+                    superv        = superg.getVertex(superVertexID)
+                    if superv in self.__superblockToRuns:
+                        pathv.setsToRuns[theSet].update(self.__superblockToRuns[superv])
+                
+            bottomLayer = True
+            while len(vertices) > 1:
+                newVertices = []
+                i = 0
+                while i < len(vertices) - 1: 
+                    newVertexID = pathg.getNextVertexID()
+                    predv       = Vertices.PathInformationVertex(newVertexID)
+                    pathg.vertices[newVertexID] = predv
+                    newVertices.append(predv)
+                    succv1 = vertices[i]
+                    succv2 = vertices[i+1]
+                    pathg.addEdge(predv.getVertexID(), succv1.getVertexID())
+                    pathg.addEdge(predv.getVertexID(), succv2.getVertexID())
+                    for set1 in succv1.setsToRuns.keys():
+                        for set2 in succv2.setsToRuns.keys():
+                            newset = set([])
+                            newset.update(set1)
+                            newset.update(set2)
+                            if bottomLayer or set1.intersection(set2):
+                                runs = succv1.setsToRuns[set1].intersection(succv2.setsToRuns[set2])
+                                predv.setsToRuns[frozenset(newset)] = runs
+                                if not runs:
+                                    print "{%s} is in EXCLUSIVE" % (', '.join(str(vertexID) for vertexID in newset))
+                                if self.__allruns.intersection(runs) == self.__allruns:
+                                    print "{%s} is in INCLUSIVE" % (', '.join(str(vertexID) for vertexID in newset))
+                    i += 1
+                bottomLayer = False
+                vertices = newVertices
+            pathg.setRootID(vertices[0].getVertexID())
+            UDrawGraph.makeUdrawFile(pathg, "%s.%s.%s" % (basename, superg.getName(), "pathg"))
+            
+                    
     def __verifyMagicNumber (self, basename, tracefile):
         magicNumber = hashlib.sha1(basename).hexdigest()
         # First assert that the magic numbers match
@@ -111,15 +159,17 @@ class ParseTraces:
                 self.__bbToCFG[v.getVertexID()] = icfg
     
     def __parse (self, tracefile):
-        self.__on = []
+        run = 0
         with open(tracefile, 'r') as f:
         # Move past the magic number line
             next(f)
             for line in f:
                 if line.startswith(newTrace):
+                    run += 1
+                    self.__allruns.add(run)
                     self.__resetToRoot()
                 elif line.startswith(endTrace):
-                    self.__analysePathInformation()
+                    pass
                 else:
                     lexemes = shlex.split(line)
                     lastID = None
@@ -127,15 +177,13 @@ class ParseTraces:
                         nextID = int(lex)
                         if self.__currentCFG.hasVertex(nextID):
                             superv = self.__currentSuperg.getSuperBlock(nextID)
-                            if superv.numberOfSuccessors() == 0 and nextID == superv.getRepresentativeID():
-                                self.__on.append(superv)      
+                            if self.__currentSuperg.isMonitoredSuperBlock(superv) and nextID == superv.getRepresentativeID():
+                                if superv not in self.__superblockToRuns:
+                                    self.__superblockToRuns[superv] = set([])
+                                self.__superblockToRuns[superv].add(run) 
                         else:
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID
-        for (superv1, superv2, pathRelation) in self.__currentSuperg.getTruePathRelationEdges():
-            print "(%s %s %s) is TRUE" % (superv1.getVertexID(), superv2.getVertexID(), pathRelation) 
-        for (superv1, superv2, pathRelation) in self.__currentSuperg.getFalsePathRelationEdges():
-            print "(%s %s %s) is FALSE" % (superv1.getVertexID(), superv2.getVertexID(), pathRelation)  
     
     def __resetToRoot (self):
         self.__callStack     = []
@@ -154,19 +202,5 @@ class ParseTraces:
             self.__currentCFG    = self.__bbToCFG[nextID]
             self.__currentCallv  = self.__callg.getVertexWithName(self.__currentCFG.getName())
             self.__currentSuperg = self.__program.getSuperBlockCFG(self.__currentCFG.getName())
-    
-    def __analysePathInformation (self):
-        Debug.debugMessage("*** End of program run ***", 10)
-        falsifySet = set([])
-        for (superv1, superv2, pathRelation) in self.__currentSuperg.getTruePathRelationEdges():
-            if pathRelation == SuperBlocks.PATHRELATION.MUTUAL_EXCLUSION \
-            and superv1 in self.__on and superv2 in self.__on:
-                falsifySet.add((superv1, superv2, pathRelation))    
-            if pathRelation == SuperBlocks.PATHRELATION.MUTUAL_INCLUSION \
-            and ((superv1 in self.__on and superv2 not in self.__on) or (superv1 not in self.__on and superv2 in self.__on)):
-                falsifySet.add((superv1, superv2, pathRelation))
-        for pathTuple in falsifySet:
-            self.__currentSuperg.falsify(pathTuple)
-        self.__on = []
         
         

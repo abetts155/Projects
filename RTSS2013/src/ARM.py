@@ -326,16 +326,18 @@ def generateInternalFile (filename):
             f.write("%s %s\n" % (ParseProgramFile.cfgIndicator, functionName))
             for v in icfg:
                 vertexID = v.getVertexID()
-                counter  = v.numberOfSuccessors()
-                if program.getCallGraph().isCallSite(vertexID):
-                    counter += 1
                 f.write("%s %d\n" %  (ParseProgramFile.bbIndicator, vertexID))
-                f.write("%s " % ParseProgramFile.successorsIndicator)
-                for succID in v.getSuccessorIDs():
-                    f.write("%d" % succID)
-                    if counter > 1:
-                        f.write(", ")
-                    counter -= 1
+                # Write out successors but only if this is not the exit vertex
+                if vertexID != icfg.getExitID():
+                    counter  = v.numberOfSuccessors()
+                    if program.getCallGraph().isCallSite(vertexID):
+                        counter += 1
+                    f.write("%s " % ParseProgramFile.successorsIndicator)
+                    for succID in v.getSuccessorIDs():
+                        f.write("%d" % succID)
+                        if counter > 1:
+                            f.write(", ")
+                        counter -= 1
                 if program.getCallGraph().isCallSite(vertexID):
                     callNames = program.getCallGraph().getCallEdgeNames(vertexID)
                     assert callNames[0] == functionName, "The function name '%s' of the ICFG and the caller name '%s' do not match" % (functionName, callNames[0])
@@ -363,6 +365,7 @@ def readARMDisassembly (filename, rootFunction):
         Debug.debugMessage("Setting entry and exit in '%s'" % icfg.getName(), debugLevel)
         icfg.setEntryID()
         icfg.setExitID()
+        icfg.addExitEntryEdge()
     # Dump program to file
     generateInternalFile(filename)
     return program
