@@ -132,11 +132,16 @@ class ParseTraces:
                     for lex in lexemes:
                         nextID = int(lex)
                         if self.__currentCFG.hasVertex(nextID):
-                            superv = self.__currentSuperg.getSuperBlock(nextID)
-                            if self.__currentSuperg.isMonitoredSuperBlock(superv) and nextID == superv.getRepresentativeID():
+                            if self.__currentSuperg.isMonitoredBasicBlock(nextID):
+                                superv = self.__currentSuperg.getMonitoredBasicBlockSuperBlock(nextID)
                                 if superv not in self.__superblockToRuns:
                                     self.__superblockToRuns[superv] = set([])
-                                self.__superblockToRuns[superv].add(run) 
+                                self.__superblockToRuns[superv].add(run)
+                            elif self.__currentSuperg.isMonitoredEdge(lastID, nextID):
+                                superv = self.__currentSuperg.getMonitoredEdgeSuperBlock(lastID, nextID)
+                                if superv not in self.__superblockToRuns:
+                                    self.__superblockToRuns[superv] = set([])
+                                self.__superblockToRuns[superv].add(run)
                         else:
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID

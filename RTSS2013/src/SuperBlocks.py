@@ -21,7 +21,7 @@ class SuperBlockGraph (DirectedGraph):
         self.__headerToPathVertices   = {}
         self.__basicBlockToSuperBlock = {}
         self.__rootSuperv             = None
-        self.__monitoredSuperBlocks   = set([])
+        self.__monitoredBasicBlocks   = set([])
         self.__monitoredEdges         = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
@@ -161,7 +161,8 @@ class SuperBlockGraph (DirectedGraph):
                     succv = self.getVertex(supere.getVertexID())
                     for superv in supervToSupervs[succv]:
                         Debug.debugMessage("%d is a monitored super block in %s" % (superv.getVertexID(), self.getName()), 1)
-                        self.__monitoredSuperBlocks.add(superv)
+                        if superv.getBasicBlockIDs():
+                            self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
                         newVertexID = self.__pathg.getNextVertexID()
                         newv        = PathInformationVertex(newVertexID, set([superv.getVertexID()]))
                         self.__pathg.vertices[newVertexID] = newv
@@ -197,11 +198,18 @@ class SuperBlockGraph (DirectedGraph):
                 pathv.runs.update(runs)
         UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "pathg"))
                 
-    def isMonitoredSuperBlock (self, superv):
-        return superv in self.__monitoredSuperBlocks
+    def isMonitoredBasicBlock (self, basicBlockID):
+        return basicBlockID in self.__monitoredBasicBlocks
+   
+    def getMonitoredBasicBlockSuperBlock (self, basicBlockID):
+        return self.__basicBlockToSuperBlock[basicBlockID]
     
     def isMonitoredEdge (self, predID, succID):
         return (predID, succID) in self.__monitoredEdges
+    
+    def getMonitoredEdgeSuperBlock (self, predID, succID):
+        assert (predID, succID) in self.__monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
+        return self.__monitoredEdges[(predID, succID)]
     
     def getSuperBlock (self, basicBlockID):
         assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
