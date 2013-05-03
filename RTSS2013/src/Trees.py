@@ -1,5 +1,5 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import TreeVertex, HeaderVertex, Ipoint, dummyVertexID
+from Vertices import TreeVertex, HeaderVertex, Ipoint, dummyVertexID, CFGEdge
 import Debug, CFGs
 
 class Tree (DirectedGraph):
@@ -615,17 +615,19 @@ class LoopNests (Tree):
             
     def _findExits (self):
         for headerID in self.__headerVertices.keys():
-            self.__loopExits[headerID] = []
+            self.__loopExits[headerID] = {}
             for vertexID in self.__loopBodies[headerID]:
                 v = self.__directedg.getVertex(vertexID)
                 for succID in v.getSuccessorIDs():
                     if succID not in self.__loopBodies[headerID]:
                         if headerID != vertexID and self.isLoopHeader(vertexID):
                             if succID not in self.__loopBodies[vertexID]:
-                                self.__loopExits[headerID].append(vertexID)
+                                self.__loopExits[headerID][vertexID] = []
+                                self.__loopExits[headerID][vertexID].append(succID)
                         else:
-                            self.__loopExits[headerID].append(vertexID)
-            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID]), 15)
+                            self.__loopExits[headerID][vertexID] = []
+                            self.__loopExits[headerID][vertexID].append(succID)
+            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID].keys()), 15)
             
     def __str__ (self):
         string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"
@@ -670,9 +672,14 @@ class LoopNests (Tree):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return len(self.__loopTails[headerID])
     
-    def getLoopExits (self, headerID):
+    def getLoopExitSources (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopExits[headerID]
+        return self.__loopExits[headerID].keys()
+    
+    def getLoopExitDestinations (self, headerID, exitID):
+        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
+        assert exitID in self.__loopExits[headerID].keys(), "Vertex %s is not an exit of loop with header %d" % (exitID, headerID)
+        return self.__loopExits[headerID][exitID]
     
     def getLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -716,13 +723,8 @@ class LoopNests (Tree):
         while worklist:
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID):
-                # Add the correct vertex type to the induced graph
-                if isinstance(self.__directedg.getVertex(vertexID), Ipoint):
-                    ipoint = CFGs.Ipoint(vertexID, vertexID)
-                    flowg.addIpoint(ipoint)
-                else:
-                    bb = CFGs.BasicBlock(vertexID)
-                    flowg.addVertex(bb)
+                bb = CFGs.BasicBlock(vertexID)
+                flowg.addVertex(bb)
                 # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])                        
                 originalv = self.__directedg.getVertex(vertexID)
@@ -742,19 +744,30 @@ class LoopNests (Tree):
         for vertexID, predIDs in edges.items():
             for predID in predIDs:
                 flowg.addEdge(predID, vertexID) 
-        # Add a continuation vertex to induced subgraph
-        continuationID = flowg.getNextVertexID()
-        bb = CFGs.BasicBlock(continuationID)
-        bb.setDummy()
-        flowg.addVertex(bb)
-        flowg.setExitID(continuationID)
-        flowg.getVertex(continuationID).setDummy()
-        # Add edge from each exit and each tail to continuation vertex
-        for exitID in self.__loopExits[headerID]:
-            flowg.addEdge(exitID, continuationID)
+        for sourceID, destinationIDs in self.__loopExits[headerID].iteritems():
+            for destinationID in destinationIDs:
+                vertexID = flowg.getNextVertexID()
+                edgev    = CFGEdge(vertexID, sourceID, destinationID)
+                flowg.addVertex(edgev)
+                flowg.addEdge(sourceID, vertexID)
         for tailID in self.__loopTails[headerID]:
-            flowg.addEdge(tailID, continuationID)
-        # Add entry vertex to induced subgraph
+            vertexID = flowg.getNextVertexID()
+            edgev    = CFGEdge(vertexID, tailID, headerID)
+            flowg.addVertex(edgev)
+            flowg.addEdge(tailID, vertexID)
+        # Add a dummy exit vertex to induced subgraph
+        exitID = flowg.getNextVertexID()
+        bb = CFGs.BasicBlock(exitID)
+        flowg.addVertex(bb)
+        bb.setDummy()
+        # Add edges from tails and exits to dummy exit vertex
+        for v in flowg:
+            vertexID = v.getVertexID()
+            if v.numberOfSuccessors() == 0 and vertexID != exitID:
+                flowg.addEdge(vertexID, exitID)
+        # Set exit vertex of induced subgraph
+        flowg.setExitID(exitID)
+        # Set entry vertex of induced subgraph
         flowg.setEntryID(headerv.getHeaderID())
         return flowg
 

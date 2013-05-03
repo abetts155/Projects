@@ -1,6 +1,7 @@
 import Programs, CFGs, Trees, Vertices, SuperBlocks, Edges
 
-enabled = False
+enabled  = False
+basename = ""
 
 beginAttributes = "["
 beginGraph      = "[\n"
@@ -65,8 +66,9 @@ def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
 def makeUdrawFile (g, fileNamePrefix):
+    global basename
     if enabled:
-        filename = fileNamePrefix + fileNameSuffix
+        filename = "%s.%s" % (basename, fileNamePrefix + fileNameSuffix)
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
@@ -123,18 +125,21 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     v = cfg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    f.write(setName(str(vertexID)))
     tooltip = ""
-    if v.getName():
-        if v.getName() not in colorMapping:
-            colorMapping[v.getName()] = colorsIterator.next()
-        f.write(setColor(colorMapping[v.getName()]))
-        if v.getName() != cfg.getName():
-            tooltip += "Callee basic block for %s%s" % (v.getName(), newLine)
-    if v.hasInstructions():
-        for instruction in v.getInstructions():
-            tooltip += instruction.__str__() + newLine
-        tooltip = tooltip.rstrip(newLine)
+    if isinstance(v, Vertices.CFGEdge):
+        f.write(setName(str(v.edge)))
+    else:
+        f.write(setName(str(vertexID)))
+        if v.getName():
+            if v.getName() not in colorMapping:
+                colorMapping[v.getName()] = colorsIterator.next()
+            f.write(setColor(colorMapping[v.getName()]))
+            if v.getName() != cfg.getName():
+                tooltip += "Callee basic block for %s%s" % (v.getName(), newLine)
+        if v.hasInstructions():
+            for instruction in v.getInstructions():
+                tooltip += instruction.__str__() + newLine
+            tooltip = tooltip.rstrip(newLine)
     f.write(setToolTip(tooltip))
     f.write(endAttibutes)
     
@@ -175,7 +180,11 @@ def writeSuperBlockVertex (superg, vertexID, f):
     v = superg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    name = ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
+    name = ""
+    if v.getBasicBlockIDs():
+        name = ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
+    if v.getEdges ():
+        name += newLine + ', '.join(str(edge) for edge in v.getEdges())
     name += "%ssuper ID = %d" % (newLine, vertexID)
     f.write(setName(name))
     f.write(endAttibutes)
@@ -198,10 +207,7 @@ def writePathInformationVertex (pathg, vertexID, f):
     v = pathg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    name = ""
-    for theSet, runs in v.setsToRuns.iteritems():
-        line = "{%s} = {%s}" % (', '.join(str(vertexID) for vertexID in theSet), ', '.join(str(runID) for runID in runs))
-        name += line + newLine
+    name = "{%s} = {%s}" % (', '.join(str(vertexID) for vertexID in v.theSet), ', '.join(str(runID) for runID in v.runs))
     f.write(setName(name))
     f.write(endAttibutes)
     

@@ -1,4 +1,4 @@
-import Debug, SuperBlocks, Vertices, UDrawGraph
+import Debug
 import random, os, hashlib, shlex
 
 newTrace = "=>"
@@ -98,52 +98,8 @@ class ParseTraces:
         self.__verifyMagicNumber(basename, tracefile)
         self.__buildCFGMap()
         self.__parse(tracefile)
-        self.__computePathInformation(basename)
-        
-    def __computePathInformation (self, basename):
         for superg in self.__program.getSuperBlockCFGs():
-            pathg    = SuperBlocks.PathInformationGraph()
-            vertices = superg.getBottomLayer()
-            for pathv in vertices:
-                pathg.vertices[pathv.getVertexID()] = pathv
-                for theSet in pathv.setsToRuns.keys():
-                    assert len(theSet) == 1
-                    superVertexID = list(theSet)[0]
-                    superv        = superg.getVertex(superVertexID)
-                    if superv in self.__superblockToRuns:
-                        pathv.setsToRuns[theSet].update(self.__superblockToRuns[superv])
-                
-            bottomLayer = True
-            while len(vertices) > 1:
-                newVertices = []
-                i = 0
-                while i < len(vertices) - 1: 
-                    newVertexID = pathg.getNextVertexID()
-                    predv       = Vertices.PathInformationVertex(newVertexID)
-                    pathg.vertices[newVertexID] = predv
-                    newVertices.append(predv)
-                    succv1 = vertices[i]
-                    succv2 = vertices[i+1]
-                    pathg.addEdge(predv.getVertexID(), succv1.getVertexID())
-                    pathg.addEdge(predv.getVertexID(), succv2.getVertexID())
-                    for set1 in succv1.setsToRuns.keys():
-                        for set2 in succv2.setsToRuns.keys():
-                            newset = set([])
-                            newset.update(set1)
-                            newset.update(set2)
-                            if bottomLayer or set1.intersection(set2):
-                                runs = succv1.setsToRuns[set1].intersection(succv2.setsToRuns[set2])
-                                predv.setsToRuns[frozenset(newset)] = runs
-                                if not runs:
-                                    print "{%s} is in EXCLUSIVE" % (', '.join(str(vertexID) for vertexID in newset))
-                                if self.__allruns.intersection(runs) == self.__allruns:
-                                    print "{%s} is in INCLUSIVE" % (', '.join(str(vertexID) for vertexID in newset))
-                    i += 1
-                bottomLayer = False
-                vertices = newVertices
-            pathg.setRootID(vertices[0].getVertexID())
-            UDrawGraph.makeUdrawFile(pathg, "%s.%s.%s" % (basename, superg.getName(), "pathg"))
-            
+            superg.computePathInformation(self.__superblockToRuns)            
                     
     def __verifyMagicNumber (self, basename, tracefile):
         magicNumber = hashlib.sha1(basename).hexdigest()

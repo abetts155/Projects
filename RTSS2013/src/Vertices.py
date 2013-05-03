@@ -109,9 +109,10 @@ class TreeVertex (Vertex):
             return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
 
 class PathInformationVertex (Vertex):
-    def __init__ (self, vertexID):
+    def __init__ (self, vertexID, theSet):
         Vertex.__init__(self, vertexID)
-        self.setsToRuns = {}
+        self.theSet = theSet
+        self.runs   = set([])
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):
@@ -129,20 +130,35 @@ class Enum(set):
         if name in self:
             return name
         raise AttributeError
-
-class BasicBlock (Vertex):
-    IpointPosition = Enum(['start', 'end'])
     
+class CFGVertex (Vertex):
     def __init__ (self, vertexID, name=None):
         Vertex.__init__(self, vertexID)
-        self.__name = name
+        self.__name  = name
         self.__dummy = False
-        self.__ipointPosition = None
-        self.__instructions = []
-        self.__addresses = set([])
+           
+    def setDummy (self):
+        self.__dummy = True
+        
+    def isDummy (self):
+        return self.__dummy
     
     def getName (self):
         return self.__name
+    
+class CFGEdge (CFGVertex):
+    def __init__ (self, vertexID, predID, succID):
+        CFGVertex.__init__(self, vertexID)
+        self.edge = (predID, succID)    
+
+class BasicBlock (CFGVertex):
+    IpointPosition = Enum(['start', 'end'])
+    
+    def __init__ (self, vertexID, name=None):
+        CFGVertex.__init__(self, vertexID, name)
+        self.__ipointPosition = None
+        self.__instructions = []
+        self.__addresses = set([])
     
     def setIpoint (self, position):
         assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
@@ -154,12 +170,6 @@ class BasicBlock (Vertex):
     def ipointPosition (self):
         assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self._vertexID
         return self.__ipointPosition
-       
-    def setDummy (self):
-        self.__dummy = True
-        
-    def isDummy (self):
-        return self.__dummy
     
     def addInstruction (self, instruction):
         self.__instructions.append(instruction)
@@ -229,6 +239,7 @@ class SuperBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.__unstructuredMerge = False
         self.__basicBlocks       = set([])
+        self.__edges             = set([])
         self.__loopHeader        = None
     
     def setLoopHeader (self, headerID):
@@ -249,14 +260,23 @@ class SuperBlock (Vertex):
     def addBasicBlocks (self, basicBlocks):
         self.__basicBlocks.update(basicBlocks)
         
+    def addEdge (self, edge):
+        self.__edges.add(edge)
+        
     def containsBasicBlock (self, vertexID):
         return vertexID in self.__basicBlocks
     
     def numberOfBasicBlocks (self):
         return len(self.__basicBlocks)
     
+    def numberOfEdges(self):
+        return len(self.__edges)
+    
     def getBasicBlockIDs (self):
         return self.__basicBlocks
+    
+    def getEdges (self):
+        return self.__edges
     
     def getRepresentativeID (self):
         assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
@@ -282,6 +302,7 @@ class SuperBlock (Vertex):
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID
         string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
+        string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
         string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
         string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string

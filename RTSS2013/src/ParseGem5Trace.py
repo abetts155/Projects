@@ -3,6 +3,7 @@ import Debug, ARM, UDrawGraph, SuperBlocks, Vertices
 class SuperBlockParser ():
     def __init__ (self, program, traceFiles):
         self.__program          = program
+        self.__allruns          = set([])
         self.__observedCFGs     = set([])
         self.__firstAddr        = None
         self.__lastAddr         = None
@@ -38,6 +39,7 @@ class SuperBlockParser ():
             parsing = False 
             with open(filename, 'r') as f:
                 self.__runID += 1
+                self.__allruns.add(self.__runID)
                 Debug.debugMessage("Analysing gem5 trace file '%s'" % filename, 1)
                 for line in f:
                     lexemes  = shlex.split(line)

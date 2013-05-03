@@ -96,19 +96,20 @@ if __name__ == "__main__":
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
+    UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
-    UDrawGraph.makeUdrawFile(program.getCallGraph(), "%s.%s" % (basename, "callg"))
+    UDrawGraph.makeUdrawFile(program.getCallGraph(), "%s" % ("callg"))
     program.inlineCalls(args.inliningCapacity)
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()
         if icfg.getExitID() != Vertices.dummyVertexID:
-            UDrawGraph.makeUdrawFile(icfg, "%s.%s.%s" % (basename, functionName, "icfg"))
+            UDrawGraph.makeUdrawFile(icfg, "%s.%s" % (functionName, "icfg"))
             lnt = Trees.LoopNests(icfg, icfg.getEntryID())
             program.addLNT(lnt, functionName)
-            UDrawGraph.makeUdrawFile(lnt, "%s.%s.%s" % (basename, functionName, "lnt"))
+            UDrawGraph.makeUdrawFile(lnt, "%s.%s" % (functionName, "lnt"))
             superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
-            UDrawGraph.makeUdrawFile(superg, "%s.%s.%s" % (basename, functionName, "superg"))
+            UDrawGraph.makeUdrawFile(superg, "%s.%s" % (functionName, "superg"))
             program.addSuperBlockCFG(superg, functionName)
         else:
             Debug.warningMessage("Not analysing function %s because it does not have an exit point set" % functionName)

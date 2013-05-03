@@ -1,6 +1,7 @@
 from DirectedGraphs import FlowGraph, DirectedGraph
-from Vertices import BasicBlock, Ipoint, dummyVertexID
+from Vertices import BasicBlock, Ipoint, dummyVertexID, CFGEdge
 import Debug
+import copy
 
 class Instruction ():    
     def __init__ (self, address, instruction):
@@ -30,12 +31,9 @@ class CFG (FlowGraph):
             reverseg = ICFG()
         # Add vertices
         for v in self:
-            copyv = None
-            if isinstance(v, BasicBlock):
-                copyv = BasicBlock(v.getVertexID())
-            else:
-                assert isinstance(v, Ipoint)
-                copyv = Ipoint(v.getVertexID(), v.getIpointID())
+            copyv = copy.copy(v)
+            copyv.removeAllSuccessors()
+            copyv.removeAllPredecessors()
             reverseg.addVertex(copyv)
     
         # Add edges
