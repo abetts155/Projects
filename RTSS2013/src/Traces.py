@@ -91,15 +91,15 @@ class ParseTraces:
     def __init__ (self, basename, tracefile, program):
         self.__program = program
         self.__allruns = set([])
-        self.__superblockToRuns = {}
+        self.__superBlockCFGInformation = {}
         self.__callg   = self.__program.getCallGraph()
         self.__rootv   = self.__callg.getVertex(self.__callg.getRootID())
         self.__bbToCFG = {}
         self.__verifyMagicNumber(basename, tracefile)
-        self.__buildCFGMap()
+        self.__initialise()
         self.__parse(tracefile)
         for superg in self.__program.getSuperBlockCFGs():
-            superg.computePathInformation(self.__superblockToRuns)            
+            superg.computePathInformation(self.__superBlockCFGInformation[superg], self.__allruns)            
                     
     def __verifyMagicNumber (self, basename, tracefile):
         magicNumber = hashlib.sha1(basename).hexdigest()
@@ -109,10 +109,12 @@ class ParseTraces:
             fileMagicNumber = line.strip()
             assert fileMagicNumber == magicNumber, "The magic number of the trace file does not compute"
     
-    def __buildCFGMap (self):
+    def __initialise (self):
         for icfg in self.__program.getICFGs():
             for v in icfg:
                 self.__bbToCFG[v.getVertexID()] = icfg
+            superg = self.__program.getSuperBlockCFG(icfg.getName())
+            self.__superBlockCFGInformation[superg] = {}
     
     def __parse (self, tracefile):
         run = 0
@@ -134,14 +136,14 @@ class ParseTraces:
                         if self.__currentCFG.hasVertex(nextID):
                             if self.__currentSuperg.isMonitoredBasicBlock(nextID):
                                 superv = self.__currentSuperg.getMonitoredBasicBlockSuperBlock(nextID)
-                                if superv not in self.__superblockToRuns:
-                                    self.__superblockToRuns[superv] = set([])
-                                self.__superblockToRuns[superv].add(run)
+                                if superv not in self.__superBlockCFGInformation[self.__currentSuperg]:
+                                    self.__superBlockCFGInformation[self.__currentSuperg][superv] = set([])
+                                self.__superBlockCFGInformation[self.__currentSuperg][superv].add(run)
                             elif self.__currentSuperg.isMonitoredEdge(lastID, nextID):
                                 superv = self.__currentSuperg.getMonitoredEdgeSuperBlock(lastID, nextID)
-                                if superv not in self.__superblockToRuns:
-                                    self.__superblockToRuns[superv] = set([])
-                                self.__superblockToRuns[superv].add(run)
+                                if superv not in self.__superBlockCFGInformation[self.__currentSuperg]:
+                                    self.__superBlockCFGInformation[self.__currentSuperg][superv] = set([])
+                                self.__superBlockCFGInformation[self.__currentSuperg][superv].add(run)
                         else:
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID

@@ -1,9 +1,9 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, PathInformationVertex
-from Edges import SuperBlockControlFlowEdge, SuperBlockLoopEdge
+from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, SuperBlockUnion
+from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
-import Debug, UDrawGraph
+import Debug, UDrawGraph, itertools
 
 nextVertexID = 0
 nextEdgeID   = 0
@@ -15,14 +15,14 @@ class SuperBlockGraph (DirectedGraph):
         self.__icfg  = icfg
         self._name   = icfg.getName()
         self.__lnt   = lnt
-        self.__pathg = PathInformationGraph()
+        self.__partitiong = SuperBlockPartitionGraph()
         self.__headerToSuperBlockSubgraph = {}
-        self.__headerToRootSuperBlock = {}
-        self.__headerToPathVertices   = {}
-        self.__basicBlockToSuperBlock = {}
-        self.__rootSuperv             = None
-        self.__monitoredBasicBlocks   = set([])
-        self.__monitoredEdges         = {}
+        self.__headerToRootSuperBlock     = {}
+        self.__headerToPartitionVertices  = {}
+        self.__basicBlockToSuperBlock     = {}
+        self.__rootSuperv                 = None
+        self.__monitoredBasicBlocks       = set([])
+        self.__monitoredEdges             = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
@@ -40,9 +40,9 @@ class SuperBlockGraph (DirectedGraph):
                     self.__headerToSuperBlockSubgraph[headerID] = self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
                     self.__headerToRootSuperBlock[headerID]     = self.__addEdges(lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID)
                     self.__headerToRootSuperBlock[headerID].setLoopHeader(headerID)
-                    self.__computePathRelationSubgraph(self.__headerToSuperBlockSubgraph[headerID], self.__headerToRootSuperBlock[headerID], forwardICFG, headerID)
                     if v.getVertexID() == lnt.getRootID():
                         self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
+                    self.__computeSuperBlockPartitions(self.__headerToSuperBlockSubgraph[headerID], self.__headerToRootSuperBlock[headerID], forwardICFG, v)
                         
     def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID):
         global nextVertexID 
@@ -86,11 +86,6 @@ class SuperBlockGraph (DirectedGraph):
         # Process vertices in topological order
         for vertexID in dfs.getPostorder():
             v = forwardICFG.getVertex(vertexID)
-            # Found a nested loop header
-           # if not v.isDummy() and lnt.isLoopHeader(vertexID) and vertexID != headerID:
-           #     sourcev      = self.__basicBlockToSuperBlock[ve rtexID]
-           #     destinationv = self.__headerToRootSuperBlock[vertexID]
-           #     self.__addEdge(sourcev, destinationv, headerID, SuperBlockLoopEdge)
             # Found a branch
             if v.numberOfSuccessors() > 1:
                 branches.add(vertexID)
@@ -125,7 +120,7 @@ class SuperBlockGraph (DirectedGraph):
         succe.setEdgeID(nextEdgeID)
         prede.setEdgeID(nextEdgeID)
         
-    def __computePathRelationSubgraph (self, subgraph, rootv, forwardICFG, headerID):
+    def __computeSuperBlockPartitions (self, subgraph, rootv, forwardICFG, headerv):
         supervToSupervs = {}
         for superv in subgraph:
             supervToSupervs[superv] = set([])
@@ -133,8 +128,10 @@ class SuperBlockGraph (DirectedGraph):
         for vertexID in dfs.getPostorder():
             superv = self.getVertex(vertexID)
             if vertexID == rootv.getVertexID():
-                self.__addPathRelationEdges(rootv, forwardICFG, headerID, supervToSupervs)
+                self.__headerToPartitionVertices[headerv.getHeaderID()] = set([])
+                self.__handleRootSuperBlock(supervToSupervs, rootv, forwardICFG, headerv)
             else:
+                # Deduce which super blocks we should monitor during trace parsing
                 alive = True
                 for bbID in superv.getBasicBlockIDs():
                     bb = self.__icfg.getVertex(bbID)
@@ -147,56 +144,58 @@ class SuperBlockGraph (DirectedGraph):
                         succv = self.getVertex(succID)
                         supervToSupervs[superv].update(supervToSupervs[succv])
                         
-    def __addPathRelationEdges (self, rootv, forwardICFG, headerID, supervToSupervs):
-        succPartition             = rootv.getBranchPartitions()
-        dfs                       = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
-        newVertexID               = 0
-        previousPartitionVertices = []
-        for vertexID in reversed(dfs.getPostorder()):
-            if self.__lnt.isLoopHeader(vertexID) and vertexID != headerID:
-                previousPartitionVertices.extend(self.__headerToPathVertices[vertexID])
-            if vertexID in succPartition:
-                thisPartitionVertices = []
-                for supere in succPartition[vertexID]:
-                    succv = self.getVertex(supere.getVertexID())
-                    for superv in supervToSupervs[succv]:
-                        Debug.debugMessage("%d is a monitored super block in %s" % (superv.getVertexID(), self.getName()), 1)
-                        if superv.getBasicBlockIDs():
-                            self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
-                        newVertexID = self.__pathg.getNextVertexID()
-                        newv        = PathInformationVertex(newVertexID, set([superv.getVertexID()]))
-                        self.__pathg.vertices[newVertexID] = newv
-                        self.__pathg.superBlockToPathVertex[superv] = newv
-                        if thisPartitionVertices and headerID != self.__icfg.getEntryID():
-                            for oldv in thisPartitionVertices:
-                                parentID = self.__pathg.getNextVertexID()
-                                theSet   = set([])
-                                theSet.update(oldv.theSet)
-                                theSet.update(newv.theSet)
-                                parentv  = PathInformationVertex(parentID, theSet)
-                                self.__pathg.vertices[parentID] = parentv
-                                self.__pathg.addEdge(parentID, oldv.getVertexID())
-                                self.__pathg.addEdge(parentID, newv.getVertexID())
-                        thisPartitionVertices.append(newv)
-                for oldv in previousPartitionVertices:
-                    for newv in thisPartitionVertices:
-                        parentID = self.__pathg.getNextVertexID()
-                        theSet   = set([])
-                        theSet.update(oldv.theSet)
-                        theSet.update(newv.theSet)
-                        parentv  = PathInformationVertex(parentID, theSet)
-                        self.__pathg.vertices[parentID] = parentv
-                        self.__pathg.addEdge(parentID, oldv.getVertexID())
-                        self.__pathg.addEdge(parentID, newv.getVertexID())
-                previousPartitionVertices.extend(thisPartitionVertices)
-        self.__headerToPathVertices[headerID] = previousPartitionVertices
+    def __handleRootSuperBlock (self, supervToSupervs, rootv, forwardICFG, headerv):
+        if headerv.getVertexID() != self.__lnt.getRootID():
+            for succID in rootv.getSuccessorIDs():
+                succv = self.getVertex(succID)
+                for monitoredv in supervToSupervs[succv]:
+                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    partitionv   = SuperBlockPartition(nextVertexID, set([monitoredv]))
+                    self.__partitiong.vertices[nextVertexID] = partitionv
+                    self.__headerToPartitionVertices[headerv.getHeaderID()].add(partitionv)
+        else:
+            branchPartitions = rootv.getBranchPartitions()
+            dfs = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
+            for vertexID in reversed(dfs.getPostorder()):
+                if self.__lnt.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
+                    for partitionv in self.__headerToPartitionVertices[vertexID]:
+                        self.__partitiong.partitionOrder.append(partitionv)
+                if vertexID in branchPartitions:
+                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    theSet       = set([])
+                    for supere in branchPartitions[vertexID]:
+                        superv = self.getVertex(supere.getVertexID())
+                        theSet.update(supervToSupervs[superv])
+                    partitionv   = SuperBlockPartition(nextVertexID, theSet)
+                    self.__partitiong.vertices[nextVertexID] = partitionv
+                    self.__partitiong.partitionOrder.append(partitionv)
+            for partitionv in self.__partitiong:
+                for superv in partitionv.runs.keys():
+                    if superv.getBasicBlockIDs():
+                        self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
         
-    def computePathInformation (self, superBlockToRuns):
+    def computePathInformation (self, superBlockToRuns, allRuns):
         for superv, runs in superBlockToRuns.iteritems():
-            if superv in self.__pathg.superBlockToPathVertex:
-                pathv = self.__pathg.superBlockToPathVertex[superv]
-                pathv.runs.update(runs)
-        UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "pathg"))
+            partitionv = self.__partitiong.getPartitionVertex(superv)
+            partitionv.runs[superv].update(runs)
+        
+        # The partition size 
+        for subsetSize in xrange(2, len(self.__partitiong.partitionOrder)+1):
+            Debug.debugMessage("Generating subsets of size %d" % subsetSize, 1)
+            # Get every partition of size r
+            for partitionTuple in set(itertools.combinations(self.__partitiong.partitionOrder, subsetSize)):
+                theSets = []
+                for i in xrange(0, subsetSize):
+                    theSets.append(partitionTuple[i].runs.keys())
+                for cartProduct in itertools.product(*theSets):
+                    runs = allRuns
+                    for superv in cartProduct:
+                        if superv in superBlockToRuns:
+                            runs = runs.intersection(superBlockToRuns[superv])
+                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
+                    self.__partitiong.vertices[nextVertexID] = partitionv
+        UDrawGraph.makeUdrawFile(self.__partitiong, "%s.%s" % (self.getName(), "partitiong"))
                 
     def isMonitoredBasicBlock (self, basicBlockID):
         return basicBlockID in self.__monitoredBasicBlocks
@@ -227,13 +226,19 @@ class SuperBlockGraph (DirectedGraph):
         assert self.__rootSuperv, "Root super block has not been set"
         return self.__rootSuperv
     
-    def getPathInformationGraph (self):
-        return self._pathg
+    def getPartitionGraph (self):
+        return self._partitiong
     
-class PathInformationGraph (DirectedGraph):
+class SuperBlockPartitionGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self.superBlockToPathVertex = {}
+        self.partitionOrder = []
+        
+    def getPartitionVertex (self, superv):
+        for partitionv in self:
+            if superv in partitionv.runs.keys():
+                return partitionv
+        assert False, "Unable to find partition vertex for super block %d" % superv.getVertexID()
     
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):

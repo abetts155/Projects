@@ -85,10 +85,10 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                     vertexID = v.getVertexID()
                     writeSuperBlockVertex(g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.PathInformationGraph):
+            elif isinstance(g, SuperBlocks.SuperBlockPartitionGraph):
                 for v in g:
                     vertexID = v.getVertexID()
-                    writePathInformationVertex(g, vertexID, f)   
+                    writeSuperBlockPathInformationVertex(g, vertexID, f)   
             elif isinstance(g, Programs.CallGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
@@ -203,11 +203,17 @@ def writeSuperBlockVertex (superg, vertexID, f):
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
     
-def writePathInformationVertex (pathg, vertexID, f):
-    v = pathg.getVertex(vertexID)
+def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
+    v = partitiong.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    name = "{%s} = {%s}" % (', '.join(str(vertexID) for vertexID in v.theSet), ', '.join(str(runID) for runID in v.runs))
+    name = ""
+    if isinstance(v, Vertices.SuperBlockPartition):
+        for superv, runs in v.runs.iteritems():
+            name += "%d = {%s}%s" % (superv.getVertexID(), ', '.join(str(runID) for runID in runs), newLine)
+    else:
+        assert isinstance(v, Vertices.SuperBlockUnion)
+        name += "{%s} = {%s}" % (', '.join(str(superv.getVertexID()) for superv in v.superblocks), ', '.join(str(runID) for runID in v.runs))
     f.write(setName(name))
     f.write(endAttibutes)
     

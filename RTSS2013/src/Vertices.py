@@ -108,11 +108,18 @@ class TreeVertex (Vertex):
         else:
             return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
 
-class PathInformationVertex (Vertex):
-    def __init__ (self, vertexID, theSet):
+class SuperBlockPartition (Vertex):
+    def __init__ (self, vertexID, superblocks):
         Vertex.__init__(self, vertexID)
-        self.theSet = theSet
-        self.runs   = set([])
+        self.runs = {}
+        for superv in superblocks:
+            self.runs[superv] = set([])
+
+class SuperBlockUnion (Vertex):
+    def __init__ (self, vertexID, superblocks, runs):
+        Vertex.__init__(self, vertexID)
+        self.superblocks = superblocks
+        self.runs        = runs
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):
