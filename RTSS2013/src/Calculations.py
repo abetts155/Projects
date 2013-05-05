@@ -12,9 +12,9 @@ class WCETCalculation:
             lnt    = program.getLNT(callv.getName())
             superg = program.getSuperBlockCFG(callv.getName())
             cfg    = program.getICFG(callv.getName())
-            CreateCFGILP(basepath, basename, cfg, lnt)
+            #CreateCFGILP(basepath, basename, cfg, lnt)
             CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
-            TreeBasedCalculation(superg, lnt)
+            #TreeBasedCalculation(superg, lnt)
             
 class TreeBasedCalculation:
     def __init__ (self, superg, lnt, longestPaths=1):
@@ -94,6 +94,7 @@ class TreeBasedCalculation:
             
 class LpSolve:
     comma        = ","
+    dummyPrefix  = "d_"
     edgePrefix   = "e_"
     equals       = " = "
     fileSuffix   = "ilp"
@@ -106,10 +107,16 @@ class LpSolve:
     vertexPrefix = "v_"
     
     @staticmethod
-    def getEdgeVariable (edgeID, index=0):
+    def getDummyVariable (edgeID, index=0):
         if index:
-            return "%s%s_%d" % (LpSolve.edgePrefix, edgeID, index)
-        return "%s%d" % (LpSolve.edgePrefix, edgeID)
+            return "%s%s_%d" % (LpSolve.dummyPrefix, edgeID, index)
+        return "%s%d" % (LpSolve.dummyPrefix, edgeID)
+    
+    @staticmethod
+    def getEdgeVariable (sourceID, destinationID, index=0):
+        if index:
+            return "%s%d_%d_%d" % (LpSolve.edgePrefix, sourceID, destinationID, index)
+        return "%s%d_%d" % (LpSolve.edgePrefix, sourceID, destinationID)
     
     @staticmethod
     def getVertexVariable (vertexID, index=0):
@@ -192,6 +199,31 @@ class CreateSuperBlockCFGILP (ILP):
                     supergRegion = superg.getSuperBlockRegion(headerID)
                     self.__createCapacityConstraints(v, lnt)
                     self.__createFlowConstraints(headerID, supergRegion)
+                    self.__addExclusiveConstraints(superg, headerID)
+        
+    def __addExclusiveConstraints (self, superg, headerID):
+        for exclusiveTuple in superg.getPartitionGraph().exclusiveTuples:
+            comment = LpSolve.getComment("Mutual exclusive constraint")
+            self.__constraints.append(comment)
+            constraint = ""
+            sizeOfExclusiveSet = len(exclusiveTuple)
+            num = 1
+            for superv in exclusiveTuple:
+                if superv.getBasicBlockIDs():
+                    constraint += LpSolve.getVertexVariable(superv.getRepresentativeID(), headerID)
+                else:
+                    edges = superv.getEdges()
+                    assert len(edges) == 1
+                    edge = list(edges)[0]
+                    constraint += LpSolve.getEdgeVariable(edge[0], edge[1], headerID)
+                if num < sizeOfExclusiveSet:
+                    constraint += LpSolve.plus
+                num += 1
+            constraint += LpSolve.ltOrEqual
+            constraint += str(sizeOfExclusiveSet - 1)
+            constraint += LpSolve.semiColon
+            constraint += LpSolve.getNewLine(2)
+            self.__constraints.append(constraint)
     
     def __createCapacityConstraints (self, treev, lnt):
         comment = LpSolve.getComment("Capacity constraints on header %d" % treev.getHeaderID())
@@ -257,11 +289,14 @@ class CreateSuperBlockCFGILP (ILP):
             for supere in superedges:
                 succSuperv = superg.getVertex(supere.getVertexID())
                 if succSuperv.isUnstructuredMerge():
-                    dummyvar = LpSolve.getEdgeVariable(supere.getEdgeID(), headerID)
+                    dummyvar = LpSolve.getDummyVariable(supere.getEdgeID(), headerID)
                     self.__variables.add(dummyvar)    
                     constraint += dummyvar
                 elif succSuperv.numberOfBasicBlocks() == 0:
-                    dummyvar = LpSolve.getEdgeVariable(supere.getEdgeID(), headerID)
+                    edges = succSuperv.getEdges()
+                    assert len(edges) == 1
+                    edge = list(edges)[0]
+                    dummyvar = LpSolve.getEdgeVariable(edge[0], edge[1], headerID)
                     self.__variables.add(dummyvar)    
                     constraint += dummyvar
                 else:
@@ -286,7 +321,7 @@ class CreateSuperBlockCFGILP (ILP):
         for supere in superv.getPredecessorEdges():
             predSuperv = superg.getVertex(supere.getVertexID())
             if predSuperv.numberOfSuccessors() > 1:
-                dummyvar = LpSolve.getEdgeVariable(supere.getEdgeID(), headerID)
+                dummyvar = LpSolve.getDummyVariable(supere.getEdgeID(), headerID)
                 self.__variables.add(dummyvar)    
                 constraint += dummyvar
             else:

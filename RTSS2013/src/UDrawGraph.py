@@ -214,6 +214,7 @@ def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
     else:
         assert isinstance(v, Vertices.SuperBlockUnion)
         name += "{%s} = {%s}" % (', '.join(str(superv.getVertexID()) for superv in v.superblocks), ', '.join(str(runID) for runID in v.runs))
+        f.write(setColor(COLOR.YELLOW))
     f.write(setName(name))
     f.write(endAttibutes)
     

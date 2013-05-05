@@ -64,7 +64,6 @@ class SuperBlockGraph (DirectedGraph):
                     superv.addBasicBlock(vertexID)
                 else:
                     superv.addEdge(v.edge)
-                    self.__monitoredEdges[v.edge] = superv
                 self.__basicBlockToSuperBlock[vertexID] = superv
                 if v.numberOfSuccessors() > 1:
                     ipostID = postdomTree.getVertex(vertexID).getParentID()
@@ -73,7 +72,6 @@ class SuperBlockGraph (DirectedGraph):
                         superVertexID = nextVertexID
                         superv        = SuperBlock(superVertexID) 
                         superv.addEdge((vertexID, ipostID))
-                        self.__monitoredEdges[(vertexID, ipostID)] = superv
                         self.vertices[superVertexID]     = superv
                         subgraph.vertices[superVertexID] = superv
                         branchIpostSuperBlocks[vertexID] = superv
@@ -173,6 +171,11 @@ class SuperBlockGraph (DirectedGraph):
                 for superv in partitionv.runs.keys():
                     if superv.getBasicBlockIDs():
                         self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
+                    else:
+                        edges = superv.getEdges()
+                        assert len(edges) == 1
+                        edge = list(edges)[0]
+                        self.__monitoredEdges[edge] = superv
         
     def computePathInformation (self, superBlockToRuns, allRuns):
         for superv, runs in superBlockToRuns.iteritems():
@@ -192,6 +195,9 @@ class SuperBlockGraph (DirectedGraph):
                     for superv in cartProduct:
                         if superv in superBlockToRuns:
                             runs = runs.intersection(superBlockToRuns[superv])
+                    if not runs:
+                        self.__partitiong.exclusiveTuples.add(cartProduct)
+                        print "%s is MUTUALLY EXCLUSIVE" % ', '.join(str(superv.getVertexID()) for superv in cartProduct)
                     nextVertexID = self.__partitiong.getNextVertexID() 
                     partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
                     self.__partitiong.vertices[nextVertexID] = partitionv
@@ -227,12 +233,13 @@ class SuperBlockGraph (DirectedGraph):
         return self.__rootSuperv
     
     def getPartitionGraph (self):
-        return self._partitiong
+        return self.__partitiong
     
 class SuperBlockPartitionGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
         self.partitionOrder = []
+        self.exclusiveTuples = set([])
         
     def getPartitionVertex (self, superv):
         for partitionv in self:
