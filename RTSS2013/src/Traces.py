@@ -1,4 +1,4 @@
-import Debug, ARM
+import Debug, ARM, Vertices
 import random, os, hashlib, shlex
 
 newTrace = "=>"
@@ -121,7 +121,7 @@ class ParseTraces (SuperBlockPathInformation):
         self.__verifyMagicNumber(basename, tracefile)
         self.__initialise()
         self.__parse(tracefile)
-        self.__computePathInformation()          
+        self._computePathInformation()          
                     
     def __verifyMagicNumber (self, basename, tracefile):
         magicNumber = hashlib.sha1(basename).hexdigest()
@@ -266,12 +266,12 @@ class Gem5Parser (SuperBlockPathInformation):
                     self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
                     self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
                     assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
-        if not self.__predBB:
-            predID = self.__currentBB.getVertexID()
-        else:
-            predID = self.__predBB.getVertexID()
-        self._analyseSuperBlock(self.__currentSuperg, predID, self.__currentBB.getVertexID(), runID)     
-        Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(),  self.__currentBB.getVertexID()), 100)    
+            if not self.__predBB:
+                self._analyseSuperBlock(self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
+            else:
+                self._analyseSuperBlock(self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
+            
+            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(),  self.__currentBB.getVertexID()), 10)    
 
         
         

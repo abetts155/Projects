@@ -4,6 +4,7 @@ from SuperBlocks import SuperBlockGraph
 from Trees import LoopNests
 from copy import deepcopy
 import Debug
+import UDrawGraph
 
 class CallGraph (DirectedGraph):   
     def __init__ (self):
@@ -14,11 +15,21 @@ class CallGraph (DirectedGraph):
         
     def addVertex (self, functionName):
         assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
-        Debug.debugMessage("Adding call graph vertex for function '%s'" % functionName, 5)
+        Debug.debugMessage("Adding call graph vertex of function '%s'" % functionName, 5)
         vertexID = self.getNextVertexID()
         callv    = CallGraphVertex(vertexID, functionName)
         self.vertices[vertexID] = callv 
         self.__functionNameToVertex[functionName] = callv
+    
+    def removeVertex (self, functionName):
+        Debug.debugMessage("Removing call graph vertex of function '%s'" % functionName, 5)
+        callv    = self.getVertexWithName(functionName)
+        vertexID = callv.getVertexID()
+        for succID in callv.getSuccessorIDs():
+            self.removeEdge(vertexID, succID)
+        for predID in callv.getPredecessorIDs():
+            self.removeEdge(predID, vertexID)
+        DirectedGraph.removeVertex(self, vertexID)
         
     def getVertexWithName (self, functionName):
         assert functionName in self.__functionNameToVertex, "Unable to find call graph vertex for function '%s'" % functionName
@@ -82,6 +93,16 @@ class Program():
         self.__superblockcfgs = {}
         self.__bbIDToICFG     = {}
         
+    def generateUDrawFiles (self):
+        UDrawGraph.makeUdrawFile(self.__callg, "callg")
+        for functionName, cfg in self.__ICFGs.iteritems():
+            UDrawGraph.makeUdrawFile(cfg, "%s.%s" % (functionName, "cfg"))
+        for functionName, lnt in self.__LNTs.iteritems():
+            UDrawGraph.makeUdrawFile(lnt, "%s.%s" % (functionName, "lnt"))
+        for functionName, superg in self.__superblockcfgs.iteritems():
+            UDrawGraph.makeUdrawFile(superg, "%s.%s" % (functionName, "superg"))
+            UDrawGraph.makeUdrawFile(superg.getSuperBlockPathInformationGraph(), "%s.%s" % (functionName, "pathg"))
+        
     def getRootICFG (self):
         rootcallv = self.__callg.getRootVertex()
         return self.getICFG(rootcallv.getName())
@@ -134,10 +155,9 @@ class Program():
     def getSuperBlockCFGs (self):
         return self.__superblockcfgs.values().__iter__() 
     
-    def inlineCalls (self, inliningCapacity):
+    def inlineCalls (self, inliningCapacity=None):
         self.__inlineNonUniqueCalls(inliningCapacity)
         self.__inlineUniqueCalls(inliningCapacity)
-        print self.__ICFGs.keys()
         
     def __inlineNonUniqueCalls (self, inliningCapacity):
         for callv in self.__callg:
@@ -147,7 +167,7 @@ class Program():
                         (callerName, calleeName) = self.__callg.getCallEdgeNames(callSiteID)
                         callerICFG = self.getICFG(callerName)
                         calleeICFG = self.getICFG(calleeName)
-                        if callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
+                        if not inliningCapacity or callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
                             Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
                             self.__doInline(callerICFG, calleeICFG, callSiteID)
                         else:
@@ -162,12 +182,13 @@ class Program():
                             (callerName, calleeName) = self.__callg.getCallEdgeNames(callSiteID)
                             callerICFG = self.getICFG(callerName)
                             calleeICFG = self.getICFG(calleeName)
-                            if callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
+                            if not inliningCapacity or callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
                                 Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
                                 self.__doInline(callerICFG, calleeICFG, callSiteID)
                                 # Now archive the callee ICFG as it is no longer needed
                                 self.__archivedICFGS[calleeName] = calleeICFG
                                 del self.__ICFGs[calleeName]
+                                self.__callg.removeVertex(calleeName)
                             else:
                                 Debug.debugMessage("NOT inlining '%s' into '%s' at call site %d because capacity exceeded" % (calleeName, callerName, callSiteID), 1)
                     

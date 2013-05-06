@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-import Debug, UDrawGraph
+import Debug, UDrawGraph, Calculations
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
@@ -188,6 +188,12 @@ def commandLine ():
                           dest="flags",
                           metavar="<FLAGS>")
     
+    cmdline.add_argument("-C",
+                         "--calculation",
+                         action="store_true",
+                         help="do WCET calculation",
+                         default=False)
+    
     cmdline.add_argument("--clean",
                          action="store_true",
                          help="clean out temporary files",
@@ -233,12 +239,14 @@ def commandLine ():
 if __name__ == "__main__":   
     import Utils, Traces
     import os
-
+    
     args                = commandLine()
+    basename            = os.path.splitext(args.program)[0]
+    basepath            = os.path.abspath(os.path.dirname(args.program))
     Debug.debug         = args.debug
     Debug.verbose       = args.verbose
     UDrawGraph.enabled  = args.udraw
-    UDrawGraph.basename = os.path.splitext(args.program)[0]
+    UDrawGraph.basename = basename
     
     if args.clean:
         Utils.clean()
@@ -249,6 +257,7 @@ if __name__ == "__main__":
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
+    program.inlineCalls()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
@@ -257,4 +266,7 @@ if __name__ == "__main__":
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     Debug.verboseMessage("Parsing gem5 traces")
     Traces.Gem5Parser(program, gem5Traces)
+    program.generateUDrawFiles()
+    if args.calculation:
+        Calculations.WCETCalculation(program, basepath, basename)
     

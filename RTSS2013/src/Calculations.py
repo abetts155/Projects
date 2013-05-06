@@ -6,14 +6,15 @@ import os
 class WCETCalculation:
     def __init__ (self, program, basepath, basename):
         callg = program.getCallGraph()
+        print callg
         dfs   = DepthFirstSearch(callg, callg.getRootID())
         for vertexID in dfs.getPostorder():
             callv  = callg.getVertex(vertexID)
             lnt    = program.getLNT(callv.getName())
             superg = program.getSuperBlockCFG(callv.getName())
             cfg    = program.getICFG(callv.getName())
-            #CreateCFGILP(basepath, basename, cfg, lnt)
-            CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
+            CreateCFGILP(basepath, basename, cfg, lnt, superg)
+            #CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
             #TreeBasedCalculation(superg, lnt)
             
 class TreeBasedCalculation:
@@ -98,6 +99,8 @@ class LpSolve:
     edgePrefix   = "e_"
     equals       = " = "
     fileSuffix   = "ilp"
+    gt           = " > "
+    gtOrEqual    = " >= "
     int_         = "int"
     lt           = " < "
     ltOrEqual    = " <= "
@@ -202,7 +205,7 @@ class CreateSuperBlockCFGILP (ILP):
                     self.__addExclusiveConstraints(superg, headerID)
         
     def __addExclusiveConstraints (self, superg, headerID):
-        for exclusiveTuple in superg.getPartitionGraph().exclusiveTuples:
+        for exclusiveTuple in superg.getSuperBlockPathInformationGraph().exclusiveTuples:
             comment = LpSolve.getComment("Mutual exclusive constraint")
             self.__constraints.append(comment)
             constraint = ""
@@ -376,12 +379,14 @@ class CreateSuperBlockCFGILP (ILP):
         self.__constraints.append(constraint)
 
 class CreateCFGILP (ILP):
-    def __init__ (self, basepath, basename, cfg, lnt):
+    def __init__ (self, basepath, basename, cfg, lnt, superg):
         ILP.__init__(self)
         self.__constraints = []
         self.__variables   = set([])
         self.__createStructuralConstraints(cfg)
         self.__createLoopConstraints(cfg, lnt)
+        self.__addExclusiveConstraints(superg)
+        self.__addAlwaysConstraints(superg)
         self.__createObjectiveFunction()
         self.__createIntegerConstraint()
         filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, cfg.getName(), "cfg", LpSolve.fileSuffix)
@@ -401,9 +406,9 @@ class CreateCFGILP (ILP):
             constraint1 += LpSolve.equals
             num = 1
             for succe in v.getSuccessorEdges():
-                edgeID = succe.getEdgeID() 
-                self.__variables.add(LpSolve.getEdgeVariable(edgeID))
-                constraint1 += LpSolve.getEdgeVariable(edgeID)
+                succID = succe.getVertexID() 
+                self.__variables.add(LpSolve.getEdgeVariable(vertexID, succID))
+                constraint1 += LpSolve.getEdgeVariable(vertexID, succID)
                 if num < v.numberOfSuccessors():
                     constraint1 += LpSolve.plus
                 num += 1
@@ -414,16 +419,16 @@ class CreateCFGILP (ILP):
             constraint2 = ""
             num = 1
             for succe in v.getSuccessorEdges():
-                edgeID = succe.getEdgeID() 
-                constraint2 += LpSolve.getEdgeVariable(edgeID)
+                succID = succe.getVertexID() 
+                constraint2 += LpSolve.getEdgeVariable(vertexID, succID)
                 if num < v.numberOfSuccessors():
                     constraint2 += LpSolve.plus
                 num += 1
             constraint2 += LpSolve.equals
             num = 1
             for prede in v.getPredecessorEdges():
-                edgeID = prede.getEdgeID() 
-                constraint2 += LpSolve.getEdgeVariable(edgeID)
+                predID = prede.getVertexID() 
+                constraint2 += LpSolve.getEdgeVariable(predID, vertexID)
                 if num < v.numberOfPredecessors():
                     constraint2 += LpSolve.plus
                 num += 1
@@ -432,6 +437,7 @@ class CreateCFGILP (ILP):
             self.__constraints.append(constraint2)
     
     def __createLoopConstraints (self, cfg, lnt):
+        import random
         for level, vertices in lnt.levelIterator(True):
             for treev in vertices:
                 if isinstance(treev, HeaderVertex):
@@ -453,13 +459,13 @@ class CreateCFGILP (ILP):
                                 forwardPredIDs = []
                                 for prede in headerv.getPredecessorEdges():
                                     if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
-                                        forwardPredIDs.append(prede.getEdgeID())
+                                        forwardPredIDs.append((prede.getVertexID(), headerID))
                                 constraint = LpSolve.getVertexVariable(treev.getHeaderID())
                                 constraint += LpSolve.ltOrEqual
                                 num = 1
-                                for predID in forwardPredIDs:
-                                    constraint += "%d " % (ancestorv.getLevel() * 10 + 1)
-                                    constraint += LpSolve.getEdgeVariable(predID)
+                                for edge in forwardPredIDs:
+                                    constraint += "%d " % (random.randint(5,25))
+                                    constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
                                     if num < len(forwardPredIDs):
                                         constraint += LpSolve.plus
                                     num += 1
@@ -468,6 +474,48 @@ class CreateCFGILP (ILP):
                                 self.__constraints.append(constraint)
                             else:
                                 pass
+    
+    def __addExclusiveConstraints (self, superg):
+        for exclusiveTuple in superg.getSuperBlockPathInformationGraph().exclusiveTuples:
+            comment = LpSolve.getComment("Mutual exclusive constraint")
+            self.__constraints.append(comment)
+            constraint = ""
+            sizeOfExclusiveSet = len(exclusiveTuple)
+            num = 1
+            for superv in exclusiveTuple:
+                if superv.getBasicBlockIDs():
+                    constraint += LpSolve.getVertexVariable(superv.getRepresentativeID())
+                else:
+                    edges = superv.getEdges()
+                    assert len(edges) == 1
+                    edge = list(edges)[0]
+                    constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
+                if num < sizeOfExclusiveSet:
+                    constraint += LpSolve.plus
+                num += 1
+            constraint += LpSolve.ltOrEqual
+            constraint += str(sizeOfExclusiveSet - 1)
+            constraint += LpSolve.semiColon
+            constraint += LpSolve.getNewLine(2)
+            self.__constraints.append(constraint)
+    
+    def __addAlwaysConstraints (self, superg):
+        for superv in superg.getSuperBlockPathInformationGraph().alwaysSuperBlocks:
+            comment = LpSolve.getComment("Always executes constraint")
+            self.__constraints.append(comment)
+            if superv.getBasicBlockIDs():
+                constraint = LpSolve.getVertexVariable(superv.getRepresentativeID())
+            else:
+                edges = superv.getEdges()
+                assert len(edges) == 1
+                edge = list(edges)[0]
+                constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
+            constraint += LpSolve.gtOrEqual
+            constraint += str(1)
+            constraint += LpSolve.semiColon
+            constraint += LpSolve.getNewLine(2)
+            self.__constraints.append(constraint)
+    
                 
     def __createObjectiveFunction (self):
         constraint = LpSolve.max_

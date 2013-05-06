@@ -85,7 +85,7 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                     vertexID = v.getVertexID()
                     writeSuperBlockVertex(g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.SuperBlockPartitionGraph):
+            elif isinstance(g, SuperBlocks.SuperBlockPathInformationGraph):
                 for v in g:
                     vertexID = v.getVertexID()
                     writeSuperBlockPathInformationVertex(g, vertexID, f)   

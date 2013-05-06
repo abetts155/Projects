@@ -15,7 +15,7 @@ class SuperBlockGraph (DirectedGraph):
         self.__icfg  = icfg
         self._name   = icfg.getName()
         self.__lnt   = lnt
-        self.__partitiong = SuperBlockPartitionGraph()
+        self.__pathg = SuperBlockPathInformationGraph()
         self.__headerToSuperBlockSubgraph = {}
         self.__headerToRootSuperBlock     = {}
         self.__headerToPartitionVertices  = {}
@@ -147,9 +147,9 @@ class SuperBlockGraph (DirectedGraph):
             for succID in rootv.getSuccessorIDs():
                 succv = self.getVertex(succID)
                 for monitoredv in supervToSupervs[succv]:
-                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    nextVertexID = self.__pathg.getNextVertexID() 
                     partitionv   = SuperBlockPartition(nextVertexID, set([monitoredv]))
-                    self.__partitiong.vertices[nextVertexID] = partitionv
+                    self.__pathg.vertices[nextVertexID] = partitionv
                     self.__headerToPartitionVertices[headerv.getHeaderID()].add(partitionv)
         else:
             branchPartitions = rootv.getBranchPartitions()
@@ -157,17 +157,17 @@ class SuperBlockGraph (DirectedGraph):
             for vertexID in reversed(dfs.getPostorder()):
                 if self.__lnt.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
                     for partitionv in self.__headerToPartitionVertices[vertexID]:
-                        self.__partitiong.partitionOrder.append(partitionv)
+                        self.__pathg.partitionOrder.append(partitionv)
                 if vertexID in branchPartitions:
-                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    nextVertexID = self.__pathg.getNextVertexID() 
                     theSet       = set([])
                     for supere in branchPartitions[vertexID]:
                         superv = self.getVertex(supere.getVertexID())
                         theSet.update(supervToSupervs[superv])
                     partitionv   = SuperBlockPartition(nextVertexID, theSet)
-                    self.__partitiong.vertices[nextVertexID] = partitionv
-                    self.__partitiong.partitionOrder.append(partitionv)
-            for partitionv in self.__partitiong:
+                    self.__pathg.vertices[nextVertexID] = partitionv
+                    self.__pathg.partitionOrder.append(partitionv)
+            for partitionv in self.__pathg:
                 for superv in partitionv.runs.keys():
                     if superv.getBasicBlockIDs():
                         self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
@@ -179,14 +179,17 @@ class SuperBlockGraph (DirectedGraph):
         
     def computePathInformation (self, superBlockToRuns, allRuns):
         for superv, runs in superBlockToRuns.iteritems():
-            partitionv = self.__partitiong.getPartitionVertex(superv)
+            partitionv = self.__pathg.getPathInformationVertex(superv)
             partitionv.runs[superv].update(runs)
-        
+            if partitionv.runs[superv] == allRuns:
+                self.__pathg.alwaysSuperBlocks.add(superv)
+                Debug.debugMessage("%s always executes" % superv.getVertexID(), 1)
+                    
         # The partition size 
-        for subsetSize in xrange(2, len(self.__partitiong.partitionOrder)+1):
+        for subsetSize in xrange(2, len(self.__pathg.partitionOrder)+1):
             Debug.debugMessage("Generating subsets of size %d" % subsetSize, 1)
             # Get every partition of size r
-            for partitionTuple in set(itertools.combinations(self.__partitiong.partitionOrder, subsetSize)):
+            for partitionTuple in set(itertools.combinations(self.__pathg.partitionOrder, subsetSize)):
                 theSets = []
                 for i in xrange(0, subsetSize):
                     theSets.append(partitionTuple[i].runs.keys())
@@ -196,12 +199,12 @@ class SuperBlockGraph (DirectedGraph):
                         if superv in superBlockToRuns:
                             runs = runs.intersection(superBlockToRuns[superv])
                     if not runs:
-                        self.__partitiong.exclusiveTuples.add(cartProduct)
+                        self.__pathg.exclusiveTuples.add(cartProduct)
                         print "%s is MUTUALLY EXCLUSIVE" % ', '.join(str(superv.getVertexID()) for superv in cartProduct)
-                    nextVertexID = self.__partitiong.getNextVertexID() 
+                    nextVertexID = self.__pathg.getNextVertexID() 
                     partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
-                    self.__partitiong.vertices[nextVertexID] = partitionv
-        UDrawGraph.makeUdrawFile(self.__partitiong, "%s.%s" % (self.getName(), "partitiong"))
+                    self.__pathg.vertices[nextVertexID] = partitionv
+        UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "partitiong"))
                 
     def isMonitoredBasicBlock (self, basicBlockID):
         return basicBlockID in self.__monitoredBasicBlocks
@@ -232,16 +235,17 @@ class SuperBlockGraph (DirectedGraph):
         assert self.__rootSuperv, "Root super block has not been set"
         return self.__rootSuperv
     
-    def getPartitionGraph (self):
-        return self.__partitiong
+    def getSuperBlockPathInformationGraph (self):
+        return self.__pathg
     
-class SuperBlockPartitionGraph (DirectedGraph):
+class SuperBlockPathInformationGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
         self.partitionOrder = []
         self.exclusiveTuples = set([])
+        self.alwaysSuperBlocks = set([])
         
-    def getPartitionVertex (self, superv):
+    def getPathInformationVertex (self, superv):
         for partitionv in self:
             if superv in partitionv.runs.keys():
                 return partitionv
