@@ -1,4 +1,4 @@
-import Debug
+import Debug, ARM
 import random, os, hashlib, shlex
 
 newTrace = "=>"
@@ -87,19 +87,41 @@ class GenerateTraces:
         self.__currentv = self.__currentICFG.getVertex(succID)
         self.__vertexID = self.__currentv.getVertexID()
         
-class ParseTraces:
+class SuperBlockPathInformation:
+    def __init__ (self, program):
+        self._program = program
+        self._allruns = set([])
+        self._superBlockCFGInformation = {}
+        for cfg in program.getICFGs():
+            superg = program.getSuperBlockCFG(cfg.getName())
+            self._superBlockCFGInformation[superg] = {}
+    
+    def _analyseSuperBlock (self, superg, predID, succID, runID):
+        if superg.isMonitoredBasicBlock(succID):
+            superv = superg.getMonitoredBasicBlockSuperBlock(succID)
+            if superv not in self._superBlockCFGInformation[superg]:
+                self._superBlockCFGInformation[superg][superv] = set([])
+            self._superBlockCFGInformation[superg][superv].add(runID)
+        elif superg.isMonitoredEdge(predID, succID):
+            superv = superg.getMonitoredEdgeSuperBlock(predID, succID)
+            if superv not in self._superBlockCFGInformation[superg]:
+                self._superBlockCFGInformation[superg][superv] = set([])
+            self._superBlockCFGInformation[superg][superv].add(runID)
+    
+    def _computePathInformation (self):
+        for superg in self._program.getSuperBlockCFGs():
+            superg.computePathInformation(self._superBlockCFGInformation[superg], self._allruns)
+        
+class ParseTraces (SuperBlockPathInformation):
     def __init__ (self, basename, tracefile, program):
-        self.__program = program
-        self.__allruns = set([])
-        self.__superBlockCFGInformation = {}
-        self.__callg   = self.__program.getCallGraph()
+        SuperBlockPathInformation.__init__(self, program)
+        self.__callg   = self._program.getCallGraph()
         self.__rootv   = self.__callg.getVertex(self.__callg.getRootID())
         self.__bbToCFG = {}
         self.__verifyMagicNumber(basename, tracefile)
         self.__initialise()
         self.__parse(tracefile)
-        for superg in self.__program.getSuperBlockCFGs():
-            superg.computePathInformation(self.__superBlockCFGInformation[superg], self.__allruns)            
+        self.__computePathInformation()          
                     
     def __verifyMagicNumber (self, basename, tracefile):
         magicNumber = hashlib.sha1(basename).hexdigest()
@@ -110,21 +132,19 @@ class ParseTraces:
             assert fileMagicNumber == magicNumber, "The magic number of the trace file does not compute"
     
     def __initialise (self):
-        for icfg in self.__program.getICFGs():
+        for icfg in self._program.getICFGs():
             for v in icfg:
                 self.__bbToCFG[v.getVertexID()] = icfg
-            superg = self.__program.getSuperBlockCFG(icfg.getName())
-            self.__superBlockCFGInformation[superg] = {}
     
     def __parse (self, tracefile):
-        run = 0
+        runID = 0
         with open(tracefile, 'r') as f:
         # Move past the magic number line
             next(f)
             for line in f:
                 if line.startswith(newTrace):
-                    run += 1
-                    self.__allruns.add(run)
+                    runID += 1
+                    self._allruns.add(runID)
                     self.__resetToRoot()
                 elif line.startswith(endTrace):
                     pass
@@ -134,16 +154,7 @@ class ParseTraces:
                     for lex in lexemes:
                         nextID = int(lex)
                         if self.__currentCFG.hasVertex(nextID):
-                            if self.__currentSuperg.isMonitoredBasicBlock(nextID):
-                                superv = self.__currentSuperg.getMonitoredBasicBlockSuperBlock(nextID)
-                                if superv not in self.__superBlockCFGInformation[self.__currentSuperg]:
-                                    self.__superBlockCFGInformation[self.__currentSuperg][superv] = set([])
-                                self.__superBlockCFGInformation[self.__currentSuperg][superv].add(run)
-                            elif self.__currentSuperg.isMonitoredEdge(lastID, nextID):
-                                superv = self.__currentSuperg.getMonitoredEdgeSuperBlock(lastID, nextID)
-                                if superv not in self.__superBlockCFGInformation[self.__currentSuperg]:
-                                    self.__superBlockCFGInformation[self.__currentSuperg][superv] = set([])
-                                self.__superBlockCFGInformation[self.__currentSuperg][superv].add(run)
+                            self._analyseSuperBlock(self.__currentSuperg, lastID, nextID, runID)
                         else:
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID
@@ -151,8 +162,8 @@ class ParseTraces:
     def __resetToRoot (self):
         self.__callStack     = []
         self.__currentCallv  = self.__rootv
-        self.__currentCFG    = self.__program.getICFG(self.__rootv.getName())
-        self.__currentSuperg = self.__program.getSuperBlockCFG(self.__rootv.getName())
+        self.__currentCFG    = self._program.getICFG(self.__rootv.getName())
+        self.__currentSuperg = self._program.getSuperBlockCFG(self.__rootv.getName())
         
     def __handleCallAndReturn (self, lastID, nextID):
         assert lastID, "The last ID was not set"
@@ -164,6 +175,103 @@ class ParseTraces:
             self.__callStack.append(callerFrame)
             self.__currentCFG    = self.__bbToCFG[nextID]
             self.__currentCallv  = self.__callg.getVertexWithName(self.__currentCFG.getName())
-            self.__currentSuperg = self.__program.getSuperBlockCFG(self.__currentCFG.getName())
+            self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+
+class Gem5Parser (SuperBlockPathInformation):
+    def __init__ (self, program, traceFiles):
+        SuperBlockPathInformation.__init__(self, program)
+        self.__firstAddr        = None
+        self.__lastAddr         = None
+        self.__rootCFG          = None
+        self.__rootsuperg       = None
+        self.__currentCFG       = None
+        self.__predBB           = None
+        self.__currentBB        = None
+        self.__currentSuperg    = None
+        self.__stack            = []
+        self.__buildAddressInformation()
+        self.__parse(traceFiles)
+        self._computePathInformation()
+        
+    def __buildAddressInformation (self):
+        self.__rootCFG    = self._program.getRootICFG()
+        self.__rootsuperg = self._program.getRootSuperBlockCFG()
+        self.__firstAddr  = self.__rootCFG.getFirstInstruction().getAddress()
+        lastbb            = self.__rootCFG.getVertex(self.__rootCFG.getExitID())
+        for instruction in reversed(lastbb.getInstructions()):
+            if instruction.getOp() not in ARM.ARMInstructionSet.Nops:
+                self.__lastAddr = instruction.getAddress()
+                break
+        assert self.__lastAddr, "Unable to find last address"
+        Debug.debugMessage("Start address of root function '%s' is %s" % (self.__rootCFG.getName(), hex(self.__firstAddr)), 1)    
+        Debug.debugMessage("End address of root function '%s' is %s" % (self.__rootCFG.getName(), hex(self.__lastAddr)), 1)
+        
+    def __parse (self, traceFiles):
+        runID = 0
+        for filename in traceFiles:
+            parsing = False 
+            with open(filename, 'r') as f:
+                runID += 1
+                self._allruns.add(runID)
+                Debug.debugMessage("Analysing gem5 trace file '%s'" % filename, 1)
+                for line in f:
+                    lexemes  = shlex.split(line)
+                    PCLexeme = lexemes[-1]
+                    assert len(PCLexeme) == 11, "Unable to parse program counter %s" % PCLexeme
+                    try:
+                        PCLexeme = PCLexeme[5:]
+                        PC       = int(PCLexeme, 16)
+                        if PC == self.__firstAddr:
+                            parsing              = True
+                            self.__currentCFG    = self.__rootCFG
+                            self.__predBB        = None
+                            self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+                            self.__currentSuperg = self.__rootsuperg 
+                        if parsing:
+                            self.__parseAddress (PC, runID)
+                        if PC == self.__lastAddr:
+                            parsing              = False
+                            self.__currentCFG    = None
+                            self.__predBB        = None
+                            self.__currentBB     = None
+                            self.__currentSuperg = None
+                    except ValueError:
+                        Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
+
+    def __getCFGWithAddress (self, address):
+        for cfg in self._program.getICFGs():
+            firstAddress = cfg.getFirstInstruction().getAddress()
+            if firstAddress == address:
+                return cfg
+        assert False, "Unable to find CFG with start address %s" % hex(address)
+    
+    def __parseAddress (self, address, runID):
+        oldBB = self.__currentBB
+        if not self.__currentBB.hasAddress(address):
+            for succID in self.__currentBB .getSuccessorIDs():
+                succv = self.__currentCFG.getVertex(succID)
+                if succv.hasAddress(address):
+                    self.__predBB    = self.__currentBB
+                    self.__currentBB = succv
+                    break
+            # Unable to find a successor of the current basic block with that address
+            # It must be a call or a return
+            if oldBB == self.__currentBB:
+                if self.__currentCFG.getExitID() ==  self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
+                    (self.__currentCFG, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
+                else:
+                    callerFrame = (self.__currentCFG, self.__currentBB, self.__currentSuperg)
+                    self.__stack.append(callerFrame)
+                    self.__currentCFG    = self.__getCFGWithAddress(address)
+                    self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+                    self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+                    assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
+        if not self.__predBB:
+            predID = self.__currentBB.getVertexID()
+        else:
+            predID = self.__predBB.getVertexID()
+        self._analyseSuperBlock(self.__currentSuperg, predID, self.__currentBB.getVertexID(), runID)     
+        Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(),  self.__currentBB.getVertexID()), 100)    
+
         
         

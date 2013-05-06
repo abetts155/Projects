@@ -30,7 +30,6 @@ bubblesort (int ARRAY_SIZE, int a[])
 {
   int i, j, tmp;
   int swapped = 0;
-  assert (1);
   for (i = 0; i < ARRAY_SIZE - 1; i++)
   {
     swapped = 0;

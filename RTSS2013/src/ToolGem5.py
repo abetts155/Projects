@@ -231,13 +231,14 @@ def commandLine ():
     return cmdline.parse_args()
 
 if __name__ == "__main__":   
-    import Utils
-    from ParseGem5Trace import SuperBlockParser
+    import Utils, Traces
+    import os
 
-    args               = commandLine()
-    Debug.debug        = args.debug
-    Debug.verbose      = args.verbose
-    UDrawGraph.enabled = args.udraw
+    args                = commandLine()
+    Debug.debug         = args.debug
+    Debug.verbose       = args.verbose
+    UDrawGraph.enabled  = args.udraw
+    UDrawGraph.basename = os.path.splitext(args.program)[0]
     
     if args.clean:
         Utils.clean()
@@ -255,5 +256,5 @@ if __name__ == "__main__":
     Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     Debug.verboseMessage("Parsing gem5 traces")
-    SuperBlockParser(program, gem5Traces)
+    Traces.Gem5Parser(program, gem5Traces)
     
