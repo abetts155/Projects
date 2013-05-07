@@ -6,6 +6,61 @@ from copy import deepcopy
 import Debug
 import UDrawGraph
 
+class ContextGraph (DirectedGraph):
+    def __init__ (self, callg):
+        DirectedGraph.__init__(self)
+        self.__rootID = None
+        self.__subprogramToContexts = {}
+        self.__subprogramToUnused   = {}
+        dfs = DepthFirstSearch(callg, callg.getRootID())
+        self.__addVertices(callg, dfs)
+        self.__addEdges(callg, dfs)
+        self.__setRootID()
+        
+    def __addVertices (self, callg, dfs):
+        for functionID in reversed(dfs.getPostorder()):
+            callv = callg.getVertex(functionID)
+            self.__subprogramToContexts[functionID] = []
+            self.__subprogramToUnused[functionID]   = []
+            if functionID == callg.getRootID():
+                self.__addVertex(functionID, callv.getName())
+            else:
+                for prede in callv.getPredecessorEdges():
+                    predID = prede.getVertexID()
+                    numOfVertices = prede.numberOfCallSites() * len(self.__subprogramToContexts[predID])
+                    for i in range(1, numOfVertices+1):
+                        self.__addVertex(functionID, callv.getName())
+    
+    def __addVertex (self, functionID, functionName):
+        contextID = self.getNextVertexID()
+        contextv  = CallGraphVertex(contextID, functionName)
+        self.vertices[contextID] = contextv
+        self.__subprogramToContexts[functionID].append(contextv)
+        self.__subprogramToUnused[functionID].append(contextv)
+    
+    def __addEdges (self, callg, dfs):
+        for callerID in reversed(dfs.getPostorder()):
+            callv = callg.getVertex(callerID)
+            for callerv in self.__subprogramToContexts[callerID]:
+                for succe in callv.getSuccessorEdges():
+                    calleeID = succe.getVertexID()
+                    for callSiteID in succe.getCallSites():
+                        calleev = self.__subprogramToUnused[calleeID].pop()
+                        callerv.addSuccessor(calleev.getVertexID(), callSiteID)            
+                        calleev.addPredecessor(callerv.getVertexID(), callSiteID)
+    
+    def __setRootID (self):
+        noPreds = []
+        for v in self:
+            if v.numberOfPredecessors() == 0:
+                noPreds.append(v)
+        print noPreds
+        self.__rootID = noPreds[0].getVertexID()
+    
+    def getRootID (self):
+        assert self.__rootID != dummyVertexID, "Root vertex of call graph has not been set"
+        return self.__rootID
+
 class CallGraph (DirectedGraph):   
     def __init__ (self):
         DirectedGraph.__init__(self)
@@ -81,6 +136,7 @@ class CallGraph (DirectedGraph):
 class Program():
     def __init__(self):
         self.__callg          = CallGraph()
+        self.__contextg       = None
         self.__archivedICFGS  = {}
         self.__ICFGs          = {}
         self.__LNTs           = {}
@@ -89,6 +145,7 @@ class Program():
         
     def generateUDrawFiles (self):
         UDrawGraph.makeUdrawFile(self.__callg, "callg")
+        UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg")
         for functionName, cfg in self.__ICFGs.iteritems():
             UDrawGraph.makeUdrawFile(cfg, "%s.%s" % (functionName, "cfg"))
         for functionName, lnt in self.__LNTs.iteritems():
@@ -107,6 +164,11 @@ class Program():
         
     def getCallGraph (self):
         return self.__callg
+
+    def getContextGraph (self):
+        if not self.__contextg:
+            self.__contextg = ContextGraph(self.__callg)
+        return self.__contextg
        
     def addICFG (self, icfg, functionName):
         assert functionName not in self.__ICFGs, "Trying to add duplicate ICFG for function '%s'" % functionName

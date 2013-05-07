@@ -196,7 +196,9 @@ class SuperBlockGraph (DirectedGraph):
                 theSets = []
                 for i in xrange(0, subsetSize):
                     theSets.append(partitionTuple[i].runs.keys())
-                for cartProduct in itertools.product(*theSets):
+                cartProducts = set(itertools.product(*theSets))
+                Debug.debugMessage("There are %d cross products" % len(cartProducts))
+                for cartProduct in cartProducts:
                     runs = allRuns
                     for superv in cartProduct:
                         if superv in superBlockToRuns:

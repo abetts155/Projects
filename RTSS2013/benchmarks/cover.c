@@ -8,7 +8,7 @@
  * For this program, a one-element test vector is expected.
  */
 
-void
+int
 cover (int c)
 {
   int i;
@@ -612,6 +612,8 @@ cover (int c)
         break;
     }
   }
+
+  return c;
 }
 
 int
@@ -628,7 +630,7 @@ main (int argc, char *argv[])
   }
 
   cnt = atoi (argv[1]);
-  cover (cnt);
+  printf("%d", cover (cnt));
 
   return 0;
 }

@@ -100,7 +100,7 @@ def compileProgram (program):
         for flag in args.flags:
             extraFlags += "-%s " % flag
     binary     = program[:-2]
-    cmd        = "%s -fno-stack-protector -static %s -o %s %s" % (armGCC, program, binary, extraFlags)
+    cmd        = "%s -fno-stack-protector -static %s %s -o %s" % (armGCC, extraFlags, program, binary)
     Debug.debugMessage("Compiling with command '%s'" % cmd, 1)
     proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()
@@ -267,6 +267,7 @@ if __name__ == "__main__":
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
     program.inlineCalls()
+    program.generateUDrawFiles()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
@@ -279,6 +280,5 @@ if __name__ == "__main__":
         Calculations.WCETCalculation(program, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
-    program.generateUDrawFiles()
     
     

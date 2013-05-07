@@ -71,7 +71,8 @@ if __name__ == "__main__":
     basename = os.path.splitext(filename)[0]
     UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
-    program.inlineCalls()
+    program.generateUDrawFiles()
+    #program.inlineCalls()
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()

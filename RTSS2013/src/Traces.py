@@ -25,7 +25,6 @@ class GenerateTraces:
         # To keep trace of the number of function calls
         self.__numberOfCalls = 0
         callg = self.__program.getCallGraph()
-        print callg
         rootv = callg.getVertex(callg.getRootID())
         self.__currentCallv = rootv
         self.__currentICFG  = self.__program.getICFG(rootv.getName())
@@ -94,7 +93,6 @@ class SuperBlockPathInformation:
         self._allruns = set([])
         self._superBlockCFGInformation = {}
         for cfg in program.getICFGs():
-            print cfg.getName()
             superg = program.getSuperBlockCFG(cfg.getName())
             self._superBlockCFGInformation[superg] = {}
     
@@ -187,6 +185,7 @@ class Gem5Parser (SuperBlockPathInformation):
         self.__rootCFG          = None
         self.__rootsuperg       = None
         self.__currentCFG       = None
+        self.__currentLNT       = None
         self.__predBB           = None
         self.__currentBB        = None
         self.__currentSuperg    = None
@@ -197,6 +196,7 @@ class Gem5Parser (SuperBlockPathInformation):
         
     def __buildAddressInformation (self):
         self.__rootCFG    = self._program.getRootICFG()
+        self.__rootLNT    = self._program.getLNT(self.__rootCFG.getName())
         self.__rootsuperg = self._program.getRootSuperBlockCFG()
         self.__firstAddr  = self.__rootCFG.getFirstInstruction().getAddress()
         lastbb            = self.__rootCFG.getVertex(self.__rootCFG.getExitID())
@@ -226,6 +226,7 @@ class Gem5Parser (SuperBlockPathInformation):
                         if PC == self.__firstAddr:
                             parsing              = True
                             self.__currentCFG    = self.__rootCFG
+                            self.__currentLNT    = self.__rootLNT
                             self.__predBB        = None
                             self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
                             self.__currentSuperg = self.__rootsuperg 
@@ -234,6 +235,7 @@ class Gem5Parser (SuperBlockPathInformation):
                         if PC == self.__lastAddr:
                             parsing              = False
                             self.__currentCFG    = None
+                            self.__currentLNT    = None
                             self.__predBB        = None
                             self.__currentBB     = None
                             self.__currentSuperg = None
@@ -260,11 +262,12 @@ class Gem5Parser (SuperBlockPathInformation):
             # It must be a call or a return
             if oldBB == self.__currentBB:
                 if self.__currentCFG.getExitID() ==  self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
-                    (self.__currentCFG, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
+                    (self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
                 else:
-                    callerFrame = (self.__currentCFG, self.__currentBB, self.__currentSuperg)
+                    callerFrame = (self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg)
                     self.__stack.append(callerFrame)
                     self.__currentCFG    = self.__getCFGWithAddress(address)
+                    self.__currentLNT    = self._program.getLNT(self.__currentCFG.getName())
                     self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
                     self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
                     assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
@@ -272,8 +275,9 @@ class Gem5Parser (SuperBlockPathInformation):
                 self._analyseSuperBlock(self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
             else:
                 self._analyseSuperBlock(self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
-            
-            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(),  self.__currentBB.getVertexID()), 10)    
+            if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
+                pass
+            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
 
         
         

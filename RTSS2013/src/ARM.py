@@ -1,4 +1,4 @@
-import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils, Trees
+import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils
 import re, shlex
 
 debugLevel = 20
@@ -8,7 +8,7 @@ class ARMInstructionSet:
     PCRegister         = 'pc'
     Call               = 'bl'
     UnconditionalJumps = ['b', 'b.n', 'b.w']
-    LoadInstructions   = ['ldr', 'ldr.n', 'ldr.w']
+    LoadInstructions   = ['ldr', 'ldr.n', 'ldr.w', 'tbh', 'tbb']
     Branches           = ['b',
                           'bl',
                           'bcc',
@@ -113,7 +113,7 @@ def extractInstructions (filename):
                     functionToJumpTableBasicBlocks[currentFunction]  = []
                 elif re.match(r'\s*[0-9a-fA-F]+:.*', line):
                     # Ignore directives reserving space for data
-                    if '.word' not in line:                  
+                    if '.word' not in line and '.short' not in line and '.byte' not in line:                  
                         lexemes     = shlex.split(line.strip())
                         instruction = getInstruction(lexemes)
                         functionToInstructions[currentFunction].append(instruction)
@@ -169,31 +169,32 @@ def isJumpTableBranch (instruction):
     if op in ARMInstructionSet.LoadInstructions: 
         fields      = instruction.getInstructionFields()
         destination = fields[1] 
-        if re.match(r'%s' % ARMInstructionSet.PCRegister, destination):
+        if re.match(r'.*%s.*' % ARMInstructionSet.PCRegister, destination):
             return True
     return False
 
-def getAddressFromDirectiveLine (line):
-    lexemes = shlex.split(line.strip())
-    address = int(lexemes[1], 16)
-    return address
+def parseDirectiveLine (line):
+    lexemes       = shlex.split(line.strip())
+    directiveAddr = int(lexemes[0][:-1], 16)
+    value         = int(lexemes[1], 16)
+    return directiveAddr, value
 
 def identifyJumpTableTargets (functions):
     functionToJumpTableTargets = {}
     for functionName in functions:
         Debug.debugMessage("Computing jump table targets in '%s'" % functionName, debugLevel)
-        jumpTableBranches                        = set([])
+        jumpTableBranches                        = []
         functionToJumpTableTargets[functionName] = set([])
         # First scan the instructions looking for change of PC through explicit load
         for instruction in functionToInstructions[functionName]:
             if isJumpTableBranch(instruction):
-                jumpTableBranches.add(instruction)
+                jumpTableBranches.append(instruction)
         if jumpTableBranches:
             for line in functionToDirectives[functionName]:
                 # We minus one from the address here because the jump table address in the disassembly
                 # always appears one byte away from the actual address
-                address = getAddressFromDirectiveLine(line) - 1
-                functionToJumpTableTargets[functionName].add(address)
+                directiveAddr, value = parseDirectiveLine(line)
+                functionToJumpTableTargets[functionName].add(value - 1)
         else:
             if functionToDirectives[functionName]:
                 Debug.warningMessage("Found directives in %s but no jump table instructions" % functionName)
@@ -260,6 +261,7 @@ def identifyBasicBlocks (functions):
             
 def addJumpTableEdges (functionToJumpTableTargets, functionName, icfg):
     for jumpTableTarget in functionToJumpTableTargets[functionName]:
+        print jumpTableTarget
         succv          = icfg.getVertexWithAddress(jumpTableTarget)
         predv          = None
         highestAddress = 0

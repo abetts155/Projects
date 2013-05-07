@@ -89,7 +89,7 @@ def makeUdrawFile (g, fileNamePrefix):
                 for v in g:
                     vertexID = v.getVertexID()
                     writeSuperBlockPathInformationVertex(g, vertexID, f)   
-            elif isinstance(g, Programs.CallGraph):
+            elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
                     vertexID = v.getVertexID()

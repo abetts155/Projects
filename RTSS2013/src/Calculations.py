@@ -462,8 +462,10 @@ class CreateCFGILP (ILP):
                                 constraint = LpSolve.getVertexVariable(treev.getHeaderID())
                                 constraint += LpSolve.ltOrEqual
                                 num = 1
+                                lowerBound = len(lnt.getLoopBody(headerID))
+                                upperBound = random.randint(lowerBound+5, lowerBound+25)
                                 for edge in forwardPredIDs:
-                                    constraint += "%d " % (random.randint(5,25))
+                                    constraint += "%d " % upperBound
                                     constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
                                     if num < len(forwardPredIDs):
                                         constraint += LpSolve.plus
