@@ -239,7 +239,7 @@ class CallGraphVertex (Vertex):
         return vertexID in self.__callSiteSuccessors
     
     def __str__ (self):
-        return "%s (vertex id=%d)" % (self.__name, self._vertexID)
+        return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):

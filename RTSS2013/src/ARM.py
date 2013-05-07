@@ -1,4 +1,4 @@
-import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils
+import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils, Trees
 import re, shlex
 
 debugLevel = 20
@@ -287,6 +287,7 @@ def addEdges (functions, functionToJumpTableTargets):
                 if instruction.getOp() == ARMInstructionSet.Call:
                     instructionFields = instruction.getInstructionFields()
                     calleeName        = getCalleeName(instructionFields)
+                    icfg.addCallSite(v.getVertexID(), calleeName)
                     program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
                 elif instruction.getOp() in ARMInstructionSet.UnconditionalJumps:
@@ -297,6 +298,7 @@ def addEdges (functions, functionToJumpTableTargets):
                         icfg.addEdge(v.getVertexID(), succv.getVertexID())
                     else:
                         calleeName = startAddressToFunction[jumpAddress]
+                        icfg.addCallSite(v.getVertexID(), calleeName)
                         program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                         predID = v.getVertexID()
                 elif instruction.getOp() in ARMInstructionSet.Branches:
@@ -307,6 +309,7 @@ def addEdges (functions, functionToJumpTableTargets):
                         icfg.addEdge(v.getVertexID(), succv.getVertexID())
                     else:
                         calleeName = getCalleeName(instructionFields)
+                        icfg.addCallSite(v.getVertexID(), calleeName)
                         program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
                     predID = v.getVertexID()
                 elif v in functionToJumpTableBasicBlocks[functionName]:
@@ -330,7 +333,7 @@ def generateInternalFile (filename):
                 # Write out successors but only if this is not the exit vertex
                 if vertexID != icfg.getExitID():
                     counter  = v.numberOfSuccessors()
-                    if program.getCallGraph().isCallSite(vertexID):
+                    if icfg.isCallSite(vertexID):
                         counter += 1
                     f.write("%s " % ParseProgramFile.successorsIndicator)
                     for succID in v.getSuccessorIDs():
@@ -338,10 +341,10 @@ def generateInternalFile (filename):
                         if counter > 1:
                             f.write(", ")
                         counter -= 1
-                if program.getCallGraph().isCallSite(vertexID):
-                    callNames = program.getCallGraph().getCallEdgeNames(vertexID)
-                    assert callNames[0] == functionName, "The function name '%s' of the ICFG and the caller name '%s' do not match" % (functionName, callNames[0])
-                    f.write("%s" % callNames[1])
+                if icfg.isCallSite(vertexID):
+                    calleeName = icfg.getCalleeName(vertexID)
+                    assert calleeName != functionName, "The caller and callee names '%s' match at call site %d" % (functionName, calleeName, vertexID)
+                    f.write("%s" % calleeName)
                 f.write("\n")
                 f.write("%s\n" % ParseProgramFile.instructionsIndicator)
                 for instruction in v.getInstructions():
@@ -353,6 +356,7 @@ def generateInternalFile (filename):
             f.write("\n")
     
 def readARMDisassembly (filename, rootFunction):
+    global newVertexID
     extractInstructions(filename)
     functions = identifyCallGraph(rootFunction)
     functionToJumpTableTargets = identifyJumpTableTargets(functions)
@@ -365,7 +369,7 @@ def readARMDisassembly (filename, rootFunction):
         Debug.debugMessage("Setting entry and exit in '%s'" % icfg.getName(), debugLevel)
         icfg.setEntryID()
         icfg.setExitID()
-        icfg.addExitEntryEdge()
+    program.removeProblematicFunctions()
     # Dump program to file
     generateInternalFile(filename)
     return program

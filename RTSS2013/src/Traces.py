@@ -93,6 +93,7 @@ class SuperBlockPathInformation:
         self._allruns = set([])
         self._superBlockCFGInformation = {}
         for cfg in program.getICFGs():
+            print cfg.getName()
             superg = program.getSuperBlockCFG(cfg.getName())
             self._superBlockCFGInformation[superg] = {}
     

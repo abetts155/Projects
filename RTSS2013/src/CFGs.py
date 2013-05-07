@@ -1,5 +1,5 @@
 from DirectedGraphs import FlowGraph, DirectedGraph
-from Vertices import BasicBlock, Ipoint, dummyVertexID, CFGEdge
+from Vertices import BasicBlock, Ipoint, dummyVertexID
 import Debug
 import copy
 
@@ -24,7 +24,23 @@ class CFG (FlowGraph):
     def __init__ (self):
         FlowGraph.__init__(self)
         self.__addressToVertex = {}
+        self.__callSites = {}
         
+    def addCallSite (self, vertexID, calleeName):
+        assert vertexID in self.vertices, "Vertex %d does not belong to the CFG of '%s'" % (vertexID, self._name)
+        self.__callSites[vertexID] = calleeName
+    
+    def isCallSite (self, vertexID):
+        return vertexID in self.__callSites
+    
+    def removeCallSite (self, vertexID):
+        assert vertexID in self.__callSites, "Vertex %d is not a call site of '%s'" % (vertexID, self._name)
+        del self.__callSites[vertexID]
+        
+    def getCalleeName (self, vertexID):
+        assert vertexID in self.__callSites, "Vertex %d is not a call site of '%s'" % (vertexID, self._name)
+        return self.__callSites[vertexID]
+    
     def getReverseCFG (self):
         reverseg = CFG() 
         if isinstance(self, ICFG):
@@ -120,12 +136,12 @@ class CFG (FlowGraph):
             self._exitID = exitID
             
     def addExitEntryEdge (self):
-        assert self._exitID != dummyVertexID, "Exit ID not set"
-        entryv = self.getVertex(self._entryID)
-        exitv = self.getVertex(self._exitID)
-        entryv.addPredecessor(self._exitID)
-        exitv.addSuccessor(self._entryID)
-        
+        if self._exitID != dummyVertexID:
+            entryv = self.getVertex(self._entryID)
+            exitv = self.getVertex(self._exitID)
+            entryv.addPredecessor(self._exitID)
+            exitv.addSuccessor(self._entryID)
+            
     def getFirstInstruction (self):
         v = self.getVertex(self._entryID)
         return v.getFirstInstruction()

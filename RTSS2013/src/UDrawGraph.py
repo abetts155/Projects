@@ -158,7 +158,7 @@ def writeCallGraphVertex (callg, vertexID, f):
     v = callg.getVertex(vertexID)
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    f.write(setName(v.__str__()))
+    f.write(setName("%s (vertex id = %d)" % (v.getName(), vertexID)))
     if vertexID == callg.getRootID():
         f.write(setColor(COLOR.RED))
         f.write(setToolTip("Root"))

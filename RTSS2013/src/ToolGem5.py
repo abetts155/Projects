@@ -207,6 +207,12 @@ def commandLine ():
                           metavar="<INT>",
                           default=0)
     
+    cmdline.add_argument("--exclusive-size",
+                          action="store",
+                          type=int,
+                          help="size of subsets of mutually exclusive basic blocks to compute",
+                          metavar="<INT>")
+    
     cmdline.add_argument("-r",
                           "--root",
                           action="store",
@@ -237,7 +243,7 @@ def commandLine ():
     return cmdline.parse_args()
 
 if __name__ == "__main__":   
-    import Utils, Traces
+    import Utils, Traces, SuperBlocks
     import os
     
     args                = commandLine()
@@ -247,6 +253,9 @@ if __name__ == "__main__":
     Debug.verbose       = args.verbose
     UDrawGraph.enabled  = args.udraw
     UDrawGraph.basename = basename
+    
+    if args.exclusive_size:
+        SuperBlocks.exclusiveSetSize = args.exclusive_size
     
     if args.clean:
         Utils.clean()
@@ -258,6 +267,7 @@ if __name__ == "__main__":
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
     program.inlineCalls()
+    program.generateUDrawFiles()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
@@ -266,7 +276,8 @@ if __name__ == "__main__":
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     Debug.verboseMessage("Parsing gem5 traces")
     Traces.Gem5Parser(program, gem5Traces)
-    program.generateUDrawFiles()
     if args.calculation:
         Calculations.WCETCalculation(program, basepath, basename)
+    for superg in program.getSuperBlockCFGs():
+        superg.getSuperBlockPathInformationGraph().output()
     

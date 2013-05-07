@@ -1,7 +1,7 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
 from SuperBlocks import SuperBlockGraph
-from Trees import LoopNests
+from Trees import LoopNests, DepthFirstSearch
 from copy import deepcopy
 import Debug
 import UDrawGraph
@@ -11,7 +11,6 @@ class CallGraph (DirectedGraph):
         DirectedGraph.__init__(self)
         self.__rootID = dummyVertexID
         self.__functionNameToVertex = {}
-        self.__callSites = {}
         
     def addVertex (self, functionName):
         assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
@@ -30,6 +29,9 @@ class CallGraph (DirectedGraph):
         for predID in callv.getPredecessorIDs():
             self.removeEdge(predID, vertexID)
         DirectedGraph.removeVertex(self, vertexID)
+        
+    def hasVertexWithName (self, functionName):
+        return functionName in self.__functionNameToVertex
         
     def getVertexWithName (self, functionName):
         assert functionName in self.__functionNameToVertex, "Unable to find call graph vertex for function '%s'" % functionName
@@ -75,14 +77,6 @@ class CallGraph (DirectedGraph):
         succv = self.getVertexWithName(succName)
         predv.addSuccessor(succv.getVertexID(), callSiteID)            
         succv.addPredecessor(predv.getVertexID(), callSiteID)
-        self.__callSites[callSiteID] = (predName, succName)
-        
-    def isCallSite (self, vertexID):
-        return vertexID in self.__callSites
-    
-    def getCallEdgeNames (self, callSiteID):
-        assert callSiteID in self.__callSites, "Unable to find call information for call site %d" % callSiteID
-        return self.__callSites[callSiteID]
     
 class Program():
     def __init__(self):
@@ -155,43 +149,59 @@ class Program():
     def getSuperBlockCFGs (self):
         return self.__superblockcfgs.values().__iter__() 
     
-    def inlineCalls (self, inliningCapacity=None):
-        self.__inlineNonUniqueCalls(inliningCapacity)
-        self.__inlineUniqueCalls(inliningCapacity)
-        
-    def __inlineNonUniqueCalls (self, inliningCapacity):
-        for callv in self.__callg:
-            if callv.numberOfPredecessors() > 1:
-                for calle in callv.getPredecessorEdges():
-                    for callSiteID in calle.getCallSites():
-                        (callerName, calleeName) = self.__callg.getCallEdgeNames(callSiteID)
-                        callerICFG = self.getICFG(callerName)
-                        calleeICFG = self.getICFG(calleeName)
-                        if not inliningCapacity or callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
-                            Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
-                            self.__doInline(callerICFG, calleeICFG, callSiteID)
-                        else:
-                            Debug.debugMessage("NOT inlining '%s' into '%s' at call site %d because capacity exceeded" % (calleeName, callerName, callSiteID), 1)
-        
-    def __inlineUniqueCalls (self, inliningCapacity):
-        for callv in self.__callg:
-            if callv.numberOfPredecessors() == 1:
-                for calle in callv.getPredecessorEdges():
-                    if calle.numberOfCallSites() == 1:
-                        for callSiteID in calle.getCallSites():
-                            (callerName, calleeName) = self.__callg.getCallEdgeNames(callSiteID)
-                            callerICFG = self.getICFG(callerName)
-                            calleeICFG = self.getICFG(calleeName)
-                            if not inliningCapacity or callerICFG.numOfVertices() + calleeICFG.numOfVertices() < inliningCapacity:
-                                Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
-                                self.__doInline(callerICFG, calleeICFG, callSiteID)
-                                # Now archive the callee ICFG as it is no longer needed
-                                self.__archivedICFGS[calleeName] = calleeICFG
-                                del self.__ICFGs[calleeName]
-                                self.__callg.removeVertex(calleeName)
-                            else:
-                                Debug.debugMessage("NOT inlining '%s' into '%s' at call site %d because capacity exceeded" % (calleeName, callerName, callSiteID), 1)
-                    
+    def removeFunction (self, functionName):
+        if functionName in self.__ICFGs:
+            # Archive the ICFG as it is no longer needed
+            cfg = self.__ICFGs[functionName]
+            self.__archivedICFGS[functionName] = cfg
+            del self.__ICFGs[functionName]
+            for v in cfg:
+                vertexID = v.getVertexID()
+                if cfg.isCallSite(vertexID):
+                    cfg.removeCallSite(vertexID)
+        if self.__callg.hasVertexWithName(functionName):
+            self.__callg.removeVertex(functionName)
+            
+    def removeProblematicFunctions (self):
+        functions = set([])
+        for functionName, cfg in self.__ICFGs.iteritems():
+            exitID = cfg.getExitID()
+            if cfg.isCallSite(exitID) or cfg.getExitID() == dummyVertexID:
+                functions.add(functionName)
+        for functionName in functions:
+            # This check is essential as the function may have been removed in the meantime
+            if functionName in self.__ICFGs:
+                cfg = self.__ICFGs[functionName]
+                dfs = DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).getVertexID())
+                for vertexID in dfs.getPostorder():
+                    callv = self.__callg.getVertex(vertexID)
+                    self.removeFunction(callv.getName())
+    
+    def inlineCalls (self):
+        Debug.verboseMessage("Inlining to create single CFG")
+        rootv = self.__callg.getRootVertex()
+        dfs   = DepthFirstSearch(self.__callg, rootv.getVertexID())
+        for vertexID in dfs.getPostorder():
+            succv = self.__callg.getVertex(vertexID)
+            for calle in succv.getPredecessorEdges():
+                predID = calle.getVertexID()
+                predv  = self.__callg.getVertex(predID)
+                for callSiteID in calle.getCallSites():
+                    calleeName = succv.getName()
+                    calleeICFG = self.getICFG(calleeName)
+                    callerName = predv.getName()
+                    callerICFG = self.getICFG(callerName)
+                    Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
+                    self.__doInline(callerICFG, calleeICFG, callSiteID)
+                
+        for vertexID in dfs.getPostorder():
+            callv = self.__callg.getVertex(vertexID)
+            if callv != rootv:
+                self.removeFunction(callv.getName())
+            else:
+                cfg = self.__ICFGs[rootv.getName()]
+                cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
+
     def __doInline (self, callerICFG, calleeICFG, callSiteID):
         callSitev  = callerICFG.getVertex(callSiteID)
         assert callSitev.numberOfSuccessors() == 1, "The call site %d does not have one successor exactly" % callSiteID

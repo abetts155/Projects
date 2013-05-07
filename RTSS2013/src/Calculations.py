@@ -6,7 +6,6 @@ import os
 class WCETCalculation:
     def __init__ (self, program, basepath, basename):
         callg = program.getCallGraph()
-        print callg
         dfs   = DepthFirstSearch(callg, callg.getRootID())
         for vertexID in dfs.getPostorder():
             callv  = callg.getVertex(vertexID)
