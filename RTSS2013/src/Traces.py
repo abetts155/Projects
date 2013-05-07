@@ -25,6 +25,7 @@ class GenerateTraces:
         # To keep trace of the number of function calls
         self.__numberOfCalls = 0
         callg = self.__program.getCallGraph()
+        print callg
         rootv = callg.getVertex(callg.getRootID())
         self.__currentCallv = rootv
         self.__currentICFG  = self.__program.getICFG(rootv.getName())
@@ -55,7 +56,7 @@ class GenerateTraces:
                     self.__chooseSuccessorInICFG()
                 else:
                     self.__chooseNonLoopBackEdgeSuccessorInICFG()
-            elif self.__currentCallv.isCallSite(self.__vertexID):
+            elif self.__currentICFG.isCallSite(self.__vertexID):
                 # If the number of calls have been exceeded or we non-deterministically choose not to make the call here
                 # then select a successor in the current ICFG 
                 if self.__numberOfCalls > GenerateTraces.maxNumberOfCalls or not bool(random.getrandbits(1)):

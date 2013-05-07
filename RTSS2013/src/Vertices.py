@@ -211,7 +211,6 @@ class CallGraphVertex (Vertex):
     def __init__ (self, vertexID, name):
         Vertex.__init__(self, vertexID)
         self.__name = name
-        self.__callSiteSuccessors = {}
         
     def getName (self):
         return self.__name
@@ -229,14 +228,6 @@ class CallGraphVertex (Vertex):
             self._successors[succID] = e
         e = self._successors[succID]
         e.addCallSite(callSiteID)
-        self.__callSiteSuccessors[callSiteID] = e.getVertexID()
-        
-    def getSuccessorEgdeWithCallSiteID (self, callSiteID):
-        assert callSiteID in self.__callSiteSuccessors, "Unable to find call site %d in function '%s'" % (callSiteID, self.__name)
-        return self._successors[self.__callSiteSuccessors[callSiteID]]
-        
-    def isCallSite (self, vertexID):
-        return vertexID in self.__callSiteSuccessors
     
     def __str__ (self):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
