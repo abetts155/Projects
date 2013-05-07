@@ -32,13 +32,6 @@ def commandLine ():
                          help="do WCET calculation",
                          default=False)
     
-    cmdline.add_argument("-I",
-                         "--inlining-capacity",
-                         dest="inliningCapacity",
-                         type=int,
-                         help="inlining capacity beyond which the size of each CFG will not exceed",
-                         metavar="<INT>")
-    
     cmdline.add_argument("-t",
                          "--traces",
                          type=int,
@@ -68,8 +61,6 @@ if __name__ == "__main__":
     Debug.debug        = args.debug
     UDrawGraph.enabled = args.udraw
     
-    if args.inliningCapacity:
-        assert args.inliningCapacity > 0, "The inlining capacity must be a positive integer"            
     if args.clean:
         Utils.clean()
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
@@ -80,15 +71,18 @@ if __name__ == "__main__":
     basename = os.path.splitext(filename)[0]
     UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
-    program.inlineCalls(args.inliningCapacity)
+    program.inlineCalls()
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()
+        UDrawGraph.makeUdrawFile(icfg, "%s.cfg" % functionName)
         if icfg.getExitID() != Vertices.dummyVertexID:
             lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+            UDrawGraph.makeUdrawFile(lnt, "%s.lnt" % functionName)
             program.addLNT(lnt, functionName)
             superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
             program.addSuperBlockCFG(superg, functionName)
+            UDrawGraph.makeUdrawFile(superg, "%s.superg" % functionName)
         else:
             Debug.warningMessage("Not analysing function %s because it does not have an exit point set" % functionName)
     if args.traces:
@@ -100,6 +94,5 @@ if __name__ == "__main__":
         Traces.ParseTraces(basename, tracefile, program)
     if args.calculation:
         Calculations.WCETCalculation(program, basepath, basename)
-    program.generateUDrawFiles()
         
         

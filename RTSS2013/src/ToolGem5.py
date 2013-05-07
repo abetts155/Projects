@@ -267,7 +267,6 @@ if __name__ == "__main__":
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
     program.inlineCalls()
-    program.generateUDrawFiles()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
@@ -280,4 +279,6 @@ if __name__ == "__main__":
         Calculations.WCETCalculation(program, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
+    program.generateUDrawFiles()
+    
     

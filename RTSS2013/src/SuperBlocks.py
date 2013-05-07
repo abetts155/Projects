@@ -1,5 +1,6 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, SuperBlockUnion
+from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, SuperBlockUnion,\
+    CFGEdge
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
@@ -148,7 +149,9 @@ class SuperBlockGraph (DirectedGraph):
         branchPartitions = rootv.getBranchPartitions()
         dfs = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
         for vertexID in reversed(dfs.getPostorder()):
-            if self.__lnt.isLoopHeader(vertexID) and vertexID != headerv.getHeaderID():
+            v = forwardICFG.getVertex(vertexID)
+            if self.__lnt.isLoopHeader(vertexID) \
+            and vertexID != headerv.getHeaderID() and not isinstance(v, CFGEdge):
                 for partitionv in self.__headerToPartitionVertices[vertexID]:
                     self.__pathg.partitionOrder.append(partitionv)
             if vertexID in branchPartitions:
@@ -171,7 +174,8 @@ class SuperBlockGraph (DirectedGraph):
                         assert len(edges) == 1
                         edge = list(edges)[0]
                         self.__monitoredEdges[edge] = superv
-        
+            UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "partitiong"))
+          
     def computePathInformation (self, superBlockToRuns, allRuns):
         global exclusiveSetSize
         for superv, runs in superBlockToRuns.iteritems():
@@ -182,8 +186,8 @@ class SuperBlockGraph (DirectedGraph):
                 Debug.debugMessage("%s always executes" % superv.getVertexID(), 1)
                     
         # The size of subsets 
-        setSize = min(len(self.__pathg.partitionOrder)+1,exclusiveSetSize)
-        for subsetSize in xrange(2, setSize):
+        setSize = min(len(self.__pathg.partitionOrder),exclusiveSetSize)
+        for subsetSize in xrange(2, setSize+1):
             Debug.debugMessage("Generating subsets of size %d from set size of %d" % (subsetSize, setSize), 1)
             # Get every partition of size r
             theCombinations = set(itertools.combinations(self.__pathg.partitionOrder, subsetSize))
