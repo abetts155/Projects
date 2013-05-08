@@ -5,14 +5,17 @@ import os
 
 class WCETCalculation:
     def __init__ (self, program, basepath, basename):
-        callg = program.getCallGraph()
-        dfs   = DepthFirstSearch(callg, callg.getRootID())
+        self.__contextToWCET = {}
+        contextg = program.getContextGraph()
+        dfs      = DepthFirstSearch(contextg, contextg.getRootID())
         for vertexID in dfs.getPostorder():
-            callv  = callg.getVertex(vertexID)
-            lnt    = program.getLNT(callv.getName())
-            superg = program.getSuperBlockCFG(callv.getName())
-            cfg    = program.getICFG(callv.getName())
-            CreateCFGILP(basepath, basename, cfg, lnt, superg)
+            contextv     = contextg.getVertex(vertexID)
+            functionName = contextv.getName()
+            lnt          = program.getLNT(functionName)
+            superg       = program.getSuperBlockCFG(functionName)
+            cfg          = program.getICFG(functionName)
+            ilp          = CreateCFGILP(basepath, basename, contextv, cfg, lnt, superg)
+            self.__contextToWCET[contextv] = ilp._wcet
             #CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
             #TreeBasedCalculation(superg, lnt)
             
@@ -378,7 +381,7 @@ class CreateSuperBlockCFGILP (ILP):
         self.__constraints.append(constraint)
 
 class CreateCFGILP (ILP):
-    def __init__ (self, basepath, basename, cfg, lnt, superg):
+    def __init__ (self, basepath, basename, contextv, cfg, lnt, superg):
         ILP.__init__(self)
         self.__constraints = []
         self.__variables   = set([])
@@ -386,9 +389,9 @@ class CreateCFGILP (ILP):
         self.__createLoopConstraints(cfg, lnt)
         self.__addExclusiveConstraints(superg)
         self.__addAlwaysConstraints(superg)
-        self.__createObjectiveFunction()
+        self.__createObjectiveFunction(cfg)
         self.__createIntegerConstraint()
-        filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, cfg.getName(), "cfg", LpSolve.fileSuffix)
+        filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
@@ -501,31 +504,48 @@ class CreateCFGILP (ILP):
             self.__constraints.append(constraint)
     
     def __addAlwaysConstraints (self, superg):
-        for superv in superg.getSuperBlockPathInformationGraph().alwaysSuperBlocks:
-            comment = LpSolve.getComment("Always executes constraint")
-            self.__constraints.append(comment)
-            if superv.getBasicBlockIDs():
-                constraint = LpSolve.getVertexVariable(superv.getRepresentativeID())
+        partitiong = superg.getSuperBlockPathInformationGraph()
+        for partitionv in partitiong:
+            if not partitionv.acyclicPartition:
+                for superv in partitionv.runs.keys():
+                    if superv in partitiong.alwaysSuperBlocks:
+                        self.__addAlwaysConstraint(superv)
             else:
-                edges = superv.getEdges()
-                assert len(edges) == 1
-                edge = list(edges)[0]
-                constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
-            constraint += LpSolve.gtOrEqual
-            constraint += str(1)
-            constraint += LpSolve.semiColon
-            constraint += LpSolve.getNewLine(2)
-            self.__constraints.append(constraint)
-    
-                
-    def __createObjectiveFunction (self):
+                alwaysExecuteSet = set([])
+                for superv in partitionv.runs.keys():
+                    if superv in partitiong.alwaysSuperBlocks:
+                        alwaysExecuteSet.add(superv)
+                if alwaysExecuteSet and len(alwaysExecuteSet) == 1:
+                    self.__addAlwaysConstraint(superv)
+                        
+    def __addAlwaysConstraint (self, superv):
+        comment = LpSolve.getComment("Always executes constraint")
+        self.__constraints.append(comment)
+        if superv.getBasicBlockIDs():
+            constraint = LpSolve.getVertexVariable(superv.getRepresentativeID())
+        else:
+            edges = superv.getEdges()
+            assert len(edges) == 1
+            edge = list(edges)[0]
+            constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
+        constraint += LpSolve.gtOrEqual
+        constraint += str(1)
+        constraint += LpSolve.semiColon
+        constraint += LpSolve.getNewLine(2)
+        self.__constraints.append(constraint)
+                            
+    def __createObjectiveFunction (self, cfg):
         constraint = LpSolve.max_
         num        = 1
         for var in self.__variables:
             if var.startswith(LpSolve.vertexPrefix):
                 lIndex       = var.find('_')
                 basicBlockID = var[lIndex+1:]
-                constraint += "%s %s" % (basicBlockID, var)
+                wcet         = basicBlockID
+                v            = cfg.getVertex(int(basicBlockID))
+                if v.hasInstructions():
+                    wcet = self.__getWCETOfBasicBlock(v)
+                constraint += "%s %s" % (wcet, var)
             else:
                 constraint += "%d %s" % (0, var)
             if num < len(self.__variables):
@@ -537,6 +557,24 @@ class CreateCFGILP (ILP):
         constraint += LpSolve.getNewLine(2)
         self.__constraints.insert(0, constraint) 
     
+    def __getWCETOfBasicBlock (self, v):
+        import re
+        wcet = 0
+        for instr in v.getInstructions():
+            match = False
+            for ARM_OP, value in InstructionWCETDatabase.ARM.iteritems():
+                if re.match(r'%s.*' % ARM_OP, instr.getOp()):
+                    wcet += value
+                    match = True
+                    break
+            if not match:
+                Debug.warningMessage("Unable to match instruction %s against ARM instruction" % instr.getOp())
+                wcet += 1
+        if not wcet:
+            # Always return a value of at least 1
+            return 1
+        return wcet
+    
     def __createIntegerConstraint (self):
         constraint = LpSolve.int_ + " "
         num        = 1
@@ -547,3 +585,20 @@ class CreateCFGILP (ILP):
             num += 1
         constraint += LpSolve.semiColon + LpSolve.getNewLine()
         self.__constraints.append(constraint)
+
+class InstructionWCETDatabase:
+    ARM = {}
+    ARM['nop']   = 1
+    ARM['ldr']   = 20
+    ARM['str']   = 15
+    ARM['lsl']   = 2
+    ARM['lsr']   = 2
+    ARM['orr']   = 2
+    ARM['mov']   = 2
+    ARM['add']   = 2
+    ARM['sub']   = 2
+    ARM['cmp']   = 2
+    ARM['b']     = 4
+    ARM['push']  = 5
+    ARM['pop']   = 5
+    ARM['stmdb'] = 10

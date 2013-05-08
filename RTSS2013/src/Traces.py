@@ -63,8 +63,8 @@ class GenerateTraces:
                 else:
                     # Make the call. First save state then move to the callee ICFG
                     self.__callStack.append((self.__currentCallv, self.__currentICFG, self.__currentLNT, self.__currentv))
-                    succe               = self.__currentCallv.getSuccessorEgdeWithCallSiteID(self.__vertexID)
-                    self.__currentCallv = callg.getVertex(succe.getVertexID())
+                    succID              = self.__currentCallv.getSuccessorWithCallSite(self.__vertexID)
+                    self.__currentCallv = callg.getVertex(succID)
                     calleeName          = self.__currentCallv.getName()
                     Debug.debugMessage("Calling %s" % self.__currentCallv.getName(), 5)
                     self.__currentICFG  = self.__program.getICFG(calleeName)
@@ -92,32 +92,35 @@ class SuperBlockPathInformation:
         self._program = program
         self._allruns = set([])
         self._superBlockCFGInformation = {}
-        for cfg in program.getICFGs():
-            superg = program.getSuperBlockCFG(cfg.getName())
-            self._superBlockCFGInformation[superg] = {}
+        for contextv in program.getContextGraph():
+            functionName = contextv.getName()
+            superg       = program.getSuperBlockCFG(functionName)
+            self._superBlockCFGInformation[(contextv, superg)] = {}
     
-    def _analyseSuperBlock (self, superg, predID, succID, runID):
+    def _analyseSuperBlock (self, contextv, superg, predID, succID, runID):
         if superg.isMonitoredBasicBlock(succID):
             superv = superg.getMonitoredBasicBlockSuperBlock(succID)
-            if superv not in self._superBlockCFGInformation[superg]:
-                self._superBlockCFGInformation[superg][superv] = set([])
-            self._superBlockCFGInformation[superg][superv].add(runID)
+            if superv not in self._superBlockCFGInformation[(contextv, superg)]:
+                self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
+            self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
         elif superg.isMonitoredEdge(predID, succID):
             superv = superg.getMonitoredEdgeSuperBlock(predID, succID)
-            if superv not in self._superBlockCFGInformation[superg]:
-                self._superBlockCFGInformation[superg][superv] = set([])
-            self._superBlockCFGInformation[superg][superv].add(runID)
+            if superv not in self._superBlockCFGInformation[(contextv, superg)]:
+                self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
+            self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
     
     def _computePathInformation (self):
-        for superg in self._program.getSuperBlockCFGs():
-            superg.computePathInformation(self._superBlockCFGInformation[superg], self._allruns)
+        for contextv in self._program.getContextGraph():
+            functionName = contextv.getName()
+            superg       = self._program.getSuperBlockCFG(functionName)
+            superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._allruns)
         
 class ParseTraces (SuperBlockPathInformation):
     def __init__ (self, basename, tracefile, program):
         SuperBlockPathInformation.__init__(self, program)
-        self.__callg   = self._program.getCallGraph()
-        self.__rootv   = self.__callg.getVertex(self.__callg.getRootID())
-        self.__bbToCFG = {}
+        self.__contextg = self._program.getContextGraph()
+        self.__rootv    = self.__contextg.getVertex(self.__contextg.getRootID())
+        self.__bbToCFG  = {}
         self.__verifyMagicNumber(basename, tracefile)
         self.__initialise()
         self.__parse(tracefile)
@@ -154,59 +157,57 @@ class ParseTraces (SuperBlockPathInformation):
                     for lex in lexemes:
                         nextID = int(lex)
                         if self.__currentCFG.hasVertex(nextID):
-                            self._analyseSuperBlock(self.__currentSuperg, lastID, nextID, runID)
+                            self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, lastID, nextID, runID)
                         else:
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID
     
     def __resetToRoot (self):
-        self.__callStack     = []
-        self.__currentCallv  = self.__rootv
-        self.__currentCFG    = self._program.getICFG(self.__rootv.getName())
-        self.__currentSuperg = self._program.getSuperBlockCFG(self.__rootv.getName())
+        self.__callStack       = []
+        self.__currentContextv = self.__rootv
+        self.__currentCFG      = self._program.getICFG(self.__rootv.getName())
+        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__rootv.getName())
         
     def __handleCallAndReturn (self, lastID, nextID):
         assert lastID, "The last ID was not set"
         if self.__currentCFG.getExitID() == lastID:
             Debug.debugMessage("Returning because of basic block %d" % lastID, 1)
-            self.__currentCallv, self.__currentCFG, self.__currentSuperg = self.__callStack.pop()
+            self.__currentContextv, self.__currentCFG, self.__currentSuperg = self.__callStack.pop()
         else:
-            callerFrame = (self.__currentCallv, self.__currentCFG, self.__currentSuperg)
-            self.__callStack.append(callerFrame)
-            self.__currentCFG    = self.__bbToCFG[nextID]
-            self.__currentCallv  = self.__callg.getVertexWithName(self.__currentCFG.getName())
-            self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+            callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentSuperg)
+            self.__callStack.append(callerFrame) 
+            self.__currentCFG      = self.__bbToCFG[nextID]
+            newContextID           = self.__currentContextv.getSuccessorWithCallSite(lastID)
+            self.__currentContextv = self.__contextg.getVertex(newContextID)
+            self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
 
 class Gem5Parser (SuperBlockPathInformation):
     def __init__ (self, program, traceFiles):
         SuperBlockPathInformation.__init__(self, program)
-        self.__firstAddr        = None
-        self.__lastAddr         = None
-        self.__rootCFG          = None
-        self.__rootsuperg       = None
-        self.__currentCFG       = None
-        self.__currentLNT       = None
-        self.__predBB           = None
-        self.__currentBB        = None
-        self.__currentSuperg    = None
-        self.__stack            = []
-        self.__buildAddressInformation()
+        self.__initialise()
         self.__parse(traceFiles)
         self._computePathInformation()
         
-    def __buildAddressInformation (self):
-        self.__rootCFG    = self._program.getRootICFG()
-        self.__rootLNT    = self._program.getLNT(self.__rootCFG.getName())
-        self.__rootsuperg = self._program.getRootSuperBlockCFG()
-        self.__firstAddr  = self.__rootCFG.getFirstInstruction().getAddress()
-        lastbb            = self.__rootCFG.getVertex(self.__rootCFG.getExitID())
+    def __initialise (self):
+        self.__currentContextv = None
+        self.__currentCFG      = None
+        self.__currentLNT      = None
+        self.__predBB          = None
+        self.__currentBB       = None
+        self.__currentSuperg   = None
+        self.__stack           = []
+        self.__contextg        = self._program.getContextGraph()
+        rootv                  = self.__contextg.getVertex(self.__contextg.getRootID())
+        self.__rootCFG         = self._program.getICFG(rootv.getName())
+        self.__firstAddr       = self.__rootCFG.getFirstInstruction().getAddress()
+        lastbb                 = self.__rootCFG.getVertex(self.__rootCFG.getExitID())
         for instruction in reversed(lastbb.getInstructions()):
             if instruction.getOp() not in ARM.ARMInstructionSet.Nops:
                 self.__lastAddr = instruction.getAddress()
                 break
         assert self.__lastAddr, "Unable to find last address"
-        Debug.debugMessage("Start address of root function '%s' is %s" % (self.__rootCFG.getName(), hex(self.__firstAddr)), 1)    
-        Debug.debugMessage("End address of root function '%s' is %s" % (self.__rootCFG.getName(), hex(self.__lastAddr)), 1)
+        Debug.debugMessage("Start address of root function '%s' is %s" % (rootv.getName(), hex(self.__firstAddr)), 1)    
+        Debug.debugMessage("End address of root function '%s' is %s" % (rootv.getName(), hex(self.__lastAddr)), 1)
         
     def __parse (self, traceFiles):
         runID = 0
@@ -224,21 +225,17 @@ class Gem5Parser (SuperBlockPathInformation):
                         PCLexeme = PCLexeme[5:]
                         PC       = int(PCLexeme, 16)
                         if PC == self.__firstAddr:
-                            parsing              = True
-                            self.__currentCFG    = self.__rootCFG
-                            self.__currentLNT    = self.__rootLNT
-                            self.__predBB        = None
-                            self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
-                            self.__currentSuperg = self.__rootsuperg 
+                            parsing                = True
+                            self.__currentContextv = self.__contextg.getVertex(self.__contextg.getRootID())
+                            self.__currentCFG      = self._program.getICFG(self.__currentContextv.getName())
+                            self.__currentLNT      = self._program.getLNT(self.__currentContextv.getName())
+                            self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentContextv.getName())
+                            self.__predBB          = None
+                            self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
                         if parsing:
                             self.__parseAddress (PC, runID)
                         if PC == self.__lastAddr:
-                            parsing              = False
-                            self.__currentCFG    = None
-                            self.__currentLNT    = None
-                            self.__predBB        = None
-                            self.__currentBB     = None
-                            self.__currentSuperg = None
+                            parsing = False
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
@@ -261,20 +258,22 @@ class Gem5Parser (SuperBlockPathInformation):
             # Unable to find a successor of the current basic block with that address
             # It must be a call or a return
             if oldBB == self.__currentBB:
-                if self.__currentCFG.getExitID() ==  self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
-                    (self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
+                if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
+                    (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
                 else:
-                    callerFrame = (self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg)
+                    callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg)
                     self.__stack.append(callerFrame)
-                    self.__currentCFG    = self.__getCFGWithAddress(address)
-                    self.__currentLNT    = self._program.getLNT(self.__currentCFG.getName())
-                    self.__currentBB     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
-                    self.__currentSuperg = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+                    self.__currentCFG      = self.__getCFGWithAddress(address)
+                    self.__currentLNT      = self._program.getLNT(self.__currentCFG.getName())
+                    self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+                    self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+                    newContextID           = self.__currentContextv.getSuccessorWithCallSite(oldBB.getVertexID())
+                    self.__currentContextv = self.__contextg.getVertex(newContextID)
                     assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
             if not self.__predBB:
-                self._analyseSuperBlock(self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
+                self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
             else:
-                self._analyseSuperBlock(self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
+                self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
                 pass
             Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    

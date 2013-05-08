@@ -122,7 +122,8 @@ def readInProgram (programFile):
                             bb.addSuccessor(succID)
                         else:
                             calleeName = lex
-                            program.getCallGraph().addEdge(icfg.getName(), calleeName, bb.getVertexID())                                    
+                            program.getCallGraph().addEdge(icfg.getName(), calleeName, bb.getVertexID())
+                            icfg.addCallSite(bb.getVertexID(), calleeName)                                    
             elif line.startswith(instructionsIndicator):
                 instructions = True
             # Ignore lines consisting of whitespace only

@@ -54,7 +54,7 @@ class ContextGraph (DirectedGraph):
         for v in self:
             if v.numberOfPredecessors() == 0:
                 noPreds.append(v)
-        print noPreds
+        assert len(noPreds) == 1
         self.__rootID = noPreds[0].getVertexID()
     
     def getRootID (self):
@@ -142,32 +142,14 @@ class Program():
         self.__LNTs           = {}
         self.__superblockcfgs = {}
         self.__bbIDToICFG     = {}
-        
-    def generateUDrawFiles (self):
-        UDrawGraph.makeUdrawFile(self.__callg, "callg")
-        UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg")
-        for functionName, cfg in self.__ICFGs.iteritems():
-            UDrawGraph.makeUdrawFile(cfg, "%s.%s" % (functionName, "cfg"))
-        for functionName, lnt in self.__LNTs.iteritems():
-            UDrawGraph.makeUdrawFile(lnt, "%s.%s" % (functionName, "lnt"))
-        for functionName, superg in self.__superblockcfgs.iteritems():
-            UDrawGraph.makeUdrawFile(superg, "%s.%s" % (functionName, "superg"))
-            UDrawGraph.makeUdrawFile(superg.getSuperBlockPathInformationGraph(), "%s.%s" % (functionName, "pathg"))
-        
-    def getRootICFG (self):
-        rootcallv = self.__callg.getRootVertex()
-        return self.getICFG(rootcallv.getName())
-    
-    def getRootSuperBlockCFG (self):
-        rootcallv = self.__callg.getRootVertex()
-        return self.getSuperBlockCFG(rootcallv.getName())
-        
+       
     def getCallGraph (self):
         return self.__callg
 
     def getContextGraph (self):
         if not self.__contextg:
             self.__contextg = ContextGraph(self.__callg)
+            UDrawGraph.makeUdrawFile(self.__contextg, "contextg")
         return self.__contextg
        
     def addICFG (self, icfg, functionName):
@@ -193,6 +175,7 @@ class Program():
             lnt    = self.getLNT(functionName)
             superg = SuperBlockGraph(icfg, lnt)
             self.__superblockcfgs[functionName] = superg
+            UDrawGraph.makeUdrawFile(superg, "%s.superg" % icfg.getName())
         return self.__superblockcfgs[functionName]
 
     def getLNT (self, functionName):
@@ -200,6 +183,7 @@ class Program():
             icfg = self.getICFG(functionName)
             lnt  = LoopNests(icfg, icfg.getEntryID())
             self.__LNTs[functionName] = lnt
+            UDrawGraph.makeUdrawFile(lnt, "%s.lnt" % icfg.getName())
         return self.__LNTs[functionName]
 
     def getICFGs (self):
@@ -239,6 +223,11 @@ class Program():
                     callv = self.__callg.getVertex(vertexID)
                     self.removeFunction(callv.getName())
     
+    def addExitEntryBackEdges (self):
+        for cfg in self.__ICFGs.values():
+            cfg.addExitEntryEdge()
+            UDrawGraph.makeUdrawFile(cfg, "%s.cfg" % cfg.getName())
+    
     def inlineCalls (self):
         Debug.verboseMessage("Inlining to create single CFG")
         rootv = self.__callg.getRootVertex()
@@ -263,6 +252,8 @@ class Program():
             else:
                 cfg = self.__ICFGs[rootv.getName()]
                 cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
+                UDrawGraph.makeUdrawFile(cfg, "inlined.cfg")
+                UDrawGraph.makeUdrawFile(self.__callg, "callg")
 
     def __doInline (self, callerICFG, calleeICFG, callSiteID):
         callSitev  = callerICFG.getVertex(callSiteID)

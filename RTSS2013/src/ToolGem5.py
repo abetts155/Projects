@@ -207,6 +207,12 @@ def commandLine ():
                           metavar="<INT>",
                           default=0)
     
+    cmdline.add_argument("-I",
+                          "--inline",
+                          action="store_true",
+                          help="inline everything",
+                          default=False)
+    
     cmdline.add_argument("--exclusive-size",
                           action="store",
                           type=int,
@@ -266,8 +272,8 @@ if __name__ == "__main__":
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
-    program.inlineCalls()
-    program.generateUDrawFiles()
+    if args.inline:
+        program.inlineCalls()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)

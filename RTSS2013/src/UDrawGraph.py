@@ -211,6 +211,9 @@ def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
     if isinstance(v, Vertices.SuperBlockPartition):
         for superv, runs in v.runs.iteritems():
             name += "%d = {%s}%s" % (superv.getVertexID(), ', '.join(str(runID) for runID in runs), newLine)
+        if v.acyclicPartition:
+            f.write(setColor(COLOR.RED))
+            f.write(setToolTip("Acyclic partition"))
     else:
         assert isinstance(v, Vertices.SuperBlockUnion)
         name += "{%s} = {%s}" % (', '.join(str(superv.getVertexID()) for superv in v.superblocks), ', '.join(str(runID) for runID in v.runs))

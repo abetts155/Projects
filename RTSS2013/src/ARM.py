@@ -250,7 +250,8 @@ def identifyBasicBlocks (functions):
             if instruction in functionToLeaders[functionName]:
                 Debug.debugMessage("Instruction @ %s is a leader" % hex(instruction.getAddress()), debugLevel)
                 vertexID = newVertexID
-                bb       = CFGs.BasicBlock(vertexID)
+                bb       = CFGs.BasicBlock(vertexID, functionName)
+                bb
                 icfg.addVertex(bb)
                 newVertexID += 1
             assert bb, "Basic block is currently null"
@@ -372,6 +373,7 @@ def readARMDisassembly (filename, rootFunction):
         icfg.setEntryID()
         icfg.setExitID()
     program.removeProblematicFunctions()
+    program.addExitEntryBackEdges()
     # Dump program to file
     generateInternalFile(filename)
     return program

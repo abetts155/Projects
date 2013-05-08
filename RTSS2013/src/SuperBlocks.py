@@ -161,6 +161,8 @@ class SuperBlockGraph (DirectedGraph):
                     superv = self.getVertex(supere.getVertexID())
                     theSet.update(supervToSupervs[superv])
                 partitionv   = SuperBlockPartition(nextVertexID, theSet)
+                if headerv.getVertexID() == self.__lnt.getRootID():
+                    partitionv.acyclicPartition = True
                 self.__pathg.vertices[nextVertexID] = partitionv
                 self.__headerToPartitionVertices[headerv.getHeaderID()].add(partitionv)
                 self.__pathg.partitionOrder.append(partitionv)
@@ -249,7 +251,7 @@ class SuperBlockPathInformationGraph (DirectedGraph):
         self.partitionOrder = []
         self.exclusiveTuples = set([])
         self.alwaysSuperBlocks = set([])
-        
+    
     def output (self):
         print "%d super blocks always execute" % (len(self.alwaysSuperBlocks))
         if self.alwaysSuperBlocks:

@@ -112,6 +112,7 @@ class SuperBlockPartition (Vertex):
     def __init__ (self, vertexID, superblocks):
         Vertex.__init__(self, vertexID)
         self.runs = {}
+        self.acyclicPartition = False
         for superv in superblocks:
             self.runs[superv] = set([])
 
@@ -228,6 +229,12 @@ class CallGraphVertex (Vertex):
             self._successors[succID] = e
         e = self._successors[succID]
         e.addCallSite(callSiteID)
+        
+    def getSuccessorWithCallSite (self, callSiteID):
+        for succe in self.getSuccessorEdges():
+            if callSiteID in succe.getCallSites():
+                return succe.getVertexID()
+        assert False, "Unable to find successor of context %d with call site %d" % (self._vertexID, callSiteID)
     
     def __str__ (self):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
