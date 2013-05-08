@@ -182,6 +182,10 @@ def commandLine ():
     cmdline.add_argument("program",
                          help="either a program to compile (with '.c.' extension) or a pre-compiled binary")
     
+    cmdline.add_argument("gem5-traces", 
+                         nargs="*",
+                         help="previous gem5 runs")
+    
     cmdline.add_argument("--compiler-flags",
                           type=commaSeparatedList,
                           help="flags to be passed to the compiler",

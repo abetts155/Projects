@@ -516,12 +516,12 @@ class CreateCFGILP (ILP):
                     if superv in partitiong.alwaysSuperBlocks:
                         self.__addAlwaysConstraint(superv)
             else:
-                alwaysExecuteSet = set([])
+                alwaysExecuteSet = []
                 for superv in partitionv.runs.keys():
                     if superv in partitiong.alwaysSuperBlocks:
-                        alwaysExecuteSet.add(superv)
+                        alwaysExecuteSet.append(superv)
                 if alwaysExecuteSet and len(alwaysExecuteSet) == 1:
-                    self.__addAlwaysConstraint(superv)
+                    self.__addAlwaysConstraint(alwaysExecuteSet[0])
                         
     def __addAlwaysConstraint (self, superv):
         comment = LpSolve.getComment("Always executes constraint")

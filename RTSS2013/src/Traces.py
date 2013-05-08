@@ -110,18 +110,20 @@ class TraceInformation:
                     self._loopBounds[(functionName, v.getHeaderID())] = 0
                     self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0 
 
-    def _analyseSuperBlock (self, contextv, superg, predID, succID, runID):
-        if superg.isMonitoredBasicBlock(succID):
-            superv = superg.getMonitoredBasicBlockSuperBlock(succID)
+    def _analyseCFGVertex (self, contextv, superg, bbID, runID):
+        if superg.isMonitoredBasicBlock(bbID):
+            superv = superg.getMonitoredBasicBlockSuperBlock(bbID)
             if superv not in self._superBlockCFGInformation[(contextv, superg)]:
                 self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
             self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-        elif superg.isMonitoredEdge(predID, succID):
+        
+    def _analyseCFGEdge (self, contextv, superg, predID, succID, runID):
+        if superg.isMonitoredEdge(predID, succID):
             superv = superg.getMonitoredEdgeSuperBlock(predID, succID)
             if superv not in self._superBlockCFGInformation[(contextv, superg)]:
                 self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
             self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-    
+            
     def _computePathInformation (self):
         for contextv in self._program.getContextGraph():
             functionName = contextv.getName()
@@ -319,10 +321,9 @@ class Gem5Parser (TraceInformation):
             # a new basic block has been found
             self.__time1 = time
             # Analyse the super blocks
-            if not self.__predBB:
-                self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
-            else:
-                self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
+            self._analyseCFGVertex(self.__currentContextv, self.__currentSuperg, self.__currentBB.getVertexID(), runID)     
+            if self.__predBB:
+                self._analyseCFGEdge(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
             # Analyse loop bounds
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
                 tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())

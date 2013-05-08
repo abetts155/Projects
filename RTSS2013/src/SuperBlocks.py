@@ -12,7 +12,6 @@ nextEdgeID       = 0
 exclusiveSetSize = maxint
 
 class SuperBlockGraph (DirectedGraph):
-    
     def __init__ (self, icfg, lnt):
         DirectedGraph.__init__(self)
         self.__icfg  = icfg
@@ -133,11 +132,10 @@ class SuperBlockGraph (DirectedGraph):
                 self.__handleRootSuperBlock(supervToSupervs, rootv, forwardICFG, headerv)
             else:
                 # Deduce which super blocks we should monitor during trace parsing
-                alive = True
-                for bbID in superv.getBasicBlockIDs():
-                    bb = self.__icfg.getVertex(bbID)
-                    if self.__lnt.isLoopHeader(bbID) or bb.numberOfSuccessors() > 1:
-                        alive = False
+                alive = False
+                if (superv.numberOfSuccessors() == 0 or superv.numberOfSuccessors() == 1) \
+                and superv != rootv:
+                    alive = True
                 if alive: 
                     supervToSupervs[superv].add(superv)
                 else:
@@ -151,7 +149,9 @@ class SuperBlockGraph (DirectedGraph):
         for vertexID in reversed(dfs.getPostorder()):
             v = forwardICFG.getVertex(vertexID)
             if self.__lnt.isLoopHeader(vertexID) \
-            and vertexID != headerv.getHeaderID() and not isinstance(v, CFGEdge):
+            and vertexID != headerv.getHeaderID() \
+            and not isinstance(v, CFGEdge) \
+            and not v.isDummy():
                 for partitionv in self.__headerToPartitionVertices[vertexID]:
                     self.__pathg.partitionOrder.append(partitionv)
             if vertexID in branchPartitions:
