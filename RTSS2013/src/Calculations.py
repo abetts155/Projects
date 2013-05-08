@@ -549,7 +549,7 @@ class CreateCFGILP (ILP):
                 wcet         = basicBlockID
                 v            = cfg.getVertex(basicBlockID)
                 if v.hasInstructions():
-                    wcet = self.__getWCETOfBasicBlock(v)
+                    wcet = v.getWCET()
                 if cfg.isCallSite(basicBlockID):
                     calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
                     calleeContextWCET = contextWCETs[calleeContextID]

@@ -168,7 +168,14 @@ class BasicBlock (CFGVertex):
         self.__instructions = []
         self.__addresses = set([])
         self.__loopBound = 0
+        self.__wcet = 0
+    
+    def setWCET (self, wcet):
+        self.__wcet = wcet
         
+    def getWCET (self):
+        return self.__wcet    
+    
     def setLoopBound (self, bound):
         self.__loopBound = bound
         

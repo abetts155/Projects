@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-import Debug, UDrawGraph, Calculations
+import Debug
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
@@ -29,7 +29,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     for i in xrange(run, args.tests + run):
         nextTV     = randomTVs.nextTestVector()
         traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", i)
-        cmd        = '%s --debug-flags=Fetch --trace-file=%s %s -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
+        cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
         Debug.debugMessage("Running '%s' on gem5" % cmd, 1)
         proc       = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)    
         returncode = proc.wait()
@@ -248,8 +248,21 @@ def commandLine ():
     
     return cmdline.parse_args()
 
+def doAnalysis (gem5Traces, program, basepath, basename):
+    import Traces, Calculations
+    Traces.Gem5Parser(program, gem5Traces)
+    Calculations.WCETCalculation(program, basepath, basename)
+    for superg in program.getSuperBlockCFGs():
+        superg.getSuperBlockPathInformationGraph().output()
+    
+    program.inlineCalls()
+    Traces.Gem5Parser(program, gem5Traces)
+    Calculations.WCETCalculation(program, basepath, basename)
+    for superg in program.getSuperBlockCFGs():
+        superg.getSuperBlockPathInformationGraph().output()
+
 if __name__ == "__main__":   
-    import Utils, Traces, SuperBlocks
+    import Utils, SuperBlocks, UDrawGraph
     import os
     
     args                = commandLine()
@@ -271,24 +284,13 @@ if __name__ == "__main__":
     gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking program configuration...")
-    binary, program, testSpecFile          = checkProgramFiles()
+    binary, program, testSpecFile = checkProgramFiles()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
-    testSpecification                      = getTestSpecification(testSpecFile)
+    testSpecification = getTestSpecification(testSpecFile)
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
-    gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
-    Debug.verboseMessage("Parsing gem5 traces")
-    Traces.Gem5Parser(program, gem5Traces)
-    Calculations.WCETCalculation(program, basepath, basename)
-    for superg in program.getSuperBlockCFGs():
-        superg.getSuperBlockPathInformationGraph().output()
-    
-    program.inlineCalls()
-    Traces.Gem5Parser(program, gem5Traces)
-    Calculations.WCETCalculation(program, basepath, basename)
-    for superg in program.getSuperBlockCFGs():
-        superg.getSuperBlockPathInformationGraph().output()
-    
+    gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+    doAnalysis(gem5Traces, program, basepath, basename)
     
     

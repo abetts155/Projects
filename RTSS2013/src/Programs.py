@@ -1,10 +1,8 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
-from SuperBlocks import SuperBlockGraph, nextVertexID
 from Trees import LoopNests, DepthFirstSearch
 from copy import deepcopy
-import Debug
-import UDrawGraph
+import Debug, UDrawGraph, SuperBlocks
 
 class ContextGraph (DirectedGraph):
     nextVertexID = 1
@@ -176,7 +174,7 @@ class Program():
         if functionName not in self.__superblockcfgs:
             icfg   = self.getICFG(functionName)
             lnt    = self.getLNT(functionName)
-            superg = SuperBlockGraph(icfg, lnt)
+            superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
             self.__superblockcfgs[functionName] = superg
             UDrawGraph.makeUdrawFile(superg, "%s.superg" % icfg.getName())
         return self.__superblockcfgs[functionName]
