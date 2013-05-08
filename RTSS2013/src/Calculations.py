@@ -387,16 +387,24 @@ class CreateCFGILP (ILP):
         self.__variables   = set([])
         self.__createStructuralConstraints(cfg)
         self.__createLoopConstraints(cfg, lnt)
-        self.__addExclusiveConstraints(superg)
-        self.__addAlwaysConstraints(superg)
-        self.__createObjectiveFunction(contextWCETs, contextv, cfg)
         self.__createIntegerConstraint()
+        self.__createObjectiveFunction(contextWCETs, contextv, cfg)
         filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
         if self._solve(filename):
-            Debug.verboseMessage("IPET:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
+            Debug.verboseMessage("No constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
+        
+        intConstraint = self.__constraints.pop()
+        self.__addExclusiveConstraints(superg)
+        self.__addAlwaysConstraints(superg)
+        self.__constraints.append(intConstraint)
+        with open(filename, 'w') as ilpFile:
+            for constraint in self.__constraints:
+                ilpFile.write(constraint)        
+        if self._solve(filename):
+            Debug.verboseMessage("Extra constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
     
     def __createStructuralConstraints (self, cfg):
         for v in cfg:

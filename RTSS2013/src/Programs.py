@@ -1,12 +1,14 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
-from SuperBlocks import SuperBlockGraph
+from SuperBlocks import SuperBlockGraph, nextVertexID
 from Trees import LoopNests, DepthFirstSearch
 from copy import deepcopy
 import Debug
 import UDrawGraph
 
 class ContextGraph (DirectedGraph):
+    nextVertexID = 1
+    
     def __init__ (self, callg):
         DirectedGraph.__init__(self)
         self.__rootID = None
@@ -32,11 +34,12 @@ class ContextGraph (DirectedGraph):
                         self.__addVertex(functionID, callv.getName())
     
     def __addVertex (self, functionID, functionName):
-        contextID = self.getNextVertexID()
+        contextID = ContextGraph.nextVertexID
         contextv  = CallGraphVertex(contextID, functionName)
         self.vertices[contextID] = contextv
         self.__subprogramToContexts[functionID].append(contextv)
         self.__subprogramToUnused[functionID].append(contextv)
+        ContextGraph.nextVertexID += 1
     
     def __addEdges (self, callg, dfs):
         for callerID in reversed(dfs.getPostorder()):
@@ -258,6 +261,10 @@ class Program():
                 cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
                 UDrawGraph.makeUdrawFile(cfg, "inlined.cfg")
                 UDrawGraph.makeUdrawFile(self.__callg, "callg")
+        # Reset the data structures so that they are subsequently rebuilt
+        self.__contextg       = None
+        self.__LNTs           = {}
+        self.__superblockcfgs = {}
 
     def __doInline (self, callerICFG, calleeICFG, callSiteID):
         callSitev  = callerICFG.getVertex(callSiteID)

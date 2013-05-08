@@ -272,8 +272,6 @@ if __name__ == "__main__":
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile          = checkProgramFiles()
-    if args.inline:
-        program.inlineCalls()
     Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking test specification...")
     testSpecification                      = getTestSpecification(testSpecFile)
@@ -282,9 +280,15 @@ if __name__ == "__main__":
     gem5Traces                             = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     Debug.verboseMessage("Parsing gem5 traces")
     Traces.Gem5Parser(program, gem5Traces)
-    if args.calculation:
-        Calculations.WCETCalculation(program, basepath, basename)
+    Calculations.WCETCalculation(program, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
+    
+    program.inlineCalls()
+    Traces.Gem5Parser(program, gem5Traces)
+    Calculations.WCETCalculation(program, basepath, basename)
+    for superg in program.getSuperBlockCFGs():
+        superg.getSuperBlockPathInformationGraph().output()
+    
     
     
