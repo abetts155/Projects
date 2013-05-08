@@ -262,7 +262,6 @@ def identifyBasicBlocks (functions):
             
 def addJumpTableEdges (functionToJumpTableTargets, functionName, icfg):
     for jumpTableTarget in functionToJumpTableTargets[functionName]:
-        print jumpTableTarget
         succv          = icfg.getVertexWithAddress(jumpTableTarget)
         predv          = None
         highestAddress = 0

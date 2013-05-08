@@ -87,7 +87,7 @@ class GenerateTraces:
         self.__currentv = self.__currentICFG.getVertex(succID)
         self.__vertexID = self.__currentv.getVertexID()
         
-class SuperBlockPathInformation:
+class TraceInformation:
     def __init__ (self, program):
         self._program = program
         self._allruns = set([])
@@ -96,7 +96,16 @@ class SuperBlockPathInformation:
             functionName = contextv.getName()
             superg       = program.getSuperBlockCFG(functionName)
             self._superBlockCFGInformation[(contextv, superg)] = {}
-    
+        self._loopBounds = {}
+        self._loopBoundsInCurrentRun = {}
+        for cfg in program.getICFGs():
+            functionName = cfg.getName()
+            lnt = program.getLNT(functionName)
+            for v in lnt:
+                if isinstance(v, Vertices.HeaderVertex):
+                    self._loopBounds[(functionName, v.getHeaderID())] = 0
+                    self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0 
+
     def _analyseSuperBlock (self, contextv, superg, predID, succID, runID):
         if superg.isMonitoredBasicBlock(succID):
             superv = superg.getMonitoredBasicBlockSuperBlock(succID)
@@ -114,10 +123,18 @@ class SuperBlockPathInformation:
             functionName = contextv.getName()
             superg       = self._program.getSuperBlockCFG(functionName)
             superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._allruns)
-        
-class ParseTraces (SuperBlockPathInformation):
+    
+    def _computeLoopBounds (self):
+        for tupleKey, bound in self._loopBounds.iteritems():
+            functionName = tupleKey[0]
+            vertexID     = tupleKey[1]
+            cfg          = self._program.getICFG(functionName)
+            v            = cfg.getVertex(vertexID)
+            v.setLoopBound(bound)
+    
+class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
-        SuperBlockPathInformation.__init__(self, program)
+        TraceInformation.__init__(self, program)
         self.__contextg = self._program.getContextGraph()
         self.__rootv    = self.__contextg.getVertex(self.__contextg.getRootID())
         self.__bbToCFG  = {}
@@ -148,7 +165,7 @@ class ParseTraces (SuperBlockPathInformation):
                 if line.startswith(newTrace):
                     runID += 1
                     self._allruns.add(runID)
-                    self.__resetToRoot()
+                    self.__reset()
                 elif line.startswith(endTrace):
                     pass
                 else:
@@ -162,7 +179,7 @@ class ParseTraces (SuperBlockPathInformation):
                             self.__handleCallAndReturn(lastID, nextID)
                         lastID = nextID
     
-    def __resetToRoot (self):
+    def __reset (self):
         self.__callStack       = []
         self.__currentContextv = self.__rootv
         self.__currentCFG      = self._program.getICFG(self.__rootv.getName())
@@ -181,12 +198,13 @@ class ParseTraces (SuperBlockPathInformation):
             self.__currentContextv = self.__contextg.getVertex(newContextID)
             self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
 
-class Gem5Parser (SuperBlockPathInformation):
+class Gem5Parser (TraceInformation):
     def __init__ (self, program, traceFiles):
-        SuperBlockPathInformation.__init__(self, program)
+        TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(traceFiles)
         self._computePathInformation()
+        self._computeLoopBounds()
         
     def __initialise (self):
         self.__currentContextv = None
@@ -194,6 +212,7 @@ class Gem5Parser (SuperBlockPathInformation):
         self.__currentLNT      = None
         self.__predBB          = None
         self.__currentBB       = None
+        self.__currentHeaderID = None
         self.__currentSuperg   = None
         self.__stack           = []
         self.__contextg        = self._program.getContextGraph()
@@ -270,13 +289,23 @@ class Gem5Parser (SuperBlockPathInformation):
                     newContextID           = self.__currentContextv.getSuccessorWithCallSite(oldBB.getVertexID())
                     self.__currentContextv = self.__contextg.getVertex(newContextID)
                     assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
+            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
             if not self.__predBB:
                 self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, Vertices.dummyVertexID, self.__currentBB.getVertexID(), runID)     
             else:
                 self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
-                pass
-            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
-
+                tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
+                assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
+                self._loopBoundsInCurrentRun[tupleKey] += 1   
+            if self.__predBB:
+                headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
+                if headerID:
+                    tupleKey = (self.__currentCFG.getName(), headerID)
+                    assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
+                    if self._loopBounds[tupleKey] < self._loopBoundsInCurrentRun[tupleKey]:
+                        self._loopBounds[tupleKey] = self._loopBoundsInCurrentRun[tupleKey]
+                        Debug.debugMessage("Maximum bound of header %d in '%s' is %d" % (headerID, self.__currentCFG.getName(),  self._loopBounds[tupleKey]), 1)
+                    self._loopBoundsInCurrentRun[tupleKey] = 0
         
         

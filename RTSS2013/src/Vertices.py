@@ -167,6 +167,13 @@ class BasicBlock (CFGVertex):
         self.__ipointPosition = None
         self.__instructions = []
         self.__addresses = set([])
+        self.__loopBound = 0
+        
+    def setLoopBound (self, bound):
+        self.__loopBound = bound
+        
+    def getLoopBound (self):
+        return self.__loopBound
     
     def setIpoint (self, position):
         assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position

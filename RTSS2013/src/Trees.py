@@ -681,6 +681,13 @@ class LoopNests (Tree):
         assert exitID in self.__loopExits[headerID].keys(), "Vertex %s is not an exit of loop with header %d" % (exitID, headerID)
         return self.__loopExits[headerID][exitID]
     
+    def isLoopExitEdge (self, predID, succID):
+        for headerID in self.__headerVertices:
+            if self.isLoopExitOfLoop(predID, headerID):
+                if succID in self.__loopExits[headerID][predID]:
+                    return headerID
+        return None
+    
     def getLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.__loopBodies[headerID]

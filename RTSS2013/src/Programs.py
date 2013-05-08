@@ -201,10 +201,6 @@ class Program():
             cfg = self.__ICFGs[functionName]
             self.__archivedICFGS[functionName] = cfg
             del self.__ICFGs[functionName]
-            for v in cfg:
-                vertexID = v.getVertexID()
-                if cfg.isCallSite(vertexID):
-                    cfg.removeCallSite(vertexID)
         if self.__callg.hasVertexWithName(functionName):
             self.__callg.removeVertex(functionName)
             
@@ -221,7 +217,14 @@ class Program():
                 dfs = DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).getVertexID())
                 for vertexID in dfs.getPostorder():
                     callv = self.__callg.getVertex(vertexID)
-                    self.removeFunction(callv.getName())
+                    for calle in callv.getPredecessorEdges():
+                        predID = calle.getVertexID()
+                        predv  = self.__callg.getVertex(predID)
+                        for callSiteID in calle.getCallSites():
+                            callerName = predv.getName()
+                            callerICFG = self.getICFG(callerName)
+                            callerICFG.removeCallSite(callSiteID)
+                    self.removeFunction(callv.getName())                    
     
     def addExitEntryBackEdges (self):
         for cfg in self.__ICFGs.values():
@@ -244,6 +247,7 @@ class Program():
                     callerICFG = self.getICFG(callerName)
                     Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
                     self.__doInline(callerICFG, calleeICFG, callSiteID)
+                    callerICFG.removeCallSite(callSiteID)
                 
         for vertexID in dfs.getPostorder():
             callv = self.__callg.getVertex(vertexID)
