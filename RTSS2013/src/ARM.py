@@ -286,6 +286,7 @@ def addJumpTableEdges (functions):
         Debug.debugMessage("Adding jump table edges in '%s'" % functionName, debugLevel)
         icfg = program.getICFG(functionName)
         i    = 0
+        hasJumpTablePredecessor = set([])
         for instr in functionToInstructions[functionName]:
             # If the instruction loads into the PC...
             if isJumpTableBranch(instr):
@@ -293,6 +294,9 @@ def addJumpTableEdges (functions):
                 # how many arms it has
                 assert instr in jumpTableToDirectives
                 numberOfBranchArms = len(jumpTableToDirectives[instr])
+                if instr.getOp() == ARMInstructionSet.LoadInstructions[3] \
+                or instr.getOp() == ARMInstructionSet.LoadInstructions[4]:
+                    numberOfBranchArms = 3
                 predv = icfg.getVertexWithAddress(instr.getAddress())
                 # Now go through each successive address, get the vertex associated with
                 # that address, and add an edge if the address belongs to a newly discovered
@@ -302,13 +306,14 @@ def addJumpTableEdges (functions):
                     address   = nextInstr.getAddress()
                     if not predv.hasAddress(address):
                         succv = icfg.getVertexWithAddress(address)
-                        if not predv.hasSuccessor(succv.getVertexID()):
+                        if not predv.hasSuccessor(succv.getVertexID()) and succv not in hasJumpTablePredecessor:
                             icfg.addEdge(predv.getVertexID(), succv.getVertexID())
+                            hasJumpTablePredecessor.add(succv)
                             numberOfBranchArms -= 1
-                    # We know how many arms to expect. As soon as the supply has been
-                    # exhausted, stop adding edges
-                    if not numberOfBranchArms:
-                        break
+                        # We know how many arms to expect. As soon as the supply has been
+                        # exhausted, stop adding edges
+                        if not numberOfBranchArms or isJumpTableBranch(nextInstr):
+                            break
             i += 1
                     
 def generateInternalFile (filename):

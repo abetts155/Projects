@@ -259,6 +259,8 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
+        Debug.verboseMessage("In %s..." % superg.getName())
+        superg.output()
         superg.getSuperBlockPathInformationGraph().output()
     
     program.inlineCalls()
@@ -266,6 +268,8 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
     Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
+        Debug.verboseMessage("In %s..." % superg.getName())
+        superg.output()
         superg.getSuperBlockPathInformationGraph().output()
     program.generateAllUDrawFiles("inlined")
         

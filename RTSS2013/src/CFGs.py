@@ -167,6 +167,6 @@ class CFG (FlowGraph):
         "Entry ID = %s\n" % str(self._entryID) + \
         "Exit ID  = %s\n" % str(self._exitID) + "\n"
         for bb in self.vertices.values():
-            string += bb.__str__()
+            string += bb.__str__() + "\n"
         return string
     

@@ -246,6 +246,12 @@ class SuperBlockGraph (DirectedGraph):
     def getSuperBlockPathInformationGraph (self):
         return self.__pathg
     
+    def output (self):
+        Debug.verboseMessage("...#basic blocks           = %d" % self.__icfg.numOfVertices())
+        Debug.verboseMessage("...#edges                  = %d" % self.__icfg.numOfEdges())
+        Debug.verboseMessage("...#super blocks           = %d" % self.numOfVertices())
+        Debug.verboseMessage("...#monitored super blocks = %d" % (len(self.__monitoredBasicBlocks)+len(self.__monitoredEdges)))
+    
 class SuperBlockPathInformationGraph (DirectedGraph):
     def __init__ (self, name):
         DirectedGraph.__init__(self)
@@ -255,7 +261,6 @@ class SuperBlockPathInformationGraph (DirectedGraph):
         self.alwaysSuperBlocks = set([])
     
     def output (self):
-        Debug.verboseMessage("In %s..." % self._name)
         Debug.verboseMessage("%d super blocks always execute" % (len(self.alwaysSuperBlocks)))
         if self.alwaysSuperBlocks:
             count = 0
