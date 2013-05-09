@@ -138,7 +138,6 @@ def G1DListMutatorIntegerRange(genome, **args):
 
    return int(mutations)
 
-
 def G1DListMutatorRealRange(genome, **args):
    """ Simple real range mutator for G1DList
 

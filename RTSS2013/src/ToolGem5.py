@@ -1,6 +1,7 @@
 #!/usr/bin/python2.7
 
 import Debug
+import TestHarness
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
@@ -8,6 +9,15 @@ armObjdump  = 'arm-linux-gnueabi-objdump'
 def fitnessFunction (chromosome):
     import os, sys, shlex
     from subprocess import Popen, PIPE
+    
+    try:
+        if fitnessFunction.vectorProperties.baseType == TestHarness.TestVectorProperties.Type[2]:
+            # Sometimes this conversion fails and I don't see why?
+            # Just catch it and move on
+            chromosome.genomeList = [chr(val) for val in chromosome.genomeList]
+    except TypeError:
+        pass
+        
     fitnessFunction.run += 1
     traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", fitnessFunction.run)
     cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % \
@@ -34,13 +44,14 @@ def fitnessFunction (chromosome):
     Debug.debugMessage("Score = %d" % score, 1)
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=100, generations=100):
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=1):
     import re
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
-    
+
     # Create the population
     genome = G1DList.G1DList(vectorProperties.length)
-    genome.setParams(rangemin=vectorProperties.lowerBound, rangemax=vectorProperties.upperBound)
+    genome.setParams(rangemin=vectorProperties.lowerBound, \
+                     rangemax=vectorProperties.upperBound)
     genome.evaluator.set(fitnessFunction)
     genome.mutator.set(Mutators.G1DListMutatorIntegerRange)
     
@@ -59,8 +70,9 @@ def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties,
     ga.setElitism(True)
     
     # Set up the fitness function static variables
-    fitnessFunction.gem5Traces = []
-    fitnessFunction.run        = 0
+    fitnessFunction.gem5Traces       = []
+    fitnessFunction.run              = 0
+    fitnessFunction.vectorProperties = vectorProperties
     # Carry on from previous executions (if they exist)
     gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
     if os.path.exists(gem5TraceDirectory):
@@ -71,6 +83,7 @@ def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties,
                 num   = int(filename[index+1:])
                 fitnessFunction.run = max(num, fitnessFunction.run)
     ga.evolve (freq_stats=1)    
+    return fitnessFunction.gem5Traces
     
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties):
     import os, sys, re
@@ -259,12 +272,6 @@ def commandLine ():
                           dest="flags",
                           metavar="<FLAGS>")
     
-    cmdline.add_argument("-C",
-                         "--calculation",
-                         action="store_true",
-                         help="do WCET calculation",
-                         default=False)
-    
     cmdline.add_argument("--clean",
                          action="store_true",
                          help="clean out temporary files",
@@ -278,17 +285,17 @@ def commandLine ():
                           metavar="<INT>",
                           default=0)
     
-    cmdline.add_argument("-I",
-                          "--inline",
-                          action="store_true",
-                          help="inline everything",
-                          default=False)
-    
     cmdline.add_argument("--exclusive-size",
                           action="store",
                           type=int,
                           help="size of subsets of mutually exclusive basic blocks to compute",
                           metavar="<INT>")
+    
+    cmdline.add_argument("-G",
+                         "--ga",
+                         action="store_true",
+                         help="use a genetic algorithm to generate test vectors",
+                         default=False)
     
     cmdline.add_argument("-r",
                           "--root",
@@ -384,7 +391,10 @@ if __name__ == "__main__":
         testSpecification = getTestSpecification(testSpecFile)
         Debug.verboseMessage("...all good")
         Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
-        gem5Traces = runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+        if args.ga:
+            gem5Traces = runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+        else:
+            gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     doAnalysis(gem5Traces, program, basepath, basename)
     
     

@@ -1,2 +1,4 @@
 type=char
 length=39
+lower=65
+upper=90
