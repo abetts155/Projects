@@ -50,13 +50,12 @@ class ARMInstructionSet:
 
 startAddressToFunction          = {}
 lastAddressToFunction           = {}
-functionToJumpTableIndices      = {}
+jumpTableToDirectives           = {}
 functionToInstructions          = {}
 functionToStartAddress          = {}
 functionToLastAddress           = {}
 functionToLeaders               = {}
 functionToDirectives            = {}
-functionToJumpTableInstructions = {}
 functionToJumpTableBasicBlocks  = {}
 instructionToBasicBlock         = {}
 program                         = Programs.Program()
@@ -88,9 +87,10 @@ def getInstruction (lexemes):
     
 def extractInstructions (filename):
     with open(filename, 'r') as f:
-        parse           = False
-        lastInstruction = None
-        currentFunction = None
+        parse                    = False
+        lastInstruction          = None
+        lastJumpTableInstruction = None
+        currentFunction          = None
         for line in f:
             if parse:
                 if re.match(r'[0-9a-fA-F]+\s<.*>.*', line):
@@ -107,12 +107,11 @@ def extractInstructions (filename):
                     Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), debugLevel)
                     startAddressToFunction[address]                  = functionName
                     currentFunction                                  = functionName
-                    functionToJumpTableIndices[currentFunction]      = set([])
                     functionToInstructions[currentFunction]          = []
                     functionToDirectives[currentFunction]            = []
-                    functionToJumpTableInstructions[currentFunction] = []
                     functionToStartAddress[currentFunction]          = address
                     functionToJumpTableBasicBlocks[currentFunction]  = []
+                    lastJumpTableInstruction                         = None
                 elif re.match(r'\s*[0-9a-fA-F]+:.*', line):
                     # Ignore directives reserving space for data
                     if '.word' not in line and '.short' not in line and '.byte' not in line:                  
@@ -120,8 +119,13 @@ def extractInstructions (filename):
                         instruction = getInstruction(lexemes)
                         functionToInstructions[currentFunction].append(instruction)
                         lastInstruction = instruction
+                        if isJumpTableBranch(instruction):
+                            lastJumpTableInstruction = instruction
+                            jumpTableToDirectives[instruction] = []
                     else:
                         functionToDirectives[currentFunction].append(line)
+                        if lastJumpTableInstruction:
+                            jumpTableToDirectives[lastJumpTableInstruction].append(line)   
             elif line.startswith('Disassembly of section'):
                 parse = '.text' in line
                 
@@ -175,34 +179,7 @@ def isJumpTableBranch (instruction):
             return True
     return False
 
-def parseDirectiveLine (line):
-    lexemes       = shlex.split(line.strip())
-    directiveAddr = int(lexemes[0][:-1], 16)
-    value         = int(lexemes[1], 16)
-    return directiveAddr, value
-
-def identifyJumpTableTargets (functions):
-    functionToJumpTableTargets = {}
-    for functionName in functions:
-        Debug.debugMessage("Computing jump table targets in '%s'" % functionName, debugLevel)
-        jumpTableBranches                        = []
-        functionToJumpTableTargets[functionName] = set([])
-        # First scan the instructions looking for change of PC through explicit load
-        for instruction in functionToInstructions[functionName]:
-            if isJumpTableBranch(instruction):
-                jumpTableBranches.append(instruction)
-        if jumpTableBranches:
-            for line in functionToDirectives[functionName]:
-                # We minus one from the address here because the jump table address in the disassembly
-                # always appears one byte away from the actual address
-                directiveAddr, value = parseDirectiveLine(line)
-                functionToJumpTableTargets[functionName].add(value - 1)
-        else:
-            if functionToDirectives[functionName]:
-                Debug.warningMessage("Found directives in %s but no jump table instructions" % functionName)
-    return functionToJumpTableTargets
-
-def identifyLeaders (functions, functionToJumpTableTargets):
+def identifyLeaders (functions):
     functionToBranchTargets = {}
     for functionName in functions:
         Debug.debugMessage("Identifying leaders in '%s'" % functionName, debugLevel)
@@ -210,6 +187,7 @@ def identifyLeaders (functions, functionToJumpTableTargets):
         functionToBranchTargets[functionName] = set([])
         newLeader                             = True
         noopAfterJumpTableBranch              = False
+        index                                 = 0
         for instruction, nextInstruction in Utils.peekaheadIterator(functionToInstructions[functionName]):
             if newLeader:
                 functionToLeaders[functionName].add(instruction)
@@ -219,9 +197,6 @@ def identifyLeaders (functions, functionToJumpTableTargets):
                 noopAfterJumpTableBranch = False
                 newLeader                = True
             
-            address = instruction.getAddress()
-            if address in functionToJumpTableTargets[functionName]:
-                functionToLeaders[functionName].add(instruction)
             op = instruction.getOp()
             if op in ARMInstructionSet.Branches:
                 newLeader     = True
@@ -231,11 +206,11 @@ def identifyLeaders (functions, functionToJumpTableTargets):
             elif isJumpTableBranch(instruction):
                 # Look for instructions with an explicit load into the PC
                 Debug.debugMessage("Instruction '%s' is loading a value into the PC" % instruction, debugLevel)
-                functionToJumpTableInstructions[functionName].append(instruction)
                 if nextInstruction and nextInstruction.getOp() in ARMInstructionSet.Nops:
                     noopAfterJumpTableBranch = True
                 else:
                     newLeader = True
+            index += 1
         for instruction in functionToInstructions[functionName]:
             if instruction.getAddress() in functionToBranchTargets[functionName]:
                 functionToLeaders[functionName].add(instruction)
@@ -262,22 +237,7 @@ def identifyBasicBlocks (functions):
             if isJumpTableBranch(instruction):
                 functionToJumpTableBasicBlocks[functionName].append(bb)
             
-def addJumpTableEdges (functionToJumpTableTargets, functionName, icfg):
-    for jumpTableTarget in functionToJumpTableTargets[functionName]:
-        succv          = icfg.getVertexWithAddress(jumpTableTarget)
-        predv          = None
-        highestAddress = 0
-        for instruction in functionToJumpTableInstructions[functionName]:
-            candidatev = instructionToBasicBlock[instruction] 
-            address    = instruction.getAddress()
-            if address > highestAddress and address < jumpTableTarget:
-                predv          = candidatev
-                highestAddress = address
-        assert predv, "Unable to find source vertex for address %s" % hex(address)
-        Debug.debugMessage("Adding jump table edge %d => %d" % (predv.getVertexID(), succv.getVertexID()), 1)
-        icfg.addEdge(predv.getVertexID(), succv.getVertexID())
-            
-def addEdges (functions, functionToJumpTableTargets):
+def addEdges (functions):
     for functionName in functions:
         Debug.debugMessage("Adding edges in '%s'" % functionName, debugLevel)
         icfg   = program.getICFG(functionName)
@@ -320,9 +280,36 @@ def addEdges (functions, functionToJumpTableTargets):
                     pass
                 else:
                     predID = v.getVertexID()
-        for instruction in functionToInstructions[functionName]:
-            if isJumpTableBranch(instruction):
-                addJumpTableEdges(functionToJumpTableTargets, functionName, icfg)
+                    
+def addJumpTableEdges (functions):
+    for functionName in functions:
+        Debug.debugMessage("Adding jump table edges in '%s'" % functionName, debugLevel)
+        icfg = program.getICFG(functionName)
+        i    = 0
+        for instr in functionToInstructions[functionName]:
+            # If the instruction loads into the PC...
+            if isJumpTableBranch(instr):
+                # Get the number of directives associated with this instruction to work out
+                # how many arms it has
+                assert instr in jumpTableToDirectives
+                numberOfBranchArms = len(jumpTableToDirectives[instr])
+                predv = icfg.getVertexWithAddress(instr.getAddress())
+                # Now go through each successive address, get the vertex associated with
+                # that address, and add an edge if the address belongs to a newly discovered
+                # basic block
+                for j in range(i, len(functionToInstructions[functionName])):
+                    nextInstr = functionToInstructions[functionName][j]
+                    address   = nextInstr.getAddress()
+                    if not predv.hasAddress(address):
+                        succv = icfg.getVertexWithAddress(address)
+                        if not predv.hasSuccessor(succv.getVertexID()):
+                            icfg.addEdge(predv.getVertexID(), succv.getVertexID())
+                            numberOfBranchArms -= 1
+                    # We know how many arms to expect. As soon as the supply has been
+                    # exhausted, stop adding edges
+                    if not numberOfBranchArms:
+                        break
+            i += 1
                     
 def generateInternalFile (filename):
     outfilename = filename[:-4] + ".txt"
@@ -363,10 +350,10 @@ def readARMDisassembly (filename, rootFunction):
     global newVertexID
     extractInstructions(filename)
     functions = identifyCallGraph(rootFunction)
-    functionToJumpTableTargets = identifyJumpTableTargets(functions)
-    identifyLeaders(functions, functionToJumpTableTargets)
+    identifyLeaders(functions)
     identifyBasicBlocks(functions)
-    addEdges(functions, functionToJumpTableTargets)
+    addEdges(functions)
+    addJumpTableEdges(functions)
     # Now compute entry and exit IDs of functions and root of call graph
     program.getCallGraph().setRoot(rootFunction)
     for icfg in program.getICFGs():
