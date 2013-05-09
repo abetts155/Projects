@@ -5,7 +5,74 @@ import Debug
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
 
-def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
+def fitnessFunction (chromosome):
+    import os, sys, shlex
+    from subprocess import Popen, PIPE
+    fitnessFunction.run += 1
+    traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", fitnessFunction.run)
+    cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % \
+     (armSimulator, traceFile, gem5ConfigFile, binary, ' '.join(map(str, chromosome.genomeList)))
+    Debug.debugMessage("Running '%s' on gem5" % cmd, 1)
+    proc       = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)    
+    returncode = proc.wait()
+    if returncode:
+        sys.exit("Running '%s' failed" % cmd)
+    gem5Trace = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + traceFile
+    assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
+    fitnessFunction.gem5Traces.append(gem5Trace)
+    firstLines = os.popen("head -1 %s" % gem5Trace).readlines()
+    lastLines  = os.popen("tail -1 %s" % gem5Trace).readlines()
+    assert len(firstLines) == 1
+    assert len(lastLines) == 1
+    firstLine = firstLines[0]
+    lastLine  = lastLines[0]
+    time1 = shlex.split(firstLine)[0]
+    time2 = shlex.split(lastLine)[0]
+    time1 = time1[:-1]
+    time2 = time2[:-1]
+    score = int(time2) - int(time1)
+    Debug.debugMessage("Score = %d" % score, 1)
+    return score
+
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=100, generations=100):
+    import re
+    from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
+    
+    # Create the population
+    genome = G1DList.G1DList(vectorProperties.length)
+    genome.setParams(rangemin=vectorProperties.lowerBound, rangemax=vectorProperties.upperBound)
+    genome.evaluator.set(fitnessFunction)
+    genome.mutator.set(Mutators.G1DListMutatorIntegerRange)
+    
+    # Cannot crossover if there is only a single gene in the chromosone
+    if vectorProperties.length == 1:
+        genome.crossover.clear()
+    else:
+        genome.crossover.set(Crossovers.G1DListCrossoverTwoPoint)
+    
+    # Set up the engine
+    ga = GSimpleGA.GSimpleGA(genome)
+    ga.setPopulationSize(populationSize)
+    ga.setGenerations(generations)
+    ga.setCrossoverRate(0.9)
+    ga.setMutationRate(0.01)
+    ga.setElitism(True)
+    
+    # Set up the fitness function static variables
+    fitnessFunction.gem5Traces = []
+    fitnessFunction.run        = 0
+    # Carry on from previous executions (if they exist)
+    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
+    if os.path.exists(gem5TraceDirectory):
+        for filename in os.listdir(gem5TraceDirectory):
+            match = re.match(r'%s' % os.path.basename(binary), filename)
+            if match:
+                index = filename.rfind('.')
+                num   = int(filename[index+1:])
+                fitnessFunction.run = max(num, fitnessFunction.run)
+    ga.evolve (freq_stats=1)    
+    
+def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties):
     import os, sys, re
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
@@ -24,7 +91,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, testSpecification):
     run += 1
     
     # Now run the program n times
-    randomTVs  = RandomGeneration(testSpecification)
+    randomTVs  = RandomGeneration(vectorProperties)
     gem5Traces = []
     for i in xrange(run, args.tests + run):
         nextTV     = randomTVs.nextTestVector()
@@ -317,7 +384,7 @@ if __name__ == "__main__":
         testSpecification = getTestSpecification(testSpecFile)
         Debug.verboseMessage("...all good")
         Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
-        gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+        gem5Traces = runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     doAnalysis(gem5Traces, program, basepath, basename)
     
     

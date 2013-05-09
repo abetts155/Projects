@@ -11,33 +11,6 @@ class TestVectorProperties:
             self.lowerBound = vectorLowerBound
             self.upperBound = vectorUpperBound
 
-class GeneticAlgorithm:
-    def __init__ (self, vectorProperties, fitnessFunction, generations=100, populationSize=100, crossoverRate=0.9, mutationRate=0.01):
-        from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
-        # Create the population
-        genome = G1DList.G1DList(vectorProperties.length)
-        genome.setParams(rangemin=vectorProperties.lowerBound, rangemax=vectorProperties.upperBound)
-        genome.evaluator.set(fitnessFunction)
-        genome.mutator.set(Mutators.G1DListMutatorIntegerRange)
-        
-        # Cannot crossover if there is only a single gene in the chromosone
-        if vectorProperties.length == 1:
-            genome.crossover.clear()
-        else:
-            genome.crossover.set(Crossovers.G1DListCrossoverTwoPoint)
-        
-        # Set up the engine
-        self.__ga = GSimpleGA.GSimpleGA(genome)
-        self.__ga.setPopulationSize(populationSize)
-        self.__ga.setGenerations(generations)
-        self.__ga.setCrossoverRate(crossoverRate)
-        self.__ga.setMutationRate(mutationRate)
-        self.__ga.setElitism(True)
-        
-    def evolve (self):
-        # Start the evolution
-        self.__ga.evolve (freq_stats=1)
-
 class RandomGeneration:
     def __init__ (self, vectorProperties):
         self.__vectorProperties = vectorProperties
