@@ -129,7 +129,8 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     if isinstance(v, Vertices.CFGEdge):
         f.write(setName(str(v.edge)))
     else:
-        f.write(setName(str(vertexID)))
+        name = "%d (original=%d)" % (vertexID, v.getOriginalVertexID())
+        f.write(setName(name))
         if v.getName():
             if v.getName() not in colorMapping:
                 colorMapping[v.getName()] = colorsIterator.next()

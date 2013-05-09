@@ -182,8 +182,8 @@ def commandLine ():
     cmdline.add_argument("program",
                          help="either a program to compile (with '.c.' extension) or a pre-compiled binary")
     
-    cmdline.add_argument("gem5-traces", 
-                         nargs="*",
+    cmdline.add_argument("gem5Traces", 
+                         nargs='*',
                          help="previous gem5 runs")
     
     cmdline.add_argument("--compiler-flags",
@@ -254,16 +254,30 @@ def commandLine ():
 
 def doAnalysis (gem5Traces, program, basepath, basename):
     import Traces, Calculations
-    Traces.Gem5Parser(program, gem5Traces)
-    Calculations.WCETCalculation(program, basepath, basename)
+    data = Traces.Gem5Parser(program, gem5Traces)
+    Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
+    program.generateAllUDrawFiles()
     
     program.inlineCalls()
-    Traces.Gem5Parser(program, gem5Traces)
-    Calculations.WCETCalculation(program, basepath, basename)
+    data = Traces.Gem5Parser(program, gem5Traces)
+    Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
+    program.generateAllUDrawFiles("inlined")
+        
+def checkTraceFiles (gem5Traces, basename):
+    import re
+    files = []
+    for arg in gem5Traces:
+        arg = os.path.abspath(arg)
+        if not re.match(r'.*%s\.trace\.[0-9]+' % basename, arg):
+            Debug.exitMessage("The file '%s' is not a valid gem5 trace for '%s'" % (arg, basename)) 
+        if not os.path.isfile(arg):
+            Debug.exitMessage("The argument '%s' is not a valid file" % arg) 
+        files.append(arg)
+    return files  
 
 if __name__ == "__main__":   
     import Utils, SuperBlocks, UDrawGraph
@@ -284,17 +298,20 @@ if __name__ == "__main__":
         Utils.clean()
     
     Debug.verboseMessage("%s Analysing program '%s' %s" % ('*' * 10, args.program, '*' * 10))
-    Debug.verboseMessage("Checking gem5 configuration...")
-    gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
-    Debug.verboseMessage("...all good")
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile = checkProgramFiles()
     Debug.verboseMessage("...all good")
-    Debug.verboseMessage("Checking test specification...")
-    testSpecification = getTestSpecification(testSpecFile)
-    Debug.verboseMessage("...all good")
-    Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
-    gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+    if args.gem5Traces:
+        gem5Traces = checkTraceFiles(args.gem5Traces, basename)
+    else:
+        Debug.verboseMessage("Checking gem5 configuration...")
+        gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
+        Debug.verboseMessage("...all good")
+        Debug.verboseMessage("Checking test specification...")
+        testSpecification = getTestSpecification(testSpecFile)
+        Debug.verboseMessage("...all good")
+        Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
+        gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     doAnalysis(gem5Traces, program, basepath, basename)
     
     

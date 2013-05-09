@@ -1,4 +1,4 @@
-import CFGs, Debug, Programs
+import CFGs, Debug, Programs, Vertices
 import shlex
 
 cfgIndicator          = 'cfg:'
@@ -61,7 +61,7 @@ def readInProgram (programFile):
             if line.startswith(cfgIndicator):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                icfg         = CFGs.ICFG()
+                icfg         = CFGs.CFG()
                 functionName = lexemes[-1]
                 # Make sure that the first characters of the function name are non-digits
                 # Otherwise function calls will be ambiguous with successor IDs inside a function
@@ -98,7 +98,7 @@ def readInProgram (programFile):
                     Debug.exitMessage("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, icfg.getName()))
                 else:
                     bbIDs.add(vertexID)
-                bb = CFGs.BasicBlock(vertexID, functionName)
+                bb = Vertices.BasicBlock(vertexID, functionName)
                 icfg.addVertex(bb)
             elif line.startswith(ipointIndicator):
                 instructions = False
@@ -147,7 +147,6 @@ def createProgram (programFile):
     program.getCallGraph().findAndSetRoot()
     for icfg in program.getICFGs():
         icfg.addPredecessorEdges()
-        icfg.addIpointEdges()
         setEntryAndExit(icfg)
         icfg.setEdgeIDs()
     return program     

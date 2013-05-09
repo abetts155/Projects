@@ -1,5 +1,5 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import TreeVertex, HeaderVertex, Ipoint, dummyVertexID, CFGEdge
+from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock
 import Debug, CFGs
 
 class Tree (DirectedGraph):
@@ -692,11 +692,6 @@ class LoopNests (Tree):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.__loopBodies[headerID]
     
-    def getIpointsInLoopBody (self, headerID):
-        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return [vertexID for vertexID in self.__loopBodies[headerID] 
-                if isinstance(self.__directedg.getVertex(vertexID), Ipoint)]
-    
     def isLoopBackEdge (self, sourceID, destinationID):
         if destinationID not in self.__headerVertices.keys():
             return False
@@ -723,14 +718,14 @@ class LoopNests (Tree):
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         headerID = headerv.getHeaderID()
-        flowg    = CFGs.ICFG()
+        flowg    = CFGs.CFG()
         edges    = {}
         worklist = []
         worklist.extend(self.getLoopTails(headerID))
         while worklist:
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID):
-                bb = CFGs.BasicBlock(vertexID)
+                bb = BasicBlock(vertexID)
                 flowg.addVertex(bb)
                 # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])                        
@@ -764,7 +759,7 @@ class LoopNests (Tree):
             flowg.addEdge(tailID, vertexID)
         # Add a dummy exit vertex to induced subgraph
         exitID = flowg.getNextVertexID()
-        bb = CFGs.BasicBlock(exitID)
+        bb = BasicBlock(exitID)
         flowg.addVertex(bb)
         bb.setDummy()
         # Add edges from tails and exits to dummy exit vertex

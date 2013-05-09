@@ -250,7 +250,7 @@ def identifyBasicBlocks (functions):
             if instruction in functionToLeaders[functionName]:
                 Debug.debugMessage("Instruction @ %s is a leader" % hex(instruction.getAddress()), debugLevel)
                 vertexID = newVertexID
-                bb       = CFGs.BasicBlock(vertexID, functionName)
+                bb       = CFGs.BasicBlock(vertexID, name=functionName)
                 bb
                 icfg.addVertex(bb)
                 newVertexID += 1

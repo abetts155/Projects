@@ -103,7 +103,7 @@ class TraceInformation:
         for cfg in program.getICFGs():
             functionName = cfg.getName()
             for v in cfg:
-                self._executionTimes[(functionName, v)] = 0
+                self._executionTimes[(functionName, v.getOriginalVertexID())] = 0
             lnt = program.getLNT(functionName)
             for v in lnt:
                 if isinstance(v, Vertices.HeaderVertex):
@@ -129,21 +129,17 @@ class TraceInformation:
             functionName = contextv.getName()
             superg       = self._program.getSuperBlockCFG(functionName)
             superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._allruns)
-    
-    def _addWCETDataToCFGs (self):
-        for tupleKey, bound in self._loopBounds.iteritems():
-            functionName = tupleKey[0]
-            vertexID     = tupleKey[1]
-            cfg          = self._program.getICFG(functionName)
-            v            = cfg.getVertex(vertexID)
-            v.setLoopBound(bound)
-        for tupleKey, executionTime in self._executionTimes.iteritems():
-            functionName = tupleKey[0]
-            v            = tupleKey[1]
-            cfg          = self._program.getICFG(functionName)
-            assert cfg.hasVertex(v.getVertexID())
-            v.setWCET(executionTime)
             
+    def getLoopBound (self, functionName, headerID):
+        tupleKey = (functionName, headerID)
+        assert tupleKey in self._loopBounds
+        return self._loopBounds[tupleKey]
+
+    def getExecutionTime (self, functionName, vertexID):
+        tupleKey = (functionName, vertexID)
+        assert tupleKey in self._executionTimes
+        return self._executionTimes[tupleKey]
+    
     def getLongestTime (self):
         return self._longestTime
     
@@ -220,7 +216,6 @@ class Gem5Parser (TraceInformation):
         self.__initialise()
         self.__parse(traceFiles)
         self._computePathInformation()
-        self._addWCETDataToCFGs()
         Debug.verboseMessage("HWMT = %d" % self._longestTime)
         
     def __initialise (self):
@@ -280,11 +275,6 @@ class Gem5Parser (TraceInformation):
                             # Compute the HWMT
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
-                            # Get the execution time for the exit basic block
-                            bbTime = time - self.__time1
-                            tupleKey = (self.__currentCFG.getName(), self.__currentBB)
-                            assert tupleKey in self._executionTimes
-                            self._executionTimes[tupleKey] = max(self._executionTimes[tupleKey], bbTime) 
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
@@ -295,61 +285,69 @@ class Gem5Parser (TraceInformation):
                 return cfg
         assert False, "Unable to find CFG with start address %s" % hex(address)
     
+    def __analyseWCETOfBasicBlock (self, executionTime):
+        tupleKey = (self.__currentCFG.getName(), self.__currentBB.getOriginalVertexID())
+        assert tupleKey in self._executionTimes
+        self._executionTimes[tupleKey] = max(self._executionTimes[tupleKey], executionTime)    
+    
     def __parseAddress (self, time, address, runID):
-        oldBB = self.__currentBB
+        if address == self.__lastAddr:
+            self.__analyseWCETOfBasicBlock(time - self.__time1)
         if not self.__currentBB.hasAddress(address):
-            for succID in self.__currentBB .getSuccessorIDs():
-                succv = self.__currentCFG.getVertex(succID)
-                if succv.hasAddress(address):
-                    bbTime = time - self.__time1
-                    tupleKey = (self.__currentCFG.getName(), self.__currentBB)
-                    assert tupleKey in self._executionTimes
-                    self._executionTimes[tupleKey] = max(self._executionTimes[tupleKey], bbTime) 
-                    self.__predBB    = self.__currentBB
-                    self.__currentBB = succv
-                    break
-            # Unable to find a successor of the current basic block with that address.
-            # It must be a call or a return
-            if oldBB == self.__currentBB:
-                bbTime = time - self.__time1
-                tupleKey = (self.__currentCFG.getName(), self.__currentBB)
-                assert tupleKey in self._executionTimes
-                self._executionTimes[tupleKey] = max(self._executionTimes[tupleKey], bbTime)     
-                self.__handleCallAndReturn(oldBB, address)
-            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
-            # Move the time marker forward to the current time to reflect that
-            # a new basic block has been found
+            # Instructions in the current basic block have finished. Analyse its execution time
+            self.__analyseWCETOfBasicBlock(time - self.__time1)
+            # Move the time marker forward to the current time to reflect that we are transitioning
+            # to a new basic block
             self.__time1 = time
-            # Analyse the super blocks
-            self._analyseCFGVertex(self.__currentContextv, self.__currentSuperg, self.__currentBB.getVertexID(), runID)     
-            if self.__predBB:
+            # Make the switch to the next basic block
+            if self.__currentCFG.isCallSite(self.__currentBB.getVertexID()):
+                self.__handleCall(address)
+            elif self.__currentCFG.getExitID() == self.__currentBB.getVertexID():
+                self.__handleReturn()
+            else:
+                for succID in self.__currentBB.getSuccessorIDs():
+                    succv = self.__currentCFG.getVertex(succID)
+                    if succv.hasAddress(address):
+                        self.__predBB    = self.__currentBB
+                        self.__currentBB = succv
+                        break
+                # Since we have switched basic blocks in the current CFG, analyse the super blocks
+                self._analyseCFGVertex(self.__currentContextv, self.__currentSuperg, self.__currentBB.getVertexID(), runID)     
                 self._analyseCFGEdge(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
             # Analyse loop bounds
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
                 tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
                 assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
                 self._loopBoundsInCurrentRun[tupleKey] += 1   
-            if self.__predBB:
                 # Check whether this edge is a loop-exit edge
                 # If it is the header ID of the exiting loop is returned
+            if self.__predBB:
                 headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
                 if headerID:
                     tupleKey = (self.__currentCFG.getName(), headerID)
                     assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
                     self._loopBounds[tupleKey] = max(self._loopBounds[tupleKey], self._loopBoundsInCurrentRun[tupleKey])
-                    self._loopBoundsInCurrentRun[tupleKey] = 0
-      
-    def __handleCallAndReturn (self, oldBB, address):
-        if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
-            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
-        else:
-            callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__currentBB, self.__currentSuperg)
-            self.__stack.append(callerFrame)
-            self.__currentCFG      = self.__getCFGWithAddress(address)
-            self.__currentLNT      = self._program.getLNT(self.__currentCFG.getName())
-            self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
-            self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
-            newContextID           = self.__currentContextv.getSuccessorWithCallSite(oldBB.getVertexID())
-            self.__currentContextv = self.__contextg.getVertex(newContextID)
-            assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
+                    self._loopBoundsInCurrentRun[tupleKey] = 0 
+            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
             
+    def __handleReturn (self):
+        if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
+            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
+            succIDs = self.__currentBB.getSuccessorIDs()
+            assert len(succIDs) == 1
+            succv            = self.__currentCFG.getVertex(succIDs[0])
+            self.__predBB    = self.__currentBB
+            self.__currentBB = succv
+    
+    def __handleCall (self, address):
+        callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg)
+        self.__stack.append(callerFrame)
+        newContextID           = self.__currentContextv.getSuccessorWithCallSite(self.__currentBB.getVertexID())
+        self.__currentContextv = self.__contextg.getVertex(newContextID)
+        self.__currentCFG      = self.__getCFGWithAddress(address)
+        self.__currentLNT      = self._program.getLNT(self.__currentCFG.getName())
+        self.__predBB          = None
+        self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+        assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
+        

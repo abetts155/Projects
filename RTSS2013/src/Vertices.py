@@ -164,34 +164,15 @@ class BasicBlock (CFGVertex):
     
     def __init__ (self, vertexID, name=None):
         CFGVertex.__init__(self, vertexID, name)
-        self.__ipointPosition = None
         self.__instructions = []
         self.__addresses = set([])
-        self.__loopBound = 0
-        self.__wcet = 0
-    
-    def setWCET (self, wcet):
-        self.__wcet = wcet
+        self.__originalID = self._vertexID
         
-    def getWCET (self):
-        return self.__wcet    
-    
-    def setLoopBound (self, bound):
-        self.__loopBound = bound
+    def setOriginalVertexID (self, originalID):
+        self.__originalID = originalID
         
-    def getLoopBound (self):
-        return self.__loopBound
-    
-    def setIpoint (self, position):
-        assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
-        self.__ipointPosition = position
-        
-    def hasIpoint (self):
-        return self.__ipointPosition
-    
-    def ipointPosition (self):
-        assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self._vertexID
-        return self.__ipointPosition
+    def getOriginalVertexID (self):
+        return self.__originalID
     
     def addInstruction (self, instruction):
         self.__instructions.append(instruction)
@@ -324,43 +305,5 @@ class SuperBlock (Vertex):
         string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
         string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
         string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
-        return string
-    
-class Ipoint (Vertex):
-    def __init__ (self, vertexID, IpointID, realID=None):
-        Vertex.__init__(self, vertexID)
-        self.__IpointID = IpointID
-        self.__succIpointIDToVertexID = {}
-        self.__isGhost = False
-        if realID:
-            self.__realID = realID
-        else:
-            self.__realID = vertexID
-    
-    def setGhost (self):
-        self.__isGhost = True
-        
-    def isGhost (self):
-        return self.__isGhost
-        
-    def getIpointID (self):
-        return self.__IpointID
-    
-    def getRealID (self):
-        return self.__realID
-    
-    def addIpointSuccessor (self, succIpointID, succID):
-        self.__succIpointIDToVertexID[succIpointID] = succID
-    
-    def getIpointSuccessor (self, succIpointID):
-        assert succIpointID in self.__succIpointIDToVertexID, \
-        "Unable to find successor of %s with Ipoint ID 0x%04X" % (self._vertexID, succIpointID)
-        return self.__succIpointIDToVertexID[succIpointID]
-    
-    def __str__ (self):
-        string = "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "\tIpoint ID = " + str(self.__IpointID) + "\n"
-        string += "\t" + Vertex.predecessorStr(self)
-        string += "\t" + Vertex.successorStr(self)    
         return string
     

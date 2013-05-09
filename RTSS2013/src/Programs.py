@@ -143,14 +143,24 @@ class Program():
         self.__LNTs           = {}
         self.__superblockcfgs = {}
         self.__bbIDToICFG     = {}
-       
+        
+    def generateAllUDrawFiles (self, prefix=""):
+        if prefix:
+            prefix += '.' 
+        UDrawGraph.makeUdrawFile(self.__callg, "callg")
+        UDrawGraph.makeUdrawFile(self.__contextg, "contextg")
+        for functionName, cfg in self.__ICFGs.iteritems():
+            UDrawGraph.makeUdrawFile(cfg, "%scfg.%s" % (prefix,functionName))
+            UDrawGraph.makeUdrawFile(self.__LNTs[functionName], "%slnt.%s" % (prefix,functionName))
+            UDrawGraph.makeUdrawFile(self.__superblockcfgs[functionName], "%ssuperg.%s" % (prefix,functionName))
+            UDrawGraph.makeUdrawFile(self.__superblockcfgs[functionName].getSuperBlockPathInformationGraph(), "%ssuperg.%s" % (prefix, functionName))
+        
     def getCallGraph (self):
         return self.__callg
 
     def getContextGraph (self):
         if not self.__contextg:
             self.__contextg = ContextGraph(self.__callg)
-            UDrawGraph.makeUdrawFile(self.__contextg, "contextg")
         return self.__contextg
        
     def addICFG (self, icfg, functionName):
@@ -176,7 +186,6 @@ class Program():
             lnt    = self.getLNT(functionName)
             superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
             self.__superblockcfgs[functionName] = superg
-            UDrawGraph.makeUdrawFile(superg, "%s.superg" % icfg.getName())
         return self.__superblockcfgs[functionName]
 
     def getLNT (self, functionName):
@@ -184,7 +193,6 @@ class Program():
             icfg = self.getICFG(functionName)
             lnt  = LoopNests(icfg, icfg.getEntryID())
             self.__LNTs[functionName] = lnt
-            UDrawGraph.makeUdrawFile(lnt, "%s.lnt" % icfg.getName())
         return self.__LNTs[functionName]
 
     def getICFGs (self):
@@ -257,8 +265,6 @@ class Program():
             else:
                 cfg = self.__ICFGs[rootv.getName()]
                 cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
-                UDrawGraph.makeUdrawFile(cfg, "inlined.cfg")
-                UDrawGraph.makeUdrawFile(self.__callg, "callg")
         # Reset the data structures so that they are subsequently rebuilt
         self.__contextg       = None
         self.__LNTs           = {}
@@ -278,6 +284,7 @@ class Program():
             oldIDToNewID[v.getVertexID()] = newID
             clonev = deepcopy(v)
             clonev.setVertexID(newID)
+            clonev.setOriginalVertexID(v.getVertexID())
             clonev.removeAllPredecessors()
             clonev.removeAllSuccessors()
             callerICFG.addVertex(clonev)

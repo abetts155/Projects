@@ -4,7 +4,7 @@ import Debug
 import os
 
 class WCETCalculation:
-    def __init__ (self, program, basepath, basename):
+    def __init__ (self, program, data, basepath, basename):
         self.__contextIDToWCET = {}
         contextg = program.getContextGraph()
         dfs      = DepthFirstSearch(contextg, contextg.getRootID())
@@ -14,7 +14,7 @@ class WCETCalculation:
             lnt          = program.getLNT(functionName)
             superg       = program.getSuperBlockCFG(functionName)
             cfg          = program.getICFG(functionName)
-            ilp          = CreateCFGILP(basepath, basename, self.__contextIDToWCET, contextv, cfg, lnt, superg)
+            ilp          = CreateCFGILP(basepath, basename, data, self.__contextIDToWCET, contextv, cfg, lnt, superg)
             self.__contextIDToWCET[contextv.getVertexID()] = ilp._wcet
             #CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
             #TreeBasedCalculation(superg, lnt)
@@ -381,14 +381,14 @@ class CreateSuperBlockCFGILP (ILP):
         self.__constraints.append(constraint)
 
 class CreateCFGILP (ILP):
-    def __init__ (self, basepath, basename, contextWCETs, contextv, cfg, lnt, superg):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg):
         ILP.__init__(self)
         self.__constraints = []
         self.__variables   = set([])
         self.__createStructuralConstraints(cfg)
-        self.__createLoopConstraints(cfg, lnt)
+        self.__createLoopConstraints(data, cfg, lnt)
         self.__createIntegerConstraint()
-        self.__createObjectiveFunction(contextWCETs, contextv, cfg)
+        self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
         filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
@@ -446,7 +446,7 @@ class CreateCFGILP (ILP):
             constraint2 += LpSolve.getNewLine(2) 
             self.__constraints.append(constraint2)
     
-    def __createLoopConstraints (self, cfg, lnt):
+    def __createLoopConstraints (self, data, cfg, lnt):
         for level, vertices in lnt.levelIterator(True):
             for treev in vertices:
                 if isinstance(treev, HeaderVertex):
@@ -473,7 +473,7 @@ class CreateCFGILP (ILP):
                                 constraint += LpSolve.ltOrEqual
                                 num = 1
                                 for edge in forwardPredIDs:
-                                    constraint += "%d " % headerv.getLoopBound()
+                                    constraint += "%d " % data.getLoopBound(cfg.getName(), headerID)
                                     constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
                                     if num < len(forwardPredIDs):
                                         constraint += LpSolve.plus
@@ -539,7 +539,7 @@ class CreateCFGILP (ILP):
         constraint += LpSolve.getNewLine(2)
         self.__constraints.append(constraint)
                             
-    def __createObjectiveFunction (self, contextWCETs, contextv, cfg):
+    def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
         num        = 1
         for var in self.__variables:
@@ -549,7 +549,7 @@ class CreateCFGILP (ILP):
                 wcet         = basicBlockID
                 v            = cfg.getVertex(basicBlockID)
                 if v.hasInstructions():
-                    wcet = v.getWCET()
+                    wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID()) #self.__getWCETOfBasicBlock(v)
                 if cfg.isCallSite(basicBlockID):
                     calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
                     calleeContextWCET = contextWCETs[calleeContextID]
