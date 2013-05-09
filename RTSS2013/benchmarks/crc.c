@@ -87,7 +87,6 @@ main (int argc, char *argv[])
   for (i = 0; i < argc-1; ++i)
   {
     lin[i] = argv[i + 1][0];
-    printf("%c\n", lin[i]);
   }
 
   unsigned short i1,i2;
