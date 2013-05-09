@@ -139,21 +139,21 @@ class Program():
         self.__callg          = CallGraph()
         self.__contextg       = None
         self.__archivedICFGS  = {}
-        self.__ICFGs          = {}
+        self.__CFGs           = {}
         self.__LNTs           = {}
         self.__superblockcfgs = {}
         self.__bbIDToICFG     = {}
         
-    def generateAllUDrawFiles (self, prefix=""):
-        if prefix:
-            prefix += '.' 
-        UDrawGraph.makeUdrawFile(self.__callg, "callg")
-        UDrawGraph.makeUdrawFile(self.__contextg, "contextg")
-        for functionName, cfg in self.__ICFGs.iteritems():
-            UDrawGraph.makeUdrawFile(cfg, "%scfg.%s" % (prefix,functionName))
-            UDrawGraph.makeUdrawFile(self.__LNTs[functionName], "%slnt.%s" % (prefix,functionName))
-            UDrawGraph.makeUdrawFile(self.__superblockcfgs[functionName], "%ssuperg.%s" % (prefix,functionName))
-            UDrawGraph.makeUdrawFile(self.__superblockcfgs[functionName].getSuperBlockPathInformationGraph(), "%ssuperg.%s" % (prefix, functionName))
+    def generateAllUDrawFiles (self, suffix=""):
+        if suffix:
+            suffix += '.' 
+        UDrawGraph.makeUdrawFile(self.__callg, "callg%s" % suffix)
+        UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg%s" % suffix)
+        for functionName, cfg in self.__CFGs.iteritems():
+            UDrawGraph.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph(), "%s.partitiong%s" % (functionName, suffix))
         
     def getCallGraph (self):
         return self.__callg
@@ -164,9 +164,9 @@ class Program():
         return self.__contextg
        
     def addICFG (self, icfg, functionName):
-        assert functionName not in self.__ICFGs, "Trying to add duplicate ICFG for function '%s'" % functionName
+        assert functionName not in self.__CFGs, "Trying to add duplicate ICFG for function '%s'" % functionName
         self.__callg.addVertex(functionName)
-        self.__ICFGs[functionName] = icfg
+        self.__CFGs[functionName] = icfg
         
     def addSuperBlockCFG (self, superg, functionName):
         assert functionName not in self.__superblockcfgs, "Trying to add duplicate super block CFG for function '%s'" % functionName
@@ -177,8 +177,8 @@ class Program():
         self.__LNTs[functionName] = lnt
         
     def getICFG (self, functionName):
-        assert functionName in self.__ICFGs, "Unable to find ICFG for function '%s'" % functionName
-        return self.__ICFGs[functionName]
+        assert functionName in self.__CFGs, "Unable to find ICFG for function '%s'" % functionName
+        return self.__CFGs[functionName]
     
     def getSuperBlockCFG (self, functionName):
         if functionName not in self.__superblockcfgs:
@@ -196,7 +196,7 @@ class Program():
         return self.__LNTs[functionName]
 
     def getICFGs (self):
-        return self.__ICFGs.values().__iter__()
+        return self.__CFGs.values().__iter__()
     
     def getLNTs (self):
         return self.__LNTs.values().__iter__() 
@@ -205,24 +205,24 @@ class Program():
         return self.__superblockcfgs.values().__iter__() 
     
     def removeFunction (self, functionName):
-        if functionName in self.__ICFGs:
+        if functionName in self.__CFGs:
             # Archive the ICFG as it is no longer needed
-            cfg = self.__ICFGs[functionName]
+            cfg = self.__CFGs[functionName]
             self.__archivedICFGS[functionName] = cfg
-            del self.__ICFGs[functionName]
+            del self.__CFGs[functionName]
         if self.__callg.hasVertexWithName(functionName):
             self.__callg.removeVertex(functionName)
             
     def removeProblematicFunctions (self):
         functions = set([])
-        for functionName, cfg in self.__ICFGs.iteritems():
+        for functionName, cfg in self.__CFGs.iteritems():
             exitID = cfg.getExitID()
             if cfg.isCallSite(exitID) or cfg.getExitID() == dummyVertexID:
                 functions.add(functionName)
         for functionName in functions:
             # This check is essential as the function may have been removed in the meantime
-            if functionName in self.__ICFGs:
-                cfg = self.__ICFGs[functionName]
+            if functionName in self.__CFGs:
+                cfg = self.__CFGs[functionName]
                 dfs = DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).getVertexID())
                 for vertexID in dfs.getPostorder():
                     callv = self.__callg.getVertex(vertexID)
@@ -236,7 +236,7 @@ class Program():
                     self.removeFunction(callv.getName())                    
     
     def addExitEntryBackEdges (self):
-        for cfg in self.__ICFGs.values():
+        for cfg in self.__CFGs.values():
             cfg.addExitEntryEdge()
             UDrawGraph.makeUdrawFile(cfg, "%s.cfg" % cfg.getName())
     
@@ -263,7 +263,7 @@ class Program():
             if callv != rootv:
                 self.removeFunction(callv.getName())
             else:
-                cfg = self.__ICFGs[rootv.getName()]
+                cfg = self.__CFGs[rootv.getName()]
                 cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
         # Reset the data structures so that they are subsequently rebuilt
         self.__contextg       = None

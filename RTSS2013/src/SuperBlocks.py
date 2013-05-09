@@ -39,8 +39,8 @@ class SuperBlockGraph (DirectedGraph):
                     dominatorg             = DominatorGraph(predomTree, postdomTree)  
                     sccs                   = StrongComponents(dominatorg)
                     branchIpostSuperBlocks = {}
-                    self.__headerToSuperBlockSubgraph[headerID] = self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
-                    self.__headerToRootSuperBlock[headerID]     = self.__addEdges(lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID)
+                    self.__headerToSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
+                    self.__headerToRootSuperBlock[headerID]                = self.__addEdges(lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
                     self.__headerToRootSuperBlock[headerID].setLoopHeader(headerID)
                     if v.getVertexID() == lnt.getRootID():
                         self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
@@ -50,6 +50,7 @@ class SuperBlockGraph (DirectedGraph):
         global nextVertexID 
         subgraph      = DirectedGraph()
         sccIDToVertex = {}
+        vToSuperv     = {}
         for sccID in xrange(1, sccs.numberOfSCCs()+1):
             nextVertexID += 1
             superVertexID                = nextVertexID
@@ -62,11 +63,12 @@ class SuperBlockGraph (DirectedGraph):
                 vertexID = v.getVertexID()     
                 sccID    = sccs.getSCCID(vertexID)
                 superv   = sccIDToVertex[sccID]
+                vToSuperv[vertexID] = superv
                 if isinstance(v, BasicBlock):
+                    self.__basicBlockToSuperBlock[vertexID] = superv
                     superv.addBasicBlock(vertexID)
                 else:
                     superv.addEdge(v.edge)
-                self.__basicBlockToSuperBlock[vertexID] = superv
                 if v.numberOfSuccessors() > 1:
                     ipostID = postdomTree.getVertex(vertexID).getParentID()
                     if v.hasSuccessor(ipostID):
@@ -77,9 +79,9 @@ class SuperBlockGraph (DirectedGraph):
                         self.vertices[superVertexID]     = superv
                         subgraph.vertices[superVertexID] = superv
                         branchIpostSuperBlocks[vertexID] = superv
-        return subgraph
+        return subgraph, vToSuperv
                 
-    def __addEdges (self, lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID):
+    def __addEdges (self, lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv):
         rootSuperv = self.__basicBlockToSuperBlock[headerID]
         dfs        = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
         branches   = set([])
@@ -89,10 +91,10 @@ class SuperBlockGraph (DirectedGraph):
             # Found a branch
             if v.numberOfSuccessors() > 1:
                 branches.add(vertexID)
-                sourcev = self.__basicBlockToSuperBlock[vertexID]                
+                sourcev =  vToSuperv[vertexID]                
                 for succID in v.getSuccessorIDs():
                     if not postdomTree.isAncestor(succID, vertexID):
-                        destinationv = self.__basicBlockToSuperBlock[succID]
+                        destinationv = vToSuperv[succID]
                         if not sourcev.hasSuccessor(destinationv.getVertexID()):
                             self.__addEdge(sourcev, destinationv, vertexID)
                     else:
@@ -176,7 +178,6 @@ class SuperBlockGraph (DirectedGraph):
                         assert len(edges) == 1
                         edge = list(edges)[0]
                         self.__monitoredEdges[edge] = superv
-            UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "partitiong"))
           
     def computePathInformation (self, superBlockToRuns, allRuns):
         global exclusiveSetSize

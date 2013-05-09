@@ -113,6 +113,7 @@ class TraceInformation:
     def _analyseCFGVertex (self, contextv, superg, bbID, runID):
         if superg.isMonitoredBasicBlock(bbID):
             superv = superg.getMonitoredBasicBlockSuperBlock(bbID)
+            #print superv.getVertexID(), bbID
             if superv not in self._superBlockCFGInformation[(contextv, superg)]:
                 self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
             self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
