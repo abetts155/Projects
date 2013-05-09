@@ -50,6 +50,7 @@ class ARMInstructionSet:
 
 startAddressToFunction          = {}
 lastAddressToFunction           = {}
+functionToJumpTableIndices      = {}
 functionToInstructions          = {}
 functionToStartAddress          = {}
 functionToLastAddress           = {}
@@ -106,6 +107,7 @@ def extractInstructions (filename):
                     Debug.debugMessage("Detected function '%s' @ start address %d" % (functionName, address), debugLevel)
                     startAddressToFunction[address]                  = functionName
                     currentFunction                                  = functionName
+                    functionToJumpTableIndices[currentFunction]      = set([])
                     functionToInstructions[currentFunction]          = []
                     functionToDirectives[currentFunction]            = []
                     functionToJumpTableInstructions[currentFunction] = []

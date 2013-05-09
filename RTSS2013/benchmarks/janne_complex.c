@@ -8,16 +8,12 @@
 void
 janne_complex (int a, int b)
 {
-  __CPROVER_assume(1 <= a && a < 50);
-  __CPROVER_assume(1 <= b && b < 50);
-  
   while (a < 30)
   {
     while (b < a)
     {
       if (b > 5)
       {
-        assert(0);
         b = b * 3;
       }
       else

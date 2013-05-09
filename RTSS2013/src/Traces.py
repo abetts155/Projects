@@ -108,8 +108,13 @@ class TraceInformation:
             for v in lnt:
                 if isinstance(v, Vertices.HeaderVertex):
                     self._loopBounds[(functionName, v.getHeaderID())] = 0
-                    self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0 
-
+                    self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0
+    
+    def _normaliseData (self):
+        for tupleKey in self._executionTimes.keys():
+            self._executionTimes[tupleKey] *= pow(10,-3)
+        self._longestTime *= pow(10,-3)
+        
     def _analyseCFGVertex (self, contextv, superg, bbID, runID):
         if superg.isMonitoredBasicBlock(bbID):
             superv = superg.getMonitoredBasicBlockSuperBlock(bbID)
@@ -217,7 +222,7 @@ class Gem5Parser (TraceInformation):
         self.__initialise()
         self.__parse(traceFiles)
         self._computePathInformation()
-        Debug.verboseMessage("HWMT = %d" % self._longestTime)
+        self._normaliseData()
         
     def __initialise (self):
         self.__currentContextv = None

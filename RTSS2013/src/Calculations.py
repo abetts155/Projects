@@ -2,6 +2,7 @@ from Vertices import HeaderVertex
 from Trees import DepthFirstSearch
 import Debug
 import os
+import Vertices
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename):
@@ -511,18 +512,19 @@ class CreateCFGILP (ILP):
     def __addAlwaysConstraints (self, superg):
         partitiong = superg.getSuperBlockPathInformationGraph()
         for partitionv in partitiong:
-            if not partitionv.acyclicPartition:
-                for superv in partitionv.runs.keys():
-                    if superv in partitiong.alwaysSuperBlocks:
-                        self.__addAlwaysConstraint(superv)
-            else:
-                alwaysExecuteSet = []
-                for superv in partitionv.runs.keys():
-                    if superv in partitiong.alwaysSuperBlocks:
-                        alwaysExecuteSet.append(superv)
-                if alwaysExecuteSet and len(alwaysExecuteSet) == 1:
-                    self.__addAlwaysConstraint(alwaysExecuteSet[0])
-                        
+            if isinstance(partitionv, Vertices.SuperBlockPartition):
+                if not partitionv.acyclicPartition:
+                    for superv in partitionv.runs.keys():
+                        if superv in partitiong.alwaysSuperBlocks:
+                            self.__addAlwaysConstraint(superv)
+                else:
+                    alwaysExecuteSet = []
+                    for superv in partitionv.runs.keys():
+                        if superv in partitiong.alwaysSuperBlocks:
+                            alwaysExecuteSet.append(superv)
+                    if alwaysExecuteSet and len(alwaysExecuteSet) == 1:
+                        self.__addAlwaysConstraint(alwaysExecuteSet[0])
+                            
     def __addAlwaysConstraint (self, superv):
         comment = LpSolve.getComment("Always executes constraint")
         self.__constraints.append(comment)

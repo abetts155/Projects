@@ -146,7 +146,7 @@ class Program():
         
     def generateAllUDrawFiles (self, suffix=""):
         if suffix:
-            suffix += '.' 
+            suffix = '.' + suffix 
         UDrawGraph.makeUdrawFile(self.__callg, "callg%s" % suffix)
         UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg%s" % suffix)
         for functionName, cfg in self.__CFGs.iteritems():
@@ -284,7 +284,7 @@ class Program():
             oldIDToNewID[v.getVertexID()] = newID
             clonev = deepcopy(v)
             clonev.setVertexID(newID)
-            clonev.setOriginalVertexID(v.getVertexID())
+            clonev.setOriginalVertexID(v.getOriginalVertexID())
             clonev.removeAllPredecessors()
             clonev.removeAllSuccessors()
             callerICFG.addVertex(clonev)

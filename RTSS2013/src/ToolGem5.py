@@ -256,12 +256,14 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     import Traces, Calculations
     program.generateAllUDrawFiles()
     data = Traces.Gem5Parser(program, gem5Traces)
+    Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()
     
     program.inlineCalls()
     data = Traces.Gem5Parser(program, gem5Traces)
+    Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
     Calculations.WCETCalculation(program, data, basepath, basename)
     for superg in program.getSuperBlockCFGs():
         superg.getSuperBlockPathInformationGraph().output()

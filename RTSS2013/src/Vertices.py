@@ -196,9 +196,10 @@ class BasicBlock (CFGVertex):
         return address in self.__addresses
         
     def __str__ (self):
-        string =  "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "pred      = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ      = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
+        string =  "Vertex ID   = " + str(self._vertexID) + "\n"
+        string += "Original ID = " + str(self.__originalID) + "\n"
+        string += "pred        = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ        = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         for instruction in self.__instructions:
             string += instruction.__str__() + '\n'    
         return string

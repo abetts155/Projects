@@ -17,7 +17,7 @@ class SuperBlockGraph (DirectedGraph):
         self.__icfg  = icfg
         self._name   = icfg.getName()
         self.__lnt   = lnt
-        self.__pathg = SuperBlockPathInformationGraph()
+        self.__pathg = SuperBlockPathInformationGraph(self._name)
         self.__headerToSuperBlockSubgraph = {}
         self.__headerToRootSuperBlock     = {}
         self.__headerToPartitionVertices  = {}
@@ -247,23 +247,24 @@ class SuperBlockGraph (DirectedGraph):
         return self.__pathg
     
 class SuperBlockPathInformationGraph (DirectedGraph):
-    def __init__ (self):
+    def __init__ (self, name):
         DirectedGraph.__init__(self)
+        self._name = name
         self.partitionOrder = []
         self.exclusiveTuples = set([])
         self.alwaysSuperBlocks = set([])
     
     def output (self):
-        print "%d super blocks always execute" % (len(self.alwaysSuperBlocks))
+        Debug.verboseMessage("In %s..." % self._name)
+        Debug.verboseMessage("%d super blocks always execute" % (len(self.alwaysSuperBlocks)))
         if self.alwaysSuperBlocks:
             count = 0
             for superv in self.alwaysSuperBlocks:
                 if superv.getBasicBlockIDs():
                     count += 1
-            print "...%d of which are basic blocks" % (count)
-            print "...%d of which are edges" % (len(self.alwaysSuperBlocks) - count)
-                    
-        print "%d mutually exclusive tuples" % (len(self.exclusiveTuples))
+            Debug.verboseMessage("...%d of which are basic blocks" % (count))
+            Debug.verboseMessage("...%d of which are edges" % (len(self.alwaysSuperBlocks) - count))
+        Debug.verboseMessage("%d mutually exclusive tuples" % (len(self.exclusiveTuples)))
         
     def getPathInformationVertex (self, superv):
         for partitionv in self:
