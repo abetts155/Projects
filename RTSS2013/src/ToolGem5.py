@@ -1,7 +1,6 @@
 #!/usr/bin/python2.7
 
-import Debug
-import TestHarness
+import Debug, TestHarness, Timing
 
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
@@ -338,6 +337,7 @@ def commandLine ():
 def doAnalysis (gem5Traces, program, basepath, basename):
     import Traces, Calculations
     program.generateAllUDrawFiles()
+    time1 = Timing.log("TRACE PARSING RUN #1 (NO INLINING)")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
@@ -345,6 +345,7 @@ def doAnalysis (gem5Traces, program, basepath, basename):
 
     program.inlineCalls()
     program.generateAllUDrawFiles("inlined")
+    time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
     Calculations.WCETCalculation(program, data, basepath, basename)
@@ -379,7 +380,9 @@ if __name__ == "__main__":
     
     Debug.verboseMessage("%s Analysing program '%s' %s" % ('*' * 10, args.program, '*' * 10))
     Debug.verboseMessage("Checking program configuration...")
+    time1 = Timing.log("COMPILING BEGIN")
     binary, program, testSpecFile = checkProgramFiles()
+    time2 = Timing.log("COMPILING END")
     Debug.verboseMessage("...all good")
     if args.compile:
         Debug.exitMessage("DONE")
@@ -395,7 +398,9 @@ if __name__ == "__main__":
         if args.ga:
             Debug.verboseMessage("Using GA to generate test vectors")
             gem5Traces = []
+            time3 = Timing.log("GA RUN #1")
             gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, False))
+            time4 = Timing.log("GA RUN #2")
             gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, True))
         else:
             Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)

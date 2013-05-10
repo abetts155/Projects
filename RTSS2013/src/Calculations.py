@@ -398,13 +398,27 @@ class CreateCFGILP (ILP):
             Debug.verboseMessage("No constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
         
         intConstraint = self.__constraints.pop()
+        self.__alwaysBasicBlocks = set([])
+        self.__alwaysEdges       = set([])
         self.__addAlwaysConstraints(data, pathg)
         self.__constraints.append(intConstraint)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
         if self._solve(filename):
-            Debug.verboseMessage("Extra constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
+            Debug.verboseMessage("Always execute constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
+        
+        candidates = self.__getMutualExclusionCandidates(data, pathg)
+        if len(candidates) > 1:
+            for candidate in candidates:
+                intConstraint = self.__constraints.pop()
+                self.__tryMutualExclusion(candidate)
+                self.__constraints.append(intConstraint)
+                with open(filename, 'w') as ilpFile:
+                    for constraint in self.__constraints:
+                        ilpFile.write(constraint)        
+                if self._solve(filename):
+                    Debug.verboseMessage("With mutual exclusion constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
     
     def __createStructuralConstraints (self, cfg):
         for v in cfg:
@@ -483,6 +497,20 @@ class CreateCFGILP (ILP):
                                 self.__constraints.append(constraint)
                             else:
                                 pass
+                            
+    def __getMutualExclusionCandidates (self, data, pathg):
+        candidates = set([])
+        for superv in pathg:
+            if superv.numberOfSuccessors() > 0 and not data.alwaysExecutes(superv):
+                if superv.getBasicBlockIDs() and superv.getRepresentativeID() not in self.__alwaysBasicBlocks:
+                    candidates.add(superv)
+                else:
+                    edges = superv.getEdges()
+                    assert len(edges) == 1
+                    edge = list(edges)[0]
+                    if edge[0] not in self.__alwaysBasicBlocks and edge[1] not in self.__alwaysBasicBlocks and edge not in self.__alwaysEdges:
+                        candidates.add(superv)
+        return candidates
     
     def __addAlwaysConstraints (self, data, pathg):
         for partitionID in range(1, pathg.partitionID+1):
@@ -501,23 +529,28 @@ class CreateCFGILP (ILP):
             else:
                 for superv in pathg.partitionToSuperBlocks[partitionID]:
                     executionCount = data.getMinimumExecutionCount(superv)
-                    self.__addAlwaysConstraint(superv, executionCount)
+                    if executionCount > 0:
+                        self.__addAlwaysConstraint(superv, executionCount)
                             
     def __addAlwaysConstraint (self, superv, value):
         comment = LpSolve.getComment("Always executes constraint")
         self.__constraints.append(comment)
         if superv.getBasicBlockIDs():
             constraint = LpSolve.getVertexVariable(superv.getRepresentativeID())
+            self.__alwaysBasicBlocks.add(superv.getRepresentativeID())
         else:
             edges = superv.getEdges()
             assert len(edges) == 1
             edge = list(edges)[0]
             constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
+            self.__alwaysBasicBlocks.add(edge[0])
+            self.__alwaysBasicBlocks.add(edge[1])
+            self.__alwaysEdges.add(edge)
         constraint += LpSolve.gtOrEqual
         constraint += str(value)
         constraint += LpSolve.semiColon
         constraint += LpSolve.getNewLine(2)
-        self.__constraints.append(constraint)
+        self.__constraints.append(constraint)        
                             
     def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_

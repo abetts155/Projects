@@ -194,6 +194,11 @@ class TraceInformation:
             return 0
         return self._executesKTimes[superv]
     
+    def alwaysExecutes (self, superv):
+        if superv in self._executesKTimes:
+            return self._executesKTimes[superv] > 0
+        return True
+    
     def getNumberOfAlwaysExecute (self, pathg):
         num = 0
         for superv in pathg:
