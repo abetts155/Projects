@@ -93,6 +93,8 @@ class TraceInformation:
         self._program = program
         self._allruns = set([])
         self._superBlockCFGInformation = {}
+        self._nonExclusivePairs = set([])
+        self.__lastSuperv = None
         for contextv in program.getContextGraph():
             functionName = contextv.getName()
             superg       = program.getSuperBlockCFG(functionName)
@@ -114,6 +116,12 @@ class TraceInformation:
         for tupleKey in self._executionTimes.keys():
             self._executionTimes[tupleKey] *= pow(10,-3)
         self._longestTime *= pow(10,-3)
+    
+    def _eliminateExclusivePair (self, superv):
+        if self.__lastSuperv:
+            self._nonExclusivePairs.add((self.__lastSuperv, superv))
+            Debug.debugMessage("Super block pair (%d, %d) is not mutually exclusive" % (self.__lastSuperv.getVertexID(), superv.getVertexID()), 10)
+        self.__lastSuperv = superv
         
     def _analyseCFGVertex (self, contextv, superg, bbID, runID):
         if superg.isMonitoredBasicBlock(bbID):
@@ -122,19 +130,21 @@ class TraceInformation:
             if superv not in self._superBlockCFGInformation[(contextv, superg)]:
                 self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
             self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-        
+            self._eliminateExclusivePair(superv)
+            
     def _analyseCFGEdge (self, contextv, superg, predID, succID, runID):
         if superg.isMonitoredEdge(predID, succID):
             superv = superg.getMonitoredEdgeSuperBlock(predID, succID)
             if superv not in self._superBlockCFGInformation[(contextv, superg)]:
                 self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
             self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-            
+            self._eliminateExclusivePair(superv) 
+               
     def _computePathInformation (self):
         for contextv in self._program.getContextGraph():
             functionName = contextv.getName()
             superg       = self._program.getSuperBlockCFG(functionName)
-            superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._allruns)
+            superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._nonExclusivePairs, self._allruns)
             
     def getLoopBound (self, functionName, headerID):
         tupleKey = (functionName, headerID)

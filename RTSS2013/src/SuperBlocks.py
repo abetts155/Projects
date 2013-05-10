@@ -179,7 +179,7 @@ class SuperBlockGraph (DirectedGraph):
                         edge = list(edges)[0]
                         self.__monitoredEdges[edge] = superv
           
-    def computePathInformation (self, superBlockToRuns, allRuns):
+    def computePathInformation (self, superBlockToRuns, nonExclusivePairs, allRuns):
         global exclusiveSetSize
         for superv, runs in superBlockToRuns.iteritems():
             partitionv = self.__pathg.getPathInformationVertex(superv)
@@ -191,29 +191,37 @@ class SuperBlockGraph (DirectedGraph):
         # The size of subsets 
         setSize = min(len(self.__pathg.partitionOrder),exclusiveSetSize)
         for subsetSize in xrange(2, setSize+1):
-            Debug.debugMessage("Generating subsets of size %d from set size of %d" % (subsetSize, setSize), 1)
+            Debug.verboseMessage("Generating subsets of size %d from set size of %d" % (subsetSize, setSize))
             # Get every partition of size r
             theCombinations = set(itertools.combinations(self.__pathg.partitionOrder, subsetSize))
-            Debug.debugMessage("There are %d combinations" % len(theCombinations))
+            Debug.verboseMessage("There are %d combinations" % len(theCombinations))
+            exclusiveTuples = set([])
             for partitionTuple in theCombinations:
                 theSets = []
                 for i in xrange(0, subsetSize):
                     theSets.append(partitionTuple[i].runs.keys())
                 cartProducts = set(itertools.product(*theSets))
-                Debug.debugMessage("There are %d cross products" % len(cartProducts))
+                Debug.verboseMessage("There are %d cross products" % len(cartProducts))
                 for cartProduct in cartProducts:
-                    runs = allRuns
-                    for superv in cartProduct:
-                        if superv in superBlockToRuns:
-                            runs = runs.intersection(superBlockToRuns[superv])
-                    if not runs:
-                        self.__pathg.exclusiveTuples.add(cartProduct)
-                        print "%s is MUTUALLY EXCLUSIVE" % ', '.join(str(superv.getVertexID()) for superv in cartProduct)
-                    nextVertexID = self.__pathg.getNextVertexID() 
-                    partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
-                    self.__pathg.vertices[nextVertexID] = partitionv
-        UDrawGraph.makeUdrawFile(self.__pathg, "%s.%s" % (self.getName(), "partitiong"))
-                
+                    cartProductStr = ', '.join(str(superv.getVertexID()) for superv in cartProduct)
+                    if cartProduct in nonExclusivePairs:
+                        Debug.verboseMessage("Set intersection of {%s} avoided as it was already falsified" % cartProductStr)
+                    else:
+                        runs = allRuns
+                        for superv in cartProduct:
+                            if superv in superBlockToRuns:
+                                runs = runs.intersection(superBlockToRuns[superv])
+                        if not runs:
+                            exclusiveTuples.add(cartProduct)
+                            Debug.verboseMessage("%s is MUTUALLY EXCLUSIVE" % cartProductStr)
+                        nextVertexID = self.__pathg.getNextVertexID() 
+                        partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
+                        self.__pathg.vertices[nextVertexID] = partitionv
+            self.__pathg.exclusiveTuples.update(exclusiveTuples)
+            if len(exclusiveTuples) == 0:
+                Debug.verboseMessage("Exiting early as there were no exclusive sets of size %d" % subsetSize)
+                break
+             
     def isMonitoredBasicBlock (self, basicBlockID):
         return basicBlockID in self.__monitoredBasicBlocks
    
