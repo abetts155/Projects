@@ -630,7 +630,8 @@ main (int argc, char *argv[])
   }
 
   cnt = atoi (argv[1]);
-  printf("%d", cover (cnt));
+  int val = cover(cnt);
+  printf("%d", val);
 
   return 0;
 }

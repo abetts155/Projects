@@ -202,6 +202,8 @@ main (int argc, char *argv[])
   }
 
   element = select (atoi (argv[1]));
+  
+  printf("%d", element);
 
   return 0;
 }

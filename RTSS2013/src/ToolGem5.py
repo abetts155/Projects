@@ -41,10 +41,12 @@ def fitnessFunction (chromosome):
     time1 = time1[:-1]
     time2 = time2[:-1]
     score = int(time2) - int(time1)
+    if fitnessFunction.minimumExecutionTimes:
+        score = sys.maxint - score
     Debug.debugMessage("Score = %d" % score, 1)
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=1):
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, minimumExecutionTimes, populationSize=10, generations=1):
     import re
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 
@@ -73,6 +75,7 @@ def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties,
     fitnessFunction.gem5Traces       = []
     fitnessFunction.run              = 0
     fitnessFunction.vectorProperties = vectorProperties
+    fitnessFunction.minimumExecutionTimes = minimumExecutionTimes
     # Carry on from previous executions (if they exist)
     gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
     if os.path.exists(gem5TraceDirectory):
@@ -123,7 +126,7 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties):
 def getTestSpecification (testSpecFile):
     import sys
     import locale
-    import TestHarness
+    
     basetype = None
     length   = None
     lower    = None
@@ -266,6 +269,12 @@ def commandLine ():
                          nargs='*',
                          help="previous gem5 runs")
     
+    cmdline.add_argument("-C",
+                         dest="compile",
+                         action="store_true",
+                         help="compile only",
+                         default=False)
+    
     cmdline.add_argument("--compiler-flags",
                           type=commaSeparatedList,
                           help="flags to be passed to the compiler",
@@ -332,20 +341,14 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
-    for superg in program.getSuperBlockCFGs():
-        Debug.verboseMessage("In %s..." % superg.getName())
-        superg.output()
-        superg.getSuperBlockPathInformationGraph().output()
-    
+    program.output(data)
+
     program.inlineCalls()
+    program.generateAllUDrawFiles("inlined")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
     Calculations.WCETCalculation(program, data, basepath, basename)
-    for superg in program.getSuperBlockCFGs():
-        Debug.verboseMessage("In %s..." % superg.getName())
-        superg.output()
-        superg.getSuperBlockPathInformationGraph().output()
-    program.generateAllUDrawFiles("inlined")
+    program.output(data)
         
 def checkTraceFiles (gem5Traces, basename):
     import re
@@ -360,7 +363,7 @@ def checkTraceFiles (gem5Traces, basename):
     return files  
 
 if __name__ == "__main__":   
-    import Utils, SuperBlocks, UDrawGraph
+    import Utils, UDrawGraph
     import os
     
     args                = commandLine()
@@ -370,10 +373,7 @@ if __name__ == "__main__":
     Debug.verbose       = args.verbose
     UDrawGraph.enabled  = args.udraw
     UDrawGraph.basename = basename
-    
-    if args.exclusive_size:
-        SuperBlocks.exclusiveSetSize = args.exclusive_size
-    
+
     if args.clean:
         Utils.clean()
     
@@ -381,6 +381,8 @@ if __name__ == "__main__":
     Debug.verboseMessage("Checking program configuration...")
     binary, program, testSpecFile = checkProgramFiles()
     Debug.verboseMessage("...all good")
+    if args.compile:
+        Debug.exitMessage("DONE")
     if args.gem5Traces:
         gem5Traces = checkTraceFiles(args.gem5Traces, basename)
     else:
@@ -390,10 +392,13 @@ if __name__ == "__main__":
         Debug.verboseMessage("Checking test specification...")
         testSpecification = getTestSpecification(testSpecFile)
         Debug.verboseMessage("...all good")
-        Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
         if args.ga:
-            gem5Traces = runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+            Debug.verboseMessage("Using GA to generate test vectors")
+            gem5Traces = []
+            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, False))
+            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, True))
         else:
+            Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
             gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
     doAnalysis(gem5Traces, program, basepath, basename)
     

@@ -9,7 +9,7 @@
 #define UPPERLIMIT 5
 typedef int matrix[UPPERLIMIT][UPPERLIMIT];
 
-void
+int
 matrixmultiply (matrix A, matrix B, matrix C)
 {
   int i, j, k;
@@ -25,6 +25,8 @@ matrixmultiply (matrix A, matrix B, matrix C)
       }
     }
   }
+  
+  return C[0][0];
 }
 
 int
@@ -39,7 +41,6 @@ main (int argc, char *argv[])
    */
   if (argc != 2*UPPERLIMIT*UPPERLIMIT+1)
   {
-    printf("HERE");
     return 1;
   }
 
@@ -69,7 +70,9 @@ main (int argc, char *argv[])
     }
   }
 
-  matrixmultiply (A, B, C);
+  int val = matrixmultiply (A, B, C);
+    
+  printf("%d", val);
 
   return 0;
 }

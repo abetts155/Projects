@@ -122,7 +122,9 @@ main (int argc, char *argv[])
   a[1] = atoi (argv[2]);
   a[2] = atoi (argv[3]);
 
-  quadraticroots(a);
+  int val = quadraticroots(a);
+  
+  printf("%d", val);
 
   return 0;
 }

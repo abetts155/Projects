@@ -12,7 +12,7 @@ volatile long P2_marking_member_0[5];
 volatile int P3_is_marked = 0;
 volatile long P3_marking_member_0[6];
 
-void
+int
 petri (int n)
 {
   while (n > 0)
@@ -4214,6 +4214,8 @@ petri (int n)
       } /* end of if (Transition condition) */
     }
   }
+  
+  return P3_is_marked;
 }
 
 int
@@ -4227,7 +4229,8 @@ main (int argc, char *argv[])
     return 1;
   }
 
-  petri (atoi (argv[1]));
+  int val = petri (atoi (argv[1]));
+  printf("%d", val); 
   
   return 0;
 }

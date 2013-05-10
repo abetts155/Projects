@@ -5,7 +5,7 @@
  * For this program, a two-element test vector is expected.
  */
 
-void
+int
 janne_complex (int a, int b)
 {
   while (a < 30)
@@ -33,6 +33,8 @@ janne_complex (int a, int b)
     a = a + 2;
     b = b - 10;
   }
+  
+  return a;
 }
 
 int
@@ -46,7 +48,8 @@ main (int argc, char *argv[])
     return 1;
   }
 
-  janne_complex (atoi(argv[1]), atoi(argv[2]));
+  int val = janne_complex (atoi(argv[1]), atoi(argv[2]));
+  printf("%d", val);
 
   return 0;
 }

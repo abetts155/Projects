@@ -1,6 +1,6 @@
 #define TEST_VECTOR_LENGTH 720
 
-void 
+long 
 finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,long scale)
 {
   long i,j,coef_len2,acc_length;
@@ -48,6 +48,8 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
       in_ptr++;
     }
   }
+  
+  return *coef;
 }
 
 int
@@ -75,7 +77,9 @@ main (int argc, char *argv[])
     0x59, 0xf, 0xffffffe6, 0xfffffff2, 0xb, 0xc, 0xfffffffc, 0xfffffff7, 0x0,
     0x7, 0x2, 0xfffffffc, 0xfffffffe, 0x3, 0x4, 0x1, 0xfffffffe, 0};
 
-  finiteImpulseResponse (in_data, out_data, 700, fir_int, 35, 285); 
+  long val = finiteImpulseResponse (in_data, out_data, 700, fir_int, 35, 285); 
+  
+  printf("%ld", val);
 
   return 0;
 }

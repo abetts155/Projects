@@ -226,6 +226,8 @@ main (int argc, char *argv[])
   /* inverse fft */
   flag = 1;
   chkerr = fft(ARRAY_SIZE, flag);
+  
+  printf("%d", chkerr);
 
   return 0;
 }

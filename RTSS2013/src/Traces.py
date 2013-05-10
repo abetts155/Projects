@@ -1,5 +1,5 @@
 import Debug, ARM, Vertices
-import random, os, hashlib, shlex
+import random, os, hashlib, shlex, sys
 
 newTrace = "=>"
 endTrace = "<="
@@ -89,24 +89,70 @@ class GenerateTraces:
         
 class TraceInformation:
     def __init__ (self, program):
-        self._longestTime = 0
-        self._program = program
-        self._allruns = set([])
+        self._program    = program
+        self._allruns    = set([])
+        self._partitions = {}
+        self._initialiseSuperBlockInformation()
+        self._initialiseRequiredWCETInformation()
+        
+    def _outputConjectures (self):
+        for superv, conjecture in self._executesKTimes.iteritems():
+            Debug.verboseMessage("Conjecture that %d executes %d times holds" % (superv.getVertexID(), conjecture)) 
+    
+    def _endRun (self):
+        newConjectures = {}
+        for superv, conjecture in self._executesKTimes.iteritems():
+            executionCount = self._superBlockExecutionCounts[superv]
+            if executionCount < conjecture:
+                Debug.debugMessage("Falsifying conjecture that %d executes %d times. Found %d instead"  % (superv.getVertexID(), conjecture, executionCount), 10)
+                newConjectures[superv] = executionCount
+            self._superBlockExecutionCounts[superv] = 0 
+        self._executesKTimes.update(newConjectures)
+        # Remove mutual edges between super blocks across partition boundaries
+        for pathg in self._partitions.keys():
+            for partitionID1 in self._partitions[pathg].keys():
+                for partitionID2 in self._partitions[pathg].keys():
+                    if partitionID1 != partitionID2:
+                        for superv1 in self._partitions[pathg][partitionID1]:
+                            for superv2 in self._partitions[pathg][partitionID2]:
+                                Debug.debugMessage("Falsifying conjecture that (%d, %d) is mutually exclusive"  % (superv1.getVertexID(), superv2.getVertexID()), 10)
+                                pathg.removeEdge(superv1.getVertexID(), superv2.getVertexID())
+                                pathg.removeEdge(superv2.getVertexID(), superv1.getVertexID())
+        for cfg in self._program.getICFGs():
+            superg = self._program.getSuperBlockCFG(cfg.getName())
+            pathg  = superg.getSuperBlockPathInformationGraph()
+            for partitionID in self._partitions[pathg].keys():
+                self._partitions[pathg][partitionID].clear()
+    
+    def _initialiseSuperBlockInformation (self):
+        self._superBlockExecutionCounts = {}
+        self._executesKTimes = {}
+        self._observedSuperBlocks = set([])
         self._superBlockCFGInformation = {}
-        self._nonExclusivePairs = set([])
-        self.__lastSuperv = None
-        for contextv in program.getContextGraph():
-            functionName = contextv.getName()
-            superg       = program.getSuperBlockCFG(functionName)
-            self._superBlockCFGInformation[(contextv, superg)] = {}
+        for cfg in self._program.getICFGs():
+            superg = self._program.getSuperBlockCFG(cfg.getName())
+            pathg  = superg.getSuperBlockPathInformationGraph()
+            self._partitions[pathg] = {}
+            for superv in pathg:
+                self._superBlockExecutionCounts[superv] = 0
+                if superv.acyclicPartition:
+                    self._executesKTimes[superv] = 1
+                else:
+                    self._executesKTimes[superv] = sys.maxint
+                partitionID = superv.partitionID
+                if partitionID not in self._partitions[pathg]:
+                    self._partitions[pathg][partitionID] = set([])
+    
+    def _initialiseRequiredWCETInformation (self):
+        self._longestTime = 0
         self._executionTimes = {}
         self._loopBounds = {}
         self._loopBoundsInCurrentRun = {}
-        for cfg in program.getICFGs():
+        for cfg in self._program.getICFGs():
             functionName = cfg.getName()
             for v in cfg:
                 self._executionTimes[(functionName, v.getOriginalVertexID())] = 0
-            lnt = program.getLNT(functionName)
+            lnt = self._program.getLNT(functionName)
             for v in lnt:
                 if isinstance(v, Vertices.HeaderVertex):
                     self._loopBounds[(functionName, v.getHeaderID())] = 0
@@ -116,35 +162,18 @@ class TraceInformation:
         for tupleKey in self._executionTimes.keys():
             self._executionTimes[tupleKey] *= pow(10,-3)
         self._longestTime *= pow(10,-3)
-    
-    def _eliminateExclusivePair (self, superv):
-        if self.__lastSuperv:
-            self._nonExclusivePairs.add((self.__lastSuperv, superv))
-            Debug.debugMessage("Super block pair (%d, %d) is not mutually exclusive" % (self.__lastSuperv.getVertexID(), superv.getVertexID()), 10)
-        self.__lastSuperv = superv
         
-    def _analyseCFGVertex (self, contextv, superg, bbID, runID):
-        if superg.isMonitoredBasicBlock(bbID):
-            superv = superg.getMonitoredBasicBlockSuperBlock(bbID)
-            #print superv.getVertexID(), bbID
-            if superv not in self._superBlockCFGInformation[(contextv, superg)]:
-                self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
-            self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-            self._eliminateExclusivePair(superv)
+    def _analyseCFGVertex (self, pathg, bbID):
+        if pathg.isMonitoredBasicBlock(bbID):
+            superv = pathg.getMonitoredBasicBlockSuperBlock(bbID)
+            self._superBlockExecutionCounts[superv] += 1
+            self._partitions[pathg][superv.partitionID].add(superv)
             
-    def _analyseCFGEdge (self, contextv, superg, predID, succID, runID):
-        if superg.isMonitoredEdge(predID, succID):
-            superv = superg.getMonitoredEdgeSuperBlock(predID, succID)
-            if superv not in self._superBlockCFGInformation[(contextv, superg)]:
-                self._superBlockCFGInformation[(contextv, superg)][superv] = set([])
-            self._superBlockCFGInformation[(contextv, superg)][superv].add(runID)
-            self._eliminateExclusivePair(superv) 
-               
-    def _computePathInformation (self):
-        for contextv in self._program.getContextGraph():
-            functionName = contextv.getName()
-            superg       = self._program.getSuperBlockCFG(functionName)
-            superg.computePathInformation(self._superBlockCFGInformation[(contextv, superg)], self._nonExclusivePairs, self._allruns)
+    def _analyseCFGEdge (self, pathg, predID, succID):
+        if pathg.isMonitoredEdge(predID, succID):
+            superv = pathg.getMonitoredEdgeSuperBlock(predID, succID)
+            self._superBlockExecutionCounts[superv] += 1
+            self._partitions[pathg][superv.partitionID].add(superv)
             
     def getLoopBound (self, functionName, headerID):
         tupleKey = (functionName, headerID)
@@ -158,6 +187,26 @@ class TraceInformation:
     
     def getLongestTime (self):
         return self._longestTime
+    
+    def getMinimumExecutionCount (self, superv):
+        if superv not in self._executesKTimes:
+            Debug.warningMessage("Unable to find minimum execution count for super block %d" % superv.getVertexID())
+            return 0
+        return self._executesKTimes[superv]
+    
+    def getNumberOfAlwaysExecute (self, pathg):
+        num = 0
+        for superv in pathg:
+            if superv in self._executesKTimes and self._executesKTimes[superv] > 0:
+                num += 1
+        return num
+    
+    def getNumberOfNeverExecute (self, pathg):
+        num = 0
+        for superv in pathg:
+            if superv in self._executesKTimes and self._executesKTimes[superv] == 0:
+                num += 1
+        return num
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
@@ -231,8 +280,8 @@ class Gem5Parser (TraceInformation):
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(traceFiles)
-        self._computePathInformation()
         self._normaliseData()
+        self._outputConjectures()
         
     def __initialise (self):
         self.__currentContextv = None
@@ -291,6 +340,8 @@ class Gem5Parser (TraceInformation):
                             # Compute the HWMT
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
+                            # Falsify conjectures
+                            self._endRun()
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
@@ -328,8 +379,8 @@ class Gem5Parser (TraceInformation):
                         self.__currentBB = succv
                         break
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                self._analyseCFGVertex(self.__currentContextv, self.__currentSuperg, self.__currentBB.getVertexID(), runID)     
-                self._analyseCFGEdge(self.__currentContextv, self.__currentSuperg, self.__predBB.getVertexID(), self.__currentBB.getVertexID(), runID)     
+                self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
+                self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
             # Analyse loop bounds
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
                 tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())

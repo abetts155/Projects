@@ -2,7 +2,6 @@ from Vertices import HeaderVertex
 from Trees import DepthFirstSearch
 import Debug
 import os
-import Vertices
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename):
@@ -12,10 +11,11 @@ class WCETCalculation:
         for vertexID in dfs.getPostorder():
             contextv     = contextg.getVertex(vertexID)
             functionName = contextv.getName()
+            Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
             lnt          = program.getLNT(functionName)
-            superg       = program.getSuperBlockCFG(functionName)
+            pathg        = program.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph()
             cfg          = program.getICFG(functionName)
-            ilp          = CreateCFGILP(basepath, basename, data, self.__contextIDToWCET, contextv, cfg, lnt, superg)
+            ilp          = CreateCFGILP(basepath, basename, data, self.__contextIDToWCET, contextv, cfg, lnt, pathg)
             self.__contextIDToWCET[contextv.getVertexID()] = ilp._wcet
             #CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
             #TreeBasedCalculation(superg, lnt)
@@ -382,7 +382,7 @@ class CreateSuperBlockCFGILP (ILP):
         self.__constraints.append(constraint)
 
 class CreateCFGILP (ILP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
         ILP.__init__(self)
         self.__constraints = []
         self.__variables   = set([])
@@ -398,8 +398,7 @@ class CreateCFGILP (ILP):
             Debug.verboseMessage("No constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
         
         intConstraint = self.__constraints.pop()
-        self.__addExclusiveConstraints(superg)
-        self.__addAlwaysConstraints(superg)
+        self.__addAlwaysConstraints(data, pathg)
         self.__constraints.append(intConstraint)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
@@ -485,47 +484,26 @@ class CreateCFGILP (ILP):
                             else:
                                 pass
     
-    def __addExclusiveConstraints (self, superg):
-        for exclusiveTuple in superg.getSuperBlockPathInformationGraph().exclusiveTuples:
-            comment = LpSolve.getComment("Mutual exclusive constraint")
-            self.__constraints.append(comment)
-            constraint = ""
-            sizeOfExclusiveSet = len(exclusiveTuple)
-            num = 1
-            for superv in exclusiveTuple:
-                if superv.getBasicBlockIDs():
-                    constraint += LpSolve.getVertexVariable(superv.getRepresentativeID())
-                else:
-                    edges = superv.getEdges()
-                    assert len(edges) == 1
-                    edge = list(edges)[0]
-                    constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
-                if num < sizeOfExclusiveSet:
-                    constraint += LpSolve.plus
-                num += 1
-            constraint += LpSolve.ltOrEqual
-            constraint += str(sizeOfExclusiveSet - 1)
-            constraint += LpSolve.semiColon
-            constraint += LpSolve.getNewLine(2)
-            self.__constraints.append(constraint)
-    
-    def __addAlwaysConstraints (self, superg):
-        partitiong = superg.getSuperBlockPathInformationGraph()
-        for partitionv in partitiong:
-            if isinstance(partitionv, Vertices.SuperBlockPartition):
-                if not partitionv.acyclicPartition:
-                    for superv in partitionv.runs.keys():
-                        if superv in partitiong.alwaysSuperBlocks:
-                            self.__addAlwaysConstraint(superv)
-                else:
-                    alwaysExecuteSet = []
-                    for superv in partitionv.runs.keys():
-                        if superv in partitiong.alwaysSuperBlocks:
-                            alwaysExecuteSet.append(superv)
-                    if alwaysExecuteSet and len(alwaysExecuteSet) == 1:
-                        self.__addAlwaysConstraint(alwaysExecuteSet[0])
+    def __addAlwaysConstraints (self, data, pathg):
+        for partitionID in range(1, pathg.partitionID+1):
+            if pathg.isAcyclicPartition(partitionID):
+                always = []
+                for superv in pathg.partitionToSuperBlocks[partitionID]:
+                    executionCount = data.getMinimumExecutionCount(superv)
+                    if executionCount > 0:
+                        always.append(superv)
+                if len(always) > 1:
+                    Debug.verboseMessage("Not adding always constraint in partition %d since super blocks {%s} can fire in this partition" % \
+                                         (partitionID, ', '.join(str(superv.getVertexID()) for superv in always)))
+                elif len(always) == 1:
+                    uniqueSuperv = always[0]
+                    self.__addAlwaysConstraint(uniqueSuperv, data.getMinimumExecutionCount(uniqueSuperv))
+            else:
+                for superv in pathg.partitionToSuperBlocks[partitionID]:
+                    executionCount = data.getMinimumExecutionCount(superv)
+                    self.__addAlwaysConstraint(superv, executionCount)
                             
-    def __addAlwaysConstraint (self, superv):
+    def __addAlwaysConstraint (self, superv, value):
         comment = LpSolve.getComment("Always executes constraint")
         self.__constraints.append(comment)
         if superv.getBasicBlockIDs():
@@ -536,7 +514,7 @@ class CreateCFGILP (ILP):
             edge = list(edges)[0]
             constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
         constraint += LpSolve.gtOrEqual
-        constraint += str(1)
+        constraint += str(value)
         constraint += LpSolve.semiColon
         constraint += LpSolve.getNewLine(2)
         self.__constraints.append(constraint)

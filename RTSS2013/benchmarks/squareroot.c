@@ -59,6 +59,8 @@ main (int argc, char *argv[])
 
   input = atoi(argv[1]);
   val = squareroot (input);
+  
+  printf("%f", val);
 
   return 0;
 }

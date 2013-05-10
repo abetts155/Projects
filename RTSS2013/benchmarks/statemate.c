@@ -984,7 +984,7 @@ generic_BLOCK_ERKENNUNG_CTRL ()
    }
 }
 
-void 
+int 
 FH_DU ()
 {
    time = 1;  /**SYS_get_clock()**/
@@ -1244,20 +1244,24 @@ FH_DU ()
       FH_DU__MFHA_old = FH_DU__MFHA;
       
    }/** while(!stable) **/  
+   
+  return FH_TUERMODUL__POSITION;
 }
 
-void 
+int 
 statemate ()
 {
   initialise();
   interface();
-  FH_DU();
+  return FH_DU();
 }
 
 int 
 main ()
 {
-  statemate ();
+  int val = statemate ();
+  
+  printf("%d", val);
 
   return 0;
 }

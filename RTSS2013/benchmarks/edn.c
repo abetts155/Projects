@@ -208,7 +208,7 @@ jpegdct(short *d, short *r)
   }
 }
 
-void
+int
 edn (short a[], short b[])
 {
   short c = 0x3;
@@ -224,6 +224,8 @@ edn (short a[], short b[])
   iir1(a, b, &output[100], output);
   e[0] = codebook(d, 1, 17, e[0], d, a, c, 1);
   jpegdct(a, b);
+  
+  return e[0];
 }
 
 int
@@ -255,7 +257,8 @@ main (int argc, char *argv[])
     k++;
   }
 
-  edn (a, b);
+  int val = edn (a, b);
+  printf("%d", val);
 
   return 0;
 }

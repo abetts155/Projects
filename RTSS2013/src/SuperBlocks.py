@@ -1,15 +1,12 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, SuperBlockUnion,\
-    CFGEdge
+from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, CFGEdge
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
-import Debug, UDrawGraph, itertools
-from sys import maxint
+import Debug, UDrawGraph
 
-nextVertexID     = 0
-nextEdgeID       = 0
-exclusiveSetSize = maxint
+nextVertexID = 0
+nextEdgeID   = 0
 
 class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
@@ -20,11 +17,9 @@ class SuperBlockGraph (DirectedGraph):
         self.__pathg = SuperBlockPathInformationGraph(self._name)
         self.__headerToSuperBlockSubgraph = {}
         self.__headerToRootSuperBlock     = {}
-        self.__headerToPartitionVertices  = {}
+        self.__headerToPartitionNumbers   = {}
         self.__basicBlockToSuperBlock     = {}
         self.__rootSuperv                 = None
-        self.__monitoredBasicBlocks       = set([])
-        self.__monitoredEdges             = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
@@ -130,7 +125,7 @@ class SuperBlockGraph (DirectedGraph):
         for vertexID in dfs.getPostorder():
             superv = self.getVertex(vertexID)
             if vertexID == rootv.getVertexID():
-                self.__headerToPartitionVertices[headerv.getHeaderID()] = set([])
+                self.__headerToPartitionNumbers[headerv.getHeaderID()] = []
                 self.__handleRootSuperBlock(supervToSupervs, rootv, forwardICFG, headerv)
             else:
                 # Deduce which super blocks we should monitor during trace parsing
@@ -154,87 +149,40 @@ class SuperBlockGraph (DirectedGraph):
             and vertexID != headerv.getHeaderID() \
             and not isinstance(v, CFGEdge) \
             and not v.isDummy():
-                for partitionv in self.__headerToPartitionVertices[vertexID]:
-                    self.__pathg.partitionOrder.append(partitionv)
+                self.__headerToPartitionNumbers[headerv.getHeaderID()].extend(self.__headerToPartitionNumbers[vertexID])
             if vertexID in branchPartitions:
-                nextVertexID = self.__pathg.getNextVertexID() 
-                theSet       = set([])
+                self.__pathg.partitionID += 1
+                self.__pathg.partitionToSuperBlocks[self.__pathg.partitionID] = set([])
+                self.__headerToPartitionNumbers[headerv.getHeaderID()].append(self.__pathg.partitionID)
                 for supere in branchPartitions[vertexID]:
-                    superv = self.getVertex(supere.getVertexID())
-                    theSet.update(supervToSupervs[superv])
-                partitionv   = SuperBlockPartition(nextVertexID, theSet)
-                if headerv.getVertexID() == self.__lnt.getRootID():
-                    partitionv.acyclicPartition = True
-                self.__pathg.vertices[nextVertexID] = partitionv
-                self.__headerToPartitionVertices[headerv.getHeaderID()].add(partitionv)
-                self.__pathg.partitionOrder.append(partitionv)
+                    succv = self.getVertex(supere.getVertexID())
+                    for superv in supervToSupervs[succv]:
+                        newVertexID     = superv.getVertexID()
+                        isAcyclic       = headerv.getVertexID() == self.__lnt.getRootID()
+                        partitionsuperv = SuperBlockPartition(newVertexID, self.__pathg.partitionID, isAcyclic, superv.getBasicBlockIDs(), superv.getEdges()) 
+                        self.__pathg.vertices[newVertexID] = partitionsuperv
+                        self.__pathg.partitionToSuperBlocks[self.__pathg.partitionID].add(partitionsuperv)
+                        if isAcyclic:
+                            self.__pathg.acyclicPartitions.add(self.__pathg.partitionID)
         if headerv.getVertexID() == self.__lnt.getRootID():
-            for partitionv in self.__pathg:
-                for superv in partitionv.runs.keys():
-                    if superv.getBasicBlockIDs():
-                        self.__monitoredBasicBlocks.add(superv.getRepresentativeID())
+            partitions = self.__headerToPartitionNumbers[headerv.getHeaderID()]
+            for partitionID in partitions:
+                for partitionsuperv in self.__pathg.partitionToSuperBlocks[partitionID]:
+                    if partitionsuperv.getBasicBlockIDs():
+                        self.__pathg.monitoredBasicBlocks[partitionsuperv.getRepresentativeID()] = partitionsuperv
                     else:
-                        edges = superv.getEdges()
+                        edges = partitionsuperv.getEdges()
                         assert len(edges) == 1
                         edge = list(edges)[0]
-                        self.__monitoredEdges[edge] = superv
-          
-    def computePathInformation (self, superBlockToRuns, nonExclusivePairs, allRuns):
-        global exclusiveSetSize
-        for superv, runs in superBlockToRuns.iteritems():
-            partitionv = self.__pathg.getPathInformationVertex(superv)
-            partitionv.runs[superv].update(runs)
-            if partitionv.runs[superv] == allRuns:
-                self.__pathg.alwaysSuperBlocks.add(superv)
-                Debug.debugMessage("%s always executes" % superv.getVertexID(), 1)
-                    
-        # The size of subsets 
-        setSize = min(len(self.__pathg.partitionOrder),exclusiveSetSize)
-        for subsetSize in xrange(2, setSize+1):
-            Debug.verboseMessage("Generating subsets of size %d from set size of %d" % (subsetSize, setSize))
-            # Get every partition of size r
-            theCombinations = set(itertools.combinations(self.__pathg.partitionOrder, subsetSize))
-            Debug.verboseMessage("There are %d combinations" % len(theCombinations))
-            exclusiveTuples = set([])
-            for partitionTuple in theCombinations:
-                theSets = []
-                for i in xrange(0, subsetSize):
-                    theSets.append(partitionTuple[i].runs.keys())
-                cartProducts = set(itertools.product(*theSets))
-                Debug.verboseMessage("There are %d cross products" % len(cartProducts))
-                for cartProduct in cartProducts:
-                    cartProductStr = ', '.join(str(superv.getVertexID()) for superv in cartProduct)
-                    if cartProduct in nonExclusivePairs:
-                        Debug.verboseMessage("Set intersection of {%s} avoided as it was already falsified" % cartProductStr)
-                    else:
-                        runs = allRuns
-                        for superv in cartProduct:
-                            if superv in superBlockToRuns:
-                                runs = runs.intersection(superBlockToRuns[superv])
-                        if not runs:
-                            exclusiveTuples.add(cartProduct)
-                            Debug.verboseMessage("%s is MUTUALLY EXCLUSIVE" % cartProductStr)
-                        nextVertexID = self.__pathg.getNextVertexID() 
-                        partitionv   = SuperBlockUnion(nextVertexID, cartProduct, runs)
-                        self.__pathg.vertices[nextVertexID] = partitionv
-            self.__pathg.exclusiveTuples.update(exclusiveTuples)
-            if len(exclusiveTuples) == 0:
-                Debug.verboseMessage("Exiting early as there were no exclusive sets of size %d" % subsetSize)
-                break
-             
-    def isMonitoredBasicBlock (self, basicBlockID):
-        return basicBlockID in self.__monitoredBasicBlocks
-   
-    def getMonitoredBasicBlockSuperBlock (self, basicBlockID):
-        return self.__basicBlockToSuperBlock[basicBlockID]
-    
-    def isMonitoredEdge (self, predID, succID):
-        return (predID, succID) in self.__monitoredEdges
-    
-    def getMonitoredEdgeSuperBlock (self, predID, succID):
-        assert (predID, succID) in self.__monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
-        return self.__monitoredEdges[(predID, succID)]
-    
+                        self.__pathg.monitoredEdges[edge] = partitionsuperv
+            for i in range(0, len(partitions)):
+                partitionID1 = partitions[i]
+                for j in range(i+1, len(partitions)):
+                    partitionID2 = partitions[j]
+                    for partitionsuperv1 in self.__pathg.partitionToSuperBlocks[partitionID1]:
+                        for partitionsuperv2 in self.__pathg.partitionToSuperBlocks[partitionID2]:
+                            self.__pathg.addEdge(partitionsuperv1.getVertexID(), partitionsuperv2.getVertexID())
+            
     def getSuperBlock (self, basicBlockID):
         assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
         # Handle the case where the basic block is a loop header because it will always appear in 2 super blocks
@@ -254,36 +202,32 @@ class SuperBlockGraph (DirectedGraph):
     def getSuperBlockPathInformationGraph (self):
         return self.__pathg
     
-    def output (self):
-        Debug.verboseMessage("...#basic blocks           = %d" % self.__icfg.numOfVertices())
-        Debug.verboseMessage("...#edges                  = %d" % self.__icfg.numOfEdges())
-        Debug.verboseMessage("...#super blocks           = %d" % self.numOfVertices())
-        Debug.verboseMessage("...#monitored super blocks = %d" % (len(self.__monitoredBasicBlocks)+len(self.__monitoredEdges)))
-    
 class SuperBlockPathInformationGraph (DirectedGraph):
     def __init__ (self, name):
         DirectedGraph.__init__(self)
-        self._name = name
-        self.partitionOrder = []
-        self.exclusiveTuples = set([])
-        self.alwaysSuperBlocks = set([])
-    
-    def output (self):
-        Debug.verboseMessage("%d super blocks always execute" % (len(self.alwaysSuperBlocks)))
-        if self.alwaysSuperBlocks:
-            count = 0
-            for superv in self.alwaysSuperBlocks:
-                if superv.getBasicBlockIDs():
-                    count += 1
-            Debug.verboseMessage("...%d of which are basic blocks" % (count))
-            Debug.verboseMessage("...%d of which are edges" % (len(self.alwaysSuperBlocks) - count))
-        Debug.verboseMessage("%d mutually exclusive tuples" % (len(self.exclusiveTuples)))
+        self._name                  = name
+        self.acyclicPartitions      = set([])
+        self.partitionID            = 0
+        self.partitionToSuperBlocks = {}
+        self.monitoredBasicBlocks   = {}
+        self.monitoredEdges         = {}
         
-    def getPathInformationVertex (self, superv):
-        for partitionv in self:
-            if superv in partitionv.runs.keys():
-                return partitionv
-        assert False, "Unable to find partition vertex for super block %d" % superv.getVertexID()
+    def isAcyclicPartition (self, partitionID):
+        return partitionID in self.acyclicPartitions
+             
+    def isMonitoredBasicBlock (self, basicBlockID):
+        return basicBlockID in self.monitoredBasicBlocks
+   
+    def getMonitoredBasicBlockSuperBlock (self, basicBlockID):
+        assert basicBlockID in self.monitoredBasicBlocks, "%d is not a monitored basic block" % basicBlockID
+        return self.monitoredBasicBlocks[basicBlockID]
+    
+    def isMonitoredEdge (self, predID, succID):
+        return (predID, succID) in self.monitoredEdges
+    
+    def getMonitoredEdgeSuperBlock (self, predID, succID):
+        assert (predID, succID) in self.monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
+        return self.monitoredEdges[(predID, succID)]
     
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):

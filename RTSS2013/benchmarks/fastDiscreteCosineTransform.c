@@ -43,7 +43,7 @@
 
 #define TEST_VECTOR_LENGTH 64
 
-void 
+int 
 fastDiscreteCosineTransform (short int *blk, int lx)
 {
   int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -187,6 +187,8 @@ fastDiscreteCosineTransform (short int *blk, int lx)
     /* advance to next column */
     block++;
   }
+  
+  return lx + block[0];
 }
 
 int
@@ -207,7 +209,8 @@ main (int argc, char *argv[])
     block[i] = (short int) atoi (argv[i + 1]);
   }
 
-  fastDiscreteCosineTransform (block, 8);
+  int val = fastDiscreteCosineTransform (block, 8);
+  printf("%d", val);
   
   return 0;
 }

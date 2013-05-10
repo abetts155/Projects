@@ -26,8 +26,8 @@ class Vertex ():
         self._predecessors = {}
     
     def removePredecessor (self, predID):
-        assert predID in self._predecessors, "Cannot remove %d as it is not in predecessor of %d" % (predID, self._vertexID)
-        del self._predecessors[predID]
+        if predID in self._predecessors:
+            del self._predecessors[predID]
     
     def getPredecessorIDs (self):
         return self._predecessors.keys()
@@ -57,8 +57,8 @@ class Vertex ():
         self._successors = {}
         
     def removeSuccessor (self, succID):
-        assert succID in self._successors, "Cannot remove %d as it is not in _successors of %d" % (succID, self._vertexID)
-        del self._successors[succID]
+        if succID in self._successors:
+            del self._successors[succID]
         
     def getSuccessorIDs (self):
         return self._successors.keys()
@@ -107,20 +107,6 @@ class TreeVertex (Vertex):
             return "parent(%d) = <>\n" % self._vertexID
         else:
             return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
-
-class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID, superblocks):
-        Vertex.__init__(self, vertexID)
-        self.runs = {}
-        self.acyclicPartition = False
-        for superv in superblocks:
-            self.runs[superv] = set([])
-
-class SuperBlockUnion (Vertex):
-    def __init__ (self, vertexID, superblocks, runs):
-        Vertex.__init__(self, vertexID)
-        self.superblocks = superblocks
-        self.runs        = runs
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):
@@ -234,6 +220,24 @@ class CallGraphVertex (Vertex):
     
     def __str__ (self):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
+    
+class SuperBlockPartition (Vertex):
+    def __init__ (self, vertexID, partitionID, acyclicPartition, basicBlocks, edges):
+        Vertex.__init__(self, vertexID)
+        self.acyclicPartition = acyclicPartition
+        self.partitionID      = partitionID
+        self.__basicBlocks    = basicBlocks
+        self.__edges          = edges
+    
+    def getBasicBlockIDs (self):
+        return self.__basicBlocks
+    
+    def getEdges (self):
+        return self.__edges
+    
+    def getRepresentativeID (self):
+        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
+        return list(self.__basicBlocks)[0]
     
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):

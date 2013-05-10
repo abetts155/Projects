@@ -144,6 +144,19 @@ class Program():
         self.__superblockcfgs = {}
         self.__bbIDToICFG     = {}
         
+    def output (self, data):
+        for functionName, cfg in self.__CFGs.iteritems():
+            superg = self.getSuperBlockCFG(functionName)
+            pathg  = superg.getSuperBlockPathInformationGraph()
+            Debug.verboseMessage("In %s..." % functionName)
+            Debug.verboseMessage("...#CFG vertices           = %d" % cfg.numOfVertices())
+            Debug.verboseMessage("...#CFG edges              = %d" % cfg.numOfEdges())
+            Debug.verboseMessage("...#super blocks           = %d" % superg.numOfVertices())
+            Debug.verboseMessage("...#monitored              = %d" % pathg.numOfVertices())
+            Debug.verboseMessage("...#mutual exclusion pairs = %d" % pathg.numOfEdges())
+            Debug.verboseMessage("...#never execute          = %d" % data.getNumberOfNeverExecute(pathg))
+            Debug.verboseMessage("...#always execute         = %d" % data.getNumberOfAlwaysExecute(pathg))
+        
     def generateAllUDrawFiles (self, suffix=""):
         if suffix:
             suffix = '.' + suffix 
@@ -153,7 +166,7 @@ class Program():
             UDrawGraph.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
             UDrawGraph.makeUdrawFile(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
             UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph(), "%s.partitiong%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph(), "%s.pathg%s" % (functionName, suffix))
         
     def getCallGraph (self):
         return self.__callg
@@ -197,12 +210,6 @@ class Program():
 
     def getICFGs (self):
         return self.__CFGs.values().__iter__()
-    
-    def getLNTs (self):
-        return self.__LNTs.values().__iter__() 
-    
-    def getSuperBlockCFGs (self):
-        return self.__superblockcfgs.values().__iter__() 
     
     def removeFunction (self, functionName):
         if functionName in self.__CFGs:

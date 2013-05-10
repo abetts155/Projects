@@ -59,6 +59,7 @@ main (int argc, char *argv[])
   }
 
   answer = prime (number);
+  printf("%c", answer); 
 
   return 0;
 }

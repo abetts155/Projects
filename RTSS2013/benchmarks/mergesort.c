@@ -46,7 +46,7 @@ merge (int ARRAY_SIZE, int a[], int b[], int l, int r, int u)
   }
 }
 
-void
+int
 mergesort (int ARRAY_SIZE, int a[])
 {
   int k = 1;
@@ -69,6 +69,8 @@ mergesort (int ARRAY_SIZE, int a[])
     }
     k = k * 2;
   }
+  
+  return a[0];
 }
 
 int
@@ -91,7 +93,9 @@ main (int argc, char *argv[])
     TV[i] = atoi (argv[i + 1]);
   }
 
-  mergesort (ARRAY_SIZE, TV);
+  int val = mergesort (ARRAY_SIZE, TV);
+  
+  printf("%d", val);
 
   return 0;
 }

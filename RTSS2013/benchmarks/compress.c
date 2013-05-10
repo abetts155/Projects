@@ -265,7 +265,7 @@ getbyte ()
   }
 }
 
-void 
+int 
 compress ()
 {
   register long fcode;
@@ -357,6 +357,8 @@ nomatch:
   { 
     exit_stat = 2;
   }
+  
+  return exit_stat;
 }
 
 int
@@ -383,8 +385,9 @@ main (int argc, char *argv[])
   InBuff      = (unsigned char *) orig_text_buffer;
   OutBuff     = (unsigned char *) comp_text_buffer;
 
-  compress();
-   
+  int val = compress();
+  printf("%d", val);
+  
   return 0;
 }
 

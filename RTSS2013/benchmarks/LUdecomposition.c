@@ -170,6 +170,8 @@ main (int argc, char* argv[])
   }
 
   chkerr = LUdecomposition (ARRAY_DIMENSION - 1, eps);
+  
+  printf("%d", chkerr);
 
   return 0;
 }

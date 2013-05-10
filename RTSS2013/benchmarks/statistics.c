@@ -77,7 +77,7 @@ Calc_LinCorrCoef (double ArrayA[], double ArrayB[], double MeanA, double MeanB,
   Coef = numerator / (sqrt (Aterm) * sqrt (Bterm));
 }
 
-void
+int
 statistics (double ArrayA[], double ArrayB[], int ARRAY_SIZE) 
 {
   double SumA;
@@ -94,6 +94,8 @@ statistics (double ArrayA[], double ArrayB[], int ARRAY_SIZE)
   Calc_Sum_Mean (ArrayB, &SumB, &MeanB, ARRAY_SIZE);
   Calc_Var_Stddev (ArrayB, MeanB, &VarB, &StddevB, ARRAY_SIZE);
   Calc_LinCorrCoef (ArrayA, ArrayB, MeanA, MeanB, ARRAY_SIZE);
+  
+  return ArrayA[0];
 }
 
 int
@@ -118,7 +120,9 @@ main (int argc, char *argv[])
     ArrayB[i] = atoi (argv[i + 1]);
   }
 
-  statistics (ArrayA, ArrayB, ELEMENTS/2);
+  int val = statistics (ArrayA, ArrayB, ELEMENTS/2);
+  
+  printf("%d", val);
 
   return 0;
 }

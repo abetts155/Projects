@@ -78,6 +78,8 @@ main (int argc, char *argv[])
   param1 = atoi (argv[1]);
   param2 = atoi (argv[2]);
   answer = exponential_integral(param1, param2);
+  
+  printf("%d", param1);
 
   return 0;
 }

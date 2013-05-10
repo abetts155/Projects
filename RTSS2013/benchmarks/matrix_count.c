@@ -19,7 +19,7 @@ int Negtotal;
 int Poscnt;
 int Negcnt;
 
-void
+int
 matrix_count (matrix A)
 {
   int i, j;
@@ -49,6 +49,8 @@ matrix_count (matrix A)
   Poscnt = Pcnt;
   Negtotal = Ntotal;
   Negcnt = Ncnt;
+  
+  return Postotal + Poscnt + Negtotal + Negcnt;
 }
 
 int
@@ -79,7 +81,9 @@ main (int argc, char *argv[])
     }
   }
 
-  matrix_count (A);
+  int val = matrix_count (A);
+  
+  printf("%d", val);
 
   return 0;
 }

@@ -17,7 +17,7 @@ fabs (double n)
     return -n;
 }
 
-void
+int
 matrix_inverse (double a[][UPPERLIMIT], int row, int col, double eps)
 {
   int work[500];
@@ -172,7 +172,9 @@ main (int argc, char **argv)
     }
   }
 
-  matrix_inverse (a, UPPERLIMIT, UPPERLIMIT, eps);
+  int val = matrix_inverse (a, UPPERLIMIT, UPPERLIMIT, eps);
+    
+  printf("%d", val);
 
   return 0;
 }

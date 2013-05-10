@@ -7,7 +7,7 @@
  * given to the program, i.e. argc - 1.
  */
 
-void
+int
 insertsort (int ARRAY_SIZE, int a[])
 {
   int i, j, key;
@@ -25,6 +25,8 @@ insertsort (int ARRAY_SIZE, int a[])
 
     a[i+1] = key;
   }
+  
+  return a[0];
 }
 
 int
@@ -47,7 +49,8 @@ main (int argc, char *argv[])
     TV[i] = atoi (argv[i + 1]);
   }
 
-  insertsort (ARRAY_SIZE, TV);
+  int val = insertsort (ARRAY_SIZE, TV);
+  printf("%d", val);
 
   return 0;
 }

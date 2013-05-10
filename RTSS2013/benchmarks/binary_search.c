@@ -100017,7 +100017,7 @@ struct DATA data[ARRAY_SIZE] = {
 {99999, 1}
 };
 
-void
+int
 binary_search (int x)
 {
   int low = 0;
@@ -100042,6 +100042,8 @@ binary_search (int x)
       low = mid + 1;
     }
   }
+  
+  return low;
 }
 
 int
@@ -100055,7 +100057,7 @@ main (int argc, char *argv[])
     return 1;
   }
 
-  binary_search (atoi (argv[1]));
-
+  int val = binary_search (atoi (argv[1]));
+  printf("%d", val);
   return 0;
 }

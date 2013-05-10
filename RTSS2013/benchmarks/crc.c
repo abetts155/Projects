@@ -97,6 +97,8 @@ main (int argc, char *argv[])
   lin[n+2] = LOBYTE(i1);
   i2       = crc(i1,n+2,(short)0,1, lin);
   
+  printf("%d", i2);
+  
   return 0;
 }
 

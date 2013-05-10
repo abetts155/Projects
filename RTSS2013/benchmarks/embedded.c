@@ -140,7 +140,7 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
   }
 }
   
-void 
+int 
 embedded (immense inp, immense key, int * newkey, int isw, immense * out) 
 {
   static char ip[65] =
@@ -215,6 +215,8 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
     (*out).r = ((*out).r <<= 1) | getbit(itmp,ipm[j],32);
     (*out).l = ((*out).l <<= 1) | getbit(itmp,ipm[k],32);
   }
+  
+  return *newkey;
 }
 
 int 
@@ -240,7 +242,8 @@ main (int argc, char *argv[])
   // Adam Betts: 'newkey' needs to be set to 1 to trigger a conditional in 'embedded'
   // Similarly for 'isw' 
 
-  embedded(inp, key, &newkey, isw, &out);
+  int val = embedded(inp, key, &newkey, isw, &out);
+  printf("%d", val);
   
   return 0;
 }

@@ -30,7 +30,8 @@ main (int argc, char *argv[])
   }
   
   num = atoi(argv[1]);
-  fibonacci (num);
-
+  int val = fibonacci (num);
+  printf("%d", val);
+  
   return 0;
 }
