@@ -235,6 +235,10 @@ class SuperBlockPartition (Vertex):
     def getEdges (self):
         return self.__edges
     
+    def getUniqueEdge (self):
+        assert len(self.__edges) == 1
+        return list(self.__edges)[0]
+    
     def getRepresentativeID (self):
         assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
         return list(self.__basicBlocks)[0]

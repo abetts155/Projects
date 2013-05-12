@@ -390,7 +390,7 @@ class CreateCFGILP (ILP):
         self.__createLoopConstraints(data, cfg, lnt)
         self.__createIntegerConstraint()
         self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
-        filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        filename = "%s.%s.context%s.%s.a.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
@@ -398,28 +398,22 @@ class CreateCFGILP (ILP):
             Debug.verboseMessage("No constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
         
         intConstraint = self.__constraints.pop()
+        self.__alwaysConstraints = set([])
         self.__alwaysBasicBlocks = set([])
         self.__alwaysEdges       = set([])
         self.__addAlwaysConstraints(data, pathg)
         self.__constraints.append(intConstraint)
+        filename = "%s.%s.context%s.%s.b.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
         if self._solve(filename):
             Debug.verboseMessage("Always execute constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
-        
-        candidates = self.__getMutualExclusionCandidates(data, pathg)
-        if len(candidates) > 1:
-            for candidate in candidates:
-                intConstraint = self.__constraints.pop()
-                self.__tryMutualExclusion(candidate)
-                self.__constraints.append(intConstraint)
-                with open(filename, 'w') as ilpFile:
-                    for constraint in self.__constraints:
-                        ilpFile.write(constraint)        
-                if self._solve(filename):
-                    Debug.verboseMessage("With mutual exclusion constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
-    
+        del self.__constraints[-(len(self.__alwaysConstraints)+1):]
+        self.__constraints.append(intConstraint)
+            
+        self.__addMutualExclusionConstraints(basepath, basename, contextv, data, pathg, lnt)
+            
     def __createStructuralConstraints (self, cfg):
         for v in cfg:
             vertexID = v.getVertexID()
@@ -487,7 +481,9 @@ class CreateCFGILP (ILP):
                                 constraint += LpSolve.ltOrEqual
                                 num = 1
                                 for edge in forwardPredIDs:
-                                    constraint += "%d " % data.getLoopBound(cfg.getName(), headerID)
+                                    bound = data.getLoopBound(cfg.getName(), headerID)
+                                    bound = max(bound, 1)
+                                    constraint += "%d " % bound 
                                     constraint += LpSolve.getEdgeVariable(edge[0], edge[1])
                                     if num < len(forwardPredIDs):
                                         constraint += LpSolve.plus
@@ -498,26 +494,71 @@ class CreateCFGILP (ILP):
                             else:
                                 pass
                             
-    def __getMutualExclusionCandidates (self, data, pathg):
-        candidates = set([])
+    def __addMutualExclusionConstraints (self, basepath, basename, contextv, data, pathg, lnt):
         for superv in pathg:
-            if superv.numberOfSuccessors() > 0 and not data.alwaysExecutes(superv):
-                if superv.getBasicBlockIDs() and superv.getRepresentativeID() not in self.__alwaysBasicBlocks:
-                    candidates.add(superv)
-                else:
-                    edges = superv.getEdges()
-                    assert len(edges) == 1
-                    edge = list(edges)[0]
-                    if edge[0] not in self.__alwaysBasicBlocks and edge[1] not in self.__alwaysBasicBlocks and edge not in self.__alwaysEdges:
-                        candidates.add(superv)
-        return candidates
+                self.__mutualExclusionConstraints = []
+                if superv.numberOfSuccessors() > 0 and self.__isMutualExclusionCandidate(superv, lnt, pathg, data):
+                    for succID in superv.getSuccessorIDs():
+                        succv = pathg.getVertex(succID)
+                        if self.__isMutualExclusionCandidate(succv, lnt, pathg, data):
+                            comment = LpSolve.getComment("Mutual exclusion constraint between %d and %d" % (superv.getVertexID(), succID))
+                            self.__mutualExclusionConstraints.append(comment)
+                            if superv.getBasicBlockIDs():
+                                constraint1 = LpSolve.getVertexVariable(superv.getRepresentativeID())
+                            else:
+                                edge        = superv.getUniqueEdge()
+                                constraint1 = LpSolve.getEdgeVariable(edge[0], edge[1])
+                            constraint1 += LpSolve.gt
+                            constraint1 += str(0)
+                            constraint1 += LpSolve.semiColon
+                            constraint1 += LpSolve.getNewLine()  
+                            self.__mutualExclusionConstraints.append(constraint1)   
+                            if succv.getBasicBlockIDs():
+                                constraint2 = LpSolve.getVertexVariable(succv.getRepresentativeID())
+                            else:
+                                edge        = succv.getUniqueEdge()
+                                constraint2 = LpSolve.getEdgeVariable(edge[0], edge[1])
+                            constraint2 += LpSolve.equals
+                            constraint2 += str(0)
+                            constraint2 += LpSolve.semiColon
+                            constraint2 += LpSolve.getNewLine(2)     
+                            self.__mutualExclusionConstraints.append(constraint2)
+                            
+                if self.__mutualExclusionConstraints:
+                    filename = "%s.%s.context%s.%s.%d.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", superv.getVertexID(), LpSolve.fileSuffix)
+                    intConstraint = self.__constraints.pop()
+                    for constraint in self.__mutualExclusionConstraints:
+                        self.__constraints.append(constraint)
+                    self.__constraints.append(intConstraint)
+                    with open(filename, 'w') as ilpFile:
+                        for constraint in self.__constraints:
+                            ilpFile.write(constraint)        
+                    if self._solve(filename):
+                        Debug.verboseMessage("Mutual exclusion constraints:: WCET(%s) = %d" % (pathg.getName(), self._wcet))  
+                    del self.__constraints[-(len(self.__mutualExclusionConstraints)+1):]
+                    self.__constraints.append(intConstraint)
+    
+    def __isMutualExclusionCandidate (self, superv, lnt, pathg, data):
+        if superv.getBasicBlockIDs():
+            return \
+                not data.neverExecutes(pathg, superv)
+                #not superv.getRepresentativeID() in self.__alwaysBasicBlocks and \
+        else:
+            edge = superv.getUniqueEdge()
+            return \
+                not data.neverExecutes(pathg, superv) and \
+                not lnt.isLoopBackEdge(edge[0], edge[1]) and \
+                not lnt.isLoopHeader(edge[0])
+                #not edge[0] in self.__alwaysBasicBlocks and \
+                #not edge[1] in self.__alwaysBasicBlocks and \
+                #not edge in self.__alwaysEdges and \
     
     def __addAlwaysConstraints (self, data, pathg):
         for partitionID in range(1, pathg.partitionID+1):
             if pathg.isAcyclicPartition(partitionID):
                 always = []
                 for superv in pathg.partitionToSuperBlocks[partitionID]:
-                    executionCount = data.getMinimumExecutionCount(superv)
+                    executionCount = data.getMinimumExecutionCount(pathg, superv)
                     if executionCount > 0:
                         always.append(superv)
                 if len(always) > 1:
@@ -525,10 +566,10 @@ class CreateCFGILP (ILP):
                                          (partitionID, ', '.join(str(superv.getVertexID()) for superv in always)))
                 elif len(always) == 1:
                     uniqueSuperv = always[0]
-                    self.__addAlwaysConstraint(uniqueSuperv, data.getMinimumExecutionCount(uniqueSuperv))
+                    self.__addAlwaysConstraint(uniqueSuperv, data.getMinimumExecutionCount(pathg, uniqueSuperv))
             else:
                 for superv in pathg.partitionToSuperBlocks[partitionID]:
-                    executionCount = data.getMinimumExecutionCount(superv)
+                    executionCount = data.getMinimumExecutionCount(pathg, superv)
                     if executionCount > 0:
                         self.__addAlwaysConstraint(superv, executionCount)
                             
@@ -539,9 +580,7 @@ class CreateCFGILP (ILP):
             constraint = LpSolve.getVertexVariable(superv.getRepresentativeID())
             self.__alwaysBasicBlocks.add(superv.getRepresentativeID())
         else:
-            edges = superv.getEdges()
-            assert len(edges) == 1
-            edge = list(edges)[0]
+            edge = superv.getUniqueEdge()
             constraint = LpSolve.getEdgeVariable(edge[0], edge[1])
             self.__alwaysBasicBlocks.add(edge[0])
             self.__alwaysBasicBlocks.add(edge[1])

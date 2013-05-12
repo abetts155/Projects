@@ -6,7 +6,7 @@ def secondsToStr(t):
         reduce(lambda ll,b : divmod(ll[0],b) + ll[1:],
             [(t*1000,),1000,60,60])
 
-line = "="*40
+line = "="*60
 def log(s, elapsed=None):
     print line
     time = clock()

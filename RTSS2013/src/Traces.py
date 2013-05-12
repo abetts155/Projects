@@ -96,49 +96,66 @@ class TraceInformation:
         self._initialiseRequiredWCETInformation()
         
     def _outputConjectures (self):
-        for superv, conjecture in self._executesKTimes.iteritems():
-            Debug.verboseMessage("Conjecture that %d executes %d times holds" % (superv.getVertexID(), conjecture)) 
-    
-    def _endRun (self):
+        for pathg, supervs in self._executesKTimes.iteritems():
+            for supervID in supervs:
+                conjecture = self._executesKTimes[pathg][supervID]
+                if conjecture > 0:
+                    Debug.verboseMessage("Conjecture that %d executes %d times holds" % (supervID, conjecture)) 
+                else:
+                    Debug.verboseMessage("Found an execution where %d NEVER executes" % supervID) 
+            
+    def _endOfFunction (self, pathg):
+        Debug.debugMessage("Falsifying conjectures in %s" % pathg.getName(), 1)
         newConjectures = {}
-        for superv, conjecture in self._executesKTimes.iteritems():
-            executionCount = self._superBlockExecutionCounts[superv]
+        for supervID, conjecture in self._executesKTimes[pathg].iteritems():
+            executionCount = self._superBlockExecutionCounts[pathg][supervID]
             if executionCount < conjecture:
-                Debug.debugMessage("Falsifying conjecture that %d executes %d times. Found %d instead"  % (superv.getVertexID(), conjecture, executionCount), 10)
-                newConjectures[superv] = executionCount
-            self._superBlockExecutionCounts[superv] = 0 
-        self._executesKTimes.update(newConjectures)
-        # Remove mutual edges between super blocks across partition boundaries
-        for pathg in self._partitions.keys():
-            for partitionID1 in self._partitions[pathg].keys():
-                for partitionID2 in self._partitions[pathg].keys():
-                    if partitionID1 != partitionID2:
-                        for superv1 in self._partitions[pathg][partitionID1]:
-                            for superv2 in self._partitions[pathg][partitionID2]:
-                                Debug.debugMessage("Falsifying conjecture that (%d, %d) is mutually exclusive"  % (superv1.getVertexID(), superv2.getVertexID()), 10)
+                Debug.debugMessage("Falsifying conjecture that %d executes %d times. Found %d instead"  % (supervID, conjecture, executionCount), 1)
+                newConjectures[supervID] = executionCount
+            self._superBlockExecutionCounts[pathg][supervID] = 0 
+        for supervID, conjecture in newConjectures.iteritems():
+            self._executesKTimes[pathg][supervID] = conjecture
+        # Now falsify mutual exclusion edges
+        for partitionID1 in self._partitions[pathg].keys():
+            for partitionID2 in self._partitions[pathg].keys():
+                if partitionID1 != partitionID2:
+                    for superv1 in self._partitions[pathg][partitionID1]:
+                        for superv2 in self._partitions[pathg][partitionID2]:
+                            if pathg.hasEdge(superv1.getVertexID(), superv2.getVertexID()):
+                                Debug.debugMessage("Falsifying conjecture that (%d, %d) is mutually exclusive"  % (superv1.getVertexID(), superv2.getVertexID()), 1)
                                 pathg.removeEdge(superv1.getVertexID(), superv2.getVertexID())
                                 pathg.removeEdge(superv2.getVertexID(), superv1.getVertexID())
+    
+    def _endRun (self):
         for cfg in self._program.getICFGs():
             superg = self._program.getSuperBlockCFG(cfg.getName())
             pathg  = superg.getSuperBlockPathInformationGraph()
             for partitionID in self._partitions[pathg].keys():
                 self._partitions[pathg][partitionID].clear()
+                
+    def _end (self):
+        for pathg, supervs in self._executesKTimes.iteritems():
+            for supervID in supervs:
+                if supervID not in self._observedSuperBlocks:
+                    Debug.verboseMessage("NEVER saw %d executing" % supervID)
+                    self._executesKTimes[pathg][supervID] = 0
     
     def _initialiseSuperBlockInformation (self):
         self._superBlockExecutionCounts = {}
-        self._executesKTimes = {}
-        self._observedSuperBlocks = set([])
-        self._superBlockCFGInformation = {}
+        self._executesKTimes            = {}
+        self._observedSuperBlocks       = set([])
         for cfg in self._program.getICFGs():
             superg = self._program.getSuperBlockCFG(cfg.getName())
             pathg  = superg.getSuperBlockPathInformationGraph()
-            self._partitions[pathg] = {}
+            self._partitions[pathg]                = {}
+            self._superBlockExecutionCounts[pathg] = {}
+            self._executesKTimes[pathg]            = {}
             for superv in pathg:
-                self._superBlockExecutionCounts[superv] = 0
+                self._superBlockExecutionCounts[pathg][superv.getVertexID()] = 0
                 if superv.acyclicPartition:
-                    self._executesKTimes[superv] = 1
+                    self._executesKTimes[pathg][superv.getVertexID()] = 1
                 else:
-                    self._executesKTimes[superv] = sys.maxint
+                    self._executesKTimes[pathg][superv.getVertexID()] = sys.maxint
                 partitionID = superv.partitionID
                 if partitionID not in self._partitions[pathg]:
                     self._partitions[pathg][partitionID] = set([])
@@ -166,14 +183,16 @@ class TraceInformation:
     def _analyseCFGVertex (self, pathg, bbID):
         if pathg.isMonitoredBasicBlock(bbID):
             superv = pathg.getMonitoredBasicBlockSuperBlock(bbID)
-            self._superBlockExecutionCounts[superv] += 1
+            self._superBlockExecutionCounts[pathg][superv.getVertexID()] += 1
             self._partitions[pathg][superv.partitionID].add(superv)
+            self._observedSuperBlocks.add(superv.getVertexID())
             
     def _analyseCFGEdge (self, pathg, predID, succID):
         if pathg.isMonitoredEdge(predID, succID):
             superv = pathg.getMonitoredEdgeSuperBlock(predID, succID)
-            self._superBlockExecutionCounts[superv] += 1
+            self._superBlockExecutionCounts[pathg][superv.getVertexID()] += 1
             self._partitions[pathg][superv.partitionID].add(superv)
+            self._observedSuperBlocks.add(superv.getVertexID())
             
     def getLoopBound (self, functionName, headerID):
         tupleKey = (functionName, headerID)
@@ -188,28 +207,26 @@ class TraceInformation:
     def getLongestTime (self):
         return self._longestTime
     
-    def getMinimumExecutionCount (self, superv):
-        if superv not in self._executesKTimes:
-            Debug.warningMessage("Unable to find minimum execution count for super block %d" % superv.getVertexID())
-            return 0
-        return self._executesKTimes[superv]
+    def getMinimumExecutionCount (self, pathg, superv):
+        return self._executesKTimes[pathg][superv.getVertexID()]
     
-    def alwaysExecutes (self, superv):
-        if superv in self._executesKTimes:
-            return self._executesKTimes[superv] > 0
-        return True
+    def alwaysExecutes (self, pathg, superv):
+        return self._executesKTimes[pathg][superv.getVertexID()] > 0
     
+    def neverExecutes (self, pathg, superv):
+        return self._executesKTimes[pathg][superv.getVertexID()] == 0
+        
     def getNumberOfAlwaysExecute (self, pathg):
         num = 0
         for superv in pathg:
-            if superv in self._executesKTimes and self._executesKTimes[superv] > 0:
+            if self._executesKTimes[pathg][superv.getVertexID()] > 0:
                 num += 1
         return num
     
     def getNumberOfNeverExecute (self, pathg):
         num = 0
         for superv in pathg:
-            if superv in self._executesKTimes and self._executesKTimes[superv] == 0:
+            if self._executesKTimes[pathg][superv.getVertexID()] == 0:
                 num += 1
         return num
     
@@ -285,6 +302,7 @@ class Gem5Parser (TraceInformation):
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(traceFiles)
+        self._end()
         self._normaliseData()
         self._outputConjectures()
         
@@ -312,10 +330,11 @@ class Gem5Parser (TraceInformation):
         Debug.debugMessage("End address of root function '%s' is %s" % (rootv.getName(), hex(self.__lastAddr)), 1)
         
     def __parse (self, traceFiles):
+        import gzip
         runID = 0
         for filename in traceFiles:
             parsing = False 
-            with open(filename, 'r') as f:
+            with gzip.open(filename, 'r') as f:
                 runID += 1
                 self._allruns.add(runID)
                 Debug.debugMessage("Analysing gem5 trace file '%s'" % filename, 1)
@@ -346,6 +365,7 @@ class Gem5Parser (TraceInformation):
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
                             # Falsify conjectures
+                            self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
                             self._endRun()
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
@@ -361,7 +381,7 @@ class Gem5Parser (TraceInformation):
         tupleKey = (self.__currentCFG.getName(), self.__currentBB.getOriginalVertexID())
         assert tupleKey in self._executionTimes
         self._executionTimes[tupleKey] = max(self._executionTimes[tupleKey], executionTime)    
-    
+        
     def __parseAddress (self, time, address, runID):
         if address == self.__lastAddr:
             self.__analyseWCETOfBasicBlock(time - self.__time1)
@@ -404,6 +424,8 @@ class Gem5Parser (TraceInformation):
             
     def __handleReturn (self):
         if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
+            # Falsify conjectures
+            self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
             (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
             succIDs = self.__currentBB.getSuccessorIDs()
             assert len(succIDs) == 1

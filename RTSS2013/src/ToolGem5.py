@@ -5,6 +5,17 @@ import Debug, TestHarness, Timing
 armGCC      = 'arm-linux-gnueabi-gcc'
 armObjdump  = 'arm-linux-gnueabi-objdump'
 
+def doCompression (gem5Trace):
+    import gzip
+    compressedFile = gem5Trace + '.gz'
+    f_in  = open(gem5Trace, 'rb')
+    f_out = gzip.open(compressedFile, 'wb')
+    f_out.writelines(f_in)
+    f_out.close()
+    f_in.close()
+    os.remove(gem5Trace)
+    return compressedFile
+
 def fitnessFunction (chromosome):
     import os, sys, shlex
     from subprocess import Popen, PIPE
@@ -28,7 +39,6 @@ def fitnessFunction (chromosome):
         sys.exit("Running '%s' failed" % cmd)
     gem5Trace = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + traceFile
     assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
-    fitnessFunction.gem5Traces.append(gem5Trace)
     firstLines = os.popen("head -1 %s" % gem5Trace).readlines()
     lastLines  = os.popen("tail -1 %s" % gem5Trace).readlines()
     assert len(firstLines) == 1
@@ -40,13 +50,11 @@ def fitnessFunction (chromosome):
     time1 = time1[:-1]
     time2 = time2[:-1]
     score = int(time2) - int(time1)
-    if fitnessFunction.minimumExecutionTimes:
-        score = sys.maxint - score
     Debug.debugMessage("Score = %d" % score, 1)
+    fitnessFunction.gem5Traces.append(doCompression(gem5Trace))
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, minimumExecutionTimes, populationSize=10, generations=1):
-    import re
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=1):
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 
     # Create the population
@@ -69,48 +77,42 @@ def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties,
     ga.setCrossoverRate(0.9)
     ga.setMutationRate(0.01)
     ga.setElitism(True)
-    
     # Set up the fitness function static variables
     fitnessFunction.gem5Traces       = []
-    fitnessFunction.run              = 0
     fitnessFunction.vectorProperties = vectorProperties
-    fitnessFunction.minimumExecutionTimes = minimumExecutionTimes
+    fitnessFunction.run              = getNextTraceFileNumber(binary)
+    # Run the GA
+    ga.evolve (freq_stats=1)    
+    return fitnessFunction.gem5Traces
+
+def getNextTraceFileNumber (binary):
+    import re
     # Carry on from previous executions (if they exist)
+    nextrun = 0
     gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
     if os.path.exists(gem5TraceDirectory):
         for filename in os.listdir(gem5TraceDirectory):
             match = re.match(r'%s' % os.path.basename(binary), filename)
             if match:
-                index = filename.rfind('.')
-                num   = int(filename[index+1:])
-                fitnessFunction.run = max(num, fitnessFunction.run)
-    ga.evolve (freq_stats=1)    
-    return fitnessFunction.gem5Traces
+                index1  = filename.rfind('.')
+                index2  = filename[:index1].rfind('.')
+                run     = int(filename[index2+1:index1])
+                nextrun = max(nextrun, run)
+    return nextrun
     
 def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties):
-    import os, sys, re
+    import os, sys
     from TestHarness import RandomGeneration
     from subprocess import Popen, PIPE
     
-    run = 0    
-    # Carry on from previous executions (if they exist)
-    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
-    if os.path.exists(gem5TraceDirectory):
-        for filename in os.listdir(gem5TraceDirectory):
-            match = re.match(r'%s' % os.path.basename(binary), filename)
-            if match:
-                index = filename.rfind('.')
-                num   = int(filename[index+1:])
-                if num > run:
-                    run = num
-    run += 1
-    
+    # Get the next run number
+    run = getNextTraceFileNumber(binary) + 1
     # Now run the program n times
     randomTVs  = RandomGeneration(vectorProperties)
     gem5Traces = []
     for i in xrange(run, args.tests + run):
         nextTV     = randomTVs.nextTestVector()
-        traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", i)
+        traceFile  = "%s.%s.%d.gz" % (os.path.basename(binary), "trace", i)
         cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
         Debug.debugMessage("Running '%s' on gem5" % cmd, 1)
         proc       = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)    
@@ -336,20 +338,20 @@ def commandLine ():
 
 def doAnalysis (gem5Traces, program, basepath, basename):
     import Traces, Calculations
-    program.generateAllUDrawFiles()
     time1 = Timing.log("TRACE PARSING RUN #1 (NO INLINING)")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
     program.output(data)
+    program.generateAllUDrawFiles()
 
     program.inlineCalls()
-    program.generateAllUDrawFiles("inlined")
     time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
     Calculations.WCETCalculation(program, data, basepath, basename)
     program.output(data)
+    program.generateAllUDrawFiles("inlined")
         
 def checkTraceFiles (gem5Traces, basename):
     import re
@@ -399,9 +401,7 @@ if __name__ == "__main__":
             Debug.verboseMessage("Using GA to generate test vectors")
             gem5Traces = []
             time3 = Timing.log("GA RUN #1")
-            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, False))
-            time4 = Timing.log("GA RUN #2")
-            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification, True))
+            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification))
         else:
             Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
             gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
