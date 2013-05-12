@@ -54,7 +54,7 @@ def fitnessFunction (chromosome):
     fitnessFunction.gem5Traces.append(doCompression(gem5Trace))
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=1):
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=100, generations=10):
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 
     # Create the population
@@ -177,13 +177,16 @@ def disassembleProgram (binary):
         
 def compileProgram (program):
     Debug.verboseMessage("Compiling program")
-    import sys
+    import sys, re
     from subprocess import Popen
-    extraFlags = ""
+    optimisation = ""
+    extraFlags   = ""
     if args.flags:
         for flag in args.flags:
             extraFlags += "-%s " % flag
-    binary     = program[:-2]
+            if re.match(r'O[1-9]+', flag):
+                optimisation = flag
+    binary     = program[:-2] + optimisation
     cmd        = "%s -fno-stack-protector -static %s %s -o %s" % (armGCC, extraFlags, program, binary)
     Debug.debugMessage("Compiling with command '%s'" % cmd, 1)
     proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    

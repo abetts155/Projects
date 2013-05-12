@@ -542,16 +542,12 @@ class CreateCFGILP (ILP):
         if superv.getBasicBlockIDs():
             return \
                 not data.neverExecutes(pathg, superv)
-                #not superv.getRepresentativeID() in self.__alwaysBasicBlocks and \
         else:
             edge = superv.getUniqueEdge()
             return \
                 not data.neverExecutes(pathg, superv) and \
                 not lnt.isLoopBackEdge(edge[0], edge[1]) and \
                 not lnt.isLoopHeader(edge[0])
-                #not edge[0] in self.__alwaysBasicBlocks and \
-                #not edge[1] in self.__alwaysBasicBlocks and \
-                #not edge in self.__alwaysEdges and \
     
     def __addAlwaysConstraints (self, data, pathg):
         for partitionID in range(1, pathg.partitionID+1):

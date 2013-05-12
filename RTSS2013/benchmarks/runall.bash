@@ -1,4 +1,5 @@
 #!/bin/bash
+python ../src/ToolGem5.py --ga adpcm
 python ../src/ToolGem5.py --ga binary_search 
 python ../src/ToolGem5.py --ga bubblesort
 python ../src/ToolGem5.py --ga compress
@@ -22,6 +23,7 @@ python ../src/ToolGem5.py --ga mergesort
 python ../src/ToolGem5.py --ga petri
 python ../src/ToolGem5.py --ga prime
 python ../src/ToolGem5.py --ga quadraticroots
+python ../src/ToolGem5.py --ga quicksort
 python ../src/ToolGem5.py --ga select
 python ../src/ToolGem5.py --ga squareroot
 python ../src/ToolGem5.py --ga statemate

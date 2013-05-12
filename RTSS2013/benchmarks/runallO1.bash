@@ -1,30 +1,33 @@
 #!/bin/bash
-python ../src/ToolGem5.py --compiler-flags O1 binary_search.c -r binary_search  
-python ../src/ToolGem5.py --compiler-flags O1 bubblesort.c -r bubblesort  
-python ../src/ToolGem5.py --compiler-flags O1 compress.c -r compress  
-python ../src/ToolGem5.py --compiler-flags O1 cover.c -r cover  
-python ../src/ToolGem5.py --compiler-flags O1 crc.c -r crc  
-python ../src/ToolGem5.py --compiler-flags O1 edn.c -r edn  
-python ../src/ToolGem5.py --compiler-flags O1 embedded.c -r embedded  
-python ../src/ToolGem5.py --compiler-flags O1 exponential_integral.c -r exponential_integral  
-python ../src/ToolGem5.py --compiler-flags O1 fastDiscreteCosineTransform.c -r fastDiscreteCosineTransform  
-python ../src/ToolGem5.py --compiler-flags O1 fft.c -r fft  
-python ../src/ToolGem5.py --compiler-flags O1 fibonacci.c -r fibonacci  
-python ../src/ToolGem5.py --compiler-flags O1 finiteImpulseResponse.c -r finiteImpulseResponse  
-python ../src/ToolGem5.py --compiler-flags O1 insertsort.c -r insertsort  
-python ../src/ToolGem5.py --compiler-flags O1 janne_complex.c -r janne_complex  
-python ../src/ToolGem5.py --compiler-flags O1 lcdnum.c -r lcdnum  
-python ../src/ToolGem5.py --compiler-flags O1 LUdecomposition.c -r LUdecomposition  
-python ../src/ToolGem5.py --compiler-flags O1 matrix_count.c -r matrix_count  
-python ../src/ToolGem5.py --compiler-flags O1 matrix_inverse.c -r matrix_inverse  
-python ../src/ToolGem5.py --compiler-flags O1 matrixmultiply.c -r matrixmultiply  
-python ../src/ToolGem5.py --compiler-flags O1 mergesort.c -r mergesort  
-python ../src/ToolGem5.py --compiler-flags O1 petri.c -r petri  
-python ../src/ToolGem5.py --compiler-flags O1 prime.c -r prime  
-python ../src/ToolGem5.py --compiler-flags O1 quadraticroots.c -r quadraticroots  
-python ../src/ToolGem5.py --compiler-flags O1 select.c -r select  
-python ../src/ToolGem5.py --compiler-flags O1 squareroot.c -r squareroot  
-python ../src/ToolGem5.py --compiler-flags O1 statemate.c -r statemate  
-python ../src/ToolGem5.py --compiler-flags O1 statistics.c -r statistics  
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r select select.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r squareroot squareroot.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r statemate statemate.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r statistics statistics.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r exponential_integral exponential_integral.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r fastDiscreteCosineTransform fastDiscreteCosineTransform.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r fft fft.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r fibonacci fibonacci.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r finiteImpulseResponse finiteImpulseResponse.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r insertsort insertsort.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r janne_complex janne_complex.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r lcdnum lcdnum.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r LUdecomposition LUdecomposition.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r matrix_count matrix_count.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r matrix_inverse matrix_inverse.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r matrixmultiply matrixmultiply.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r mergesort mergesort.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r petri petri.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r prime prime.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r quadraticroots quadraticroots.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r quicksort quicksort.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r binary_search binary_search.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r bubblesort bubblesort.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r compress compress.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r cover cover.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r crc crc.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r edn edn.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r embedded embedded.c
+python ../src/ToolGem5.py --compiler-flags O1 --ga -r adpcm adpcm.c
+
 
 
