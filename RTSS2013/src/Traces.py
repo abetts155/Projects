@@ -364,6 +364,7 @@ class Gem5Parser (TraceInformation):
                             # Compute the HWMT
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
+                            print self._longestTime
                             # Falsify conjectures
                             self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
                             self._endRun()

@@ -54,7 +54,7 @@ def fitnessFunction (chromosome):
     fitnessFunction.gem5Traces.append(doCompression(gem5Trace))
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=100, generations=10):
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=10):
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 
     # Create the population
@@ -348,13 +348,14 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     program.output(data)
     program.generateAllUDrawFiles()
 
-    program.inlineCalls()
-    time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
-    data = Traces.Gem5Parser(program, gem5Traces)
-    Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
-    Calculations.WCETCalculation(program, data, basepath, basename)
-    program.output(data)
-    program.generateAllUDrawFiles("inlined")
+    if program.getCallGraph().numOfVertices() > 1:
+        program.inlineCalls()
+        time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
+        data = Traces.Gem5Parser(program, gem5Traces)
+        Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
+        Calculations.WCETCalculation(program, data, basepath, basename)
+        program.output(data)
+        program.generateAllUDrawFiles("inlined")
         
 def checkTraceFiles (gem5Traces, basename):
     import re

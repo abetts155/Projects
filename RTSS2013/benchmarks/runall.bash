@@ -20,7 +20,6 @@ python ../src/ToolGem5.py --ga matrix_count
 python ../src/ToolGem5.py --ga matrix_inverse
 python ../src/ToolGem5.py --ga matrixmultiply
 python ../src/ToolGem5.py --ga mergesort
-python ../src/ToolGem5.py --ga petri
 python ../src/ToolGem5.py --ga prime
 python ../src/ToolGem5.py --ga quadraticroots
 python ../src/ToolGem5.py --ga quicksort

@@ -56,7 +56,7 @@ sqrt (double val)
   return x;
 }
 
-int
+void
 quadraticroots (double a[])
 {
   double x1[2];
@@ -105,7 +105,6 @@ int
 main (int argc, char *argv[])
 {
   double a[3];
-
   /*
    * Three integers must be supplied
    */
@@ -122,9 +121,8 @@ main (int argc, char *argv[])
   a[1] = atoi (argv[2]);
   a[2] = atoi (argv[3]);
 
-  int val = quadraticroots(a);
-  
-  printf("%d", val);
+  quadraticroots(a);
+  printf("%lf", a[0]);
 
   return 0;
 }

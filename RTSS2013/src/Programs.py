@@ -145,6 +145,9 @@ class Program():
         self.__bbIDToICFG     = {}
         
     def output (self, data):
+        totalMutualExclusion = 0
+        totalAlways = 0
+        
         for functionName, cfg in self.__CFGs.iteritems():
             superg = self.getSuperBlockCFG(functionName)
             pathg  = superg.getSuperBlockPathInformationGraph()
@@ -156,7 +159,11 @@ class Program():
             Debug.verboseMessage("...#mutual exclusion pairs = %d" % pathg.numOfEdges())
             Debug.verboseMessage("...#never execute          = %d" % data.getNumberOfNeverExecute(pathg))
             Debug.verboseMessage("...#always execute         = %d" % data.getNumberOfAlwaysExecute(pathg))
-        
+            totalMutualExclusion += pathg.numOfEdges()
+            totalAlways += data.getNumberOfAlwaysExecute(pathg)
+        Debug.verboseMessage("...#TOTAL mutual exclusion pairs = %d" % totalMutualExclusion)
+        Debug.verboseMessage("...#TOTAL always execute         = %d" % totalAlways)
+            
     def generateAllUDrawFiles (self, suffix=""):
         if suffix:
             suffix = '.' + suffix 
