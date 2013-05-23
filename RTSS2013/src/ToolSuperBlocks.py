@@ -26,12 +26,6 @@ def commandLine ():
                          help="generate uDrawGraph files",
                          default=False)
 
-    cmdline.add_argument("-C",
-                         "--calculation",
-                         action="store_true",
-                         help="do WCET calculation",
-                         default=False)
-    
     cmdline.add_argument("-t",
                          "--traces",
                          type=int,
@@ -54,7 +48,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Vertices, Utils, Calculations
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Utils, Calculations
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -71,29 +65,21 @@ if __name__ == "__main__":
     basename = os.path.splitext(filename)[0]
     UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
-    program.generateUDrawFiles()
-    #program.inlineCalls()
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
         functionName = icfg.getName()
-        UDrawGraph.makeUdrawFile(icfg, "%s.cfg" % functionName)
-        if icfg.getExitID() != Vertices.dummyVertexID:
-            lnt = Trees.LoopNests(icfg, icfg.getEntryID())
-            UDrawGraph.makeUdrawFile(lnt, "%s.lnt" % functionName)
-            program.addLNT(lnt, functionName)
-            superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
-            program.addSuperBlockCFG(superg, functionName)
-            UDrawGraph.makeUdrawFile(superg, "%s.superg" % functionName)
-        else:
-            Debug.warningMessage("Not analysing function %s because it does not have an exit point set" % functionName)
+        lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+        program.addLNT(lnt, functionName)
+        superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
+        program.addSuperBlockCFG(superg, functionName)
+    program.generateAllUDrawFiles()
     if args.traces:
         Debug.verboseMessage("Generating dummy traces")
         Traces.GenerateTraces(basepath, basename, program, args.traces)
     elif args.tracefile:
         tracefile = os.path.abspath(args.tracefile)
         assert os.path.exists(tracefile), "Trace file '%s' does not exist" % tracefile
-        Traces.ParseTraces(basename, tracefile, program)
-    if args.calculation:
-        Calculations.WCETCalculation(program, basepath, basename)
+        data = Traces.ParseTraces(basename, tracefile, program)
+        Calculations.WCETCalculation(program, data, basepath, basename)
         
         

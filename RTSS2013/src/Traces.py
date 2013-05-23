@@ -1,5 +1,5 @@
 import Debug, ARM, Vertices
-import random, os, hashlib, shlex, sys
+import random, os, shlex, sys
 
 newTrace = "=>"
 endTrace = "<="
@@ -12,7 +12,6 @@ class GenerateTraces:
         self.__program = program
         filename       = basepath + os.sep + basename + ".traces"
         with open(filename, 'w') as self.__outfile:
-            self.__outfile.write("%s\n" % hashlib.sha1(basename).hexdigest())
             for trace in xrange(1, numberOfTraces+1):
                 Debug.debugMessage("Generating trace #%d" % trace, 1)
                 self.__outfile.write("%s\n" % newTrace)
@@ -56,21 +55,16 @@ class GenerateTraces:
                 else:
                     self.__chooseNonLoopBackEdgeSuccessorInICFG()
             elif self.__currentICFG.isCallSite(self.__vertexID):
-                # If the number of calls have been exceeded or we non-deterministically choose not to make the call here
-                # then select a successor in the current ICFG 
-                if self.__numberOfCalls > GenerateTraces.maxNumberOfCalls or not bool(random.getrandbits(1)):
-                    self.__chooseSuccessorInICFG()
-                else:
-                    # Make the call. First save state then move to the callee ICFG
-                    self.__callStack.append((self.__currentCallv, self.__currentICFG, self.__currentLNT, self.__currentv))
-                    succID              = self.__currentCallv.getSuccessorWithCallSite(self.__vertexID)
-                    self.__currentCallv = callg.getVertex(succID)
-                    calleeName          = self.__currentCallv.getName()
-                    Debug.debugMessage("Calling %s" % self.__currentCallv.getName(), 5)
-                    self.__currentICFG  = self.__program.getICFG(calleeName)
-                    self.__currentLNT   = self.__program.getLNT(calleeName)
-                    self.__currentv     = self.__currentICFG.getVertex(self.__currentICFG.getEntryID())
-                    self.__vertexID     = self.__currentv.getVertexID()
+                # Make the call. First save state then move to the callee ICFG
+                self.__callStack.append((self.__currentCallv, self.__currentICFG, self.__currentLNT, self.__currentv))
+                succID              = self.__currentCallv.getSuccessorWithCallSite(self.__vertexID)
+                self.__currentCallv = callg.getVertex(succID)
+                calleeName          = self.__currentCallv.getName()
+                Debug.debugMessage("Calling %s" % self.__currentCallv.getName(), 5)
+                self.__currentICFG  = self.__program.getICFG(calleeName)
+                self.__currentLNT   = self.__program.getLNT(calleeName)
+                self.__currentv     = self.__currentICFG.getVertex(self.__currentICFG.getEntryID())
+                self.__vertexID     = self.__currentv.getVertexID()
             else:
                 self.__chooseSuccessorInICFG()
     
@@ -102,7 +96,7 @@ class TraceInformation:
                 if conjecture > 0:
                     Debug.verboseMessage("Conjecture that %d executes %d times holds" % (supervID, conjecture)) 
                 else:
-                    Debug.verboseMessage("Found an execution where %d NEVER executes" % supervID) 
+                    Debug.verboseMessage("%d may NOT ALWAYS execute" % supervID) 
             
     def _endOfFunction (self, pathg):
         Debug.debugMessage("Falsifying conjectures in %s" % pathg.getName(), 1)
@@ -233,32 +227,45 @@ class TraceInformation:
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
         TraceInformation.__init__(self, program)
-        self.__contextg = self._program.getContextGraph()
-        self.__rootv    = self.__contextg.getVertex(self.__contextg.getRootID())
-        self.__bbToCFG  = {}
-        self.__verifyMagicNumber(basename, tracefile)
         self.__initialise()
         self.__parse(tracefile)
-        self._computePathInformation()          
-                    
-    def __verifyMagicNumber (self, basename, tracefile):
-        magicNumber = hashlib.sha1(basename).hexdigest()
-        # First assert that the magic numbers match
-        with open(tracefile, 'r') as f:
-            line = f.readline()
-            fileMagicNumber = line.strip()
-            assert fileMagicNumber == magicNumber, "The magic number of the trace file does not compute"
-    
+        self._end()
+        self._outputConjectures()      
+        self.__assignRandomWCETs()
+        
+    def __assignRandomWCETs (self):
+        for cfg in self._program.getICFGs():
+            functionName = cfg.getName()
+            for v in cfg:
+                self._executionTimes[(functionName, v.getOriginalVertexID())] = random.randint(1,100)
+
     def __initialise (self):
-        for icfg in self._program.getICFGs():
-            for v in icfg:
-                self.__bbToCFG[v.getVertexID()] = icfg
+        self.__currentContextv = None
+        self.__currentCFG      = None
+        self.__currentLNT      = None
+        self.__predBB          = None
+        self.__currentBB       = None
+        self.__currentHeaderID = None
+        self.__currentSuperg   = None
+        self.__stack           = []
+        self.__contextg        = self._program.getContextGraph()
+        rootv                  = self.__contextg.getVertex(self.__contextg.getRootID())
+        self.__rootCFG         = self._program.getICFG(rootv.getName())
+        self.__entryToCFG      = {}        
+        for cfg in self._program.getICFGs():
+            self.__entryToCFG[cfg.getEntryID()] = cfg
     
+    def __reset (self):
+        self.__currentContextv = self.__contextg.getVertex(self.__contextg.getRootID())
+        self.__currentCFG      = self._program.getICFG(self.__currentContextv.getName())
+        self.__currentLNT      = self._program.getLNT(self.__currentContextv.getName())
+        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentContextv.getName())
+        self.__predBB          = None
+        self.__currentBB       = None
+        
     def __parse (self, tracefile):
         runID = 0
         with open(tracefile, 'r') as f:
-        # Move past the magic number line
-            next(f)
             for line in f:
                 if line.startswith(newTrace):
                     runID += 1
@@ -268,34 +275,72 @@ class ParseTraces (TraceInformation):
                     pass
                 else:
                     lexemes = shlex.split(line)
-                    lastID = None
                     for lex in lexemes:
                         nextID = int(lex)
-                        if self.__currentCFG.hasVertex(nextID):
-                            self._analyseSuperBlock(self.__currentContextv, self.__currentSuperg, lastID, nextID, runID)
+                        if nextID == self.__rootCFG.getEntryID():
+                            self.__currentBB = self.__currentCFG.getVertex(nextID)
                         else:
-                            self.__handleCallAndReturn(lastID, nextID)
-                        lastID = nextID
-    
-    def __reset (self):
-        self.__callStack       = []
-        self.__currentContextv = self.__rootv
-        self.__currentCFG      = self._program.getICFG(self.__rootv.getName())
-        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__rootv.getName())
-        
-    def __handleCallAndReturn (self, lastID, nextID):
-        assert lastID, "The last ID was not set"
-        if self.__currentCFG.getExitID() == lastID:
-            Debug.debugMessage("Returning because of basic block %d" % lastID, 1)
-            self.__currentContextv, self.__currentCFG, self.__currentSuperg = self.__callStack.pop()
+                            found = False
+                            for succID in self.__currentBB.getSuccessorIDs():
+                                if succID == nextID:
+                                    self.__predBB    = self.__currentBB
+                                    self.__currentBB = self.__currentCFG.getVertex(succID)
+                                    # Since we have switched basic blocks in the current CFG, analyse the super blocks
+                                    self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
+                                    self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())             
+                                    self.__analyseLoopBounds()
+                                    found = True
+                                    break
+                            if not found:
+                                if self.__currentBB.getVertexID() == self.__currentCFG.getExitID():
+                                    self.__handleReturn()
+                                    succIDs = self.__currentBB.getSuccessorIDs()
+                                    assert len(succIDs) == 1
+                                    succv            = self.__currentCFG.getVertex(succIDs[0])
+                                    self.__predBB    = self.__currentBB
+                                    self.__currentBB = succv
+                                    # Since we have switched basic blocks in the current CFG, analyse the super blocks
+                                    self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
+                                    self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())             
+                                    self.__analyseLoopBounds()
+                                else:
+                                    self.__handleCall(nextID)                                
+                            
+    def __analyseLoopBounds (self):
+        # Analyse loop bounds
+        if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
+            tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
+            assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
+            self._loopBoundsInCurrentRun[tupleKey] += 1   
+            # Check whether this edge is a loop-exit edge
+            # If it is the header ID of the exiting loop is returned
+        if self.__predBB:
+            headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
+            if headerID:
+                tupleKey = (self.__currentCFG.getName(), headerID)
+                assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
+                self._loopBounds[tupleKey] = max(self._loopBounds[tupleKey], self._loopBoundsInCurrentRun[tupleKey])
+                self._loopBoundsInCurrentRun[tupleKey] = 0 
+                            
+    def __handleReturn (self):
+        self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
+        if self.__currentCFG != self.__rootCFG:
+            Debug.debugMessage("Returning because of basic block %d" % self.__currentBB.getVertexID(), 1)
+            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
         else:
-            callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentSuperg)
-            self.__callStack.append(callerFrame) 
-            self.__currentCFG      = self.__bbToCFG[nextID]
-            newContextID           = self.__currentContextv.getSuccessorWithCallSite(lastID)
-            self.__currentContextv = self.__contextg.getVertex(newContextID)
-            self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
-
+            self._endRun()
+            
+    def __handleCall (self, nextID):
+        callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg)
+        self.__stack.append(callerFrame)
+        newContextID           = self.__currentContextv.getSuccessorWithCallSite(self.__currentBB.getVertexID())
+        self.__currentContextv = self.__contextg.getVertex(newContextID)
+        self.__currentCFG      = self.__entryToCFG[nextID]
+        self.__currentLNT      = self._program.getLNT(self.__currentCFG.getName())
+        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+        self.__predBB          = None
+        self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+        
 class Gem5Parser (TraceInformation):
     def __init__ (self, program, traceFiles):
         Debug.verboseMessage("Parsing gem5 traces")

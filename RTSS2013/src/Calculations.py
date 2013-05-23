@@ -594,10 +594,8 @@ class CreateCFGILP (ILP):
             if var.startswith(LpSolve.vertexPrefix):
                 lIndex       = var.find('_')
                 basicBlockID = int(var[lIndex+1:])
-                wcet         = basicBlockID
                 v            = cfg.getVertex(basicBlockID)
-                if v.hasInstructions():
-                    wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID()) #self.__getWCETOfBasicBlock(v)
+                wcet         = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
                 if cfg.isCallSite(basicBlockID):
                     calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
                     calleeContextWCET = contextWCETs[calleeContextID]

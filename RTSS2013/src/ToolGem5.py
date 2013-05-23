@@ -340,7 +340,7 @@ def commandLine ():
     return cmdline.parse_args()
 
 def doAnalysis (gem5Traces, program, basepath, basename):
-    import Traces, Calculations
+    import Traces, Calculations    
     time1 = Timing.log("TRACE PARSING RUN #1 (NO INLINING)")
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
@@ -348,15 +348,14 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     program.output(data)
     program.generateAllUDrawFiles()
 
-    if program.getCallGraph().numOfVertices() > 1:
-        program.inlineCalls()
-        time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
-        data = Traces.Gem5Parser(program, gem5Traces)
-        Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
-        Calculations.WCETCalculation(program, data, basepath, basename)
-        program.output(data)
-        program.generateAllUDrawFiles("inlined")
-        
+    program.inlineCalls()
+    time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
+    data = Traces.Gem5Parser(program, gem5Traces)
+    Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
+    Calculations.WCETCalculation(program, data, basepath, basename)
+    program.output(data)
+    program.generateAllUDrawFiles("inlined")
+    
 def checkTraceFiles (gem5Traces, basename):
     import re
     files = []
