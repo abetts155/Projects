@@ -3,6 +3,9 @@ from Trees import DepthFirstSearch
 import Debug
 import os
 
+def getNewLine (num=1):
+    return "\n" * num 
+
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename):
         self.__contextIDToWCET = {}
@@ -17,9 +20,166 @@ class WCETCalculation:
             cfg          = program.getICFG(functionName)
             ilp          = CreateCFGILP(basepath, basename, data, self.__contextIDToWCET, contextv, cfg, lnt, pathg)
             self.__contextIDToWCET[contextv.getVertexID()] = ilp._wcet
-            #CreateSuperBlockCFGILP(basepath, basename, superg, lnt)
-            #TreeBasedCalculation(superg, lnt)
+            CreateCFGCLP(basepath, basename, data, self.__contextIDToWCET, contextv, cfg, lnt, pathg)
             
+class ECLIPSE:
+    conjunct        = "," + getNewLine()
+    countPrefix     = "C" 
+    domainSeparator = " #:: "
+    equals          = " #= "
+    fileSuffix      = "ecl"
+    implies         = ":-"
+    multiply        = "*"
+    plus            = " + "
+    terminator      = "."
+    wcetPrefix      = "W"
+    
+    @staticmethod
+    def getComment (comment):
+        return "% " + comment + getNewLine()
+    
+    @staticmethod
+    def getEdgeCountVariable (sourceID, destinationID):
+        return "%s%d_%s%d" % (ECLIPSE.countPrefix, sourceID, ECLIPSE.countPrefix, destinationID)
+    
+    @staticmethod
+    def getVertexCountVariable (vertexID):
+        return "%s%d" % (ECLIPSE.countPrefix, vertexID)
+    
+    @staticmethod
+    def getVertexWCETVariable (vertexID):
+        return "%s%d" % (ECLIPSE.wcetPrefix, vertexID)
+    
+    @staticmethod
+    def getTempList (suffix):
+        return "VARS%d" % suffix
+    
+class CLP ():
+    WCET        = "WCET"
+    PWCET       = "PWCET"
+    BB_TIMES    = "BB_TIMES"
+    BB_COUNTS   = "BB_COUNTS"
+    EDGE_COUNTS = "EDGE_COUNTS"
+    
+    def __init__ (self):
+        self._wcet  = -1
+        self._lines = []
+        
+    def _solve(self, filename):
+        Debug.debugMessage("Solving CLP in %s" % filename, 10)
+        
+    def _addRequiredPackages (self):
+        self._lines.append(ECLIPSE.getComment("Packages"))
+        libs = ['ic', 'branch_and_bound', 'lists', 'util']
+        for lib in libs:
+            self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.implies, 'lib', lib, ECLIPSE.terminator, getNewLine()))
+        self._lines.append(getNewLine())
+                    
+class CreateCFGCLP (CLP):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+        CLP.__init__(self)
+        self._addRequiredPackages()
+        self._lines.append("solve(%s,%s)%s%s" % (CLP.WCET, CLP.BB_TIMES, ECLIPSE.implies, getNewLine()))
+        self.__addVariables(cfg)
+        self.__addExecutionCountDomains(cfg)
+        self.__addStructuralConstraints(cfg)
+        self.__addExecutionTimeDomains(data, cfg)
+        self.__addObjectiveFunction(cfg)
+        self.__addEpilogue()
+        
+        filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        with open(filename, 'w') as clpFile:
+            for line in self._lines:
+                clpFile.write(line)        
+        
+    def __addVariables (self, cfg):
+        self._lines.append(ECLIPSE.getComment("Declarations"))
+        bbCounts   = []
+        bbTimes    = []
+        edgeCounts = []
+        for v in cfg:
+            bbCounts.append(ECLIPSE.getVertexCountVariable(v.getVertexID()))
+            bbTimes.append(ECLIPSE.getVertexWCETVariable(v.getVertexID()))
+            for succID in v.getSuccessorIDs():
+                edgeCounts.append(ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID))
+        self._lines.append("%s = [%s]%s" % (CLP.BB_COUNTS, ','.join(var for var in bbCounts), ECLIPSE.conjunct))
+        self._lines.append("%s = [%s]%s" % (CLP.BB_TIMES, ','.join(var for var in bbTimes), ECLIPSE.conjunct))
+        self._lines.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, ','.join(var for var in edgeCounts),  ECLIPSE.conjunct))
+        self._lines.append(getNewLine())
+    
+    def __addExecutionCountDomains (self, cfg):
+        self._lines.append(ECLIPSE.getComment("Execution count domains"))
+        for v in cfg:
+            self._lines.append("%s%s[%d..%d]%s" % \
+                               (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.domainSeparator, 0, 1, ECLIPSE.conjunct))
+        for v in cfg:
+            for succID in v.getSuccessorIDs():
+                self._lines.append("%s%s[%d..%d]%s" % \
+                                   (ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID), ECLIPSE.domainSeparator, 0, 1, ECLIPSE.conjunct))
+        self._lines.append(getNewLine())
+    
+    def __addStructuralConstraints (self, cfg):
+        self._lines.append(ECLIPSE.getComment("Structural constraints"))
+        for v in cfg:
+            self._lines.append(ECLIPSE.getComment("Vertex %d" % v.getVertexID()))
+            if v.getVertexID() == cfg.getEntryID():
+                self._lines.append("%s%s1%s" % \
+                                   (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, ECLIPSE.conjunct))
+            else:
+                # Flow out to successor edges
+                rhs   = ""
+                count = 1
+                for succID in v.getSuccessorIDs():
+                    rhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
+                    if count < v.numberOfSuccessors():
+                        rhs += ECLIPSE.plus
+                    count += 1
+                self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+                # Flow in through predecessor edges
+                rhs   = ""
+                count = 1
+                for predID in v.getPredecessorIDs():
+                    rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
+                    if count < v.numberOfPredecessors():
+                        rhs += ECLIPSE.plus
+                    count += 1
+                self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+        self._lines.append(getNewLine())    
+    
+    def __addExecutionTimeDomains (self, data, cfg):
+        self._lines.append(ECLIPSE.getComment("Timing constraints"))
+        # First write out WCET of each basic block
+        highestWCET = 0
+        for v in cfg:
+            wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
+            self._lines.append("%s%s%d%s" % \
+                                   (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.equals, wcet, ECLIPSE.conjunct))
+            highestWCET = max(highestWCET, wcet) 
+        # Now write out the domain of the WCETs 
+        for v in cfg:
+            self._lines.append("%s%s[%d..%d]%s" % \
+                                   (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.domainSeparator, 0, highestWCET, ECLIPSE.conjunct))
+        self._lines.append(getNewLine())    
+        
+    def __addObjectiveFunction (self, cfg):
+        self._lines.append(ECLIPSE.getComment("Objective function"))
+        rhs   = ""
+        count = 1
+        for v in cfg:
+            rhs += "%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.multiply, ECLIPSE.getVertexWCETVariable(v.getVertexID()))
+            if count < cfg.numOfVertices():
+                rhs += ECLIPSE.plus
+            count += 1
+        self._lines.append("%s%s%s%s" % (CLP.WCET, ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+        self._lines.append(getNewLine())    
+        
+    def __addEpilogue (self):
+        self._lines.append("%s%s%d%s%s%s" % (CLP.PWCET, ECLIPSE.equals, -1, ECLIPSE.multiply, CLP.WCET, ECLIPSE.conjunct))
+        self._lines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
+        self._lines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
+        self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
+                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.terminator))
+
 class TreeBasedCalculation:
     def __init__ (self, superg, lnt, longestPaths=1):
         self.__longestPaths  = longestPaths
@@ -134,10 +294,6 @@ class LpSolve:
     def getComment (comment):
         return "// " + comment + "\n"
     
-    @staticmethod
-    def getNewLine (num=1):
-        return "\n" * num 
-    
 class ILP ():
     def __init__ (self):
         self._wcet = -1
@@ -192,7 +348,7 @@ class CreateSuperBlockCFGILP (ILP):
         constraint    += LpSolve.ltOrEqual
         constraint    += str(self._wcet - 1)
         constraint    += LpSolve.semiColon
-        constraint    += LpSolve.getNewLine()
+        constraint    += getNewLine()
         self.__constraints.append(constraint)
         self.__constraints.append(intConstraint)
         
@@ -228,7 +384,7 @@ class CreateSuperBlockCFGILP (ILP):
             constraint += LpSolve.ltOrEqual
             constraint += str(sizeOfExclusiveSet - 1)
             constraint += LpSolve.semiColon
-            constraint += LpSolve.getNewLine(2)
+            constraint += getNewLine(2)
             self.__constraints.append(constraint)
     
     def __createCapacityConstraints (self, treev, lnt):
@@ -239,7 +395,7 @@ class CreateSuperBlockCFGILP (ILP):
             constraint += LpSolve.equals
             constraint += "1"
             constraint += LpSolve.semiColon
-            constraint += LpSolve.getNewLine(2)
+            constraint += getNewLine(2)
             self.__constraints.append(constraint)
         else:
             for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
@@ -249,7 +405,7 @@ class CreateSuperBlockCFGILP (ILP):
                     constraint += "%d " % (ancestorv.getLevel() * 10 + 1)
                     constraint += LpSolve.getVertexVariable(treev.getHeaderID(), ancestorv.getHeaderID())
                     constraint += LpSolve.semiColon
-                    constraint += LpSolve.getNewLine(2)
+                    constraint += getNewLine(2)
                     self.__constraints.append(constraint)
                 else:
                     pass
@@ -269,9 +425,9 @@ class CreateSuperBlockCFGILP (ILP):
                         constraint += LpSolve.equals
                         constraint += LpSolve.getVertexVariable(repID, headerID)
                         constraint += LpSolve.semiColon
-                        constraint += LpSolve.getNewLine()
+                        constraint += getNewLine()
                         self.__constraints.append(constraint)
-                self.__constraints.append(LpSolve.getNewLine())
+                self.__constraints.append(getNewLine())
                         
             # Handle super blocks with more than one successor
             if superv.numberOfSuccessors() > 1:
@@ -312,7 +468,7 @@ class CreateSuperBlockCFGILP (ILP):
                     constraint += LpSolve.plus
                 num += 1
             constraint += LpSolve.semiColon 
-            constraint += LpSolve.getNewLine(2)
+            constraint += getNewLine(2)
             self.__constraints.append(constraint)
     
     def __createMergeConstraints (self, superg, superv, headerID):
@@ -337,7 +493,7 @@ class CreateSuperBlockCFGILP (ILP):
                 constraint += LpSolve.plus
             num += 1
         constraint += LpSolve.semiColon 
-        constraint += LpSolve.getNewLine(2)
+        constraint += getNewLine(2)
         self.__constraints.append(constraint)
        
     def __createObjectiveFunction (self, lnt):
@@ -363,10 +519,10 @@ class CreateSuperBlockCFGILP (ILP):
             if num < len(self.__variables):
                 constraint += LpSolve.plus
             if num % 10 == 0:
-                constraint += LpSolve.getNewLine()
+                constraint += getNewLine()
             num += 1
         constraint += LpSolve.semiColon 
-        constraint += LpSolve.getNewLine(2)
+        constraint += getNewLine(2)
         self.__constraints.insert(0, constraint)
         self.__endOfObjectiveFunction = 3            
     
@@ -378,7 +534,7 @@ class CreateSuperBlockCFGILP (ILP):
             if num < len(self.__variables):
                 constraint += LpSolve.comma
             num += 1
-        constraint += LpSolve.semiColon + LpSolve.getNewLine()
+        constraint += LpSolve.semiColon + getNewLine()
         self.__constraints.append(constraint)
 
 class CreateCFGILP (ILP):
@@ -397,23 +553,23 @@ class CreateCFGILP (ILP):
         if self._solve(filename):
             Debug.verboseMessage("No constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet)) 
         
-        intConstraint = self.__constraints.pop()
-        self.__alwaysConstraints = set([])
-        self.__alwaysBasicBlocks = set([])
-        self.__alwaysEdges       = set([])
-        self.__addAlwaysConstraints(data, pathg)
-        self.__constraints.append(intConstraint)
-        filename = "%s.%s.context%s.%s.b.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
-        with open(filename, 'w') as ilpFile:
-            for constraint in self.__constraints:
-                ilpFile.write(constraint)        
-        if self._solve(filename):
-            Debug.verboseMessage("Always execute constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
-        del self.__constraints[-(len(self.__alwaysConstraints)+1):]
-        self.__constraints.append(intConstraint)
-            
-        self.__addMutualExclusionConstraints(basepath, basename, contextv, data, pathg, lnt)
-            
+#        intConstraint = self.__constraints.pop()
+#        self.__alwaysConstraints = set([])
+#        self.__alwaysBasicBlocks = set([])
+#        self.__alwaysEdges       = set([])
+#        self.__addAlwaysConstraints(data, pathg)
+#        self.__constraints.append(intConstraint)
+#        filename = "%s.%s.context%s.%s.b.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+#        with open(filename, 'w') as ilpFile:
+#            for constraint in self.__constraints:
+#                ilpFile.write(constraint)        
+#        if self._solve(filename):
+#            Debug.verboseMessage("Always execute constraints:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
+#        del self.__constraints[-(len(self.__alwaysConstraints)+1):]
+#        self.__constraints.append(intConstraint)
+#            
+#        self.__addMutualExclusionConstraints(basepath, basename, contextv, data, pathg, lnt)
+#            
     def __createStructuralConstraints (self, cfg):
         for v in cfg:
             vertexID = v.getVertexID()
@@ -431,7 +587,7 @@ class CreateCFGILP (ILP):
                     constraint1 += LpSolve.plus
                 num += 1
             constraint1 += LpSolve.semiColon
-            constraint1 += LpSolve.getNewLine() 
+            constraint1 += getNewLine() 
             self.__constraints.append(constraint1)
             
             constraint2 = ""
@@ -451,7 +607,7 @@ class CreateCFGILP (ILP):
                     constraint2 += LpSolve.plus
                 num += 1
             constraint2 += LpSolve.semiColon
-            constraint2 += LpSolve.getNewLine(2) 
+            constraint2 += getNewLine(2) 
             self.__constraints.append(constraint2)
     
     def __createLoopConstraints (self, data, cfg, lnt):
@@ -467,7 +623,7 @@ class CreateCFGILP (ILP):
                         constraint += LpSolve.equals
                         constraint += "1"
                         constraint += LpSolve.semiColon
-                        constraint += LpSolve.getNewLine(2)
+                        constraint += getNewLine(2)
                         self.__constraints.append(constraint)
                     else:
                         headerv = cfg.getVertex(headerID)
@@ -489,7 +645,7 @@ class CreateCFGILP (ILP):
                                         constraint += LpSolve.plus
                                     num += 1
                                 constraint += LpSolve.semiColon
-                                constraint += LpSolve.getNewLine(2)
+                                constraint += getNewLine(2)
                                 self.__constraints.append(constraint)
                             else:
                                 pass
@@ -511,7 +667,7 @@ class CreateCFGILP (ILP):
                             constraint1 += LpSolve.gt
                             constraint1 += str(0)
                             constraint1 += LpSolve.semiColon
-                            constraint1 += LpSolve.getNewLine()  
+                            constraint1 += getNewLine()  
                             self.__mutualExclusionConstraints.append(constraint1)   
                             if succv.getBasicBlockIDs():
                                 constraint2 = LpSolve.getVertexVariable(succv.getRepresentativeID())
@@ -521,7 +677,7 @@ class CreateCFGILP (ILP):
                             constraint2 += LpSolve.equals
                             constraint2 += str(0)
                             constraint2 += LpSolve.semiColon
-                            constraint2 += LpSolve.getNewLine(2)     
+                            constraint2 += getNewLine(2)     
                             self.__mutualExclusionConstraints.append(constraint2)
                             
                 if self.__mutualExclusionConstraints:
@@ -584,7 +740,7 @@ class CreateCFGILP (ILP):
         constraint += LpSolve.gtOrEqual
         constraint += str(value)
         constraint += LpSolve.semiColon
-        constraint += LpSolve.getNewLine(2)
+        constraint += getNewLine(2)
         self.__constraints.append(constraint)        
                             
     def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
@@ -606,10 +762,10 @@ class CreateCFGILP (ILP):
             if num < len(self.__variables):
                 constraint += LpSolve.plus
             if num % 10 == 0:
-                constraint += LpSolve.getNewLine()
+                constraint += getNewLine()
             num += 1
         constraint += LpSolve.semiColon 
-        constraint += LpSolve.getNewLine(2)
+        constraint += getNewLine(2)
         self.__constraints.insert(0, constraint) 
     
     def __getWCETOfBasicBlock (self, v):
@@ -638,7 +794,7 @@ class CreateCFGILP (ILP):
             if num < len(self.__variables):
                 constraint += LpSolve.comma
             num += 1
-        constraint += LpSolve.semiColon + LpSolve.getNewLine()
+        constraint += LpSolve.semiColon + getNewLine()
         self.__constraints.append(constraint)
 
 class InstructionWCETDatabase:

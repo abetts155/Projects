@@ -3,16 +3,16 @@ bb: 1
 succ: 2
 
 bb: 2
-succ: 3, F2
+succ: 3, 4
 
 bb: 3
-succ: 4 
+succ: 5 
 
 bb: 4
-succ: 5,6
+succ: 5
 
 bb: 5
-succ: 11
+succ: 6
 
 bb: 6
 succ: 7,  11
@@ -27,29 +27,20 @@ bb: 9
 succ: 10
 
 bb: 10
-succ: 7, 11
+succ: 11
 
 bb: 11
-succ: 3, 12
+succ: 12
 
 bb: 12
-succ:
+succ: 13, 14
 
-CFG: F2
 bb: 13
-succ: 14, 15, 16
+succ: 15
 
 bb: 14
-succ: 17
+succ: 15
 
 bb: 15
-succ: 17
-
-bb: 17
-succ: 18
-
-bb: 16
-succ: 18
-
-bb: 18
 succ:
+

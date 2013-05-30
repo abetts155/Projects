@@ -126,6 +126,8 @@ class TraceInformation:
             pathg  = superg.getSuperBlockPathInformationGraph()
             for partitionID in self._partitions[pathg].keys():
                 self._partitions[pathg][partitionID].clear()
+        import time
+        time.sleep(0)
                 
     def _end (self):
         for pathg, supervs in self._executesKTimes.iteritems():
@@ -272,7 +274,8 @@ class ParseTraces (TraceInformation):
                     self._allruns.add(runID)
                     self.__reset()
                 elif line.startswith(endTrace):
-                    pass
+                    self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
+                    self._endRun()
                 else:
                     lexemes = shlex.split(line)
                     for lex in lexemes:
@@ -324,11 +327,8 @@ class ParseTraces (TraceInformation):
                             
     def __handleReturn (self):
         self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
-        if self.__currentCFG != self.__rootCFG:
-            Debug.debugMessage("Returning because of basic block %d" % self.__currentBB.getVertexID(), 1)
-            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
-        else:
-            self._endRun()
+        Debug.debugMessage("Returning because of basic block %d" % self.__currentBB.getVertexID(), 1)
+        (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
             
     def __handleCall (self, nextID):
         callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg)

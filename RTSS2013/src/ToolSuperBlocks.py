@@ -80,6 +80,7 @@ if __name__ == "__main__":
         tracefile = os.path.abspath(args.tracefile)
         assert os.path.exists(tracefile), "Trace file '%s' does not exist" % tracefile
         data = Traces.ParseTraces(basename, tracefile, program)
+        program.generateAllUDrawFiles()
         Calculations.WCETCalculation(program, data, basepath, basename)
         
         

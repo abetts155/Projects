@@ -220,6 +220,7 @@ def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
     for succID in v.getSuccessorIDs():
         f.write(newEdge)
         f.write(beginAttributes)
+        f.write(setEdgeDirection(DIRECTION.NONE))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
