@@ -168,8 +168,11 @@ class TraceInformation:
             lnt = self._program.getLNT(functionName)
             for v in lnt:
                 if isinstance(v, Vertices.HeaderVertex):
-                    self._loopBounds[(functionName, v.getHeaderID())] = 0
-                    self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0
+                    if v.getVertexID() == lnt.getRootID():
+                        self._loopBounds[(functionName, v.getHeaderID())] = 1
+                    else:
+                        self._loopBounds[(functionName, v.getHeaderID())] = 0
+                        self._loopBoundsInCurrentRun[(functionName, v.getHeaderID())] = 0
     
     def _normaliseData (self):
         for tupleKey in self._executionTimes.keys():
