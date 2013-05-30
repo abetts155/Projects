@@ -65,32 +65,44 @@ class CLP ():
         self._wcet  = -1
         self._lines = []
         
-    def _solve(self, filename):
+    def _solve(self, filename, goal):
+        from subprocess import Popen, PIPE
+        import shlex, decimal
         Debug.debugMessage("Solving CLP in %s" % filename, 10)
-        
-    def _addRequiredPackages (self):
-        self._lines.append(ECLIPSE.getComment("Packages"))
-        libs = ['ic', 'branch_and_bound', 'lists', 'util']
-        for lib in libs:
-            self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.implies, 'lib', lib, ECLIPSE.terminator, getNewLine()))
-        self._lines.append(getNewLine())
+        command    = 'jeclipse -b %s -e "%s."' % (filename, goal) 
+        proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        returnCode = proc.wait()
+        if returnCode != 0:
+            Debug.warningMessage("Running '%s' failed" % command)
+            return False
+        for line in proc.stdout.readlines():
+            print line,
+        return True
                     
 class CreateCFGCLP (CLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
         CLP.__init__(self)
-        self._addRequiredPackages()
-        self._lines.append("solve(%s,%s)%s%s" % (CLP.WCET, CLP.BB_TIMES, ECLIPSE.implies, getNewLine()))
+        self.__addRequiredPackages()
+        goal = "solve(%s,%s)" % (CLP.WCET, CLP.BB_TIMES)
+        self._lines.append("%s%s%s" % (goal, ECLIPSE.implies, getNewLine()))
         self.__addVariables(cfg)
         self.__addExecutionCountDomains(cfg)
         self.__addStructuralConstraints(cfg)
         self.__addExecutionTimeDomains(data, cfg)
         self.__addObjectiveFunction(cfg)
         self.__addEpilogue()
-        
         filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
         with open(filename, 'w') as clpFile:
             for line in self._lines:
-                clpFile.write(line)        
+                clpFile.write(line)     
+        self._solve(filename, goal)   
+    
+    def __addRequiredPackages (self):
+        self._lines.append(ECLIPSE.getComment("Packages"))
+        libs = ['ic', 'branch_and_bound', 'lists', 'util']
+        for lib in libs:
+            self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.implies, 'lib', lib, ECLIPSE.terminator, getNewLine()))
+        self._lines.append(getNewLine())
         
     def __addVariables (self, cfg):
         self._lines.append(ECLIPSE.getComment("Declarations"))
