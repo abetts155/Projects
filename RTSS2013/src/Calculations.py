@@ -93,7 +93,7 @@ class CreateCFGCLP (CLP):
         goal = "solve(%s,%s)" % (CLP.WCET, CLP.BB_TIMES)
         self._lines.append("%s%s%s" % (goal, ECLIPSE.implies, getNewLine()))
         self.__addVariables(cfg)
-        self.__addExecutionCountDomains(data, cfg, lnt)
+        self.__addExecutionCountDomains(data, cfg, lnt, pathg)
         self.__addStructuralConstraints(cfg)
         self.__addRelativeCapacityConstraints(data, cfg, lnt)
         self.__addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
@@ -128,15 +128,50 @@ class CreateCFGCLP (CLP):
         self._lines.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, ','.join(var for var in edgeCounts),  ECLIPSE.conjunct))
         self._lines.append(getNewLine())
     
-    def __addExecutionCountDomains (self, data, cfg, lnt):
+    def __getValidAlwaysSuperBlocks (self, data, pathg):
+        always = set([])
+        for partitionID in range(1, pathg.partitionID+1):
+            if pathg.isAcyclicPartition(partitionID):
+                partitionSupervs = []
+                for superv in pathg.partitionToSuperBlocks[partitionID]:
+                    executionCount = data.getMinimumExecutionCount(pathg, superv)
+                    if executionCount > 0:
+                        partitionSupervs.append(superv)
+                if len(partitionSupervs) > 1:
+                    Debug.verboseMessage("Not adding always constraint in partition %d since super blocks {%s} can fire in this partition" % \
+                                         (partitionID, ', '.join(str(superv.getVertexID()) for superv in partitionSupervs)))
+                elif len(partitionSupervs) == 1:
+                    always.update(set(partitionSupervs))
+            else:
+                for superv in pathg.partitionToSuperBlocks[partitionID]:
+                    executionCount = data.getMinimumExecutionCount(pathg, superv)
+                    if executionCount > 0:
+                        always.add(superv)
+        return always
+    
+    def __alwaysBasicBlock (self, data, pathg, supervs, vertexID):
+        for superv in supervs:
+            if vertexID in superv.getBasicBlockIDs():
+                return data.getMinimumExecutionCount(pathg, superv)
+        return 0
+    
+    def __alwaysEdge (self, data, pathg, supervs, predID, succID):
+        for superv in supervs:
+            if (predID, succID) in superv.getEdges():
+                return data.getMinimumExecutionCount(pathg, superv)
+        return 0
+    
+    def __addExecutionCountDomains (self, data, cfg, lnt, pathg):
+        always = self.__getValidAlwaysSuperBlocks(data, pathg)
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         for v in cfg:
             vertexID   = v.getVertexID()
             treev      = lnt.getVertex(vertexID)
             parentv    = lnt.getVertex(treev.getParentID())
+            lowerBound = self.__alwaysBasicBlock(data, pathg, always, vertexID)
             upperBound = data.getLoopBound(cfg.getName(), parentv.getHeaderID())
             self._lines.append("%s%s[%d..%d]%s" % \
-                               (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSeparator, 0, upperBound, ECLIPSE.conjunct))
+                               (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSeparator, lowerBound, upperBound, ECLIPSE.conjunct))
         for v in cfg:            
             vertexID = v.getVertexID()
             treev1   = lnt.getVertex(vertexID)
@@ -144,13 +179,14 @@ class CreateCFGCLP (CLP):
             for succID in v.getSuccessorIDs():    
                 treev2     = lnt.getVertex(succID)
                 parentv2   = lnt.getVertex(treev2.getParentID())
+                lowerBound = self.__alwaysEdge(data, pathg, always, vertexID, succID)
                 upperBound = 0
                 if parentv1 == parentv2:
                     upperBound = data.getLoopBound(cfg.getName(), parentv1.getHeaderID())
                 else:
                     upperBound = max(data.getLoopBound(cfg.getName(), parentv1.getHeaderID()), data.getLoopBound(cfg.getName(), parentv2.getHeaderID()))                
                 self._lines.append("%s%s[%d..%d]%s" % \
-                                   (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSeparator, 0, upperBound, ECLIPSE.conjunct))
+                                   (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSeparator, lowerBound, upperBound, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
     
     def __addStructuralConstraints (self, cfg):
