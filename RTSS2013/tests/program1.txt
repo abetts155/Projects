@@ -30,11 +30,7 @@ bb: 10
 succ: 11
 
 bb: 11
-<<<<<<< HEAD
 succ: 5, 12
-=======
-succ: 12, 2
->>>>>>> 7fe13245f9e59a0cfcb49a6aee97e704510a3224
 
 bb: 12
 succ: 13, 14

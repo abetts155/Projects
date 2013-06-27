@@ -92,7 +92,7 @@ class CreateCFGCLP (CLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
         CLP.__init__(self)
         self.__addRequiredPackages()
-        goal = "solve(%s,%s)" % (CLP.WCET, CLP.BB_TIMES)
+        goal = "solve(%s)" % (CLP.WCET)
         self._lines.append("%s%s%s" % (goal, ECLIPSE.clauseSep, getNewLine()))
         self.__addVariables(cfg)
         self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt)
@@ -254,8 +254,6 @@ class CreateCFGCLP (CLP):
     
     def __addExecutionTimeDomains (self, data, contextWCETs, contextv, cfg):
         self._lines.append(ECLIPSE.getComment("Timing constraints"))
-        # First write out WCET of each basic block
-        highestWCET = 0
         for v in cfg:
             wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
             if cfg.isCallSite(v.getVertexID()):
@@ -264,11 +262,6 @@ class CreateCFGCLP (CLP):
                     wcet += calleeContextWCET
             self._lines.append("%s%s%d%s" % \
                                    (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.equals, wcet, ECLIPSE.conjunct))
-            highestWCET = max(highestWCET, wcet) 
-        # Now write out the domain of the WCETs 
-        for v in cfg:
-            self._lines.append("%s%s[%d..%d]%s" % \
-                                   (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.domainSeparator, 0, highestWCET, ECLIPSE.conjunct))
         self._lines.append(getNewLine())    
         
     def __addObjectiveFunction (self, cfg):

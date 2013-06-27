@@ -263,6 +263,7 @@ class StrongComponents ():
         self.__directedg      = directedg
         self.__vertexToColour = {}
         self.__vertexToSCC    = {}
+        self.__SCCToVertices  = {}
         # Initialise
         for v in directedg:
             vertexID = v.getVertexID()
@@ -281,6 +282,7 @@ class StrongComponents ():
         for vertexID in reversed(vertexList):
             if self.__vertexToColour[vertexID] == Colors.BLACK:
                 self.__sccCounter += 1
+                self.__SCCToVertices[self.__sccCounter] = set([])
                 # The vertex v is from the forward directed graph.
                 # Need to get the vertex from the reverse graph instead
                 self.__visit2(self.__reverseg.getVertex(vertexID))
@@ -308,6 +310,7 @@ class StrongComponents ():
             poppedv = stack.pop()
             vertexID = poppedv.getVertexID()
             self.__vertexToSCC[vertexID] = self.__sccCounter
+            self.__SCCToVertices[self.__sccCounter].add(vertexID)
             Debug.debugMessage("Vertex %d is in SCC %d" % (vertexID, self.__sccCounter), 15)
             if self.__vertexToColour[vertexID] == Colors.BLACK:
                 self.__vertexToColour[vertexID] = Colors.BLUE
@@ -324,5 +327,10 @@ class StrongComponents ():
     def getSCCID (self, vertexID):
         assert vertexID in self.__vertexToSCC, "Unable to find SCC of vertex %d" % vertexID
         return self.__vertexToSCC[vertexID]
+    
+    def getVertexIDs (self, sccID):
+        assert sccID in self.__SCCToVertices, "Unable to find set of vertices associated with SCC ID %d" % sccID
+        return self.__SCCToVertices[sccID]
+        
                         
                         

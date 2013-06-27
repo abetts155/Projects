@@ -1,4 +1,4 @@
-import Debug, ARM, Vertices
+import Debug, ARM, Vertices, SuperBlocks
 import random, os, shlex, sys
 
 newTrace = "=>"
