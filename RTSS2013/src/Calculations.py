@@ -67,9 +67,13 @@ class CLP ():
     def __init__ (self):
         self._lines = []
         
-    def _solve(self, filename, goal):
+    def _solve(self, basepath, basename, contextv, modelNumber, goal):
         from subprocess import Popen, PIPE
         import shlex
+        filename = "%s.%s.context%s.%s.%s%d" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix, modelNumber)
+        with open(filename, 'w') as clpFile:
+            for line in self._lines:
+                clpFile.write(line)                
         Debug.debugMessage("Solving CLP in %s" % filename, 10)
         command    = 'jeclipse -b %s -e "%s."' % (filename, goal) 
         proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
@@ -77,13 +81,13 @@ class CLP ():
         WCET = 0
         if returnCode != 0:
             Debug.warningMessage("Running '%s' failed" % command)
-            return False, WCET
         for line in proc.stdout.readlines():
             if line.startswith("Found a solution with cost"):
                 lexemes = shlex.split(line)
                 value   = int(lexemes[-1])
                 WCET    = max(WCET, -1 * value)
-        return True, WCET
+        Debug.verboseMessage("CLP:: WCET(%s) = %d" % (contextv.getName(), WCET)) 
+        return WCET
                     
 class CreateCFGCLP (CLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
@@ -106,13 +110,7 @@ class CreateCFGCLP (CLP):
         self._lines.extend(self.__executionCountlines)
         self.__addEpilogue()
         self._lines.extend(self.__epilogueLines)
-        filename = "%s.%s.context%s.%s.%s1" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
-        with open(filename, 'w') as clpFile:
-            for line in self._lines:
-                clpFile.write(line)                
-        success, WCET = self._solve(filename, goal)
-        if success:
-            Debug.verboseMessage("CLP:: WCET(%s) = %d" % (cfg.getName(), WCET)) 
+        self._wcet = self._solve(basepath, basename, contextv, 1, goal)
         del self._lines[-len(self.__epilogueLines):]
         del self._lines[-len(self.__executionCountlines):]
     
@@ -120,14 +118,7 @@ class CreateCFGCLP (CLP):
         self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
         self._lines.extend(self.__executionCountlines)
         self._lines.extend(self.__epilogueLines)
-        filename = "%s.%s.context%s.%s.%s2" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
-        with open(filename, 'w') as clpFile:
-            for line in self._lines:
-                clpFile.write(line)     
-        success, WCET = self._solve(filename, goal)
-        if success:
-            Debug.verboseMessage("CLP:: WCET(%s) = %d" % (cfg.getName(), WCET)) 
-        self._wcet = WCET
+        self._solve(basepath, basename, contextv, 2, goal)
         del self._lines[-len(self.__epilogueLines):]
         del self._lines[-len(self.__executionCountlines):]
     
@@ -137,14 +128,7 @@ class CreateCFGCLP (CLP):
         self._lines.extend(self.__executionCountlines)
         self._lines.extend(self.__infeasiblePathLines)
         self._lines.extend(self.__epilogueLines)
-        filename = "%s.%s.context%s.%s.%s3" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
-        with open(filename, 'w') as clpFile:
-            for line in self._lines:
-                clpFile.write(line)     
-        success, WCET = self._solve(filename, goal)
-        if success:
-            Debug.verboseMessage("CLP:: WCET(%s) = %d" % (cfg.getName(), WCET)) 
-        self._wcet = WCET
+        self._solve(basepath, basename, contextv, 3, goal)
         del self._lines[-len(self.__epilogueLines):]
         del self._lines[-len(self.__infeasiblePathLines):]
         del self._lines[-len(self.__executionCountlines):]
@@ -154,14 +138,7 @@ class CreateCFGCLP (CLP):
         self._lines.extend(self.__executionCountlines)
         self._lines.extend(self.__infeasiblePathLines)
         self._lines.extend(self.__epilogueLines)
-        filename = "%s.%s.context%s.%s.%s4" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
-        with open(filename, 'w') as clpFile:
-            for line in self._lines:
-                clpFile.write(line)     
-        success, WCET = self._solve(filename, goal)
-        if success:
-            Debug.verboseMessage("CLP:: WCET(%s) = %d" % (cfg.getName(), WCET)) 
-        self._wcet = WCET
+        self._solve(basepath, basename, contextv, 4, goal)
         del self._lines[-len(self.__epilogueLines):]
         del self._lines[-len(self.__infeasiblePathLines):]
         del self._lines[-len(self.__executionCountlines):]
