@@ -89,14 +89,38 @@ class TraceInformation:
         self._initialiseSuperBlockInformation()
         self._initialiseRequiredWCETInformation()
         
-    def _outputConjectures (self):
+    def _outputConjectures (self): 
+        Debug.verboseMessage(
+"""%s
+NEVER-EXECUTE CONJECTURES
+%s""" \
+% ('-' * 50, '-' * 50))
+        for pathg, supervs in self._neverExecuted.iteritems():
+            for supervID in supervs:
+                Debug.verboseMessage("  super block %d NEVER executes" % supervID)
+               
+        Debug.verboseMessage(
+"""%s 
+ALWAYS-EXECUTE CONJECTURES
+%s""" \
+% ('-' * 50, '-' * 50))
         for pathg, supervs in self._executesKTimes.iteritems():
             for supervID in supervs:
                 conjecture = self._executesKTimes[pathg][supervID]
                 if conjecture > 0:
-                    Debug.verboseMessage("Conjecture that %d executes %d times holds" % (supervID, conjecture)) 
-                else:
-                    Debug.verboseMessage("%d may NOT ALWAYS execute" % supervID) 
+                    Debug.verboseMessage("  super block %d always executes %d times" % (supervID, conjecture)) 
+                elif supervID not in self._neverExecuted:
+                    Debug.verboseMessage("  super block %d may NOT ALWAYS execute" % supervID)
+        
+        Debug.verboseMessage(
+"""%s
+INFEASIBLE CONJECTURES
+%s""" \
+% ('-' * 50, '-' * 50))
+        for pathg in self._partitions.keys():
+            for superv in pathg:
+                for succID in superv.getSuccessorIDs():
+                    Debug.verboseMessage("  super blocks %d and %d" % (superv.getVertexID(), succID))
             
     def _endOfFunction (self, pathg):
         Debug.debugMessage("Falsifying conjectures in %s" % pathg.getName(), 1)
@@ -126,19 +150,17 @@ class TraceInformation:
             pathg  = superg.getSuperBlockPathInformationGraph()
             for partitionID in self._partitions[pathg].keys():
                 self._partitions[pathg][partitionID].clear()
-        import time
-        time.sleep(0)
                 
     def _end (self):
         for pathg, supervs in self._executesKTimes.iteritems():
             for supervID in supervs:
                 if supervID not in self._observedSuperBlocks:
-                    Debug.verboseMessage("NEVER saw %d executing" % supervID)
-                    self._executesKTimes[pathg][supervID] = 0
+                    self._neverExecuted[pathg].add(supervID)
     
     def _initialiseSuperBlockInformation (self):
         self._superBlockExecutionCounts = {}
         self._executesKTimes            = {}
+        self._neverExecuted             = {}
         self._observedSuperBlocks       = set([])
         for cfg in self._program.getICFGs():
             superg = self._program.getSuperBlockCFG(cfg.getName())
@@ -146,6 +168,7 @@ class TraceInformation:
             self._partitions[pathg]                = {}
             self._superBlockExecutionCounts[pathg] = {}
             self._executesKTimes[pathg]            = {}
+            self._neverExecuted[pathg]             = set([])
             for superv in pathg:
                 self._superBlockExecutionCounts[pathg][superv.getVertexID()] = 0
                 if superv.acyclicPartition:
@@ -213,7 +236,7 @@ class TraceInformation:
         return self._executesKTimes[pathg][superv.getVertexID()] > 0
     
     def neverExecutes (self, pathg, superv):
-        return self._executesKTimes[pathg][superv.getVertexID()] == 0
+        return superv.getVertexID() in self._neverExecuted[pathg]
         
     def getNumberOfAlwaysExecute (self, pathg):
         num = 0

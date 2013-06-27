@@ -30,7 +30,7 @@ bb: 10
 succ: 11
 
 bb: 11
-succ: 12
+succ: 5, 12
 
 bb: 12
 succ: 13, 14
@@ -46,14 +46,29 @@ succ:
 
 CFG: F2
 bb: 16
-succ: 17
+succ: 17, 18
 
 bb: 17
-succ: 18
+succ: 19
 
 bb: 18
-succ: 17, 19
+succ: 19
 
 bb: 19
+succ: 20, 21
+
+bb: 20
+succ: 21
+
+bb: 21
+succ: 22, 23
+
+bb: 22
+succ: 24
+
+bb: 23
+succ: 24
+
+bb: 24
 succ:
 
