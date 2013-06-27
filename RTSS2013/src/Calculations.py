@@ -94,6 +94,7 @@ class CreateCFGCLP (CLP):
         self.__createVanillaModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
         self.__createExecutionBoundConstraintModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
         self.__createInfeasiblePathModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
+        self.__createCompleteModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
         
     def __createVanillaModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
         self.__addVariables(cfg)
@@ -137,6 +138,23 @@ class CreateCFGCLP (CLP):
         self._lines.extend(self.__infeasiblePathLines)
         self._lines.extend(self.__epilogueLines)
         filename = "%s.%s.context%s.%s.%s3" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        with open(filename, 'w') as clpFile:
+            for line in self._lines:
+                clpFile.write(line)     
+        success, WCET = self._solve(filename, goal)
+        if success:
+            Debug.verboseMessage("CLP:: WCET(%s) = %d" % (cfg.getName(), WCET)) 
+        self._wcet = WCET
+        del self._lines[-len(self.__epilogueLines):]
+        del self._lines[-len(self.__infeasiblePathLines):]
+        del self._lines[-len(self.__executionCountlines):]
+        
+    def __createCompleteModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
+        self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
+        self._lines.extend(self.__executionCountlines)
+        self._lines.extend(self.__infeasiblePathLines)
+        self._lines.extend(self.__epilogueLines)
+        filename = "%s.%s.context%s.%s.%s4" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
         with open(filename, 'w') as clpFile:
             for line in self._lines:
                 clpFile.write(line)     
