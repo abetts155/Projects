@@ -182,9 +182,9 @@ class CreateCFGCLP (CLP):
             # Flow out to successor edges
             rhs   = ""
             count = 1
-            for succID in v.getSuccessorIDs():
-                rhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
-                if count < v.numberOfSuccessors():
+            for predID in v.getPredecessorIDs():
+                rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
+                if count < v.numberOfPredecessors():
                     rhs += ECLIPSE.plus
                 count += 1
             self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
