@@ -66,6 +66,7 @@ class CLP ():
     BB_TIMES    = "BB_TIMES"
     BB_COUNTS   = "BB_COUNTS"
     EDGE_COUNTS = "EDGE_COUNTS"
+    OUTPUT_PREDICATE_HEAD = "print_results"
     
     def __init__ (self):
         self._lines = []
@@ -79,7 +80,6 @@ class CLP ():
         for lib in libs:
             self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.clauseSep, 'lib', lib, ECLIPSE.terminator, getNewLine()))
         self._lines.append(getNewLine())
-        
         
     def _solve(self, basepath, basename, contextv, filename):
         from subprocess import Popen, PIPE
@@ -101,7 +101,37 @@ class CLP ():
                 WCET    = max(WCET, -1 * value)
         Debug.verboseMessage("CLP:: WCET(%s) = %d" % (contextv.getName(), WCET)) 
         return WCET
-                    
+    
+    def _addOutputPredicates (self, filename):
+        fileHandle = "F"        
+        
+        self._lines.append('%s(%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.clauseSep))
+        self._lines.append(getNewLine())
+        self._lines.append('open("%s",%s,%s)%s' % (os.path.basename(filename) + ".res", "write", fileHandle, ECLIPSE.conjunct))
+        self._lines.append('print_list(%s,"%s: ",%s)%s' % (fileHandle, CLP.BB_COUNTS, CLP.BB_COUNTS, ECLIPSE.conjunct))
+        self._lines.append('print_list(%s,"%s: ",%s)%s' % (fileHandle, CLP.EDGE_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.conjunct))
+        self._lines.append('close(%s)%s' % (fileHandle, ECLIPSE.terminator))
+        self._lines.append(getNewLine(2))
+        
+        self._lines.append('print_list(_,_,[])%s' % (ECLIPSE.terminator))
+        self._lines.append(getNewLine())
+        self._lines.append('print_list(%s,Name,[H|T])%s' % (fileHandle, ECLIPSE.clauseSep))
+        self._lines.append(getNewLine())
+        self._lines.append('write(%s,Name)%s' % (fileHandle, ECLIPSE.conjunct))
+        self._lines.append('write(%s,H)%s' % (fileHandle, ECLIPSE.conjunct))
+        self._lines.append('print_list1(%s,T)%s' % (fileHandle, ECLIPSE.conjunct))
+        self._lines.append('nl(%s)%s' % (fileHandle, ECLIPSE.terminator))
+        self._lines.append(getNewLine(2))
+        
+        self._lines.append('print_list1(_,[])%s' % (ECLIPSE.terminator))
+        self._lines.append(getNewLine())
+        self._lines.append('print_list1(%s,[H|T])%s' % (fileHandle, ECLIPSE.clauseSep))
+        self._lines.append(getNewLine())
+        self._lines.append('write(%s,",")%s' % (fileHandle, ECLIPSE.conjunct))
+        self._lines.append('write(%s,H)%s' % (fileHandle, ECLIPSE.conjunct))
+        self._lines.append('print_list1(%s,T)%s' % (fileHandle, ECLIPSE.terminator))
+        self._lines.append(getNewLine(2))
+   
 class CreateCFGCLP (CLP):
     def __init__ (self):
         CLP.__init__(self)
@@ -149,28 +179,31 @@ class CreateCFGCLP (CLP):
         self._lines.append(ECLIPSE.getComment("Structural constraints"))
         for v in cfg:
             self._lines.append(ECLIPSE.getComment("Vertex %d" % v.getVertexID()))
-            if v.getVertexID() == cfg.getEntryID():
-                self._lines.append("%s%s1%s" % \
-                                   (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, ECLIPSE.conjunct))
-            else:
-                # Flow out to successor edges
-                rhs   = ""
-                count = 1
-                for succID in v.getSuccessorIDs():
-                    rhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
-                    if count < v.numberOfSuccessors():
-                        rhs += ECLIPSE.plus
-                    count += 1
-                self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
-                # Flow in through predecessor edges
-                rhs   = ""
-                count = 1
-                for predID in v.getPredecessorIDs():
-                    rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
-                    if count < v.numberOfPredecessors():
-                        rhs += ECLIPSE.plus
-                    count += 1
-                self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+            # Flow out to successor edges
+            rhs   = ""
+            count = 1
+            for succID in v.getSuccessorIDs():
+                rhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
+                if count < v.numberOfSuccessors():
+                    rhs += ECLIPSE.plus
+                count += 1
+            self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+            # Flow in/out through predecessor/successor edges
+            lhs   = ""
+            count = 1
+            for succID in v.getSuccessorIDs():
+                lhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
+                if count < v.numberOfSuccessors():
+                    lhs += ECLIPSE.plus
+                count += 1
+            rhs   = ""
+            count = 1
+            for predID in v.getPredecessorIDs():
+                rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
+                if count < v.numberOfPredecessors():
+                    rhs += ECLIPSE.plus
+                count += 1
+            self._lines.append("%s%s%s%s" % (lhs, ECLIPSE.equals, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
         
     def _addRelativeCapacityConstraints (self, data, cfg, lnt):
@@ -179,8 +212,10 @@ class CreateCFGCLP (CLP):
             for treev in vertices:
                 if isinstance(treev, HeaderVertex):
                     headerID = treev.getHeaderID()
-                    if treev.getVertexID() != lnt.getRootID():
-                        self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))
+                    self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))
+                    if treev.getVertexID() == lnt.getRootID():
+                        self._lines.append("%s%s1%s" % (ECLIPSE.getEdgeCountVariable(cfg.getExitID(), cfg.getEntryID()), ECLIPSE.equals, ECLIPSE.conjunct))
+                    else:
                         headerv = cfg.getVertex(headerID)
                         for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
                             if ancestorv.getVertexID() == treev.getParentID():
@@ -251,11 +286,15 @@ class CreateCFGCLP (CLP):
         self._lines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
         self._lines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
         self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
-                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.terminator))
+                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.conjunct))
+        self._lines.append("%s(%s, %s)%s" % \
+                           (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.terminator))
+        self._lines.append(getNewLine(2))
 
 class CreateCFGCLPVanilla (CreateCFGCLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
         CreateCFGCLP.__init__(self)
+        filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
         self._addVariables(cfg)
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
@@ -263,7 +302,7 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         self._addRelativeCapacityConstraints(data, cfg, lnt)
         self._addExecutionCountDomains(data, superg, pathg, cfg, lnt)
         self._addEpilogue()
-        filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._addOutputPredicates(filename)
         self._wcet = self._solve(basepath, basename, contextv, filename)
 
 class CreateCFGCLPExtra (CreateCFGCLP):

@@ -479,9 +479,10 @@ class Gem5Parser (TraceInformation):
                 self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
                 self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
             # Analyse loop bounds
-            if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
+            if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()) and self.__currentBB.getVertexID() != self.__currentCFG.getEntryID():
                 tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
-                assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
+                assert tupleKey in self._loopBounds 
+                assert tupleKey in self._loopBoundsInCurrentRun
                 self._loopBoundsInCurrentRun[tupleKey] += 1   
                 # Check whether this edge is a loop-exit edge
                 # If it is the header ID of the exiting loop is returned
