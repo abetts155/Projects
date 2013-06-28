@@ -8,7 +8,8 @@ def getNewLine (num=1):
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename):
-        self.__CLPcontextIDToWCET = {}
+        self.__CLPVanillaContextIDToWCET = {}
+        self.__CLPExtraContextIDToWCET = {}
         contextg = program.getContextGraph()
         dfs      = DepthFirstSearch(contextg, contextg.getRootID())
         for vertexID in dfs.getPostorder():
@@ -19,8 +20,10 @@ class WCETCalculation:
             superg       = program.getSuperBlockCFG(functionName)
             pathg        = superg.getSuperBlockPathInformationGraph()
             cfg          = program.getICFG(functionName)
-            clp          = CreateCFGCLP(basepath, basename, data, self.__CLPcontextIDToWCET, contextv, cfg, lnt, superg, pathg)
-            self.__CLPcontextIDToWCET[contextv.getVertexID()] = clp._wcet
+            clp1         = CreateCFGCLPVanilla(basepath, basename, data, self.__CLPVanillaContextIDToWCET, contextv, cfg, lnt, superg, pathg)
+            self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = clp1._wcet
+            clp2         = CreateCFGCLPExtra(basepath, basename, data, self.__CLPExtraContextIDToWCET, contextv, cfg, lnt, superg, pathg)
+            self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2._wcet
             
 class ECLIPSE:
     conjunct        = "," + getNewLine()
@@ -66,16 +69,26 @@ class CLP ():
     
     def __init__ (self):
         self._lines = []
+        self.__addRequiredPackages()
+        self.__goal = "solve(%s)" % (CLP.WCET)
+        self._lines.append("%s%s%s" % (self.__goal, ECLIPSE.clauseSep, getNewLine()))
         
-    def _solve(self, basepath, basename, contextv, modelNumber, goal):
+    def __addRequiredPackages (self):
+        self._lines.append(ECLIPSE.getComment("Packages"))
+        libs = ['ic', 'branch_and_bound', 'lists', 'util']
+        for lib in libs:
+            self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.clauseSep, 'lib', lib, ECLIPSE.terminator, getNewLine()))
+        self._lines.append(getNewLine())
+        
+        
+    def _solve(self, basepath, basename, contextv, filename):
         from subprocess import Popen, PIPE
         import shlex
-        filename = "%s.%s.context%s.%s.%s%d" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix, modelNumber)
         with open(filename, 'w') as clpFile:
             for line in self._lines:
                 clpFile.write(line)                
         Debug.debugMessage("Solving CLP in %s" % filename, 10)
-        command    = 'jeclipse -b %s -e "%s."' % (filename, goal) 
+        command    = 'jeclipse -b %s -e "%s."' % (filename, self.__goal) 
         proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
         returnCode = proc.wait()
         WCET = 0
@@ -90,67 +103,10 @@ class CLP ():
         return WCET
                     
 class CreateCFGCLP (CLP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
+    def __init__ (self):
         CLP.__init__(self)
-        self.__addRequiredPackages()
-        goal = "solve(%s)" % (CLP.WCET)
-        self._lines.append("%s%s%s" % (goal, ECLIPSE.clauseSep, getNewLine()))
-        self.__createVanillaModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
-        self.__createExecutionBoundConstraintModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
-        self.__createInfeasiblePathModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
-        self.__createCompleteModel(goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg)
-        
-    def __createVanillaModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
-        self.__addVariables(cfg)
-        self.__addObjectiveFunction(cfg)
-        self.__addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
-        self.__addStructuralConstraints(cfg)
-        self.__addRelativeCapacityConstraints(data, cfg, lnt)
-        self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt)
-        self._lines.extend(self.__executionCountlines)
-        self.__addEpilogue()
-        self._lines.extend(self.__epilogueLines)
-        self._wcet = self._solve(basepath, basename, contextv, 1, goal)
-        del self._lines[-len(self.__epilogueLines):]
-        del self._lines[-len(self.__executionCountlines):]
-    
-    def __createExecutionBoundConstraintModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
-        self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
-        self._lines.extend(self.__executionCountlines)
-        self._lines.extend(self.__epilogueLines)
-        self._solve(basepath, basename, contextv, 2, goal)
-        del self._lines[-len(self.__epilogueLines):]
-        del self._lines[-len(self.__executionCountlines):]
-    
-    def __createInfeasiblePathModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
-        self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt)
-        self.__addInfeasiblePathConstraints(data, pathg, cfg, lnt)
-        self._lines.extend(self.__executionCountlines)
-        self._lines.extend(self.__infeasiblePathLines)
-        self._lines.extend(self.__epilogueLines)
-        self._solve(basepath, basename, contextv, 3, goal)
-        del self._lines[-len(self.__epilogueLines):]
-        del self._lines[-len(self.__infeasiblePathLines):]
-        del self._lines[-len(self.__executionCountlines):]
-        
-    def __createCompleteModel (self, goal, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
-        self.__addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
-        self._lines.extend(self.__executionCountlines)
-        self._lines.extend(self.__infeasiblePathLines)
-        self._lines.extend(self.__epilogueLines)
-        self._solve(basepath, basename, contextv, 4, goal)
-        del self._lines[-len(self.__epilogueLines):]
-        del self._lines[-len(self.__infeasiblePathLines):]
-        del self._lines[-len(self.__executionCountlines):]
-    
-    def __addRequiredPackages (self):
-        self._lines.append(ECLIPSE.getComment("Packages"))
-        libs = ['ic', 'branch_and_bound', 'lists', 'util']
-        for lib in libs:
-            self._lines.append("%s%s(%s)%s%s" % (ECLIPSE.clauseSep, 'lib', lib, ECLIPSE.terminator, getNewLine()))
-        self._lines.append(getNewLine())
-        
-    def __addVariables (self, cfg):
+
+    def _addVariables (self, cfg):
         self._lines.append(ECLIPSE.getComment("Declarations"))
         bbCounts   = []
         bbTimes    = []
@@ -165,7 +121,7 @@ class CreateCFGCLP (CLP):
         self._lines.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, ','.join(var for var in edgeCounts),  ECLIPSE.conjunct))
         self._lines.append(getNewLine())
     
-    def __addObjectiveFunction (self, cfg):
+    def _addObjectiveFunction (self, cfg):
         self._lines.append(ECLIPSE.getComment("Objective function"))
         rhs   = ""
         count = 1
@@ -177,7 +133,7 @@ class CreateCFGCLP (CLP):
         self._lines.append("%s%s%s%s" % (CLP.WCET, ECLIPSE.equals, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine())  
         
-    def __addExecutionTimeDomains (self, data, contextWCETs, contextv, cfg):
+    def _addExecutionTimeDomains (self, data, contextWCETs, contextv, cfg):
         self._lines.append(ECLIPSE.getComment("Timing constraints"))
         for v in cfg:
             wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
@@ -189,7 +145,7 @@ class CreateCFGCLP (CLP):
                                    (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.equals, wcet, ECLIPSE.conjunct))
         self._lines.append(getNewLine())   
         
-    def __addStructuralConstraints (self, cfg):
+    def _addStructuralConstraints (self, cfg):
         self._lines.append(ECLIPSE.getComment("Structural constraints"))
         for v in cfg:
             self._lines.append(ECLIPSE.getComment("Vertex %d" % v.getVertexID()))
@@ -217,7 +173,7 @@ class CreateCFGCLP (CLP):
                 self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
         
-    def __addRelativeCapacityConstraints (self, data, cfg, lnt):
+    def _addRelativeCapacityConstraints (self, data, cfg, lnt):
         self._lines.append(ECLIPSE.getComment("Relative capacity constraints"))
         for level, vertices in lnt.levelIterator(True):
             for treev in vertices:
@@ -245,9 +201,8 @@ class CreateCFGCLP (CLP):
                                 pass
         self._lines.append(getNewLine()) 
         
-    def __addExecutionCountDomains (self, data, superg, pathg, cfg, lnt, addPathInformation=False):
-        self.__executionCountlines = []
-        self.__executionCountlines.append(ECLIPSE.getComment("Execution count domains"))
+    def _addExecutionCountDomains (self, data, superg, pathg, cfg, lnt, addPathInformation=False):
+        self._lines.append(ECLIPSE.getComment("Execution count domains"))
         # First add domains for basic blocks
         for superv in superg:
             if superv.getBasicBlockIDs():           
@@ -263,7 +218,7 @@ class CreateCFGCLP (CLP):
                 for vertexID in superv.getBasicBlockIDs():
                     line = "%s%s[%d..%d]%s" % \
                     (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
-                    self.__executionCountlines.append(line)   
+                    self._lines.append(line)   
                                 
         # Now add domains for edges
         for v in cfg:            
@@ -288,12 +243,45 @@ class CreateCFGCLP (CLP):
                         lowerBound = data.getMinimumExecutionCount(pathg, superv)   
                 line = "%s%s[%d..%d]%s" % \
                 (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
-                self.__executionCountlines.append(line)
-        self.__executionCountlines.append(getNewLine()) 
+                self._lines.append(line)
+        self._lines.append(getNewLine()) 
         
+    def _addEpilogue (self):
+        self._lines.append("%s%s%d%s%s%s" % (CLP.PWCET, ECLIPSE.equals, -1, ECLIPSE.multiply, CLP.WCET, ECLIPSE.conjunct))
+        self._lines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
+        self._lines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
+        self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
+                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.terminator))
+
+class CreateCFGCLPVanilla (CreateCFGCLP):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
+        CreateCFGCLP.__init__(self)
+        self._addVariables(cfg)
+        self._addObjectiveFunction(cfg)
+        self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
+        self._addStructuralConstraints(cfg)
+        self._addRelativeCapacityConstraints(data, cfg, lnt)
+        self._addExecutionCountDomains(data, superg, pathg, cfg, lnt)
+        self._addEpilogue()
+        filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._wcet = self._solve(basepath, basename, contextv, filename)
+
+class CreateCFGCLPExtra (CreateCFGCLP):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
+        CreateCFGCLP.__init__(self)
+        self._addVariables(cfg)
+        self._addObjectiveFunction(cfg)
+        self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
+        self._addStructuralConstraints(cfg)
+        self._addRelativeCapacityConstraints(data, cfg, lnt)
+        self._addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
+        self.__addInfeasiblePathConstraints(data, pathg, cfg, lnt)
+        self._addEpilogue()
+        filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._wcet = self._solve(basepath, basename, contextv, filename)
+
     def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
-        self.__infeasiblePathLines = []
-        self.__infeasiblePathLines.append(ECLIPSE.getComment("Infeasible path constraints"))
+        self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
         for superv in pathg:
             if superv.getBasicBlockIDs():
                 countVariable1 = ECLIPSE.getVertexCountVariable(superv.getRepresentativeID())
@@ -307,19 +295,11 @@ class CreateCFGCLP (CLP):
                 else:
                     edge           = succSuperv.getUniqueEdge()
                     countVariable2 = ECLIPSE.getEdgeCountVariable(edge[0], edge[1])
-                self.__infeasiblePathLines.append("%s%s0%s%s%s0%s" % \
+                self._lines.append("%s%s0%s%s%s0%s" % \
                                (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
-                self.__infeasiblePathLines.append("%s%s0%s%s%s0%s" % \
+                self._lines.append("%s%s0%s%s%s0%s" % \
                                (countVariable2, ECLIPSE.gt, ECLIPSE.implies, countVariable1, ECLIPSE.equals, ECLIPSE.conjunct))
-        self.__infeasiblePathLines.append(getNewLine())  
-        
-    def __addEpilogue (self):
-        self.__epilogueLines = []
-        self.__epilogueLines.append("%s%s%d%s%s%s" % (CLP.PWCET, ECLIPSE.equals, -1, ECLIPSE.multiply, CLP.WCET, ECLIPSE.conjunct))
-        self.__epilogueLines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
-        self.__epilogueLines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
-        self.__epilogueLines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
-                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.terminator))
+        self._lines.append(getNewLine())  
 
 class TreeBasedCalculation:
     def __init__ (self, superg, lnt, longestPaths=1):
