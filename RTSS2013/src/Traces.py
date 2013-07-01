@@ -123,7 +123,7 @@ INFEASIBLE CONJECTURES
                     Debug.verboseMessage("  super blocks %d and %d" % (superv.getVertexID(), succID))
             
     def _endOfFunction (self, pathg):
-        Debug.debugMessage("Falsifying conjectures in %s" % pathg.getName(), 1)
+        Debug.debugMessage("Falsifying conjectures in %s" % pathg.getName(), 10)
         newConjectures = {}
         for supervID, conjecture in self._executesKTimes[pathg].iteritems():
             executionCount = self._superBlockExecutionCounts[pathg][supervID]
@@ -435,7 +435,6 @@ class Gem5Parser (TraceInformation):
                             # Compute the HWMT
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
-                            print self._longestTime
                             # Falsify conjectures
                             self._endOfFunction(self.__currentSuperg.getSuperBlockPathInformationGraph())
                             self._endRun()

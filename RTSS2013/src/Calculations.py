@@ -104,7 +104,6 @@ class CLP ():
     
     def _addOutputPredicates (self, filename):
         fileHandle = "F"        
-        
         self._lines.append('%s(%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.clauseSep))
         self._lines.append(getNewLine())
         self._lines.append('open("%s",%s,%s)%s' % (os.path.basename(filename) + ".res", "write", fileHandle, ECLIPSE.conjunct))
@@ -239,21 +238,23 @@ class CreateCFGCLP (CLP):
     def _addExecutionCountDomains (self, data, superg, pathg, cfg, lnt, addPathInformation=False):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         # First add domains for basic blocks
-        for superv in superg:
-            if superv.getBasicBlockIDs():           
-                lowerBound = 0   
-                treev      = lnt.getVertex(superv.getRepresentativeID())
-                parentv    = lnt.getVertex(treev.getParentID())
-                upperBound = data.getLoopBound(cfg.getName(), parentv.getHeaderID())  
-                if addPathInformation and pathg.hasVertex(superv.getVertexID()):
-                    if data.neverExecutes(pathg, superv):
-                        upperBound = 0
-                    else:
-                        lowerBound = data.getMinimumExecutionCount(pathg, superv)
-                for vertexID in superv.getBasicBlockIDs():
-                    line = "%s%s[%d..%d]%s" % \
-                    (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
-                    self._lines.append(line)   
+        for headerID in lnt.getHeaderIDs():
+            for superv in superg.getSuperBlockRegion(headerID):
+                if superv.getBasicBlockIDs():           
+                    lowerBound = 0   
+                    treev      = lnt.getVertex(superv.getRepresentativeID())
+                    parentv    = lnt.getVertex(treev.getParentID())
+                    upperBound = data.getLoopBound(cfg.getName(), parentv.getHeaderID())  
+                    if addPathInformation and pathg.hasVertex(superv.getVertexID()):
+                        if data.neverExecutes(pathg, superv):
+                            upperBound = 0
+                        else:
+                            lowerBound = data.getMinimumExecutionCount(pathg, superv)
+                    for vertexID in superv.getBasicBlockIDs():
+                        if not (lnt.isLoopHeader(vertexID) and vertexID != headerID):
+                            line = "%s%s[%d..%d]%s" % \
+                            (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
+                            self._lines.append(line)   
                                 
         # Now add domains for edges
         for v in cfg:            
@@ -308,6 +309,7 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
 class CreateCFGCLPExtra (CreateCFGCLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
         CreateCFGCLP.__init__(self)
+        filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
         self._addVariables(cfg)
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
@@ -316,7 +318,7 @@ class CreateCFGCLPExtra (CreateCFGCLP):
         self._addExecutionCountDomains(data, superg, pathg, cfg, lnt, True)
         self.__addInfeasiblePathConstraints(data, pathg, cfg, lnt)
         self._addEpilogue()
-        filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._addOutputPredicates(filename)
         self._wcet = self._solve(basepath, basename, contextv, filename)
 
     def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
