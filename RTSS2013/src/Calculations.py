@@ -235,6 +235,13 @@ class CreateCFGCLP (CLP):
                                 pass
         self._lines.append(getNewLine()) 
         
+    def __computeUpperCapacityConstraint (self, data, cfg, lnt, loopv):
+        bound = data.getLoopBound(cfg.getName(), loopv.getHeaderID())
+        while loopv.getVertexID() != lnt.getRootID():
+            loopv  = lnt.getVertex(loopv.getParentID())
+            bound *= data.getLoopBound(cfg.getName(), loopv.getHeaderID())
+        return bound
+    
     def _addExecutionCountDomains (self, data, superg, pathg, cfg, lnt, addPathInformation=False):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         # First add domains for basic blocks
@@ -243,8 +250,8 @@ class CreateCFGCLP (CLP):
                 if superv.getBasicBlockIDs():           
                     lowerBound = 0   
                     treev      = lnt.getVertex(superv.getRepresentativeID())
-                    parentv    = lnt.getVertex(treev.getParentID())
-                    upperBound = data.getLoopBound(cfg.getName(), parentv.getHeaderID())  
+                    headerv    = lnt.getVertex(treev.getParentID())
+                    upperBound = self.__computeUpperCapacityConstraint(data, cfg, lnt, headerv)
                     if addPathInformation and pathg.hasVertex(superv.getVertexID()):
                         if data.neverExecutes(pathg, superv):
                             upperBound = 0
@@ -261,15 +268,15 @@ class CreateCFGCLP (CLP):
             vertexID = v.getVertexID()
             for succID in v.getSuccessorIDs(): 
                 treev1     = lnt.getVertex(vertexID)
-                parentv1   = lnt.getVertex(treev1.getParentID())
+                headerv1   = lnt.getVertex(treev1.getParentID())
                 treev2     = lnt.getVertex(succID)
-                parentv2   = lnt.getVertex(treev2.getParentID())  
+                headerv2   = lnt.getVertex(treev2.getParentID())  
                 lowerBound = 0              
-                if parentv1 == parentv2:
-                    upperBound = data.getLoopBound(cfg.getName(), parentv1.getHeaderID())
+                if headerv1 == headerv2:
+                    upperBound = self.__computeUpperCapacityConstraint(data, cfg, lnt, headerv1)
                 else:
-                    bound1 = data.getLoopBound(cfg.getName(), parentv1.getHeaderID())
-                    bound2 = data.getLoopBound(cfg.getName(), parentv2.getHeaderID())
+                    bound1 = self.__computeUpperCapacityConstraint(data, cfg, lnt, headerv1)
+                    bound2 = self.__computeUpperCapacityConstraint(data, cfg, lnt, headerv2)
                     upperBound = max(bound1, bound2)  
                 if addPathInformation and pathg.isMonitoredEdge(vertexID, succID):
                     superv = pathg.getMonitoredEdgeSuperBlock(vertexID, succID)
