@@ -49,6 +49,9 @@ class GenerateTraces:
                 if tupleIndex not in self.__functionToTailCount:
                     self.__functionToTailCount[tupleIndex] = 1
                     self.__chooseSuccessorInICFG()
+                elif self.__currentv.numberOfSuccessors() == 1:
+                    self.__functionToTailCount[tupleIndex] += 1
+                    self.__chooseSuccessorInICFG()
                 elif self.__functionToTailCount[tupleIndex] < GenerateTraces.maxLoopIterations:
                     self.__functionToTailCount[tupleIndex] += 1
                     self.__chooseSuccessorInICFG()
@@ -76,6 +79,8 @@ class GenerateTraces:
         
     def __chooseNonLoopBackEdgeSuccessorInICFG (self):
         succIDs = [succID for succID in self.__currentv.getSuccessorIDs() if not self.__currentLNT.isLoopBackEdge(self.__vertexID, succID)]
+        print self.__currentv
+        print succIDs
         succIndex = random.randint(0, len(succIDs) - 1)
         succID    = succIDs[succIndex]
         self.__currentv = self.__currentICFG.getVertex(succID)

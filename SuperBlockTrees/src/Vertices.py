@@ -247,6 +247,7 @@ class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.__unstructuredMerge = False
+        self.__repID             = None
         self.__basicBlocks       = set([])
         self.__edges             = set([])
         self.__loopHeader        = None
@@ -290,9 +291,13 @@ class SuperBlock (Vertex):
     def getEdges (self):
         return self.__edges
     
+    def setRepresentativeID (self, vertexID):
+        assert vertexID in self.__basicBlocks
+        self.__repID = vertexID
+    
     def getRepresentativeID (self):
         assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
-        return list(self.__basicBlocks)[0]
+        return self.__repID
     
     def getBranchPartitions (self):
         partitions = {}

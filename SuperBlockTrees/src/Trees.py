@@ -261,12 +261,9 @@ class ArithmeticExpressionTree (DirectedGraph):
             newSuperv.addEdges(superv.getEdges())
             self.vertices[newSupervID] = newSuperv
             
-    def __getUpperBound (self, superv, loopExitPathVertices):
+    def __getUpperBound (self, superv, headerID, loopExitPathVertices):
         if superv.getBasicBlockIDs():
             repID    = superv.getRepresentativeID()
-            treev    = self.__lnt.getVertex(repID)
-            parentv  = self.__lnt.getVertex(treev.getParentID())
-            headerID = parentv.getHeaderID()
             if repID in loopExitPathVertices:
                 return self.__data.getHeaderBound(self.__functionName, headerID)
             else:
@@ -291,7 +288,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                         self.addEdge(addvID, supervID)
                         # Multiplication vertex to factor WCET contribution of super block
                         multiplyvID = self.getNextVertexID()
-                        bound       = self.__getUpperBound(superg.getVertex(supervID),loopExitPathVertices)
+                        bound       = self.__getUpperBound(superg.getVertex(supervID), headerID, loopExitPathVertices)
                         multiplyv   = MultiplicationVertex(multiplyvID, bound)
                         self.vertices[multiplyvID] = multiplyv
                         self.addEdge(multiplyvID, addvID)
@@ -306,14 +303,20 @@ class ArithmeticExpressionTree (DirectedGraph):
                             self.addEdge(addvID2, multiplyvID)
                             self.__supervToTreeVertex[supervID] = addvID2
                             for branchID, succEdges in originalSuperv.getBranchPartitions().iteritems():
-                                maxvID = self.getNextVertexID()
-                                maxv   = MaximumVertex(maxvID)
-                                self.vertices[maxvID] = maxv
-                                for succe in succEdges:
+                                if len(succEdges) > 1:
+                                    maxvID = self.getNextVertexID()
+                                    maxv   = MaximumVertex(maxvID)
+                                    self.vertices[maxvID] = maxv
+                                    for succe in succEdges:
+                                        succID      = succe.getVertexID()
+                                        multiplyvID = self.__supervToTreeVertex[succID]
+                                        self.addEdge(maxvID, multiplyvID)
+                                    self.addEdge(addvID2, maxvID)
+                                else:
+                                    succe       = list(succEdges)[0]
                                     succID      = succe.getVertexID()
                                     multiplyvID = self.__supervToTreeVertex[succID]
-                                    self.addEdge(maxvID, multiplyvID)
-                                self.addEdge(addvID2, maxvID)
+                                    self.addEdge(addvID2, multiplyvID)
                         
                         for basicBlockID in originalSuperv.getBasicBlockIDs():
                             if lnt.isLoopHeader(basicBlockID) and basicBlockID != headerID:

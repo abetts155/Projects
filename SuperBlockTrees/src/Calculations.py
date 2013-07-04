@@ -17,83 +17,8 @@ class WCETCalculation:
             lnt          = program.getLNT(functionName)
             superg       = program.getSuperBlockCFG(functionName)
             arithmetict  = ArithmeticExpressionTree(data, functionName, superg, lnt)
-            arithmetict.evaluate(False)            
+            arithmetict.evaluate()            
             UDrawGraph.makeUdrawFile(arithmetict, "%s.aet" % functionName)
-            
-class TreeBasedCalculation:
-    def __init__ (self, superg, lnt):
-        self.__supervToWCETs = {}
-        for superv in superg:
-            self.__supervToWCETs[superv] = set([])
-        self.__doCalculation(superg, lnt)
-        rootSuperv = superg.getRootSuperBlock()
-        Debug.verboseMessage("TREE:: WCET(%s) = %s" % (superg.getName(), sorted(self.__supervToWCETs[rootSuperv])))
-        
-    def __doCalculation (self, superg, lnt):
-        rootSuperv = superg.getRootSuperBlock()
-        dfs        = DepthFirstSearch(superg, rootSuperv.getVertexID())
-        for vertexID in dfs.getPostorder():
-            superv = superg.getVertex(vertexID)
-            if superv.numberOfBasicBlocks() == 0:
-                self.__supervToWCETs[superv].add(0)
-            else:
-                intraBlockWCET = self.__calculateIntraBlockValue(superv, lnt)
-                forwardPartitions = superv.getBranchPartitions()
-                loopPartitions    = superv.getLoopPartition()
-                if forwardPartitions:
-                    self.__calculateForwardControlFlow(superg, superv, forwardPartitions, intraBlockWCET)
-                if loopPartitions:
-                    self.__calculateLoopControlFlow(lnt, superg, superv, loopPartitions,intraBlockWCET)
-                if not forwardPartitions and not loopPartitions:
-                    self.__supervToWCETs[superv] = set([intraBlockWCET])
-                print "%d %s" % (superv.getVertexID(), self.__supervToWCETs[superv])
-                        
-    def __calculateLoopControlFlow (self, lnt, superg, superv, loopPartitions,intraBlockWCET):
-        for supere in loopPartitions:
-            succSuperv = superg.getVertex(supere.getVertexID())
-            headerIDs  = succSuperv.getBasicBlockIDs().intersection(lnt.getHeaderIDs())
-            assert len(headerIDs) == 1, "Header ID not found in super block %d" % (succSuperv.getVertexID())
-            headerID = list(headerIDs)[0]
-            treev    = lnt.getVertex(lnt.getVertex(headerID).getParentID())
-            parentv  = lnt.getVertex(treev.getParentID())
-            bound    = parentv.getLevel() * 10 + 1
-            self.__supervToWCETs[superv] = set([intraBlockWCET + val * bound for val in self.__supervToWCETs[succSuperv]])
-                    
-    def __calculateIntraBlockValue (self, superv, lnt):
-        intraBlockWCET = 0
-        for basicBlockID in superv.getBasicBlockIDs():
-            # Since every header except the dummy header appears in 2 super blocks we need to decide when to add
-            # its contribution to the super block. 
-            # In a for loop, we add it BOTH times. 
-            # In a do-while loop, we only add it when the root super block obtained during construction of its loop subgraph is analysed
-            if lnt.isLoopHeader(basicBlockID):
-                if not lnt.isDoWhileLoop(basicBlockID):
-                    intraBlockWCET += basicBlockID
-                else:
-                    headerID = superv.getLoopHeader()
-                    if headerID and headerID == basicBlockID:
-                        intraBlockWCET += basicBlockID
-            else:
-                intraBlockWCET += basicBlockID
-        return intraBlockWCET
-    
-    def __calculateForwardControlFlow (self, superg, superv, forwardPartitions, intraBlockWCET):
-        values = set([])
-        for branchID, superedges in forwardPartitions.iteritems():
-            if not values:
-                for supere in superedges:
-                    succSuperv = superg.getVertex(supere.getVertexID())
-                    values.update(self.__supervToWCETs[succSuperv])
-            else:
-                newValues = set([])
-                for supere in superedges:
-                    succSuperv = superg.getVertex(supere.getVertexID())
-                    for val1 in self.__supervToWCETs[succSuperv]:
-                        for val2 in values:
-                            newValues.add(val1+val2)
-                values = newValues
-        for val in values:
-            self.__supervToWCETs[superv].add(val+intraBlockWCET)
             
 class ECLIPSE:
     conjunct        = "," + getNewLine()

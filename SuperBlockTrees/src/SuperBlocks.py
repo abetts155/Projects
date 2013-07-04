@@ -40,6 +40,13 @@ class SuperBlockGraph (DirectedGraph):
                     if v.getVertexID() == lnt.getRootID():
                         self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
                     self.__computeSuperBlockPartitions(self.__headerToSuperBlockSubgraph[headerID], self.__headerToRootSuperBlock[headerID], forwardICFG, v)
+        for superv in self:
+            if superv.getBasicBlockIDs():
+                for vertexID in superv.getBasicBlockIDs():
+                    if not lnt.isLoopHeader(vertexID):
+                        superv.setRepresentativeID(vertexID)
+                    elif len(superv.getBasicBlockIDs()) == 1:
+                        superv.setRepresentativeID(vertexID)
                         
     def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID):
         global nextVertexID 
