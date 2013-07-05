@@ -191,15 +191,14 @@ def writeArithmeticVertex (arithmetict, vertexID, f):
         f.write(beginAttributes)
         op   = v.getOperator()
         name = ""
-        name += "vertex = " + str(vertexID) + newLine 
-        name += "op         = " + op + newLine
-        name += "WCET   = %s" % sorted(v.getWCETs())
+        name += "op        = " + op + newLine
+        name += "WCET  = %s" % sorted(v.getWCETs())
         if op == '+':
             f.write(setColor('#05EDFF'))
         elif op == 'max':            
             f.write(setColor('#D44942'))
         else:
-            name += newLine + "bound  = %d" % v.getBound()
+            name += newLine + "bound = %d" % v.getBound()
             f.write(setColor('#EEC900'))
         f.write(setName(name))
         f.write(endAttibutes)

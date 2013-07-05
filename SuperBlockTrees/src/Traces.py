@@ -277,8 +277,10 @@ class ParseTraces (TraceInformation):
         for cfg in self._program.getICFGs():
             functionName = cfg.getName()
             for v in cfg:
-                self._executionTimes[(functionName, v.getOriginalVertexID())] = random.randint(1,100)
-
+                tupleKey = (functionName, v.getOriginalVertexID())
+                self._executionTimes[tupleKey] = random.randint(1,20)
+                Debug.debugMessage("WCET%s = %d" % (tupleKey, self._executionTimes[tupleKey]), 1)
+                
     def __initialise (self):
         self.__currentContextv = None
         self.__currentCFG      = None
