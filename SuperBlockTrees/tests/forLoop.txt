@@ -1,0 +1,21 @@
+CFG: F1
+bb: 1
+succ: 2
+
+bb: 2
+succ: 3, 7
+
+bb: 3
+succ: 4, 5
+
+bb: 4
+succ: 6
+
+bb: 5
+succ: 6
+
+bb: 6
+succ: 2
+
+bb: 7
+succ:

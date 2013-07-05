@@ -249,16 +249,17 @@ class ArithmeticExpressionTree (DirectedGraph):
         self.__functionName = functionName
         self.__superg = superg
         self.__lnt = lnt
-        self.__addSuperBlocks(superg)
-        self.__addOperators(superg, lnt)
+        self.__addSuperBlocks()
+        self.__addOperators()
         self.__setRoot()
     
-    def __addSuperBlocks(self, superg):
-        for superv in superg:
+    def __addSuperBlocks(self):
+        for superv in self.__superg:
             newSupervID  = superv.getVertexID()
             newSuperv    = SuperBlock(newSupervID)
             newSuperv.addBasicBlocks(superv.getBasicBlockIDs())
             newSuperv.addEdges(superv.getEdges())
+            newSuperv.setLoopHeader(superv.getLoopHeader())
             self.vertices[newSupervID] = newSuperv
             
     def __getUpperBound (self, superv, headerID, loopExitPathVertices):
@@ -269,16 +270,23 @@ class ArithmeticExpressionTree (DirectedGraph):
             else:
                 return self.__data.getTailsBound(self.__functionName, headerID)
         return 0
+    
+    def __getInnerHeaders (self, superv, headerID):
+        headers = set([])
+        for basicBlockID in superv.getBasicBlockIDs():
+            if self.__lnt.isLoopHeader(basicBlockID) and basicBlockID != headerID:
+                headers.add(basicBlockID)
+        return headers
         
-    def __addOperators (self, superg, lnt):
+    def __addOperators (self):
         self.__supervToTreeVertex = {}
-        for level, vertices in lnt.levelIterator(True):
+        for level, vertices in self.__lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
                     headerID             = v.getHeaderID()
-                    loopExitPathVertices = lnt.getLoopExitPathsVertices(headerID)
-                    supergRegion         = superg.getSuperBlockRegion(headerID)
-                    rootv                = superg.getSuperBlockRegionRoot(headerID)
+                    loopExitPathVertices = self.__lnt.getLoopExitPathsVertices(headerID)
+                    supergRegion         = self.__superg.getSuperBlockRegion(headerID)
+                    rootv                = self.__superg.getSuperBlockRegionRoot(headerID)
                     dfs                  = DepthFirstSearch(supergRegion, rootv.getVertexID())
                     for supervID in dfs.getPostorder():
                         # Addition vertex to sum up WCETs of basic blocks within super block
@@ -288,40 +296,50 @@ class ArithmeticExpressionTree (DirectedGraph):
                         self.addEdge(addvID, supervID)
                         # Multiplication vertex to factor WCET contribution of super block
                         multiplyvID = self.getNextVertexID()
-                        bound       = self.__getUpperBound(superg.getVertex(supervID), headerID, loopExitPathVertices)
+                        bound       = self.__getUpperBound(self.__superg.getVertex(supervID), headerID, loopExitPathVertices)
                         multiplyv   = MultiplicationVertex(multiplyvID, bound)
                         self.vertices[multiplyvID] = multiplyv
                         self.addEdge(multiplyvID, addvID)
                         self.__supervToTreeVertex[supervID] = multiplyvID
                         
-                        originalSuperv = superg.getVertex(supervID)
+                        originalSuperv = self.__superg.getVertex(supervID)
                         if originalSuperv.numberOfSuccessors():
-                            # Addition vertex to sum up evaluation of maximum vertices and the contribution of the super block
-                            addvID2 = self.getNextVertexID()
-                            addv2   = AdditionVertex(addvID2)
-                            self.vertices[addvID2] = addv2
-                            self.addEdge(addvID2, multiplyvID)
-                            self.__supervToTreeVertex[supervID] = addvID2
-                            for branchID, succEdges in originalSuperv.getBranchPartitions().iteritems():
-                                if len(succEdges) > 1:
-                                    maxvID = self.getNextVertexID()
-                                    maxv   = MaximumVertex(maxvID)
-                                    self.vertices[maxvID] = maxv
-                                    for succe in succEdges:
-                                        succID      = succe.getVertexID()
-                                        multiplyvID = self.__supervToTreeVertex[succID]
-                                        self.addEdge(maxvID, multiplyvID)
-                                    self.addEdge(addvID2, maxvID)
-                                else:
-                                    succe       = list(succEdges)[0]
-                                    succID      = succe.getVertexID()
-                                    multiplyvID = self.__supervToTreeVertex[succID]
-                                    self.addEdge(addvID2, multiplyvID)
-                        
-                        for basicBlockID in originalSuperv.getBasicBlockIDs():
-                            if lnt.isLoopHeader(basicBlockID) and basicBlockID != headerID:
-                                innerRootv = superg.getSuperBlockRegionRoot(basicBlockID)
-                                self.addEdge(self.__supervToTreeVertex[supervID], self.__supervToTreeVertex[innerRootv.getVertexID()])
+                            if originalSuperv.numberOfSuccessors() == 1:
+                                succID = originalSuperv.getSuccessorIDs()[0]
+                                addvID2 = self.getNextVertexID()
+                                addv2   = AdditionVertex(addvID2)
+                                self.vertices[addvID2] = addv2
+                                self.addEdge(addvID2, self.__supervToTreeVertex[supervID])
+                                self.addEdge(addvID2, self.__supervToTreeVertex[succID])
+                                self.__supervToTreeVertex[supervID] = addvID2
+                            else:
+                                # Addition vertex to sum up evaluation of maximum vertices and the contribution of the super block
+                                addvID2 = self.getNextVertexID()
+                                addv2   = AdditionVertex(addvID2)
+                                self.vertices[addvID2] = addv2
+                                self.addEdge(addvID2, multiplyvID)
+                                self.__supervToTreeVertex[supervID] = addvID2
+                                for succEdges in originalSuperv.getBranchPartitions().values():
+                                    if len(succEdges) > 1:
+                                        maxvID = self.getNextVertexID()
+                                        maxv   = MaximumVertex(maxvID)
+                                        self.vertices[maxvID] = maxv
+                                        for succe in succEdges:
+                                            succID      = succe.getVertexID()
+                                            multiplyvID = self.__supervToTreeVertex[succID]
+                                            self.addEdge(maxvID, multiplyvID)
+                                        self.addEdge(addvID2, maxvID)    
+                        # Link in sub-trees of nested loops
+                        innerHeaders = self.__getInnerHeaders(originalSuperv, headerID)                                
+                        if innerHeaders:
+                            addvID3 = self.getNextVertexID()
+                            addv3   = AdditionVertex(addvID3)
+                            self.vertices[addvID3] = addv3
+                            self.addEdge(addvID3, self.__supervToTreeVertex[supervID])
+                            self.__supervToTreeVertex[supervID] = addvID3
+                            for innerHeaderID in innerHeaders:
+                                innerRootv = self.__superg.getSuperBlockRegionRoot(innerHeaderID)
+                                self.addEdge(addvID3, self.__supervToTreeVertex[innerRootv.getVertexID()])
         
     def __setRoot (self):
         self.__rootv = None
@@ -333,7 +351,10 @@ class ArithmeticExpressionTree (DirectedGraph):
     def evaluateSuperBlock (self, superv):
         time = 0
         for basicBlockID in superv.getBasicBlockIDs():
-            time += self.__data.getExecutionTime(self.__functionName, basicBlockID)
+            if not self.__lnt.isLoopHeader(basicBlockID):
+                time += self.__data.getExecutionTime(self.__functionName, basicBlockID)
+            elif superv.getLoopHeader() == basicBlockID:
+                time += self.__data.getExecutionTime(self.__functionName, basicBlockID)
         return time
         
     def evaluate (self, maximumOnly=True):
