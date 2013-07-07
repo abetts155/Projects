@@ -354,4 +354,8 @@ class AdditionVertex (ArithmeticOperatorVertex):
 class MaximumVertex (ArithmeticOperatorVertex):
     def __init__ (self, vertexID):
         ArithmeticOperatorVertex.__init__(self, vertexID, 'max')
-    
+
+class UnionVertex (ArithmeticOperatorVertex):
+    def __init__ (self, vertexID):
+        ArithmeticOperatorVertex.__init__(self, vertexID, 'union')
+        

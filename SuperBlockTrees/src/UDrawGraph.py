@@ -197,6 +197,8 @@ def writeArithmeticVertex (arithmetict, vertexID, f):
             f.write(setColor('#05EDFF'))
         elif op == 'max':            
             f.write(setColor('#D44942'))
+        elif op == 'union':
+            f.write(setColor('#003F87'))
         else:
             name += newLine + "bound = %d" % v.getBound()
             f.write(setColor('#EEC900'))

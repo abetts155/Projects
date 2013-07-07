@@ -1,5 +1,6 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock, SuperBlock, AdditionVertex, MultiplicationVertex, MaximumVertex
+from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock, SuperBlock, \
+AdditionVertex, MultiplicationVertex, MaximumVertex, UnionVertex
 import Debug, CFGs
 
 class Tree (DirectedGraph):
@@ -285,6 +286,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                 if isinstance(v, HeaderVertex):
                     headerID             = v.getHeaderID()
                     loopExitPathVertices = self.__lnt.getLoopExitPathsVertices(headerID)
+                    print loopExitPathVertices
                     supergRegion         = self.__superg.getSuperBlockRegion(headerID)
                     rootv                = self.__superg.getSuperBlockRegionRoot(headerID)
                     dfs                  = DepthFirstSearch(supergRegion, rootv.getVertexID())
