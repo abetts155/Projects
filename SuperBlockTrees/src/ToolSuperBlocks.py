@@ -82,8 +82,8 @@ if __name__ == "__main__":
         tracefileLastModified = os.stat(tracefile)[8]
         programfileLastModified = os.stat(args.program)[8]
         assert programfileLastModified < tracefileLastModified, "Program file modified AFTER trace file generation"
-        data = Traces.ParseTraces(basename, tracefile, program)
-        program.generateAllUDrawFiles()
-        Calculations.WCETCalculation(program, data, basepath, basename)
+        #data = Traces.ParseTraces(basename, tracefile, program)
+        program.generateVisualisationFiles()
+        Calculations.WCETCalculation(program, None, basepath, basename)
     
     

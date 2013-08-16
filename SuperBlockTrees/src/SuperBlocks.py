@@ -1,5 +1,5 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, CFGEdge
+from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum

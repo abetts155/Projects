@@ -221,14 +221,6 @@ class CallGraphVertex (Vertex):
     def __str__ (self):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
-class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID):
-        Vertex.__init__(self, vertexID)
-        self._superBlocks = set([])
-        
-    def addSuperBlock (self, superv):
-        self._superBlocks.add(superv)
-    
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
@@ -326,10 +318,13 @@ class ArithmeticOperatorVertex (Vertex):
         return self._operator
 
 class MultiplicationVertex (ArithmeticOperatorVertex):
-    def __init__ (self, vertexID, bound):
+    def __init__ (self, vertexID):
         ArithmeticOperatorVertex.__init__(self, vertexID, '*')
+        self._bound = 0
+
+    def setBound (self, bound):
         self._bound = bound
-    
+
     def getBound (self):
         return self._bound
 

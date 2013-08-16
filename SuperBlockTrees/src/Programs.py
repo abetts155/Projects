@@ -2,7 +2,7 @@ from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
 from Trees import LoopNests, DepthFirstSearch
 from copy import deepcopy
-import Debug, SuperBlocks, Visualisation
+import Debug, SuperBlocks, Visualisation, PathData
 
 class ContextGraph (DirectedGraph):
     nextVertexID = 1
@@ -136,13 +136,14 @@ class CallGraph (DirectedGraph):
     
 class Program():
     def __init__(self):
-        self.__callg          = CallGraph()
-        self.__contextg       = None
-        self.__archivedICFGS  = {}
-        self.__CFGs           = {}
-        self.__LNTs           = {}
-        self.__superblockcfgs = {}
-        self.__bbIDToICFG     = {}
+        self.__callg           = CallGraph()
+        self.__contextg        = None
+        self.__archivedICFGS   = {}
+        self.__CFGs            = {}
+        self.__LNTs            = {}
+        self.__superblockcfgs  = {}
+        self.__bbIDToICFG      = {}
+        self.__WCETInformation = {}
         
     def output (self, data):
         totalMutualExclusion = 0
@@ -174,6 +175,13 @@ class Program():
             Visualisation.generateGraphviz(cfg, "%s.cfg%s" % (functionName, suffix))
             Visualisation.generateGraphviz(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
             Visualisation.generateGraphviz(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
+            
+    def addPathInformation (self, functionName, info):
+        assert isinstance(info, PathData.WCETInformation)
+        assert functionName in self.__CFGs, "Unable to find CFG '%s' to which the path information '%s' relates" % (functionName, info)
+        if functionName not in self.__WCETInformation:
+            self.__WCETInformation[functionName] = set([])
+        self.__WCETInformation[functionName].add(info)
         
     def getCallGraph (self):
         return self.__callg

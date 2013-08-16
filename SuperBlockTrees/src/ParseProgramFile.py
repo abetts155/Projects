@@ -1,11 +1,12 @@
-import CFGs, Debug, Programs, Vertices
-import shlex
+import CFGs, Debug, Programs, Vertices, PathData
+import shlex, re
 
 cfgIndicator          = 'cfg:'
 bbIndicator           = 'bb:'
 ipointIndicator       = 'ipoint:'
 successorsIndicator   = 'succ:'
 instructionsIndicator = 'instructions:'
+pragmaRegex           = re.compile(r'\#pragma\s+(exclusive|inclusive|bounds)\s+.*')
         
 def setEntryAndExit (icfg):
     withoutPred = []
@@ -52,7 +53,6 @@ def setEntryAndExit (icfg):
         icfg.addEdge(exitID, entryID)
     
 def readInProgram (programFile):
-    import re
     program = Programs.Program()
     # First parse the file for functions to partially build call graph
     with open(programFile, 'r') as f:
@@ -78,7 +78,7 @@ def readInProgram (programFile):
         bb           = None   
         instructions = False
         for line in f:
-            line = line.lower()
+            line = line.lower().strip()
             if line.startswith(cfgIndicator):
                 instructions = False
                 lexemes = shlex.split(line)
@@ -140,7 +140,36 @@ def readInProgram (programFile):
                 assert address, "No address found in instruction %s" % line
                 instruction = CFGs.Instruction(address, fields)
                 bb.addInstruction(instruction)
-    return program
+            elif pragmaRegex.match(line):
+                assert icfg, "Found path information pragma but current CFG is null. List path information after the CFG definition."
+                if 'exclusive' in line or 'inclusive' in line:
+                    setInfo = re.findall(r'\{.*\}', line)
+                    assert len(setInfo) == 1
+                    # The first and last element of the split will be the empty character ''
+                    basicBlockIDs = re.split(r'\W+', setInfo[0])[1:-1]
+                    theSet        = set(map(int, basicBlockIDs))
+                    for bbID in theSet:
+                        assert icfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
+                    if 'exclusive' in line:
+                        program.addPathInformation(functionName, PathData.MutualExclusion(theSet))
+                    else:
+                        program.addPathInformation(functionName, PathData.MutualInclusion(theSet))
+                elif 'bounds' in line:
+                    info = re.findall(r'\[.*\]', line)
+                    assert len(info) == 1
+                    bbID, lowerBound, upperBound = tuple(re.split(r'\W+', info[0])[1:-1])
+                    assert bbID.isdigit(), "Vertex identifier '%s' is not an integer" % bbID
+                    assert lowerBound.isdigit(), "Lower bound '%s' is not an integer" % lowerBound
+                    assert upperBound.isdigit(), "Upper bound'%s' is not an integer" % upperBound
+                    bbID       = int(bbID)
+                    assert icfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
+                    lowerBound = int(lowerBound)
+                    upperBound = int(upperBound)
+                    assert upperBound >= lowerBound, "Upper bound %d is less than lower bound %d" % (upperBound, lowerBound)
+                    program.addPathInformation(functionName, PathData.ExecutionBounds(bbID, lowerBound, upperBound))
+                else:
+                    Debug.exitMessage("Unable to handle path information line '%s'" % line)
+        return program
     
 def createProgram (programFile):
     program = readInProgram(programFile)

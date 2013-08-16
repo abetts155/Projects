@@ -17,6 +17,8 @@ def generateGraphviz (g, fileNamePrefix):
             graph = generateCallGraph(g)
         elif isinstance(g, Trees.LoopNests):
             graph = generateLNT(g)
+        elif isinstance(g, Trees.ArithmeticExpressionTree):
+            graph = generateAET(g)
         assert graph
         filename = "%s.%s" % (basename, fileNamePrefix + ".png")
         graph.write_png(filename)
@@ -39,21 +41,26 @@ def handleSuperBlockCFG (superg):
     graph        = pydot.Dot(graph_type='digraph')
     vertexToNode = {}
     for v in superg:
-        label = "super ID = %d\n" % (v.getVertexID())
-        if v.getBasicBlockIDs():
-            label += "{%s}" % ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
-        if v.getEdges ():
-            label += "\n" 
-            label += "{%s}" % ', '.join(str(edge) for edge in v.getEdges())
-        node = pydot.Node(label)
+        node = handleSuperBlock(v)
         graph.add_node(node)
         vertexToNode[v] = node
     for v in superg:
-        for succID in v.getSuccessorIDs():
-            succv = superg.getVertex(succID)
-            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
-            graph.add_edge(edge)
+        for branchID, succEdges in v.getBranchPartitions().iteritems():
+            for succe in succEdges:
+                succv = superg.getVertex(succe.getVertexID())
+                edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv], label=str(branchID))
+                graph.add_edge(edge)
     return graph
+
+def handleSuperBlock (superv):
+    label = "super ID = %d\n" % (superv.getVertexID())
+    if superv.getBasicBlockIDs():
+        label += "{%s}" % ', '.join(str(vertexID) for vertexID in superv.getBasicBlockIDs())
+    if superv.getEdges ():
+        label += "\n" 
+        label += "{%s}" % ', '.join(str(edge) for edge in superv.getEdges())
+    node = pydot.Node(label)
+    return node
 
 def generateCallGraph (callg):
     graph        = pydot.Dot(graph_type='digraph')
@@ -86,6 +93,36 @@ def generateLNT (lnt):
     for v in lnt:
         for succID in v.getSuccessorIDs():
             succv = lnt.getVertex(succID)
+            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
+            graph.add_edge(edge)
+    return graph
+
+def generateAET (aet):
+    graph        = pydot.Dot(graph_type='graph')
+    vertexToNode = {}
+    for v in aet:
+        if isinstance(v, Vertices.SuperBlock):
+            node = handleSuperBlock(v)
+            graph.add_node(node)
+            vertexToNode[v] = node
+        else:
+            op    = v.getOperator()
+            label = "op %s (vertex=%d)" % (op, v.getVertexID())
+            if op == '+':
+                node = pydot.Node(label, shape="box", fillcolor="#05EDFF", style="filled")
+            elif op == 'max':            
+                node = pydot.Node(label, shape="box", fillcolor="#D44942", style="filled")
+            elif op == 'union':
+                node = pydot.Node(label, shape="box", fillcolor="#003F87", style="filled")
+            else:
+                label += "\nbound = %d" % v.getBound()
+                node = pydot.Node(label, shape="box", fillcolor="#EEC900", style="filled")
+            graph.add_node(node)
+            vertexToNode[v] = node
+                
+    for v in aet:
+        for succID in v.getSuccessorIDs():
+            succv = aet.getVertex(succID)
             edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
             graph.add_edge(edge)
     return graph

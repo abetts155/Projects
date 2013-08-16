@@ -1,6 +1,6 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock, SuperBlock, \
-AdditionVertex, MultiplicationVertex, MaximumVertex, UnionVertex
+AdditionVertex, MultiplicationVertex, MaximumVertex
 import Debug, CFGs
 
 class Tree (DirectedGraph):
@@ -244,9 +244,8 @@ class LengauerTarjan (Tree):
         self.__ancestor[wID] = vID
         
 class ArithmeticExpressionTree (DirectedGraph):
-    def __init__(self, data, functionName, superg, lnt):
+    def __init__(self, functionName, superg, lnt):
         DirectedGraph.__init__(self)
-        self.__data = data
         self.__functionName = functionName
         self.__superg = superg
         self.__lnt = lnt
@@ -262,15 +261,6 @@ class ArithmeticExpressionTree (DirectedGraph):
             newSuperv.addEdges(superv.getEdges())
             newSuperv.setLoopHeader(superv.getLoopHeader())
             self.vertices[newSupervID] = newSuperv
-            
-    def __getUpperBound (self, superv, headerID, loopExitPathVertices):
-        if superv.getBasicBlockIDs():
-            repID    = superv.getRepresentativeID()
-            if repID in loopExitPathVertices:
-                return self.__data.getHeaderBound(self.__functionName, headerID)
-            else:
-                return self.__data.getTailsBound(self.__functionName, headerID)
-        return 0
     
     def __getInnerHeaders (self, superv, headerID):
         headers = set([])
@@ -298,8 +288,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                         self.addEdge(addvID, supervID)
                         # Multiplication vertex to factor WCET contribution of super block
                         multiplyvID = self.getNextVertexID()
-                        bound       = self.__getUpperBound(self.__superg.getVertex(supervID), headerID, loopExitPathVertices)
-                        multiplyv   = MultiplicationVertex(multiplyvID, bound)
+                        multiplyv   = MultiplicationVertex(multiplyvID)
                         self.vertices[multiplyvID] = multiplyv
                         self.addEdge(multiplyvID, addvID)
                         self.__supervToTreeVertex[supervID] = multiplyvID
@@ -350,16 +339,16 @@ class ArithmeticExpressionTree (DirectedGraph):
                 self.__rootv = v
         assert self.__rootv, "Unable to set root of arithmetic expression tree"
         
-    def evaluateSuperBlock (self, superv):
+    def evaluateSuperBlock (self, data, superv):
         time = 0
         for basicBlockID in superv.getBasicBlockIDs():
             if not self.__lnt.isLoopHeader(basicBlockID):
-                time += self.__data.getExecutionTime(self.__functionName, basicBlockID)
+                time += data.getExecutionTime(self.__functionName, basicBlockID)
             elif superv.getLoopHeader() == basicBlockID:
-                time += self.__data.getExecutionTime(self.__functionName, basicBlockID)
+                time += data.getExecutionTime(self.__functionName, basicBlockID)
         return time
         
-    def evaluate (self, maximumOnly=True):
+    def evaluate (self, data, maximumOnly=True):
         dfs = DepthFirstSearch(self, self.__rootv.getVertexID())
         for vertexID in dfs.getPostorder():
             v = self.getVertex(vertexID)

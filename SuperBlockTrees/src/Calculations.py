@@ -1,6 +1,6 @@
 from Vertices import HeaderVertex
 from Trees import DepthFirstSearch, ArithmeticExpressionTree
-import Debug, UDrawGraph
+import Debug, Visualisation
 import os
 
 def getNewLine (num=1):
@@ -16,9 +16,9 @@ class WCETCalculation:
             Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
             lnt          = program.getLNT(functionName)
             superg       = program.getSuperBlockCFG(functionName)
-            arithmetict  = ArithmeticExpressionTree(data, functionName, superg, lnt)
-            arithmetict.evaluate()            
-            UDrawGraph.makeUdrawFile(arithmetict, "%s.aet" % functionName)
+            arithmetict  = ArithmeticExpressionTree(functionName, superg, lnt)
+            Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
+            #arithmetict.evaluate(data)
             
 class ECLIPSE:
     conjunct        = "," + getNewLine()
