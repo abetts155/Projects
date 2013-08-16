@@ -2,7 +2,7 @@ from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
 from Trees import LoopNests, DepthFirstSearch
 from copy import deepcopy
-import Debug, UDrawGraph, SuperBlocks
+import Debug, SuperBlocks, Visualisation
 
 class ContextGraph (DirectedGraph):
     nextVertexID = 1
@@ -164,16 +164,16 @@ class Program():
         Debug.verboseMessage("...#TOTAL mutual exclusion pairs = %d" % totalMutualExclusion)
         Debug.verboseMessage("...#TOTAL always execute         = %d" % totalAlways)
             
-    def generateAllUDrawFiles (self, suffix=""):
+    def generateVisualisationFiles (self, suffix=""):
         if suffix:
             suffix = '.' + suffix 
-        UDrawGraph.makeUdrawFile(self.__callg, "callg%s" % suffix)
-        UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg%s" % suffix)
+        Visualisation.generateGraphviz(self.__callg, "callg%s" % suffix)
+        Visualisation.generateGraphviz(self.getContextGraph(), "contextg%s" % suffix)
         for functionName, cfg in self.__CFGs.iteritems():
-            UDrawGraph.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph(), "%s.pathg%s" % (functionName, suffix))
+            Visualisation.generateUdraw(cfg, "%s.cfg%s" % (functionName, suffix))
+            Visualisation.generateGraphviz(cfg, "%s.cfg%s" % (functionName, suffix))
+            Visualisation.generateGraphviz(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
+            Visualisation.generateGraphviz(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
         
     def getCallGraph (self):
         return self.__callg
@@ -252,7 +252,6 @@ class Program():
     def addExitEntryBackEdges (self):
         for cfg in self.__CFGs.values():
             cfg.addExitEntryEdge()
-            UDrawGraph.makeUdrawFile(cfg, "%s.cfg" % cfg.getName())
     
     def inlineCalls (self):
         Debug.verboseMessage("Inlining to create single CFG")

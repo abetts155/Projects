@@ -86,11 +86,7 @@ def makeUdrawFile (g, fileNamePrefix):
                     vertexID = v.getVertexID()
                     superv   = g.getVertex(vertexID)
                     writeSuperBlockVertex(superv, f)   
-                    writeSuperBlockVertexLinks(superv, f)
-            elif isinstance(g, SuperBlocks.SuperBlockPathInformationGraph):
-                for v in g:
-                    vertexID = v.getVertexID()
-                    writeSuperBlockPathInformationVertex(g, vertexID, f)   
+                    writeSuperBlockVertexLinks(superv, f) 
             elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
@@ -242,28 +238,6 @@ def writeSuperBlockVertexLinks (superv, f):
             f.write(endAttibutes)
             f.write(edgeLink(succe.getVertexID()))
             f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-    
-def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
-    v = partitiong.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    name  = "Superv    = %d%s" % (vertexID, newLine)
-    name += "Partition = %d" % v.partitionID
-    f.write(setName(name))
-    if v.acyclicPartition:
-        f.write(setColor(COLOR.RED))
-        f.write(setToolTip("Acyclic partition"))
-    f.write(endAttibutes)
-    
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setEdgeDirection(DIRECTION.NONE))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
 
 def writeTreeVertex (tree, vertexID, f):

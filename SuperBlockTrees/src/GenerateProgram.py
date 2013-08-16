@@ -453,7 +453,7 @@ def cutEdgesFromCallGraph (program):
             predID  = predIDs[index]
             callg.removeEdge(predID, callv.getVertexID())    
     
-def generate (subprograms, 
+def generateGraphviz (subprograms, 
               cfgVertices, 
               fanOut, 
               loops, 

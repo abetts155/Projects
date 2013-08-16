@@ -20,10 +20,10 @@ def commandLine ():
                          help="debug mode",
                          default=0)
     
-    cmdline.add_argument("-u",
-                         "--udraw",
+    cmdline.add_argument("-g",
+                         "--graphviz",
                          action="store_true",
-                         help="generate uDrawGraph files",
+                         help="generate png files to visualise graphs",
                          default=False)
 
     cmdline.add_argument("-t",
@@ -48,12 +48,12 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Utils, Calculations
+    import ParseProgramFile, Debug, Trees, Traces, SuperBlocks, Utils, Calculations, Visualisation
     
-    args               = commandLine()
-    Debug.verbose      = args.verbose
-    Debug.debug        = args.debug
-    UDrawGraph.enabled = args.udraw
+    args = commandLine()
+    Debug.verbose         = args.verbose
+    Debug.debug           = args.debug
+    Visualisation.enabled = args.graphviz
     
     if args.clean:
         Utils.clean()
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
-    UDrawGraph.basename = basename
+    Visualisation.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
     Debug.verboseMessage("Analysing CFGs")
     for icfg in program.getICFGs():
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         program.addLNT(lnt, functionName)
         superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
         program.addSuperBlockCFG(superg, functionName)
-    program.generateAllUDrawFiles()
+    program.generateVisualisationFiles()
     if args.traces:
         Debug.verboseMessage("Generating dummy traces")
         Traces.GenerateTraces(basepath, basename, program, args.traces)
@@ -85,5 +85,5 @@ if __name__ == "__main__":
         data = Traces.ParseTraces(basename, tracefile, program)
         program.generateAllUDrawFiles()
         Calculations.WCETCalculation(program, data, basepath, basename)
-        
-        
+    
+    

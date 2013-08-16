@@ -222,26 +222,12 @@ class CallGraphVertex (Vertex):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
 class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID, partitionID, acyclicPartition, basicBlocks, edges):
+    def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.acyclicPartition = acyclicPartition
-        self.partitionID      = partitionID
-        self.__basicBlocks    = basicBlocks
-        self.__edges          = edges
-    
-    def getBasicBlockIDs (self):
-        return self.__basicBlocks
-    
-    def getEdges (self):
-        return self.__edges
-    
-    def getUniqueEdge (self):
-        assert len(self.__edges) == 1
-        return list(self.__edges)[0]
-    
-    def getRepresentativeID (self):
-        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
-        return list(self.__basicBlocks)[0]
+        self._superBlocks = set([])
+        
+    def addSuperBlock (self, superv):
+        self._superBlocks.add(superv)
     
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):

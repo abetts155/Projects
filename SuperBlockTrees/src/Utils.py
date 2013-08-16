@@ -6,7 +6,7 @@ def clean ():
     for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
         files.sort()
         for filename in files:
-            if filename.endswith('.udraw') or filename.endswith('.dis'):
+            if filename.endswith('.png') or filename.endswith('.udraw') or filename.endswith('.dis'):
                 fullPath = os.path.join(paths, filename)
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 os.remove(fullPath)

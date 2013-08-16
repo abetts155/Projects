@@ -26,7 +26,7 @@ def commandLine ():
     cmdline.add_argument("-u",
                          "--udraw",
                          action="store_true",
-                         help="generate uDrawGraph files",
+                         help="generateGraphviz uDrawGraph files",
                          default=False)
     
     cmdline.add_argument("--subprograms",
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     if args.loops:
         assert args.nesting_depth <= args.loops, "The loop-nesting depth must be lower than the number of loops"
     
-    program = GenerateProgram.generate(args.subprograms, 
+    program = GenerateProgram.generateGraphviz(args.subprograms, 
                                        args.basic_blocks, 
                                        args.fan_out, 
                                        args.loops, 
