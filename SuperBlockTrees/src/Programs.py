@@ -191,8 +191,8 @@ class Program():
             self.__contextg = ContextGraph(self.__callg)
         return self.__contextg
        
-    def addICFG (self, icfg, functionName):
-        assert functionName not in self.__CFGs, "Trying to add duplicate ICFG for function '%s'" % functionName
+    def addCFG (self, icfg, functionName):
+        assert functionName not in self.__CFGs, "Trying to add duplicate CFG for function '%s'" % functionName
         self.__callg.addVertex(functionName)
         self.__CFGs[functionName] = icfg
         
@@ -204,13 +204,13 @@ class Program():
         assert functionName not in self.__LNTs, "Trying to add duplicate LNT for function '%s'" % functionName
         self.__LNTs[functionName] = lnt
         
-    def getICFG (self, functionName):
+    def getCFG (self, functionName):
         assert functionName in self.__CFGs, "Unable to find ICFG for function '%s'" % functionName
         return self.__CFGs[functionName]
     
     def getSuperBlockCFG (self, functionName):
         if functionName not in self.__superblockcfgs:
-            icfg   = self.getICFG(functionName)
+            icfg   = self.getCFG(functionName)
             lnt    = self.getLNT(functionName)
             superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
             self.__superblockcfgs[functionName] = superg
@@ -223,8 +223,11 @@ class Program():
             self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
 
-    def getICFGs (self):
+    def getCFGs (self):
         return self.__CFGs.values().__iter__()
+    
+    def getSuperBlockCFGs (self):
+        return self.__superblockcfgs.values().__iter__()
     
     def removeFunction (self, functionName):
         if functionName in self.__CFGs:

@@ -66,11 +66,11 @@ if __name__ == "__main__":
     Visualisation.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
     Debug.verboseMessage("Analysing CFGs")
-    for icfg in program.getICFGs():
-        functionName = icfg.getName()
-        lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+    for cfg in program.getCFGs():
+        functionName = cfg.getName()
+        lnt = Trees.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
-        superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
+        superg = SuperBlocks.SuperBlockGraph(cfg, lnt)
         program.addSuperBlockCFG(superg, functionName)
     program.generateVisualisationFiles()
     if args.traces:
@@ -82,8 +82,8 @@ if __name__ == "__main__":
         tracefileLastModified = os.stat(tracefile)[8]
         programfileLastModified = os.stat(args.program)[8]
         assert programfileLastModified < tracefileLastModified, "Program file modified AFTER trace file generation"
-        #data = Traces.ParseTraces(basename, tracefile, program)
+        data = Traces.ParseTraces(basename, tracefile, program)
         program.generateVisualisationFiles()
-        Calculations.WCETCalculation(program, None, basepath, basename)
+        Calculations.WCETCalculation(program, data, basepath, basename)
     
     

@@ -44,6 +44,8 @@ class SuperBlockGraph (DirectedGraph):
                         superv.setRepresentativeID(vertexID)
                     elif len(superv.getBasicBlockIDs()) == 1:
                         superv.setRepresentativeID(vertexID)
+                if not superv.getRepresentativeID():
+                    Debug.warningMessage("super block %d does not have a representative ID" % superv.getVertexID())
                         
     def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID):
         global nextVertexID 

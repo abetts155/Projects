@@ -274,7 +274,7 @@ class SuperBlock (Vertex):
         self.__repID = vertexID
     
     def getRepresentativeID (self):
-        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
+        assert self.__basicBlocks, "Trying to return a representative ID for super block %d which has no basic blocks" % self._vertexID
         return self.__repID
     
     def getBranchPartitions (self):

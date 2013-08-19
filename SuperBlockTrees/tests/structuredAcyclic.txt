@@ -51,7 +51,69 @@ bb: 17
 succ: 18
 
 bb: 18
-succ: 19
+succ: 19, F2
 
 bb: 19
 succ:
+
+#pragma exclusive {3, 10, 17}
+#pragma bounds [1, 1, 2] 
+
+CFG: F2
+bb: 20
+succ: 21, 25
+
+bb: 21
+succ: 22, 26
+
+bb: 22
+succ: 23
+
+bb: 23
+succ: 24
+
+bb: 24
+succ: 31
+
+bb: 25
+succ: 26, 28
+
+bb: 26
+succ: 27
+
+bb: 27
+succ: 29
+
+bb: 28
+succ: 29
+
+bb: 29
+succ: 30
+
+bb: 30
+succ: 31
+
+bb: 31
+succ:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

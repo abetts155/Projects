@@ -260,6 +260,8 @@ class ArithmeticExpressionTree (DirectedGraph):
             newSuperv.addBasicBlocks(superv.getBasicBlockIDs())
             newSuperv.addEdges(superv.getEdges())
             newSuperv.setLoopHeader(superv.getLoopHeader())
+            if superv.getBasicBlockIDs():
+                newSuperv.setRepresentativeID(superv.getRepresentativeID())
             self.vertices[newSupervID] = newSuperv
     
     def __getInnerHeaders (self, superv, headerID):
@@ -275,8 +277,6 @@ class ArithmeticExpressionTree (DirectedGraph):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
                     headerID             = v.getHeaderID()
-                    loopExitPathVertices = self.__lnt.getLoopExitPathsVertices(headerID)
-                    print loopExitPathVertices
                     supergRegion         = self.__superg.getSuperBlockRegion(headerID)
                     rootv                = self.__superg.getSuperBlockRegionRoot(headerID)
                     dfs                  = DepthFirstSearch(supergRegion, rootv.getVertexID())
@@ -339,18 +339,21 @@ class ArithmeticExpressionTree (DirectedGraph):
                 self.__rootv = v
         assert self.__rootv, "Unable to set root of arithmetic expression tree"
         
-    def evaluateSuperBlock (self, data, superv):
-        time = 0
+    def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv, cfg):
+        wcet = 0
         for basicBlockID in superv.getBasicBlockIDs():
-            if not self.__lnt.isLoopHeader(basicBlockID):
-                time += data.getExecutionTime(self.__functionName, basicBlockID)
-            elif superv.getLoopHeader() == basicBlockID:
-                time += data.getExecutionTime(self.__functionName, basicBlockID)
-        return time
+            if not self.__lnt.isLoopHeader(basicBlockID) or superv.getLoopHeader() == basicBlockID:
+                wcet += data.getExecutionTime(self.__functionName, basicBlockID)
+                if cfg.isCallSite(basicBlockID):
+                    calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
+                    calleeContextWCET = contextWCETs[calleeContextID]
+                    wcet += calleeContextWCET
+        return wcet
         
-    def evaluate (self, data, maximumOnly=True):
+    def evaluate (self, data, contextWCETs, contextv, cfg, maximumOnly=True):
         dfs = DepthFirstSearch(self, self.__rootv.getVertexID())
         for vertexID in dfs.getPostorder():
+            # Do bottom-up traversal
             v = self.getVertex(vertexID)
             if isinstance(v, AdditionVertex):
                 if maximumOnly:
@@ -358,7 +361,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                     for succID in v.getSuccessorIDs():
                         succv = self.getVertex(succID)
                         if isinstance(succv, SuperBlock):
-                            time += self.evaluateSuperBlock(succv)
+                            time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv, cfg)
                         else:
                             time += list(succv.getWCETs())[0]
                     v.addWCET(time)
@@ -366,7 +369,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                     if v.numberOfSuccessors() == 1:
                         succID = v.getSuccessorIDs()[0]
                         succv  = self.getVertex(succID)
-                        v.addWCET(self.evaluateSuperBlock(succv))
+                        v.addWCET(self.__evaluateSuperBlock(succv, data, contextWCETs, contextv, cfg))
                     else:
                         maxTimes = set([])
                         for succID in v.getSuccessorIDs():
@@ -397,11 +400,28 @@ class ArithmeticExpressionTree (DirectedGraph):
                                 v.addWCET(time1+time2)
                                                
             elif isinstance(v, MultiplicationVertex):
-                for succID in v.getSuccessorIDs():
-                    succv = self.getVertex(succID)
-                    for succTime in succv.getWCETs():
-                        succTime *= v.getBound()
-                        v.addWCET(succTime)
+                assert v.numberOfSuccessors() == 1
+                # Get only child of multiplication vertex
+                addv   = self.getVertex(v.getSuccessorIDs()[0])
+                assert addv.numberOfSuccessors() == 1
+                # Get only child of addition vertex
+                superv = self.getVertex(addv.getSuccessorIDs()[0])
+                # It should be a super block
+                assert isinstance(superv, SuperBlock)
+                # We need to get the bound of the super block.
+                # If the super block contains basic block, get its representative ID
+                # Otherwise use the edge it represents
+                if superv.getBasicBlockIDs():
+                    entity = superv.getRepresentativeID()
+                else:
+                    edges = superv.getEdges()
+                    assert len(edges) == 1
+                    entity = list(edges)[0]
+                # Set the bound
+                v.setBound(data.getBound(self.__functionName, entity))
+                for succTime in addv.getWCETs():
+                    succTime *= v.getBound()
+                    v.addWCET(succTime)
             elif isinstance(v, MaximumVertex):
                 if maximumOnly:                            
                     # If only computing the maximum, take the max value among the WCETs of children
@@ -415,7 +435,8 @@ class ArithmeticExpressionTree (DirectedGraph):
                     for succID in v.getSuccessorIDs():
                         succv = self.getVertex(succID)
                         for succTime in succv.getWCETs():
-                            v.addWCET(succTime)                     
+                            v.addWCET(succTime)     
+        return self.__rootv.getWCETs()                
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):

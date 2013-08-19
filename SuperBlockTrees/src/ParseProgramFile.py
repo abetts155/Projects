@@ -8,10 +8,10 @@ successorsIndicator   = 'succ:'
 instructionsIndicator = 'instructions:'
 pragmaRegex           = re.compile(r'\#pragma\s+(exclusive|inclusive|bounds)\s+.*')
         
-def setEntryAndExit (icfg):
+def setEntryAndExit (cfg):
     withoutPred = []
     withoutSucc = []
-    for bb in icfg:
+    for bb in cfg:
         if bb.numberOfSuccessors() == 0:
             withoutSucc.append(bb.getVertexID())
         elif bb.numberOfSuccessors() == 1:
@@ -25,32 +25,32 @@ def setEntryAndExit (icfg):
     
     entryID = None
     if len(withoutPred) == 0:
-        Debug.exitMessage("CFG '%s' does not an entry point" % icfg.getName())
+        Debug.exitMessage("CFG '%s' does not an entry point" % cfg.getName())
     elif len(withoutPred) > 1:
         debugStr = ""
         for bbID in withoutPred:
-            bb       = icfg.getVertex(bbID)
+            bb       = cfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
+        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), debugStr))
     else:
         entryID = withoutPred[0]
-        icfg.setEntryID(entryID)
+        cfg.setEntryID(entryID)
     
     exitID = None
     if len(withoutSucc) == 0:
-        Debug.warningMessage("CFG '%s' does not an exit point" % icfg.getName())
+        Debug.warningMessage("CFG '%s' does not an exit point" % cfg.getName())
     elif len(withoutSucc) > 1:
         debugStr = ""
         for bbID in withoutSucc:
-            bb       = icfg.getVertex(bbID)
+            bb       = cfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
+        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
     else:
         exitID = withoutSucc[0]
-        icfg.setExitID(exitID)
+        cfg.setExitID(exitID)
     
     if entryID and exitID:
-        icfg.addEdge(exitID, entryID)
+        cfg.addEdge(exitID, entryID)
     
 def readInProgram (programFile):
     program = Programs.Program()
@@ -61,20 +61,20 @@ def readInProgram (programFile):
             if line.startswith(cfgIndicator):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                icfg         = CFGs.CFG()
+                cfg          = CFGs.CFG()
                 functionName = lexemes[-1]
                 # Make sure that the first characters of the function name are non-digits
                 # Otherwise function calls will be ambiguous with successor IDs inside a function
                 match = re.match(r'\D+', functionName)
                 if not match: 
                     Debug.exitMessage("Function name '%s' is disallowed. Every name must start with a non-digit character" % functionName)
-                icfg.setName(functionName)
-                program.addICFG(icfg, functionName)
+                cfg.setName(functionName)
+                program.addCFG(cfg, functionName)
                 Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
     # Now add the relevant edges to the CFGs and the call graph
     with open(programFile, 'r') as f: 
         bbIDs        = set([]) 
-        icfg         = None
+        cfg          = None
         bb           = None   
         instructions = False
         for line in f:
@@ -84,22 +84,22 @@ def readInProgram (programFile):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 functionName = lexemes[-1]
-                icfg         = program.getICFG(functionName)
+                cfg          = program.getCFG(functionName)
                 Debug.debugMessage("Retrieved CFG for '%s'" % functionName, 1)
             elif line.startswith(bbIndicator):
                 instructions = False
-                assert icfg, "Found basic block but current CFG is null"
+                assert cfg, "Found basic block but current CFG is null"
                 lexemes = shlex.split(line) 
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
                 vertexID = lexemes[-1]
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
                 vertexID = int(vertexID)
                 if vertexID in bbIDs:
-                    Debug.exitMessage("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, icfg.getName()))
+                    Debug.exitMessage("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, cfg.getName()))
                 else:
                     bbIDs.add(vertexID)
                 bb = Vertices.BasicBlock(vertexID, functionName)
-                icfg.addVertex(bb)
+                cfg.addVertex(bb)
             elif line.startswith(ipointIndicator):
                 instructions = False
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
@@ -122,8 +122,8 @@ def readInProgram (programFile):
                             bb.addSuccessor(succID)
                         else:
                             calleeName = lex
-                            program.getCallGraph().addEdge(icfg.getName(), calleeName, bb.getVertexID())
-                            icfg.addCallSite(bb.getVertexID(), calleeName)                                    
+                            program.getCallGraph().addEdge(cfg.getName(), calleeName, bb.getVertexID())
+                            cfg.addCallSite(bb.getVertexID(), calleeName)                                    
             elif line.startswith(instructionsIndicator):
                 instructions = True
             # Ignore lines consisting of whitespace only
@@ -141,7 +141,7 @@ def readInProgram (programFile):
                 instruction = CFGs.Instruction(address, fields)
                 bb.addInstruction(instruction)
             elif pragmaRegex.match(line):
-                assert icfg, "Found path information pragma but current CFG is null. List path information after the CFG definition."
+                assert cfg, "Found path information pragma but current CFG is null. List path information after the CFG definition."
                 if 'exclusive' in line or 'inclusive' in line:
                     setInfo = re.findall(r'\{.*\}', line)
                     assert len(setInfo) == 1
@@ -149,7 +149,7 @@ def readInProgram (programFile):
                     basicBlockIDs = re.split(r'\W+', setInfo[0])[1:-1]
                     theSet        = set(map(int, basicBlockIDs))
                     for bbID in theSet:
-                        assert icfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
+                        assert cfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
                     if 'exclusive' in line:
                         program.addPathInformation(functionName, PathData.MutualExclusion(theSet))
                     else:
@@ -162,7 +162,7 @@ def readInProgram (programFile):
                     assert lowerBound.isdigit(), "Lower bound '%s' is not an integer" % lowerBound
                     assert upperBound.isdigit(), "Upper bound'%s' is not an integer" % upperBound
                     bbID       = int(bbID)
-                    assert icfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
+                    assert cfg.hasVertex(bbID), "Path information pertaining to basic block %d is not valid as it is not contained in this CFG" % bbID
                     lowerBound = int(lowerBound)
                     upperBound = int(upperBound)
                     assert upperBound >= lowerBound, "Upper bound %d is less than lower bound %d" % (upperBound, lowerBound)
@@ -174,8 +174,8 @@ def readInProgram (programFile):
 def createProgram (programFile):
     program = readInProgram(programFile)
     program.getCallGraph().findAndSetRoot()
-    for icfg in program.getICFGs():
-        icfg.addPredecessorEdges()
-        setEntryAndExit(icfg)
-        icfg.setEdgeIDs()
+    for cfg in program.getCFGs():
+        cfg.addPredecessorEdges()
+        setEntryAndExit(cfg)
+        cfg.setEdgeIDs()
     return program     
