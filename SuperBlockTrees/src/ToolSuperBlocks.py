@@ -4,7 +4,7 @@ def commandLine ():
     from argparse import ArgumentParser
     
     # The command-line parser and its options
-    cmdline = ArgumentParser(description="Compute super block CFGs")
+    cmdline = ArgumentParser(description="Compute WCET using tree-based calculation derived from the super block CFG")
     
     cmdline.add_argument("program",
                          help="a file containing program information (with '.txt' extension)")

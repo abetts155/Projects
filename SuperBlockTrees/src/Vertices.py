@@ -303,40 +303,47 @@ class SuperBlock (Vertex):
         return string
 
 class ArithmeticOperatorVertex (Vertex):
-    def __init__ (self, vertexID, operator):
+    def __init__ (self, vertexID, headerID, operator, acyclicRegion):
         Vertex.__init__(self, vertexID)
-        self._wcets    = set([])
+        self._headerID = headerID
         self._operator = operator
+        self._bound = 0
+        self._acyclicRegion = acyclicRegion
     
-    def addWCET (self, wcet):
-        self._wcets.add(wcet)
+    def setWCET (self, wcet):
+        self._wcet = wcet
         
-    def getWCETs (self):
-        return self._wcets
+    def getWCET (self):
+        return self._wcet
+    
+    def getHeaderID (self):
+        return self._headerID
     
     def getOperator (self):
         return self._operator
-
-class MultiplicationVertex (ArithmeticOperatorVertex):
-    def __init__ (self, vertexID):
-        ArithmeticOperatorVertex.__init__(self, vertexID, '*')
-        self._bound = 0
 
     def setBound (self, bound):
         self._bound = bound
 
     def getBound (self):
         return self._bound
+    
+    def isAcyclicRegion (self):
+        return self._acyclicRegion
+    
+class MultiplicationVertex (ArithmeticOperatorVertex):
+    def __init__ (self, vertexID, headerID, acyclicRegion):
+        ArithmeticOperatorVertex.__init__(self, vertexID, headerID, '*', acyclicRegion)
 
 class AdditionVertex (ArithmeticOperatorVertex):
-    def __init__ (self, vertexID):
-        ArithmeticOperatorVertex.__init__(self, vertexID, '+')
+    def __init__ (self, vertexID, headerID, acyclicRegion):
+        ArithmeticOperatorVertex.__init__(self, vertexID, headerID, '+', acyclicRegion)
         
 class MaximumVertex (ArithmeticOperatorVertex):
-    def __init__ (self, vertexID):
-        ArithmeticOperatorVertex.__init__(self, vertexID, 'max')
+    def __init__ (self, vertexID, headerID, acyclicRegion):
+        ArithmeticOperatorVertex.__init__(self, vertexID, headerID, 'max', acyclicRegion)
 
 class UnionVertex (ArithmeticOperatorVertex):
-    def __init__ (self, vertexID):
-        ArithmeticOperatorVertex.__init__(self, vertexID, 'union')
+    def __init__ (self, vertexID, headerID, acyclicRegion):
+        ArithmeticOperatorVertex.__init__(self, vertexID, headerID, 'union', acyclicRegion)
         

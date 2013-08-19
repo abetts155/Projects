@@ -14,29 +14,29 @@ class SuperBlockGraph (DirectedGraph):
         self.__icfg  = icfg
         self._name   = icfg.getName()
         self.__lnt   = lnt
-        self.__headerToSuperBlockSubgraph = {}
-        self.__headerToRootSuperBlock     = {}
-        self.__headerToPartitionNumbers   = {}
-        self.__basicBlockToSuperBlock     = {}
-        self.__rootSuperv                 = None
+        self.__headerToIterationPathsSuperBlockSubgraph = {}        
+        self.__headerToIterationPathsRootSuperBlock     = {}
+        self.__headerToExitPathsSuperBlockSubgraph      = {}
+        self.__headerToExitPathsRootSuperBlock          = {}
         for level, vertices in lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
-                    headerID = v.getHeaderID()
+                    headerID = v.getHeaderID()                    
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    forwardICFG            = lnt.induceSubgraph(v)
-                    predomTree             = Dominators(forwardICFG, forwardICFG.getEntryID())
-                    reverseICFG            = forwardICFG.getReverseCFG()
-                    postdomTree            = Dominators(reverseICFG, reverseICFG.getEntryID())
-                    postDF                 = DominanceFrontiers(reverseICFG, postdomTree)    
-                    dominatorg             = DominatorGraph(predomTree, postdomTree)  
-                    sccs                   = StrongComponents(dominatorg)
                     branchIpostSuperBlocks = {}
-                    self.__headerToSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
-                    self.__headerToRootSuperBlock[headerID]                = self.__addEdges(lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
-                    self.__headerToRootSuperBlock[headerID].setLoopHeader(headerID)
-                    if v.getVertexID() == lnt.getRootID():
-                        self.__rootSuperv = self.__headerToRootSuperBlock[headerID]
+                    if v.getVertexID() != lnt.getRootID():
+                        forwardCFG, predomTree, postdomTree, postDF, sccs = self.__createSuperBlockRegionDataStructures(lnt, v, lnt.getLoopTails(headerID))
+                        self.__headerToIterationPathsSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardCFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
+                        self.__headerToIterationPathsRootSuperBlock[headerID] = self.__addEdges(lnt, forwardCFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
+                        self.__headerToIterationPathsRootSuperBlock[headerID].setLoopHeader(headerID)  
+                        forwardCFG, predomTree, postdomTree, postDF, sccs = self.__createSuperBlockRegionDataStructures(lnt, v, lnt.getLoopExitSources(headerID))
+                    else:
+                        forwardCFG, predomTree, postdomTree, postDF, sccs = self.__createSuperBlockRegionDataStructures(lnt, v, lnt.getLoopTails(headerID))
+                    branchIpostSuperBlocks.clear()
+                    self.__headerToExitPathsSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardCFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
+                    self.__headerToExitPathsRootSuperBlock[headerID] = self.__addEdges(lnt, forwardCFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
+                    self.__headerToExitPathsRootSuperBlock[headerID].setLoopHeader(headerID)                        
+
         for superv in self:
             if superv.getBasicBlockIDs():
                 for vertexID in superv.getBasicBlockIDs():
@@ -44,8 +44,18 @@ class SuperBlockGraph (DirectedGraph):
                         superv.setRepresentativeID(vertexID)
                     elif len(superv.getBasicBlockIDs()) == 1:
                         superv.setRepresentativeID(vertexID)
-                if not superv.getRepresentativeID():
-                    Debug.warningMessage("super block %d does not have a representative ID" % superv.getVertexID())
+            if not superv.getRepresentativeID():
+                Debug.warningMessage("super block %d does not have a representative ID" % superv.getVertexID())
+                    
+    def __createSuperBlockRegionDataStructures (self, lnt, headerv, sinkVertices):
+        forwardCFG   = lnt.induceSubgraph(headerv, sinkVertices)
+        predomTree   = Dominators(forwardCFG, forwardCFG.getEntryID())
+        reverseICFG  = forwardCFG.getReverseCFG()
+        postdomTree  = Dominators(reverseICFG, reverseICFG.getEntryID())
+        postDF       = DominanceFrontiers(reverseICFG, postdomTree)    
+        dominatorg   = DominatorGraph(predomTree, postdomTree)  
+        sccs         = StrongComponents(dominatorg)
+        return forwardCFG, predomTree, postdomTree, postDF, sccs
                         
     def __addSuperBlocks (self, lnt, forwardICFG, postdomTree, sccs, branchIpostSuperBlocks, headerID):
         global nextVertexID 
@@ -64,9 +74,8 @@ class SuperBlockGraph (DirectedGraph):
                 vertexID = v.getVertexID()     
                 sccID    = sccs.getSCCID(vertexID)
                 superv   = sccIDToVertex[sccID]
-                vToSuperv[vertexID] = superv
                 if isinstance(v, BasicBlock):
-                    self.__basicBlockToSuperBlock[vertexID] = superv
+                    vToSuperv[vertexID] = superv
                     superv.addBasicBlock(vertexID)
                 else:
                     superv.addEdge(v.edge)
@@ -83,7 +92,7 @@ class SuperBlockGraph (DirectedGraph):
         return subgraph, vToSuperv
                 
     def __addEdges (self, lnt, forwardICFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv):
-        rootSuperv = self.__basicBlockToSuperBlock[headerID]
+        rootSuperv = vToSuperv[headerID]
         dfs        = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
         branches   = set([])
         # Process vertices in topological order
@@ -92,7 +101,7 @@ class SuperBlockGraph (DirectedGraph):
             # Found a branch
             if v.numberOfSuccessors() > 1:
                 branches.add(vertexID)
-                sourcev =  vToSuperv[vertexID]                
+                sourcev = vToSuperv[vertexID]                
                 for succID in v.getSuccessorIDs():
                     if not postdomTree.isAncestor(succID, vertexID):
                         destinationv = vToSuperv[succID]
@@ -105,11 +114,11 @@ class SuperBlockGraph (DirectedGraph):
             if v.numberOfPredecessors() > 1:
                 ipreID = predomTree.getImmediateDominator(vertexID)
                 if postdomTree.getImmediateDominator(ipreID) != vertexID:
-                    destinationv = self.__basicBlockToSuperBlock[vertexID]
+                    destinationv = vToSuperv[vertexID]
                     if postDF.size(vertexID) > 1:
                         destinationv.setUnstructuredMerge()
                     for predID in v.getPredecessorIDs():
-                        sourcev = self.__basicBlockToSuperBlock[predID]
+                        sourcev = vToSuperv[predID]
                         self.__addEdge(sourcev, destinationv, predID)
         return rootSuperv
     
@@ -122,26 +131,22 @@ class SuperBlockGraph (DirectedGraph):
         destinationv.addPredecessorEdge(prede)
         succe.setEdgeID(nextEdgeID)
         prede.setEdgeID(nextEdgeID)
-            
-    def getSuperBlock (self, basicBlockID):
-        assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
-        # Handle the case where the basic block is a loop header because it will always appear in 2 super blocks
-        # and we want the one representing the header, not the abstract vertex
-        if basicBlockID in self.__headerToRootSuperBlock:
-            return self.__headerToRootSuperBlock[basicBlockID]
-        return self.__basicBlockToSuperBlock[basicBlockID]
     
-    def getSuperBlockRegion (self, headerID):
-        assert headerID in self.__headerToSuperBlockSubgraph, "Unable to find super block in region of header %d" % headerID
-        return self.__headerToSuperBlockSubgraph[headerID]
+    def getIterationPathsSuperBlockRegion (self, headerID):
+        assert headerID in self.__headerToIterationPathsSuperBlockSubgraph, "Unable to find iteration paths super block region for header %d" % headerID
+        return self.__headerToIterationPathsSuperBlockSubgraph[headerID]
     
-    def getSuperBlockRegionRoot (self, headerID):
-        assert headerID in self.__headerToRootSuperBlock, "Unable to find root super block in region of header %d" % headerID
-        return self.__headerToRootSuperBlock[headerID]
+    def getIterationPathsSuperBlockRegionRoot (self, headerID):
+        assert headerID in self.__headerToIterationPathsRootSuperBlock, "Unable to find root in iteration paths super block region for header %d" % headerID
+        return self.__headerToIterationPathsRootSuperBlock[headerID]
     
-    def getRootSuperBlock (self):
-        assert self.__rootSuperv, "Root super block has not been set"
-        return self.__rootSuperv
+    def getExitPathsSuperBlockRegion (self, headerID):
+        assert headerID in self.__headerToExitPathsSuperBlockSubgraph, "Unable to find exit paths super block region for header %d" % headerID
+        return self.__headerToExitPathsSuperBlockSubgraph[headerID]
+    
+    def getExitPathsSuperBlockRegionRoot (self, headerID):
+        assert headerID in self.__headerToExitPathsRootSuperBlock, "Unable to find root in exit paths super block region for header %d" % headerID
+        return self.__headerToExitPathsRootSuperBlock[headerID]
     
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):

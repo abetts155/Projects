@@ -108,6 +108,11 @@ def generateAET (aet):
         else:
             op    = v.getOperator()
             label = "op %s (vertex=%d)" % (op, v.getVertexID())
+            label += "\nbound = %d" % v.getBound()
+            if v.isAcyclicRegion():
+                label += "\nExit path"
+            else:
+                label += "\nIteration path"
             if op == '+':
                 node = pydot.Node(label, shape="box", fillcolor="#05EDFF", style="filled")
             elif op == 'max':            
@@ -115,7 +120,6 @@ def generateAET (aet):
             elif op == 'union':
                 node = pydot.Node(label, shape="box", fillcolor="#003F87", style="filled")
             else:
-                label += "\nbound = %d" % v.getBound()
                 node = pydot.Node(label, shape="box", fillcolor="#EEC900", style="filled")
             graph.add_node(node)
             vertexToNode[v] = node

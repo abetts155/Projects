@@ -229,6 +229,9 @@ class Program():
     def getSuperBlockCFGs (self):
         return self.__superblockcfgs.values().__iter__()
     
+    def getLNTs (self):
+        return self.__LNTs.values().__iter__()
+    
     def removeFunction (self, functionName):
         if functionName in self.__CFGs:
             # Archive the ICFG as it is no longer needed

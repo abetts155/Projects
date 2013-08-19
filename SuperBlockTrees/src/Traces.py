@@ -97,6 +97,8 @@ class TraceInformation:
         self._executionTimes = {}
         self._bounds = {}
         self._boundsCurrent = {}
+        self._freshInvocations = {}
+        self._freshInvocationsCurrent = {}
         for superg in self._program.getSuperBlockCFGs():
             functionName = superg.getName()
             for v in superg:
@@ -107,17 +109,44 @@ class TraceInformation:
                 if not v.getBasicBlockIDs():    
                     for edge in v.getEdges():
                         self._bounds[(functionName, edge)] = 0
-                        self._boundsCurrent[(functionName, edge)] = 0  
+                        self._boundsCurrent[(functionName, edge)] = 0
+        for lnt in self._program.getLNTs():
+            functionName = lnt.getName()
+            for headerID in lnt.getHeaderIDs():
+                self._freshInvocations[(functionName, headerID)] = 0
+                self._freshInvocationsCurrent[(functionName, headerID)] = 0  
             
     def getBound (self, functionName, vertexID):
         tupleKey = (functionName, vertexID)
         assert tupleKey in self._bounds
         return self._bounds[tupleKey]
+    
+    def getFreshInvocations (self, functionName, headerID):
+        tupleKey = (functionName, headerID)
+        assert tupleKey in self._freshInvocations
+        return self._freshInvocations[tupleKey]
 
     def getExecutionTime (self, functionName, vertexID):
         tupleKey = (functionName, vertexID)
         assert tupleKey in self._executionTimes
         return self._executionTimes[tupleKey]
+    
+    def output (self):
+        for cfg in self._program.getCFGs():
+            functionName = cfg.getName()
+            lnt = self._program.getLNT(functionName)
+            for v in cfg:
+                vertexID = v.getVertexID()
+                tupleKey = (functionName, vertexID)
+                if not lnt.isLoopHeader(vertexID):
+                    Debug.verboseMessage("%s: WCET = %d\tCount = %d" % (tupleKey, 
+                                                                        self._executionTimes[tupleKey], 
+                                                                        self._bounds[tupleKey]))
+                else:
+                    Debug.verboseMessage("%s: WCET = %d\tCount = %d\tInvocations = %d" % (tupleKey, 
+                                                                        self._executionTimes[tupleKey], 
+                                                                        self._bounds[tupleKey],
+                                                                        self._freshInvocations[tupleKey]))
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
@@ -125,6 +154,7 @@ class ParseTraces (TraceInformation):
         self.__initialise()
         self.__parse(tracefile)
         self.__assignRandomWCETs()
+        self.output()
         
     def __assignRandomWCETs (self):
         for cfg in self._program.getCFGs():
@@ -132,7 +162,6 @@ class ParseTraces (TraceInformation):
             for v in cfg:
                 tupleKey = (functionName, v.getVertexID())
                 self._executionTimes[tupleKey] = random.randint(1,20)
-                Debug.verboseMessage("WCET%s = %d" % (tupleKey, self._executionTimes[tupleKey]))
                 
     def __initialise (self):
         self.__currentContextv = None
@@ -198,6 +227,9 @@ class ParseTraces (TraceInformation):
     def __incrementBounds (self):
         tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
         self._boundsCurrent[tupleKey] += 1 
+        if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
+            if not self.__predBB or not self.__currentLNT.isLoopBackEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID()):
+                self._freshInvocationsCurrent[tupleKey] += 1
         if self.__predBB:
             tupleKey2 = (self.__currentCFG.getName(), (self.__predBB.getVertexID(), self.__currentBB.getVertexID()))
             if tupleKey2 in self._boundsCurrent:
@@ -207,6 +239,9 @@ class ParseTraces (TraceInformation):
         for tupleKey in self._bounds:
             self._bounds[tupleKey] = max(self._boundsCurrent[tupleKey], self._bounds[tupleKey])
             self._boundsCurrent[tupleKey] = 0
+        for tupleKey in self._freshInvocationsCurrent:
+            self._freshInvocations[tupleKey] = max(self._freshInvocationsCurrent[tupleKey], self._freshInvocations[tupleKey])
+            self._freshInvocationsCurrent[tupleKey] = 0
     
     def __handleReturn (self):
         Debug.debugMessage("Returning because of basic block %d" % self.__currentBB.getVertexID(), 1)

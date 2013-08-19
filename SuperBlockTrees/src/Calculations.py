@@ -16,14 +16,14 @@ class WCETCalculation:
             contextv     = contextg.getVertex(vertexID)
             functionName = contextv.getName()
             Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
-            cfg          = program.getCFG(functionName)
-            lnt          = program.getLNT(functionName)
-            superg       = program.getSuperBlockCFG(functionName)
-            arithmetict  = ArithmeticExpressionTree(functionName, superg, lnt)
+            cfg         = program.getCFG(functionName)
+            lnt         = program.getLNT(functionName)
+            superg      = program.getSuperBlockCFG(functionName)
+            arithmetict = ArithmeticExpressionTree(functionName, superg, lnt)
+            treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv, cfg)
+            Debug.verboseMessage("Tree:: WCET(%s) = %s" % (functionName, treeWCET))
+            self.__contextDataTrees[contextv.getVertexID()] = treeWCET
             Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
-            wcets = list(arithmetict.evaluate(data, self.__contextDataTrees, contextv, cfg))
-            Debug.verboseMessage("Tree:: WCET(%s) = %s" % (functionName, wcets[0]))
-            self.__contextDataTrees[contextv.getVertexID()] =  wcets[0]
             ilp = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
             Debug.verboseMessage("ILP::  WCET(%s) = %d" % (functionName, ilp._wcet))
             self.__contextDataILPs[contextv.getVertexID()] = ilp._wcet
@@ -249,7 +249,7 @@ class CreateCFGCLP (CLP):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         # First add domains for basic blocks
         for headerID in lnt.getHeaderIDs():
-            for superv in superg.getSuperBlockRegion(headerID):
+            for superv in superg.getIterationPathSuperBlockRegion(headerID):
                 if superv.getBasicBlockIDs():           
                     lowerBound = 0   
                     treev      = lnt.getVertex(superv.getRepresentativeID())
@@ -454,7 +454,7 @@ class CreateSuperBlockCFGILP (ILP):
                 if isinstance(v, HeaderVertex):
                     headerID = v.getHeaderID()
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    supergRegion = superg.getSuperBlockRegion(headerID)
+                    supergRegion = superg.getIterationPathSuperBlockRegion(headerID)
                     self.__createCapacityConstraints(v, lnt)
                     self.__createFlowConstraints(headerID, supergRegion)
                     self.__addExclusiveConstraints(superg, headerID)
