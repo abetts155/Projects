@@ -139,14 +139,14 @@ class TraceInformation:
                 vertexID = v.getVertexID()
                 tupleKey = (functionName, vertexID)
                 if not lnt.isLoopHeader(vertexID):
-                    Debug.verboseMessage("%s: WCET = %d\tCount = %d" % (tupleKey, 
+                    Debug.debugMessage("%s: WCET = %d\tCount = %d" % (tupleKey, 
                                                                         self._executionTimes[tupleKey], 
-                                                                        self._bounds[tupleKey]))
+                                                                        self._bounds[tupleKey]), 10)
                 else:
-                    Debug.verboseMessage("%s: WCET = %d\tCount = %d\tInvocations = %d" % (tupleKey, 
+                    Debug.debugMessage("%s: WCET = %d\tCount = %d\tInvocations = %d" % (tupleKey, 
                                                                         self._executionTimes[tupleKey], 
                                                                         self._bounds[tupleKey],
-                                                                        self._freshInvocations[tupleKey]))
+                                                                        self._freshInvocations[tupleKey]), 10)
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):

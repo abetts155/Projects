@@ -1,7 +1,7 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock, SuperBlock, \
+from Vertices import TreeVertex, HeaderVertex, dummyVertexID, BasicBlock, SuperBlock, \
 AdditionVertex, MultiplicationVertex, MaximumVertex
-import Debug, CFGs
+import Debug, CFGs, Utils
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -426,6 +426,8 @@ class ArithmeticExpressionTree (DirectedGraph):
                 v.setWCET(time)
     
     def evaluate (self, data, contextWCETs, contextv):
+        import time
+        start = time.time()
         self.__headerToWCET = {}
         for level, vertices in self.__lnt.levelIterator(True):
             for lntv in vertices:
@@ -447,6 +449,7 @@ class ArithmeticExpressionTree (DirectedGraph):
                         self.__headerToWCET[headerID] = iterationAETWCET + exitAETWCET
                     else:
                         self.__headerToWCET[headerID] = iterationAETWCET
+        self.solvingTime = (time.time() - start)
         lntRootv = self.__lnt.getVertex(self.__lnt.getRootID())
         return self.__headerToWCET[lntRootv.getHeaderID()]             
         
@@ -454,41 +457,77 @@ class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):
         assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
-        self.__preorder = []
+        self.__initialise (directedg, rootID)
+        self.__doSearch (directedg, rootID)
+        assert self.numOfEdges() == self.numOfVertices() - 1, "Edges = %d, vertices = %d" % (self.numOfEdges(), self.numOfVertices())
+        
+    def __initialise (self, directedg, rootID):
+        self.__preorder  = []
         self.__postorder = []
-        self.__preorderID = 1
-        self.__postorderID = 1
-        self.__vertexID2PreID = {}
+        self.__vertexID2PreID  = {}
         self.__vertexID2PostID = {}
         self.__backedges = []
-        self.initialise (directedg)
-        self.setRootID(rootID)
-        self.doSearch (directedg, rootID)
-        
-    def initialise (self, directedg):
         for v in directedg:
             vertexID = v.getVertexID()
             self.vertices[vertexID] = TreeVertex(vertexID)
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
+        self.setRootID(rootID)
+            
+    def __doSearch (self, directedg, rootID):
+        TRAVERSAL = Utils.enum('FIRST', 'SECOND')
+        stack = []
+        stack.append((rootID, TRAVERSAL.FIRST))
+        stack.append((rootID, TRAVERSAL.SECOND))
+        preorderID = 1
+        postorderID = 1
+        while stack:
+            elem     = stack.pop()
+            vertexID = elem[0] 
+            if elem[1] == TRAVERSAL.SECOND:
+                self.__vertexID2PreID[vertexID] = preorderID
+                self.__preorder.append(vertexID)
+                preorderID += 1
+                v = directedg.getVertex(vertexID)
+                for succID in v.getSuccessorIDs():
+                    if self.__vertexID2PreID[succID] == 0:
+                        if self.getVertex(succID).numberOfPredecessors() == 0:
+                            self.addEdge(vertexID, succID)
+                            stack.append((succID, TRAVERSAL.FIRST))
+                            stack.append((succID, TRAVERSAL.SECOND))
+                    elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+                        pass
+                    elif self.__vertexID2PostID[succID] == 0:
+                        self.__backedges.append([vertexID, succID])
+            else:
+                self.__vertexID2PostID[vertexID] = postorderID
+                self.__postorder.append(vertexID)
+                postorderID += 1
         
-    def doSearch (self, directedg, vertexID):
-        self.__vertexID2PreID[vertexID] = self.__preorderID
-        self.__preorder.append(vertexID)
-        self.__preorderID += 1
-        
-        v = directedg.getVertex(vertexID)
-        for succID in v.getSuccessorIDs ():
-            if self.__vertexID2PreID[succID] == 0:
-                self.addEdge(vertexID, succID)
-                self.doSearch(directedg, succID)
-            elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
-                pass
-            elif self.__vertexID2PostID[succID] == 0:
-                self.__backedges.append([vertexID, succID])
-        self.__vertexID2PostID[vertexID] = self.__postorderID
-        self.__postorder.append(vertexID)
-        self.__postorderID += 1
+#     def initialise (self, directedg):
+#         for v in directedg:
+#             vertexID = v.getVertexID()
+#             self.vertices[vertexID] = TreeVertex(vertexID)
+#             self.__vertexID2PreID[vertexID] = 0
+#             self.__vertexID2PostID[vertexID] = 0
+#         
+#     def doSearch (self, directedg, vertexID):
+#         self.__vertexID2PreID[vertexID] = self.__preorderID
+#         self.__preorder.append(vertexID)
+#         self.__preorderID += 1
+#         
+#         v = directedg.getVertex(vertexID)
+#         for succID in v.getSuccessorIDs ():
+#             if self.__vertexID2PreID[succID] == 0:
+#                 self.addEdge(vertexID, succID)
+#                 self.doSearch(directedg, succID)
+#             elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+#                 pass
+#             elif self.__vertexID2PostID[succID] == 0:
+#                 self.__backedges.append([vertexID, succID])
+#         self.__vertexID2PostID[vertexID] = self.__postorderID
+#         self.__postorder.append(vertexID)
+#         self.__postorderID += 1
         
     def getPreorder (self):
         return self.__preorder
@@ -750,6 +789,7 @@ class LoopNests (Tree):
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
         self.setRootID(self.__headerVertices[rootID])
+        assert self.numOfEdges() == self.numOfVertices() - 1, "Edges = %d, vertices = %d" % (self.numOfEdges(), self.numOfVertices()) 
         
     def _initialise (self):
         for v in self.__directedg:
@@ -865,7 +905,7 @@ class LoopNests (Tree):
         return self.__selfLoopHeaders
     
     def isLoopTail (self, vertexID):
-        for headerID, tails in self.__loopTails.iteritems():
+        for tails in self.__loopTails.values():
             if vertexID in tails:
                 return True
         return False
@@ -896,13 +936,6 @@ class LoopNests (Tree):
             destinations.add(succID)
         return destinations
     
-    def isLoopExitEdge (self, predID, succID):
-        for headerID in self.__headerVertices:
-            if self.isLoopExitOfLoop(predID, headerID):
-                if succID in self.__loopExits[headerID][predID]:
-                    return headerID
-        return None
-    
     def getLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.__loopBodies[headerID]
@@ -912,16 +945,27 @@ class LoopNests (Tree):
             return False
         else:
             return sourceID in self.__loopTails[destinationID]
-        
-    def isLoopExitOfLoop (self, vertexID, headerID):
-        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return vertexID in self.__loopExits[headerID]
     
-    def isLoopExit (self, vertexID):
-        for headerID in self.__headerVertices:
-            if self.isLoopExitOfLoop(vertexID, headerID):
-                return True
+    def isLoopExitSource (self, vertexID):
+        for edges in self.__loopExits.values():
+            for edge in edges:
+                if edge[0] == vertexID:
+                    return True
         return False
+    
+    def isLoopExitDestination (self, vertexID):
+        for edges in self.__loopExits.values():
+            for edge in edges:
+                if edge[1] == vertexID:
+                    return True
+        return False
+    
+    def isLoopExitEdge (self, predID, succID):
+        for headerID, edges in self.__loopExits.iteritems():
+            for edge in edges:
+                if edge[0] == predID and edge[1] == succID:
+                    return headerID
+        return None
     
     def isDoWhileLoop (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID

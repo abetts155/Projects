@@ -1,7 +1,7 @@
 from Vertices import HeaderVertex
 from Trees import DepthFirstSearch, ArithmeticExpressionTree
 import Debug, Visualisation
-import os, re
+import os
 
 def getNewLine (num=1):
     return "\n" * num 
@@ -21,11 +21,11 @@ class WCETCalculation:
             superg      = program.getSuperBlockCFG(functionName)
             arithmetict = ArithmeticExpressionTree(functionName, superg, cfg, lnt)
             treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv)
-            Debug.verboseMessage("Tree:: WCET(%s) = %s" % (functionName, treeWCET))
+            Debug.verboseMessage("Tree:: WCET(%s) = %s (SOLVE TIME = %.5f)" % (functionName, treeWCET, arithmetict.solvingTime))
             self.__contextDataTrees[contextv.getVertexID()] = treeWCET
             Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
             ilp = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
-            Debug.verboseMessage("ILP::  WCET(%s) = %d" % (functionName, ilp._wcet))
+            Debug.verboseMessage("ILP::  WCET(%s) = %d (SOLVE TIME = %.5f)" % (functionName, ilp._wcet, ilp.solvingTime))
             self.__contextDataILPs[contextv.getVertexID()] = ilp._wcet
             
 class ECLIPSE:
@@ -392,30 +392,31 @@ class LpSolve:
     
 class ILP ():
     def __init__ (self):
-        self._wcet = -1
+        self._wcet = 0
         self._variableToExecutionCount = {}
         
     def _solve(self, filename):
+        import time, shlex, decimal
         from subprocess import Popen, PIPE
-        import shlex, decimal
         Debug.debugMessage("Solving ILP for %s" % filename, 10)
-        command    = "lp_solve %s" % filename 
-        proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        command    = "lp_solve %s -S1 -time" % filename 
+        start = time.time()
+        proc       = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, executable="/bin/bash")
+        self.solvingTime = (time.time() - start)
         returnCode = proc.wait()
         if returnCode != 0:
             Debug.warningMessage("Running '%s' failed" % command)
             return False
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
-                lexemes     = shlex.split(line)
-                self._wcet = long(decimal.Decimal(lexemes[-1])) 
-            elif line.startswith(LpSolve.edgePrefix) or line.startswith(LpSolve.vertexPrefix):
                 lexemes = shlex.split(line)
-                assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
-                variable = lexemes[0]
-                count    = lexemes[1]
-                self._variableToExecutionCount[variable] = count
-                Debug.debugMessage("%s = %s" % (variable, count), 15)
+                self._wcet = long(decimal.Decimal(lexemes[-1])) 
+        assert self._wcet
+        for line in proc.stderr.readlines():
+            if line.startswith("CPU Time for Parsing"):
+                lexemes = shlex.split(line)
+                time    = lexemes[5][:-1]
+                self.solvingTime -= float(time)
         return True
                     
 class CreateSuperBlockCFGILP (ILP):
