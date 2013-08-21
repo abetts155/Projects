@@ -1,7 +1,7 @@
 from Vertices import HeaderVertex
 from Trees import DepthFirstSearch, ArithmeticExpressionTree
 import Debug, Visualisation
-import os
+import os, re
 
 def getNewLine (num=1):
     return "\n" * num 
@@ -19,8 +19,8 @@ class WCETCalculation:
             cfg         = program.getCFG(functionName)
             lnt         = program.getLNT(functionName)
             superg      = program.getSuperBlockCFG(functionName)
-            arithmetict = ArithmeticExpressionTree(functionName, superg, lnt)
-            treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv, cfg)
+            arithmetict = ArithmeticExpressionTree(functionName, superg, cfg, lnt)
+            treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv)
             Debug.verboseMessage("Tree:: WCET(%s) = %s" % (functionName, treeWCET))
             self.__contextDataTrees[contextv.getVertexID()] = treeWCET
             Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
@@ -415,6 +415,7 @@ class ILP ():
                 variable = lexemes[0]
                 count    = lexemes[1]
                 self._variableToExecutionCount[variable] = count
+                Debug.debugMessage("%s = %s" % (variable, count), 15)
         return True
                     
 class CreateSuperBlockCFGILP (ILP):
@@ -639,14 +640,14 @@ class CreateCFGILP (ILP):
         self.__constraints = []
         self.__variables   = set([])
         self.__createStructuralConstraints(cfg)
-        self.__createExecutionCountConstraints(data, cfg)
+        self.__createExecutionCountConstraints(data, cfg, lnt)
         self.__createIntegerConstraint()
         self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
         filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(filename, 'w') as ilpFile:
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
-        self._solve(filename)            
+        self._solve(filename)
             
     def __createStructuralConstraints (self, cfg):
         for v in cfg:
@@ -688,17 +689,59 @@ class CreateCFGILP (ILP):
             constraint2 += getNewLine(2) 
             self.__constraints.append(constraint2)
     
-    def __createExecutionCountConstraints (self, data, cfg):
-        for v in cfg:
-            bound = data.getBound(cfg.getName(), v.getVertexID())
-            comment = LpSolve.getComment("Capacity constraints on vertex %d" % v.getVertexID())
-            self.__constraints.append(comment)
-            constraint = LpSolve.getVertexVariable(v.getVertexID())
-            constraint += LpSolve.ltOrEqual
-            constraint += str(bound)
-            constraint += LpSolve.semiColon
-            constraint += getNewLine(2)
-            self.__constraints.append(constraint)
+    def __createExecutionCountConstraints (self, data, cfg, lnt):
+        for level, vertices in lnt.levelIterator(True):
+            for lntv in vertices:
+                if isinstance(lntv, HeaderVertex):
+                    headerID = lntv.getHeaderID()
+                    comment  = LpSolve.getComment("Capacity constraints on header %d" % headerID)
+                    self.__constraints.append(comment)
+                    if lnt.getRootID() != lntv.getVertexID():
+                        if lnt.isDoWhileLoop(headerID):
+                            bound      = data.getBound(cfg.getName(), headerID)
+                            constraint = LpSolve.getVertexVariable(headerID)
+                            constraint += LpSolve.ltOrEqual
+                            constraint += str(bound)
+                            constraint += LpSolve.semiColon
+                            constraint += getNewLine(2)
+                            self.__constraints.append(constraint)
+                        else:
+                            headerInvocations = data.getBound(cfg.getName(), headerID)
+                            freshInvocations  = data.getFreshInvocations(cfg.getName(), headerID)
+                            # Bound on back-edge executions
+                            constraint = ""
+                            count = 1
+                            tails = lnt.getLoopTails(headerID)
+                            for tailID in tails:
+                                constraint += LpSolve.getEdgeVariable(tailID, headerID)
+                                if count < len(tails):
+                                    constraint += LpSolve.plus 
+                            constraint += LpSolve.ltOrEqual
+                            constraint += str(headerInvocations - freshInvocations)
+                            constraint += LpSolve.semiColon
+                            constraint += getNewLine(2)
+                            self.__constraints.append(constraint)
+                            # Bound on exit-edge executions
+                            constraint = ""
+                            count = 1
+                            exits = lnt.getLoopExits(headerID)
+                            for predID, succID in exits:
+                                constraint += LpSolve.getEdgeVariable(predID, succID)
+                                if count < len(exits):
+                                    constraint += LpSolve.plus 
+                            constraint += LpSolve.ltOrEqual
+                            constraint += str(freshInvocations)
+                            constraint += LpSolve.semiColon
+                            constraint += getNewLine(2)
+                            self.__constraints.append(constraint)                            
+                    else:
+                        bound      = data.getBound(cfg.getName(), headerID)
+                        constraint = LpSolve.getVertexVariable(headerID)
+                        constraint += LpSolve.equals
+                        constraint += str(bound)
+                        constraint += LpSolve.semiColon
+                        constraint += getNewLine(2)
+                        self.__constraints.append(constraint)
                             
     def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
@@ -707,8 +750,7 @@ class CreateCFGILP (ILP):
             if var.startswith(LpSolve.vertexPrefix):
                 lIndex       = var.find('_')
                 basicBlockID = int(var[lIndex+1:])
-                v            = cfg.getVertex(basicBlockID)
-                wcet         = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
+                wcet         = data.getExecutionTime(cfg.getName(), basicBlockID)
                 if cfg.isCallSite(basicBlockID):
                     calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
                     calleeContextWCET = contextWCETs[calleeContextID]

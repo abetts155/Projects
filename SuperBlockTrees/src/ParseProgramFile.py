@@ -7,6 +7,30 @@ ipointIndicator       = 'ipoint:'
 successorsIndicator   = 'succ:'
 instructionsIndicator = 'instructions:'
 pragmaRegex           = re.compile(r'\#pragma\s+(exclusive|inclusive|bounds)\s+.*')
+
+def writeProgram (program, filename):
+    with open(filename, 'w') as f:
+        for cfg in program.getCFGs():
+            f.write("%s %s\n" % (cfgIndicator, cfg.getName()))
+            for v in cfg:
+                vertexID = v.getVertexID()
+                f.write("%s %d\n" % (bbIndicator, vertexID))
+                f.write("%s " % successorsIndicator)
+                i = 1
+                totalSuccessors = v.numberOfSuccessors()
+                if cfg.isCallSite(vertexID):
+                    assert cfg.getExitID() != vertexID, "Exit vertex in CFG '%s' is a call site, which should be forbidden" % vertexID
+                    totalSuccessors += 1
+                if cfg.getExitID() != vertexID:
+                    for succID in v.getSuccessorIDs():
+                        f.write("%d" % succID)
+                        if i < totalSuccessors:
+                            f.write(", ")
+                        i += 1
+                    if cfg.isCallSite(vertexID):
+                        calleeName = cfg.getCalleeName(vertexID)
+                        f.write(calleeName)
+                f.write("\n" * 2)        
         
 def setEntryAndExit (cfg):
     withoutPred = []

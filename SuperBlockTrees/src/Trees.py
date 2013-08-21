@@ -244,76 +244,107 @@ class LengauerTarjan (Tree):
         self.__ancestor[wID] = vID
         
 class ArithmeticExpressionTree (DirectedGraph):
-    def __init__(self, functionName, superg, lnt):
+    def __init__(self, functionName, superg, cfg, lnt):
         DirectedGraph.__init__(self)
         self.__functionName = functionName
         self.__superg = superg
+        self.__cfg = cfg
         self.__lnt = lnt
         self.__addSuperBlocks()
         self.__addOperators()
-        self.__setRoot()
     
-    def __addSuperBlocks(self):
+    def __addSuperBlocks (self):
         for superv in self.__superg:
-            newSupervID  = superv.getVertexID()
-            newSuperv    = SuperBlock(newSupervID)
-            newSuperv.addBasicBlocks(superv.getBasicBlockIDs())
-            newSuperv.addEdges(superv.getEdges())
+            supervID  = superv.getVertexID()
+            newSuperv = SuperBlock(supervID)
+            self.vertices[supervID] = newSuperv
+            bbIDs = set([])
+            for bbID in superv.getBasicBlockIDs():
+                if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
+                    bbIDs.add(bbID)
+            newSuperv.addBasicBlocks(bbIDs)
+            if superv.hasRepresentativeID():
+                repID = superv.getRepresentativeID()
+                if repID in bbIDs:
+                    newSuperv.setRepresentativeID(repID)
             newSuperv.setLoopHeader(superv.getLoopHeader())
-            if superv.getBasicBlockIDs():
-                newSuperv.setRepresentativeID(superv.getRepresentativeID())
-            self.vertices[newSupervID] = newSuperv
-        
+            newSuperv.addEdges(superv.getEdges())
+    
     def __addOperators (self):
-        self.__supervToTreeVertex = {}
-        self.__loopSubtrees = {}
+        self.__supervToTreeVertex    = {}
+        self.__iterationPathsRootIDs = {}
+        self.__exitPathsRootIDs      = {}
+        self.__iterationPathsAETs    = {}
+        self.__exitPathsAETs         = {}
         for level, vertices in self.__lnt.levelIterator(True):
             for v in vertices:
                 if isinstance(v, HeaderVertex):
                     headerID = v.getHeaderID()
                     if v.getVertexID() != self.__lnt.getRootID():
-                        supergRegion   = self.__superg.getIterationPathsSuperBlockRegion(headerID)
-                        iterationRootv = self.__superg.getIterationPathsSuperBlockRegionRoot(headerID)
-                        self.__buildSubtree(headerID, supergRegion, iterationRootv, False)
-                        supergRegion2 = self.__superg.getExitPathsSuperBlockRegion(headerID)
-                        acyclicRootv  = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
-                        self.__buildSubtree(headerID, supergRegion2, acyclicRootv, True)
-                        self.__connectIterationAndExitPathsSubtrees(headerID, iterationRootv, acyclicRootv)
+                        supergRegion     = self.__superg.getIterationPathsSuperBlockRegion(headerID)
+                        supergRegionRoot = self.__superg.getIterationPathsSuperBlockRegionRoot(headerID)
+                        subgraph, root   = self.__buildSubtree(headerID, supergRegion, supergRegionRoot, False)
+                        self.__iterationPathsRootIDs[headerID] = root
+                        self.__iterationPathsAETs[headerID] = subgraph
+                        if not self.__lnt.isDoWhileLoop(headerID):
+                            supergRegion2     = self.__superg.getExitPathsSuperBlockRegion(headerID)
+                            supergRegionRoot2 = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
+                            subgraph, root = self.__buildSubtree(headerID, supergRegion2, supergRegionRoot2, True)
+                            self.__exitPathsRootIDs[headerID] = root
+                            self.__exitPathsAETs[headerID] = subgraph
                     else:
                         supergRegion2 = self.__superg.getExitPathsSuperBlockRegion(headerID)
                         rootv2        = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
-                        self.__buildSubtree(headerID, supergRegion2, rootv2, True)
+                        subgraph, root = self.__buildSubtree(headerID, supergRegion2, rootv2, True)
+                        self.__iterationPathsRootIDs[headerID] = root
+                        self.__iterationPathsAETs[headerID] = subgraph
                         
-    def __connectIterationAndExitPathsSubtrees (self, headerID, iterationRootv, acyclicRootv):
-        addvID = self.getNextVertexID()
-        addv   = AdditionVertex(addvID, headerID, True)
-        self.vertices[addvID] = addv
-        self.addEdge(addvID, self.__supervToTreeVertex[iterationRootv.getVertexID()])
-        self.addEdge(addvID, self.__supervToTreeVertex[acyclicRootv.getVertexID()])
-        self.__loopSubtrees[headerID] = addv
+    def __addVertex (self, subgraph, vertexID, v):
+        subgraph.vertices[vertexID] = v
+        self.vertices[vertexID] = v
                     
     def __buildSubtree (self, headerID, supergRegion, rootv, acyclicRegion):
-        dfs = DepthFirstSearch(supergRegion, rootv.getVertexID())
+        subgraph = DirectedGraph()
+        dfs      = DepthFirstSearch(supergRegion, rootv.getVertexID())
         for supervID in dfs.getPostorder():
+            originalSuperv = self.__superg.getVertex(supervID)
+            subgraph.vertices[supervID] = self.getVertex(supervID)
             # Addition vertex to sum up WCETs of basic blocks within super block
             addvID = self.getNextVertexID()
             addv   = AdditionVertex(addvID, headerID, acyclicRegion)
-            self.vertices[addvID] = addv
+            self.__addVertex(subgraph, addvID, addv)
             self.addEdge(addvID, supervID)
             # Multiplication vertex to factor WCET contribution of super block
             multiplyvID = self.getNextVertexID()
             multiplyv   = MultiplicationVertex(multiplyvID, headerID, acyclicRegion)
-            self.vertices[multiplyvID] = multiplyv
+            self.__addVertex(subgraph, multiplyvID, multiplyv)
             self.addEdge(multiplyvID, addvID)
             self.__supervToTreeVertex[supervID] = multiplyvID
             
-            originalSuperv = self.__superg.getVertex(supervID)
+            headerIDs = set([])
+            for bbID in originalSuperv.getBasicBlockIDs():
+                if self.__lnt.isLoopHeader(bbID) and originalSuperv.getLoopHeader() != bbID:
+                    headerIDs.add(bbID)
+            if headerIDs:
+                # Add new super block representing collapsed inner loops
+                newSupervID = self.getNextVertexID()
+                newSuperv   = SuperBlock(newSupervID)
+                newSuperv.addBasicBlocks(headerIDs)
+                self.__addVertex(subgraph, newSupervID, newSuperv)
+                # Addition vertex to sum up contribution of inner loops
+                addvID2 = self.getNextVertexID()
+                addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
+                self.__addVertex(subgraph, addvID2, addv2)
+                self.addEdge(addvID2, multiplyvID)
+                self.addEdge(addvID2, newSupervID)
+                self.__supervToTreeVertex[supervID] = addvID2
+
             if originalSuperv.numberOfSuccessors():
                 if originalSuperv.numberOfSuccessors() == 1:
                     succID = originalSuperv.getSuccessorIDs()[0]
                     addvID2 = self.getNextVertexID()
                     addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
-                    self.vertices[addvID2] = addv2
+                    self.__addVertex(subgraph, addvID2, addv2)
                     self.addEdge(addvID2, self.__supervToTreeVertex[supervID])
                     self.addEdge(addvID2, self.__supervToTreeVertex[succID])
                     self.__supervToTreeVertex[supervID] = addvID2
@@ -321,118 +352,103 @@ class ArithmeticExpressionTree (DirectedGraph):
                     # Addition vertex to sum up evaluation of maximum vertices and the contribution of the super block
                     addvID2 = self.getNextVertexID()
                     addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
-                    self.vertices[addvID2] = addv2
+                    self.__addVertex(subgraph, addvID2, addv2)
                     self.addEdge(addvID2, multiplyvID)
                     self.__supervToTreeVertex[supervID] = addvID2
                     for succEdges in originalSuperv.getBranchPartitions().values():
                         if len(succEdges) > 1:
                             maxvID = self.getNextVertexID()
                             maxv   = MaximumVertex(maxvID, headerID, acyclicRegion)
-                            self.vertices[maxvID] = maxv
+                            self.__addVertex(subgraph, maxvID, maxv)
                             for succe in succEdges:
                                 succID      = succe.getVertexID()
                                 multiplyvID = self.__supervToTreeVertex[succID]
                                 self.addEdge(maxvID, multiplyvID)
-                            self.addEdge(addvID2, maxvID)    
-            # Link in sub-trees of nested loops
-            innerHeaders = self.__getInnerHeaders(originalSuperv, headerID)                                
-            if innerHeaders:
-                addvID3 = self.getNextVertexID()
-                addv3   = AdditionVertex(addvID3, headerID, acyclicRegion)
-                self.vertices[addvID3] = addv3
-                self.addEdge(addvID3, self.__supervToTreeVertex[supervID])
-                self.__supervToTreeVertex[supervID] = addvID3
-                for innerHeaderID in innerHeaders:
-                    innerRootv = self.__loopSubtrees[innerHeaderID]
-                    self.addEdge(addvID3, innerRootv.getVertexID())
-                    
-    def __getInnerHeaders (self, superv, headerID):
-        headers = set([])
-        for basicBlockID in superv.getBasicBlockIDs():
-            if self.__lnt.isLoopHeader(basicBlockID) and basicBlockID != headerID:
-                headers.add(basicBlockID)
-        return headers
+                            self.addEdge(addvID2, maxvID)
+        return subgraph, self.__supervToTreeVertex[rootv.getVertexID()]
         
-    def __setRoot (self):
-        self.__rootv = None
-        for v in self:
-            if v.numberOfPredecessors() == 0:
-                #assert self.__rootv is None, "Root of arithmetic expression tree already set"
-                self.__rootv = v
-        assert self.__rootv, "Unable to set root of arithmetic expression tree"
-        
-    def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv, cfg):
+    def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv):
         wcet = 0
-        for basicBlockID in superv.getBasicBlockIDs():
-            if not self.__lnt.isLoopHeader(basicBlockID) or superv.getLoopHeader() == basicBlockID:
-                wcet += data.getExecutionTime(self.__functionName, basicBlockID)
-                if cfg.isCallSite(basicBlockID):
-                    calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
+        for bbID in superv.getBasicBlockIDs():
+            if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
+                wcet += data.getExecutionTime(self.__functionName, bbID)
+                if self.__cfg.isCallSite(bbID):
+                    calleeContextID   = contextv.getSuccessorWithCallSite(bbID)
                     calleeContextWCET = contextWCETs[calleeContextID]
                     wcet += calleeContextWCET
+            if self.__lnt.isLoopHeader(bbID) and superv.getLoopHeader() != bbID:
+                wcet += self.__headerToWCET[bbID]
         return wcet
-        
-    def evaluate (self, data, contextWCETs, contextv, cfg):
-        dfs = DepthFirstSearch(self, self.__rootv.getVertexID())
+    
+    def __propagateBounds (self, headerv, data):
+        headerID = headerv.getHeaderID()
+        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID():
+            # If not a do-while loop and not the dummy loop, peel off the iterations which came from outside the loop body
+            headerInvocations = data.getBound(self.__functionName, headerID)
+            freshInvocations  = data.getFreshInvocations(self.__functionName, headerID)
+            totalCount        = headerInvocations - freshInvocations
+        else:
+            totalCount = data.getBound(self.__functionName, headerID)
+        iterationAET = self.__iterationPathsAETs[headerID]
+        for v in iterationAET:
+            if not isinstance(v, SuperBlock):
+                v.setBound(totalCount)
+        #  Now propagate bound downwards to acyclic region
+        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID(): 
+            totalCount = data.getFreshInvocations(self.__functionName, headerID)
+            exitAET    = self.__exitPathsAETs[headerID]
+            for v in exitAET:
+                if not isinstance(v, SuperBlock):
+                    v.setBound(totalCount)
+                    
+    def __evaluateDFS (self, dfs, data, contextWCETs, contextv):
         for vertexID in dfs.getPostorder():
-            # Do bottom-up traversal
             v = self.getVertex(vertexID)
             if isinstance(v, AdditionVertex):
                 time  = 0
-                bound = 0
                 for succID in v.getSuccessorIDs():
                     succv = self.getVertex(succID)
                     if isinstance(succv, SuperBlock):
-                        time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv, cfg)
-                        if v.isAcyclicRegion():
-                            bound = max(bound, data.getFreshInvocations(self.__functionName, v.getHeaderID()))
-                        else:
-                            if succv.getBasicBlockIDs():
-                                entity = succv.getRepresentativeID()
-                            else:
-                                edges = succv.getEdges()
-                                assert len(edges) == 1
-                                entity = list(edges)[0]
-                            bound = max(bound, data.getBound(self.__functionName, entity))
+                        time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv)
                     else:
                         time += succv.getWCET()
-                        bound = max(bound, succv.getBound())
-                v.setWCET(time)                        
-                v.setBound(bound)                       
+                v.setWCET(time)
             elif isinstance(v, MultiplicationVertex):
                 # Get only child of multiplication vertex
                 assert v.numberOfSuccessors() == 1
                 addv = self.getVertex(v.getSuccessorIDs()[0])
-                v.setBound(addv.getBound())
-                v.setWCET(addv.getWCET() * addv.getBound())
+                v.setWCET(addv.getWCET() * v.getBound())
             elif isinstance(v, MaximumVertex):
-                if v.isAcyclicRegion():
-                    totalCount = data.getFreshInvocations(self.__functionName, v.getHeaderID())
-                else:
-                    headerInvocations = data.getBound(self.__functionName, v.getHeaderID())
-                    freshInvocations  = data.getFreshInvocations(self.__functionName, v.getHeaderID())
-                    totalCount        = headerInvocations - freshInvocations
-                v.setBound(totalCount)
-                succTimes = []
-                for succID in v.getSuccessorIDs():
-                    succv       = self.getVertex(succID)
-                    timingTuple = (succv.getWCET(), succv)
-                    succTimes.append(timingTuple)
-                sortedTimes = sorted(succTimes, reverse=True)
                 time = 0
-                while totalCount and sortedTimes:
-                    timingTuple = sortedTimes.pop(0)
-                    # If the execution count remaining at the maximum vertex >= execution count at successor
-                    # then all of its execution time can be used 
-                    if totalCount >= timingTuple[1].getBound():
-                        time += timingTuple[0]
-                        totalCount -= timingTuple[1].getBound()
-                    else:
-                        unitTime = timingTuple[0]/timingTuple[1].getBound()
-                        time += unitTime * totalCount
-                        totalCount -= totalCount
+                for succID in v.getSuccessorIDs():
+                    succv = self.getVertex(succID)
+                    time  = max(time, succv.getWCET())
                 v.setWCET(time)
-        return self.__rootv.getWCET()               
+    
+    def evaluate (self, data, contextWCETs, contextv):
+        self.__headerToWCET = {}
+        for level, vertices in self.__lnt.levelIterator(True):
+            for lntv in vertices:
+                if isinstance(lntv, HeaderVertex):
+                    # Propagate bounds downwards in tree
+                    self.__propagateBounds(lntv, data)
+                    headerID = lntv.getHeaderID()
+                    iterationAET       = self.__iterationPathsAETs[headerID]
+                    iterationAETRootID = self.__iterationPathsRootIDs[headerID]
+                    dfs                = DepthFirstSearch(iterationAET, iterationAETRootID)
+                    self.__evaluateDFS(dfs, data, contextWCETs, contextv)
+                    iterationAETWCET   = iterationAET.getVertex(iterationAETRootID).getWCET()
+                    if not self.__lnt.isDoWhileLoop(headerID) and lntv.getVertexID() != self.__lnt.getRootID():
+                        exitAET       = self.__exitPathsAETs[headerID]
+                        exitAETRootID = self.__exitPathsRootIDs[headerID]
+                        dfs2          = DepthFirstSearch(exitAET, exitAETRootID)
+                        self.__evaluateDFS(dfs2, data, contextWCETs, contextv)
+                        exitAETWCET   = exitAET.getVertex(exitAETRootID).getWCET()
+                        self.__headerToWCET[headerID] = iterationAETWCET + exitAETWCET
+                    else:
+                        self.__headerToWCET[headerID] = iterationAETWCET
+        lntRootv = self.__lnt.getVertex(self.__lnt.getRootID())
+        return self.__headerToWCET[lntRootv.getHeaderID()]             
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):
@@ -807,19 +823,17 @@ class LoopNests (Tree):
             
     def _findExits (self):
         for headerID in self.__headerVertices.keys():
-            self.__loopExits[headerID] = {}
+            self.__loopExits[headerID] = set([])
             for vertexID in self.__loopBodies[headerID]:
                 v = self.__directedg.getVertex(vertexID)
                 for succID in v.getSuccessorIDs():
                     if succID not in self.__loopBodies[headerID]:
                         if headerID != vertexID and self.isLoopHeader(vertexID):
                             if succID not in self.__loopBodies[vertexID]:
-                                self.__loopExits[headerID][vertexID] = []
-                                self.__loopExits[headerID][vertexID].append(succID)
+                                self.__loopExits[headerID].add((vertexID, succID))
                         else:
-                            self.__loopExits[headerID][vertexID] = []
-                            self.__loopExits[headerID][vertexID].append(succID)
-            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID].keys()), 15)
+                            self.__loopExits[headerID].add((vertexID, succID))
+            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID]), 15)
             
     def __str__ (self):
         string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"
@@ -864,14 +878,23 @@ class LoopNests (Tree):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return len(self.__loopTails[headerID])
     
+    def getLoopExits (self, headerID):
+        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.__loopExits[headerID] 
+    
     def getLoopExitSources (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopExits[headerID].keys()
+        sources = set([])
+        for predID, succID in self.__loopExits[headerID]:
+            sources.add(predID)
+        return sources
     
     def getLoopExitDestinations (self, headerID, exitID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        assert exitID in self.__loopExits[headerID].keys(), "Vertex %s is not an exit of loop with header %d" % (exitID, headerID)
-        return self.__loopExits[headerID][exitID]
+        destinations = set([])
+        for predID, succID in self.__loopExits[headerID]:
+            destinations.add(succID)
+        return destinations
     
     def isLoopExitEdge (self, predID, succID):
         for headerID in self.__headerVertices:

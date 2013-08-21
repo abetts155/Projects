@@ -26,10 +26,15 @@ def generateGraphviz (g, fileNamePrefix):
 def handleCFG (cfg):
     graph        = pydot.Dot(graph_type='digraph')
     vertexToNode = {}
+    entryv = cfg.getVertex(cfg.getEntryID())
+    node = pydot.Node(str(entryv.getVertexID()))
+    graph.add_node(node)
+    vertexToNode[entryv] = node
     for v in cfg:
-        node = pydot.Node(str(v.getVertexID()))
-        graph.add_node(node)
-        vertexToNode[v] = node
+        if v.getVertexID() != entryv.getVertexID():
+            node = pydot.Node(str(v.getVertexID()))
+            graph.add_node(node)
+            vertexToNode[v] = node
     for v in cfg:
         for succID in v.getSuccessorIDs():
             succv = cfg.getVertex(succID)
@@ -109,6 +114,7 @@ def generateAET (aet):
             op    = v.getOperator()
             label = "op %s (vertex=%d)" % (op, v.getVertexID())
             label += "\nbound = %d" % v.getBound()
+            label += "\nWCET = %d" % v.getWCET()
             if v.isAcyclicRegion():
                 label += "\nExit path"
             else:

@@ -32,10 +32,11 @@ class SuperBlockGraph (DirectedGraph):
                         forwardCFG, predomTree, postdomTree, postDF, sccs = self.__createSuperBlockRegionDataStructures(lnt, v, lnt.getLoopExitSources(headerID))
                     else:
                         forwardCFG, predomTree, postdomTree, postDF, sccs = self.__createSuperBlockRegionDataStructures(lnt, v, lnt.getLoopTails(headerID))
-                    branchIpostSuperBlocks.clear()
-                    self.__headerToExitPathsSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardCFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
-                    self.__headerToExitPathsRootSuperBlock[headerID] = self.__addEdges(lnt, forwardCFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
-                    self.__headerToExitPathsRootSuperBlock[headerID].setLoopHeader(headerID)                        
+                    if not lnt.isDoWhileLoop(headerID):
+                        branchIpostSuperBlocks.clear()
+                        self.__headerToExitPathsSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, forwardCFG, postdomTree, sccs, branchIpostSuperBlocks, headerID)
+                        self.__headerToExitPathsRootSuperBlock[headerID] = self.__addEdges(lnt, forwardCFG, predomTree, postdomTree, postDF, branchIpostSuperBlocks, headerID, vToSuperv)
+                        self.__headerToExitPathsRootSuperBlock[headerID].setLoopHeader(headerID)                        
 
         for superv in self:
             if superv.getBasicBlockIDs():
@@ -44,8 +45,6 @@ class SuperBlockGraph (DirectedGraph):
                         superv.setRepresentativeID(vertexID)
                     elif len(superv.getBasicBlockIDs()) == 1:
                         superv.setRepresentativeID(vertexID)
-            if not superv.getRepresentativeID():
-                Debug.warningMessage("super block %d does not have a representative ID" % superv.getVertexID())
                     
     def __createSuperBlockRegionDataStructures (self, lnt, headerv, sinkVertices):
         forwardCFG   = lnt.induceSubgraph(headerv, sinkVertices)

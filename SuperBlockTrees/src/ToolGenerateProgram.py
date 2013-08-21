@@ -11,6 +11,10 @@ def commandLine ():
                          help="clean out temporary files",
                          default=False)
     
+    cmdline.add_argument("-f",
+                         "--filename",
+                         help="write to this filename in the current directory")
+    
     cmdline.add_argument("-d",
                          "--debug",
                          type=int,
@@ -23,10 +27,10 @@ def commandLine ():
                          help="be verbose",
                          default=False)
     
-    cmdline.add_argument("-u",
-                         "--udraw",
+    cmdline.add_argument("-g",
+                         "--graphviz",
                          action="store_true",
-                         help="generateGraphviz uDrawGraph files",
+                         help="generate Graphviz files",
                          default=False)
     
     cmdline.add_argument("--subprograms",
@@ -83,12 +87,13 @@ def commandLine ():
     return cmdline.parse_args()
         
 if __name__ == "__main__":
-    import GenerateProgram, Debug, UDrawGraph
+    import GenerateProgram, Debug, Visualisation, ParseProgramFile
+    import os, re, sys
     
-    args               = commandLine()
-    Debug.verbose      = args.verbose
-    Debug.debug        = args.debug
-    UDrawGraph.enabled = args.udraw
+    args                  = commandLine()
+    Debug.verbose         = args.verbose
+    Debug.debug           = args.debug
+    Visualisation.enabled = args.graphviz
     
     assert args.subprograms > 0, "The number of subprograms must be at least one"
     assert args.basic_blocks > 0, "The number of basic blocks per CFG must be a positive integer"
@@ -97,7 +102,7 @@ if __name__ == "__main__":
     if args.loops:
         assert args.nesting_depth <= args.loops, "The loop-nesting depth must be lower than the number of loops"
     
-    program = GenerateProgram.generateGraphviz(args.subprograms, 
+    program = GenerateProgram.generate(args.subprograms, 
                                        args.basic_blocks, 
                                        args.fan_out, 
                                        args.loops, 
@@ -105,4 +110,26 @@ if __name__ == "__main__":
                                        args.nesting_depth,
                                        args.breaks, 
                                        args.continues)
+    
+    if args.filename:
+        args.filesname = os.path.abspath(args.filename)
+        if os.path.exists(args.filename):
+            Debug.warningMessage("Overwriting file '%s'" % args.filename)
+    else:
+        files   = [f for f in os.listdir(os.curdir) if os.path.isfile(os.path.join(os.curdir,f))]
+        numbers = set([])
+        for f in files:
+            if re.match(r'program[0-9]+\.txt', f):
+                filenumbers = re.findall(r'[0-9]+', f)
+                assert len(filenumbers) == 1
+                filenumber = filenumbers[0]
+                numbers.add(int(filenumber))
+        for i in xrange(1,sys.maxint):
+            if i not in numbers:
+                args.filename = os.path.abspath('program%d.txt' % i)
+                break
+        assert args.filename, "Unable to create a filename in which to write the program"
+    Debug.verboseMessage("Writing program out to file '%s'" % args.filename)
+    ParseProgramFile.writeProgram(program, args.filename)
+    
     

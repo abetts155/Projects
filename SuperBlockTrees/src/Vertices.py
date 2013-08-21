@@ -272,9 +272,13 @@ class SuperBlock (Vertex):
     def setRepresentativeID (self, vertexID):
         assert vertexID in self.__basicBlocks
         self.__repID = vertexID
+        
+    def hasRepresentativeID (self):
+        return self.__repID
     
     def getRepresentativeID (self):
         assert self.__basicBlocks, "Trying to return a representative ID for super block %d which has no basic blocks" % self._vertexID
+        assert self.__repID, "Representative ID not set"
         return self.__repID
     
     def getBranchPartitions (self):
@@ -309,6 +313,7 @@ class ArithmeticOperatorVertex (Vertex):
         self._operator = operator
         self._bound = 0
         self._acyclicRegion = acyclicRegion
+        self._wcet = 0
     
     def setWCET (self, wcet):
         self._wcet = wcet

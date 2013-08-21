@@ -1,4 +1,4 @@
-import Debug, Programs, Trees, CFGs, Vertices, UDrawGraph
+import Debug, Programs, Trees, CFGs, Vertices
 import random, math
 
 singleVertices = None
@@ -451,9 +451,9 @@ def cutEdgesFromCallGraph (program):
             predIDs = callv.getPredecessorIDs()
             index   = random.randint(0,len(predIDs)-1)
             predID  = predIDs[index]
-            callg.removeEdge(predID, callv.getVertexID())    
+            callg.removeEdge(predID, callv.getVertexID()) 
     
-def generateGraphviz (subprograms, 
+def generate (subprograms, 
               cfgVertices, 
               fanOut, 
               loops, 
@@ -471,8 +471,8 @@ def generateGraphviz (subprograms,
         levelInCallgraph[subprogramName]   = 0
         Debug.debugMessage("Generating subprogram %s" % subprogramName, 1)
         generateCFG (cfgVertices, loops, selfLoops, nestingDepth, breaks, continues)
-        program.addICFG(currentCFG, subprogramName)
-        UDrawGraph.makeUdrawFile(currentCFG, subprogramName)
+        program.addCFG(currentCFG, subprogramName)
+        currentCFG.setName(subprogramName)
         isConnected()
         for v in currentCFG:
             if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
@@ -481,5 +481,4 @@ def generateGraphviz (subprograms,
     addTreeEdgesToCallGraph(program, candidateCallSites)
     addOtherEdgesToCallGraph(program, candidateCallSites)
     cutEdgesFromCallGraph(program)
-    UDrawGraph.makeUdrawFile(program.getCallGraph(), "callg")
     return program
