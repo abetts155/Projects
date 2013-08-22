@@ -1,7 +1,7 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import TreeVertex, HeaderVertex, dummyVertexID, BasicBlock, SuperBlock, \
 AdditionVertex, MultiplicationVertex, MaximumVertex
-import Debug, CFGs, Utils
+import Debug, CFGs
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -338,33 +338,26 @@ class ArithmeticExpressionTree (DirectedGraph):
                 self.addEdge(addvID2, multiplyvID)
                 self.addEdge(addvID2, newSupervID)
                 self.__supervToTreeVertex[supervID] = addvID2
-
-            if originalSuperv.numberOfSuccessors():
-                if originalSuperv.numberOfSuccessors() == 1:
-                    succID = originalSuperv.getSuccessorIDs()[0]
-                    addvID2 = self.getNextVertexID()
-                    addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
-                    self.__addVertex(subgraph, addvID2, addv2)
-                    self.addEdge(addvID2, self.__supervToTreeVertex[supervID])
-                    self.addEdge(addvID2, self.__supervToTreeVertex[succID])
-                    self.__supervToTreeVertex[supervID] = addvID2
+            
+            addvID3 = self.getNextVertexID()
+            addv3   = AdditionVertex(addvID3, headerID, acyclicRegion)
+            self.__addVertex(subgraph, addvID3, addv3)
+            self.addEdge(addvID3, self.__supervToTreeVertex[supervID])
+            self.__supervToTreeVertex[supervID] = addvID3
+            for succEdges in originalSuperv.getBranchPartitions().values():
+                if len(succEdges) == 1:
+                    succe  = succEdges[0]
+                    succID = succe.getVertexID()
+                    self.addEdge(addvID3, self.__supervToTreeVertex[succID])
                 else:
-                    # Addition vertex to sum up evaluation of maximum vertices and the contribution of the super block
-                    addvID2 = self.getNextVertexID()
-                    addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
-                    self.__addVertex(subgraph, addvID2, addv2)
-                    self.addEdge(addvID2, multiplyvID)
-                    self.__supervToTreeVertex[supervID] = addvID2
-                    for succEdges in originalSuperv.getBranchPartitions().values():
-                        if len(succEdges) > 1:
-                            maxvID = self.getNextVertexID()
-                            maxv   = MaximumVertex(maxvID, headerID, acyclicRegion)
-                            self.__addVertex(subgraph, maxvID, maxv)
-                            for succe in succEdges:
-                                succID      = succe.getVertexID()
-                                multiplyvID = self.__supervToTreeVertex[succID]
-                                self.addEdge(maxvID, multiplyvID)
-                            self.addEdge(addvID2, maxvID)
+                    maxvID = self.getNextVertexID()
+                    maxv   = MaximumVertex(maxvID, headerID, acyclicRegion)
+                    self.__addVertex(subgraph, maxvID, maxv)
+                    self.addEdge(addvID3, maxvID)
+                    for succe in succEdges:
+                        succID = succe.getVertexID()
+                        multiplyvID = self.__supervToTreeVertex[succID]
+                        self.addEdge(maxvID, multiplyvID)                            
         return subgraph, self.__supervToTreeVertex[rootv.getVertexID()]
         
     def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv):
@@ -459,7 +452,8 @@ class DepthFirstSearch (Tree):
         Tree.__init__(self)
         self.__initialise (directedg, rootID)
         self.__doSearch (directedg, rootID)
-        assert self.numOfEdges() == self.numOfVertices() - 1, "Edges = %d, vertices = %d" % (self.numOfEdges(), self.numOfVertices())
+        if self.numOfEdges() != self.numOfVertices() - 1:
+            Debug.warningMessage("Edges = %d, vertices = %d" % (self.numOfEdges(), self.numOfVertices()))
         
     def __initialise (self, directedg, rootID):
         self.__preorder  = []
@@ -473,61 +467,26 @@ class DepthFirstSearch (Tree):
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
         self.setRootID(rootID)
-            
-    def __doSearch (self, directedg, rootID):
-        TRAVERSAL = Utils.enum('FIRST', 'SECOND')
-        stack = []
-        stack.append((rootID, TRAVERSAL.FIRST))
-        stack.append((rootID, TRAVERSAL.SECOND))
-        preorderID = 1
-        postorderID = 1
-        while stack:
-            elem     = stack.pop()
-            vertexID = elem[0] 
-            if elem[1] == TRAVERSAL.SECOND:
-                self.__vertexID2PreID[vertexID] = preorderID
-                self.__preorder.append(vertexID)
-                preorderID += 1
-                v = directedg.getVertex(vertexID)
-                for succID in v.getSuccessorIDs():
-                    if self.__vertexID2PreID[succID] == 0:
-                        if self.getVertex(succID).numberOfPredecessors() == 0:
-                            self.addEdge(vertexID, succID)
-                            stack.append((succID, TRAVERSAL.FIRST))
-                            stack.append((succID, TRAVERSAL.SECOND))
-                    elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
-                        pass
-                    elif self.__vertexID2PostID[succID] == 0:
-                        self.__backedges.append([vertexID, succID])
-            else:
-                self.__vertexID2PostID[vertexID] = postorderID
-                self.__postorder.append(vertexID)
-                postorderID += 1
-        
-#     def initialise (self, directedg):
-#         for v in directedg:
-#             vertexID = v.getVertexID()
-#             self.vertices[vertexID] = TreeVertex(vertexID)
-#             self.__vertexID2PreID[vertexID] = 0
-#             self.__vertexID2PostID[vertexID] = 0
-#         
-#     def doSearch (self, directedg, vertexID):
-#         self.__vertexID2PreID[vertexID] = self.__preorderID
-#         self.__preorder.append(vertexID)
-#         self.__preorderID += 1
-#         
-#         v = directedg.getVertex(vertexID)
-#         for succID in v.getSuccessorIDs ():
-#             if self.__vertexID2PreID[succID] == 0:
-#                 self.addEdge(vertexID, succID)
-#                 self.doSearch(directedg, succID)
-#             elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
-#                 pass
-#             elif self.__vertexID2PostID[succID] == 0:
-#                 self.__backedges.append([vertexID, succID])
-#         self.__vertexID2PostID[vertexID] = self.__postorderID
-#         self.__postorder.append(vertexID)
-#         self.__postorderID += 1
+        self.__preorderID  = 1
+        self.__postorderID = 1        
+         
+    def __doSearch (self, directedg, vertexID):
+        self.__vertexID2PreID[vertexID] = self.__preorderID
+        self.__preorder.append(vertexID)
+        self.__preorderID += 1
+         
+        v = directedg.getVertex(vertexID)
+        for succID in v.getSuccessorIDs ():
+            if self.__vertexID2PreID[succID] == 0:
+                self.addEdge(vertexID, succID)
+                self.__doSearch(directedg, succID)
+            elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+                pass
+            elif self.__vertexID2PostID[succID] == 0:
+                self.__backedges.append([vertexID, succID])
+        self.__vertexID2PostID[vertexID] = self.__postorderID
+        self.__postorder.append(vertexID)
+        self.__postorderID += 1
         
     def getPreorder (self):
         return self.__preorder

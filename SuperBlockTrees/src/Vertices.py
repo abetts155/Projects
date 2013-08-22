@@ -1,4 +1,4 @@
-from Edges import Edge, CallGraphEdge, SuperBlockLoopEdge
+from Edges import Edge, CallGraphEdge
 
 dummyVertexID = -1
 
@@ -284,19 +284,11 @@ class SuperBlock (Vertex):
     def getBranchPartitions (self):
         partitions = {}
         for succe in self._successors.values():
-            if not isinstance(succe, SuperBlockLoopEdge):
-                branchID = succe.getBasicBlockID()
-                if branchID not in partitions:
-                    partitions[branchID] = set([])
-                partitions[branchID].add(succe)
+            branchID = succe.getBasicBlockID()
+            if branchID not in partitions:
+                partitions[branchID] = []
+            partitions[branchID].append(succe)
         return partitions
-    
-    def getLoopPartition (self):
-        partition = set([])
-        for succe in self._successors.values():
-            if isinstance(succe, SuperBlockLoopEdge):
-                partition.add(succe)
-        return partition
     
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID

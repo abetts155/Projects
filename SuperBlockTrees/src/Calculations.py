@@ -24,6 +24,7 @@ class WCETCalculation:
             Debug.verboseMessage("Tree:: WCET(%s) = %s (SOLVE TIME = %.5f)" % (functionName, treeWCET, arithmetict.solvingTime))
             self.__contextDataTrees[contextv.getVertexID()] = treeWCET
             Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
+            Visualisation.makeUdrawFile(arithmetict, "%s.%s" % (functionName, "aet"))
             ilp = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
             Debug.verboseMessage("ILP::  WCET(%s) = %d (SOLVE TIME = %.5f)" % (functionName, ilp._wcet, ilp.solvingTime))
             self.__contextDataILPs[contextv.getVertexID()] = ilp._wcet
@@ -416,7 +417,7 @@ class ILP ():
             if line.startswith("CPU Time for Parsing"):
                 lexemes = shlex.split(line)
                 time    = lexemes[5][:-1]
-                self.solvingTime -= float(time)
+                #self.solvingTime -= float(time)
         return True
                     
 class CreateSuperBlockCFGILP (ILP):

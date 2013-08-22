@@ -20,10 +20,10 @@ def commandLine ():
                          help="debug mode",
                          default=0)
     
-    cmdline.add_argument("-g",
-                         "--graphviz",
+    cmdline.add_argument("-V",
+                         "--visualise",
                          action="store_true",
-                         help="generate png files to visualise graphs",
+                         help="generate dot and uDraw files to visualise graphs",
                          default=False)
 
     cmdline.add_argument("-t",
@@ -47,13 +47,16 @@ def commandLine ():
     return cmdline.parse_args()
         
 if __name__ == "__main__":
-    import os
+    import os, sys, threading
     import ParseProgramFile, Debug, Trees, Traces, SuperBlocks, Utils, Calculations, Visualisation
     
     args = commandLine()
     Debug.verbose         = args.verbose
     Debug.debug           = args.debug
-    Visualisation.enabled = args.graphviz
+    Visualisation.enabled = args.visualise
+    
+    threading.stack_size(67108864) # 64MB stack
+    sys.setrecursionlimit(2 ** 20)
     
     if args.clean:
         Utils.clean()

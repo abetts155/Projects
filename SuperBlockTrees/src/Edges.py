@@ -43,11 +43,6 @@ class SuperBlockControlFlowEdge (Edge):
     def getBasicBlockID (self):
         return self.__bbID
     
-class SuperBlockLoopEdge (SuperBlockControlFlowEdge):
-    def __init__ (self, vertexID, headerID):
-        SuperBlockControlFlowEdge.__init__(self, vertexID, headerID)
-        self.__bbID = headerID
-    
 class IPGEdge (Edge):
     def __init__ (self, vertexID, edgeID=None, dummyEdge=False):
         Edge.__init__(self, vertexID, edgeID)
