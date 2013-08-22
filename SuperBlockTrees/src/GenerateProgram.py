@@ -371,6 +371,7 @@ def generateCFG (cfgVertices,
                  loops, 
                  selfLoops, 
                  nestingDepth,
+                 unstructured,
                  breaks, 
                  continues):
     global currentCFG
@@ -408,7 +409,8 @@ def generateCFG (cfgVertices,
         for treev in vertices:
             if treev.numberOfSuccessors() > 0:
                 connectNestedLoops(lnt, treev, loopRegions)
-    findMergeVerticesToRemove()
+    if unstructured:
+        findMergeVerticesToRemove()
 
 def isConnected ():
     global currentCFG
@@ -499,6 +501,7 @@ def generate (subprograms,
               loops, 
               selfLoops, 
               nestingDepth,
+              unstructured,
               breaks, 
               continues):
     maxFanOut          = fanOut
@@ -510,7 +513,7 @@ def generate (subprograms,
         candidateCallSites[subprogramName] = []
         levelInCallgraph[subprogramName]   = 0
         Debug.debugMessage("Generating subprogram %s" % subprogramName, 1)
-        generateCFG (cfgVertices, loops, selfLoops, nestingDepth, breaks, continues)
+        generateCFG (cfgVertices, loops, selfLoops, nestingDepth, unstructured, breaks, continues)
         program.addCFG(currentCFG, subprogramName)
         currentCFG.setName(subprogramName)
         isConnected()

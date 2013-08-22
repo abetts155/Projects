@@ -6,7 +6,7 @@ endTrace = "<="
 
 class GenerateTraces:
     maxNumberOfCalls  = 20
-    maxLoopIterations = 10
+    maxLoopIterations = 50
     
     def __init__ (self, basepath, basename, program, numberOfTraces=1):
         self.__program = program
@@ -45,15 +45,15 @@ class GenerateTraces:
                     # Go past the call site
                     self.__chooseSuccessorInCFG()
             elif self.__currentLNT.isLoopTail(self.__vertexID):
-                tupleIndex = self.__currentCFG.getName(), self.__vertexID
-                if tupleIndex not in self.__functionToTailCount:
-                    self.__functionToTailCount[tupleIndex] = 1
+                tupleKey = self.__currentCFG.getName(), self.__vertexID
+                if tupleKey not in self.__functionToTailCount:
+                    self.__functionToTailCount[tupleKey] = 1
                     self.__chooseSuccessorInCFG()
                 elif self.__currentv.numberOfSuccessors() == 1:
-                    self.__functionToTailCount[tupleIndex] += 1
+                    self.__functionToTailCount[tupleKey] += 1
                     self.__chooseSuccessorInCFG()
-                elif self.__functionToTailCount[tupleIndex] < GenerateTraces.maxLoopIterations:
-                    self.__functionToTailCount[tupleIndex] += 1
+                elif self.__functionToTailCount[tupleKey] < GenerateTraces.maxLoopIterations:
+                    self.__functionToTailCount[tupleKey] += 1
                     self.__chooseSuccessorInCFG()
                 else:
                     self.__chooseNonLoopBackEdgeSuccessorInCFG()
@@ -79,8 +79,6 @@ class GenerateTraces:
         
     def __chooseNonLoopBackEdgeSuccessorInCFG (self):
         succIDs = [succID for succID in self.__currentv.getSuccessorIDs() if not self.__currentLNT.isLoopBackEdge(self.__vertexID, succID)]
-        print self.__currentv
-        print succIDs
         succIndex = random.randint(0, len(succIDs) - 1)
         succID    = succIDs[succIndex]
         self.__currentv = self.__currentCFG.getVertex(succID)
@@ -99,6 +97,7 @@ class TraceInformation:
         self._boundsCurrent = {}
         self._freshInvocations = {}
         self._freshInvocationsCurrent = {}
+        self._relativeBoundToInnermostLoop = {}
         for superg in self._program.getSuperBlockCFGs():
             functionName = superg.getName()
             for v in superg:
@@ -115,11 +114,17 @@ class TraceInformation:
             for headerID in lnt.getHeaderIDs():
                 self._freshInvocations[(functionName, headerID)] = 0
                 self._freshInvocationsCurrent[(functionName, headerID)] = 0  
+                self._relativeBoundToInnermostLoop[(functionName, headerID)] = 0
             
     def getBound (self, functionName, vertexID):
         tupleKey = (functionName, vertexID)
         assert tupleKey in self._bounds
         return self._bounds[tupleKey]
+    
+    def getRelativeBound (self, functionName, headerID):
+        tupleKey = (functionName, headerID)
+        assert tupleKey in self._relativeBoundToInnermostLoop
+        return self._relativeBoundToInnermostLoop[tupleKey]
     
     def getFreshInvocations (self, functionName, headerID):
         tupleKey = (functionName, headerID)
@@ -130,6 +135,13 @@ class TraceInformation:
         tupleKey = (functionName, vertexID)
         assert tupleKey in self._executionTimes
         return self._executionTimes[tupleKey]
+    
+    def assignRandomWCETs (self):
+        for cfg in self._program.getCFGs():
+            functionName = cfg.getName()
+            for v in cfg:
+                tupleKey = (functionName, v.getVertexID())
+                self._executionTimes[tupleKey] = random.randint(1,200)
     
     def output (self):
         for cfg in self._program.getCFGs():
@@ -143,25 +155,18 @@ class TraceInformation:
                                                                         self._executionTimes[tupleKey], 
                                                                         self._bounds[tupleKey]), 10)
                 else:
-                    Debug.debugMessage("%s: WCET = %d\tCount = %d\tInvocations = %d" % (tupleKey, 
+                    Debug.debugMessage("%s: WCET = %d\tCount = %d\tInvocations = %d\tRelative = %d" % (tupleKey, 
                                                                         self._executionTimes[tupleKey], 
                                                                         self._bounds[tupleKey],
-                                                                        self._freshInvocations[tupleKey]), 10)
+                                                                        self._freshInvocations[tupleKey],
+                                                                        self._relativeBoundToInnermostLoop[tupleKey]), 10)
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(tracefile)
-        self.__assignRandomWCETs()
         self.output()
-        
-    def __assignRandomWCETs (self):
-        for cfg in self._program.getCFGs():
-            functionName = cfg.getName()
-            for v in cfg:
-                tupleKey = (functionName, v.getVertexID())
-                self._executionTimes[tupleKey] = random.randint(1,20)
                 
     def __initialise (self):
         self.__currentContextv = None
@@ -172,6 +177,7 @@ class ParseTraces (TraceInformation):
         self.__currentHeaderID = None
         self.__currentSuperg   = None
         self.__stack           = []
+        self.__relativeBounds  = []
         self.__contextg        = self._program.getContextGraph()
         rootv                  = self.__contextg.getVertex(self.__contextg.getRootID())
         self.__rootCFG         = self._program.getCFG(rootv.getName())
@@ -186,12 +192,14 @@ class ParseTraces (TraceInformation):
         self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentContextv.getName())
         self.__predBB          = None
         self.__currentBB       = None
+        self.__relativeBounds  = []
         
     def __parse (self, tracefile):
         runID = 0
         with open(tracefile, 'r') as f:
             for line in f:
                 if line.startswith(newTrace):
+                    assert not self.__relativeBounds, self.__relativeBounds.__str__()
                     runID += 1
                     self._allruns.add(runID)
                     self.__reset()
@@ -221,19 +229,41 @@ class ParseTraces (TraceInformation):
                                     self.__predBB    = self.__currentBB
                                     self.__currentBB = succv
                                 else:
-                                    self.__handleCall(nextID)
-                        self.__incrementBounds()      
+                                    self.__handleCall(nextID) 
+                        self.__incrementBounds()    
     
     def __incrementBounds (self):
         tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
         self._boundsCurrent[tupleKey] += 1 
         if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
-            if not self.__predBB or not self.__currentLNT.isLoopBackEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID()):
+            headerID = self.__currentBB.getVertexID()
+            if not self.__predBB or not self.__currentLNT.isLoopBackEdge(self.__predBB.getVertexID(), headerID):
                 self._freshInvocationsCurrent[tupleKey] += 1
         if self.__predBB:
+            # Record bounds on specific edges
             tupleKey2 = (self.__currentCFG.getName(), (self.__predBB.getVertexID(), self.__currentBB.getVertexID()))
             if tupleKey2 in self._boundsCurrent:
                 self._boundsCurrent[tupleKey2] += 1
+            # Increment relative loop bounds
+            if self.__currentLNT.isLoopHeader(self.__predBB.getVertexID()):
+                headerID = self.__predBB.getVertexID()
+                # Ignore the entry vertex
+                if self.__currentCFG.getEntryID() != headerID:
+                    if headerID in [elem[0] for elem in self.__relativeBounds]:
+                        tos = self.__relativeBounds.pop()
+                        assert tos[0] == headerID
+                        bound = tos[1] + 1
+                        self.__relativeBounds.append((headerID, bound))
+                    else:
+                        self.__relativeBounds.append((headerID, 1))
+            # Compute relative loop bounds if a loop-exit edge is detected
+            headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
+            if headerID:
+                assert self.__relativeBounds, "Relative bound stack is empty"
+                tos = self.__relativeBounds.pop()
+                assert tos[0] == headerID, "Top of relative bound stack and header ID for loop-exit edge do not match. Found %d and %d respectively" % (tos[0], headerID)
+                tupleKey = (self.__currentCFG.getName(), headerID)
+                self._relativeBoundToInnermostLoop[tupleKey] = max(self._relativeBoundToInnermostLoop[tupleKey], tos[1])               
 
     def __computeMaximumBounds (self):
         for tupleKey in self._bounds:

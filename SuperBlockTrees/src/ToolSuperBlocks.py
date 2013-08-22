@@ -33,6 +33,13 @@ def commandLine ():
                          default=0,
                          metavar="<INT>")
     
+    cmdline.add_argument("-r",
+                         "--repeat",
+                         type=int,
+                         help="repeat the calculation this many times",
+                         default=1,
+                         metavar="<INT>")
+    
     cmdline.add_argument("-T",
                          dest="tracefile",
                          help="parse this trace file",
@@ -87,6 +94,6 @@ if __name__ == "__main__":
         assert programfileLastModified <= tracefileLastModified, "Program file modified AFTER trace file generation"
         data = Traces.ParseTraces(basename, tracefile, program)
         program.generateVisualisationFiles()
-        Calculations.WCETCalculation(program, data, basepath, basename)
+        Calculations.WCETCalculation(program, data, basepath, basename, args.repeat)
     
     

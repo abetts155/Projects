@@ -108,6 +108,7 @@ if __name__ == "__main__":
                                        args.loops, 
                                        args.self_loops, 
                                        args.nesting_depth,
+                                       args.unstructured,
                                        args.breaks, 
                                        args.continues)
     

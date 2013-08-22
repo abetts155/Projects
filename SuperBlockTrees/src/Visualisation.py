@@ -88,6 +88,10 @@ def generateLNT (lnt):
     for v in lnt:
         if isinstance(v, Vertices.HeaderVertex):
             label = "%d\nHeader=%d" % (v.getVertexID(), v.getHeaderID())
+            if lnt.isDoWhileLoop(v.getHeaderID()):
+                label += "\nDo-while loop"
+            else:
+                label += "\nFor loop"
             node = pydot.Node(label, shape="box", fillcolor="red", style="filled")
         elif lnt.isLoopExitSource(v.getVertexID()):  
             node = pydot.Node(str(v.getVertexID()), shape="triangle", fillcolor="yellow", style="filled")
