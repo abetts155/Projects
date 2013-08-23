@@ -1,7 +1,8 @@
-from Vertices import HeaderVertex
-from Trees import DepthFirstSearch, ArithmeticExpressionTree
+from Vertices import HeaderVertex, AdditionVertex, MultiplicationVertex, MaximumVertex, SuperBlock
+from Trees import DepthFirstSearch
+from DirectedGraphs import DirectedGraph
 import Debug, Visualisation
-import os, re
+import os, re, timeit
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename, repeatability):
@@ -20,17 +21,270 @@ class WCETCalculation:
                 superg      = program.getSuperBlockCFG(functionName)
                 arithmetict = ArithmeticExpressionTree(functionName, superg, cfg, lnt)
                 treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv)
-                Debug.verboseMessage("Tree:: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, treeWCET, arithmetict.solvingTime))
+                Debug.verboseMessage("Tree:: WCET(%s)=%s (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
+                                                                                                        treeWCET, 
+                                                                                                        arithmetict.solvingTime, 
+                                                                                                        arithmetict.constructionTime,
+                                                                                                        arithmetict.solvingTime + arithmetict.constructionTime))
                 self.__contextDataTrees[contextv.getVertexID()] = treeWCET
                 Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
                 Visualisation.makeUdrawFile(arithmetict, "%s.%s" % (functionName, "aet"))
-                ilp = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
-                Debug.verboseMessage("ILP::  WCET(%s)=%d (SOLVE TIME=%.5f)" % (functionName, ilp._wcet, ilp.solvingTime))
-                self.__contextDataILPs[contextv.getVertexID()] = ilp._wcet
+                ilp     = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
+                ilpWCET = ilp.solve()
+                Debug.verboseMessage("ILP::  WCET(%s)=%d (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
+                                                                                                        ilpWCET, 
+                                                                                                        ilp.solvingTime, 
+                                                                                                        ilp.constructionTime,
+                                                                                                        ilp.solvingTime + ilp.constructionTime))
+                self.__contextDataILPs[contextv.getVertexID()] = ilpWCET
                 if i == 0:
                     Debug.verboseMessage("CFG size:: vertices=%d edges=%d" % (cfg.numOfVertices(), cfg.numOfEdges()))
                     Debug.verboseMessage("AET size:: vertices=%d edges=%d" % (arithmetict.numOfVertices(), arithmetict.numOfEdges()))
                     Debug.verboseMessage("ILP size:: constraints=%d variables=%d" % (ilp.numOfConstraints(), ilp.numOfVariables()))
+                 
+class ArithmeticExpressionTree (DirectedGraph):
+    def __init__(self, functionName, superg, cfg, lnt):
+        start = timeit.default_timer()
+        DirectedGraph.__init__(self)
+        self.__functionName = functionName
+        self.__superg = superg
+        self.__cfg = cfg
+        self.__lnt = lnt
+        self.__superBlocksToAETSuperBlocks = {}
+        self.__headerSuperBlocks = set([])
+        self.__addSuperBlocks()
+        self.__addOperators()
+        self.constructionTime = (timeit.default_timer() - start)
+    
+    def __addSuperBlocks (self):
+        supervToHeaderSuperv = {}
+        largestVertexID = 0
+        for superv in self.__superg:
+            self.__superBlocksToAETSuperBlocks[superv] = []
+            bbIDs     = set([])
+            headerIDs = set([])
+            for bbID in superv.getBasicBlockIDs():
+                if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
+                    bbIDs.add(bbID)
+                else:
+                    headerIDs.add(bbID)
+            if bbIDs or superv.numberOfEdges() > 0:
+                supervID  = superv.getVertexID()
+                newSuperv = SuperBlock(supervID)
+                self.vertices[supervID] = newSuperv
+                largestVertexID = max(largestVertexID, supervID)
+                newSuperv.addBasicBlocks(bbIDs)
+                newSuperv.setLoopHeader(superv.getLoopHeader())
+                newSuperv.addEdges(superv.getEdges())
+                self.__superBlocksToAETSuperBlocks[superv].append(newSuperv)
+            if headerIDs:
+                supervToHeaderSuperv[superv] = headerIDs
+        self.__nextVertexID = largestVertexID
+        for superv, headerIDs in supervToHeaderSuperv.iteritems():
+            newSupervID = self.getNextVertexID()
+            newSuperv   = SuperBlock(newSupervID)
+            newSuperv.addBasicBlocks(headerIDs)
+            self.vertices[newSupervID] = newSuperv
+            self.__superBlocksToAETSuperBlocks[superv].append(newSuperv)
+            self.__headerSuperBlocks.add(newSupervID)
+            
+    def getNextVertexID (self):
+        self.__nextVertexID += 1
+        return self.__nextVertexID
+    
+    def __addOperators (self):
+        self.__supervToTreeVertex    = {}
+        self.__iterationPathsRootIDs = {}
+        self.__exitPathsRootIDs      = {}
+        self.__iterationPathsAETs    = {}
+        self.__exitPathsAETs         = {}
+        for level, vertices in self.__lnt.levelIterator(True):
+            for v in vertices:
+                if isinstance(v, HeaderVertex):
+                    headerID = v.getHeaderID()
+                    if v.getVertexID() != self.__lnt.getRootID():
+                        supergRegion     = self.__superg.getIterationPathsSuperBlockRegion(headerID)
+                        supergRegionRoot = self.__superg.getIterationPathsSuperBlockRegionRoot(headerID)
+                        subgraph, root   = self.__buildSubtree(headerID, supergRegion, supergRegionRoot, False)
+                        self.__iterationPathsRootIDs[headerID] = root
+                        self.__iterationPathsAETs[headerID] = subgraph
+                        if not self.__lnt.isDoWhileLoop(headerID):
+                            supergRegion2     = self.__superg.getExitPathsSuperBlockRegion(headerID)
+                            supergRegionRoot2 = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
+                            subgraph, root = self.__buildSubtree(headerID, supergRegion2, supergRegionRoot2, True)
+                            self.__exitPathsRootIDs[headerID] = root
+                            self.__exitPathsAETs[headerID] = subgraph
+                    else:
+                        supergRegion2 = self.__superg.getExitPathsSuperBlockRegion(headerID)
+                        rootv2        = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
+                        subgraph, root = self.__buildSubtree(headerID, supergRegion2, rootv2, True)
+                        self.__iterationPathsRootIDs[headerID] = root
+                        self.__iterationPathsAETs[headerID] = subgraph
+                        
+    def __addVertex (self, subgraph, vertexID, v):
+        subgraph.vertices[vertexID] = v
+        self.vertices[vertexID] = v
+              
+    def __buildSubtree (self, headerID, supergRegion, rootv, acyclicRegion):
+        subgraph = DirectedGraph()
+        dfs      = DepthFirstSearch(supergRegion, rootv.getVertexID())
+        for supervID in dfs.getPostorder():
+            originalSuperv = self.__superg.getVertex(supervID)
+            supervs = self.__superBlocksToAETSuperBlocks[originalSuperv]
+            assert supervs, "Unable to find super blocks in AET for super block %s" % originalSuperv
+            if len(supervs) == 2:
+                bbSuperv     = supervs[0]
+                assert bbSuperv.getVertexID() == supervID
+                headerSuperv = supervs[1]
+                subgraph.vertices[bbSuperv.getVertexID()] = bbSuperv
+                subgraph.vertices[headerSuperv.getVertexID()] = headerSuperv
+                # Addition vertex to sum up WCETs of basic blocks within super block
+                addvID = self.getNextVertexID()
+                addv   = AdditionVertex(addvID, headerID, acyclicRegion)
+                self.__addVertex(subgraph, addvID, addv)
+                self.addEdge(addvID, supervID)
+                # Multiplication vertex to factor WCET contribution of super block
+                multiplyvID = self.getNextVertexID()
+                multiplyv   = MultiplicationVertex(multiplyvID, headerID, acyclicRegion)
+                self.__addVertex(subgraph, multiplyvID, multiplyv)
+                self.addEdge(multiplyvID, addvID)
+                self.__supervToTreeVertex[supervID] = multiplyvID
+                # Addition vertex to include contribution of inner loops
+                addvID2 = self.getNextVertexID()
+                addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
+                self.__addVertex(subgraph, addvID2, addv2)
+                self.addEdge(addvID2, multiplyvID)
+                self.addEdge(addvID2, headerSuperv.getVertexID())
+                self.__supervToTreeVertex[supervID] = addvID2
+            else:
+                newSuperv = supervs[0]
+                subgraph.vertices[newSuperv.getVertexID()] = newSuperv
+                if newSuperv.getVertexID() not in self.__headerSuperBlocks:
+                    # Addition vertex to sum up WCETs of basic blocks within super block
+                    addvID = self.getNextVertexID()
+                    addv   = AdditionVertex(addvID, headerID, acyclicRegion)
+                    self.__addVertex(subgraph, addvID, addv)
+                    self.addEdge(addvID, supervID)
+                    # Multiplication vertex to factor WCET contribution of super block
+                    multiplyvID = self.getNextVertexID()
+                    multiplyv   = MultiplicationVertex(multiplyvID, headerID, acyclicRegion)
+                    self.__addVertex(subgraph, multiplyvID, multiplyv)
+                    self.addEdge(multiplyvID, addvID)
+                    self.__supervToTreeVertex[supervID] = multiplyvID
+                else:
+                    # Addition vertex to include contribution of inner loops
+                    addvID = self.getNextVertexID()
+                    addv   = AdditionVertex(addvID, headerID, acyclicRegion)
+                    self.__addVertex(subgraph, addvID, addv)
+                    self.addEdge(addvID, newSuperv.getVertexID())
+                    self.__supervToTreeVertex[supervID] = addvID
+                    
+            if originalSuperv.numberOfSuccessors(): 
+                addvID = self.getNextVertexID()
+                addv   = AdditionVertex(addvID, headerID, acyclicRegion)
+                self.__addVertex(subgraph, addvID, addv)
+                self.addEdge(addvID, self.__supervToTreeVertex[supervID])
+                self.__supervToTreeVertex[supervID] = addvID
+                for succEdges in originalSuperv.getBranchPartitions().values():
+                    if len(succEdges) == 1:
+                        succe  = succEdges[0]
+                        succID = succe.getVertexID()
+                        self.addEdge(addvID, self.__supervToTreeVertex[succID])
+                    else:
+                        maxvID = self.getNextVertexID()
+                        maxv   = MaximumVertex(maxvID, headerID, acyclicRegion)
+                        self.__addVertex(subgraph, maxvID, maxv)
+                        self.addEdge(addvID, maxvID)
+                        for succe in succEdges:
+                            succID = succe.getVertexID()
+                            multiplyvID = self.__supervToTreeVertex[succID]
+                            self.addEdge(maxvID, multiplyvID)                          
+        return subgraph, self.__supervToTreeVertex[rootv.getVertexID()]
+        
+    def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv):
+        wcet = 0
+        for bbID in superv.getBasicBlockIDs():
+            if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
+                wcet += data.getExecutionTime(self.__functionName, bbID)
+                if self.__cfg.isCallSite(bbID):
+                    calleeContextID   = contextv.getSuccessorWithCallSite(bbID)
+                    calleeContextWCET = contextWCETs[calleeContextID]
+                    wcet += calleeContextWCET
+            if self.__lnt.isLoopHeader(bbID) and superv.getLoopHeader() != bbID:
+                wcet += self.__headerToWCET[bbID]
+        return wcet
+    
+    def __propagateBounds (self, headerv, data):
+        headerID = headerv.getHeaderID()
+        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID():
+            # If not a do-while loop and not the dummy loop, peel off the iterations which came from outside the loop body
+            headerInvocations = data.getBound(self.__functionName, headerID)
+            freshInvocations  = data.getFreshInvocations(self.__functionName, headerID)
+            totalCount        = headerInvocations - freshInvocations
+        else:
+            totalCount = data.getBound(self.__functionName, headerID)
+        iterationAET = self.__iterationPathsAETs[headerID]
+        for v in iterationAET:
+            if not isinstance(v, SuperBlock):
+                v.setBound(totalCount)
+        #  Now propagate bound downwards to acyclic region
+        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID(): 
+            totalCount = data.getFreshInvocations(self.__functionName, headerID)
+            exitAET    = self.__exitPathsAETs[headerID]
+            for v in exitAET:
+                if not isinstance(v, SuperBlock):
+                    v.setBound(totalCount)
+                    
+    def __evaluateDFS (self, dfs, data, contextWCETs, contextv):
+        for vertexID in dfs.getPostorder():
+            v = self.getVertex(vertexID)
+            if isinstance(v, AdditionVertex):
+                time  = 0
+                for succID in v.getSuccessorIDs():
+                    succv = self.getVertex(succID)
+                    if isinstance(succv, SuperBlock):
+                        time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv)
+                    else:
+                        time += succv.getWCET()
+                v.setWCET(time)
+            elif isinstance(v, MultiplicationVertex):
+                # Get only child of multiplication vertex
+                assert v.numberOfSuccessors() == 1
+                addv = self.getVertex(v.getSuccessorIDs()[0])
+                v.setWCET(addv.getWCET() * v.getBound())
+            elif isinstance(v, MaximumVertex):
+                time = 0
+                for succID in v.getSuccessorIDs():
+                    succv = self.getVertex(succID)
+                    time  = max(time, succv.getWCET())
+                v.setWCET(time)
+    
+    def evaluate (self, data, contextWCETs, contextv):
+        start = timeit.default_timer()
+        self.__headerToWCET = {}
+        for level, vertices in self.__lnt.levelIterator(True):
+            for lntv in vertices:
+                if isinstance(lntv, HeaderVertex):
+                    # Propagate bounds downwards in tree
+                    self.__propagateBounds(lntv, data)
+                    headerID = lntv.getHeaderID()
+                    iterationAET       = self.__iterationPathsAETs[headerID]
+                    iterationAETRootID = self.__iterationPathsRootIDs[headerID]
+                    dfs                = DepthFirstSearch(iterationAET, iterationAETRootID)
+                    self.__evaluateDFS(dfs, data, contextWCETs, contextv)
+                    iterationAETWCET   = iterationAET.getVertex(iterationAETRootID).getWCET()
+                    if not self.__lnt.isDoWhileLoop(headerID) and lntv.getVertexID() != self.__lnt.getRootID():
+                        exitAET       = self.__exitPathsAETs[headerID]
+                        exitAETRootID = self.__exitPathsRootIDs[headerID]
+                        dfs2          = DepthFirstSearch(exitAET, exitAETRootID)
+                        self.__evaluateDFS(dfs2, data, contextWCETs, contextv)
+                        exitAETWCET   = exitAET.getVertex(exitAETRootID).getWCET()
+                        self.__headerToWCET[headerID] = iterationAETWCET + exitAETWCET
+                    else:
+                        self.__headerToWCET[headerID] = iterationAETWCET
+        lntRootv = self.__lnt.getVertex(self.__lnt.getRootID())
+        self.solvingTime = (timeit.default_timer() - start)
+        return self.__headerToWCET[lntRootv.getHeaderID()] 
 
 def getNewLine (num=1):
     return "\n" * num 
@@ -403,6 +657,7 @@ class ILP ():
         self._variableToExecutionCount = {}
         self._constraints = []
         self._variables = set([])
+        self._filename = None
         
     def numOfConstraints (self):
         count = 0
@@ -414,18 +669,19 @@ class ILP ():
     def numOfVariables (self):
         return len(self._variables)
     
-    def _solve(self, filename):
-        import time, shlex, decimal
+    def solve (self):
+        import shlex, decimal
         from subprocess import Popen, PIPE
-        Debug.debugMessage("Solving ILP for %s" % filename, 10)
-        command    = "lp_solve %s -S1 -time" % filename 
-        start = time.time()
+        assert self._filename, "ILP filename has not been set"
+        Debug.debugMessage("Solving ILP for %s" % self._filename, 10)
+        command    = "lp_solve %s -S1 -time" % self._filename 
+        start = timeit.default_timer()
         proc       = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, executable="/bin/bash")
-        self.solvingTime = (time.time() - start)
         returnCode = proc.wait()
+        self.solvingTime = (timeit.default_timer() - start)
         if returnCode != 0:
             Debug.warningMessage("Running '%s' failed" % command)
-            return False
+            return 0
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes = shlex.split(line)
@@ -436,7 +692,7 @@ class ILP ():
                 lexemes = shlex.split(line)
                 time    = lexemes[5][:-1]
                 #self.solvingTime -= float(time)
-        return True
+        return self._wcet
                     
 class CreateSuperBlockCFGILP (ILP):
     def __init__ (self, basepath, basename, superg, lnt, soughtSolutions=1):
@@ -655,17 +911,17 @@ class CreateSuperBlockCFGILP (ILP):
 
 class CreateCFGILP (ILP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt):
+        start = timeit.default_timer()
         ILP.__init__(self)
-        
         self.__createStructuralConstraints(cfg)
         self.__createExecutionCountConstraints(data, cfg, lnt)
         self.__createIntegerConstraint()
         self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
-        filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
-        with open(filename, 'w') as ilpFile:
+        self._filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        with open(self._filename, 'w') as ilpFile:
             for constraint in self._constraints:
-                ilpFile.write(constraint)        
-        self._solve(filename)
+                ilpFile.write(constraint)
+        self.constructionTime = (timeit.default_timer() - start)
             
     def __createStructuralConstraints (self, cfg):
         for v in cfg:

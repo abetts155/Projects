@@ -1,5 +1,5 @@
 import pydot
-import Trees, CFGs, SuperBlocks, Programs, Vertices
+import Trees, CFGs, SuperBlocks, Programs, Vertices, Calculations
 
 enabled  = False
 basename = ""
@@ -17,7 +17,7 @@ def generateGraphviz (g, fileNamePrefix):
             graph = generateCallGraph(g)
         elif isinstance(g, Trees.LoopNests):
             graph = generateLNT(g)
-        elif isinstance(g, Trees.ArithmeticExpressionTree):
+        elif isinstance(g, Calculations.ArithmeticExpressionTree):
             graph = generateAET(g)
         assert graph
         filename = "%s.%s" % (basename, fileNamePrefix + ".png")
@@ -251,7 +251,7 @@ def makeUdrawFile (g, fileNamePrefix):
             elif isinstance(g, Trees.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.getVertexID(), f)
-            elif isinstance(g, Trees.ArithmeticExpressionTree):
+            elif isinstance(g, Calculations.ArithmeticExpressionTree):
                 for v in g:
                     writeArithmeticVertex(g, v.getVertexID(), f)
             else:
