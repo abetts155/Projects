@@ -6,6 +6,10 @@ import os, re, timeit
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename, repeatability):
+        AETSolvingTime = 0
+        ILPSolvingTime = 0
+        AETConstructionTime = 0
+        ILPConstructionTime = 0
         for i in xrange(0, repeatability):
             data.assignRandomWCETs()
             self.__contextDataTrees = {}
@@ -26,6 +30,8 @@ class WCETCalculation:
                                                                                                         arithmetict.solvingTime, 
                                                                                                         arithmetict.constructionTime,
                                                                                                         arithmetict.solvingTime + arithmetict.constructionTime))
+                AETSolvingTime += arithmetict.solvingTime
+                AETConstructionTime += arithmetict.constructionTime
                 self.__contextDataTrees[contextv.getVertexID()] = treeWCET
                 Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
                 Visualisation.makeUdrawFile(arithmetict, "%s.%s" % (functionName, "aet"))
@@ -36,11 +42,21 @@ class WCETCalculation:
                                                                                                         ilp.solvingTime, 
                                                                                                         ilp.constructionTime,
                                                                                                         ilp.solvingTime + ilp.constructionTime))
+                ILPSolvingTime += ilp.solvingTime
+                ILPConstructionTime += ilp.constructionTime
                 self.__contextDataILPs[contextv.getVertexID()] = ilpWCET
                 if i == 0:
                     Debug.verboseMessage("CFG size:: vertices=%d edges=%d" % (cfg.numOfVertices(), cfg.numOfEdges()))
                     Debug.verboseMessage("AET size:: vertices=%d edges=%d" % (arithmetict.numOfVertices(), arithmetict.numOfEdges()))
                     Debug.verboseMessage("ILP size:: constraints=%d variables=%d" % (ilp.numOfConstraints(), ilp.numOfVariables()))
+        Debug.verboseMessage("TREE:: (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
+                             (AETSolvingTime/repeatability, 
+                              AETConstructionTime/repeatability,
+                              (AETSolvingTime+AETConstructionTime)/repeatability))
+        Debug.verboseMessage("ILP::  (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
+                             (ILPSolvingTime/repeatability, 
+                              ILPConstructionTime/repeatability,
+                              (ILPSolvingTime+ILPConstructionTime)/repeatability))
                  
 class ArithmeticExpressionTree (DirectedGraph):
     def __init__(self, functionName, superg, cfg, lnt):

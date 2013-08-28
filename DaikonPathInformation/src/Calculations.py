@@ -1,7 +1,7 @@
 from Vertices import HeaderVertex
 from Trees import DepthFirstSearch
 import Debug
-import os
+import os, timeit
 
 def getNewLine (num=1):
     return "\n" * num 
@@ -21,9 +21,11 @@ class WCETCalculation:
             pathg        = superg.getSuperBlockPathInformationGraph()
             cfg          = program.getICFG(functionName)
             clp1         = CreateCFGCLPVanilla(basepath, basename, data, self.__CLPVanillaContextIDToWCET, contextv, cfg, lnt, superg, pathg)
-            self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = clp1._wcet
+            Debug.verboseMessage("CLP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp1.wcet, clp1.solvingTime))
+            self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = clp1.wcet
             clp2         = CreateCFGCLPExtra(basepath, basename, data, self.__CLPExtraContextIDToWCET, contextv, cfg, lnt, superg, pathg)
-            self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2._wcet
+            self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2.wcet
+            Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2.wcet, clp2.solvingTime))
             
 class ECLIPSE:
     conjunct        = "," + getNewLine()
@@ -69,6 +71,8 @@ class CLP ():
     OUTPUT_PREDICATE_HEAD = "print_results"
     
     def __init__ (self):
+        self.wcet  = -1
+        self.solvingTime = 0
         self._lines = []
         self.__addRequiredPackages()
         self.__goal = "solve(%s)" % (CLP.WCET)
@@ -82,33 +86,38 @@ class CLP ():
         self._lines.append(getNewLine())
         
     def _solve(self, basepath, basename, contextv, filename):
-        from subprocess import Popen, PIPE
-        import shlex
+        from subprocess import Popen
+        import re
         with open(filename, 'w') as clpFile:
             for line in self._lines:
                 clpFile.write(line)                
         Debug.debugMessage("Solving CLP in %s" % filename, 10)
         command    = 'jeclipse -b %s -e "%s."' % (filename, self.__goal) 
-        proc       = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        Debug.verboseMessage("Running command '%s'" % command)
+        start = timeit.default_timer()
+        proc       = Popen(command, shell=True, executable="/bin/bash")
         returnCode = proc.wait()
-        WCET = 0
+        self.solvingTime = (timeit.default_timer() - start)
         if returnCode != 0:
             Debug.warningMessage("Running '%s' failed" % command)
-        for line in proc.stdout.readlines():
-            if line.startswith("Found a solution with cost"):
-                lexemes = shlex.split(line)
-                value   = int(lexemes[-1])
-                WCET    = max(WCET, -1 * value)
-        Debug.verboseMessage("CLP:: WCET(%s) = %d" % (contextv.getName(), WCET)) 
-        return WCET
+        else:
+            with open(filename + '.res') as f:
+                for line in f:
+                    if re.match(r'%s' % CLP.WCET, line):
+                        values = re.findall(r'[0-9]+', line)
+                        assert len(values) == 1, "Unable to find WCET value in CLP output file"
+                        self.wcet = int(values[0])
     
     def _addOutputPredicates (self, filename):
         fileHandle = "F"        
-        self._lines.append('%s(%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.clauseSep))
+        self._lines.append('%s(%s,%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, CLP.WCET, ECLIPSE.clauseSep))
         self._lines.append(getNewLine())
         self._lines.append('open("%s",%s,%s)%s' % (os.path.basename(filename) + ".res", "write", fileHandle, ECLIPSE.conjunct))
         self._lines.append('print_list(%s,"%s: ",%s)%s' % (fileHandle, CLP.BB_COUNTS, CLP.BB_COUNTS, ECLIPSE.conjunct))
         self._lines.append('print_list(%s,"%s: ",%s)%s' % (fileHandle, CLP.EDGE_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.conjunct))
+        self._lines.append('write(%s, "%s: ")%s' % (fileHandle, CLP.WCET, ECLIPSE.conjunct))
+        self._lines.append('write(%s,%s)%s' % (fileHandle, CLP.WCET, ECLIPSE.conjunct))
+        self._lines.append('nl(%s)%s' % (fileHandle, ECLIPSE.conjunct))
         self._lines.append('close(%s)%s' % (fileHandle, ECLIPSE.terminator))
         self._lines.append(getNewLine(2))
         
@@ -247,8 +256,8 @@ class CreateCFGCLP (CLP):
         # First add domains for basic blocks
         for headerID in lnt.getHeaderIDs():
             for superv in superg.getSuperBlockRegion(headerID):
-                if superv.getBasicBlockIDs():           
-                    lowerBound = 0   
+                if superv.getBasicBlockIDs() and superv.hasRepresentativeID():           
+                    lowerBound = 0
                     treev      = lnt.getVertex(superv.getRepresentativeID())
                     headerv    = lnt.getVertex(treev.getParentID())
                     upperBound = self.__computeUpperCapacityConstraint(data, cfg, lnt, headerv)
@@ -294,9 +303,9 @@ class CreateCFGCLP (CLP):
         self._lines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
         self._lines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
         self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
-                           (ECLIPSE.getTempList(1), CLP.PWCET, 900, ECLIPSE.conjunct))
-        self._lines.append("%s(%s, %s)%s" % \
-                           (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, ECLIPSE.terminator))
+                           (ECLIPSE.getTempList(1), CLP.PWCET, 5000, ECLIPSE.conjunct))
+        self._lines.append("%s(%s, %s, %s)%s" % \
+                           (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, CLP.WCET, ECLIPSE.terminator))
         self._lines.append(getNewLine(2))
 
 class CreateCFGCLPVanilla (CreateCFGCLP):
@@ -311,7 +320,7 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         self._addExecutionCountDomains(data, superg, pathg, cfg, lnt)
         self._addEpilogue()
         self._addOutputPredicates(filename)
-        self._wcet = self._solve(basepath, basename, contextv, filename)
+        self._solve(basepath, basename, contextv, filename)
 
 class CreateCFGCLPExtra (CreateCFGCLP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg, pathg):
@@ -326,28 +335,22 @@ class CreateCFGCLPExtra (CreateCFGCLP):
         self.__addInfeasiblePathConstraints(data, pathg, cfg, lnt)
         self._addEpilogue()
         self._addOutputPredicates(filename)
-        self._wcet = self._solve(basepath, basename, contextv, filename)
+        self._solve(basepath, basename, contextv, filename)
 
     def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
         self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
         for superv in pathg:
-            if superv.getBasicBlockIDs():
-                countVariable1 = ECLIPSE.getVertexCountVariable(superv.getRepresentativeID())
-            else:
-                edge          = superv.getUniqueEdge()
-                countVariable1 = ECLIPSE.getEdgeCountVariable(edge[0], edge[1])
+            edge1          = superv.getEdge()
+            countVariable1 = ECLIPSE.getEdgeCountVariable(edge1[0], edge1[1])
             for succID in superv.getSuccessorIDs():
-                succSuperv = pathg.getVertex(succID)
-                if succSuperv.getBasicBlockIDs():
-                    countVariable2 = ECLIPSE.getVertexCountVariable(succSuperv.getRepresentativeID())
-                else:
-                    edge           = succSuperv.getUniqueEdge()
-                    countVariable2 = ECLIPSE.getEdgeCountVariable(edge[0], edge[1])
+                succv          = pathg.getVertex(succID)
+                edge2          = succv.getEdge()
+                countVariable2 = ECLIPSE.getEdgeCountVariable(edge2[0], edge2[1])
                 self._lines.append("%s%s0%s%s%s0%s" % \
                                (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
                 self._lines.append("%s%s0%s%s%s0%s" % \
                                (countVariable2, ECLIPSE.gt, ECLIPSE.implies, countVariable1, ECLIPSE.equals, ECLIPSE.conjunct))
-        self._lines.append(getNewLine())  
+        self._lines.append(getNewLine())
 
 class TreeBasedCalculation:
     def __init__ (self, superg, lnt, longestPaths=1):
@@ -465,7 +468,7 @@ class LpSolve:
     
 class ILP ():
     def __init__ (self):
-        self._wcet = -1
+        self.wcet = -1
         self._variableToExecutionCount = {}
         
     def _solve(self, filename):
@@ -481,7 +484,7 @@ class ILP ():
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes     = shlex.split(line)
-                self._wcet = long(decimal.Decimal(lexemes[-1])) 
+                self.wcet = long(decimal.Decimal(lexemes[-1])) 
             elif line.startswith(LpSolve.edgePrefix) or line.startswith(LpSolve.vertexPrefix):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
@@ -502,20 +505,20 @@ class CreateSuperBlockCFGILP (ILP):
         solution = True
         while solution and soughtSolutions:
             soughtSolutions -= 1
-            if self._wcet != -1:
+            if self.wcet != -1:
                 self.__addMaximumWCETConstraint()
             with open(filename, 'w') as ilpFile:
                 for constraint in self.__constraints:
                     ilpFile.write(constraint)        
             solution = self._solve(filename)
             if solution:
-                Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self._wcet))
+                Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self.wcet))
             
     def __addMaximumWCETConstraint (self):
         intConstraint = self.__constraints.pop()
         constraint    = self.__constraints[0][len(LpSolve.max_):-self.__endOfObjectiveFunction]
         constraint    += LpSolve.ltOrEqual
-        constraint    += str(self._wcet - 1)
+        constraint    += str(self.wcet - 1)
         constraint    += LpSolve.semiColon
         constraint    += getNewLine()
         self.__constraints.append(constraint)
@@ -720,7 +723,7 @@ class CreateCFGILP (ILP):
             for constraint in self.__constraints:
                 ilpFile.write(constraint)        
         if self._solve(filename):
-            Debug.verboseMessage("ILP:: WCET(%s) = %d" % (cfg.getName(), self._wcet))
+            Debug.verboseMessage("ILP:: WCET(%s) = %d" % (cfg.getName(), self.wcet))
 #            
     def __createStructuralConstraints (self, cfg):
         for v in cfg:

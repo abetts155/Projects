@@ -222,26 +222,14 @@ class CallGraphVertex (Vertex):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
 class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID, partitionID, acyclicPartition, basicBlocks, edges):
+    def __init__ (self, vertexID, partitionID, acyclicPartition, edge):
         Vertex.__init__(self, vertexID)
         self.acyclicPartition = acyclicPartition
         self.partitionID      = partitionID
-        self.__basicBlocks    = basicBlocks
-        self.__edges          = edges
+        self.__edge           = edge
     
-    def getBasicBlockIDs (self):
-        return self.__basicBlocks
-    
-    def getEdges (self):
-        return self.__edges
-    
-    def getUniqueEdge (self):
-        assert len(self.__edges) == 1
-        return list(self.__edges)[0]
-    
-    def getRepresentativeID (self):
-        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
-        return list(self.__basicBlocks)[0]
+    def getEdge (self):
+        return self.__edge
     
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
@@ -250,6 +238,7 @@ class SuperBlock (Vertex):
         self.__basicBlocks       = set([])
         self.__edges             = set([])
         self.__loopHeader        = None
+        self.__repID             = None
     
     def setLoopHeader (self, headerID):
         self.__loopHeader = headerID
@@ -287,9 +276,16 @@ class SuperBlock (Vertex):
     def getEdges (self):
         return self.__edges
     
+    def setRepresentativeID (self, vertexID):
+        assert vertexID in self.__basicBlocks
+        self.__repID = vertexID
+        
+    def hasRepresentativeID (self):
+        return self.__repID
+    
     def getRepresentativeID (self):
-        assert self.__basicBlocks, "Trying to return a representative ID for a super block without basic blocks"
-        return list(self.__basicBlocks)[0]
+        assert self.__repID, "Representative ID of super block %d not set" % self._vertexID
+        return self.__repID
     
     def getBranchPartitions (self):
         partitions = {}

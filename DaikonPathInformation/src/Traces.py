@@ -201,13 +201,6 @@ INFEASIBLE CONJECTURES
         for tupleKey in self._executionTimes.keys():
             self._executionTimes[tupleKey] *= pow(10,-3)
         self._longestTime *= pow(10,-3)
-        
-    def _analyseCFGVertex (self, pathg, bbID):
-        if pathg.isMonitoredBasicBlock(bbID):
-            superv = pathg.getMonitoredBasicBlockSuperBlock(bbID)
-            self._superBlockExecutionCounts[pathg][superv.getVertexID()] += 1
-            self._partitions[pathg][superv.partitionID].add(superv)
-            self._observedSuperBlocks.add(superv.getVertexID())
             
     def _analyseCFGEdge (self, pathg, predID, succID):
         if pathg.isMonitoredEdge(predID, succID):
@@ -315,7 +308,6 @@ class ParseTraces (TraceInformation):
                                     self.__predBB    = self.__currentBB
                                     self.__currentBB = self.__currentCFG.getVertex(succID)
                                     # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                                    self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
                                     self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())             
                                     self.__analyseLoopBounds()
                                     found = True
@@ -329,7 +321,6 @@ class ParseTraces (TraceInformation):
                                     self.__predBB    = self.__currentBB
                                     self.__currentBB = succv
                                     # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                                    self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
                                     self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())             
                                     self.__analyseLoopBounds()
                                 else:
@@ -475,7 +466,6 @@ class Gem5Parser (TraceInformation):
                         self.__currentBB = succv
                         break
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                self._analyseCFGVertex(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__currentBB.getVertexID())     
                 self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
             # Analyse loop bounds
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()) and self.__currentBB.getVertexID() != self.__currentCFG.getEntryID():

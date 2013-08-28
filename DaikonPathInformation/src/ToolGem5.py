@@ -310,6 +310,12 @@ def commandLine ():
                          help="use a genetic algorithm to generate test vectors",
                          default=False)
     
+    cmdline.add_argument("-I",
+                         "--inline",
+                         action="store_true",
+                         help="do analysis with fully inlined program where applicable",
+                         default=False)
+    
     cmdline.add_argument("-r",
                           "--root",
                           action="store",
@@ -339,7 +345,7 @@ def commandLine ():
     
     return cmdline.parse_args()
 
-def doAnalysis (gem5Traces, program, basepath, basename):
+def doAnalysis (gem5Traces, program, inline, basepath, basename):
     import Traces, Calculations    
     time1 = Timing.log("TRACE PARSING RUN #1 (NO INLINING)")
     data = Traces.Gem5Parser(program, gem5Traces)
@@ -348,7 +354,7 @@ def doAnalysis (gem5Traces, program, basepath, basename):
     program.output(data)
     program.generateAllUDrawFiles()
 
-    if program.getCallGraph().numOfVertices() > 1:
+    if program.getCallGraph().numOfVertices() > 1 and inline:
         program.inlineCalls()
         time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
         data = Traces.Gem5Parser(program, gem5Traces)
@@ -409,6 +415,6 @@ if __name__ == "__main__":
         else:
             Debug.verboseMessage("Running program on gem5 with %d tests" % args.tests)
             gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
-    doAnalysis(gem5Traces, program, basepath, basename)
+    doAnalysis(gem5Traces, program, args.inline, basepath, basename)
     
     
