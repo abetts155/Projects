@@ -238,6 +238,14 @@ INFEASIBLE CONJECTURES
                 num += 1
         return num
     
+    def isExecutedFunction (self, functionName):
+        import decimal
+        total = 0
+        cfg = self._program.getICFG(functionName)
+        for v in cfg:
+            total += self._executionTimes[(functionName, v.getOriginalVertexID())]
+        return decimal.Decimal(total)        
+    
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
         TraceInformation.__init__(self, program)

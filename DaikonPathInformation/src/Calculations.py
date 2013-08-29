@@ -15,17 +15,22 @@ class WCETCalculation:
         for vertexID in dfs.getPostorder():
             contextv     = contextg.getVertex(vertexID)
             functionName = contextv.getName()
-            Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
-            lnt          = program.getLNT(functionName)
-            superg       = program.getSuperBlockCFG(functionName)
-            pathg        = superg.getSuperBlockPathInformationGraph()
-            cfg          = program.getICFG(functionName)
-            clp1         = CreateCFGCLPVanilla(basepath, basename, data, self.__CLPVanillaContextIDToWCET, contextv, cfg, lnt, superg, pathg)
-            Debug.verboseMessage("CLP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp1.wcet, clp1.solvingTime))
-            self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = clp1.wcet
-            clp2         = CreateCFGCLPExtra(basepath, basename, data, self.__CLPExtraContextIDToWCET, contextv, cfg, lnt, superg, pathg)
-            self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2.wcet
-            Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2.wcet, clp2.solvingTime))
+            if data.isExecutedFunction(functionName):
+                Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
+                lnt          = program.getLNT(functionName)
+                superg       = program.getSuperBlockCFG(functionName)
+                pathg        = superg.getSuperBlockPathInformationGraph()
+                cfg          = program.getICFG(functionName)
+                clp1         = CreateCFGCLPVanilla(basepath, basename, data, self.__CLPVanillaContextIDToWCET, contextv, cfg, lnt, superg, pathg)
+                Debug.verboseMessage("CLP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp1.wcet, clp1.solvingTime))
+                self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = clp1.wcet
+                clp2         = CreateCFGCLPExtra(basepath, basename, data, self.__CLPExtraContextIDToWCET, contextv, cfg, lnt, superg, pathg)
+                self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2.wcet
+                Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2.wcet, clp2.solvingTime))
+            else:
+                Debug.verboseMessage("%s did not execute" % functionName)
+                self.__CLPVanillaContextIDToWCET[contextv.getVertexID()] = 0
+                self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = 0
             
 class ECLIPSE:
     conjunct        = "," + getNewLine()
