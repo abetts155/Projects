@@ -222,14 +222,16 @@ class CallGraphVertex (Vertex):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
 class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID, partitionID, acyclicPartition, edge):
+    def __init__ (self, vertexID, acyclicPartition, edges):
         Vertex.__init__(self, vertexID)
-        self.acyclicPartition = acyclicPartition
-        self.partitionID      = partitionID
-        self.__edge           = edge
+        self.__acyclicPartition = acyclicPartition
+        self.__edges            = edges
     
-    def getEdge (self):
-        return self.__edge
+    def isAcyclicPartition (self):
+        return self.__acyclicPartition
+    
+    def getEdges (self):
+        return self.__edges
     
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
@@ -239,6 +241,7 @@ class SuperBlock (Vertex):
         self.__edges             = set([])
         self.__loopHeader        = None
         self.__repID             = None
+        self.__dummy             = False
     
     def setLoopHeader (self, headerID):
         self.__loopHeader = headerID
@@ -287,6 +290,12 @@ class SuperBlock (Vertex):
         assert self.__repID, "Representative ID of super block %d not set" % self._vertexID
         return self.__repID
     
+    def setDummy (self):
+        self.__dummy = True
+        
+    def isDummy (self):
+        return self.__dummy
+    
     def getBranchPartitions (self):
         partitions = {}
         for succe in self._successors.values():
@@ -296,13 +305,6 @@ class SuperBlock (Vertex):
                     partitions[branchID] = set([])
                 partitions[branchID].add(succe)
         return partitions
-    
-    def getLoopPartition (self):
-        partition = set([])
-        for succe in self._successors.values():
-            if isinstance(succe, SuperBlockLoopEdge):
-                partition.add(succe)
-        return partition
     
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID

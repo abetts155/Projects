@@ -302,8 +302,8 @@ class CreateCFGCLP (CLP):
         self._lines.append("%s%s%d%s%s%s" % (CLP.PWCET, ECLIPSE.equals, -1, ECLIPSE.multiply, CLP.WCET, ECLIPSE.conjunct))
         self._lines.append("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, CLP.BB_COUNTS, ECLIPSE.getTempList(0), ECLIPSE.conjunct))
         self._lines.append("append(%s,%s,%s)%s" % (CLP.BB_TIMES, ECLIPSE.getTempList(0), ECLIPSE.getTempList(1), ECLIPSE.conjunct))
-        self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{timeout:%d}))%s" % \
-                           (ECLIPSE.getTempList(1), CLP.PWCET, 5000, ECLIPSE.conjunct))
+        self._lines.append("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{}))%s" % \
+                           (ECLIPSE.getTempList(1), CLP.PWCET, ECLIPSE.conjunct))
         self._lines.append("%s(%s, %s, %s)%s" % \
                            (CLP.OUTPUT_PREDICATE_HEAD, CLP.BB_COUNTS, CLP.EDGE_COUNTS, CLP.WCET, ECLIPSE.terminator))
         self._lines.append(getNewLine(2))
@@ -340,16 +340,16 @@ class CreateCFGCLPExtra (CreateCFGCLP):
     def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
         self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
         for superv in pathg:
-            edge1          = superv.getEdge()
-            countVariable1 = ECLIPSE.getEdgeCountVariable(edge1[0], edge1[1])
-            for succID in superv.getSuccessorIDs():
-                succv          = pathg.getVertex(succID)
-                edge2          = succv.getEdge()
-                countVariable2 = ECLIPSE.getEdgeCountVariable(edge2[0], edge2[1])
-                self._lines.append("%s%s0%s%s%s0%s" % \
-                               (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
-                self._lines.append("%s%s0%s%s%s0%s" % \
-                               (countVariable2, ECLIPSE.gt, ECLIPSE.implies, countVariable1, ECLIPSE.equals, ECLIPSE.conjunct))
+            for edge1 in superv.getEdges():
+                countVariable1 = ECLIPSE.getEdgeCountVariable(edge1[0], edge1[1])
+                for succID in superv.getSuccessorIDs():
+                    succv = pathg.getVertex(succID)
+                    for edge2 in succv.getEdges():
+                        countVariable2 = ECLIPSE.getEdgeCountVariable(edge2[0], edge2[1])
+                        self._lines.append("%s%s0%s%s%s0%s" % \
+                                       (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
+                        self._lines.append("%s%s0%s%s%s0%s" % \
+                                       (countVariable2, ECLIPSE.gt, ECLIPSE.implies, countVariable1, ECLIPSE.equals, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
 
 class TreeBasedCalculation:

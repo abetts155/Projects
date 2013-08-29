@@ -12,7 +12,7 @@ bb: 4
 succ: 5
 
 bb: 5
-succ: 6, F2
+succ: 6
 
 bb: 6
 succ: 7,  11
@@ -30,7 +30,7 @@ bb: 10
 succ: 11
 
 bb: 11
-succ: 5, 12
+succ: 12, 6
 
 bb: 12
 succ: 13, 14
@@ -42,9 +42,8 @@ bb: 14
 succ: 15
 
 bb: 15
-succ:
+succ: 16, 12
 
-CFG: F2
 bb: 16
 succ: 17, 18
 
@@ -52,7 +51,7 @@ bb: 17
 succ: 19
 
 bb: 18
-succ: 19
+succ: 19, 5
 
 bb: 19
 succ: 20, 21

@@ -1,13 +1,12 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition, CFGEdge
+from Vertices import BasicBlock, Vertex, HeaderVertex, SuperBlock, SuperBlockPartition
 from Edges import SuperBlockControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from Utils import enum
 import Debug, UDrawGraph
 
-nextVertexID    = 0
-nextEdgeID      = 0
-nextPartitionID = 0
+nextVertexID = 0
+nextEdgeID   = 0
 
 class SuperBlockGraph (DirectedGraph):
     def __init__ (self, icfg, lnt):
@@ -18,7 +17,7 @@ class SuperBlockGraph (DirectedGraph):
         self.__pathg = SuperBlockPathInformationGraph(self._name)
         self.__headerToSuperBlockSubgraph = {}
         self.__headerToRootSuperBlock     = {}
-        self.__headerToPartitionNumbers   = {}
+        self.__headerToAliveSuperBlocks   = {}
         self.__basicBlockToSuperBlock     = {}
         self.__rootSuperv                 = None
         for level, vertices in lnt.levelIterator(True):
@@ -120,73 +119,113 @@ class SuperBlockGraph (DirectedGraph):
         succe.setEdgeID(nextEdgeID)
         prede.setEdgeID(nextEdgeID)
         
-    def __computeSuperBlockPartitions (self, subgraph, rootv, forwardICFG, headerv):
-        supervToSupervs = {}
+    def __addDummyExitToSubgraph (self, subgraph):
+        noSuccs = []
         for superv in subgraph:
-            supervToSupervs[superv] = set([])
-        dfs = DepthFirstSearch(subgraph, rootv.getVertexID())
-        for vertexID in dfs.getPostorder():
-            superv = self.getVertex(vertexID)
-            if vertexID == rootv.getVertexID():
-                self.__headerToPartitionNumbers[headerv.getHeaderID()] = []
-                self.__handleRootSuperBlock(supervToSupervs, rootv, forwardICFG, headerv)
-            else:
-                # Deduce which super blocks we should monitor during trace parsing
-                alive = False
-                if (superv.numberOfSuccessors() == 0 or superv.numberOfSuccessors() == 1) \
-                and superv != rootv:
-                    alive = True
-                if alive: 
-                    supervToSupervs[superv].add(superv)
+            if superv.numberOfSuccessors() == 0:
+                noSuccs.append(superv)
+        if len(noSuccs) > 1:
+            nextVertexID = subgraph.getNextVertexID()
+            newSuperv    = SuperBlock(nextVertexID)
+            newSuperv.setDummy()
+            subgraph.vertices[nextVertexID] = newSuperv
+            for predSuperv in noSuccs:
+                subgraph.addEdge(predSuperv.getVertexID(), nextVertexID)
+            return True, nextVertexID
+        else:
+            assert len(noSuccs) == 1
+            return False, noSuccs[0].getVertexID()
+        
+    def __removeDummyExitFromSubgraph (self, subgraph, exitID):
+        exitv = subgraph.getVertex(exitID)
+        for predID in exitv.getPredecessorIDs():
+            subgraph.removeEdge(predID, exitID)
+        subgraph.removeVertex(exitID)
+        
+    def __computeSuperBlockPartitions (self, subgraph, rootv, forwardICFG, headerv):
+        dummy, exitID   = self.__addDummyExitToSubgraph(subgraph)
+        predomTree      = Dominators(subgraph, rootv.getVertexID())
+        reverseSubgraph = subgraph.getReverseGraph()
+        postdomTree     = Dominators(reverseSubgraph, exitID)
+        dominatorg      = DominatorGraph(predomTree, postdomTree)
+        if dummy:
+            self.__removeDummyExitFromSubgraph(subgraph, exitID)
+        # Determine which super blocks need to be in the path information graph
+        for dominatorv in dominatorg:
+            # Only add super blocks which do not pre-dominate or post-dominate other super blocks 
+            # and which is not the root super block in this region
+            if dominatorv.numberOfSuccessors() == 0 and dominatorv.numberOfPredecessors() > 0:
+                supervID  = dominatorv.getVertexID()
+                superv    = subgraph.getVertex(supervID)
+                isAcyclic = headerv.getVertexID() == self.__lnt.getRootID()
+                edges     = set([])
+                # Find out which CFG edges we need to monitor during trace parsing to falsify conjectures
+                if superv.getBasicBlockIDs() and superv.hasRepresentativeID():
+                    repID  = superv.getRepresentativeID()
+                    repv   = self.__icfg.getVertex(repID)
+                    for succID in repv.getSuccessorIDs():
+                        edges.add((repID, succID))
                 else:
-                    for succID in superv.getSuccessorIDs():
-                        succv = self.getVertex(succID)
-                        supervToSupervs[superv].update(supervToSupervs[succv])
-                        
-    def __handleRootSuperBlock (self, supervToSupervs, rootv, forwardICFG, headerv):
-        global nextPartitionID
+                    edges = superv.getEdges()
+                assert edges, "Unable to find suitable CFG edges for super block %d" % superv.getVertexID()
+                pathv = SuperBlockPartition(supervID, isAcyclic, edges) 
+                self.__pathg.addVertex(pathv, isAcyclic)
+        # Compute reachability of alive super blocks to other super blocks
+        aliveSuperBlocks = {}
+        for superv in subgraph:
+            aliveSuperBlocks[superv] = set([])
+        dfs              = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
         branchPartitions = rootv.getBranchPartitions()
-        dfs = DepthFirstSearch(forwardICFG, forwardICFG.getEntryID())
+        branchToAliveSuperBlocks = {}
+        prevRootBranches = set([])
         for vertexID in reversed(dfs.getPostorder()):
-            v = forwardICFG.getVertex(vertexID)
-            if self.__lnt.isLoopHeader(vertexID) \
-            and vertexID != headerv.getHeaderID() \
-            and not isinstance(v, CFGEdge) \
-            and not v.isDummy():
-                self.__headerToPartitionNumbers[headerv.getHeaderID()].extend(self.__headerToPartitionNumbers[vertexID])
+            # Does this basic block belong to the root super block?
             if vertexID in branchPartitions:
-                nextPartitionID += 1
-                self.__pathg.addNewPartition(nextPartitionID)
-                self.__headerToPartitionNumbers[headerv.getHeaderID()].append(nextPartitionID)
+                succIDs = []
                 for supere in branchPartitions[vertexID]:
-                    succv = self.getVertex(supere.getVertexID())
-                    for superv in supervToSupervs[succv]:
-                        newVertexID     = superv.getVertexID()
-                        Debug.verboseMessage(superv.getVertexID())
-                        isAcyclic       = headerv.getVertexID() == self.__lnt.getRootID()
-                        edge            = None
-                        if superv.getBasicBlockIDs():
-                            repID  = superv.getRepresentativeID()
-                            repv   = self.__icfg.getVertex(repID)
-                            assert len(repv.getSuccessorIDs()) > 0
-                            edge   = (repID, repv.getSuccessorIDs()[0])
-                        else:
-                            edges  = superv.getEdges()
-                            assert len(edges) > 0
-                            edge   = list(edges)[0] 
-                        assert edge, "Unable to find suitable CFG edge for super block %d" % superv.getVertexID()
-                        partitionv = SuperBlockPartition(newVertexID, nextPartitionID, isAcyclic, edge) 
-                        self.__pathg.addVertex(partitionv, nextPartitionID, isAcyclic)
-        # Add edges in path information graph
-        if headerv.getVertexID() == self.__lnt.getRootID():
-            partitions = self.__headerToPartitionNumbers[headerv.getHeaderID()]
-            for i in range(0, len(partitions)):
-                partitionID1 = partitions[i]
-                for j in range(i+1, len(partitions)):
-                    partitionID2 = partitions[j]
-                    for partitionv1 in self.__pathg.partitionToSuperBlocks[partitionID1]:
-                        for partitionv2 in self.__pathg.partitionToSuperBlocks[partitionID2]:
-                            self.__pathg.addEdge(partitionv1.getVertexID(), partitionv2.getVertexID())
+                    succIDs.append(supere.getVertexID())
+                # Topologically sort the SB-CFG with the edges emanating from the root super block created for that specific branch
+                dfs2 = DepthFirstSearch(subgraph, rootv.getVertexID(), succIDs)
+                aliveInThisPartition = set([])
+                for supervID in reversed(dfs2.getPostorder()):
+                    superv = subgraph.getVertex(supervID)     
+                    # Are we monitoring this super block?               
+                    if self.__pathg.hasVertex(supervID):
+                        # If so, add edges from all alive super blocks which can reach this super block
+                        for prede in superv.getPredecessorEdges(): 
+                            predv = subgraph.getVertex(prede.getVertexID())
+                            for pathv in aliveSuperBlocks[predv]:
+                                self.__pathg.addEdge(pathv.getVertexID(), superv.getVertexID())
+                        # The super block is alive
+                        aliveSuperBlocks[superv].add(superv)
+                        aliveInThisPartition.add(superv)
+                    # See if there are any collapsed inner loops in the super block
+                    prevHeaders = set([])
+                    for bbID in superv.getBasicBlockIDs():
+                        if self.__lnt.isLoopHeader(bbID) and bbID != headerv.getHeaderID():
+                            aliveSuperBlocks[superv].update(self.__headerToAliveSuperBlocks[bbID])
+                            if prevHeaders:
+                                for headerID in prevHeaders:
+                                    for pathv1 in self.__headerToAliveSuperBlocks[headerID]:
+                                        for pathv2 in self.__headerToAliveSuperBlocks[bbID]:
+                                            self.__pathg.addEdge(pathv1.getVertexID(), pathv2.getVertexID())
+                            prevHeaders.add(bbID)
+                                
+                    for prede in superv.getPredecessorEdges():
+                        predv = subgraph.getVertex(prede.getVertexID())
+                        aliveSuperBlocks[superv].update(aliveSuperBlocks[predv])
+                branchToAliveSuperBlocks[vertexID] = aliveInThisPartition
+                # Were there previous partitions?
+                if prevRootBranches:
+                    for branchID in prevRootBranches:
+                        for pathv1 in branchToAliveSuperBlocks[branchID]:
+                            for pathv2 in branchToAliveSuperBlocks[vertexID]:
+                                self.__pathg.addEdge(pathv1.getVertexID(), pathv2.getVertexID())
+                prevRootBranches.add(vertexID)
+        
+        self.__headerToAliveSuperBlocks[headerv.getHeaderID()] = set([])
+        for aliveInPartition in branchToAliveSuperBlocks.values():
+            self.__headerToAliveSuperBlocks[headerv.getHeaderID()].update(aliveInPartition)        
             
     def getSuperBlock (self, basicBlockID):
         assert basicBlockID in self.__basicBlockToSuperBlock, "Unable to find basic block %d in a super block" % basicBlockID
@@ -210,32 +249,22 @@ class SuperBlockGraph (DirectedGraph):
 class SuperBlockPathInformationGraph (DirectedGraph):
     def __init__ (self, name):
         DirectedGraph.__init__(self)
-        self._name                  = name
-        self.acyclicPartitions      = set([])
-        self.partitionToSuperBlocks = {}
-        self.monitoredEdges         = {}
+        self._name            = name
+        self.__monitoredEdges = {}
         
-    def addNewPartition (self, partitionID):
-        self.partitionToSuperBlocks[partitionID] = set([])
-        
-    def addVertex (self, partitionv, partitionID, isAcyclic):
+    def addVertex (self, partitionv, isAcyclic):
         vertexID = partitionv.getVertexID()
         assert vertexID not in self.vertices
         self.vertices[vertexID] = partitionv
-        self.partitionToSuperBlocks[partitionID].add(partitionv)
-        if isAcyclic:
-            self.acyclicPartitions.add(partitionID)
-        self.monitoredEdges[partitionv.getEdge()] = partitionv
-                            
-    def isAcyclicPartition (self, partitionID):
-        return partitionID in self.acyclicPartitions
+        for edge in partitionv.getEdges():
+            self.__monitoredEdges[edge] = partitionv
     
     def isMonitoredEdge (self, predID, succID):
-        return (predID, succID) in self.monitoredEdges
+        return (predID, succID) in self.__monitoredEdges
     
     def getMonitoredEdgeSuperBlock (self, predID, succID):
-        assert (predID, succID) in self.monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
-        return self.monitoredEdges[(predID, succID)]
+        assert (predID, succID) in self.__monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
+        return self.__monitoredEdges[(predID, succID)]
     
 class DominatorGraph (DirectedGraph):
     def __init__ (self, predomTree, postdomTree):

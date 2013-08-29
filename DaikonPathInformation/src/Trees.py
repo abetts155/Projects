@@ -244,7 +244,7 @@ class LengauerTarjan (Tree):
         self.__ancestor[wID] = vID
         
 class DepthFirstSearch (Tree):
-    def __init__(self, directedg, rootID):
+    def __init__(self, directedg, rootID, succIDs=None):
         assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
         self.__preorder = []
@@ -254,9 +254,12 @@ class DepthFirstSearch (Tree):
         self.__vertexID2PreID = {}
         self.__vertexID2PostID = {}
         self.__backedges = []
-        self.initialise (directedg)
+        self.initialise(directedg)
         self.setRootID(rootID)
-        self.doSearch (directedg, rootID)
+        if succIDs:
+            self.doSearch(directedg, rootID, succIDs)
+        else:
+            self.doSearch(directedg, rootID, directedg.getVertex(rootID).getSuccessorIDs())
         
     def initialise (self, directedg):
         for v in directedg:
@@ -265,16 +268,15 @@ class DepthFirstSearch (Tree):
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
         
-    def doSearch (self, directedg, vertexID):
+    def doSearch (self, directedg, vertexID, succIDs):
         self.__vertexID2PreID[vertexID] = self.__preorderID
         self.__preorder.append(vertexID)
         self.__preorderID += 1
         
-        v = directedg.getVertex(vertexID)
-        for succID in v.getSuccessorIDs ():
+        for succID in succIDs:
             if self.__vertexID2PreID[succID] == 0:
                 self.addEdge(vertexID, succID)
-                self.doSearch(directedg, succID)
+                self.doSearch(directedg, succID, directedg.getVertex(succID).getSuccessorIDs())
             elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
                 pass
             elif self.__vertexID2PostID[succID] == 0:
@@ -745,18 +747,14 @@ class LoopNests (Tree):
         # Add edges in induced subgraph
         for vertexID, predIDs in edges.items():
             for predID in predIDs:
-                flowg.addEdge(predID, vertexID) 
-        for sourceID, destinationIDs in self.__loopExits[headerID].iteritems():
-            for destinationID in destinationIDs:
-                vertexID = flowg.getNextVertexID()
-                edgev    = CFGEdge(vertexID, sourceID, destinationID)
-                flowg.addVertex(edgev)
-                flowg.addEdge(sourceID, vertexID)
-        for tailID in self.__loopTails[headerID]:
-            vertexID = flowg.getNextVertexID()
-            edgev    = CFGEdge(vertexID, tailID, headerID)
-            flowg.addVertex(edgev)
-            flowg.addEdge(tailID, vertexID)
+                flowg.addEdge(predID, vertexID)
+        if not self.isDoWhileLoop(headerID): 
+            for sourceID, destinationIDs in self.__loopExits[headerID].iteritems():
+                for destinationID in destinationIDs:
+                    vertexID = flowg.getNextVertexID()
+                    edgev    = CFGEdge(vertexID, sourceID, destinationID)
+                    flowg.addVertex(edgev)
+                    flowg.addEdge(sourceID, vertexID)
         # Add a dummy exit vertex to induced subgraph
         exitID = flowg.getNextVertexID()
         bb = BasicBlock(exitID)

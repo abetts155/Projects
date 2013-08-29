@@ -134,22 +134,18 @@ INFEASIBLE CONJECTURES
         for supervID, conjecture in newConjectures.iteritems():
             self._executesKTimes[pathg][supervID] = conjecture
         # Now falsify mutual exclusion edges
-        for partitionID1 in self._partitions[pathg].keys():
-            for partitionID2 in self._partitions[pathg].keys():
-                if partitionID1 != partitionID2:
-                    for superv1 in self._partitions[pathg][partitionID1]:
-                        for superv2 in self._partitions[pathg][partitionID2]:
-                            if pathg.hasEdge(superv1.getVertexID(), superv2.getVertexID()):
-                                Debug.debugMessage("Falsifying conjecture that (%d, %d) is mutually exclusive"  % (superv1.getVertexID(), superv2.getVertexID()), 1)
-                                pathg.removeEdge(superv1.getVertexID(), superv2.getVertexID())
-                                pathg.removeEdge(superv2.getVertexID(), superv1.getVertexID())
+        for superv1 in self._partitions[pathg]:
+            for superv2 in self._partitions[pathg]:
+                if pathg.hasEdge(superv1.getVertexID(), superv2.getVertexID()):
+                    Debug.debugMessage("Falsifying conjecture that (%d, %d) is mutually exclusive"  % (superv1.getVertexID(), superv2.getVertexID()), 1)
+                    pathg.removeEdge(superv1.getVertexID(), superv2.getVertexID())
+                    pathg.removeEdge(superv2.getVertexID(), superv1.getVertexID())
     
     def _endRun (self):
         for cfg in self._program.getICFGs():
             superg = self._program.getSuperBlockCFG(cfg.getName())
             pathg  = superg.getSuperBlockPathInformationGraph()
-            for partitionID in self._partitions[pathg].keys():
-                self._partitions[pathg][partitionID].clear()
+            self._partitions[pathg].clear()
                 
     def _end (self):
         for pathg, supervs in self._executesKTimes.iteritems():
@@ -165,19 +161,16 @@ INFEASIBLE CONJECTURES
         for cfg in self._program.getICFGs():
             superg = self._program.getSuperBlockCFG(cfg.getName())
             pathg  = superg.getSuperBlockPathInformationGraph()
-            self._partitions[pathg]                = {}
+            self._partitions[pathg]                = set([])
             self._superBlockExecutionCounts[pathg] = {}
             self._executesKTimes[pathg]            = {}
             self._neverExecuted[pathg]             = set([])
             for superv in pathg:
                 self._superBlockExecutionCounts[pathg][superv.getVertexID()] = 0
-                if superv.acyclicPartition:
+                if superv.isAcyclicPartition():
                     self._executesKTimes[pathg][superv.getVertexID()] = 1
                 else:
                     self._executesKTimes[pathg][superv.getVertexID()] = sys.maxint
-                partitionID = superv.partitionID
-                if partitionID not in self._partitions[pathg]:
-                    self._partitions[pathg][partitionID] = set([])
     
     def _initialiseRequiredWCETInformation (self):
         self._longestTime = 0
@@ -206,7 +199,7 @@ INFEASIBLE CONJECTURES
         if pathg.isMonitoredEdge(predID, succID):
             superv = pathg.getMonitoredEdgeSuperBlock(predID, succID)
             self._superBlockExecutionCounts[pathg][superv.getVertexID()] += 1
-            self._partitions[pathg][superv.partitionID].add(superv)
+            self._partitions[pathg].add(superv)
             self._observedSuperBlocks.add(superv.getVertexID())
             
     def getLoopBound (self, functionName, headerID):

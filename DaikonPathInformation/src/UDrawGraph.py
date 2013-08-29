@@ -209,10 +209,9 @@ def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     name  = "Superv    = %d%s" % (vertexID, newLine)
-    name += "Partition = %d%s" % (v.partitionID, newLine)
-    name += "Edge      = %s" % (str(v.getEdge()))
+    name += "Edges     = %s" % ', '.join(str(edge) for edge in v.getEdges())
     f.write(setName(name))
-    if v.acyclicPartition:
+    if v.isAcyclicPartition():
         f.write(setColor(COLOR.RED))
         f.write(setToolTip("Acyclic partition"))
     f.write(endAttibutes)
