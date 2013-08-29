@@ -1,3 +1,5 @@
+import Calculations
+
 m5Directory = 'm5out'
 
 def clean ():
@@ -6,13 +8,14 @@ def clean ():
     for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
         files.sort()
         for filename in files:
-            if filename.endswith('.udraw') or filename.endswith('.dis'):
+            ext = os.path.splitext(filename)[1]
+            if ext == '.udraw' or ext == '.dis' or ext in Calculations.ECLIPSE.fileExtensions:
                 fullPath = os.path.join(paths, filename)
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 os.remove(fullPath)
             if os.access(filename, os.X_OK) and os.path.exists(filename + '.c'):
                 fullPath = os.path.join(paths, filename)
-                Debug.verboseMessage("Removing '%s'" % fullPath)
+                Debug.verboseMessage("Removing executable '%s'" % fullPath)
                 os.remove(fullPath)
         for directory in dirs:
             if directory == m5Directory:

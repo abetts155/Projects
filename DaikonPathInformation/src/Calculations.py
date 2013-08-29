@@ -33,6 +33,7 @@ class WCETCalculation:
                 self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = 0
             
 class ECLIPSE:
+    fileExtensions  = ['.res', '.vanilla', '.extra']
     conjunct        = "," + getNewLine()
     clauseSep       = ":-"
     domainSep       = " #:: "
