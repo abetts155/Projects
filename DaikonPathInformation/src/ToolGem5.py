@@ -174,6 +174,19 @@ def disassembleProgram (binary):
         if returncode:
             sys.exit("Disassembling '%s' failed" % binary) 
     return filename
+
+def generateAssembly (program):
+    Debug.verboseMessage("Generating assembly")
+    import sys, ARM
+    from subprocess import Popen
+    cmd = "%s -S %s" % (armGCC, program)
+    Debug.debugMessage("Compiling with command '%s'" % cmd, 1)
+    proc       = Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
+    returncode = proc.wait()
+    if returncode:
+        sys.exit("Compiling '%s' with '%s' failed" % (program, cmd))
+    assembly = program[:-2] + '.s'
+    return ARM.readARMAssembly(assembly, args.root)  
         
 def compileProgram (program):
     Debug.verboseMessage("Compiling program")
@@ -201,13 +214,13 @@ def checkProgramFiles ():
     from ParseProgramFile import createProgram
     from ARM import readARMDisassembly
     
-    program = os.path.abspath(args.program)
-    if not os.path.exists(program):
-        sys.exit("The first command-line argument must be a file: '%s' does not exist." % program)
-    elif not os.path.isfile(program):
-        sys.exit("The first command-line argument must be a file: '%s' is not a file" % program)
+    args.program = os.path.abspath(args.program)
+    if not os.path.exists(args.program):
+        sys.exit("The first command-line argument must be a file: '%s' does not exist." % args.program)
+    elif not os.path.isfile(args.program):
+        sys.exit("The first command-line argument must be a file: '%s' is not a file" % args.program)
     else:
-        fileStem, fileExt = os.path.splitext(program)
+        fileStem, fileExt = os.path.splitext(args.program)
         testSpecFile      = fileStem + '.test'
         if not os.path.exists(testSpecFile):
             sys.exit("Expected to find the test specification file '%s' but it is not there" % testSpecFile)
@@ -220,17 +233,17 @@ def checkProgramFiles ():
                     sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
                 if not args.root:
                     sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
-                program     = compileProgram(program)
-                disassembly = disassembleProgram(program)
-                return program, readARMDisassembly(disassembly, args.root), testSpecFile
+                binary      = compileProgram(args.program)
+                disassembly = disassembleProgram(binary)
+                return binary, readARMDisassembly(disassembly, args.root), testSpecFile
             else:
-                sys.exit("Unable to compile '%s' because its extension is not '%s'" % (program, cExt))
+                sys.exit("Unable to compile '%s' because its extension is not '%s'" % (args.program, cExt))
         else:
-            if not os.access(program, os.X_OK):
-                sys.exit("The argument '%s' does not have execute permissions" % program)
-            programFile = program + '.txt'
+            if not os.access(args.program, os.X_OK):
+                sys.exit("The argument '%s' does not have execute permissions" % args.program)
+            programFile = args.program + '.txt'
             assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
-            return program, createProgram(programFile), testSpecFile
+            return args.program, createProgram(programFile), testSpecFile
         
 def checkGem5Settings ():
     import os, sys
@@ -274,9 +287,15 @@ def commandLine ():
                          help="previous gem5 runs")
     
     cmdline.add_argument("-C",
-                         dest="compile",
+                         "--compile",
                          action="store_true",
-                         help="compile only",
+                         help="only compile program",
+                         default=False)
+    
+    cmdline.add_argument("-S",
+                         dest="assembly",
+                         action="store_true",
+                         help="generate program assembly",
                          default=False)
     
     cmdline.add_argument("--compiler-flags",
@@ -388,12 +407,14 @@ if __name__ == "__main__":
     UDrawGraph.basename = basename
 
     if args.clean:
-        Utils.clean()
+        Utils.clean()       
     
     Debug.verboseMessage("%s Analysing program '%s' %s" % ('*' * 10, args.program, '*' * 10))
     Debug.verboseMessage("Checking program configuration...")
     time1 = Timing.log("COMPILING BEGIN")
     binary, program, testSpecFile = checkProgramFiles()
+    if args.assembly:
+        program2 = generateAssembly(args.program)
     time2 = Timing.log("COMPILING END")
     Debug.verboseMessage("...all good")
     if args.compile:

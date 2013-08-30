@@ -137,7 +137,7 @@ def readInProgram (programFile):
                         address = int(lex[1:-1], 16)
                     else:
                         fields.append(lex[1:-1])
-                assert address, "No address found in instruction %s" % line
+                assert address is not None, "No address found in instruction %s" % line
                 instruction = CFGs.Instruction(address, fields)
                 bb.addInstruction(instruction)
     return program

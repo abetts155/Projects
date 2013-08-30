@@ -48,7 +48,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Utils, Calculations
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Utils, Calculations, ARM
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -56,7 +56,8 @@ if __name__ == "__main__":
     UDrawGraph.enabled = args.udraw
     
     if args.clean:
-        Utils.clean()
+        Utils.clean()  
+    
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
     # Create the CFGs
     Debug.verboseMessage("Reading in program file to do super block CFG analysis")

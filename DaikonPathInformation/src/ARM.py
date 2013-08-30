@@ -1,5 +1,5 @@
 import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils
-import re, shlex
+import re, shlex, os, sys
 
 debugLevel = 20
 
@@ -47,6 +47,7 @@ class ARMInstructionSet:
                           'blt.w',
                           'bne.n',
                           'bne.w']
+    
 
 startAddressToFunction          = {}
 lastAddressToFunction           = {}
@@ -58,7 +59,7 @@ functionToLeaders               = {}
 functionToDirectives            = {}
 functionToJumpTableBasicBlocks  = {}
 instructionToBasicBlock         = {}
-program                         = Programs.Program()
+program                         = None
 newVertexID                     = 1
 
 def getInstruction (lexemes):
@@ -228,7 +229,6 @@ def identifyBasicBlocks (functions):
                 Debug.debugMessage("Instruction @ %s is a leader" % hex(instruction.getAddress()), debugLevel)
                 vertexID = newVertexID
                 bb       = Vertices.BasicBlock(vertexID, name=functionName)
-                bb
                 icfg.addVertex(bb)
                 newVertexID += 1
             assert bb, "Basic block is currently null"
@@ -317,7 +317,12 @@ def addJumpTableEdges (functions):
             i += 1
                     
 def generateInternalFile (filename):
-    outfilename = filename[:-4] + ".txt"
+    ext = os.path.splitext(filename)[1]
+    if ext == '.dis':
+        outfilename = filename[:-4] + '.txt'
+    else:
+        assert ext == '.s'
+        outfilename = filename + '.txt'
     Debug.debugMessage("Outputting program to %s" % outfilename, debugLevel)
     with open(outfilename, 'w') as f:
         for icfg in program.getICFGs():
@@ -344,7 +349,7 @@ def generateInternalFile (filename):
                 f.write("\n")
                 f.write("%s\n" % ParseProgramFile.instructionsIndicator)
                 for instruction in v.getInstructions():
-                    f.write("[%s]" % hex(instruction.getAddress()))
+                    f.write("[0x%08X]" % instruction.getAddress())
                     for field in instruction.getInstructionFields():
                         f.write(" [%s] " % field)
                     f.write("\n")
@@ -352,7 +357,9 @@ def generateInternalFile (filename):
             f.write("\n")
     
 def readARMDisassembly (filename, rootFunction):
-    global newVertexID
+    global newVertexID, program
+    program     = Programs.Program()
+    newVertexID = 1
     extractInstructions(filename)
     functions = identifyCallGraph(rootFunction)
     identifyLeaders(functions)
@@ -370,4 +377,188 @@ def readARMDisassembly (filename, rootFunction):
     # Dump program to file
     generateInternalFile(filename)
     return program
+
+def findSuccessor (icfg, address):
+    succv = None
+    closestAddress = sys.maxint
+    for v in icfg:
+        firstAddr = v.getFirstInstruction().getAddress()
+        if firstAddr < address:
+            continue
+        if firstAddr < closestAddress and firstAddr > address: 
+            closestAddress = firstAddr
+            succv = v
+    return succv
+
+def findJumpTableDirectives (functionName, functionLabelToDirectives, lastAddr):
+    closestAddress = sys.maxint
+    directives     = None
+    for key in functionLabelToDirectives.keys():
+        if key[0] == functionName:
+            firstAddr = key[1].getAddress()
+            if firstAddr < closestAddress and firstAddr > lastAddr:
+                closestAddress = firstAddr
+                directives     = functionLabelToDirectives[key]
+    assert directives, "Unable to find jump table information from address %s" % hex(lastAddr)
+    return directives
+
+def addAssemblyJumpTableEdges (icfg, v, directives, labelToBasicBlock):
+    for dir in directives:
+        lexemes = shlex.split(dir)
+        assert len(lexemes) == 2
+        labels = re.findall(r'\.L[0-9]+', lexemes[1])
+        assert len(labels) == 1
+        label = labels[0]
+        succv = labelToBasicBlock[label]
+        icfg.addEdge(v.getVertexID(), succv.getVertexID())
+
+def readARMAssembly (filename, rootFunction):
+    global newVertexID, program
+    program     = Programs.Program()
+    newVertexID = 1
+    functionName = None
+    functions = set([])
+    functionToInstructions    = {}
+    functionLabelToDirectives = {}
+    functionToLeaders         = {}
+    labelToBasicBlock         = {}
+    labels = set([])
+    lastLabel = None
+    # Rip out instructions for each function
+    instructionCounter = 0
+    with open(filename, 'r') as f:
+        for line in f:
+            if re.match(r'\w+:', line):
+                index = line.index(':')
+                functionName = line[:index]
+                functionToInstructions[functionName] = []
+                functionToLeaders[functionName] = set([])
+                functions.add(functionName)
+                continue
+            if functionName:
+                line = line.replace('[', '')
+                line = line.replace(']', '')
+                if re.match(r'\s*[a-zA-Z]+', line):
+                    lexemes = shlex.split(line)
+                    instr = CFGs.Instruction(instructionCounter, lexemes)
+                    instructionCounter += 1
+                    functionToInstructions[functionName].append(instr)
+                    lastLabel = None
+                elif re.match(r'\.[a-zA-Z]+[0-9]+:', line):
+                    lexemes = shlex.split(line)
+                    instr = CFGs.Instruction(instructionCounter, lexemes)
+                    instructionCounter += 1
+                    functionToInstructions[functionName].append(instr)
+                    labels.add(instr)
+                    lastLabel = instr
+                elif re.match(r'\s*\.word\s+\.[a-zA-Z]+[0-9]+', line):
+                    assert lastLabel
+                    key = (functionName, lastLabel)
+                    if key not in functionLabelToDirectives:
+                        functionLabelToDirectives[key] = []
+                    functionLabelToDirectives[key].append(line)
+    # Remove falsely identified functions (those which have no instructions)
+    for functionName in functions:
+        if not functionToInstructions[functionName]:
+            del functionToInstructions[functionName]
+            del functionToLeaders[functionName]
+    # Identify leaders
+    for functionName, instructions in functionToInstructions.iteritems():
+        # The first instruction in a function is always a leader
+        leader = True
+        for instr in instructions:
+            if leader and instr not in labels:
+                functionToLeaders[functionName].add(instr)
+                leader = False
+            if instr not in labels:
+                op = instr.getOp()
+                if op in ARMInstructionSet.Branches or isJumpTableBranch(instr):
+                    leader = True
+            else:
+                leader = True
+    # Identify basic blocks
+    for functionName, instructions in functionToInstructions.iteritems():
+        icfg = CFGs.CFG()
+        icfg.setName(functionName)
+        program.addICFG(icfg, functionName)
+        bb = None
+        for idx, instr in enumerate(instructions):
+            if instr in functionToLeaders[functionName]:
+                Debug.debugMessage("Instruction '%s' is a leader" % instr, 1)
+                vertexID = newVertexID
+                bb       = Vertices.BasicBlock(vertexID, name=functionName)
+                icfg.addVertex(bb)
+                newVertexID += 1
+                # Remember the label associated with this basic block
+                if idx > 0:
+                    previousIdx = idx-1
+                    while instructions[previousIdx] in labels:
+                        fields = instructions[previousIdx].getInstructionFields()
+                        assert len(fields) == 1
+                        # Strip colon from label
+                        label = fields[0][:-1]
+                        labelToBasicBlock[label] = bb
+                        previousIdx -= 1
+            assert bb, "Basic block is currently null"
+            if instr not in labels:
+                bb.addInstruction(instr)
+    # Add edges
+    for icfg in program.getICFGs():
+        for v in icfg:
+            lastInstr = v.getLastInstruction()
+            op        = lastInstr.getOp()
+            if op in ARMInstructionSet.UnconditionalJumps:
+                fields = lastInstr.getInstructionFields()
+                assert len(fields) == 2
+                target = fields[1]
+                succv = labelToBasicBlock[target]
+                icfg.addEdge(v.getVertexID(), succv.getVertexID())
+            elif op in ARMInstructionSet.Branches:
+                fields = lastInstr.getInstructionFields()
+                assert len(fields) == 2
+                target = fields[1]
+                if target in labelToBasicBlock:
+                    succv = labelToBasicBlock[target]
+                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+                elif target in functionToInstructions:
+                    icfg.addCallSite(v.getVertexID(), target)
+                    program.getCallGraph().addEdge(icfg.getName(), target, v.getVertexID())
+                succv = findSuccessor(icfg, lastInstr.getAddress())
+                if succv:
+                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+            elif isJumpTableBranch(lastInstr):
+                directives = findJumpTableDirectives(icfg.getName(), functionLabelToDirectives, lastInstr.getAddress())
+                addAssemblyJumpTableEdges(icfg, v, directives, labelToBasicBlock)
+            else:
+                succv = findSuccessor(icfg, lastInstr.getAddress())
+                if succv:
+                    icfg.addEdge(v.getVertexID(), succv.getVertexID())
+    for icfg in program.getICFGs():
+        Debug.debugMessage("Setting entry and exit in '%s'" % icfg.getName(), debugLevel)
+        icfg.setEntryID()
+        icfg.setExitID()
+    program.addExitEntryBackEdges()
+    # Remove functions other than the root
+    callg = program.getCallGraph()
+    stack = []
+    stack.append(callg.getVertexWithName(rootFunction))
+    visited = {}
+    for callv in callg:
+        visited[callv] = False
+    while stack:
+        callv = stack.pop()
+        visited[callv] = True
+        for succID in callv.getSuccessorIDs():
+            succv = callg.getVertex(succID)
+            if not visited[succv]:
+                stack.append(succv)
+    for callv in visited:
+        if not visited[callv]:
+            program.removeFunction(callv.getName())
+    callg.setRoot(rootFunction)
+    # Dump program to file
+    generateInternalFile(filename)
+    return program
+                
+
     
