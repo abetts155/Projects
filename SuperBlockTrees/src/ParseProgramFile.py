@@ -151,7 +151,7 @@ def readInProgram (programFile):
             elif line.startswith(instructionsIndicator):
                 instructions = True
             # Ignore lines consisting of whitespace only
-            elif instructions and not re.match(r'\s+', line):
+            elif instructions and not re.match(r'\s*', line):
                 assert bb, "Found instruction but current basic block is null"
                 lexemes = shlex.split(line)
                 address = None

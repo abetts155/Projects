@@ -127,7 +127,7 @@ class CFG (FlowGraph):
             for bb in self.vertices.values():
                 if bb.numberOfSuccessors() == 0:
                     bbID = bb.getVertexID()
-                    assert self._exitID == dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID)
+                    assert self._exitID == dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._exitID, bbID)
                     self._exitID = bbID
             if self._exitID == dummyVertexID:
                 Debug.warningMessage("Unable to find a vertex without successors to set as the exit in '%s'" % self._name)

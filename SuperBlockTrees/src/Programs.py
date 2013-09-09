@@ -76,7 +76,7 @@ class CallGraph (DirectedGraph):
         self.vertices[vertexID] = callv 
         self.__functionNameToVertex[functionName] = callv
     
-    def removeVertex (self, functionName):
+    def removeVertexWithName (self, functionName):
         Debug.debugMessage("Removing call graph vertex of function '%s'" % functionName, 5)
         callv    = self.getVertexWithName(functionName)
         vertexID = callv.getVertexID()
@@ -191,10 +191,10 @@ class Program():
             self.__contextg = ContextGraph(self.__callg)
         return self.__contextg
        
-    def addCFG (self, icfg, functionName):
+    def addCFG (self, cfg, functionName):
         assert functionName not in self.__CFGs, "Trying to add duplicate CFG for function '%s'" % functionName
         self.__callg.addVertex(functionName)
-        self.__CFGs[functionName] = icfg
+        self.__CFGs[functionName] = cfg
         
     def addSuperBlockCFG (self, superg, functionName):
         assert functionName not in self.__superblockcfgs, "Trying to add duplicate super block CFG for function '%s'" % functionName
@@ -218,7 +218,7 @@ class Program():
 
     def getLNT (self, functionName):
         if functionName not in self.__LNTs:
-            icfg = self.getICFG(functionName)
+            icfg = self.getCFG(functionName)
             lnt  = LoopNests(icfg, icfg.getEntryID())
             self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
@@ -239,7 +239,7 @@ class Program():
             self.__archivedICFGS[functionName] = cfg
             del self.__CFGs[functionName]
         if self.__callg.hasVertexWithName(functionName):
-            self.__callg.removeVertex(functionName)
+            self.__callg.removeVertexWithName(functionName)
             
     def removeProblematicFunctions (self):
         functions = set([])
@@ -259,8 +259,9 @@ class Program():
                         predv  = self.__callg.getVertex(predID)
                         for callSiteID in calle.getCallSites():
                             callerName = predv.getName()
-                            callerICFG = self.getICFG(callerName)
+                            callerICFG = self.getCFG(callerName)
                             callerICFG.removeCallSite(callSiteID)
+                    Debug.debugMessage("Removing function '%s'" % callv.getName(), 10)
                     self.removeFunction(callv.getName())                    
     
     def addExitEntryBackEdges (self):
@@ -278,9 +279,9 @@ class Program():
                 predv  = self.__callg.getVertex(predID)
                 for callSiteID in calle.getCallSites():
                     calleeName = succv.getName()
-                    calleeICFG = self.getICFG(calleeName)
+                    calleeICFG = self.getCFG(calleeName)
                     callerName = predv.getName()
-                    callerICFG = self.getICFG(callerName)
+                    callerICFG = self.getCFG(callerName)
                     Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
                     self.__doInline(callerICFG, calleeICFG, callSiteID)
                     callerICFG.removeCallSite(callSiteID)

@@ -1,4 +1,4 @@
-from Edges import Edge, CallGraphEdge, SuperBlockLoopEdge
+from Edges import Edge, CallGraphEdge
 
 dummyVertexID = -1
 
@@ -143,7 +143,16 @@ class CFGVertex (Vertex):
 class CFGEdge (CFGVertex):
     def __init__ (self, vertexID, predID, succID):
         CFGVertex.__init__(self, vertexID)
-        self.edge = (predID, succID)    
+        self.__edge = (predID, succID)    
+        
+    def getEdge (self):
+        return self.__edge
+        
+    def __str__ (self):
+        string = "Vertex ID = %d (edge = %s)\n" % (self._vertexID, self.__edge)
+        string += "pred     = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ     = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
+        return string 
 
 class BasicBlock (CFGVertex):
     IpointPosition = Enum(['start', 'end'])

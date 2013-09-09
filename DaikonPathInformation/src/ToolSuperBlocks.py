@@ -48,7 +48,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, SuperBlocks, Utils, Calculations, ARM
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, Utils, Calculations
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -67,12 +67,11 @@ if __name__ == "__main__":
     UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
     Debug.verboseMessage("Analysing CFGs")
-    for icfg in program.getICFGs():
-        functionName = icfg.getName()
-        lnt = Trees.LoopNests(icfg, icfg.getEntryID())
+    for cfg in program.getCFGs():
+        functionName = cfg.getName()
+        lnt = Trees.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
-        superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
-        program.addSuperBlockCFG(superg, functionName)
+        pathg = program.getPathInfoGraph(functionName)
     program.generateAllUDrawFiles()
     if args.traces:
         Debug.verboseMessage("Generating dummy traces")

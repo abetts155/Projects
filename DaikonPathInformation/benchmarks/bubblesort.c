@@ -30,11 +30,21 @@ bubblesort (int ARRAY_SIZE, int a[])
 {
   int i, j, tmp;
   int swapped = 0;
+  #ifdef CBMC
+  int __counti = 0;
+  int __countj = 0;
+  #endif
   for (i = 0; i < ARRAY_SIZE - 1; i++)
   {
+    #ifdef CBMC
+    __counti++;
+    #endif
     swapped = 0;
     for (j = 0; j < ARRAY_SIZE - 1 - i; j++)
     {
+      #ifdef CBMC
+      __countj++;
+      #endif
       if (swapIfLarger(&a[j], &a[j+1]))
       {
         swapped = 1;
@@ -45,6 +55,10 @@ bubblesort (int ARRAY_SIZE, int a[])
       break;
     }
   }
+  #ifdef CBMC
+  assert(__counti<=10);
+  assert(__countj<=10);
+  #endif
 }
 
 int
@@ -53,6 +67,9 @@ main (int argc, char *argv[])
   const int ARRAY_SIZE = argc - 1;
   int TV[ARRAY_SIZE];
   int i;
+  #ifdef CBMC
+  __CPROVER_assume(ARRAY_SIZE == 10);
+  #endif
 
   /*
    * At least one integer value must be supplied

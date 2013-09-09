@@ -146,10 +146,9 @@ class CFGEdge (CFGVertex):
         self.edge = (predID, succID)    
 
 class BasicBlock (CFGVertex):
-    IpointPosition = Enum(['start', 'end'])
-    
-    def __init__ (self, vertexID, name=None):
+    def __init__ (self, vertexID, name=None, label=None):
         CFGVertex.__init__(self, vertexID, name)
+        self._label = label
         self.__instructions = []
         self.__addresses = set([])
         self.__originalID = self._vertexID

@@ -1,4 +1,6 @@
-import Programs, CFGs, Trees, Vertices, SuperBlocks, Edges
+import Programs, CFGs, Trees, Vertices
+from Vertices import CFGEdge
+from Edges import PathInformationEdgeType
 
 enabled  = False
 basename = ""
@@ -81,24 +83,30 @@ def makeUdrawFile (g, fileNamePrefix):
                     vertexID = v.getVertexID()
                     if vertexID != g.getEntryID():
                         writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.SuperBlockGraph):
+            elif isinstance(g, CFGs.PathInformationGraph):
+                bidirectionalEdges = {}
                 for v in g:
                     vertexID = v.getVertexID()
-                    writeSuperBlockVertex(g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.SuperBlockPathInformationGraph):
+                    v        = g.getVertex(vertexID)
+                    for succID in v.getSuccessorIDs():
+                        succv = g.getVertex(succID)
+                        if succv.hasPredecessor(vertexID):
+                            bidirectionalEdges[(vertexID, succID)] = True
                 for v in g:
                     vertexID = v.getVertexID()
-                    writeSuperBlockPathInformationVertex(g, vertexID, f)   
+                    writePathInfoVertex(g, vertexID, bidirectionalEdges, f)    
             elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
                     vertexID = v.getVertexID()
                     if vertexID != g.getRootID():
                         writeCallGraphVertex(g, vertexID, f) 
-            # Loop-Nesting Tree
+            elif isinstance(g, CFGs.EnhancedCFG):
+                for v in g:
+                    writeEnhancedCFGVertex(g, v.getVertexID(), f)
             elif isinstance(g, Trees.LoopNests):
                 for v in g:
-                        writeTreeVertex(g, v.getVertexID(), f)
+                    writeTreeVertex(g, v.getVertexID(), f)
             else:
                 for v in g:
                     writeVertex(g, v.getVertexID(), f)
@@ -119,6 +127,69 @@ def writeVertex (g, vertexID, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
+    f.write(endVertex + "\n") 
+    
+def writeEnhancedCFGVertex (g, vertexID, f):
+    v = g.getVertex(vertexID)        
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    if isinstance(v, CFGEdge):
+        name = str(v.getEdge())
+        name += "%sID = %s" % (newLine, vertexID)
+    else:
+        name = str(vertexID)
+    f.write(setName(name))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succe in v.getSuccessorEdges():
+        f.write(newEdge)
+        f.write(beginAttributes)
+        if succe.hasEdgeID():
+            f.write(setName("%d" % succe.getEdgeID()))
+        f.write(endAttibutes)
+        f.write(edgeLink(succe.getVertexID()))
+        f.write(endEdge + ",\n")
+    f.write(endVertex + "\n")
+    
+def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
+    v = g.getVertex(vertexID)        
+    f.write(newVertex(vertexID))
+    f.write(beginAttributes)
+    name = str(v.getEdge())
+    name += "%sID = %s" % (newLine, vertexID)
+    if g.neverExecutes(vertexID):
+        f.write(setShape(SHAPE.TRIANGLE))
+    f.write(setName(name))
+    f.write(endAttibutes)
+    
+    f.write(beginAttributes)
+    for succe in v.getSuccessorEdges():
+        succID = succe.getVertexID()
+        if (vertexID, succID) in bidirectionalEdges:
+            if bidirectionalEdges[(vertexID, succID)]:
+                bidirectionalEdges[(vertexID, succID)] = False
+                bidirectionalEdges[(succID, vertexID)] = False
+                f.write(newEdge)
+                f.write(beginAttributes)
+                f.write(setEdgeDirection(DIRECTION.BOTH))
+                if succe.getType() == PathInformationEdgeType.EXCLUSION:
+                    f.write(setEdgeColor(COLOR.BLUE))
+                else:
+                    f.write(setEdgeColor(COLOR.RED))
+                f.write(endAttibutes)
+                f.write(edgeLink(succID))
+                f.write(endEdge + ",\n")
+        else:
+            f.write(newEdge)
+            f.write(beginAttributes)
+            if succe.getType() == PathInformationEdgeType.EXCLUSION:
+                f.write(setEdgeColor(COLOR.BLUE))
+            else:
+                f.write(setEdgeColor(COLOR.RED))
+            f.write(endAttibutes)
+            f.write(edgeLink(succID))
+            f.write(endEdge + ",\n")
     f.write(endVertex + "\n") 
     
 def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
@@ -172,55 +243,6 @@ def writeCallGraphVertex (callg, vertexID, f):
         calle   = v.getSuccessorEdge(succID)
         tooltip = ', '.join(str(vertexID) for vertexID in calle.getCallSites())
         f.write(setToolTip(tooltip))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-    
-def writeSuperBlockVertex (superg, vertexID, f):
-    v = superg.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    name = "super ID = %d%s" % (vertexID, newLine)
-    if v.getBasicBlockIDs():
-        name += "{%s}" % ', '.join(str(vertexID) for vertexID in v.getBasicBlockIDs())
-    if v.getEdges ():
-        name += newLine 
-        name += "{%s}" % ', '.join(str(edge) for edge in v.getEdges())
-    f.write(setName(name))
-    f.write(endAttibutes)
-    
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        succe = v.getSuccessorEdge(succID)
-        f.write(setName(str(succe.getBasicBlockID())))
-        if isinstance(succe, Edges.SuperBlockLoopEdge):
-            f.write(setEdgePattern(EDGESHAPE.DOTTED, 4))
-            f.write(setEdgeColor("#339999"))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-    
-def writeSuperBlockPathInformationVertex (partitiong, vertexID, f):
-    v = partitiong.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    name  = "Superv    = %d%s" % (vertexID, newLine)
-    name += "Edges     = %s" % ', '.join(str(edge) for edge in v.getEdges())
-    f.write(setName(name))
-    if v.isAcyclicPartition():
-        f.write(setColor(COLOR.RED))
-        f.write(setToolTip("Acyclic partition"))
-    f.write(endAttibutes)
-    
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setEdgeDirection(DIRECTION.NONE))
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")

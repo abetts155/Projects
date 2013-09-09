@@ -1,4 +1,4 @@
 type=int
-length=100
+length=10
 lower=1
 upper=100

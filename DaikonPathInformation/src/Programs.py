@@ -1,6 +1,7 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
-from Trees import LoopNests, DepthFirstSearch
+from Trees import LoopNests, DepthFirstSearch, Dominators
+from CFGs import PathInformationGraph
 from copy import deepcopy
 import Debug, UDrawGraph, SuperBlocks
 
@@ -136,13 +137,13 @@ class CallGraph (DirectedGraph):
     
 class Program():
     def __init__(self):
-        self.__callg          = CallGraph()
-        self.__contextg       = None
-        self.__archivedICFGS  = {}
-        self.__CFGs           = {}
-        self.__LNTs           = {}
-        self.__superblockcfgs = {}
-        self.__bbIDToICFG     = {}
+        self.__callg        = CallGraph()
+        self.__contextg     = None
+        self.__archivedCFGS = {}
+        self.__CFGs         = {}
+        self.__LNTs         = {}
+        self.__pathgs       = {}
+        self.__bbIDToCFG    = {}
         
     def output (self, data):
         totalMutualExclusion = 0
@@ -171,9 +172,12 @@ class Program():
         UDrawGraph.makeUdrawFile(self.getContextGraph(), "contextg%s" % suffix)
         for functionName, cfg in self.__CFGs.iteritems():
             UDrawGraph.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(self.getPathInfoGraph(functionName), "%s.pathg%s" % (functionName, suffix))
             UDrawGraph.makeUdrawFile(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(self.getSuperBlockCFG(functionName).getSuperBlockPathInformationGraph(), "%s.pathg%s" % (functionName, suffix))
+            pathg = self.getPathInfoGraph(functionName)
+            UDrawGraph.makeUdrawFile(pathg, "%s.pathg%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(pathg.getEnhancedCFG(), "%s.enhancedCFG%s" % (functionName, suffix))
+            UDrawGraph.makeUdrawFile(pathg.getDominatorGraph(), "%s.dominatorg%s" % (functionName, suffix))
         
     def getCallGraph (self):
         return self.__callg
@@ -183,46 +187,43 @@ class Program():
             self.__contextg = ContextGraph(self.__callg)
         return self.__contextg
        
-    def addICFG (self, icfg, functionName):
-        assert functionName not in self.__CFGs, "Trying to add duplicate ICFG for function '%s'" % functionName
+    def addCFG (self, cfg, functionName):
+        assert functionName not in self.__CFGs, "Trying to add duplicate CFG for function '%s'" % functionName
         self.__callg.addVertex(functionName)
-        self.__CFGs[functionName] = icfg
-        
-    def addSuperBlockCFG (self, superg, functionName):
-        assert functionName not in self.__superblockcfgs, "Trying to add duplicate super block CFG for function '%s'" % functionName
-        self.__superblockcfgs[functionName] = superg
+        self.__CFGs[functionName] = cfg
         
     def addLNT (self, lnt, functionName):
         assert functionName not in self.__LNTs, "Trying to add duplicate LNT for function '%s'" % functionName
         self.__LNTs[functionName] = lnt
         
-    def getICFG (self, functionName):
-        assert functionName in self.__CFGs, "Unable to find ICFG for function '%s'" % functionName
+    def getCFG (self, functionName):
+        assert functionName in self.__CFGs, "Unable to find CFG for function '%s'" % functionName
         return self.__CFGs[functionName]
     
-    def getSuperBlockCFG (self, functionName):
-        if functionName not in self.__superblockcfgs:
-            icfg   = self.getICFG(functionName)
-            lnt    = self.getLNT(functionName)
-            superg = SuperBlocks.SuperBlockGraph(icfg, lnt)
-            self.__superblockcfgs[functionName] = superg
-        return self.__superblockcfgs[functionName]
+    def getPathInfoGraph (self, functionName):
+        if functionName not in self.__pathgs:
+            cfg = self.getCFG(functionName)
+            self.__pathgs[functionName] = PathInformationGraph(cfg)
+        return self.__pathgs[functionName]
 
     def getLNT (self, functionName):
         if functionName not in self.__LNTs:
-            icfg = self.getICFG(functionName)
-            lnt  = LoopNests(icfg, icfg.getEntryID())
+            cfg  = self.getCFG(functionName)
+            lnt  = LoopNests(cfg, cfg.getEntryID())
             self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
 
-    def getICFGs (self):
+    def getCFGs (self):
         return self.__CFGs.values().__iter__()
+    
+    def getPathInformationGraphs (self):
+        return self.__pathgs.values().__iter__()
     
     def removeFunction (self, functionName):
         if functionName in self.__CFGs:
-            # Archive the ICFG as it is no longer needed
+            # Archive the CFG as it is no longer needed
             cfg = self.__CFGs[functionName]
-            self.__archivedICFGS[functionName] = cfg
+            self.__archivedCFGS[functionName] = cfg
             del self.__CFGs[functionName]
         if self.__callg.hasVertexWithName(functionName):
             self.__callg.removeVertex(functionName)
@@ -245,8 +246,8 @@ class Program():
                         predv  = self.__callg.getVertex(predID)
                         for callSiteID in calle.getCallSites():
                             callerName = predv.getName()
-                            callerICFG = self.getICFG(callerName)
-                            callerICFG.removeCallSite(callSiteID)
+                            callerCFG  = self.getCFG(callerName)
+                            callerCFG.removeCallSite(callSiteID)
                     self.removeFunction(callv.getName())                    
     
     def addExitEntryBackEdges (self):
@@ -265,12 +266,12 @@ class Program():
                 predv  = self.__callg.getVertex(predID)
                 for callSiteID in calle.getCallSites():
                     calleeName = succv.getName()
-                    calleeICFG = self.getICFG(calleeName)
+                    calleeCFG  = self.getCFG(calleeName)
                     callerName = predv.getName()
-                    callerICFG = self.getICFG(callerName)
+                    callerCFG  = self.getCFG(callerName)
                     Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
-                    self.__doInline(callerICFG, calleeICFG, callSiteID)
-                    callerICFG.removeCallSite(callSiteID)
+                    self.__doInline(callerCFG, calleeCFG, callSiteID)
+                    callerCFG.removeCallSite(callSiteID)
                 
         for vertexID in dfs.getPostorder():
             callv = self.__callg.getVertex(vertexID)
@@ -284,35 +285,35 @@ class Program():
         self.__LNTs           = {}
         self.__superblockcfgs = {}
 
-    def __doInline (self, callerICFG, calleeICFG, callSiteID):
-        callSitev  = callerICFG.getVertex(callSiteID)
+    def __doInline (self, callerCFG, calleeCFG, callSiteID):
+        callSitev  = callerCFG.getVertex(callSiteID)
         assert callSitev.numberOfSuccessors() == 1, "The call site %d does not have one successor exactly" % callSiteID
-        returnv    = callerICFG.getVertex(callSitev.getSuccessorIDs()[0])
-        newEntryID, newExitID = self.__duplicateCFG(callerICFG, calleeICFG)
-        self.__linkDuplicate(callerICFG, callSitev, returnv, newEntryID, newExitID)
+        returnv    = callerCFG.getVertex(callSitev.getSuccessorIDs()[0])
+        newEntryID, newExitID = self.__duplicateCFG(callerCFG, calleeCFG)
+        self.__linkDuplicate(callerCFG, callSitev, returnv, newEntryID, newExitID)
         
-    def __duplicateCFG (self, callerICFG, calleeICFG):
+    def __duplicateCFG (self, callerCFG, calleeCFG):
         oldIDToNewID = {}
-        for v in calleeICFG:
-            newID  = callerICFG.getNextVertexID()
+        for v in calleeCFG:
+            newID  = callerCFG.getNextVertexID()
             oldIDToNewID[v.getVertexID()] = newID
             clonev = deepcopy(v)
             clonev.setVertexID(newID)
             clonev.setOriginalVertexID(v.getOriginalVertexID())
             clonev.removeAllPredecessors()
             clonev.removeAllSuccessors()
-            callerICFG.addVertex(clonev)
-        for v in calleeICFG:
+            callerCFG.addVertex(clonev)
+        for v in calleeCFG:
             predID = v.getVertexID()
             for succID in v.getSuccessorIDs():
-                if predID != calleeICFG.getExitID() and succID != calleeICFG.getEntryID():
+                if predID != calleeCFG.getExitID() and succID != calleeCFG.getEntryID():
                     newPredID = oldIDToNewID[predID]
                     newSuccID = oldIDToNewID[succID]
-                    callerICFG.addEdge(newPredID, newSuccID)
-        return oldIDToNewID[calleeICFG.getEntryID()], oldIDToNewID[calleeICFG.getExitID()]
+                    callerCFG.addEdge(newPredID, newSuccID)
+        return oldIDToNewID[calleeCFG.getEntryID()], oldIDToNewID[calleeCFG.getExitID()]
     
-    def __linkDuplicate (self, callerICFG, callSitev, returnv, newEntryID, newExitID):    
-        callerICFG.addEdge(callSitev.getVertexID(), newEntryID)
-        callerICFG.addEdge(newExitID, returnv.getVertexID())
-        callerICFG.removeEdge(callSitev.getVertexID(), returnv.getVertexID())
+    def __linkDuplicate (self, callerCFG, callSitev, returnv, newEntryID, newExitID):    
+        callerCFG.addEdge(callSitev.getVertexID(), newEntryID)
+        callerCFG.addEdge(newExitID, returnv.getVertexID())
+        callerCFG.removeEdge(callSitev.getVertexID(), returnv.getVertexID())
         

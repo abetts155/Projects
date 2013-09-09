@@ -35,41 +35,14 @@ class CallGraphEdge (Edge):
     def numberOfCallSites (self):
         return len(self.__callSites)
     
-class SuperBlockControlFlowEdge (Edge):
-    def __init__ (self, vertexID, bbID):
+class PathInformationEdgeType:
+    INCLUSION = 0
+    EXCLUSION = 1
+    
+class PathInformationEdge (Edge):    
+    def __init__ (self, vertexID, infoType):
         Edge.__init__(self, vertexID)
-        self.__bbID = bbID
-        
-    def getBasicBlockID (self):
-        return self.__bbID
+        self.__infoType = infoType
     
-class SuperBlockLoopEdge (SuperBlockControlFlowEdge):
-    def __init__ (self, vertexID, headerID):
-        SuperBlockControlFlowEdge.__init__(self, vertexID, headerID)
-        self.__bbID = headerID
-    
-class IPGEdge (Edge):
-    def __init__ (self, vertexID, edgeID=None, dummyEdge=False):
-        Edge.__init__(self, vertexID, edgeID)
-        self.__edgeLabel = set()
-        self.__iterationEdge = False
-        self.__dummyEdge = dummyEdge
-        
-    def addToEdgeLabel (self, vertices):
-        self.__edgeLabel.update(set(vertices))
-        
-    def getEdgeLabelSize (self):
-        return len(self.__edgeLabel)
-    
-    def getEdgeLabel (self):
-        return self.__edgeLabel
-    
-    def setIterationEdge (self):
-        self.__iterationEdge = True
-    
-    def isIterationEdge (self):
-        return self.__iterationEdge
-    
-    def isDummyEdge (self):
-        return self.__dummyEdge
-    
+    def getType (self):
+        return self.__infoType
