@@ -279,7 +279,7 @@ class CreateCFGCLP (CLP):
                 headerv1   = lnt.getVertex(treev1.getParentID())
                 treev2     = lnt.getVertex(succID)
                 headerv2   = lnt.getVertex(treev2.getParentID())  
-                lowerBound = 0              
+                lowerBound = 0            
                 if headerv1 == headerv2:
                     upperBound = data.getLoopBound(cfg.getName(), headerv1.getHeaderID(), rootv.getHeaderID())
                 else:
@@ -290,10 +290,10 @@ class CreateCFGCLP (CLP):
                 if addPathInformation:
                     pathv = pathg.isMonitoredEdge(vertexID, succID)
                     if pathv:
-                        if data.neverExecutes(pathg, pathv):
+                        if pathv.getUpperBound() == 0:
                             upperBound = 0
                         else:
-                            lowerBound = data.getMinimumExecutionCount(pathg, pathv) 
+                            lowerBound = data.getMinimumExecutionCount(pathg, pathv)
                 line = "%s%s[%d..%d]%s" % \
                 (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
                 self._lines.append(line)

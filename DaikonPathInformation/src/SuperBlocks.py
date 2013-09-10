@@ -292,21 +292,23 @@ class DominatorGraph (DirectedGraph):
     def pinpointMonitoredCFGEdges (self):
         monitoredCFGEdges = set([])
         sccs = StrongComponents(self)
-        for sccID in xrange(1, sccs.numberOfSCCs()+1):
-            scc           = sccs.getVertexIDs(sccID)
-            externalEdges = False
-            edgev         = None
-            for vertexID in scc:
-                v         = self.getVertex(vertexID)
-                enhancedv = self.__enhancedCFG.getVertex(vertexID)
-                if isinstance(enhancedv, CFGEdge):
-                    edgev = enhancedv
-                for succID in v.getSuccessorIDs():
-                    if succID not in scc:
-                        externalEdges = True
-            if not externalEdges:
-                assert edgev
-                monitoredCFGEdges.add(edgev.getEdge())
+        # Avoid the case where everything executes
+        if sccs.numberOfSCCs() > 1:
+            for sccID in xrange(1, sccs.numberOfSCCs()+1):
+                scc           = sccs.getVertexIDs(sccID)
+                externalEdges = False
+                edgev         = None
+                for vertexID in scc:
+                    v         = self.getVertex(vertexID)
+                    enhancedv = self.__enhancedCFG.getVertex(vertexID)
+                    if isinstance(enhancedv, CFGEdge):
+                        edgev = enhancedv
+                    for succID in v.getSuccessorIDs():
+                        if succID not in scc:
+                            externalEdges = True
+                if not externalEdges:
+                    assert edgev
+                    monitoredCFGEdges.add(edgev.getEdge())
         return monitoredCFGEdges
 
 Colors = enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
