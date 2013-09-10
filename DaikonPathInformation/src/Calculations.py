@@ -339,7 +339,7 @@ class CreateCFGCLPExtra (CreateCFGCLP):
     def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
         self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
         for v in pathg:
-            if not pathg.neverExecutes(v.getVertexID()):
+            if v.getUpperBound() > 0:
                 edge1          = v.getEdge()
                 countVariable1 = ECLIPSE.getEdgeCountVariable(edge1[0], edge1[1])
                 for succID in v.getSuccessorIDs():

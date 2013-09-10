@@ -1,9 +1,9 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CallGraphVertex, dummyVertexID
-from Trees import LoopNests, DepthFirstSearch, Dominators
+from Trees import LoopNests, DepthFirstSearch
 from CFGs import PathInformationGraph
 from copy import deepcopy
-import Debug, UDrawGraph, SuperBlocks
+import Debug, UDrawGraph
 
 class ContextGraph (DirectedGraph):
     nextVertexID = 1
@@ -145,24 +145,36 @@ class Program():
         self.__pathgs       = {}
         self.__bbIDToCFG    = {}
         
-    def output (self, data):
+    def output (self):
         totalMutualExclusion = 0
-        totalAlways = 0
-        
+        totalMutualInclusion = 0
+        totalDependencies    = 0
+        totalNever           = 0
+        totalAlways          = 0        
         for functionName, cfg in self.__CFGs.iteritems():
-            superg = self.getSuperBlockCFG(functionName)
-            pathg  = superg.getSuperBlockPathInformationGraph()
+            pathg                = self.getPathInfoGraph(functionName)
+            mutualExclusionPairs = pathg.numOfMutualExclusionPairs() 
+            mutualInclusionPairs = pathg.numOfMutualInclusionPairs()
+            dependencies         = pathg.numOfExecutionDependencies()
+            neverExecute         = pathg.numOfNeverExecuteEdges()
+            alwaysExecute        = pathg.numOfAlwaysExecuteEdges()
+            totalMutualExclusion += mutualExclusionPairs
+            totalMutualInclusion += mutualInclusionPairs
+            totalDependencies    += dependencies
+            totalNever           += neverExecute
+            totalAlways          += alwaysExecute
             Debug.verboseMessage("In %s..." % functionName)
-            Debug.verboseMessage("...#CFG vertices           = %d" % cfg.numOfVertices())
             Debug.verboseMessage("...#CFG edges              = %d" % cfg.numOfEdges())
-            Debug.verboseMessage("...#super blocks           = %d" % superg.numOfVertices())
             Debug.verboseMessage("...#monitored              = %d" % pathg.numOfVertices())
-            Debug.verboseMessage("...#mutual exclusion pairs = %d" % pathg.numOfEdges())
-            Debug.verboseMessage("...#never execute          = %d" % data.getNumberOfNeverExecute(pathg))
-            Debug.verboseMessage("...#always execute         = %d" % data.getNumberOfAlwaysExecute(pathg))
-            totalMutualExclusion += pathg.numOfEdges()
-            totalAlways += data.getNumberOfAlwaysExecute(pathg)
+            Debug.verboseMessage("...#mutual exclusion pairs = %d" % mutualExclusionPairs)
+            Debug.verboseMessage("...#mutual inclusion pairs = %d" % mutualInclusionPairs)
+            Debug.verboseMessage("...#execution dependencies = %d" % dependencies)
+            Debug.verboseMessage("...#never execute          = %d" % neverExecute)
+            Debug.verboseMessage("...#always execute         = %d" % alwaysExecute)
         Debug.verboseMessage("...#TOTAL mutual exclusion pairs = %d" % totalMutualExclusion)
+        Debug.verboseMessage("...#TOTAL mutual inclusion pairs = %d" % totalMutualInclusion)
+        Debug.verboseMessage("...#TOTAL execution dependencies = %d" % totalDependencies)
+        Debug.verboseMessage("...#TOTAL never execute          = %d" % totalAlways)
         Debug.verboseMessage("...#TOTAL always execute         = %d" % totalAlways)
             
     def generateAllUDrawFiles (self, suffix=""):

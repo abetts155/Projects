@@ -1,6 +1,6 @@
-from DirectedGraphs import DirectedGraph
+from DirectedGraphs import DirectedGraph, FlowGraph
 from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock
-import Debug, CFGs
+import Debug
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -720,7 +720,7 @@ class LoopNests (Tree):
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         headerID = headerv.getHeaderID()
-        flowg    = CFGs.CFG()
+        flowg    = FlowGraph()
         edges    = {}
         worklist = []
         worklist.extend(self.getLoopTails(headerID))

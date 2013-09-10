@@ -81,6 +81,7 @@ if __name__ == "__main__":
         assert os.path.exists(args.tracefile), "Trace file '%s' does not exist" % args.tracefile
         assert os.path.getmtime(args.program) <= os.path.getmtime(args.tracefile), "Program file modified AFTER trace file generation"
         data = Traces.ParseTraces(basename, args.tracefile, program)
+        program.output()
         program.generateAllUDrawFiles()
         Calculations.WCETCalculation(program, data, basepath, basename)
         

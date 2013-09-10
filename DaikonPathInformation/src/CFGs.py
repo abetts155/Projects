@@ -37,19 +37,60 @@ class PathInformationGraph (DirectedGraph):
         self.__monitoredEdges = {}
         self.__addVertices(self.__enhancedCFG, monitoredCFGEdges)
         self.__addEdges(reachability)
-        self.__neverExecutes = set([])
         
     def getEnhancedCFG (self):
         return self.__enhancedCFG
     
     def getDominatorGraph (self):
         return self.__dominatorg
-
-    def setNeverExecutes (self, vertexID):
-        self.__neverExecutes.add(vertexID)
-        
-    def neverExecutes (self, vertexID):
-        return vertexID in self.__neverExecutes
+    
+    def numOfAlwaysExecuteEdges (self):
+        count = 0
+        for v in self:
+            if v.getLowerBound() > 0:
+                count += 1
+        return count
+    
+    def numOfNeverExecuteEdges (self):
+        count = 0
+        for v in self:
+            if v.getLowerBound() == 0 and v.getUpperBound() == 0:
+                count += 1
+        return count
+    
+    def numOfMutualExclusionPairs (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                if succe.getType() == PathInformationEdgeType.EXCLUSION:
+                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
+                        edges.add((vertexID, succID))
+        return len(edges)
+    
+    def numOfExecutionDependencies (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                succv  = self.getVertex(succID)
+                if succe.getType() == PathInformationEdgeType.INCLUSION and not succv.hasSuccessor(vertexID):
+                    edges.add((vertexID, succID))
+        return len(edges)
+    
+    def numOfMutualInclusionPairs (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                succv  = self.getVertex(succID)
+                if succe.getType() == PathInformationEdgeType.INCLUSION and succv.hasSuccessor(vertexID):
+                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
+                        edges.add((vertexID, succID))
+        return len(edges)
                             
     def isMonitoredEdge (self, predID, succID):
         if (predID, succID) in self.__monitoredEdges:
@@ -90,19 +131,19 @@ class PathInformationGraph (DirectedGraph):
         return reachability
     
     def __addEdges (self, reachabilityInformation):
-        for v, reachable in reachabilityInformation.iteritems():
-            vertexID = v.getVertexID()
-            if self.hasVertex(v.getVertexID()):
-                for predv in reachable:
-                    predID = predv.getVertexID()
+        for v1CFG, reachable in reachabilityInformation.iteritems():
+            vertexID1 = v1CFG.getVertexID()
+            if self.hasVertex(vertexID1):
+                for v2CFG in reachable:
+                    vertexID2 = v2CFG.getVertexID()
                     # Avoid self-loops
-                    if predID != vertexID:
-                        predv = self.getVertex(predID)
-                        succv = self.getVertex(vertexID)
-                        prede = PathInformationEdge(predID, PathInformationEdgeType.INCLUSION)
-                        succe = PathInformationEdge(vertexID, PathInformationEdgeType.INCLUSION)
-                        predv.addSuccessorEdge(succe)
-                        succv.addPredecessorEdge(prede)
+                    if vertexID1 != vertexID2:
+                        v1     = self.getVertex(vertexID1)
+                        v2     = self.getVertex(vertexID2)
+                        succe1 = PathInformationEdge(vertexID2, PathInformationEdgeType.INCLUSION)
+                        succe2 = PathInformationEdge(vertexID1, PathInformationEdgeType.INCLUSION)
+                        v1.addSuccessorEdge(succe1)
+                        v2.addSuccessorEdge(succe2)
 
 class EnhancedCFG (FlowGraph):
     def __init__ (self, cfg=None):

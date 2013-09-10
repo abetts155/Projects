@@ -370,7 +370,7 @@ def doAnalysis (gem5Traces, program, inline, basepath, basename):
     data = Traces.Gem5Parser(program, gem5Traces)
     Debug.verboseMessage("HWMT = %d" % data.getLongestTime())   
     Calculations.WCETCalculation(program, data, basepath, basename)
-    program.output(data)
+    program.output()
     program.generateAllUDrawFiles()
 
     if program.getCallGraph().numOfVertices() > 1 and inline:
@@ -379,7 +379,7 @@ def doAnalysis (gem5Traces, program, inline, basepath, basename):
         data = Traces.Gem5Parser(program, gem5Traces)
         Debug.verboseMessage("HWMT = %d" % data.getLongestTime())
         Calculations.WCETCalculation(program, data, basepath, basename)
-        program.output(data)
+        program.output()
         program.generateAllUDrawFiles("inlined")
     
 def checkTraceFiles (gem5Traces, basename):

@@ -1,4 +1,5 @@
 from Edges import Edge, CallGraphEdge
+import sys
 
 dummyVertexID = -1
 
@@ -143,7 +144,21 @@ class CFGVertex (Vertex):
 class CFGEdge (CFGVertex):
     def __init__ (self, vertexID, predID, succID):
         CFGVertex.__init__(self, vertexID)
-        self.__edge = (predID, succID)    
+        self.__edge  = (predID, succID)  
+        self.__lowerBound = 0 
+        self.__upperBound = sys.maxint 
+    
+    def setLowerBound (self, bound): 
+        self.__lowerBound = bound
+        
+    def getLowerBound (self):
+        return self.__lowerBound
+    
+    def setUpperBound (self, bound): 
+        self.__upperBound = bound
+        
+    def getUpperBound (self):
+        return self.__upperBound
         
     def getEdge (self):
         return self.__edge
@@ -230,18 +245,6 @@ class CallGraphVertex (Vertex):
     def __str__ (self):
         return "%s\n%s" % (self.__name, Vertex.__str__(self))
     
-class SuperBlockPartition (Vertex):
-    def __init__ (self, vertexID, acyclicPartition, edges):
-        Vertex.__init__(self, vertexID)
-        self.__acyclicPartition = acyclicPartition
-        self.__edges            = edges
-    
-    def isAcyclicPartition (self):
-        return self.__acyclicPartition
-    
-    def getEdges (self):
-        return self.__edges
-    
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
@@ -308,11 +311,10 @@ class SuperBlock (Vertex):
     def getBranchPartitions (self):
         partitions = {}
         for succe in self._successors.values():
-            if not isinstance(succe, SuperBlockLoopEdge):
-                branchID = succe.getBasicBlockID()
-                if branchID not in partitions:
-                    partitions[branchID] = set([])
-                partitions[branchID].add(succe)
+            branchID = succe.getBasicBlockID()
+            if branchID not in partitions:
+                partitions[branchID] = set([])
+            partitions[branchID].add(succe)
         return partitions
     
     def __str__ (self):

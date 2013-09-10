@@ -134,25 +134,29 @@ class TraceInformation:
         for v in pathg:
             vertexID = v.getVertexID()
             # If this vertex has been triggered in this run
-            if self._executionCountsThisRun[pathg][vertexID] == 0:
-                newSuccEdges = set([])
+            if self._executionCountsThisRun[pathg][vertexID] > 0:
+                mutualExclusionCandiates = set([])
                 # Falsify inclusive conjectures
                 for succe in v.getSuccessorEdges():
                     succID = succe.getVertexID()
                     if succe.getType() == PathInformationEdgeType.INCLUSION and self._executionCountsThisRun[pathg][succID] == 0:
                         succv = pathg.getVertex(succID)
-                        Debug.debugMessage("When %s executes, %s may not always execute (INCLUSIVITY FALSIFIED)" % (str(v.getEdge()), str(succv.getEdge())), 1)
-                        pathg.removeEdge(vertexID, succID)
-                        newSuccEdges.add(PathInformationEdge(succID, PathInformationEdgeType.EXCLUSION))
-                for succe in newSuccEdges:
-                    v.addSuccessorEdge(succe)
-                # Falsify exclusive conjectures
-                for succe in v.getSuccessorEdges():
-                    succID = succe.getVertexID()
-                    if succe.getType() == PathInformationEdgeType.EXCLUSION and self._executionCountsThisRun[pathg][succID] > 0:
+                        Debug.debugMessage("When %s executes, %s does not always execute (EXECUTION DEPENDENCE FALSIFIED)" % (str(v.getEdge()), str(succv.getEdge())), 1)
+                        v.removeSuccessor(succID)
+                        if not succv.hasSuccessor(vertexID):
+                            mutualExclusionCandiates.add(succID)
+                    elif succe.getType() == PathInformationEdgeType.EXCLUSION and self._executionCountsThisRun[pathg][succID] > 0:
                         succv = pathg.getVertex(succID)
                         Debug.debugMessage("When %s executes, %s may execute (EXCLUSIVITY FALSIFIED)" % (str(v.getEdge()), str(succv.getEdge())), 1)
-                        pathg.removeEdge(vertexID, succID)
+                        v.removeSuccessor(succID)
+                        succv.removeSuccessor(vertexID)
+                # Falsify exclusive conjectures
+                for succID in mutualExclusionCandiates:
+                    succv = pathg.getVertex(succID)
+                    v.addSuccessorEdge(PathInformationEdge(succID, PathInformationEdgeType.EXCLUSION))
+                    succv.addSuccessorEdge(PathInformationEdge(vertexID, PathInformationEdgeType.EXCLUSION))
+                    Debug.debugMessage("New conjecture: %s and %s are MUTUALLY EXCLUSIVE" % (str(v.getEdge()), str(succv.getEdge())), 1)
+                    
         # Minimum execution counts
         newConjectures = {}
         for vertexID, conjecture in self._executesKTimes[pathg].iteritems():
@@ -174,7 +178,6 @@ class TraceInformation:
                 vertexID = v.getVertexID()
                 if vertexID not in self._observedPathv[pathg]:
                     self._neverExecuted[pathg].add(vertexID)
-                    pathg.setNeverExecutes(vertexID)
     
     def _normaliseData (self):
         for tupleKey in self._executionTimes.keys():
@@ -249,7 +252,8 @@ NEVER-EXECUTE CONJECTURES
     % ('-' * 50, '-' * 50))
             for vertexID in self._neverExecuted[pathg]:
                 v = pathg.getVertex(vertexID)
-                Debug.verboseMessage("  CFG edge %s NEVER executes" % str(v.getEdge()))
+                v.setUpperBound(0)
+                Debug.verboseMessage("  NEVER EXECUTES: CFG edge %s" % (v.getEdge(),))
                
             Debug.verboseMessage(
 """%s 
@@ -257,16 +261,17 @@ ALWAYS-EXECUTE CONJECTURES
 %s""" \
     % ('-' * 50, '-' * 50))
             for vertexID in self._executesKTimes[pathg]:
-                v = pathg.getVertex(vertexID)
+                v          = pathg.getVertex(vertexID)
                 conjecture = self._executesKTimes[pathg][vertexID]
+                v.setLowerBound(conjecture)
                 if conjecture > 0:
-                    Debug.verboseMessage("  CFG edge %s always executes %d times" % (v.getEdge(), conjecture))
+                    Debug.verboseMessage("  ALWAYS EXECUTES: CFG edge %s, %d time(s)" % (v.getEdge(), conjecture))
                 elif vertexID not in self._neverExecuted:
-                    Debug.verboseMessage("  CFG edge %s may NOT ALWAYS execute" % str(v.getEdge()))
+                    Debug.verboseMessage("  MAY EXECUTE: CFG edge %s" % (v.getEdge(),))
             
             Debug.verboseMessage(
 """%s
-INCLUSION/EXCLUSION CONJECTURES
+INCLUSIVE/EXCLUSIVE CONJECTURES
 %s""" \
     % ('-' * 50, '-' * 50))
             for v in pathg:
@@ -274,15 +279,12 @@ INCLUSION/EXCLUSION CONJECTURES
                     succID = succe.getVertexID()
                     succv  = pathg.getVertex(succID)
                     if succe.getType() == PathInformationEdgeType.INCLUSION:
-                        if succv.hasPredecessor(v.getVertexID()):
-                            Debug.verboseMessage("  CFG edges %s and %s are MUTUALLY INCLUSIVE" % (str(v.getEdge()), str(succv.getEdge())))
+                        if succv.hasSuccessor(v.getVertexID()):
+                            Debug.verboseMessage("  MUTUALLY INCLUSIVE: CFG edges %s and %s" % (v.getEdge(), succv.getEdge()))
                         else:
-                            Debug.verboseMessage("  CFG edge %s ALWAYS happens when %s does" % (str(v.getEdge()), str(succv.getEdge())))
+                            Debug.verboseMessage("  EXECUTION DEPENDENCE: CFG edge %s on CFG edge %s" % (v.getEdge(), succv.getEdge()))
                     elif succe.getType() == PathInformationEdgeType.EXCLUSION:
-                        if succv.hasPredecessor(v.getVertexID()):
-                            Debug.verboseMessage("  CFG edges %s and %s are MUTUALLY EXCLUSIVE" % (str(v.getEdge()), str(succv.getEdge())))
-                        else:
-                            Debug.verboseMessage("  CFG edge %s ALWAYS happens when %s does" % (str(v.getEdge()), str(succv.getEdge())))
+                        Debug.verboseMessage("  MUTUALLY EXCLUSIVE: CFG edges %s and %s" % (v.getEdge(), succv.getEdge()))
                     else:
                         assert False
 
@@ -444,7 +446,7 @@ class Gem5Parser (TraceInformation):
         self.__predBB          = None
         self.__currentBB       = None
         self.__currentHeaderID = None
-        self.__currentSuperg   = None
+        self.__currentPathg    = None
         self.__time1           = None
         self.__stack           = []
         self.__contextg        = self._program.getContextGraph()
@@ -484,7 +486,7 @@ class Gem5Parser (TraceInformation):
                             self.__currentContextv = self.__contextg.getVertex(self.__contextg.getRootID())
                             self.__currentCFG      = self._program.getCFG(self.__currentContextv.getName())
                             self.__currentLNT      = self._program.getLNT(self.__currentContextv.getName())
-                            self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentContextv.getName())
+                            self.__currentPathg   = self._program.getPathInfoGraph(self.__currentContextv.getName())
                             self.__predBB          = None
                             self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
                         if parsing:
@@ -496,13 +498,13 @@ class Gem5Parser (TraceInformation):
                             totalTime = time - startTime
                             self._longestTime = max(self._longestTime, totalTime)
                             # Falsify conjectures
-                            self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentSuperg.getSuperBlockPathInformationGraph())
+                            self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentPathg)
                             self._endRun()
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
     def __getCFGWithAddress (self, address):
-        for cfg in self._program.getICFGs():
+        for cfg in self._program.getCFGs():
             firstAddress = cfg.getFirstInstruction().getAddress()
             if firstAddress == address:
                 return cfg
@@ -535,7 +537,7 @@ class Gem5Parser (TraceInformation):
                         self.__currentBB = succv
                         break
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                self._analyseCFGEdge(self.__currentSuperg.getSuperBlockPathInformationGraph(), self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
+                self._analyseCFGEdge(self.__currentPathg, self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
             # Analyse loop bounds
             if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()) and self.__currentBB.getVertexID() != self.__currentCFG.getEntryID():
                 # The header vertex in the LNT associated with this CFG loop header
@@ -550,6 +552,15 @@ class Gem5Parser (TraceInformation):
                 assert tupleKey2 in self._loopBounds 
                 assert tupleKey2 in self._loopBoundsInCurrentRun
                 self._loopBoundsInCurrentRun[tupleKey2] += 1   
+            elif self.__currentBB.getVertexID() == self.__currentCFG.getExitID():
+                rootv = self.__currentLNT.getVertex(self.__currentLNT.getRootID())
+                for headerID in self.__currentLNT.getHeaderIDs():
+                    if headerID != rootv.getHeaderID():
+                        tupleKey = (self.__currentCFG.getName(), headerID, rootv.getHeaderID())
+                        assert tupleKey in self._loopBounds 
+                        assert tupleKey in self._loopBoundsInCurrentRun
+                        self._loopBounds[tupleKey] = max(self._loopBounds[tupleKey], self._loopBoundsInCurrentRun[tupleKey])
+                        self._loopBoundsInCurrentRun[tupleKey] = 0
             if self.__predBB:
                 # Check whether this edge is a loop-exit edge
                 # If it is the header ID of the exiting loop is returned
@@ -567,8 +578,8 @@ class Gem5Parser (TraceInformation):
     def __handleReturn (self):
         if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:
             # Falsify conjectures
-            self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentSuperg.getSuperBlockPathInformationGraph())
-            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg) = self.__stack.pop()
+            self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentPathg)
+            (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentPathg) = self.__stack.pop()
             succIDs = self.__currentBB.getSuccessorIDs()
             assert len(succIDs) == 1
             succv            = self.__currentCFG.getVertex(succIDs[0])
@@ -576,7 +587,7 @@ class Gem5Parser (TraceInformation):
             self.__currentBB = succv
     
     def __handleCall (self, address):
-        callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentSuperg)
+        callerFrame = (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentPathg)
         self.__stack.append(callerFrame)
         newContextID           = self.__currentContextv.getSuccessorWithCallSite(self.__currentBB.getVertexID())
         self.__currentContextv = self.__contextg.getVertex(newContextID)
@@ -584,6 +595,6 @@ class Gem5Parser (TraceInformation):
         self.__currentLNT      = self._program.getLNT(self.__currentCFG.getName())
         self.__predBB          = None
         self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
-        self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentCFG.getName())
+        self.__currentPathg    = self._program.getPathInfoGraph(self.__currentCFG.getName())
         assert self.__currentBB.hasAddress(address), "Calling into '%s' because of address %s but basic block does not contain an instruction with that address" % (self.__currentCFG.getName(), hex(address))      
         

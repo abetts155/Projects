@@ -90,7 +90,7 @@ def makeUdrawFile (g, fileNamePrefix):
                     v        = g.getVertex(vertexID)
                     for succID in v.getSuccessorIDs():
                         succv = g.getVertex(succID)
-                        if succv.hasPredecessor(vertexID):
+                        if succv.hasSuccessor(vertexID):
                             bidirectionalEdges[(vertexID, succID)] = True
                 for v in g:
                     vertexID = v.getVertexID()
@@ -158,8 +158,14 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
     f.write(beginAttributes)
     name = str(v.getEdge())
     name += "%sID = %s" % (newLine, vertexID)
-    if g.neverExecutes(vertexID):
+    tooltip = ""
+    if v.getUpperBound() == 0:
         f.write(setShape(SHAPE.TRIANGLE))
+        tooltip = "Upper bound = %d" % v.getUpperBound()
+    elif v.getLowerBound() > 0:
+        f.write(setShape(SHAPE.CIRCLE))
+        tooltip = "Lower bound = %d" % v.getLowerBound()
+    f.write(setToolTip(tooltip))
     f.write(setName(name))
     f.write(endAttibutes)
     
@@ -181,12 +187,9 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
                 f.write(edgeLink(succID))
                 f.write(endEdge + ",\n")
         else:
+            assert succe.getType() == PathInformationEdgeType.INCLUSION
             f.write(newEdge)
             f.write(beginAttributes)
-            if succe.getType() == PathInformationEdgeType.EXCLUSION:
-                f.write(setEdgeColor(COLOR.BLUE))
-            else:
-                f.write(setEdgeColor(COLOR.RED))
             f.write(endAttibutes)
             f.write(edgeLink(succID))
             f.write(endEdge + ",\n")

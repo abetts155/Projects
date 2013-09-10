@@ -1,3 +1,5 @@
+import Calculations
+
 m5Directory = 'm5out'
 
 def clean ():
@@ -7,7 +9,7 @@ def clean ():
         files.sort()
         for filename in files:
             ext = os.path.splitext(filename)[1]
-            if ext == '.udraw' or ext == '.dis' or ext == '.ilp':
+            if ext == '.udraw' or ext == '.dis' or ext == '.ilp' or ext in Calculations.ECLIPSE.fileExtensions:
                 fullPath = os.path.join(paths, filename)
                 Debug.verboseMessage("Removing '%s'" % fullPath)
                 os.remove(fullPath)
