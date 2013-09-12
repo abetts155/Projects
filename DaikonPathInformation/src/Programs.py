@@ -153,9 +153,9 @@ class Program():
         totalAlways          = 0        
         for functionName, cfg in self.__CFGs.iteritems():
             pathg                = self.getPathInfoGraph(functionName)
-            mutualExclusionPairs = pathg.numOfMutualExclusionPairs() 
-            mutualInclusionPairs = pathg.numOfMutualInclusionPairs()
-            dependencies         = pathg.numOfExecutionDependencies()
+            mutualExclusionPairs = len(pathg.mutualExclusionPairs())
+            mutualInclusionPairs = len(pathg.mutualInclusionPairs())
+            dependencies         = len(pathg.executionDependencies())
             neverExecute         = pathg.numOfNeverExecuteEdges()
             alwaysExecute        = pathg.numOfAlwaysExecuteEdges()
             totalMutualExclusion += mutualExclusionPairs

@@ -293,7 +293,7 @@ class CreateCFGCLP (CLP):
                         if pathv.getUpperBound() == 0:
                             upperBound = 0
                         else:
-                            lowerBound = data.getMinimumExecutionCount(pathg, pathv)
+                            lowerBound = pathv.getLowerBound()
                 line = "%s%s[%d..%d]%s" % \
                 (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
                 self._lines.append(line)

@@ -100020,6 +100020,10 @@ struct DATA data[ARRAY_SIZE] = {
 int
 binary_search (int x)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  #endif
+  
   int low = 0;
   int up = ARRAY_SIZE - 1;
   int fvalue = -1;
@@ -100027,6 +100031,10 @@ binary_search (int x)
 
   while (low <= up)
   {
+    #ifdef CBMC
+    __countL1++;
+    #endif
+    
     mid = (low + up) >> 1;
     if (data[mid].key == x)
     {

@@ -28,23 +28,26 @@ swapIfLarger (int *a, int *b)
 void
 bubblesort (int ARRAY_SIZE, int a[])
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  #endif
+
   int i, j, tmp;
   int swapped = 0;
-  #ifdef CBMC
-  int __counti = 0;
-  int __countj = 0;
-  #endif
   for (i = 0; i < ARRAY_SIZE - 1; i++)
   {
     #ifdef CBMC
-    __counti++;
+    __countL1++;
     #endif
+    
     swapped = 0;
     for (j = 0; j < ARRAY_SIZE - 1 - i; j++)
     {
       #ifdef CBMC
-      __countj++;
+      __countL1++;
       #endif
+      
       if (swapIfLarger(&a[j], &a[j+1]))
       {
         swapped = 1;

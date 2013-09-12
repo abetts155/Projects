@@ -54,7 +54,7 @@ def fitnessFunction (chromosome):
     fitnessFunction.gem5Traces.append(doCompression(gem5Trace))
     return score
 
-def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=10, generations=10):
+def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=20, generations=20):
     from pyevolve import G1DList, GSimpleGA, Crossovers, Mutators
 
     # Create the population

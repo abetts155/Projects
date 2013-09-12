@@ -58,7 +58,7 @@ class PathInformationGraph (DirectedGraph):
                 count += 1
         return count
     
-    def numOfMutualExclusionPairs (self):
+    def mutualExclusionPairs (self):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
@@ -67,9 +67,9 @@ class PathInformationGraph (DirectedGraph):
                 if succe.getType() == PathInformationEdgeType.EXCLUSION:
                     if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
                         edges.add((vertexID, succID))
-        return len(edges)
+        return sorted(edges)
     
-    def numOfExecutionDependencies (self):
+    def executionDependencies (self):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
@@ -78,9 +78,9 @@ class PathInformationGraph (DirectedGraph):
                 succv  = self.getVertex(succID)
                 if succe.getType() == PathInformationEdgeType.INCLUSION and not succv.hasSuccessor(vertexID):
                     edges.add((vertexID, succID))
-        return len(edges)
+        return sorted(edges)
     
-    def numOfMutualInclusionPairs (self):
+    def mutualInclusionPairs (self):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
@@ -90,7 +90,7 @@ class PathInformationGraph (DirectedGraph):
                 if succe.getType() == PathInformationEdgeType.INCLUSION and succv.hasSuccessor(vertexID):
                     if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
                         edges.add((vertexID, succID))
-        return len(edges)
+        return sorted(edges)
                             
     def isMonitoredEdge (self, predID, succID):
         if (predID, succID) in self.__monitoredEdges:
@@ -149,6 +149,7 @@ class EnhancedCFG (FlowGraph):
     def __init__ (self, cfg=None):
         FlowGraph.__init__(self)
         if cfg:
+            self._name = cfg.getName()
             for v in cfg:
                 newVertexID = v.getVertexID()
                 newv        = Vertex(newVertexID)

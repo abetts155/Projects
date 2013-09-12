@@ -140,17 +140,29 @@ my_abs (int n)
 int 
 my_sin (int rad)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  int __countL3 = 0;
+  #endif
+
   int diff;
   int app=0;
   int inc = 1;
 
   while (rad > 2*PI)
   {
-      rad -= 2*PI;
+    #ifdef CBMC
+    __countL1++;
+    #endif
+    rad -= 2*PI;
   }
   
   while (rad < -2*PI)
-  {    
+  {   
+    #ifdef CBMC
+    __countL2++;
+    #endif 
     rad += 2*PI;
   }
   
@@ -162,6 +174,9 @@ my_sin (int rad)
   
   while (my_abs(diff) >= 1) 
   {
+    #ifdef CBMC
+    __countL3++;
+    #endif
     diff = (diff * (-(rad*rad))) / ((2 * inc) * (2 * inc + 1));
     app = app + diff;
     inc++;
@@ -179,11 +194,19 @@ my_cos (int rad)
 void 
 upzero (int dlt,int *dlti,int *bli)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  #endif
+
   int i,wd2,wd3;
   if(dlt == 0) 
   {
     for(i = 0 ; i < 6 ; i++) 
     {
+      #ifdef CBMC
+      __countL1++;
+      #endif
       bli[i] = (int)((255L*bli[i]) >> 8L); 
     }
   }
@@ -191,6 +214,9 @@ upzero (int dlt,int *dlti,int *bli)
   {
     for(i = 0 ; i < 6 ; i++) 
     {
+      #ifdef CBMC
+      __countL2++;
+      #endif
       if ((long)dlt*dlti[i] >= 0)
       { 
         wd2 = 128;
@@ -215,6 +241,11 @@ upzero (int dlt,int *dlti,int *bli)
 int 
 encode (int xin1,int xin2)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  #endif
+
   int i;
   int *h_ptr,*tqmf_ptr,*tqmf_ptr1;
   long int xa,xb;
@@ -227,6 +258,9 @@ encode (int xin1,int xin2)
   
   for(i = 0 ; i < 10 ; i++) 
   {
+    #ifdef CBMC
+    __countL1++;
+    #endif
     xa += (long)(*tqmf_ptr++) * (*h_ptr++);
     xb += (long)(*tqmf_ptr++) * (*h_ptr++);
   }
@@ -237,6 +271,9 @@ encode (int xin1,int xin2)
   
   for(i = 0 ; i < 22 ; i++)
   {
+    #ifdef CBMC
+    __countL2++;
+    #endif
     *tqmf_ptr-- = *tqmf_ptr1--;
   }
   
@@ -306,6 +343,11 @@ encode (int xin1,int xin2)
 void 
 decode (int input)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  #endif
+
   int i;
   long int xa1,xa2;  
   int *h_ptr,*ac_ptr,*ac_ptr1,*ad_ptr,*ad_ptr1;
@@ -355,6 +397,9 @@ decode (int input)
 
   for(i = 0 ; i < 10 ; i++) 
   {
+    #ifdef CBMC
+    __countL1++;
+    #endif
     xa1 += (long)(*ac_ptr++) * (*h_ptr++);
     xa2 += (long)(*ad_ptr++) * (*h_ptr++);
   }
@@ -370,6 +415,9 @@ decode (int input)
   
   for(i = 0 ; i < 10 ; i++) 
   {
+    #ifdef CBMC
+    __countL2++;
+    #endif
     *ac_ptr-- = *ac_ptr1--;
     *ad_ptr-- = *ad_ptr1--;
   }
@@ -381,6 +429,17 @@ decode (int input)
 void 
 reset ()
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  int __countL3 = 0;
+  int __countL4 = 0;
+  int __edge_2_3 = 0;
+  int __edge_6_5 = 0;
+  int __edge_8_9 = 0;
+  int __edge_12_11 = 0;
+  #endif
+  
   int i;
 
   detl = dec_detl = 32; 
@@ -390,37 +449,88 @@ reset ()
   dec_nbl = dec_al1 = dec_al2 = dec_plt1 = dec_plt2 = dec_rlt1 = dec_rlt2 = 0;
   dec_nbh = dec_ah1 = dec_ah2 = dec_ph1 = dec_ph2 = dec_rh1 = dec_rh2 = 0;
 
-  for(i = 0 ; i < 6 ; i++) 
+  for(i = 0;
+      #ifdef CBMC 
+      __countL1++, 
+      #endif
+      i < 6; i++) 
   {
+    #ifdef CBMC 
+    __edge_2_3++;
+    #endif
     delay_dltx[i] = 0;
     delay_dhx[i] = 0;
     dec_del_dltx[i] = 0;
     dec_del_dhx[i] = 0;
   }
 
-  for(i = 0 ; i < 6 ; i++) 
+  for(i = 0; 
+      #ifdef CBMC 
+      __countL2++, 
+      #endif
+      i < 6 ; i++) 
   {
+    #ifdef CBMC 
+    __edge_6_5++;
+    #endif
     delay_bpl[i] = 0;
     delay_bph[i] = 0;
     dec_del_bpl[i] = 0;
     dec_del_bph[i] = 0;
   }
 
-  for(i = 0 ; i < 23 ; i++)
+  for(i = 0;
+      #ifdef CBMC 
+      __countL3++, 
+      #endif
+      i < 23 ; i++)
   {
+    #ifdef CBMC 
+    __edge_8_9++;
+    #endif
     tqmf[i] = 0;
   }
   
-  for(i = 0 ; i < 11 ; i++) 
+  for(i = 0;
+      #ifdef CBMC 
+      __countL4++, 
+      #endif
+      i < 11 ; i++) 
   {
+    #ifdef CBMC 
+    __edge_12_11++;
+    #endif
     accumc[i] = 0;
     accumd[i] = 0;
   }
+  
+  #ifdef CBMC
+  assert(__countL1<=7);
+  assert(__countL2<=7);
+  assert(__countL3<=24);
+  assert(__countL4<=12);
+  assert(__edge_2_3 > 0 ==>   __edge_6_5 > 0 && 
+         __edge_6_5 > 0 ==>   __edge_2_3 > 0);
+  assert(__edge_8_9 > 0 ==>   __edge_2_3 > 0 && 
+         __edge_2_3 > 0 ==>   __edge_8_9 > 0);
+  assert(__edge_8_9 > 0 ==>   __edge_6_5 > 0 && 
+         __edge_6_5 > 0 ==>   __edge_8_9 > 0);
+  assert(__edge_12_11 > 0 ==> __edge_2_3 > 0 && 
+         __edge_2_3 > 0 ==>   __edge_12_11 > 0);
+  assert(__edge_12_11 > 0 ==> __edge_6_5 > 0 && 
+         __edge_6_5 > 0 ==>   __edge_12_11 > 0);
+  assert(__edge_12_11 > 0 ==> __edge_8_9 > 0 && 
+         __edge_8_9 > 0 ==>   __edge_12_11 > 0);
+  #endif
 }
 
 int 
 filtez (int *bpl,int *dlt)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  #endif
+  
   int i;
   long int zl;
   zl = (long)(*bpl++) * (*dlt++);
@@ -445,11 +555,18 @@ filtep (int rlt1,int al1,int rlt2,int al2)
 int 
 quantl (int el,int detl)
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  #endif
+  
   int ril,mil;
   long int wd,decis;
   wd = my_abs(el);
   for(mil = 0 ; mil < 30 ; mil++) 
   {
+    #ifdef CBMC
+    __countL1++;
+    #endif
     decis = (decis_levl[mil]*(long)detl) >> 15L;
     if(wd <= decis)
     { 
@@ -471,17 +588,41 @@ quantl (int el,int detl)
 int 
 logscl (int il,int nbl)
 {
+  #ifdef CBMC
+  int __edge_14_15 = 0;
+  int __edge_14_16 = 0;
+  int __edge_17_18 = 0;
+  int __edge_16_18 = 0;
+  #endif
+
   long int wd;  
   wd = ((long)nbl * 127L) >> 7L; 
   nbl = (int)wd + wl_code_table[il >> 2];
   if(nbl < 0)
   {
+    #ifdef CBMC
+    __edge_14_15++;
+    #endif
     nbl = 0;
   }
+  #ifdef CBMC
+  else __edge_14_16++;
+  #endif
+  
   if (nbl > 18432) 
   {
+    #ifdef CBMC
+    __edge_17_18++;
+    #endif
     nbl = 18432;
   }
+  #ifdef CBMC
+  else __edge_16_18++;
+  #endif
+  
+  #ifdef CBMC
+  #endif
+  
   return nbl;
 }
 
@@ -577,6 +718,11 @@ logsch (int ih,int nbh)
 void
 adpcm (int test_data[])
 {
+  #ifdef CBMC
+  int __countL1 = 0;
+  int __countL2 = 0;
+  #endif
+
   int compressed[2];
   int result[4];
 
@@ -585,11 +731,17 @@ adpcm (int test_data[])
   int i;
   for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2)
   {
+    #ifdef CBMC
+    __countL1++;
+    #endif
     compressed[i/2] = encode(test_data[i],test_data[i+1]);
   }
   
   for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2)
   {
+    #ifdef CBMC
+    __countL2++;
+    #endif
     decode(compressed[i/2]);
     result[i] = xout1;
     result[i+1] = xout2;

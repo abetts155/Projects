@@ -309,6 +309,8 @@ class DominatorGraph (DirectedGraph):
                 if not externalEdges:
                     assert edgev
                     monitoredCFGEdges.add(edgev.getEdge())
+        print "======>", self.__enhancedCFG.getName()
+        print monitoredCFGEdges
         return monitoredCFGEdges
 
 Colors = enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
