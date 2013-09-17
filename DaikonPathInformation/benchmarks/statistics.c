@@ -33,11 +33,23 @@ Square (double x)
 void
 Calc_Sum_Mean (double Array[], double * Sum, double * Mean, int ARRAY_SIZE)
 {
+  #ifdef CBMC
+  int __count_18_19 = 0;
+  int __count_L19 = 0;
+  #endif
   int i;
 
   *Sum = 0;
-  for (i = 0; i < ARRAY_SIZE; i++)
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L19++,
+    #endif
+    i < ARRAY_SIZE
+    ; i++)
   {
+    #ifdef CBMC
+    __count_18_19++;
+    #endif
     *Sum += Array[i];
   }
   *Mean = *Sum / ARRAY_SIZE;
@@ -47,11 +59,22 @@ void
 Calc_Var_Stddev (double Array[], double Mean, double * Var, double * Stddev,
     int ARRAY_SIZE)
 {
+  #ifdef CBMC
+  int __count_24_22 = 0;
+  int __count_L24 = 0;
+  #endif
   int i;
   double diffs = 0.0;
 
-  for (i = 0; i < ARRAY_SIZE; i++)
+  for (i = 0; 
+#ifdef CBMC
+__count_L24++,
+#endif
+    i < ARRAY_SIZE; i++)
   {
+    #ifdef CBMC
+    __count_24_22++;
+    #endif
     diffs += Square (Array[i] - Mean);
   }
   *Var = diffs / ARRAY_SIZE;
@@ -62,14 +85,25 @@ void
 Calc_LinCorrCoef (double ArrayA[], double ArrayB[], double MeanA, double MeanB,
     int ARRAY_SIZE)
 {
+  #ifdef CBMC
+  int __count_11_8 = 0;
+  int __count_L11 = 0;
+  #endif
   int i;
   double numerator = 0.0;
   double Aterm = 0.0;
   double Bterm = 0.0;
   double Coef;
 
-  for (i = 0; i < ARRAY_SIZE; i++)
+  for (i = 0; 
+      #ifdef CBMC
+      __count_L11++,
+      #endif
+    i < ARRAY_SIZE; i++)
   {
+    #ifdef CBMC
+    __count_11_8++;
+    #endif
     numerator += (ArrayA[i] - MeanA) * (ArrayB[i] - MeanB);
     Aterm += Square (ArrayA[i] - MeanA);
     Bterm += Square (ArrayB[i] - MeanB);
