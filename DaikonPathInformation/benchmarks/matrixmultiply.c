@@ -12,15 +12,36 @@ typedef int matrix[UPPERLIMIT][UPPERLIMIT];
 int
 matrixmultiply (matrix A, matrix B, matrix C)
 {
+  #ifdef CBMC
+  int __count_5_4 = 0;
+  int __count_L9 = 0;
+  int __count_L7 = 0;
+  int __count_L5 = 0;
+  #endif
   int i, j, k;
 
-  for (i = 0; i < UPPERLIMIT; ++i)
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L9++,
+    #endif
+    i < UPPERLIMIT; ++i)
   {
-    for (j = 0; j < UPPERLIMIT; ++j)
+    for (j = 0; 
+      #ifdef CBMC
+      __count_L7++,
+      #endif
+      j < UPPERLIMIT; ++j)
     {
       C[i][j] = 0;
-      for (k = 0; k < UPPERLIMIT; ++k)
+      for (k = 0; 
+        #ifdef CBMC
+        __count_L5++,
+        #endif
+        k < UPPERLIMIT; ++k)
       {
+        #ifdef CBMC
+        __count_5_4++;
+        #endif
         C[i][j] += A[j][k] * B[k][j];
       }
     }
