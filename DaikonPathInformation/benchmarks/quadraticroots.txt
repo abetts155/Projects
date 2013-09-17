@@ -1,0 +1,260 @@
+cfg: sqrt
+bb: 1
+succ: 2, 3
+instructions:
+[0x0000896C] [push]  [{r7}] 
+[0x0000896E] [sub]  [sp,]  [#52] 
+[0x00008970] [add]  [r7,]  [sp,]  [#0] 
+[0x00008972] [strd]  [r0,]  [r1,]  [[r7]] 
+[0x00008976] [vldr]  [d6,]  [[r7]] 
+[0x0000897A] [vmov.f64]  [d7,]  [#36] 
+[0x0000897E] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008982] [vstr]  [d7,]  [[r7,]  [#40]] 
+[0x00008986] [add]  [r3,]  [pc,]  [#200] 
+[0x00008988] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x0000898C] [strd]  [r2,]  [r3,]  [[r7,]  [#24]] 
+[0x00008990] [mov.w]  [r3,]  [#0] 
+[0x00008994] [str]  [r3,]  [[r7,]  [#32]] 
+[0x00008996] [vldr]  [d7,]  [[r7]] 
+[0x0000899A] [vcmp.f64]  [d7,]  [#0.0] 
+[0x0000899E] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x000089A2] [bne.n]  [89b0]  [<sqrt+0x44>] 
+
+bb: 2
+succ: 9
+instructions:
+[0x000089A4] [add]  [r3,]  [pc,]  [#176] 
+[0x000089A6] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x000089AA] [strd]  [r2,]  [r3,]  [[r7,]  [#40]] 
+[0x000089AE] [b.n]  [8a3e]  [<sqrt+0xd2>] 
+
+bb: 3
+succ: 8
+instructions:
+[0x000089B0] [mov.w]  [r3,]  [#1] 
+[0x000089B4] [str]  [r3,]  [[r7,]  [#36]] 
+[0x000089B6] [b.n]  [8a38]  [<sqrt+0xcc>] 
+
+bb: 4
+succ: 5, 7
+instructions:
+[0x000089B8] [ldr]  [r3,]  [[r7,]  [#32]] 
+[0x000089BA] [cmp]  [r3,]  [#0] 
+[0x000089BC] [bne.n]  [8a30]  [<sqrt+0xc4>] 
+
+bb: 5
+succ: 6, 7
+instructions:
+[0x000089BE] [vldr]  [d6,]  [[r7,]  [#40]] 
+[0x000089C2] [vldr]  [d7,]  [[r7,]  [#40]] 
+[0x000089C6] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x000089CA] [vldr]  [d6,]  [[r7]] 
+[0x000089CE] [vsub.f64]  [d6,]  [d6,]  [d7] 
+[0x000089D2] [vldr]  [d7,]  [[r7,]  [#40]] 
+[0x000089D6] [vadd.f64]  [d7,]  [d7,]  [d7] 
+[0x000089DA] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x000089DE] [vstr]  [d7,]  [[r7,]  [#16]] 
+[0x000089E2] [vldr]  [d6,]  [[r7,]  [#40]] 
+[0x000089E6] [vldr]  [d7,]  [[r7,]  [#16]] 
+[0x000089EA] [vadd.f64]  [d7,]  [d6,]  [d7] 
+[0x000089EE] [vstr]  [d7,]  [[r7,]  [#40]] 
+[0x000089F2] [vldr]  [d6,]  [[r7,]  [#40]] 
+[0x000089F6] [vldr]  [d7,]  [[r7,]  [#40]] 
+[0x000089FA] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x000089FE] [vldr]  [d6,]  [[r7]] 
+[0x00008A02] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008A06] [vstr]  [d7,]  [[r7,]  [#8]] 
+[0x00008A0A] [vldr]  [d7,]  [[r7,]  [#8]] 
+[0x00008A0E] [vabs.f64]  [d6,]  [d7] 
+[0x00008A12] [vldr]  [d7,]  [[r7,]  [#24]] 
+[0x00008A16] [vcmpe.f64]  [d6,]  [d7] 
+[0x00008A1A] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x00008A1E] [ite]  [hi] 
+[0x00008A20] [movhi]  [r3,]  [#0] 
+[0x00008A22] [movls]  [r3,]  [#1] 
+[0x00008A24] [uxtb]  [r3,]  [r3] 
+[0x00008A26] [cmp]  [r3,]  [#0] 
+[0x00008A28] [beq.n]  [8a30]  [<sqrt+0xc4>] 
+
+bb: 6
+succ: 7
+instructions:
+[0x00008A2A] [mov.w]  [r3,]  [#1] 
+[0x00008A2E] [str]  [r3,]  [[r7,]  [#32]] 
+
+bb: 7
+succ: 8
+instructions:
+[0x00008A30] [ldr]  [r3,]  [[r7,]  [#36]] 
+[0x00008A32] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008A36] [str]  [r3,]  [[r7,]  [#36]] 
+
+bb: 8
+succ: 9, 4
+instructions:
+[0x00008A38] [ldr]  [r3,]  [[r7,]  [#36]] 
+[0x00008A3A] [cmp]  [r3,]  [#19] 
+[0x00008A3C] [ble.n]  [89b8]  [<sqrt+0x4c>] 
+
+bb: 9
+
+instructions:
+[0x00008A3E] [ldrd]  [r2,]  [r3,]  [[r7,]  [#40]] 
+[0x00008A42] [mov]  [r0,]  [r2] 
+[0x00008A44] [mov]  [r1,]  [r3] 
+[0x00008A46] [add.w]  [r7,]  [r7,]  [#52] 
+[0x00008A4A] [mov]  [sp,]  [r7] 
+[0x00008A4C] [pop]  [{r7}] 
+[0x00008A4E] [bx]  [lr] 
+
+
+cfg: quadraticroots
+bb: 10
+succ: 17, 11
+instructions:
+[0x00008A60] [push]  [{r7,]  [lr}] 
+[0x00008A62] [sub]  [sp,]  [#64] 
+[0x00008A64] [add]  [r7,]  [sp,]  [#0] 
+[0x00008A66] [str]  [r0,]  [[r7,]  [#4]] 
+[0x00008A68] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008A6A] [vldr]  [d7,]  [[r3]] 
+[0x00008A6E] [vcmp.f64]  [d7,]  [#0.0] 
+[0x00008A72] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x00008A76] [beq.w]  [8bd6]  [<quadraticroots+0x176>] 
+
+bb: 11
+succ: 12, sqrt
+instructions:
+[0x00008A7A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008A7C] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008A80] [vldr]  [d6,]  [[r3]] 
+[0x00008A84] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008A86] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008A8A] [vldr]  [d7,]  [[r3]] 
+[0x00008A8E] [vmul.f64]  [d6,]  [d6,]  [d7] 
+[0x00008A92] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008A94] [vldr]  [d5,]  [[r3]] 
+[0x00008A98] [vmov.f64]  [d7,]  [#16] 
+[0x00008A9C] [vmul.f64]  [d7,]  [d5,]  [d7] 
+[0x00008AA0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008AA2] [add.w]  [r3,]  [r3,]  [#16] 
+[0x00008AA6] [vldr]  [d5,]  [[r3]] 
+[0x00008AAA] [vmul.f64]  [d7,]  [d7,]  [d5] 
+[0x00008AAE] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008AB2] [vstr]  [d7,]  [[r7,]  [#56]] 
+[0x00008AB6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008AB8] [vldr]  [d7,]  [[r3]] 
+[0x00008ABC] [vadd.f64]  [d7,]  [d7,]  [d7] 
+[0x00008AC0] [vstr]  [d7,]  [[r7,]  [#48]] 
+[0x00008AC4] [vldr]  [d7,]  [[r7,]  [#56]] 
+[0x00008AC8] [vabs.f64]  [d7,]  [d7] 
+[0x00008ACC] [vmov]  [r0,]  [r1,]  [d7] 
+[0x00008AD0] [bl]  [896c]  [<sqrt>] 
+
+bb: 12
+succ: 13, 14
+instructions:
+[0x00008AD4] [strd]  [r0,]  [r1,]  [[r7,]  [#40]] 
+[0x00008AD8] [vldr]  [d7,]  [[r7,]  [#56]] 
+[0x00008ADC] [vcmpe.f64]  [d7,]  [#0.0] 
+[0x00008AE0] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x00008AE4] [ite]  [le] 
+[0x00008AE6] [movle]  [r3,]  [#0] 
+[0x00008AE8] [movgt]  [r3,]  [#1] 
+[0x00008AEA] [uxtb]  [r3,]  [r3] 
+[0x00008AEC] [cmp]  [r3,]  [#0] 
+[0x00008AEE] [beq.n]  [8b46]  [<quadraticroots+0xe6>] 
+
+bb: 13
+succ: 18
+instructions:
+[0x00008AF0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008AF2] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008AF6] [vldr]  [d7,]  [[r3]] 
+[0x00008AFA] [vldr]  [d6,]  [[r7,]  [#40]] 
+[0x00008AFE] [vsub.f64]  [d6,]  [d6,]  [d7] 
+[0x00008B02] [vldr]  [d7,]  [[r7,]  [#48]] 
+[0x00008B06] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008B0A] [vstr]  [d7,]  [[r7,]  [#24]] 
+[0x00008B0E] [add]  [r3,]  [pc,]  [#208] 
+[0x00008B10] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008B14] [strd]  [r2,]  [r3,]  [[r7,]  [#32]] 
+[0x00008B18] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B1A] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008B1E] [vldr]  [d7,]  [[r3]] 
+[0x00008B22] [vneg.f64]  [d6,]  [d7] 
+[0x00008B26] [vldr]  [d7,]  [[r7,]  [#40]] 
+[0x00008B2A] [vsub.f64]  [d6,]  [d6,]  [d7] 
+[0x00008B2E] [vldr]  [d7,]  [[r7,]  [#48]] 
+[0x00008B32] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008B36] [vstr]  [d7,]  [[r7,]  [#8]] 
+[0x00008B3A] [add]  [r3,]  [pc,]  [#164] 
+[0x00008B3C] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008B40] [strd]  [r2,]  [r3,]  [[r7,]  [#16]] 
+[0x00008B44] [b.n]  [8bd8]  [<quadraticroots+0x178>] 
+
+bb: 14
+succ: 16, 15
+instructions:
+[0x00008B46] [vldr]  [d7,]  [[r7,]  [#56]] 
+[0x00008B4A] [vcmp.f64]  [d7,]  [#0.0] 
+[0x00008B4E] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x00008B52] [bne.n]  [8b8c]  [<quadraticroots+0x12c>] 
+
+bb: 15
+succ: 18
+instructions:
+[0x00008B54] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B56] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008B5A] [vldr]  [d7,]  [[r3]] 
+[0x00008B5E] [vneg.f64]  [d6,]  [d7] 
+[0x00008B62] [vldr]  [d7,]  [[r7,]  [#48]] 
+[0x00008B66] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008B6A] [vstr]  [d7,]  [[r7,]  [#24]] 
+[0x00008B6E] [add]  [r3,]  [pc,]  [#112] 
+[0x00008B70] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008B74] [strd]  [r2,]  [r3,]  [[r7,]  [#32]] 
+[0x00008B78] [ldrd]  [r2,]  [r3,]  [[r7,]  [#24]] 
+[0x00008B7C] [strd]  [r2,]  [r3,]  [[r7,]  [#8]] 
+[0x00008B80] [add]  [r3,]  [pc,]  [#92] 
+[0x00008B82] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008B86] [strd]  [r2,]  [r3,]  [[r7,]  [#16]] 
+[0x00008B8A] [b.n]  [8bd8]  [<quadraticroots+0x178>] 
+
+bb: 16
+succ: 18
+instructions:
+[0x00008B8C] [vldr]  [d6,]  [[r7,]  [#40]] 
+[0x00008B90] [vldr]  [d7,]  [[r7,]  [#48]] 
+[0x00008B94] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008B98] [vstr]  [d7,]  [[r7,]  [#40]] 
+[0x00008B9C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B9E] [add.w]  [r3,]  [r3,]  [#8] 
+[0x00008BA2] [vldr]  [d7,]  [[r3]] 
+[0x00008BA6] [vneg.f64]  [d6,]  [d7] 
+[0x00008BAA] [vldr]  [d7,]  [[r7,]  [#48]] 
+[0x00008BAE] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008BB2] [vstr]  [d7,]  [[r7,]  [#24]] 
+[0x00008BB6] [ldrd]  [r2,]  [r3,]  [[r7,]  [#40]] 
+[0x00008BBA] [strd]  [r2,]  [r3,]  [[r7,]  [#32]] 
+[0x00008BBE] [ldrd]  [r2,]  [r3,]  [[r7,]  [#24]] 
+[0x00008BC2] [strd]  [r2,]  [r3,]  [[r7,]  [#8]] 
+[0x00008BC6] [vldr]  [d7,]  [[r7,]  [#40]] 
+[0x00008BCA] [vneg.f64]  [d7,]  [d7] 
+[0x00008BCE] [vstr]  [d7,]  [[r7,]  [#16]] 
+[0x00008BD2] [nop] 
+[0x00008BD4] [b.n]  [8bd8]  [<quadraticroots+0x178>] 
+
+bb: 17
+succ: 18
+instructions:
+[0x00008BD6] [nop] 
+
+bb: 18
+
+instructions:
+[0x00008BD8] [add.w]  [r7,]  [r7,]  [#64] 
+[0x00008BDC] [mov]  [sp,]  [r7] 
+[0x00008BDE] [pop]  [{r7,]  [pc}] 
+
+

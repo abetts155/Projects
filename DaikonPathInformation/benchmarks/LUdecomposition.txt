@@ -1,0 +1,574 @@
+cfg: LUdecomposition
+bb: 1
+succ: 2, 3
+instructions:
+[0x0000896C] [push]  [{r7,]  [lr}] 
+[0x0000896E] [sub.w]  [sp,]  [sp,]  [#840] 
+[0x00008972] [add]  [r7,]  [sp,]  [#0] 
+[0x00008974] [add.w]  [r1,]  [r7,]  [#12] 
+[0x00008978] [str]  [r0,]  [[r1,]  [#0]] 
+[0x0000897A] [mov]  [r1,]  [r7] 
+[0x0000897C] [strd]  [r2,]  [r3,]  [[r1]] 
+[0x00008980] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008984] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008986] [cmp]  [r3,]  [#99] 
+[0x00008988] [bgt.n]  [89a4]  [<LUdecomposition+0x38>] 
+
+bb: 2
+succ: 3, 4
+instructions:
+[0x0000898A] [mov]  [r3,]  [r7] 
+[0x0000898C] [vldr]  [d7,]  [[r3]] 
+[0x00008990] [vcmpe.f64]  [d7,]  [#0.0] 
+[0x00008994] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x00008998] [ite]  [hi] 
+[0x0000899A] [movhi]  [r3,]  [#0] 
+[0x0000899C] [movls]  [r3,]  [#1] 
+[0x0000899E] [uxtb]  [r3,]  [r3] 
+[0x000089A0] [cmp]  [r3,]  [#0] 
+[0x000089A2] [beq.n]  [89aa]  [<LUdecomposition+0x3e>] 
+
+bb: 3
+succ: 36
+instructions:
+[0x000089A4] [movw]  [r3,]  [#999] 
+[0x000089A8] [b.n]  [8e6c]  [<LUdecomposition+0x500>] 
+
+bb: 4
+succ: 22
+instructions:
+[0x000089AA] [mov.w]  [r3,]  [#0] 
+[0x000089AE] [str.w]  [r3,]  [[r7,]  [#836]] 
+[0x000089B2] [b.n]  [8c48]  [<LUdecomposition+0x2dc>] 
+
+bb: 5
+succ: 6, fabs
+instructions:
+[0x000089B4] [movw]  [r2,]  [#48928] 
+[0x000089B8] [movt]  [r2,]  [#6] 
+[0x000089BC] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x000089C0] [mov]  [r3,]  [r1] 
+[0x000089C2] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x000089C6] [subs]  [r3,]  [r3,]  [r1] 
+[0x000089C8] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x000089CC] [adds]  [r3,]  [r2,]  [r3] 
+[0x000089CE] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x000089D2] [mov]  [r0,]  [r2] 
+[0x000089D4] [mov]  [r1,]  [r3] 
+[0x000089D6] [bl]  [8928]  [<fabs>] 
+
+bb: 6
+succ: 8, 7
+instructions:
+[0x000089DA] [vmov]  [d6,]  [r0,]  [r1] 
+[0x000089DE] [mov]  [r3,]  [r7] 
+[0x000089E0] [vldr]  [d7,]  [[r3]] 
+[0x000089E4] [vcmpe.f64]  [d6,]  [d7] 
+[0x000089E8] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x000089EC] [ite]  [hi] 
+[0x000089EE] [movhi]  [r3,]  [#0] 
+[0x000089F0] [movls]  [r3,]  [#1] 
+[0x000089F2] [uxtb]  [r3,]  [r3] 
+[0x000089F4] [cmp]  [r3,]  [#0] 
+[0x000089F6] [beq.n]  [89fe]  [<LUdecomposition+0x92>] 
+
+bb: 7
+succ: 36
+instructions:
+[0x000089F8] [mov.w]  [r3,]  [#1] 
+[0x000089FC] [b.n]  [8e6c]  [<LUdecomposition+0x500>] 
+
+bb: 8
+succ: 14
+instructions:
+[0x000089FE] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008A02] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008A06] [str.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008A0A] [b.n]  [8b1c]  [<LUdecomposition+0x1b0>] 
+
+bb: 9
+succ: 10, 13
+instructions:
+[0x00008A0C] [movw]  [r2,]  [#48928] 
+[0x00008A10] [movt]  [r2,]  [#6] 
+[0x00008A14] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008A18] [mov]  [r3,]  [r1] 
+[0x00008A1A] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A1E] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A20] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A24] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008A28] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A2A] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008A2E] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008A30] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008A34] [strd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008A38] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008A3C] [cmp]  [r3,]  [#0] 
+[0x00008A3E] [beq.n]  [8ac2]  [<LUdecomposition+0x156>] 
+
+bb: 10
+succ: 12
+instructions:
+[0x00008A40] [mov.w]  [r3,]  [#0] 
+[0x00008A44] [str.w]  [r3,]  [[r7,]  [#828]] 
+[0x00008A48] [b.n]  [8ab6]  [<LUdecomposition+0x14a>] 
+
+bb: 11
+succ: 12
+instructions:
+[0x00008A4A] [movw]  [r2,]  [#48928] 
+[0x00008A4E] [movt]  [r2,]  [#6] 
+[0x00008A52] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008A56] [mov]  [r3,]  [r1] 
+[0x00008A58] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A5C] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A5E] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A62] [ldr.w]  [r1,]  [[r7,]  [#828]] 
+[0x00008A66] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A68] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008A6C] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008A6E] [vldr]  [d6,]  [[r3]] 
+[0x00008A72] [movw]  [r2,]  [#48928] 
+[0x00008A76] [movt]  [r2,]  [#6] 
+[0x00008A7A] [ldr.w]  [r1,]  [[r7,]  [#828]] 
+[0x00008A7E] [mov]  [r3,]  [r1] 
+[0x00008A80] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A84] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A86] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008A8A] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008A8E] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008A90] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008A94] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008A96] [vldr]  [d7,]  [[r3]] 
+[0x00008A9A] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x00008A9E] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008AA2] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008AA6] [vstr]  [d7,]  [[r7,]  [#816]] 
+[0x00008AAA] [ldr.w]  [r3,]  [[r7,]  [#828]] 
+[0x00008AAE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008AB2] [str.w]  [r3,]  [[r7,]  [#828]] 
+
+bb: 12
+succ: 11, 13
+instructions:
+[0x00008AB6] [ldr.w]  [r2,]  [[r7,]  [#828]] 
+[0x00008ABA] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008ABE] [cmp]  [r2,]  [r3] 
+[0x00008AC0] [blt.n]  [8a4a]  [<LUdecomposition+0xde>] 
+
+bb: 13
+succ: 14
+instructions:
+[0x00008AC2] [movw]  [r2,]  [#48928] 
+[0x00008AC6] [movt]  [r2,]  [#6] 
+[0x00008ACA] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008ACE] [mov]  [r3,]  [r1] 
+[0x00008AD0] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008AD4] [subs]  [r3,]  [r3,]  [r1] 
+[0x00008AD6] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008ADA] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008ADC] [vldr]  [d7,]  [[r3]] 
+[0x00008AE0] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008AE4] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008AE8] [movw]  [r2,]  [#48928] 
+[0x00008AEC] [movt]  [r2,]  [#6] 
+[0x00008AF0] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008AF4] [mov]  [r3,]  [r1] 
+[0x00008AF6] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008AFA] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008AFC] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008B00] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008B04] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008B06] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008B0A] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008B0C] [vstr]  [d7,]  [[r3]] 
+[0x00008B10] [ldr.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008B14] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B18] [str.w]  [r3,]  [[r7,]  [#832]] 
+
+bb: 14
+succ: 9, 15
+instructions:
+[0x00008B1C] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008B20] [ldr.w]  [r2,]  [[r7,]  [#832]] 
+[0x00008B24] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008B26] [cmp]  [r2,]  [r3] 
+[0x00008B28] [ble.w]  [8a0c]  [<LUdecomposition+0xa0>] 
+
+bb: 15
+succ: 20
+instructions:
+[0x00008B2C] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008B30] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B34] [str.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008B38] [b.n]  [8c2c]  [<LUdecomposition+0x2c0>] 
+
+bb: 16
+succ: 18
+instructions:
+[0x00008B3A] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008B3E] [add.w]  [r1,]  [r3,]  [#1] 
+[0x00008B42] [movw]  [r2,]  [#48928] 
+[0x00008B46] [movt]  [r2,]  [#6] 
+[0x00008B4A] [mov]  [r3,]  [r1] 
+[0x00008B4C] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008B50] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008B52] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008B56] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008B5A] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008B5C] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008B60] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008B62] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008B66] [strd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008B6A] [mov.w]  [r3,]  [#0] 
+[0x00008B6E] [str.w]  [r3,]  [[r7,]  [#828]] 
+[0x00008B72] [b.n]  [8be4]  [<LUdecomposition+0x278>] 
+
+bb: 17
+succ: 18
+instructions:
+[0x00008B74] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008B78] [add.w]  [r1,]  [r3,]  [#1] 
+[0x00008B7C] [movw]  [r2,]  [#48928] 
+[0x00008B80] [movt]  [r2,]  [#6] 
+[0x00008B84] [mov]  [r3,]  [r1] 
+[0x00008B86] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008B8A] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008B8C] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008B90] [ldr.w]  [r1,]  [[r7,]  [#828]] 
+[0x00008B94] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008B96] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008B9A] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008B9C] [vldr]  [d6,]  [[r3]] 
+[0x00008BA0] [movw]  [r2,]  [#48928] 
+[0x00008BA4] [movt]  [r2,]  [#6] 
+[0x00008BA8] [ldr.w]  [r1,]  [[r7,]  [#828]] 
+[0x00008BAC] [mov]  [r3,]  [r1] 
+[0x00008BAE] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008BB2] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008BB4] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008BB8] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008BBC] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008BBE] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008BC2] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008BC4] [vldr]  [d7,]  [[r3]] 
+[0x00008BC8] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x00008BCC] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008BD0] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008BD4] [vstr]  [d7,]  [[r7,]  [#816]] 
+[0x00008BD8] [ldr.w]  [r3,]  [[r7,]  [#828]] 
+[0x00008BDC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BE0] [str.w]  [r3,]  [[r7,]  [#828]] 
+
+bb: 18
+succ: 17, 19
+instructions:
+[0x00008BE4] [ldr.w]  [r2,]  [[r7,]  [#828]] 
+[0x00008BE8] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008BEC] [cmp]  [r2,]  [r3] 
+[0x00008BEE] [ble.n]  [8b74]  [<LUdecomposition+0x208>] 
+
+bb: 19
+succ: 20
+instructions:
+[0x00008BF0] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008BF4] [add.w]  [r1,]  [r3,]  [#1] 
+[0x00008BF8] [movw]  [r2,]  [#48928] 
+[0x00008BFC] [movt]  [r2,]  [#6] 
+[0x00008C00] [mov]  [r3,]  [r1] 
+[0x00008C02] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008C06] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008C08] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008C0C] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008C10] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008C12] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008C16] [adds]  [r1,]  [r2,]  [r3] 
+[0x00008C18] [ldrd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008C1C] [strd]  [r2,]  [r3,]  [[r1]] 
+[0x00008C20] [ldr.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008C24] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C28] [str.w]  [r3,]  [[r7,]  [#832]] 
+
+bb: 20
+succ: 16, 21
+instructions:
+[0x00008C2C] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008C30] [ldr.w]  [r2,]  [[r7,]  [#832]] 
+[0x00008C34] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008C36] [cmp]  [r2,]  [r3] 
+[0x00008C38] [ble.w]  [8b3a]  [<LUdecomposition+0x1ce>] 
+
+bb: 21
+succ: 22
+instructions:
+[0x00008C3C] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008C40] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C44] [str.w]  [r3,]  [[r7,]  [#836]] 
+
+bb: 22
+succ: 5, 23
+instructions:
+[0x00008C48] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008C4C] [ldr.w]  [r2,]  [[r7,]  [#836]] 
+[0x00008C50] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008C52] [cmp]  [r2,]  [r3] 
+[0x00008C54] [blt.w]  [89b4]  [<LUdecomposition+0x48>] 
+
+bb: 23
+succ: 28
+instructions:
+[0x00008C58] [movw]  [r3,]  [#48832] 
+[0x00008C5C] [movt]  [r3,]  [#6] 
+[0x00008C60] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008C64] [add.w]  [r1,]  [r7,]  [#16] 
+[0x00008C68] [strd]  [r2,]  [r3,]  [[r1]] 
+[0x00008C6C] [mov.w]  [r3,]  [#1] 
+[0x00008C70] [str.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008C74] [b.n]  [8d1e]  [<LUdecomposition+0x3b2>] 
+
+bb: 24
+succ: 26
+instructions:
+[0x00008C76] [movw]  [r3,]  [#48832] 
+[0x00008C7A] [movt]  [r3,]  [#6] 
+[0x00008C7E] [ldr.w]  [r2,]  [[r7,]  [#836]] 
+[0x00008C82] [mov.w]  [r2,]  [r2,]  [lsl]  [#3] 
+[0x00008C86] [adds]  [r3,]  [r3,]  [r2] 
+[0x00008C88] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008C8C] [strd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008C90] [mov.w]  [r3,]  [#0] 
+[0x00008C94] [str.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008C98] [b.n]  [8cf0]  [<LUdecomposition+0x384>] 
+
+bb: 25
+succ: 26
+instructions:
+[0x00008C9A] [movw]  [r2,]  [#48928] 
+[0x00008C9E] [movt]  [r2,]  [#6] 
+[0x00008CA2] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008CA6] [mov]  [r3,]  [r1] 
+[0x00008CA8] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008CAC] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008CAE] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008CB2] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008CB6] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008CB8] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008CBC] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008CBE] [vldr]  [d6,]  [[r3]] 
+[0x00008CC2] [add.w]  [r2,]  [r7,]  [#16] 
+[0x00008CC6] [ldr.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008CCA] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008CCE] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008CD0] [vldr]  [d7,]  [[r3]] 
+[0x00008CD4] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x00008CD8] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008CDC] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008CE0] [vstr]  [d7,]  [[r7,]  [#816]] 
+[0x00008CE4] [ldr.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008CE8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CEC] [str.w]  [r3,]  [[r7,]  [#832]] 
+
+bb: 26
+succ: 25, 27
+instructions:
+[0x00008CF0] [ldr.w]  [r2,]  [[r7,]  [#832]] 
+[0x00008CF4] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008CF8] [cmp]  [r2,]  [r3] 
+[0x00008CFA] [blt.n]  [8c9a]  [<LUdecomposition+0x32e>] 
+
+bb: 27
+succ: 28
+instructions:
+[0x00008CFC] [add.w]  [r2,]  [r7,]  [#16] 
+[0x00008D00] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008D04] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008D08] [adds]  [r1,]  [r2,]  [r3] 
+[0x00008D0A] [ldrd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008D0E] [strd]  [r2,]  [r3,]  [[r1]] 
+[0x00008D12] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008D16] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D1A] [str.w]  [r3,]  [[r7,]  [#836]] 
+
+bb: 28
+succ: 24, 29
+instructions:
+[0x00008D1E] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008D22] [ldr.w]  [r2,]  [[r7,]  [#836]] 
+[0x00008D26] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008D28] [cmp]  [r2,]  [r3] 
+[0x00008D2A] [ble.n]  [8c76]  [<LUdecomposition+0x30a>] 
+
+bb: 29
+succ: 34
+instructions:
+[0x00008D2C] [add.w]  [r2,]  [r7,]  [#16] 
+[0x00008D30] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008D34] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008D36] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008D3A] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008D3C] [vldr]  [d6,]  [[r3]] 
+[0x00008D40] [movw]  [r2,]  [#48928] 
+[0x00008D44] [movt]  [r2,]  [#6] 
+[0x00008D48] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008D4C] [ldr]  [r1,]  [[r3,]  [#0]] 
+[0x00008D4E] [mov]  [r3,]  [r1] 
+[0x00008D50] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008D54] [subs]  [r3,]  [r3,]  [r1] 
+[0x00008D56] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008D5A] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008D5C] [vldr]  [d7,]  [[r3]] 
+[0x00008D60] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008D64] [movw]  [r3,]  [#48880] 
+[0x00008D68] [movt]  [r3,]  [#6] 
+[0x00008D6C] [add.w]  [r2,]  [r7,]  [#12] 
+[0x00008D70] [ldr]  [r2,]  [[r2,]  [#0]] 
+[0x00008D72] [mov.w]  [r2,]  [r2,]  [lsl]  [#3] 
+[0x00008D76] [adds]  [r3,]  [r3,]  [r2] 
+[0x00008D78] [vstr]  [d7,]  [[r3]] 
+[0x00008D7C] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008D80] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008D82] [add.w]  [r3,]  [r3,]  [#4294967295] 
+[0x00008D86] [str.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008D8A] [b.n]  [8e60]  [<LUdecomposition+0x4f4>] 
+
+bb: 30
+succ: 32
+instructions:
+[0x00008D8C] [add.w]  [r2,]  [r7,]  [#16] 
+[0x00008D90] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008D94] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008D98] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008D9A] [ldrd]  [r2,]  [r3,]  [[r3]] 
+[0x00008D9E] [strd]  [r2,]  [r3,]  [[r7,]  [#816]] 
+[0x00008DA2] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008DA6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DAA] [str.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008DAE] [b.n]  [8e0a]  [<LUdecomposition+0x49e>] 
+
+bb: 31
+succ: 32
+instructions:
+[0x00008DB0] [movw]  [r2,]  [#48928] 
+[0x00008DB4] [movt]  [r2,]  [#6] 
+[0x00008DB8] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008DBC] [mov]  [r3,]  [r1] 
+[0x00008DBE] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008DC2] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008DC4] [mov.w]  [r3,]  [r3,]  [lsl]  [#1] 
+[0x00008DC8] [ldr.w]  [r1,]  [[r7,]  [#832]] 
+[0x00008DCC] [adds]  [r3,]  [r3,]  [r1] 
+[0x00008DCE] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008DD2] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008DD4] [vldr]  [d6,]  [[r3]] 
+[0x00008DD8] [movw]  [r3,]  [#48880] 
+[0x00008DDC] [movt]  [r3,]  [#6] 
+[0x00008DE0] [ldr.w]  [r2,]  [[r7,]  [#832]] 
+[0x00008DE4] [mov.w]  [r2,]  [r2,]  [lsl]  [#3] 
+[0x00008DE8] [adds]  [r3,]  [r3,]  [r2] 
+[0x00008DEA] [vldr]  [d7,]  [[r3]] 
+[0x00008DEE] [vmul.f64]  [d7,]  [d6,]  [d7] 
+[0x00008DF2] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008DF6] [vsub.f64]  [d7,]  [d6,]  [d7] 
+[0x00008DFA] [vstr]  [d7,]  [[r7,]  [#816]] 
+[0x00008DFE] [ldr.w]  [r3,]  [[r7,]  [#832]] 
+[0x00008E02] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E06] [str.w]  [r3,]  [[r7,]  [#832]] 
+
+bb: 32
+succ: 33, 31
+instructions:
+[0x00008E0A] [add.w]  [r3,]  [r7,]  [#12] 
+[0x00008E0E] [ldr.w]  [r2,]  [[r7,]  [#832]] 
+[0x00008E12] [ldr]  [r3,]  [[r3,]  [#0]] 
+[0x00008E14] [cmp]  [r2,]  [r3] 
+[0x00008E16] [ble.n]  [8db0]  [<LUdecomposition+0x444>] 
+
+bb: 33
+succ: 34
+instructions:
+[0x00008E18] [movw]  [r2,]  [#48928] 
+[0x00008E1C] [movt]  [r2,]  [#6] 
+[0x00008E20] [ldr.w]  [r1,]  [[r7,]  [#836]] 
+[0x00008E24] [mov]  [r3,]  [r1] 
+[0x00008E26] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008E2A] [subs]  [r3,]  [r3,]  [r1] 
+[0x00008E2C] [mov.w]  [r3,]  [r3,]  [lsl]  [#3] 
+[0x00008E30] [adds]  [r3,]  [r2,]  [r3] 
+[0x00008E32] [vldr]  [d7,]  [[r3]] 
+[0x00008E36] [vldr]  [d6,]  [[r7,]  [#816]] 
+[0x00008E3A] [vdiv.f64]  [d7,]  [d6,]  [d7] 
+[0x00008E3E] [movw]  [r3,]  [#48880] 
+[0x00008E42] [movt]  [r3,]  [#6] 
+[0x00008E46] [ldr.w]  [r2,]  [[r7,]  [#836]] 
+[0x00008E4A] [mov.w]  [r2,]  [r2,]  [lsl]  [#3] 
+[0x00008E4E] [adds]  [r3,]  [r3,]  [r2] 
+[0x00008E50] [vstr]  [d7,]  [[r3]] 
+[0x00008E54] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008E58] [add.w]  [r3,]  [r3,]  [#4294967295] 
+[0x00008E5C] [str.w]  [r3,]  [[r7,]  [#836]] 
+
+bb: 34
+succ: 35, 30
+instructions:
+[0x00008E60] [ldr.w]  [r3,]  [[r7,]  [#836]] 
+[0x00008E64] [cmp]  [r3,]  [#0] 
+[0x00008E66] [bge.n]  [8d8c]  [<LUdecomposition+0x420>] 
+
+bb: 35
+succ: 36
+instructions:
+[0x00008E68] [mov.w]  [r3,]  [#0] 
+
+bb: 36
+
+instructions:
+[0x00008E6C] [mov]  [r0,]  [r3] 
+[0x00008E6E] [add.w]  [r7,]  [r7,]  [#840] 
+[0x00008E72] [mov]  [sp,]  [r7] 
+[0x00008E74] [pop]  [{r7,]  [pc}] 
+[0x00008E76] [nop] 
+
+
+cfg: fabs
+bb: 40
+
+instructions:
+[0x00008958] [vmov]  [r2,]  [r3,]  [d7] 
+[0x0000895C] [mov]  [r0,]  [r2] 
+[0x0000895E] [mov]  [r1,]  [r3] 
+[0x00008960] [add.w]  [r7,]  [r7,]  [#12] 
+[0x00008964] [mov]  [sp,]  [r7] 
+[0x00008966] [pop]  [{r7}] 
+[0x00008968] [bx]  [lr] 
+[0x0000896A] [nop] 
+
+bb: 37
+succ: 38, 39
+instructions:
+[0x00008928] [push]  [{r7}] 
+[0x0000892A] [sub]  [sp,]  [#12] 
+[0x0000892C] [add]  [r7,]  [sp,]  [#0] 
+[0x0000892E] [strd]  [r0,]  [r1,]  [[r7]] 
+[0x00008932] [vldr]  [d7,]  [[r7]] 
+[0x00008936] [vcmpe.f64]  [d7,]  [#0.0] 
+[0x0000893A] [vmrs]  [APSR_nzcv,]  [fpscr] 
+[0x0000893E] [ite]  [lt] 
+[0x00008940] [movlt]  [r3,]  [#0] 
+[0x00008942] [movge]  [r3,]  [#1] 
+[0x00008944] [uxtb]  [r3,]  [r3] 
+[0x00008946] [cmp]  [r3,]  [#0] 
+[0x00008948] [beq.n]  [8950]  [<fabs+0x28>] 
+
+bb: 38
+succ: 40
+instructions:
+[0x0000894A] [vldr]  [d7,]  [[r7]] 
+[0x0000894E] [b.n]  [8958]  [<fabs+0x30>] 
+
+bb: 39
+succ: 40
+instructions:
+[0x00008950] [vldr]  [d7,]  [[r7]] 
+[0x00008954] [vneg.f64]  [d7,]  [d7] 
+
+

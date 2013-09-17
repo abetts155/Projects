@@ -1,0 +1,1665 @@
+cfg: cover
+bb: 1
+succ: 126
+instructions:
+[0x00008924] [push]  [{r7}] 
+[0x00008926] [sub]  [sp,]  [#20] 
+[0x00008928] [add]  [r7,]  [sp,]  [#0] 
+[0x0000892A] [str]  [r0,]  [[r7,]  [#4]] 
+[0x0000892C] [mov.w]  [r3,]  [#0] 
+[0x00008930] [str]  [r3,]  [[r7,]  [#12]] 
+[0x00008932] [b.n]  [8fe6]  [<cover+0x6c2>] 
+
+bb: 2
+succ: 3, 124
+instructions:
+[0x00008934] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00008936] [cmp]  [r3,]  [#119] 
+[0x00008938] [bhi.w]  [8fd4]  [<cover+0x6b0>] 
+
+bb: 3
+succ: 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123
+instructions:
+[0x0000893C] [add]  [r2,]  [pc,]  [#4] 
+[0x0000893E] [ldr.w]  [pc,]  [[r2,]  [r3,]  [lsl]  [#2]] 
+[0x00008942] [nop] 
+
+bb: 4
+succ: 125
+instructions:
+[0x00008B24] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B26] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B2A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B2C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 5
+succ: 125
+instructions:
+[0x00008B2E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B30] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B34] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B36] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 6
+succ: 125
+instructions:
+[0x00008B38] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B3A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B3E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B40] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 7
+succ: 125
+instructions:
+[0x00008B42] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B44] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B48] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B4A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 8
+succ: 125
+instructions:
+[0x00008B4C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B4E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B52] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B54] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 9
+succ: 125
+instructions:
+[0x00008B56] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B58] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B5C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B5E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 10
+succ: 125
+instructions:
+[0x00008B60] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B62] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B66] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B68] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 11
+succ: 125
+instructions:
+[0x00008B6A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B6C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B70] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B72] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 12
+succ: 125
+instructions:
+[0x00008B74] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B76] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B7A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B7C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 13
+succ: 125
+instructions:
+[0x00008B7E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B80] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B84] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B86] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 14
+succ: 125
+instructions:
+[0x00008B88] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B8A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B8E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B90] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 15
+succ: 125
+instructions:
+[0x00008B92] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B94] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008B98] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008B9A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 16
+succ: 125
+instructions:
+[0x00008B9C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008B9E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BA2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BA4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 17
+succ: 125
+instructions:
+[0x00008BA6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BA8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BAC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BAE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 18
+succ: 125
+instructions:
+[0x00008BB0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BB2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BB6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BB8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 19
+succ: 125
+instructions:
+[0x00008BBA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BBC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BC0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BC2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 20
+succ: 125
+instructions:
+[0x00008BC4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BC6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BCA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BCC] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 21
+succ: 125
+instructions:
+[0x00008BCE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BD0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BD4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BD6] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 22
+succ: 125
+instructions:
+[0x00008BD8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BDA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BDE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BE0] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 23
+succ: 125
+instructions:
+[0x00008BE2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BE4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BE8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BEA] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 24
+succ: 125
+instructions:
+[0x00008BEC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BEE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BF2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BF4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 25
+succ: 125
+instructions:
+[0x00008BF6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008BF8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008BFC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008BFE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 26
+succ: 125
+instructions:
+[0x00008C00] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C02] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C06] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C08] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 27
+succ: 125
+instructions:
+[0x00008C0A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C0C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C10] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C12] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 28
+succ: 125
+instructions:
+[0x00008C14] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C16] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C1A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C1C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 29
+succ: 125
+instructions:
+[0x00008C1E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C20] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C24] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C26] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 30
+succ: 125
+instructions:
+[0x00008C28] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C2A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C2E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C30] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 31
+succ: 125
+instructions:
+[0x00008C32] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C34] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C38] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C3A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 32
+succ: 125
+instructions:
+[0x00008C3C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C3E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C42] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C44] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 33
+succ: 125
+instructions:
+[0x00008C46] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C48] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C4C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C4E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 34
+succ: 125
+instructions:
+[0x00008C50] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C52] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C56] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C58] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 35
+succ: 125
+instructions:
+[0x00008C5A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C5C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C60] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C62] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 36
+succ: 125
+instructions:
+[0x00008C64] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C66] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C6A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C6C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 37
+succ: 125
+instructions:
+[0x00008C6E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C70] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C74] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C76] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 38
+succ: 125
+instructions:
+[0x00008C78] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C7A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C7E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C80] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 39
+succ: 125
+instructions:
+[0x00008C82] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C84] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C88] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C8A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 40
+succ: 125
+instructions:
+[0x00008C8C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C8E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C92] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C94] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 41
+succ: 125
+instructions:
+[0x00008C96] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008C98] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008C9C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008C9E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 42
+succ: 125
+instructions:
+[0x00008CA0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CA2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CA6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CA8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 43
+succ: 125
+instructions:
+[0x00008CAA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CAC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CB0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CB2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 44
+succ: 125
+instructions:
+[0x00008CB4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CB6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CBA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CBC] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 45
+succ: 125
+instructions:
+[0x00008CBE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CC0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CC4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CC6] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 46
+succ: 125
+instructions:
+[0x00008CC8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CCA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CCE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CD0] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 47
+succ: 125
+instructions:
+[0x00008CD2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CD4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CD8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CDA] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 48
+succ: 125
+instructions:
+[0x00008CDC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CDE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CE2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CE4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 49
+succ: 125
+instructions:
+[0x00008CE6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CE8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CEC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CEE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 50
+succ: 125
+instructions:
+[0x00008CF0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CF2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008CF6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008CF8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 51
+succ: 125
+instructions:
+[0x00008CFA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008CFC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D00] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D02] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 52
+succ: 125
+instructions:
+[0x00008D04] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D06] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D0A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D0C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 53
+succ: 125
+instructions:
+[0x00008D0E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D10] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D14] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D16] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 54
+succ: 125
+instructions:
+[0x00008D18] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D1A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D1E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D20] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 55
+succ: 125
+instructions:
+[0x00008D22] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D24] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D28] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D2A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 56
+succ: 125
+instructions:
+[0x00008D2C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D2E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D32] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D34] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 57
+succ: 125
+instructions:
+[0x00008D36] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D38] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D3C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D3E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 58
+succ: 125
+instructions:
+[0x00008D40] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D42] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D46] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D48] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 59
+succ: 125
+instructions:
+[0x00008D4A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D4C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D50] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D52] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 60
+succ: 125
+instructions:
+[0x00008D54] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D56] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D5A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D5C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 61
+succ: 125
+instructions:
+[0x00008D5E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D60] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D64] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D66] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 62
+succ: 125
+instructions:
+[0x00008D68] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D6A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D6E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D70] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 63
+succ: 125
+instructions:
+[0x00008D72] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D74] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D78] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D7A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 64
+succ: 125
+instructions:
+[0x00008D7C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D7E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D82] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D84] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 65
+succ: 125
+instructions:
+[0x00008D86] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D88] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D8C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D8E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 66
+succ: 125
+instructions:
+[0x00008D90] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D92] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008D96] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008D98] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 67
+succ: 125
+instructions:
+[0x00008D9A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008D9C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DA0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DA2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 68
+succ: 125
+instructions:
+[0x00008DA4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DA6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DAA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DAC] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 69
+succ: 125
+instructions:
+[0x00008DAE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DB0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DB4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DB6] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 70
+succ: 125
+instructions:
+[0x00008DB8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DBA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DBE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DC0] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 71
+succ: 125
+instructions:
+[0x00008DC2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DC4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DC8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DCA] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 72
+succ: 125
+instructions:
+[0x00008DCC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DCE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DD2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DD4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 73
+succ: 125
+instructions:
+[0x00008DD6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DD8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DDC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DDE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 74
+succ: 125
+instructions:
+[0x00008DE0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DE2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DE6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DE8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 75
+succ: 125
+instructions:
+[0x00008DEA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DEC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DF0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DF2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 76
+succ: 125
+instructions:
+[0x00008DF4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008DF6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008DFA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008DFC] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 77
+succ: 125
+instructions:
+[0x00008DFE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E00] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E04] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E06] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 78
+succ: 125
+instructions:
+[0x00008E08] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E0A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E0E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E10] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 79
+succ: 125
+instructions:
+[0x00008E12] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E14] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E18] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E1A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 80
+succ: 125
+instructions:
+[0x00008E1C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E1E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E22] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E24] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 81
+succ: 125
+instructions:
+[0x00008E26] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E28] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E2C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E2E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 82
+succ: 125
+instructions:
+[0x00008E30] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E32] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E36] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E38] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 83
+succ: 125
+instructions:
+[0x00008E3A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E3C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E40] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E42] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 84
+succ: 125
+instructions:
+[0x00008E44] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E46] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E4A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E4C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 85
+succ: 125
+instructions:
+[0x00008E4E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E50] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E54] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E56] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 86
+succ: 125
+instructions:
+[0x00008E58] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E5A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E5E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E60] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 87
+succ: 125
+instructions:
+[0x00008E62] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E64] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E68] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E6A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 88
+succ: 125
+instructions:
+[0x00008E6C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E6E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E72] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E74] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 89
+succ: 125
+instructions:
+[0x00008E76] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E78] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E7C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E7E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 90
+succ: 125
+instructions:
+[0x00008E80] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E82] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E86] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E88] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 91
+succ: 125
+instructions:
+[0x00008E8A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E8C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E90] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E92] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 92
+succ: 125
+instructions:
+[0x00008E94] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008E96] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008E9A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008E9C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 93
+succ: 125
+instructions:
+[0x00008E9E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EA0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EA4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EA6] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 94
+succ: 125
+instructions:
+[0x00008EA8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EAA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EAE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EB0] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 95
+succ: 125
+instructions:
+[0x00008EB2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EB4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EB8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EBA] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 96
+succ: 125
+instructions:
+[0x00008EBC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EBE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EC2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EC4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 97
+succ: 125
+instructions:
+[0x00008EC6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EC8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008ECC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008ECE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 98
+succ: 125
+instructions:
+[0x00008ED0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008ED2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008ED6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008ED8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 99
+succ: 125
+instructions:
+[0x00008EDA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EDC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EE0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EE2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 100
+succ: 125
+instructions:
+[0x00008EE4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EE6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EEA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EEC] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 101
+succ: 125
+instructions:
+[0x00008EEE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EF0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EF4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008EF6] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 102
+succ: 125
+instructions:
+[0x00008EF8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008EFA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008EFE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F00] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 103
+succ: 125
+instructions:
+[0x00008F02] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F04] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F08] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F0A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 104
+succ: 125
+instructions:
+[0x00008F0C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F0E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F12] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F14] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 105
+succ: 125
+instructions:
+[0x00008F16] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F18] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F1C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F1E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 106
+succ: 125
+instructions:
+[0x00008F20] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F22] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F26] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F28] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 107
+succ: 125
+instructions:
+[0x00008F2A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F2C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F30] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F32] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 108
+succ: 125
+instructions:
+[0x00008F34] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F36] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F3A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F3C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 109
+succ: 125
+instructions:
+[0x00008F3E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F40] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F44] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F46] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 110
+succ: 125
+instructions:
+[0x00008F48] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F4A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F4E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F50] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 111
+succ: 125
+instructions:
+[0x00008F52] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F54] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F58] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F5A] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 112
+succ: 125
+instructions:
+[0x00008F5C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F5E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F62] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F64] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 113
+succ: 125
+instructions:
+[0x00008F66] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F68] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F6C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F6E] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 114
+succ: 125
+instructions:
+[0x00008F70] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F72] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F76] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F78] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 115
+succ: 125
+instructions:
+[0x00008F7A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F7C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F80] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F82] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 116
+succ: 125
+instructions:
+[0x00008F84] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F86] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F8A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F8C] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 117
+succ: 125
+instructions:
+[0x00008F8E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F90] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F94] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008F96] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 118
+succ: 125
+instructions:
+[0x00008F98] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008F9A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008F9E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FA0] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 119
+succ: 125
+instructions:
+[0x00008FA2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FA4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FA8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FAA] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 120
+succ: 125
+instructions:
+[0x00008FAC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FAE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FB2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FB4] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 121
+succ: 125
+instructions:
+[0x00008FB6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FB8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FBC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FBE] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 122
+succ: 125
+instructions:
+[0x00008FC0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FC2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FC6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FC8] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 123
+succ: 125
+instructions:
+[0x00008FCA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FCC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FD0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FD2] [b.n]  [8fde]  [<cover+0x6ba>] 
+
+bb: 124
+succ: 125
+instructions:
+[0x00008FD4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00008FD6] [add.w]  [r3,]  [r3,]  [#4294967295] 
+[0x00008FDA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00008FDC] [nop] 
+
+bb: 125
+succ: 126
+instructions:
+[0x00008FDE] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00008FE0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00008FE4] [str]  [r3,]  [[r7,]  [#12]] 
+
+bb: 126
+succ: 2, 127
+instructions:
+[0x00008FE6] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00008FE8] [cmp]  [r3,]  [#119] 
+[0x00008FEA] [ble.w]  [8934]  [<cover+0x10>] 
+
+bb: 127
+succ: 192
+instructions:
+[0x00008FEE] [mov.w]  [r3,]  [#0] 
+[0x00008FF2] [str]  [r3,]  [[r7,]  [#12]] 
+[0x00008FF4] [b.n]  [935e]  [<cover+0xa3a>] 
+
+bb: 128
+succ: 129, 190
+instructions:
+[0x00008FF6] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00008FF8] [cmp]  [r3,]  [#59] 
+[0x00008FFA] [bhi.w]  [934c]  [<cover+0xa28>] 
+
+bb: 129
+succ: 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189
+instructions:
+[0x00008FFE] [add]  [r2,]  [pc,]  [#4] 
+[0x00009000] [ldr.w]  [pc,]  [[r2,]  [r3,]  [lsl]  [#2]] 
+
+bb: 130
+succ: 191
+instructions:
+[0x000090F4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000090F6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000090FA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000090FC] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 131
+succ: 191
+instructions:
+[0x000090FE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009100] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009104] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009106] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 132
+succ: 191
+instructions:
+[0x00009108] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000910A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000910E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009110] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 133
+succ: 191
+instructions:
+[0x00009112] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009114] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009118] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000911A] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 134
+succ: 191
+instructions:
+[0x0000911C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000911E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009122] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009124] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 135
+succ: 191
+instructions:
+[0x00009126] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009128] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000912C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000912E] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 136
+succ: 191
+instructions:
+[0x00009130] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009132] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009136] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009138] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 137
+succ: 191
+instructions:
+[0x0000913A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000913C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009140] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009142] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 138
+succ: 191
+instructions:
+[0x00009144] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009146] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000914A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000914C] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 139
+succ: 191
+instructions:
+[0x0000914E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009150] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009154] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009156] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 140
+succ: 191
+instructions:
+[0x00009158] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000915A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000915E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009160] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 141
+succ: 191
+instructions:
+[0x00009162] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009164] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009168] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000916A] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 142
+succ: 191
+instructions:
+[0x0000916C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000916E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009172] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009174] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 143
+succ: 191
+instructions:
+[0x00009176] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009178] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000917C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000917E] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 144
+succ: 191
+instructions:
+[0x00009180] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009182] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009186] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009188] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 145
+succ: 191
+instructions:
+[0x0000918A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000918C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009190] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009192] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 146
+succ: 191
+instructions:
+[0x00009194] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009196] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000919A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000919C] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 147
+succ: 191
+instructions:
+[0x0000919E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091A0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091A4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091A6] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 148
+succ: 191
+instructions:
+[0x000091A8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091AA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091AE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091B0] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 149
+succ: 191
+instructions:
+[0x000091B2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091B4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091B8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091BA] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 150
+succ: 191
+instructions:
+[0x000091BC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091BE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091C2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091C4] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 151
+succ: 191
+instructions:
+[0x000091C6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091C8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091CC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091CE] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 152
+succ: 191
+instructions:
+[0x000091D0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091D2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091D6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091D8] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 153
+succ: 191
+instructions:
+[0x000091DA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091DC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091E0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091E2] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 154
+succ: 191
+instructions:
+[0x000091E4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091E6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091EA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091EC] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 155
+succ: 191
+instructions:
+[0x000091EE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091F0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091F4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000091F6] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 156
+succ: 191
+instructions:
+[0x000091F8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000091FA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000091FE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009200] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 157
+succ: 191
+instructions:
+[0x00009202] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009204] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009208] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000920A] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 158
+succ: 191
+instructions:
+[0x0000920C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000920E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009212] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009214] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 159
+succ: 191
+instructions:
+[0x00009216] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009218] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000921C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000921E] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 160
+succ: 191
+instructions:
+[0x00009220] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009222] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009226] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009228] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 161
+succ: 191
+instructions:
+[0x0000922A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000922C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009230] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009232] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 162
+succ: 191
+instructions:
+[0x00009234] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009236] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000923A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000923C] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 163
+succ: 191
+instructions:
+[0x0000923E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009240] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009244] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009246] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 164
+succ: 191
+instructions:
+[0x00009248] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000924A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000924E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009250] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 165
+succ: 191
+instructions:
+[0x00009252] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009254] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009258] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000925A] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 166
+succ: 191
+instructions:
+[0x0000925C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000925E] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009262] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009264] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 167
+succ: 191
+instructions:
+[0x00009266] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009268] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000926C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000926E] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 168
+succ: 191
+instructions:
+[0x00009270] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009272] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009276] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009278] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 169
+succ: 191
+instructions:
+[0x0000927A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000927C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009280] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009282] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 170
+succ: 191
+instructions:
+[0x00009284] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009286] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000928A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000928C] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 171
+succ: 191
+instructions:
+[0x0000928E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009290] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009294] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009296] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 172
+succ: 191
+instructions:
+[0x00009298] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000929A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000929E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092A0] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 173
+succ: 191
+instructions:
+[0x000092A2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092A4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092A8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092AA] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 174
+succ: 191
+instructions:
+[0x000092AC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092AE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092B2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092B4] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 175
+succ: 191
+instructions:
+[0x000092B6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092B8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092BC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092BE] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 176
+succ: 191
+instructions:
+[0x000092C0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092C2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092C6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092C8] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 177
+succ: 191
+instructions:
+[0x000092CA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092CC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092D0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092D2] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 178
+succ: 191
+instructions:
+[0x000092D4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092D6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092DA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092DC] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 179
+succ: 191
+instructions:
+[0x000092DE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092E0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092E4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092E6] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 180
+succ: 191
+instructions:
+[0x000092E8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092EA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092EE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092F0] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 181
+succ: 191
+instructions:
+[0x000092F2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092F4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000092F8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000092FA] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 182
+succ: 191
+instructions:
+[0x000092FC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000092FE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009302] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009304] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 183
+succ: 191
+instructions:
+[0x00009306] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009308] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000930C] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000930E] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 184
+succ: 191
+instructions:
+[0x00009310] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009312] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009316] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009318] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 185
+succ: 191
+instructions:
+[0x0000931A] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000931C] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009320] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009322] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 186
+succ: 191
+instructions:
+[0x00009324] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009326] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000932A] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000932C] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 187
+succ: 191
+instructions:
+[0x0000932E] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009330] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009334] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009336] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 188
+succ: 191
+instructions:
+[0x00009338] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000933A] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000933E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009340] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 189
+succ: 191
+instructions:
+[0x00009342] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009344] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009348] [str]  [r3,]  [[r7,]  [#4]] 
+[0x0000934A] [b.n]  [9356]  [<cover+0xa32>] 
+
+bb: 190
+succ: 191
+instructions:
+[0x0000934C] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000934E] [add.w]  [r3,]  [r3,]  [#4294967295] 
+[0x00009352] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009354] [nop] 
+
+bb: 191
+succ: 192
+instructions:
+[0x00009356] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00009358] [add.w]  [r3,]  [r3,]  [#1] 
+[0x0000935C] [str]  [r3,]  [[r7,]  [#12]] 
+
+bb: 192
+succ: 128, 193
+instructions:
+[0x0000935E] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00009360] [cmp]  [r3,]  [#49] 
+[0x00009362] [ble.w]  [8ff6]  [<cover+0x6d2>] 
+
+bb: 193
+succ: 208
+instructions:
+[0x00009366] [mov.w]  [r3,]  [#0] 
+[0x0000936A] [str]  [r3,]  [[r7,]  [#12]] 
+[0x0000936C] [b.n]  [941a]  [<cover+0xaf6>] 
+
+bb: 194
+succ: 195, 206
+instructions:
+[0x0000936E] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00009370] [cmp]  [r3,]  [#9] 
+[0x00009372] [bhi.n]  [9408]  [<cover+0xae4>] 
+
+bb: 195
+succ: 196, 197, 198, 199, 200, 201, 202, 203, 204, 205
+instructions:
+[0x00009374] [add]  [r2,]  [pc,]  [#4] 
+[0x00009376] [ldr.w]  [pc,]  [[r2,]  [r3,]  [lsl]  [#2]] 
+[0x0000937A] [nop] 
+
+bb: 196
+succ: 207
+instructions:
+[0x000093A4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093A6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093AA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093AC] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 197
+succ: 207
+instructions:
+[0x000093AE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093B0] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093B4] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093B6] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 198
+succ: 207
+instructions:
+[0x000093B8] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093BA] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093BE] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093C0] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 199
+succ: 207
+instructions:
+[0x000093C2] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093C4] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093C8] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093CA] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 200
+succ: 207
+instructions:
+[0x000093CC] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093CE] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093D2] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093D4] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 201
+succ: 207
+instructions:
+[0x000093D6] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093D8] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093DC] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093DE] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 202
+succ: 207
+instructions:
+[0x000093E0] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093E2] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093E6] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093E8] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 203
+succ: 207
+instructions:
+[0x000093EA] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093EC] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093F0] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093F2] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 204
+succ: 207
+instructions:
+[0x000093F4] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x000093F6] [add.w]  [r3,]  [r3,]  [#1] 
+[0x000093FA] [str]  [r3,]  [[r7,]  [#4]] 
+[0x000093FC] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 205
+succ: 207
+instructions:
+[0x000093FE] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009400] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009404] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009406] [b.n]  [9412]  [<cover+0xaee>] 
+
+bb: 206
+succ: 207
+instructions:
+[0x00009408] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x0000940A] [add.w]  [r3,]  [r3,]  [#4294967295] 
+[0x0000940E] [str]  [r3,]  [[r7,]  [#4]] 
+[0x00009410] [nop] 
+
+bb: 207
+succ: 208
+instructions:
+[0x00009412] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x00009414] [add.w]  [r3,]  [r3,]  [#1] 
+[0x00009418] [str]  [r3,]  [[r7,]  [#12]] 
+
+bb: 208
+succ: 209, 194
+instructions:
+[0x0000941A] [ldr]  [r3,]  [[r7,]  [#12]] 
+[0x0000941C] [cmp]  [r3,]  [#9] 
+[0x0000941E] [ble.n]  [936e]  [<cover+0xa4a>] 
+
+bb: 209
+
+instructions:
+[0x00009420] [ldr]  [r3,]  [[r7,]  [#4]] 
+[0x00009422] [mov]  [r0,]  [r3] 
+[0x00009424] [add.w]  [r7,]  [r7,]  [#20] 
+[0x00009428] [mov]  [sp,]  [r7] 
+[0x0000942A] [pop]  [{r7}] 
+[0x0000942C] [bx]  [lr] 
+[0x0000942E] [nop] 
+
+

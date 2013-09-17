@@ -1,0 +1,1074 @@
+cfg: cl_block
+bb: 1
+succ: 2, 6
+instructions:
+[0x00000187] [push]  [{r3,]  [r4,]  [r7,]  [lr}] 
+[0x00000188] [add]  [r7,]  [sp,]  [#0] 
+[0x00000189] [movw]  [r3,]  [#:lower16:in_count] 
+[0x0000018A] [movt]  [r3,]  [#:upper16:in_count] 
+[0x0000018B] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000018C] [add]  [r3,]  [r3,]  [#9984] 
+[0x0000018D] [add]  [r3,]  [r3,]  [#16] 
+[0x0000018E] [mov]  [r2,]  [r3] 
+[0x0000018F] [movw]  [r3,]  [#:lower16:checkpoint] 
+[0x00000190] [movt]  [r3,]  [#:upper16:checkpoint] 
+[0x00000191] [str]  [r2,]  [r3,]  [#0] 
+[0x00000192] [movw]  [r3,]  [#:lower16:in_count] 
+[0x00000193] [movt]  [r3,]  [#:upper16:in_count] 
+[0x00000194] [ldr]  [r2,]  [r3,]  [#0] 
+[0x00000195] [movw]  [r3,]  [#65535] 
+[0x00000196] [movt]  [r3,]  [127] 
+[0x00000197] [cmp]  [r2,]  [r3] 
+[0x00000198] [ble]  [.L24] 
+
+bb: 2
+succ: 3, 4
+instructions:
+[0x00000199] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x0000019A] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x0000019B] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000019C] [asr]  [r4,]  [r3,]  [#8] 
+[0x0000019D] [cmp]  [r4,]  [#0] 
+[0x0000019E] [bne]  [.L25] 
+
+bb: 3
+succ: 8
+instructions:
+[0x0000019F] [mvn]  [r4,]  [#-2147483648] 
+[0x000001A0] [b]  [.L26] 
+
+bb: 4
+succ: 5
+instructions:
+[0x000001A2] [movw]  [r3,]  [#:lower16:in_count] 
+[0x000001A3] [movt]  [r3,]  [#:upper16:in_count] 
+[0x000001A4] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001A5] [mov]  [r0,]  [r3] 
+[0x000001A6] [mov]  [r1,]  [r4] 
+[0x000001A7] [bl]  [__aeabi_idiv] 
+
+bb: 5
+succ: 8
+instructions:
+[0x000001A8] [mov]  [r3,]  [r0] 
+[0x000001A9] [mov]  [r4,]  [r3] 
+[0x000001AA] [b]  [.L26] 
+
+bb: 6
+succ: 7
+instructions:
+[0x000001AC] [movw]  [r3,]  [#:lower16:in_count] 
+[0x000001AD] [movt]  [r3,]  [#:upper16:in_count] 
+[0x000001AE] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001AF] [lsl]  [r2,]  [r3,]  [#8] 
+[0x000001B0] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x000001B1] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x000001B2] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001B3] [mov]  [r0,]  [r2] 
+[0x000001B4] [mov]  [r1,]  [r3] 
+[0x000001B5] [bl]  [__aeabi_idiv] 
+
+bb: 7
+succ: 8
+instructions:
+[0x000001B6] [mov]  [r3,]  [r0] 
+[0x000001B7] [mov]  [r4,]  [r3] 
+
+bb: 8
+succ: 9, 10
+instructions:
+[0x000001B9] [movw]  [r3,]  [#:lower16:ratio] 
+[0x000001BA] [movt]  [r3,]  [#:upper16:ratio] 
+[0x000001BB] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001BC] [cmp]  [r4,]  [r3] 
+[0x000001BD] [ble]  [.L27] 
+
+bb: 9
+succ: 12
+instructions:
+[0x000001BE] [movw]  [r3,]  [#:lower16:ratio] 
+[0x000001BF] [movt]  [r3,]  [#:upper16:ratio] 
+[0x000001C0] [str]  [r4,]  [r3,]  [#0] 
+[0x000001C1] [b]  [.L23] 
+
+bb: 10
+succ: 11, cl_hash
+instructions:
+[0x000001C3] [movw]  [r3,]  [#:lower16:ratio] 
+[0x000001C4] [movt]  [r3,]  [#:upper16:ratio] 
+[0x000001C5] [mov]  [r2,]  [#0] 
+[0x000001C6] [str]  [r2,]  [r3,]  [#0] 
+[0x000001C7] [movw]  [r3,]  [#:lower16:hsize] 
+[0x000001C8] [movt]  [r3,]  [#:upper16:hsize] 
+[0x000001C9] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001CA] [mov]  [r0,]  [r3] 
+[0x000001CB] [bl]  [cl_hash] 
+
+bb: 11
+succ: 12, output
+instructions:
+[0x000001CC] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x000001CD] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x000001CE] [movw]  [r2,]  [#257] 
+[0x000001CF] [str]  [r2,]  [r3,]  [#0] 
+[0x000001D0] [movw]  [r3,]  [#:lower16:clear_flg] 
+[0x000001D1] [movt]  [r3,]  [#:upper16:clear_flg] 
+[0x000001D2] [mov]  [r2,]  [#1] 
+[0x000001D3] [str]  [r2,]  [r3,]  [#0] 
+[0x000001D4] [mov]  [r0,]  [#256] 
+[0x000001D5] [bl]  [output] 
+
+bb: 12
+
+instructions:
+[0x000001D7] [pop]  [{r3,]  [r4,]  [r7,]  [pc}] 
+
+
+cfg: writebytes
+bb: 24
+succ: 25
+instructions:
+[0x0000006B] [movw]  [r3,]  [#:lower16:OutBuff] 
+[0x0000006C] [movt]  [r3,]  [#:upper16:OutBuff] 
+[0x0000006D] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000006E] [ldr]  [r2,]  [r7,]  [#12] 
+[0x0000006F] [ldr]  [r1,]  [r7,]  [#4] 
+[0x00000070] [adds]  [r2,]  [r1,]  [r2] 
+[0x00000071] [ldrb]  [r2,]  [r2,]  [#0]  [@]  [zero_extendqisi2] 
+[0x00000072] [strb]  [r2,]  [r3,]  [#0] 
+[0x00000073] [add]  [r2,]  [r3,]  [#1] 
+[0x00000074] [movw]  [r3,]  [#:lower16:OutBuff] 
+[0x00000075] [movt]  [r3,]  [#:upper16:OutBuff] 
+[0x00000076] [str]  [r2,]  [r3,]  [#0] 
+[0x00000077] [ldr]  [r3,]  [r7,]  [#12] 
+[0x00000078] [add]  [r3,]  [r3,]  [#1] 
+[0x00000079] [str]  [r3,]  [r7,]  [#12] 
+
+bb: 25
+succ: 26, 27
+instructions:
+[0x0000007B] [ldr]  [r2,]  [r7,]  [#12] 
+[0x0000007C] [ldr]  [r3,]  [r7,]  [#0] 
+[0x0000007D] [cmp]  [r2,]  [r3] 
+[0x0000007E] [bge]  [.L6] 
+
+bb: 26
+succ: 24, 27
+instructions:
+[0x0000007F] [ldr]  [r3,]  [r7,]  [#12] 
+[0x00000080] [cmp]  [r3,]  [#15] 
+[0x00000081] [ble]  [.L9] 
+
+bb: 27
+
+instructions:
+[0x00000083] [add]  [r7,]  [r7,]  [#20] 
+[0x00000084] [mov]  [sp,]  [r7] 
+[0x00000085] [pop]  [{r7}] 
+[0x00000086] [bx]  [lr] 
+
+bb: 23
+succ: 25
+instructions:
+[0x00000062] [push]  [{r7}] 
+[0x00000063] [sub]  [sp,]  [sp,]  [#20] 
+[0x00000064] [add]  [r7,]  [sp,]  [#0] 
+[0x00000065] [str]  [r0,]  [r7,]  [#4] 
+[0x00000066] [str]  [r1,]  [r7,]  [#0] 
+[0x00000067] [mov]  [r3,]  [#0] 
+[0x00000068] [str]  [r3,]  [r7,]  [#12] 
+[0x00000069] [b]  [.L7] 
+
+
+cfg: getbyte
+bb: 64
+succ: 66
+instructions:
+[0x000001ED] [movw]  [r3,]  [#:lower16:InCnt] 
+[0x000001EE] [movt]  [r3,]  [#:upper16:InCnt] 
+[0x000001EF] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001F0] [add]  [r2,]  [r3,]  [#-1] 
+[0x000001F1] [movw]  [r3,]  [#:lower16:InCnt] 
+[0x000001F2] [movt]  [r3,]  [#:upper16:InCnt] 
+[0x000001F3] [str]  [r2,]  [r3,]  [#0] 
+[0x000001F4] [movw]  [r3,]  [#:lower16:InBuff] 
+[0x000001F5] [movt]  [r3,]  [#:upper16:InBuff] 
+[0x000001F6] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001F7] [ldrb]  [r2,]  [r3,]  [#0]  [@]  [zero_extendqisi2] 
+[0x000001F8] [add]  [r1,]  [r3,]  [#1] 
+[0x000001F9] [movw]  [r3,]  [#:lower16:InBuff] 
+[0x000001FA] [movt]  [r3,]  [#:upper16:InBuff] 
+[0x000001FB] [str]  [r1,]  [r3,]  [#0] 
+[0x000001FC] [b]  [.L31] 
+
+bb: 65
+succ: 66
+instructions:
+[0x000001FE] [mov]  [r2,]  [#-1] 
+
+bb: 66
+
+instructions:
+[0x00000200] [mov]  [r3,]  [r2] 
+[0x00000201] [mov]  [r0,]  [r3] 
+[0x00000202] [mov]  [sp,]  [r7] 
+[0x00000203] [pop]  [{r7}] 
+[0x00000204] [bx]  [lr] 
+
+bb: 62
+succ: 65, 63
+instructions:
+[0x000001D8] [push]  [{r7}] 
+[0x000001D9] [add]  [r7,]  [sp,]  [#0] 
+[0x000001DA] [movw]  [r3,]  [#:lower16:InCnt] 
+[0x000001DB] [movt]  [r3,]  [#:upper16:InCnt] 
+[0x000001DC] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001DD] [cmp]  [r3,]  [#0] 
+[0x000001DE] [ble]  [.L30] 
+
+bb: 63
+succ: 64, 65
+instructions:
+[0x000001DF] [movw]  [r3,]  [#:lower16:apsim_InCnt] 
+[0x000001E0] [movt]  [r3,]  [#:upper16:apsim_InCnt] 
+[0x000001E1] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000001E2] [cmp]  [r3,]  [#0] 
+[0x000001E3] [ite]  [le] 
+[0x000001E4] [movle]  [r2,]  [#0] 
+[0x000001E5] [movgt]  [r2,]  [#1] 
+[0x000001E6] [uxtb]  [r2,]  [r2] 
+[0x000001E7] [add]  [r1,]  [r3,]  [#-1] 
+[0x000001E8] [movw]  [r3,]  [#:lower16:apsim_InCnt] 
+[0x000001E9] [movt]  [r3,]  [#:upper16:apsim_InCnt] 
+[0x000001EA] [str]  [r1,]  [r3,]  [#0] 
+[0x000001EB] [cmp]  [r2,]  [#0] 
+[0x000001EC] [beq]  [.L30] 
+
+
+cfg: compress
+bb: 28
+succ: 29, 30
+instructions:
+[0x00000205] [push]  [{r4,]  [r5,]  [r6,]  [r7,]  [r8,]  [r9,]  [sl,]  [lr}] 
+[0x00000206] [sub]  [sp,]  [sp,]  [#8] 
+[0x00000207] [add]  [r7,]  [sp,]  [#0] 
+[0x00000208] [mov]  [r4,]  [#0] 
+[0x00000209] [movw]  [r3,]  [#:lower16:offset] 
+[0x0000020A] [movt]  [r3,]  [#:upper16:offset] 
+[0x0000020B] [mov]  [r2,]  [#0] 
+[0x0000020C] [str]  [r2,]  [r3,]  [#0] 
+[0x0000020D] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x0000020E] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x0000020F] [mov]  [r2,]  [#3] 
+[0x00000210] [str]  [r2,]  [r3,]  [#0] 
+[0x00000211] [movw]  [r3,]  [#:lower16:out_count] 
+[0x00000212] [movt]  [r3,]  [#:upper16:out_count] 
+[0x00000213] [mov]  [r2,]  [#0] 
+[0x00000214] [str]  [r2,]  [r3,]  [#0] 
+[0x00000215] [movw]  [r3,]  [#:lower16:clear_flg] 
+[0x00000216] [movt]  [r3,]  [#:upper16:clear_flg] 
+[0x00000217] [mov]  [r2,]  [#0] 
+[0x00000218] [str]  [r2,]  [r3,]  [#0] 
+[0x00000219] [movw]  [r3,]  [#:lower16:ratio] 
+[0x0000021A] [movt]  [r3,]  [#:upper16:ratio] 
+[0x0000021B] [mov]  [r2,]  [#0] 
+[0x0000021C] [str]  [r2,]  [r3,]  [#0] 
+[0x0000021D] [movw]  [r3,]  [#:lower16:in_count] 
+[0x0000021E] [movt]  [r3,]  [#:upper16:in_count] 
+[0x0000021F] [mov]  [r2,]  [#1] 
+[0x00000220] [str]  [r2,]  [r3,]  [#0] 
+[0x00000221] [movw]  [r3,]  [#:lower16:checkpoint] 
+[0x00000222] [movt]  [r3,]  [#:upper16:checkpoint] 
+[0x00000223] [movw]  [r2,]  [#10000] 
+[0x00000224] [str]  [r2,]  [r3,]  [#0] 
+[0x00000225] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x00000226] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000227] [mov]  [r2,]  [#9] 
+[0x00000228] [str]  [r2,]  [r3,]  [#0] 
+[0x00000229] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000022A] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x0000022B] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000022C] [mov]  [r2,]  [#1] 
+[0x0000022D] [lsl]  [r3,]  [r2,]  [r3] 
+[0x0000022E] [add]  [r2,]  [r3,]  [#-1] 
+[0x0000022F] [movw]  [r3,]  [#:lower16:maxcode] 
+[0x00000230] [movt]  [r3,]  [#:upper16:maxcode] 
+[0x00000231] [str]  [r2,]  [r3,]  [#0] 
+[0x00000232] [movw]  [r3,]  [#:lower16:block_compress] 
+[0x00000233] [movt]  [r3,]  [#:upper16:block_compress] 
+[0x00000234] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000235] [cmp]  [r3,]  [#0] 
+[0x00000236] [beq]  [.L33] 
+
+bb: 29
+succ: 31
+instructions:
+[0x00000237] [movw]  [r2,]  [#257] 
+[0x00000238] [b]  [.L34] 
+
+bb: 30
+succ: 31
+instructions:
+[0x0000023A] [mov]  [r2,]  [#256] 
+
+bb: 31
+succ: 32, getbyte
+instructions:
+[0x0000023C] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x0000023D] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x0000023E] [str]  [r2,]  [r3,]  [#0] 
+[0x0000023F] [bl]  [getbyte] 
+
+bb: 32
+succ: 34
+instructions:
+[0x00000240] [mov]  [r3,]  [r0] 
+[0x00000241] [mov]  [r6,]  [r3] 
+[0x00000242] [mov]  [r8,]  [#0] 
+[0x00000243] [movw]  [r3,]  [#:lower16:hsize] 
+[0x00000244] [movt]  [r3,]  [#:upper16:hsize] 
+[0x00000245] [ldr]  [r5,]  [r3,]  [#0] 
+[0x00000246] [b]  [.L35] 
+
+bb: 33
+succ: 34
+instructions:
+[0x00000248] [add]  [r8,]  [r8,]  [#1] 
+[0x00000249] [lsl]  [r5,]  [r5,]  [#1] 
+
+bb: 34
+succ: 33, 35
+instructions:
+[0x0000024B] [movw]  [r3,]  [#65535] 
+[0x0000024C] [cmp]  [r5,]  [r3] 
+[0x0000024D] [ble]  [.L36] 
+
+bb: 35
+succ: 36, cl_hash
+instructions:
+[0x0000024E] [rsb]  [r8,]  [r8,]  [#8] 
+[0x0000024F] [movw]  [r3,]  [#:lower16:hsize] 
+[0x00000250] [movt]  [r3,]  [#:upper16:hsize] 
+[0x00000251] [ldr]  [r9,]  [r3,]  [#0] 
+[0x00000252] [mov]  [r3,]  [r9] 
+[0x00000253] [mov]  [r0,]  [r3] 
+[0x00000254] [bl]  [cl_hash] 
+
+bb: 36
+succ: 57
+instructions:
+[0x00000255] [b]  [.L37] 
+
+bb: 37
+succ: 38, getbyte
+instructions:
+[0x00000257] [mov]  [r3,]  [#0] 
+[0x00000258] [str]  [r3,]  [r7,]  [#4] 
+[0x00000259] [bl]  [getbyte] 
+
+bb: 38
+succ: 40, 39
+instructions:
+[0x0000025A] [mov]  [r3,]  [r0] 
+[0x0000025B] [mov]  [sl,]  [r3] 
+[0x0000025C] [movw]  [r3,]  [#:lower16:in_count] 
+[0x0000025D] [movt]  [r3,]  [#:upper16:in_count] 
+[0x0000025E] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000025F] [add]  [r2,]  [r3,]  [#1] 
+[0x00000260] [movw]  [r3,]  [#:lower16:in_count] 
+[0x00000261] [movt]  [r3,]  [#:upper16:in_count] 
+[0x00000262] [str]  [r2,]  [r3,]  [#0] 
+[0x00000263] [movw]  [r3,]  [#:lower16:maxbits] 
+[0x00000264] [movt]  [r3,]  [#:upper16:maxbits] 
+[0x00000265] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000266] [lsl]  [r3,]  [sl,]  [r3] 
+[0x00000267] [adds]  [r5,]  [r3,]  [r6] 
+[0x00000268] [lsl]  [r3,]  [sl,]  [r8] 
+[0x00000269] [eor]  [r4,]  [r3,]  [r6] 
+[0x0000026A] [movw]  [r3,]  [#:lower16:htab] 
+[0x0000026B] [movt]  [r3,]  [#:upper16:htab] 
+[0x0000026C] [ldr]  [r2,]  [r3,]  [r4,]  [lsl]  [#2] 
+[0x0000026D] [mov]  [r3,]  [r5] 
+[0x0000026E] [cmp]  [r2,]  [r3] 
+[0x0000026F] [bne]  [.L38] 
+
+bb: 39
+succ: 57
+instructions:
+[0x00000270] [movw]  [r3,]  [#:lower16:codetab] 
+[0x00000271] [movt]  [r3,]  [#:upper16:codetab] 
+[0x00000272] [ldrh]  [r3,]  [r3,]  [r4,]  [lsl]  [#1] 
+[0x00000273] [mov]  [r6,]  [r3] 
+[0x00000274] [b]  [.L37] 
+
+bb: 40
+succ: 41, 51
+instructions:
+[0x00000276] [movw]  [r3,]  [#:lower16:htab] 
+[0x00000277] [movt]  [r3,]  [#:upper16:htab] 
+[0x00000278] [ldr]  [r3,]  [r3,]  [r4,]  [lsl]  [#2] 
+[0x00000279] [cmp]  [r3,]  [#0] 
+[0x0000027A] [blt]  [.L47] 
+
+bb: 41
+succ: 42, 44
+instructions:
+[0x0000027C] [rsb]  [r6,]  [r4,]  [r9] 
+[0x0000027D] [cmp]  [r4,]  [#0] 
+[0x0000027E] [bne]  [.L41] 
+
+bb: 42
+succ: 44
+instructions:
+[0x0000027F] [mov]  [r6,]  [#1] 
+[0x00000280] [b]  [.L41] 
+
+bb: 43
+succ: 44
+instructions:
+[0x00000282] [nop] 
+
+bb: 44
+succ: 45, 46
+instructions:
+[0x00000284] [subs]  [r4,]  [r4,]  [r6] 
+[0x00000285] [cmp]  [r4,]  [#0] 
+[0x00000286] [bge]  [.L42] 
+
+bb: 45
+succ: 46
+instructions:
+[0x00000287] [add]  [r4,]  [r4,]  [r9] 
+
+bb: 46
+succ: 48, 47
+instructions:
+[0x00000289] [movw]  [r3,]  [#:lower16:htab] 
+[0x0000028A] [movt]  [r3,]  [#:upper16:htab] 
+[0x0000028B] [ldr]  [r2,]  [r3,]  [r4,]  [lsl]  [#2] 
+[0x0000028C] [mov]  [r3,]  [r5] 
+[0x0000028D] [cmp]  [r2,]  [r3] 
+[0x0000028E] [bne]  [.L43] 
+
+bb: 47
+succ: 57
+instructions:
+[0x0000028F] [movw]  [r3,]  [#:lower16:codetab] 
+[0x00000290] [movt]  [r3,]  [#:upper16:codetab] 
+[0x00000291] [ldrh]  [r3,]  [r3,]  [r4,]  [lsl]  [#1] 
+[0x00000292] [mov]  [r6,]  [r3] 
+[0x00000293] [b]  [.L37] 
+
+bb: 48
+succ: 49, 52
+instructions:
+[0x00000295] [movw]  [r3,]  [#:lower16:htab] 
+[0x00000296] [movt]  [r3,]  [#:upper16:htab] 
+[0x00000297] [ldr]  [r3,]  [r3,]  [r4,]  [lsl]  [#2] 
+[0x00000298] [cmp]  [r3,]  [#0] 
+[0x00000299] [ble]  [.L40] 
+
+bb: 49
+succ: 50, 43
+instructions:
+[0x0000029A] [ldr]  [r3,]  [r7,]  [#4] 
+[0x0000029B] [add]  [r3,]  [r3,]  [#1] 
+[0x0000029C] [str]  [r3,]  [r7,]  [#4] 
+[0x0000029D] [movw]  [r3,]  [#:lower16:in_count] 
+[0x0000029E] [movt]  [r3,]  [#:upper16:in_count] 
+[0x0000029F] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002A0] [ldr]  [r2,]  [r7,]  [#4] 
+[0x000002A1] [cmp]  [r2,]  [r3] 
+[0x000002A2] [blt]  [.L48] 
+
+bb: 50
+succ: 52
+instructions:
+[0x000002A3] [b]  [.L40] 
+
+bb: 51
+succ: 52
+instructions:
+[0x000002A5] [nop] 
+
+bb: 52
+succ: 53, 54
+instructions:
+[0x000002A7] [movw]  [r3,]  [#:lower16:out_count] 
+[0x000002A8] [movt]  [r3,]  [#:upper16:out_count] 
+[0x000002A9] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002AA] [add]  [r2,]  [r3,]  [#1] 
+[0x000002AB] [movw]  [r3,]  [#:lower16:out_count] 
+[0x000002AC] [movt]  [r3,]  [#:upper16:out_count] 
+[0x000002AD] [str]  [r2,]  [r3,]  [#0] 
+[0x000002AE] [mov]  [r6,]  [sl] 
+[0x000002AF] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x000002B0] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x000002B1] [ldr]  [r2,]  [r3,]  [#0] 
+[0x000002B2] [movw]  [r3,]  [#:lower16:maxmaxcode] 
+[0x000002B3] [movt]  [r3,]  [#:upper16:maxmaxcode] 
+[0x000002B4] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002B5] [cmp]  [r2,]  [r3] 
+[0x000002B6] [bge]  [.L44] 
+
+bb: 53
+succ: 57
+instructions:
+[0x000002B7] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x000002B8] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x000002B9] [ldr]  [r2,]  [r3,]  [#0] 
+[0x000002BA] [uxth]  [r1,]  [r2] 
+[0x000002BB] [movw]  [r3,]  [#:lower16:codetab] 
+[0x000002BC] [movt]  [r3,]  [#:upper16:codetab] 
+[0x000002BD] [strh]  [r1,]  [r3,]  [r4,]  [lsl]  [#1]  [@]  [movhi] 
+[0x000002BE] [add]  [r2,]  [r2,]  [#1] 
+[0x000002BF] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x000002C0] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x000002C1] [str]  [r2,]  [r3,]  [#0] 
+[0x000002C2] [mov]  [r2,]  [r5] 
+[0x000002C3] [movw]  [r3,]  [#:lower16:htab] 
+[0x000002C4] [movt]  [r3,]  [#:upper16:htab] 
+[0x000002C5] [str]  [r2,]  [r3,]  [r4,]  [lsl]  [#2] 
+[0x000002C6] [b]  [.L37] 
+
+bb: 54
+succ: 57, 55
+instructions:
+[0x000002C8] [movw]  [r3,]  [#:lower16:in_count] 
+[0x000002C9] [movt]  [r3,]  [#:upper16:in_count] 
+[0x000002CA] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002CB] [mov]  [r2,]  [r3] 
+[0x000002CC] [movw]  [r3,]  [#:lower16:checkpoint] 
+[0x000002CD] [movt]  [r3,]  [#:upper16:checkpoint] 
+[0x000002CE] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002CF] [cmp]  [r2,]  [r3] 
+[0x000002D0] [bcc]  [.L37] 
+
+bb: 55
+succ: 56, 57
+instructions:
+[0x000002D1] [movw]  [r3,]  [#:lower16:block_compress] 
+[0x000002D2] [movt]  [r3,]  [#:upper16:block_compress] 
+[0x000002D3] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002D4] [cmp]  [r3,]  [#0] 
+[0x000002D5] [beq]  [.L37] 
+
+bb: 56
+succ: 57, cl_block
+instructions:
+[0x000002D6] [bl]  [cl_block] 
+
+bb: 57
+succ: 58, 37
+instructions:
+[0x000002D8] [movw]  [r3,]  [#:lower16:InCnt] 
+[0x000002D9] [movt]  [r3,]  [#:upper16:InCnt] 
+[0x000002DA] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002DB] [cmp]  [r3,]  [#0] 
+[0x000002DC] [bgt]  [.L45] 
+
+bb: 58
+succ: 59, 60
+instructions:
+[0x000002DD] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x000002DE] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x000002DF] [ldr]  [r2,]  [r3,]  [#0] 
+[0x000002E0] [movw]  [r3,]  [#:lower16:in_count] 
+[0x000002E1] [movt]  [r3,]  [#:upper16:in_count] 
+[0x000002E2] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002E3] [cmp]  [r2,]  [r3] 
+[0x000002E4] [ble]  [.L46] 
+
+bb: 59
+succ: 60
+instructions:
+[0x000002E5] [movw]  [r3,]  [#:lower16:exit_stat] 
+[0x000002E6] [movt]  [r3,]  [#:upper16:exit_stat] 
+[0x000002E7] [mov]  [r2,]  [#2] 
+[0x000002E8] [str]  [r2,]  [r3,]  [#0] 
+
+bb: 60
+
+instructions:
+[0x000002EA] [movw]  [r3,]  [#:lower16:exit_stat] 
+[0x000002EB] [movt]  [r3,]  [#:upper16:exit_stat] 
+[0x000002EC] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000002ED] [mov]  [r0,]  [r3] 
+[0x000002EE] [add]  [r7,]  [r7,]  [#8] 
+[0x000002EF] [mov]  [sp,]  [r7] 
+[0x000002F0] [pop]  [{r4,]  [r5,]  [r6,]  [r7,]  [r8,]  [r9,]  [sl,]  [pc}] 
+
+
+cfg: cl_hash
+bb: 67
+succ: 68
+instructions:
+[0x00000000] [push]  [{r4,]  [r5,]  [r6,]  [r7}] 
+[0x00000001] [sub]  [sp,]  [sp,]  [#8] 
+[0x00000002] [add]  [r7,]  [sp,]  [#0] 
+[0x00000003] [str]  [r0,]  [r7,]  [#4] 
+[0x00000004] [ldr]  [r3,]  [r7,]  [#4] 
+[0x00000005] [lsl]  [r2,]  [r3,]  [#2] 
+[0x00000006] [movw]  [r3,]  [#:lower16:htab] 
+[0x00000007] [movt]  [r3,]  [#:upper16:htab] 
+[0x00000008] [adds]  [r4,]  [r2,]  [r3] 
+[0x00000009] [mov]  [r5,]  [#-1] 
+[0x0000000A] [ldr]  [r3,]  [r7,]  [#4] 
+[0x0000000B] [sub]  [r3,]  [r3,]  [#16] 
+[0x0000000C] [mov]  [r6,]  [r3] 
+
+bb: 68
+succ: 68, 69
+instructions:
+[0x0000000E] [sub]  [r3,]  [r4,]  [#64] 
+[0x0000000F] [mov]  [r2,]  [r5] 
+[0x00000010] [str]  [r2,]  [r3,]  [#0] 
+[0x00000011] [sub]  [r3,]  [r4,]  [#60] 
+[0x00000012] [mov]  [r2,]  [r5] 
+[0x00000013] [str]  [r2,]  [r3,]  [#0] 
+[0x00000014] [sub]  [r3,]  [r4,]  [#56] 
+[0x00000015] [mov]  [r2,]  [r5] 
+[0x00000016] [str]  [r2,]  [r3,]  [#0] 
+[0x00000017] [sub]  [r3,]  [r4,]  [#52] 
+[0x00000018] [mov]  [r2,]  [r5] 
+[0x00000019] [str]  [r2,]  [r3,]  [#0] 
+[0x0000001A] [sub]  [r3,]  [r4,]  [#48] 
+[0x0000001B] [mov]  [r2,]  [r5] 
+[0x0000001C] [str]  [r2,]  [r3,]  [#0] 
+[0x0000001D] [sub]  [r3,]  [r4,]  [#44] 
+[0x0000001E] [mov]  [r2,]  [r5] 
+[0x0000001F] [str]  [r2,]  [r3,]  [#0] 
+[0x00000020] [sub]  [r3,]  [r4,]  [#40] 
+[0x00000021] [mov]  [r2,]  [r5] 
+[0x00000022] [str]  [r2,]  [r3,]  [#0] 
+[0x00000023] [sub]  [r3,]  [r4,]  [#36] 
+[0x00000024] [mov]  [r2,]  [r5] 
+[0x00000025] [str]  [r2,]  [r3,]  [#0] 
+[0x00000026] [sub]  [r3,]  [r4,]  [#32] 
+[0x00000027] [mov]  [r2,]  [r5] 
+[0x00000028] [str]  [r2,]  [r3,]  [#0] 
+[0x00000029] [sub]  [r3,]  [r4,]  [#28] 
+[0x0000002A] [mov]  [r2,]  [r5] 
+[0x0000002B] [str]  [r2,]  [r3,]  [#0] 
+[0x0000002C] [sub]  [r3,]  [r4,]  [#24] 
+[0x0000002D] [mov]  [r2,]  [r5] 
+[0x0000002E] [str]  [r2,]  [r3,]  [#0] 
+[0x0000002F] [sub]  [r3,]  [r4,]  [#20] 
+[0x00000030] [mov]  [r2,]  [r5] 
+[0x00000031] [str]  [r2,]  [r3,]  [#0] 
+[0x00000032] [sub]  [r3,]  [r4,]  [#16] 
+[0x00000033] [mov]  [r2,]  [r5] 
+[0x00000034] [str]  [r2,]  [r3,]  [#0] 
+[0x00000035] [sub]  [r3,]  [r4,]  [#12] 
+[0x00000036] [mov]  [r2,]  [r5] 
+[0x00000037] [str]  [r2,]  [r3,]  [#0] 
+[0x00000038] [sub]  [r3,]  [r4,]  [#8] 
+[0x00000039] [mov]  [r2,]  [r5] 
+[0x0000003A] [str]  [r2,]  [r3,]  [#0] 
+[0x0000003B] [sub]  [r3,]  [r4,]  [#4] 
+[0x0000003C] [mov]  [r2,]  [r5] 
+[0x0000003D] [str]  [r2,]  [r3,]  [#0] 
+[0x0000003E] [sub]  [r4,]  [r4,]  [#64] 
+[0x0000003F] [sub]  [r6,]  [r6,]  [#16] 
+[0x00000040] [cmp]  [r6,]  [#0] 
+[0x00000041] [bge]  [.L2] 
+
+bb: 69
+succ: 71
+instructions:
+[0x00000042] [add]  [r6,]  [r6,]  [#16] 
+[0x00000043] [b]  [.L3] 
+
+bb: 70
+succ: 71
+instructions:
+[0x00000045] [sub]  [r4,]  [r4,]  [#4] 
+[0x00000046] [mov]  [r3,]  [r5] 
+[0x00000047] [str]  [r3,]  [r4,]  [#0] 
+[0x00000048] [add]  [r6,]  [r6,]  [#-1] 
+
+bb: 71
+succ: 72, 70
+instructions:
+[0x0000004A] [cmp]  [r6,]  [#0] 
+[0x0000004B] [bgt]  [.L4] 
+
+bb: 72
+
+instructions:
+[0x0000004C] [add]  [r7,]  [r7,]  [#8] 
+[0x0000004D] [mov]  [sp,]  [r7] 
+[0x0000004E] [pop]  [{r4,]  [r5,]  [r6,]  [r7}] 
+[0x0000004F] [bx]  [lr] 
+
+
+cfg: output
+bb: 73
+succ: 74, 94
+instructions:
+[0x00000087] [push]  [{r4,]  [r5,]  [r6,]  [r7,]  [lr}] 
+[0x00000088] [sub]  [sp,]  [sp,]  [#12] 
+[0x00000089] [add]  [r7,]  [sp,]  [#0] 
+[0x0000008A] [str]  [r0,]  [r7,]  [#4] 
+[0x0000008B] [movw]  [r3,]  [#:lower16:offset] 
+[0x0000008C] [movt]  [r3,]  [#:upper16:offset] 
+[0x0000008D] [ldr]  [r6,]  [r3,]  [#0] 
+[0x0000008E] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000008F] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000090] [ldr]  [r5,]  [r3,]  [#0] 
+[0x00000091] [movw]  [r4,]  [#:lower16:buf] 
+[0x00000092] [movt]  [r4,]  [#:upper16:buf] 
+[0x00000093] [ldr]  [r3,]  [r7,]  [#4] 
+[0x00000094] [cmp]  [r3,]  [#0] 
+[0x00000095] [blt]  [.L11] 
+
+bb: 74
+succ: 75, 76
+instructions:
+[0x00000096] [asr]  [r3,]  [r6,]  [#3] 
+[0x00000097] [adds]  [r4,]  [r4,]  [r3] 
+[0x00000098] [and]  [r6,]  [r6,]  [#7] 
+[0x00000099] [ldrb]  [r2,]  [r4,]  [#0]  [@]  [zero_extendqisi2] 
+[0x0000009A] [movw]  [r3,]  [#:lower16:rmask] 
+[0x0000009B] [movt]  [r3,]  [#:upper16:rmask] 
+[0x0000009C] [ldrb]  [r3,]  [r3,]  [r6]  [@]  [zero_extendqisi2] 
+[0x0000009D] [ands]  [r3,]  [r3,]  [r2] 
+[0x0000009E] [uxtb]  [r3,]  [r3] 
+[0x0000009F] [uxtb]  [r2,]  [r3] 
+[0x000000A0] [ldr]  [r3,]  [r7,]  [#4] 
+[0x000000A1] [lsl]  [r3,]  [r3,]  [r6] 
+[0x000000A2] [uxtb]  [r3,]  [r3] 
+[0x000000A3] [orrs]  [r3,]  [r3,]  [r2] 
+[0x000000A4] [uxtb]  [r2,]  [r3] 
+[0x000000A5] [movw]  [r3,]  [#:lower16:lmask] 
+[0x000000A6] [movt]  [r3,]  [#:upper16:lmask] 
+[0x000000A7] [ldrb]  [r3,]  [r3,]  [r6]  [@]  [zero_extendqisi2] 
+[0x000000A8] [uxtb]  [r3,]  [r3] 
+[0x000000A9] [ands]  [r3,]  [r3,]  [r2] 
+[0x000000AA] [uxtb]  [r3,]  [r3] 
+[0x000000AB] [uxtb]  [r3,]  [r3] 
+[0x000000AC] [strb]  [r3,]  [r4,]  [#0] 
+[0x000000AD] [add]  [r4,]  [r4,]  [#1] 
+[0x000000AE] [sub]  [r3,]  [r6,]  [#8] 
+[0x000000AF] [adds]  [r5,]  [r5,]  [r3] 
+[0x000000B0] [rsb]  [r3,]  [r6,]  [#8] 
+[0x000000B1] [ldr]  [r2,]  [r7,]  [#4] 
+[0x000000B2] [asr]  [r3,]  [r2,]  [r3] 
+[0x000000B3] [str]  [r3,]  [r7,]  [#4] 
+[0x000000B4] [cmp]  [r5,]  [#7] 
+[0x000000B5] [ble]  [.L12] 
+
+bb: 75
+succ: 76
+instructions:
+[0x000000B6] [ldr]  [r3,]  [r7,]  [#4] 
+[0x000000B7] [uxtb]  [r3,]  [r3] 
+[0x000000B8] [strb]  [r3,]  [r4,]  [#0] 
+[0x000000B9] [add]  [r4,]  [r4,]  [#1] 
+[0x000000BA] [ldr]  [r3,]  [r7,]  [#4] 
+[0x000000BB] [asr]  [r3,]  [r3,]  [#8] 
+[0x000000BC] [str]  [r3,]  [r7,]  [#4] 
+[0x000000BD] [sub]  [r5,]  [r5,]  [#8] 
+
+bb: 76
+succ: 77, 78
+instructions:
+[0x000000BF] [cmp]  [r5,]  [#0] 
+[0x000000C0] [beq]  [.L13] 
+
+bb: 77
+succ: 78
+instructions:
+[0x000000C1] [ldr]  [r3,]  [r7,]  [#4] 
+[0x000000C2] [uxtb]  [r3,]  [r3] 
+[0x000000C3] [strb]  [r3,]  [r4,]  [#0] 
+
+bb: 78
+succ: 84, 79
+instructions:
+[0x000000C5] [movw]  [r3,]  [#:lower16:offset] 
+[0x000000C6] [movt]  [r3,]  [#:upper16:offset] 
+[0x000000C7] [ldr]  [r2,]  [r3,]  [#0] 
+[0x000000C8] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x000000C9] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x000000CA] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000000CB] [adds]  [r2,]  [r2,]  [r3] 
+[0x000000CC] [movw]  [r3,]  [#:lower16:offset] 
+[0x000000CD] [movt]  [r3,]  [#:upper16:offset] 
+[0x000000CE] [str]  [r2,]  [r3,]  [#0] 
+[0x000000CF] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x000000D0] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x000000D1] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000000D2] [lsl]  [r2,]  [r3,]  [#3] 
+[0x000000D3] [movw]  [r3,]  [#:lower16:offset] 
+[0x000000D4] [movt]  [r3,]  [#:upper16:offset] 
+[0x000000D5] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000000D6] [cmp]  [r2,]  [r3] 
+[0x000000D7] [bne]  [.L14] 
+
+bb: 79
+succ: 80
+instructions:
+[0x000000D8] [movw]  [r4,]  [#:lower16:buf] 
+[0x000000D9] [movt]  [r4,]  [#:upper16:buf] 
+[0x000000DA] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x000000DB] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x000000DC] [ldr]  [r5,]  [r3,]  [#0] 
+[0x000000DD] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x000000DE] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x000000DF] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000000E0] [adds]  [r2,]  [r3,]  [r5] 
+[0x000000E1] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x000000E2] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x000000E3] [str]  [r2,]  [r3,]  [#0] 
+
+bb: 80
+succ: 81, putbyte
+instructions:
+[0x000000E5] [ldrb]  [r3,]  [r4,]  [#0]  [@]  [zero_extendqisi2] 
+[0x000000E6] [add]  [r4,]  [r4,]  [#1] 
+[0x000000E7] [mov]  [r0,]  [r3] 
+[0x000000E8] [bl]  [putbyte] 
+
+bb: 81
+succ: 82, 83
+instructions:
+[0x000000E9] [add]  [r5,]  [r5,]  [#-1] 
+[0x000000EA] [cmp]  [r5,]  [#0] 
+[0x000000EB] [beq]  [.L15] 
+
+bb: 82
+succ: 80, 83
+instructions:
+[0x000000EC] [mov]  [r2,]  [r4] 
+[0x000000ED] [movw]  [r3,]  [#:lower16:buf] 
+[0x000000EE] [movt]  [r3,]  [#:upper16:buf] 
+[0x000000EF] [subs]  [r3,]  [r2,]  [r3] 
+[0x000000F0] [cmp]  [r3,]  [#15] 
+[0x000000F1] [ble]  [.L16] 
+
+bb: 83
+succ: 84
+instructions:
+[0x000000F3] [movw]  [r3,]  [#:lower16:offset] 
+[0x000000F4] [movt]  [r3,]  [#:upper16:offset] 
+[0x000000F5] [mov]  [r2,]  [#0] 
+[0x000000F6] [str]  [r2,]  [r3,]  [#0] 
+
+bb: 84
+succ: 85, 86
+instructions:
+[0x000000F8] [movw]  [r3,]  [#:lower16:free_ent] 
+[0x000000F9] [movt]  [r3,]  [#:upper16:free_ent] 
+[0x000000FA] [ldr]  [r2,]  [r3,]  [#0] 
+[0x000000FB] [movw]  [r3,]  [#:lower16:maxcode] 
+[0x000000FC] [movt]  [r3,]  [#:upper16:maxcode] 
+[0x000000FD] [ldr]  [r3,]  [r3,]  [#0] 
+[0x000000FE] [cmp]  [r2,]  [r3] 
+[0x000000FF] [bgt]  [.L17] 
+
+bb: 85
+succ: 97, 86
+instructions:
+[0x00000100] [movw]  [r3,]  [#:lower16:clear_flg] 
+[0x00000101] [movt]  [r3,]  [#:upper16:clear_flg] 
+[0x00000102] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000103] [cmp]  [r3,]  [#0] 
+[0x00000104] [ble]  [.L10] 
+
+bb: 86
+succ: 89, 87
+instructions:
+[0x00000106] [movw]  [r3,]  [#:lower16:offset] 
+[0x00000107] [movt]  [r3,]  [#:upper16:offset] 
+[0x00000108] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000109] [cmp]  [r3,]  [#0] 
+[0x0000010A] [ble]  [.L19] 
+
+bb: 87
+succ: 88, writebytes
+instructions:
+[0x0000010B] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000010C] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x0000010D] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000010E] [movw]  [r0,]  [#:lower16:buf] 
+[0x0000010F] [movt]  [r0,]  [#:upper16:buf] 
+[0x00000110] [mov]  [r1,]  [r3] 
+[0x00000111] [bl]  [writebytes] 
+
+bb: 88
+succ: 89
+instructions:
+[0x00000112] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x00000113] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x00000114] [ldr]  [r2,]  [r3,]  [#0] 
+[0x00000115] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x00000116] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000117] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000118] [adds]  [r2,]  [r2,]  [r3] 
+[0x00000119] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x0000011A] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x0000011B] [str]  [r2,]  [r3,]  [#0] 
+
+bb: 89
+succ: 90, 91
+instructions:
+[0x0000011D] [movw]  [r3,]  [#:lower16:offset] 
+[0x0000011E] [movt]  [r3,]  [#:upper16:offset] 
+[0x0000011F] [mov]  [r2,]  [#0] 
+[0x00000120] [str]  [r2,]  [r3,]  [#0] 
+[0x00000121] [movw]  [r3,]  [#:lower16:clear_flg] 
+[0x00000122] [movt]  [r3,]  [#:upper16:clear_flg] 
+[0x00000123] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000124] [cmp]  [r3,]  [#0] 
+[0x00000125] [beq]  [.L20] 
+
+bb: 90
+succ: 97
+instructions:
+[0x00000126] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x00000127] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000128] [mov]  [r2,]  [#9] 
+[0x00000129] [str]  [r2,]  [r3,]  [#0] 
+[0x0000012A] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000012B] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x0000012C] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000012D] [mov]  [r2,]  [#1] 
+[0x0000012E] [lsl]  [r3,]  [r2,]  [r3] 
+[0x0000012F] [add]  [r2,]  [r3,]  [#-1] 
+[0x00000130] [movw]  [r3,]  [#:lower16:maxcode] 
+[0x00000131] [movt]  [r3,]  [#:upper16:maxcode] 
+[0x00000132] [str]  [r2,]  [r3,]  [#0] 
+[0x00000133] [movw]  [r3,]  [#:lower16:clear_flg] 
+[0x00000134] [movt]  [r3,]  [#:upper16:clear_flg] 
+[0x00000135] [mov]  [r2,]  [#0] 
+[0x00000136] [str]  [r2,]  [r3,]  [#0] 
+[0x00000137] [b]  [.L10] 
+
+bb: 91
+succ: 92, 93
+instructions:
+[0x00000139] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000013A] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x0000013B] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000013C] [add]  [r2,]  [r3,]  [#1] 
+[0x0000013D] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x0000013E] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x0000013F] [str]  [r2,]  [r3,]  [#0] 
+[0x00000140] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x00000141] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000142] [ldr]  [r2,]  [r3,]  [#0] 
+[0x00000143] [movw]  [r3,]  [#:lower16:maxbits] 
+[0x00000144] [movt]  [r3,]  [#:upper16:maxbits] 
+[0x00000145] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000146] [cmp]  [r2,]  [r3] 
+[0x00000147] [bne]  [.L21] 
+
+bb: 92
+succ: 97
+instructions:
+[0x00000148] [movw]  [r3,]  [#:lower16:maxmaxcode] 
+[0x00000149] [movt]  [r3,]  [#:upper16:maxmaxcode] 
+[0x0000014A] [ldr]  [r2,]  [r3,]  [#0] 
+[0x0000014B] [movw]  [r3,]  [#:lower16:maxcode] 
+[0x0000014C] [movt]  [r3,]  [#:upper16:maxcode] 
+[0x0000014D] [str]  [r2,]  [r3,]  [#0] 
+[0x0000014E] [b]  [.L10] 
+
+bb: 93
+succ: 97
+instructions:
+[0x00000150] [movw]  [r3,]  [#:lower16:n_bits] 
+[0x00000151] [movt]  [r3,]  [#:upper16:n_bits] 
+[0x00000152] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000153] [mov]  [r2,]  [#1] 
+[0x00000154] [lsl]  [r3,]  [r2,]  [r3] 
+[0x00000155] [add]  [r2,]  [r3,]  [#-1] 
+[0x00000156] [movw]  [r3,]  [#:lower16:maxcode] 
+[0x00000157] [movt]  [r3,]  [#:upper16:maxcode] 
+[0x00000158] [str]  [r2,]  [r3,]  [#0] 
+[0x00000159] [b]  [.L10] 
+
+bb: 94
+succ: 96, 95
+instructions:
+[0x0000015B] [movw]  [r3,]  [#:lower16:offset] 
+[0x0000015C] [movt]  [r3,]  [#:upper16:offset] 
+[0x0000015D] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000015E] [cmp]  [r3,]  [#0] 
+[0x0000015F] [ble]  [.L22] 
+
+bb: 95
+succ: 96, writebytes
+instructions:
+[0x00000160] [movw]  [r3,]  [#:lower16:offset] 
+[0x00000161] [movt]  [r3,]  [#:upper16:offset] 
+[0x00000162] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000163] [add]  [r3,]  [r3,]  [#7] 
+[0x00000164] [add]  [r2,]  [r3,]  [#7] 
+[0x00000165] [cmp]  [r3,]  [#0] 
+[0x00000166] [it]  [lt] 
+[0x00000167] [movlt]  [r3,]  [r2] 
+[0x00000168] [asr]  [r3,]  [r3,]  [#3] 
+[0x00000169] [movw]  [r0,]  [#:lower16:buf] 
+[0x0000016A] [movt]  [r0,]  [#:upper16:buf] 
+[0x0000016B] [mov]  [r1,]  [r3] 
+[0x0000016C] [bl]  [writebytes] 
+
+bb: 96
+succ: 97
+instructions:
+[0x0000016E] [movw]  [r3,]  [#:lower16:offset] 
+[0x0000016F] [movt]  [r3,]  [#:upper16:offset] 
+[0x00000170] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000171] [add]  [r3,]  [r3,]  [#7] 
+[0x00000172] [add]  [r2,]  [r3,]  [#7] 
+[0x00000173] [cmp]  [r3,]  [#0] 
+[0x00000174] [it]  [lt] 
+[0x00000175] [movlt]  [r3,]  [r2] 
+[0x00000176] [asr]  [r3,]  [r3,]  [#3] 
+[0x00000177] [mov]  [r2,]  [r3] 
+[0x00000178] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x00000179] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x0000017A] [ldr]  [r3,]  [r3,]  [#0] 
+[0x0000017B] [adds]  [r2,]  [r2,]  [r3] 
+[0x0000017C] [movw]  [r3,]  [#:lower16:bytes_out] 
+[0x0000017D] [movt]  [r3,]  [#:upper16:bytes_out] 
+[0x0000017E] [str]  [r2,]  [r3,]  [#0] 
+[0x0000017F] [movw]  [r3,]  [#:lower16:offset] 
+[0x00000180] [movt]  [r3,]  [#:upper16:offset] 
+[0x00000181] [mov]  [r2,]  [#0] 
+[0x00000182] [str]  [r2,]  [r3,]  [#0] 
+
+bb: 97
+
+instructions:
+[0x00000184] [add]  [r7,]  [r7,]  [#12] 
+[0x00000185] [mov]  [sp,]  [r7] 
+[0x00000186] [pop]  [{r4,]  [r5,]  [r6,]  [r7,]  [pc}] 
+
+
+cfg: putbyte
+bb: 61
+
+instructions:
+[0x00000050] [push]  [{r7}] 
+[0x00000051] [sub]  [sp,]  [sp,]  [#12] 
+[0x00000052] [add]  [r7,]  [sp,]  [#0] 
+[0x00000053] [mov]  [r3,]  [r0] 
+[0x00000054] [strb]  [r3,]  [r7,]  [#7] 
+[0x00000055] [movw]  [r3,]  [#:lower16:OutBuff] 
+[0x00000056] [movt]  [r3,]  [#:upper16:OutBuff] 
+[0x00000057] [ldr]  [r3,]  [r3,]  [#0] 
+[0x00000058] [ldrb]  [r2,]  [r7,]  [#7] 
+[0x00000059] [strb]  [r2,]  [r3,]  [#0] 
+[0x0000005A] [add]  [r2,]  [r3,]  [#1] 
+[0x0000005B] [movw]  [r3,]  [#:lower16:OutBuff] 
+[0x0000005C] [movt]  [r3,]  [#:upper16:OutBuff] 
+[0x0000005D] [str]  [r2,]  [r3,]  [#0] 
+[0x0000005E] [add]  [r7,]  [r7,]  [#12] 
+[0x0000005F] [mov]  [sp,]  [r7] 
+[0x00000060] [pop]  [{r7}] 
+[0x00000061] [bx]  [lr] 
+
+
