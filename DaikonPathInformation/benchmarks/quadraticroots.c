@@ -22,6 +22,13 @@ fabs (double n)
 double
 sqrt (double val)
 {
+  #ifdef CBMC
+  int __count_2_9 = 0;
+  int __count_4_7 = 0;
+  int __count_5_7 = 0;
+  int __count_6_7 = 0;
+  int __count_L8 = 0;
+  #endif
   double x = val / 10;
   double dx;
   double diff;
@@ -32,10 +39,17 @@ sqrt (double val)
   if (val == 0)
   {
     x = 0;
+    #ifdef CBMC
+    __count_2_9++;
+    #endif
   }
   else
   {
-    for (i = 1; i < 20; i++)
+    for (i = 1; 
+      #ifdef CBMC
+      __count_L8++,
+      #endif
+      i < 20; i++)
     {
       if (!flag)
       {
@@ -45,11 +59,20 @@ sqrt (double val)
         if (fabs (diff) <= min_tol)
         {
           flag = 1;
+          #ifdef CBMC
+          __count_6_7++;
+          #endif
         }
+        #ifdef CBMC
+        else __count_5_7++;
+        #endif
       }
       else
       {
         x = x;
+        #ifdef CBMC
+        __count_4_7++;
+        #endif
       }
     }
   }
@@ -59,6 +82,12 @@ sqrt (double val)
 void
 quadraticroots (double a[])
 {
+  #ifdef CBMC
+  int __count_13_18 = 0;
+  int __count_14_16 = 0;
+  int __count_15_18 = 0;
+  int __count_17_18 = 0;
+  #endif
   double x1[2];
   double x2[2];
   double d;
@@ -67,6 +96,9 @@ quadraticroots (double a[])
 
   if (a[0] == 0.0)
   {
+    #ifdef CBMC
+    __count_17_18++;
+    #endif
     return 999;
   }
 
@@ -76,10 +108,14 @@ quadraticroots (double a[])
 
   if (d > 0.0)
   {
+
     x1[0] = (-a[1] + w2) / w1;
     x1[1] = 0.0;
     x2[0] = (-a[1] - w2) / w1;
     x2[1] = 0.0;
+    #ifdef CBMC
+    __count_13_18++;
+    #endif
     return 0;
   }
   else if (d == 0.0)
@@ -88,10 +124,17 @@ quadraticroots (double a[])
     x1[1] = 0.0;
     x2[0] = x1[0];
     x2[1] = 0.0;
+    #ifdef CBMC
+    __count_15_18++;
+    #endif
     return 0;
   }
   else
   {
+    #ifdef CBMC
+    // TODO: check
+    __count_14_16++;
+    #endif
     w2 /= w1;
     x1[0] = -a[1] / w1;
     x1[1] = w2;
