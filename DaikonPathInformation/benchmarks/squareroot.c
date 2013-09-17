@@ -9,6 +9,13 @@
 float
 squareroot (float val)
 {
+  #ifdef CBMC
+  int __count_4_7 = 0;
+  int __count_5_7 = 0;
+  int __count_6_7 = 0;
+  int __count_2_9 = 0;
+  int __count_L10 = 0;
+  #endif
   float x = val / 10;
   float dx;
   double diff;
@@ -22,7 +29,11 @@ squareroot (float val)
   }
   else
   {
-    for (i = 1; i < 20; i++)
+    for (i = 1; 
+      #ifdef CBMC
+      __count_L10++,
+      #endif
+      i < 20; i++)
     {
       if (!flag)
       {
@@ -31,11 +42,20 @@ squareroot (float val)
         diff = val - (x * x);
         if (fabs (diff) <= min_tol)
         {
+          #ifdef CBMC
+          __count_6_7++;
+          #endif
           flag = 1;
         }
+        #ifdef CBMC
+        else __count_5_7++;
+        #endif
       }
       else
       {
+        #ifdef CBMC
+        __count_4_7++;
+        #endif
         x = x;
       }
     }
