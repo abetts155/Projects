@@ -112,6 +112,33 @@ float arr[ARRAY_SIZE] =
 float
 select (unsigned long k)
 {
+  #ifdef CBMC
+  int __count_3_6 = 0;
+  int __count_4_5 = 0;
+  int __count_4_6 = 0;
+  int __count_7_30 = 0;
+  int __count_8_10 = 0;
+  int __count_9_10 = 0;
+  int __count_10_11 = 0;
+  int __count_10_12 = 0;
+  int __count_12_14 = 0;
+  int __count_13_14 = 0;
+  int __count_17_16 = 0;
+  int __count_20_19 = 0;
+  int __count_21_23 = 0;
+  int __count_22_23 = 0;
+  int __count_23_25 = 0;
+  int __count_24_25 = 0;
+  int __count_26_28 = 0;
+  int __count_27_28 = 0;
+  int __count_28_30 = 0;
+  int __count_29_30 = 0;
+  int __count_L30 = 0;
+  int __count_L25 = 0;
+  int __count_L20 = 0;
+  int __count_L17 = 0;
+
+  #endif
   unsigned long i, ir, j, l, mid;
   float a, temp;
   int flag, flag2;
@@ -120,7 +147,11 @@ select (unsigned long k)
   ir = ARRAY_SIZE - 1;
   flag = flag2 = 0;
 
-  while (!flag)
+  while (
+    #ifdef CBMC
+    __count_L30++,
+    #endif
+    !flag)
   {
     if (ir <= l + 1)
     {
@@ -128,9 +159,18 @@ select (unsigned long k)
       {
         if (arr[ir] < arr[l])
         {
+          #ifdef CBMC
+          __count_4_5++;
+          #endif
           SWAP(arr[l], arr[ir])
         }
+        #ifdef CBMC
+        else __count_4_6++;
+        #endif
       }
+      #ifdef CBMC
+      else __count_3_6++;
+      #endif
       flag = 1;
     }
     else if (!flag)
@@ -140,50 +180,113 @@ select (unsigned long k)
       if (arr[l + 1] > arr[ir])
       {
         SWAP(arr[l + 1], arr[ir])
+        #ifdef CBMC
+        __count_9_10++;
+        #endif
       }
+      #ifdef CBMC
+      else __count_8_10++;
+      #endif
       if (arr[l] > arr[ir])
       {
+        #ifdef CBMC
+        __count_10_11++;
+        #endif
         SWAP(arr[l], arr[ir])
       }
+      #ifdef CBMC
+      else __count_10_12++;
+      #endif
       if (arr[l + 1] > arr[l])
       {
         SWAP(arr[l + 1], arr[l])
+        #ifdef CBMC
+        __count_13_14++;
+        #endif
       }
+      #ifdef CBMC
+      else __count_12_14++;
+      #endif
       i = l + 1;
       j = ir;
       a = arr[l];
-      while (!flag2)
+      while (
+        #ifdef CBMC
+        __count_L25++,
+        #endif
+        !flag2)
       {
         i++;
-        while (arr[i] < a)
+        while (
+          #ifdef CBMC
+          __count_L20++,
+          #endif
+          arr[i] < a)
         {
+          #ifdef CBMC
+          __count_17_16++;
+          #endif
           i++;
         }
         j--;
-        while (arr[j] > a)
+        while (
+          #ifdef CBMC
+          __count_L17++,
+          #endif
+          arr[j] > a)
         {
+          #ifdef CBMC
+          __count_20_19++;
+          #endif
           j--;
         }
         if (j < i)
         {
           flag2 = 1;
+          #ifdef CBMC
+          __count_22_23++;
+          #endif
         }
+        #ifdef CBMC
+        else __count_21_23++;
+        #endif
         if (!flag2)
         {
           SWAP(arr[i], arr[j])
+          #ifdef CBMC
+          __count_24_25++;
+          #endif
         }
+        #ifdef CBMC
+        else __count_23_25++;
+        #endif
       }
       arr[l] = arr[j];
       arr[j] = a;
       if (j >= k)
       {
         ir = j - 1;
+        #ifdef CBMC
+        __count_27_28++;
+        #endif
       }
+      #ifdef CBMC
+      else __count_26_28++;
+      #endif
       if (j <= k)
       {
         l = i;
+        #ifdef CBMC
+        __count_29_30++;
+        #endif
       }
+      #ifdef CBMC
+      __count_28_30++;
+      #endif
     }
+    #ifdef CBMC
+    else __count_7_30++;
+    #endif
   }
   return arr[k];
 }
