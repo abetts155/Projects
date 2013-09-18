@@ -193,16 +193,12 @@ fft (int n, int flag)
   // TODO: check
   if (flag == 1) // 10
   {
-    #ifdef CBMC
     __count_10_12++;
-    #endif
     sign = 1.0; // 12?
   }
   else
   {
-    #ifdef CBMC
     __count_10_11++;
-    #endif
     sign = -1.0; // 11?
   }
   #else
