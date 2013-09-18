@@ -30,7 +30,7 @@ merge (int ARRAY_SIZE, int a[], int b[], int l, int r, int u)
 
   while (
     #ifdef CBMC
-    __count_L26++,
+    __count_L16++,
     #endif
     i < r && j < u)
   {
@@ -65,7 +65,7 @@ merge (int ARRAY_SIZE, int a[], int b[], int l, int r, int u)
 
   while (
     #ifdef CBMC
-    __count_L23++,
+    __count_L20++,
     #endif
     i < r)
   {
@@ -78,7 +78,7 @@ merge (int ARRAY_SIZE, int a[], int b[], int l, int r, int u)
   }
   while (
     #ifdef CBMC
-    __count_L20++,
+    __count_L23++,
     #endif
     j < u)
   {
@@ -91,7 +91,7 @@ merge (int ARRAY_SIZE, int a[], int b[], int l, int r, int u)
   }
   for (k = l; 
     #ifdef CBMC
-    __count_L16++,
+    __count_L26++,
     #endif
     k < u; k++)
   {
