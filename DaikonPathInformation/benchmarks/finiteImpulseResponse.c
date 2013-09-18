@@ -3,6 +3,14 @@
 long 
 finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,long scale)
 {
+  #ifdef CBMC
+  int __count_24_25 = 0;
+  int __count_28_32 = 0;
+  int __count_29_30 = 0;
+  int __count_29_31 = 0;
+  int __count_L33 = 0;
+  int __count_L25 = 0;
+  #endif
   long i,j,coef_len2,acc_length;
   long acc;
   long *in_ptr,*data_ptr,*coef_start,*coef_ptr,*in_end;
@@ -18,7 +26,11 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
   /* initial value of accumulation length for startup */
   acc_length = coef_len2;
 
-  for(i = 0 ; i < in_len ; i++)
+  for(i = 0 ; 
+    #ifdef CBMC
+    __count_L33++,
+    #endif
+  i < in_len ; i++) // 33
   {
     /* set up pointer for accumulation */
     data_ptr = in_ptr;
@@ -26,25 +38,43 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
 
     /* do accumulation and write result with scale factor */
     acc = (long)(*coef_ptr++) * (*data_ptr--);
-    for(j = 1 ; j < acc_length ; j++)
+    for(j = 1 ; 
+      #ifdef CBMC
+      __count_L25++,
+      #endif
+    j < acc_length ; j++) // 25
     {
       acc += (long)(*coef_ptr++) * (*data_ptr--);
+      #ifdef CBMC
+      __count_24_25++;
+      #endif
     }
     *out++ = (int)(acc/scale);
 
     /* check for end case */
-    if(in_ptr == in_end) 
+    if(in_ptr == in_end) // 27
     {
+      // 28
       acc_length--;       /* one shorter each time */
       coef_start++;       /* next coefficient each time */
+      #ifdef CBMC
+      __count_28_32++;
+      #endif
     }
     else 
     {
       /* if not at end, then check for startup, add to input pointer */
-      if(acc_length < coef_len) 
+      if(acc_length < coef_len) // 29
       {
+        #ifdef CBMC
+        __count_29_30++;
+        #endif
+        // 30
         acc_length++;
       }
+      #ifdef CBMC
+      else __count_29_31++;
+      #endif
       in_ptr++;
     }
   }
