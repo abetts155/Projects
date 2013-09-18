@@ -22,23 +22,44 @@ int Negcnt;
 int
 matrix_count (matrix A)
 {
+  #ifdef CBMC
+  int __count_3_5 = 0;
+  int __count_4_6 = 0;
+  int __count_L9 = 0;
+  int __count_L7 = 0;
+  #endif
   int i, j;
   int Ptotal = 0;
   int Ntotal = 0;
   int Pcnt = 0;
   int Ncnt = 0;
 
-  for (i = 0; i < UPPERLIMIT; ++i)
+  for (i = 0; 
+  #ifdef CBMC
+  __count_L9++,
+  #endif
+  i < UPPERLIMIT; ++i) // 9
   {
-    for (j = 0; j < UPPERLIMIT; ++j)
+    for (j = 0; 
+    #ifdef CBMC
+    __count_L7++,
+    #endif
+    j < UPPERLIMIT; ++j) // 7
     {
       if (A[i][j] < 0)
       {
+        // 4
         Ntotal += A[i][j];
         Ncnt++;
+        #ifdef CBMC
+        __count_4_6++;
+        #endif
       }
       else
       {
+        #ifdef CBMC
+        __count_3_5++;
+        #endif
         Ptotal += A[i][j];
         Pcnt++;
       }
