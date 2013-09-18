@@ -219,7 +219,7 @@ select (unsigned long k)
         i++;
         while (
           #ifdef CBMC
-          __count_L20++,
+          __count_L17++,
           #endif
           arr[i] < a)
         {
@@ -231,7 +231,7 @@ select (unsigned long k)
         j--;
         while (
           #ifdef CBMC
-          __count_L17++,
+          __count_L20++,
           #endif
           arr[j] > a)
         {
