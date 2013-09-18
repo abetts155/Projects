@@ -8,26 +8,56 @@
 int
 janne_complex (int a, int b)
 {
-  while (a < 30)
+  #ifdef CBMC
+  int __count_2_3 = 0;
+  int __count_2_4 = 0;
+  int __count_5_8 = 0;
+  int __count_6_8 = 0;
+  int __count_7_9 = 0;
+  int __count_L9 = 0;
+  int __count_L11 = 0;
+  #endif
+  while (
+    #ifdef CBMC
+    __count_L11++,
+    #endif
+  a < 30) // 11
   {
-    while (b < a)
+    while (
+      #ifdef CBMC
+      __count_L9++,
+      #endif
+    b < a) // 9
     {
-      if (b > 5)
+      if (b > 5) // 2
       {
-        b = b * 3;
+        #ifdef CBMC
+        __count_2_3++;
+        #endif
+        b = b * 3; // 3
       }
       else
       {
-        b = b + 2;
+        #ifdef CBMC
+        __count_2_4++;
+        #endif
+        b = b + 2; // 4
       }
  
-      if (b >= 10 && b <= 12)
+      if (b >= 10 && b <= 12) // 5, 6
       {
-        a = a + 10;
+        a = a + 10; // 7
+        #ifdef CBMC
+        __count_7_9++;
+        #endif
       }
       else
       {
-        a = a + 1;
+        #ifdef CBMC
+        if (b >= 10) __count_6_8++;
+        else __count_5_8++;
+        #endif
+        a = a + 1; // 8
       }
     }
     a = a + 2;
