@@ -46,6 +46,13 @@
 int 
 fastDiscreteCosineTransform (short int *blk, int lx)
 {
+  #ifdef CBMC
+  int __count_3_2 = 0;
+  int __count_5_6 = 0;
+  int __count_L6 = 0;
+  int __count_L3 = 0;
+  #endif
+
   int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   int tmp10, tmp11, tmp12, tmp13;
   int z1, z2, z3, z4, z5;
@@ -60,8 +67,15 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 
   block=blk;
 
-  for (i=0; i<8; i++)
+  for (i=0; 
+    #ifdef CBMC
+    __count_L3++,
+    #endif
+  i<8; i++) // 3
   {
+    #ifdef CBMC
+    __count_3_2++;
+    #endif
     tmp0 = block[0] + block[7];
     tmp7 = block[0] - block[7];
     tmp1 = block[1] + block[6];
@@ -126,7 +140,11 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 
   block=blk;
 
-  for (i = 0; i<8; i++)
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L6++,
+    #endif
+  i<8; i++) // 6
   {
     tmp0 = block[0] + block[7*lx];
     tmp7 = block[0] - block[7*lx];
@@ -186,6 +204,9 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 
     /* advance to next column */
     block++;
+    #ifdef CBMC
+    __count_5_6++;
+    #endif
   }
   
   return lx + block[0];
