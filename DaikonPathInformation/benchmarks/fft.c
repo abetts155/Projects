@@ -74,22 +74,55 @@ log(double n)
 static double 
 sin (double rad)
 {
+  #ifdef CBMC
+  int __count_42_41 = 0;
+  int __count_45_44 = 0;
+  int __count_49_47 = 0;
+  int __count_L42 = 0;
+  int __count_L45 = 0;
+  int __count_L48 = 0;
+  #endif
   double app;
 
   double diff;
   int inc = 1;
   int counter =0;
 
-  while (rad > 2*PI)
-	rad -= 2*PI;
-  while (rad < -2*PI)
+  while (
+    #ifdef CBMC
+    __count_L42++,
+    #endif
+  rad > 2*PI) // 42
+	{
+    #ifdef CBMC
+    __count_42_41++;
+    #endif
+    rad -= 2*PI;
+  }
+  while (
+    #ifdef CBMC
+    __count_L45++,
+    #endif
+  rad < -2*PI) // 45
+  {
+    #ifdef CBMC
+    __count_45_44++;
+    #endif
     rad += 2*PI;
+  }
   app = diff = rad;
    diff = (diff * (-(rad*rad))) /
       ((2.0 * inc) * (2.0 * inc + 1.0));
     app = app + diff;
     inc++;
-  while(fabs(diff) >= 0.00001) {
+  while(
+    #ifdef CBMC
+    __count_L48++,
+    #endif
+  fabs(diff) >= 0.00001) { // 48, 49
+    #ifdef CBMC
+    __count_49_47++;
+    #endif
     counter++;
     diff = (diff * (-(rad*rad))) /
       ((2.0 * inc) * (2.0 * inc + 1.0));
@@ -111,61 +144,132 @@ cos (double rad)
 int 
 fft (int n, int flag)
 {
+  #ifdef CBMC
+  int __count_4_39 = 0;
+  int __count_9_8 = 0;
+  int __count_10_11 = 0;
+  int __count_10_12 = 0;
+  int __count_18_19 = 0;
+  int __count_25_27 = 0;
+  int __count_26_27 = 0;
+  int __count_29_30 = 0;
+  int __count_34_39 = 0;
+  int __count_36_37 = 0;
+  int __count_L32 = 0;
+  int __count_L30 = 0;
+  int __count_L23 = 0;
+  int __count_L21 = 0;
+  int __count_L19 = 0;
+  int __count_L9 = 0;
+  int __count_L37 = 0;
+  #endif
   int i, j, k, it, xp, xp2, j1, j2, iter;
   double sign, w, wr, wi, dr1, dr2, di1, di2, tr, ti, arg;
 
-  if (n < 2)
+  if (n < 2) // 3
   {
-    return 999;
+    #ifdef CBMC
+    __count_4_39++;
+    #endif
+    return 999; // 4
   }
 
   iter = log((double)n)/log(2.0);
   j = 1;
-  for(i = 0; i < iter; i++)
+  for(i = 0; 
+  #ifdef CBMC
+  __count_L9++,
+  #endif
+  i < iter; i++) // 9
   {
+    #ifdef CBMC
+    __count_9_8++;
+    #endif
     j *= 2;
   }
 
   /*  Main FFT Loops  */
-  sign = ((flag == 1) ? 1.0 : -1.0);
-  xp2 = n;
-  for(it = 0; it < iter; it++)
+  #ifdef CBMC
+  // TODO: check
+  if (flag == 1) // 10
   {
+    #ifdef CBMC
+    __count_10_12++;
+    #endif
+    sign = 1.0; // 12?
+  }
+  else
+  {
+    #ifdef CBMC
+    __count_10_11++;
+    #endif
+    sign = -1.0; // 11?
+  }
+  #else
+  sign = ((flag == 1) ? 1.0 : -1.0); // 10, 11, 12
+  #endif
+  xp2 = n;
+  for(it = 0;
+    #ifdef CBMC
+    __count_L23++,
+    #endif
+  it < iter; it++) // 23
+  {
+    // 14
     xp = xp2;
     xp2 /= 2;
     w = PI / xp2;
-    for(k = 0; k < xp2; k++)
+    for(k = 0; 
+      #ifdef CBMC
+      __count_L21++,
+      #endif
+    k < xp2; k++) // 21
     {
       arg = k * w;
       wr  = cos(arg);
       wi  = sign * sin(arg);
       i   = k - xp;
-      for(j = xp; j <= n; j += xp)
+      for(j = xp; 
+        #ifdef CBMC
+        __count_L19++,
+        #endif
+      j <= n; j += xp) // 19
       {
-	j1 = j + i;
-	j2 = j1 + xp2;
-	dr1 = realArray[j1];
-	dr2 = realArray[j2];
-	di1 = imaginaryArray[j1];
-	di2 = imaginaryArray[j2];
-	tr = dr1 - dr2;
-	ti = di1 - di2;
-	realArray[j1] = dr1 + dr2;
-	imaginaryArray[j1] = di1 + di2;
-	realArray[j2] = tr * wr - ti * wi;
-	imaginaryArray[j2] = ti * wr + tr * wi;
+        #ifdef CBMC
+        __count_18_19++;
+        #endif
+      	j1 = j + i;
+      	j2 = j1 + xp2;
+      	dr1 = realArray[j1];
+      	dr2 = realArray[j2];
+      	di1 = imaginaryArray[j1];
+      	di2 = imaginaryArray[j2];
+      	tr = dr1 - dr2;
+      	ti = di1 - di2;
+      	realArray[j1] = dr1 + dr2;
+      	imaginaryArray[j1] = di1 + di2;
+      	realArray[j2] = tr * wr - ti * wi;
+      	imaginaryArray[j2] = ti * wr + tr * wi;
        }
      }
   }
-
+// 24
   /*  Digit Reverse Counter  */
   j1 = n / 2;
   j2 = n - 1;
   j = 1;
-  for(i = 1; i <= j2; i++)
+  for(i = 1;
+    #ifdef CBMC
+    __count_L32++,
+    #endif
+  i <= j2; i++) // 32
   {
-    if(i < j)
+    if(i < j) // 25
     {
+      // 26
+      #ifdef CBMC
+      __count_26_27++;
+      #endif
       tr = realArray[j-1];
       ti = imaginaryArray[j-1];
       realArray[j-1] = realArray[i-1];
@@ -173,26 +277,46 @@ fft (int n, int flag)
       realArray[i-1] = tr;
       imaginaryArray[i-1] = ti;
      }
+     #ifdef CBMC
+     else __count_25_27++;
+     #endif
      
      k = j1;
-     while(k < j)
+     while(
+      #ifdef CBMC
+      __count_L30++,
+      #endif
+     k < j) // 30
      {
        j -= k;
        k /= 2;
+       #ifdef CBMC
+       __count_29_30++;
+       #endif
      }
      j += k;
   }
    
-  if(flag == 0)
-  { 
-    return 0;
+  if(flag == 0) // 33
+  {
+    #ifdef CBMC
+    __count_34_39++;
+    #endif
+    return 0; // 34
   }
 
   w = n;
-  for(i = 0; i < n; i++)
+  for(i = 0; 
+    #ifdef CBMC
+    __count_L37++,
+    #endif
+  i < n; i++) // 37
   {
     realArray[i] /= w;
     imaginaryArray[i] /= w;
+    #ifdef CBMC
+    __count_36_37++;
+    #endif
   }
 
   return 0;
