@@ -65,47 +65,119 @@ double a[ARRAY_DIMENSION][ARRAY_DIMENSION], b[ARRAY_DIMENSION], x[ARRAY_DIMENSIO
 static double 
 fabs (double n)
 {
+  #ifdef CBMC
+  int __count_38_40 = 0;
+  int __count_39_40 = 0;
+  #endif
+
   if (n >= 0)
+  {
+    #ifdef CBMC
+    __count_38_40++;
+    #endif
     return n;
+  }
   else
-    return -n;
+  {
+    #ifdef CBMC
+    __count_39_40++; // TODO: check
+    #endif
+    return -n; // 39
+  }
 }
 
 int
 LUdecomposition (int n, double eps)
 {
+  #ifdef CBMC
+  int __count_1_3 = 0;
+  int __count_2_3 = 0;
+  int __count_7_36 = 0;
+  int __count_9_13 = 0;
+  int __count_12_11 = 0;
+  int __count_18_17 = 0;
+  int __count_26_25 = 0;
+  int __count_31_32 = 0;
+  int __count_L34 = 0;
+  int __count_L32 = 0;
+  int __count_L28 = 0;
+  int __count_L26 = 0;
+  int __count_L22 = 0;
+  int __count_L20 = 0;
+  int __count_L18 = 0;
+  int __count_L14 = 0;
+  int __count_L12 = 0;
+  #endif
+
   int i, j, k;
   double w, y[100];
 
-  if (n > 99 || eps <= 0.0)
+  if (n > 99 || eps <= 0.0) // 1,2
   {
+    #ifdef CBMC
+    if (n>99) __count_1_3++;
+    else if (eps <= 0.0) __count_2_3++;
+    #endif
     return 999;
   }
 
-  for (i = 0; i < n; i++) 
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L22++,
+    #endif
+  i < n; i++) // 22
   {
-    if (fabs(a[i][i]) <= eps)
+    if (fabs(a[i][i]) <= eps) // 6
     {
+      // 7
+      #ifdef CBMC
+      __count_7_36++;
+      #endif
       return 1;
     }
   
-    for (j = i + 1; j <= n; j++) 
+    for (j = i + 1; 
+      #ifdef CBMC
+      __count_L14++,
+      #endif
+    j <= n; j++) // 14
     {
       w = a[j][i];
-      if (i != 0)
+      if (i != 0) // 9
       {  
-        for (k = 0; k < i; k++)
-	{
+        for (k = 0; 
+          #ifdef CBMC
+          __count_L12++,
+          #endif
+        k < i; k++) // 12
+        {
+          #ifdef CBMC
+          __count_12_11++;
+          #endif
           w -= a[j][k] * a[k][i];
         }
       }
+      #ifdef CBMC
+      else __count_9_13++;
+      #endif
       a[j][i] = w / a[i][i];
     }
-    for (j = i + 1; j <= n; j++) 
+    for (j = i + 1; 
+      #ifdef CBMC
+      __count_L20++,
+      #endif
+    j <= n; j++)  // 20
     {
       w = a[i + 1][j];
-      for (k = 0; k <= i; k++)
+      for (k = 0; 
+        #ifdef CBMC
+        __count_L18++,
+        #endif
+      k <= i; k++) // 18
       {
+        #ifdef CBMC
+        __count_18_17++;
+        #endif
         w -= a[i + 1][k] * a[k][j];
       }
       a[i + 1][j] = w;
@@ -114,23 +186,45 @@ LUdecomposition (int n, double eps)
 
   y[0] = b[0];
   
-  for (i = 1; i <= n; i++) 
+  for (i = 1; 
+    #ifdef CBMC
+    __count_L28++,
+    #endif
+  i <= n; i++) // 28
   {
     w = b[i];
-    for (j = 0; j < i; j++)
+    for (j = 0; 
+      #ifdef CBMC
+      __count_L26++,
+      #endif
+    j < i; j++) // 26
     {
+      #ifdef CBMC
+      __count_26_25++;
+      #endif
       w -= a[i][j] * y[j];
     }
     y[i] = w;
   }
   
   x[n] = y[n] / a[n][n];
-  for (i = n - 1; i >= 0; i--) 
+  for (i = n - 1; 
+    #ifdef CBMC
+    __count_L34++,
+    #endif
+  i >= 0; i--) // 34
   {
     w = y[i];
-    for (j = i + 1; j <= n; j++)
+    for (j = i + 1; 
+      #ifdef CBMC
+      __count_L32++,
+      #endif
+    j <= n; j++) // 32
     {
       w -= a[i][j] * x[j];
+      #ifdef CBMC
+      __count_31_32++;
+      #endif
     }
     x[i] = w / a[i][i];
   }
