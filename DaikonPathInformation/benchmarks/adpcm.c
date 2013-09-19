@@ -131,38 +131,42 @@ typedef struct
 int 
 my_abs (int n)
 {
-  if (n >= 0) 
+  #ifdef CBMC
+  int __count_38_40 = 0;
+  int __count_39_41 = 0;
+  #endif
+  if (n >= 0)  // 38
+  {
+    // 39
+    #ifdef CBMC
+    __count_39_41++;
+    #endif
     return n;
+  }
   else
-    return-n;
+  {
+    #ifdef CBMC
+    __count_38_40++;
+    #endif
+    // 40
+    return-n; 
+  }
 }
 
 int 
 my_sin (int rad)
 {
-  #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
-  int __countL3 = 0;
-  #endif
-
   int diff;
   int app=0;
   int inc = 1;
 
   while (rad > 2*PI)
   {
-    #ifdef CBMC
-    __countL1++;
-    #endif
     rad -= 2*PI;
   }
   
   while (rad < -2*PI)
   {   
-    #ifdef CBMC
-    __countL2++;
-    #endif 
     rad += 2*PI;
   }
   
@@ -174,9 +178,6 @@ my_sin (int rad)
   
   while (my_abs(diff) >= 1) 
   {
-    #ifdef CBMC
-    __countL3++;
-    #endif
     diff = (diff * (-(rad*rad))) / ((2 * inc) * (2 * inc + 1));
     app = app + diff;
     inc++;
@@ -195,34 +196,50 @@ void
 upzero (int dlt,int *dlti,int *bli)
 {
   #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
+  int __count_125_124 = 0;
+  int __count_128_129 = 0;
+  int __count_128_130 = 0;
+  int __count_L132 = 0;
+  int __count_L125 = 0;
   #endif
 
   int i,wd2,wd3;
-  if(dlt == 0) 
+  if(dlt == 0) // 122
   {
-    for(i = 0 ; i < 6 ; i++) 
+    for(i = 0 ; 
+      #ifdef CBMC
+      __count_L125++,
+      #endif
+    i < 6 ; i++) // 125
     {
       #ifdef CBMC
-      __countL1++;
+      __count_125_124++;
       #endif
       bli[i] = (int)((255L*bli[i]) >> 8L); 
     }
   }
   else 
   {
-    for(i = 0 ; i < 6 ; i++) 
-    {
+    for(i = 0 ; 
       #ifdef CBMC
-      __countL2++;
+      __count_L132++,
       #endif
-      if ((long)dlt*dlti[i] >= 0)
+    i < 6 ; i++) // 132
+    {
+      if ((long)dlt*dlti[i] >= 0) // 128
       { 
+        #ifdef CBMC
+        __count_128_129++;
+        #endif
+        // 129
         wd2 = 128;
       }
       else
       { 
+        #ifdef CBMC
+        __count_128_130++;
+        #endif
+        // 130
         wd2 = -128;
       }
       wd3 = (int)((255L*bli[i]) >> 8L);  
@@ -242,10 +259,15 @@ int
 encode (int xin1,int xin2)
 {
   #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
+  int __count_66_67 = 0;
+  int __count_70_69 = 0;
+  int __count_82_84 = 0;
+  int __count_83_84 = 0;
+  int __count_85_87 = 0;
+  int __count_86_87 = 0;
+  int __count_L70 = 0;
+  int __count_L67 = 0;
   #endif
-
   int i;
   int *h_ptr,*tqmf_ptr,*tqmf_ptr1;
   long int xa,xb;
@@ -256,23 +278,31 @@ encode (int xin1,int xin2)
   xa = (long)(*tqmf_ptr++) * (*h_ptr++);
   xb = (long)(*tqmf_ptr++) * (*h_ptr++);
   
-  for(i = 0 ; i < 10 ; i++) 
-  {
+  for(i = 0 ; 
     #ifdef CBMC
-    __countL1++;
+    __count_L67++,
     #endif
+  i < 10 ; i++) // 67
+  {
     xa += (long)(*tqmf_ptr++) * (*h_ptr++);
     xb += (long)(*tqmf_ptr++) * (*h_ptr++);
+    #ifdef CBMC
+    __count_66_67++;
+    #endif
   }
   
   xa += (long)(*tqmf_ptr++) * (*h_ptr++);
   xb += (long)(*tqmf_ptr) * (*h_ptr++);
   tqmf_ptr1 = tqmf_ptr - 2;
   
-  for(i = 0 ; i < 22 ; i++)
+  for(i = 0 ; 
+    #ifdef CBMC
+    __count_L70++,
+    #endif
+  i < 22 ; i++) // 70
   {
     #ifdef CBMC
-    __countL2++;
+    __count_70_69++;
     #endif
     *tqmf_ptr-- = *tqmf_ptr1--;
   }
@@ -305,21 +335,36 @@ encode (int xin1,int xin2)
   sh = sph + szh;
   eh = xh - sh;
 
-  if(eh >= 0) 
+  if(eh >= 0) // 81
   {
+    // 82
     ih = 3;
+    #ifdef CBMC
+    __count_82_84++;
+    #endif
   }
   else
   {
+    // 83
     ih = 1;
+    #ifdef CBMC
+    __count_83_84++;
+    #endif
   }
   
   decis = (564L*(long)deth) >> 12L;
   
-  if(my_abs(eh) > decis)
+  if(my_abs(eh) > decis) // 85
   { 
+    // 86
     ih--;
+    #ifdef CBMC
+    __count_86_87++;
+    #endif
   }
+  #ifdef CBMC
+  else __count_85_87++;
+  #endif
   
   dh = ((long)deth*qq2_code2_table[ih]) >> 15L ;
   nbh = logsch(ih,nbh);
@@ -344,10 +389,11 @@ void
 decode (int input)
 {
   #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
+  int __count_58_57 = 0;
+  int __count_61_60 = 0;
+  int __count_L58 = 0;
+  int __count_L61 = 0;
   #endif
-
   int i;
   long int xa1,xa2;  
   int *h_ptr,*ac_ptr,*ac_ptr1,*ad_ptr,*ad_ptr1;
@@ -395,10 +441,14 @@ decode (int input)
   xa1 = (long)xd * (*h_ptr++);
   xa2 = (long)xs * (*h_ptr++);
 
-  for(i = 0 ; i < 10 ; i++) 
+  for(i = 0 ; 
+    #ifdef CBMC
+    __count_L58++,
+    #endif
+  i < 10 ; i++) // 58
   {
     #ifdef CBMC
-    __countL1++;
+    __count_58_57++;
     #endif
     xa1 += (long)(*ac_ptr++) * (*h_ptr++);
     xa2 += (long)(*ad_ptr++) * (*h_ptr++);
@@ -413,10 +463,14 @@ decode (int input)
   ac_ptr1 = ac_ptr - 1;
   ad_ptr1 = ad_ptr - 1;
   
-  for(i = 0 ; i < 10 ; i++) 
+  for(i = 0 ; 
+    #ifdef CBMC
+    __count_L61++,
+    #endif
+  i < 10 ; i++) // 61
   {
     #ifdef CBMC
-    __countL2++;
+    __count_61_60++;
     #endif
     *ac_ptr-- = *ac_ptr1--;
     *ad_ptr-- = *ad_ptr1--;
@@ -430,16 +484,16 @@ void
 reset ()
 {
   #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
-  int __countL3 = 0;
-  int __countL4 = 0;
-  int __edge_2_3 = 0;
-  int __edge_6_5 = 0;
-  int __edge_8_9 = 0;
-  int __edge_12_11 = 0;
+  int __count_2_3 = 0;
+  int __count_6_5 = 0;
+  int __count_8_9 = 0;
+  int __count_12_11 = 0;
+  int __count_L3 = 0;
+  int __count_L6 = 0;
+  int __count_L9 = 0;
+  int __count_L12 = 0;
   #endif
-  
+
   int i;
 
   detl = dec_detl = 32; 
@@ -450,28 +504,28 @@ reset ()
   dec_nbh = dec_ah1 = dec_ah2 = dec_ph1 = dec_ph2 = dec_rh1 = dec_rh2 = 0;
 
   for(i = 0;
-      #ifdef CBMC 
-      __countL1++, 
-      #endif
-      i < 6; i++) 
-  {
-    #ifdef CBMC 
-    __edge_2_3++;
+    #ifdef CBMC
+    __count_L3++,
     #endif
+      i < 6; i++) // 3
+  {
     delay_dltx[i] = 0;
     delay_dhx[i] = 0;
     dec_del_dltx[i] = 0;
     dec_del_dhx[i] = 0;
+    #ifdef CBMC
+    __count_2_3++;
+    #endif
   }
 
   for(i = 0; 
-      #ifdef CBMC 
-      __countL2++, 
-      #endif
-      i < 6 ; i++) 
+    #ifdef CBMC
+    __count_L6++,
+    #endif
+      i < 6 ; i++) // 6
   {
-    #ifdef CBMC 
-    __edge_6_5++;
+    #ifdef CBMC
+    __count_6_5++;
     #endif
     delay_bpl[i] = 0;
     delay_bph[i] = 0;
@@ -480,62 +534,51 @@ reset ()
   }
 
   for(i = 0;
-      #ifdef CBMC 
-      __countL3++, 
-      #endif
-      i < 23 ; i++)
-  {
-    #ifdef CBMC 
-    __edge_8_9++;
+    #ifdef CBMC
+    __count_L9++,
     #endif
+      i < 23 ; i++) // 9
+  {
     tqmf[i] = 0;
+    #ifdef CBMC
+    __count_8_9++;
+    #endif
   }
   
   for(i = 0;
-      #ifdef CBMC 
-      __countL4++, 
-      #endif
-      i < 11 ; i++) 
+    #ifdef CBMC
+    __count_L12++,
+    #endif
+      i < 11 ; i++) // 12
   {
-    #ifdef CBMC 
-    __edge_12_11++;
+    #ifdef CBMC
+    __count_12_11++;
     #endif
     accumc[i] = 0;
     accumd[i] = 0;
   }
   
-  #ifdef CBMC
-  assert(__countL1<=7);
-  assert(__countL2<=7);
-  assert(__countL3<=24);
-  assert(__countL4<=12);
-  assert(__edge_2_3 > 0 ==>   __edge_6_5 > 0 && 
-         __edge_6_5 > 0 ==>   __edge_2_3 > 0);
-  assert(__edge_8_9 > 0 ==>   __edge_2_3 > 0 && 
-         __edge_2_3 > 0 ==>   __edge_8_9 > 0);
-  assert(__edge_8_9 > 0 ==>   __edge_6_5 > 0 && 
-         __edge_6_5 > 0 ==>   __edge_8_9 > 0);
-  assert(__edge_12_11 > 0 ==> __edge_2_3 > 0 && 
-         __edge_2_3 > 0 ==>   __edge_12_11 > 0);
-  assert(__edge_12_11 > 0 ==> __edge_6_5 > 0 && 
-         __edge_6_5 > 0 ==>   __edge_12_11 > 0);
-  assert(__edge_12_11 > 0 ==> __edge_8_9 > 0 && 
-         __edge_8_9 > 0 ==>   __edge_12_11 > 0);
-  #endif
 }
 
 int 
 filtez (int *bpl,int *dlt)
 {
   #ifdef CBMC
-  int __countL1 = 0;
+  int __count_31_30 = 0;
+  int __count_L31 = 0;
   #endif
-  
   int i;
   long int zl;
   zl = (long)(*bpl++) * (*dlt++);
-  for(i = 1 ; i < 6 ; i++)
+  for(i = 1 ; 
+    #ifdef CBMC
+    __count_L31++,
+    #endif
+  i < 6 ; i++) // 31
   {
+    #ifdef CBMC
+    __count_31_30++;
+    #endif
     zl += (long)(*bpl++) * (*dlt++);
   }
   return (int)(zl >> 14);
@@ -556,31 +599,63 @@ int
 quantl (int el,int detl)
 {
   #ifdef CBMC
-  int __countL1 = 0;
+  int __count_105_109 = 0;
+  int __count_106_107 = 0;
+  int __count_107_108 = 0;
+  int __count_111_113 = 0;
+  int __count_112_113 = 0;
+
+  int __count_L107 = 0;
+
+  // TODO: check
+  int did_break = 0;
   #endif
-  
   int ril,mil;
   long int wd,decis;
   wd = my_abs(el);
-  for(mil = 0 ; mil < 30 ; mil++) 
-  {
+  for(mil = 0 ; 
     #ifdef CBMC
-    __countL1++;
+    __count_L107++,
     #endif
+  mil < 30 ; mil++) // 107
+  {
     decis = (decis_levl[mil]*(long)detl) >> 15L;
-    if(wd <= decis)
+    if(wd <= decis) // 105
     { 
+      #ifdef CBMC
+      __count_105_109++;
+      did_break = 1;
+      #endif
+      // 109
       break;
     }
+    #ifdef CBMC
+    __count_106_107++;
+    #endif
   }
 
-  if (el >= 0) 
+  #ifdef CBMC
+  // exit without break
+  if(!did_break) {
+    __count_107_108++;
+  }
+  #endif
+
+  if (el >= 0) // 110
   {
+    // 111
     ril = quant26bt_pos[mil];
+    #ifdef CBMC
+    __count_111_113++;
+    #endif
   }
   else
   { 
+    // 112
     ril = quant26bt_neg[mil];
+    #ifdef CBMC
+    __count_112_113++;
+    #endif
   }
   return ril;
 }
@@ -589,39 +664,38 @@ int
 logscl (int il,int nbl)
 {
   #ifdef CBMC
-  int __edge_14_15 = 0;
-  int __edge_14_16 = 0;
-  int __edge_17_18 = 0;
-  int __edge_16_18 = 0;
+  int __count_14_15 = 0;
+  int __count_14_16 = 0;
+  int __count_16_18 = 0;
+  int __count_17_18 = 0;
   #endif
-
   long int wd;  
   wd = ((long)nbl * 127L) >> 7L; 
   nbl = (int)wd + wl_code_table[il >> 2];
-  if(nbl < 0)
+  if(nbl < 0) // 14
   {
     #ifdef CBMC
-    __edge_14_15++;
+    __count_14_15++;
     #endif
+    // 15
     nbl = 0;
   }
   #ifdef CBMC
-  else __edge_14_16++;
+  else __count_14_16++;
   #endif
   
-  if (nbl > 18432) 
+  if (nbl > 18432) // 16
   {
-    #ifdef CBMC
-    __edge_17_18++;
-    #endif
+    // 17
     nbl = 18432;
+    #ifdef CBMC
+    __count_17_18++;
+    #endif
   }
   #ifdef CBMC
-  else __edge_16_18++;
+  else __count_16_18++;
   #endif
   
-  #ifdef CBMC
-  #endif
   
   return nbl;
 }
@@ -639,78 +713,168 @@ scalel (int nbl,int shift_constant)
 int 
 uppol2 (int al1,int al2,int plt,int plt1,int plt2)
 {
+  #ifdef CBMC
+  int __count_93_95 = 0;
+  int __count_94_95 = 0;
+  int __count_95_96 = 0;
+  int __count_95_97 = 0;
+  int __count_98_100 = 0;
+  int __count_99_100 = 0;
+  int __count_100_101 = 0;
+  int __count_100_102 = 0;
+  #endif
+
   long int wd2,wd4;
   int apl2;
   wd2 = 4L*(long)al1;
-  if ((long)plt*plt1 >= 0L)
+  if ((long)plt*plt1 >= 0L) // 93
   {
     wd2 = -wd2;
+    #ifdef CBMC
+    __count_94_95++;
+    #endif
   }   
+  #ifdef CBMC
+  else __count_93_95++;
+  #endif
+
   wd2 = wd2 >> 7;                  
-  if((long)plt*plt2 >= 0L) 
+  if((long)plt*plt2 >= 0L) // 95
   {
+    #ifdef CBMC
+    __count_95_96++;
+    #endif
+    // 96
     wd4 = wd2 + 128;    
   }
   else 
   {
+    #ifdef CBMC
+    __count_95_97++;
+    #endif
+    // 97
     wd4 = wd2 - 128;
   }
   apl2 = wd4 + (127L*(long)al2 >> 7L);
 
-  if (apl2 > 12288) 
+  if (apl2 > 12288) // 98
   {
    apl2 = 12288;
+   #ifdef CBMC
+   __count_99_100++;
+   #endif
   }
-  if (apl2 < -12288)
+  #ifdef CBMC
+  else __count_98_100++;
+  #endif
+
+  if (apl2 < -12288) // 100
   {
+    #ifdef CBMC
+    __count_100_101++;
+    #endif
    apl2 = -12288;
   }
+  #ifdef CBMC
+  else __count_100_102++;
+  #endif
   return apl2;
 }
 
 int 
 uppol1 (int al1,int apl2,int plt,int plt1)
 {
+  #ifdef CBMC
+  int __count_114_115 = 0;
+  int __count_114_116 = 0;
+  int __count_117_119 = 0;
+  int __count_118_119 = 0;
+  int __count_119_121 = 0;
+  int __count_120_121 = 0;
+  #endif
+
   long int wd2;
   int wd3,apl1;
   
   wd2 = ((long)al1*255L) >> 8L;  
-  if((long)plt*plt1 >= 0L) 
+  if((long)plt*plt1 >= 0L) // 114
   {
+    #ifdef CBMC
+    __count_114_115++;
+    #endif
+    // 115
     apl1 = (int)wd2 + 192;   
   }
   else 
   {
+    #ifdef CBMC
+    __count_114_116++;
+    #endif
+    // 116
     apl1 = (int)wd2 - 192;
   }
     
   wd3 = 15360 - apl2;          
-  if(apl1 > wd3)
+  if(apl1 > wd3) // 117
   {
     apl1 = wd3;
+    #ifdef CBMC
+    __count_118_119++;
+    #endif
   }
-  if(apl1 < -wd3)
+  #ifdef CBMC
+  else __count_117_119++;
+  #endif
+
+  if(apl1 < -wd3) // 119
   { 
     apl1 = -wd3;
+    #ifdef CBMC
+    __count_120_121++;
+    #endif
   }
+  #ifdef CBMC
+  else __count_119_121++;
+  #endif
   return apl1;
 }
 
 int 
 logsch (int ih,int nbh)
 {
+  #ifdef CBMC
+  int __count_33_35 = 0;
+  int __count_34_35 = 0;
+  int __count_35_37 = 0;
+  int __count_36_37 = 0;
+  #endif
+
   int wd;
   wd = ((long)nbh * 127L) >> 7L;       
   nbh = wd + wh_code_table[ih];
   
-  if (nbh < 0) 
+  if (nbh < 0) // 33
   {
+    // 34
     nbh = 0;
+    #ifdef CBMC
+    __count_34_35++;
+    #endif
   }
-  if (nbh > 22528)
+  #ifdef CBMC
+  else __count_33_35++;
+  #endif
+  if (nbh > 22528) // 35
   {
+    // 36
     nbh = 22528;
+    #ifdef CBMC
+    __count_36_37++;
+    #endif
   }  
+  #ifdef CBMC
+  else __count_35_37++;
+  #endif
   
   return nbh;
 }
@@ -719,32 +883,41 @@ void
 adpcm (int test_data[])
 {
   #ifdef CBMC
-  int __countL1 = 0;
-  int __countL2 = 0;
+  int __count_23_21 = 0;
+  int __count_26_27 = 0;
+  int __count_L27 = 0;
+  int __count_L23 = 0;
   #endif
-
   int compressed[2];
   int result[4];
 
   reset();
   
   int i;
-  for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2)
+  for(i = 0 ; 
+    #ifdef CBMC
+    __count_L23++,
+    #endif
+  i < TEST_VECTOR_LENGTH; i += 2) // 23
   {
     #ifdef CBMC
-    __countL1++;
+    __count_23_21++;
     #endif
     compressed[i/2] = encode(test_data[i],test_data[i+1]);
   }
   
-  for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2)
-  {
+  for(i = 0 ; 
     #ifdef CBMC
-    __countL2++;
+    __count_L27++,
     #endif
+  i < TEST_VECTOR_LENGTH; i += 2) // 27
+  {
     decode(compressed[i/2]);
     result[i] = xout1;
     result[i+1] = xout2;
+    #ifdef CBMC
+    __count_26_27++;
+    #endif
   }
 }
 
