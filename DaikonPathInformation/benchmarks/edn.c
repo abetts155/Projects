@@ -6,10 +6,21 @@
 void
 vec_mpy1 (short y[], const short x[], short scaler)
 {
+  #ifdef CBMC
+  int __count_10_9 = 0;
+  int __count_L10 = 0;
+  #endif
   long int i;
 
-  for (i = 0; i < 150; i++)
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L10++,
+    #endif
+  i < 150; i++) // 10
   {
+    #ifdef CBMC
+    __count_10_9++;
+    #endif
     y[i] += ((scaler * x[i]) >> 15);
   }
 }
@@ -20,11 +31,22 @@ vec_mpy1 (short y[], const short x[], short scaler)
 long int
 mac (const short *a, const short *b, long int sqr, long int *sum)
 {
+  #ifdef CBMC
+  int __count_31_30 = 0;
+  int __count_L31 = 0;
+  #endif
   long int i;
   long int dotp = *sum;
 
-  for (i = 0; i < 150; i++) 
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L31++,
+    #endif
+  i < 150; i++) // 31
   {
+    #ifdef CBMC
+    __count_31_30++;
+    #endif
     dotp += b[i] * a[i];
     sqr += b[i] * b[i];
   }
@@ -40,13 +62,29 @@ mac (const short *a, const short *b, long int sqr, long int *sum)
 void
 fir (const short array1[], const short coeff[], long int output[])
 {
+  #ifdef CBMC
+  int __count_4_3 = 0;
+  int __count_L6 = 0;
+  int __count_L4 = 0;
+  #endif
   long int i, j, sum;
 
-  for (i = 0; i < N - ORDER; i++) 
+  for (i = 0; 
+    #ifdef CBMC
+    __count_L6++,
+    #endif
+  i < N - ORDER; i++) // 6
   {
     sum = 0;
-    for (j = 0; j < ORDER; j++) 
+    for (j = 0; 
+      #ifdef CBMC
+      __count_L4++,
+      #endif
+    j < ORDER; j++) // 4
     {
+      #ifdef CBMC
+      __count_4_3++;
+      #endif
       sum += array1[i + j] * coeff[j];
     }
     output[i] = sum >> 15;
@@ -63,17 +101,33 @@ This reduces memory bandwidth and power.
 void
 fir_no_red_ld (const short x[], const short h[], long int y[])
 {
+  #ifdef CBMC
+  int __count_36_35 = 0;
+  int __count_L38 = 0;
+  int __count_L36 = 0;
+  #endif
   long int i, j;
   long int sum0, sum1;
   short x0, x1, h0, h1;
 
-  for (j = 0; j < 100; j += 2) 
+  for (j = 0; 
+    #ifdef CBMC
+    __count_L38++,
+    #endif
+  j < 100; j += 2) // 38
   {
     sum0 = 0;
     sum1 = 0;
     x0 = x[j];
-    for (i = 0; i < 32; i += 2) 
+    for (i = 0; 
+      #ifdef CBMC
+      __count_L36++,
+      #endif
+    i < 32; i += 2) // 36
     {
+      #ifdef CBMC
+      __count_36_35++;
+      #endif
       x1 = x[j + i + 1];
       h0 = h[i];
       sum0 += x0 * h0;
@@ -96,11 +150,22 @@ fir_no_red_ld (const short x[], const short h[], long int y[])
 long int
 latsynth (short b[], const short k[], long int n, long int f)
 {
+  #ifdef CBMC
+  int __count_14_13 = 0;
+  int __count_L14 = 0;
+  #endif
   long int i;
 
   f -= b[n - 1] * k[n - 1];
-  for (i = n - 2; i >= 0; i--) 
+  for (i = n - 2; 
+    #ifdef CBMC
+    __count_L14++,
+    #endif
+  i >= 0; i--)  // 14
   {
+    #ifdef CBMC
+    __count_14_13++;
+    #endif
     f -= b[i] * k[i];
     b[i + 1] = b[i] + ((k[i] * (f >> 16)) >> 16);
   }
@@ -115,13 +180,24 @@ latsynth (short b[], const short k[], long int n, long int f)
 void
 iir1 (const short *coefs, const short *input, long int *optr, long int *state)
 {
+  #ifdef CBMC
+  int __count_52_51 = 0;
+  int __count_L52 = 0;
+  #endif
   long int x;
   long int t;
   long int n;
 
   x = input[0];
-  for (n = 0; n < 50; n++) 
+  for (n = 0; 
+    #ifdef CBMC
+    __count_L52++,
+    #endif
+  n < 50; n++) // 52
   {
+    #ifdef CBMC
+    __count_52_51++;
+    #endif
     t = x + ((coefs[2] * state[0] + coefs[3] * state[1]) >> 15);
     x = t + ((coefs[0] * state[0] + coefs[1] * state[1]) >> 15);
     state[1] = state[0];
@@ -139,12 +215,24 @@ iir1 (const short *coefs, const short *input, long int *optr, long int *state)
 long int
 codebook (long int mask, long int bitchanged, long int numbasis, long int codeword, long int g, const short *d, short ddim, short theta)
 {
+  #ifdef CBMC
+  int __count_26_27 = 0;
+  int __count_L27 = 0;
+  #endif
+
   long int j;
   long int tmpMask;
 
   tmpMask = mask << 1;
-  for (j = bitchanged + 1; j <= numbasis; j++) 
+  for (j = bitchanged + 1; 
+    #ifdef CBMC
+    __count_L27++,
+    #endif
+  j <= numbasis; j++) // 27
   {
+    #ifdef CBMC
+    __count_26_27++;
+    #endif
 /*		
  * The following code is removed since it gave a memory access exception.
  * It is OK since the return value does not control the flow.
@@ -167,19 +255,38 @@ codebook (long int mask, long int bitchanged, long int numbasis, long int codewo
 void
 jpegdct(short *d, short *r)
 {
+  #ifdef CBMC
+  int __count_44_43 = 0;
+  int __count_L48 = 0;
+  int __count_L46 = 0;
+  int __count_L44 = 0;
+  #endif
   long int t[12];
   short i, j, k, m, n, p;
   
-  for (k = 1, m = 0, n = 13, p = 8; 
+  for (k = 1, m = 0, n = 13, p = 8;
+        #ifdef CBMC
+         __count_L48++,
+         #endif 
        k <= 8; 
-       k += 7, m += 3, n += 3, p -= 7, d -= 64) 
+       k += 7, m += 3, n += 3, p -= 7, d -= 64) // 48
   {
     for (i = 0; 
+      #ifdef CBMC
+      __count_L46++,
+      #endif
          i < 8; 
-         i++, d += p) 
+         i++, d += p) // 46
     {
-      for (j = 0; j < 4; j++) 
+      for (j = 0; 
+        #ifdef CBMC
+        __count_L44++,
+        #endif
+      j < 4; j++) // 44
       {
+        #ifdef CBMC
+        __count_44_43++;
+        #endif
         t[j] = d[k * j] + d[k * (7 - j)];
 	t[7 - j] = d[k * j] - d[k * (7 - j)];
       }
