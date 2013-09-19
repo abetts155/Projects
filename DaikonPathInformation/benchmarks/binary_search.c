@@ -100021,7 +100021,10 @@ int
 binary_search (int x)
 {
   #ifdef CBMC
-  int __countL1 = 0;
+  int __count_3_7 = 0;
+  int __count_4_5 = 0;
+  int __count_4_6 = 0;
+  int __count_L7 = 0;
   #endif
   
   int low = 0;
@@ -100029,24 +100032,36 @@ binary_search (int x)
   int fvalue = -1;
   int mid;
 
-  while (low <= up)
+  while (
+  #ifdef CBMC
+  __count_L7++,
+  #endif
+  low <= up) // 7
   {
-    #ifdef CBMC
-    __countL1++;
-    #endif
-    
     mid = (low + up) >> 1;
-    if (data[mid].key == x)
+    if (data[mid].key == x) // 2
     {
+      // 3
       up = low - 1;
       fvalue = data[mid].value;
+      #ifdef CBMC
+      __count_3_7++;
+      #endif
     }
-    else if (data[mid].key > x)
+    else if (data[mid].key > x) // 4
     {
+      #ifdef CBMC
+      __count_4_5++;
+      #endif
+      // 5
       up = mid - 1;
     }
     else
     {
+      #ifdef CBMC
+      __count_4_6++;
+      #endif
+      // 6
       low = mid + 1;
     }
   }
