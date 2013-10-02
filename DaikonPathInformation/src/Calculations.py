@@ -2,15 +2,15 @@ from Vertices import HeaderVertex
 from Edges import PathInformationEdge, PathInformationEdgeType
 from Trees import DepthFirstSearch
 import Debug
-import os, timeit
+import os, timeit, sys
 
 def getNewLine (num=1):
     return "\n" * num 
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename):
-        self.__ILPVanillaContextIDToWCET = {}
-        self.__CLPExtraContextIDToWCET = {}
+        self.__VanillaContextIDToWCET = {}
+        self.__ExtraContextIDToWCET = {}
         contextg = program.getContextGraph()
         dfs      = DepthFirstSearch(contextg, contextg.getRootID())
         for vertexID in dfs.getPostorder():
@@ -21,18 +21,24 @@ class WCETCalculation:
                 lnt   = program.getLNT(functionName)
                 pathg = program.getPathInfoGraph(functionName)
                 cfg   = program.getCFG(functionName)
-                ilp1  = CreateCFGILP(basepath, basename, data, self.__ILPVanillaContextIDToWCET, contextv, cfg, lnt)
+                ilp1  = CreateCFGILPVanilla(basepath, basename, data, self.__VanillaContextIDToWCET, contextv, cfg, lnt)
                 ilp1WCET, ilp1SolvingTime = ilp1.solve()
                 Debug.verboseMessage("ILP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp1WCET, ilp1SolvingTime))
-                self.__ILPVanillaContextIDToWCET[contextv.getVertexID()] = ilp1WCET
-                clp2         = CreateCFGCLPExtra(basepath, basename, data, self.__CLPExtraContextIDToWCET, contextv, cfg, lnt, pathg)
-                clp2WCET, clp2SolvingTime = clp2.solve()
-                self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = clp2WCET
-                Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2WCET, clp2SolvingTime))
+                self.__VanillaContextIDToWCET[contextv.getVertexID()] = ilp1WCET
+                if not pathg.executionDependencies() and not pathg.mutualInclusionPairs() and not pathg.mutualExclusionPairs():
+                    ilp2 = CreateCFGILPExtra(basepath, basename, data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
+                    ilp2WCET, ilp2SolvingTime = ilp2.solve()
+                    self.__ExtraContextIDToWCET[contextv.getVertexID()] = ilp2WCET
+                    Debug.verboseMessage("ILP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp2WCET, ilp2SolvingTime))
+                else:
+                    clp2 = CreateCFGCLPExtra(basepath, basename, data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
+                    clp2WCET, clp2SolvingTime = clp2.solve()
+                    self.__ExtraContextIDToWCET[contextv.getVertexID()] = clp2WCET
+                    Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2WCET, clp2SolvingTime))
             else:
                 Debug.verboseMessage("%s did not execute" % functionName)
-                self.__ILPVanillaContextIDToWCET[contextv.getVertexID()] = 0
-                self.__CLPExtraContextIDToWCET[contextv.getVertexID()] = 0
+                self.__VanillaContextIDToWCET[contextv.getVertexID()] = 0
+                self.__ExtraContextIDToWCET[contextv.getVertexID()] = 0
             
 class ECLIPSE:
     fileExtensions  = ['.res', '.vanilla', '.extra']
@@ -332,11 +338,11 @@ class CreateCFGCLPExtra (CreateCFGCLP):
         self._addStructuralConstraints(cfg)
         self._addRelativeCapacityConstraints(data, cfg, lnt)
         self._addExecutionCountDomains(data, pathg, cfg, lnt, True)
-        self.__addInfeasiblePathConstraints(data, pathg, cfg, lnt)
+        self._addInfeasiblePathConstraints(data, pathg, cfg, lnt)
         self._addEpilogue()
         self._addOutputPredicates()
 
-    def __addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
+    def _addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
         self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
         for v in pathg:
             if v.getUpperBound() > 0:
@@ -430,20 +436,9 @@ class ILP ():
                 time    = lexemes[5][:-1]
                 #self.solvingTime -= float(time)
         return self._wcet, self._solvingTime
-
-class CreateCFGILP (ILP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt):
-        ILP.__init__(self)
-        self.__createStructuralConstraints(cfg)
-        self.__createExecutionCountConstraints(data, cfg, lnt)
-        self.__createIntegerConstraint()
-        self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
-        self._filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
-        with open(self._filename, 'w') as ilpFile:
-            for constraint in self._constraints:
-                ilpFile.write(constraint)
-            
-    def __createStructuralConstraints (self, cfg):
+    
+class CreateCFGILP (ILP):                
+    def _createStructuralConstraints (self, cfg):
         for v in cfg:
             vertexID = v.getVertexID()
             comment  = LpSolve.getComment("Basic block = %d" % vertexID)
@@ -483,7 +478,7 @@ class CreateCFGILP (ILP):
             constraint2 += getNewLine(2) 
             self._constraints.append(constraint2)
     
-    def __createExecutionCountConstraints (self, data, cfg, lnt):
+    def _createExecutionCountConstraints (self, data, cfg, lnt):
         for level, vertices in lnt.levelIterator(True):
             for lntv in vertices:
                 if isinstance(lntv, HeaderVertex):
@@ -518,7 +513,7 @@ class CreateCFGILP (ILP):
                         constraint += getNewLine(2)
                         self._constraints.append(constraint)
                             
-    def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
+    def _createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
         num        = 1
         for var in self._variables:
@@ -542,7 +537,7 @@ class CreateCFGILP (ILP):
         constraint += getNewLine(2)
         self._constraints.insert(0, constraint) 
     
-    def __createIntegerConstraint (self):
+    def _createIntegerConstraint (self):
         constraint = LpSolve.int_ + " "
         num        = 1
         for var in self._variables:
@@ -552,4 +547,50 @@ class CreateCFGILP (ILP):
             num += 1
         constraint += LpSolve.semiColon + getNewLine()
         self._constraints.append(constraint)
+        
+    def _outputConstraints (self):
+        with open(self._filename, 'w') as ilpFile:
+            for constraint in self._constraints:
+                ilpFile.write(constraint)
+
+class CreateCFGILPVanilla (CreateCFGILP):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt):
+        CreateCFGILP.__init__(self)
+        self._filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        self._createStructuralConstraints(cfg)
+        self._createExecutionCountConstraints(data, cfg, lnt)
+        self._createIntegerConstraint()
+        self._createObjectiveFunction(data, contextWCETs, contextv, cfg)
+        self._outputConstraints()
+        
+class CreateCFGILPExtra (CreateCFGILP):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+        CreateCFGILP.__init__(self)
+        self._filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        self._createStructuralConstraints(cfg)
+        self._createExecutionCountConstraints(data, cfg, lnt)
+        self._createLowerAndUpperBoundConstraints(data, cfg, lnt, pathg)
+        self._createIntegerConstraint()
+        self._createObjectiveFunction(data, contextWCETs, contextv, cfg)
+        self._outputConstraints()
+        
+    def _createLowerAndUpperBoundConstraints (self, data, cfg, lnt, pathg):
+        comment = LpSolve.getComment("Infeasible path constraints")
+        self._constraints.append(comment)
+        for v in pathg:
+            edge        = v.getEdge()
+            constraint1 = LpSolve.getEdgeVariable(edge[0], edge[1])
+            constraint1 += LpSolve.gtOrEqual
+            constraint1 += str(v.getLowerBound())
+            constraint1 += LpSolve.semiColon;
+            constraint1 += getNewLine()
+            self._constraints.append(constraint1)
+            if v.getUpperBound() < sys.maxint:
+                constraint2 = LpSolve.getEdgeVariable(edge[0], edge[1])
+                constraint2 += LpSolve.ltOrEqual
+                constraint2 += str(v.getUpperBound())
+                constraint2 += LpSolve.semiColon;
+                constraint2 += getNewLine(2)
+                self._constraints.append(constraint2)        
+        
         
