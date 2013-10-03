@@ -71,8 +71,6 @@ if __name__ == "__main__":
         functionName = cfg.getName()
         lnt = Trees.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
-        pathg = program.getPathInfoGraph(functionName)
-        SuperBlocks.SuperBlockLoopAnalysis(cfg, lnt)
     program.generateAllUDrawFiles()
     if args.traces:
         Debug.verboseMessage("Generating dummy traces")

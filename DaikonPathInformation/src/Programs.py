@@ -190,7 +190,6 @@ class Program():
             pathg = self.getPathInfoGraph(functionName)
             UDrawGraph.makeUdrawFile(pathg, "%s.pathg%s" % (functionName, suffix))
             UDrawGraph.makeUdrawFile(pathg.getEnhancedCFG(), "%s.enhancedCFG%s" % (functionName, suffix))
-            UDrawGraph.makeUdrawFile(pathg.getDominatorGraph(), "%s.dominatorg%s" % (functionName, suffix))
         
     def getCallGraph (self):
         return self.__callg
@@ -215,13 +214,10 @@ class Program():
     
     def getPathInfoGraph (self, functionName):
         if functionName not in self.__pathgs:
-            cfg                = self.getCFG(functionName)
-            enhancedCFG        = EnhancedCFG(cfg)
-            predomTree         = Dominators(enhancedCFG, enhancedCFG.getEntryID())
-            reverseEnhancedCFG = enhancedCFG.getReverseGraph()
-            postdomTree        = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
-            dominatorg         = DominatorGraph(enhancedCFG, predomTree, postdomTree)
-            self.__pathgs[functionName] = PathInformationGraph(enhancedCFG, dominatorg)
+            cfg = self.getCFG(functionName)
+            lnt = self.getLNT(functionName)
+            enhancedCFG = EnhancedCFG(cfg)
+            self.__pathgs[functionName] = PathInformationGraph(cfg, lnt, enhancedCFG)
         return self.__pathgs[functionName]
 
     def getLNT (self, functionName):
