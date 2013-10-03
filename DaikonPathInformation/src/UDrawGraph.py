@@ -1,4 +1,4 @@
-import Programs, CFGs, Trees, Vertices
+import Programs, CFGs, Trees, Vertices, SuperBlocks
 from Vertices import CFGEdge
 from Edges import PathInformationEdgeType
 
@@ -83,7 +83,7 @@ def makeUdrawFile (g, fileNamePrefix):
                     vertexID = v.getVertexID()
                     if vertexID != g.getEntryID():
                         writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
-            elif isinstance(g, CFGs.PathInformationGraph):
+            elif isinstance(g, SuperBlocks.PathInformationGraph):
                 bidirectionalEdges = {}
                 for v in g:
                     vertexID = v.getVertexID()

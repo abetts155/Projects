@@ -48,7 +48,7 @@ def commandLine ():
         
 if __name__ == "__main__":
     import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, Utils, Calculations
+    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, Utils, Calculations, SuperBlocks
     
     args               = commandLine()
     Debug.verbose      = args.verbose
@@ -72,6 +72,7 @@ if __name__ == "__main__":
         lnt = Trees.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
         pathg = program.getPathInfoGraph(functionName)
+        SuperBlocks.SuperBlockLoopAnalysis(cfg, lnt)
     program.generateAllUDrawFiles()
     if args.traces:
         Debug.verboseMessage("Generating dummy traces")

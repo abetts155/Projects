@@ -1,6 +1,6 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import TreeVertex, HeaderVertex, dummyVertexID, BasicBlock
-import Debug, CFGs
+import Debug, CFGs, Utils
 
 class Tree (DirectedGraph):
     def __init__ (self):
@@ -243,6 +243,8 @@ class LengauerTarjan (Tree):
         self.__ancestor[wID] = vID            
         
 class DepthFirstSearch (Tree):
+    Colors = Utils.enum('WHITE', 'BLACK', 'GRAY')
+
     def __init__(self, directedg, rootID):
         assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
@@ -254,35 +256,65 @@ class DepthFirstSearch (Tree):
     def __initialise (self, directedg, rootID):
         self.__preorder  = []
         self.__postorder = []
-        self.__vertexID2PreID  = {}
         self.__vertexID2PostID = {}
+        self.__vertexID2PreID = {}
+        self.__vertexToColor = {}
         self.__backedges = []
         for v in directedg:
             vertexID = v.getVertexID()
             self.vertices[vertexID] = TreeVertex(vertexID)
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
-        self.setRootID(rootID)
+            self.__vertexToColor[vertexID] = DepthFirstSearch.Colors.WHITE
         self.__preorderID  = 1
-        self.__postorderID = 1        
-         
-    def __doSearch (self, directedg, vertexID):
-        self.__vertexID2PreID[vertexID] = self.__preorderID
-        self.__preorder.append(vertexID)
-        self.__preorderID += 1
-         
-        v = directedg.getVertex(vertexID)
-        for succID in v.getSuccessorIDs ():
-            if self.__vertexID2PreID[succID] == 0:
-                self.addEdge(vertexID, succID)
-                self.__doSearch(directedg, succID)
-            elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
-                pass
-            elif self.__vertexID2PostID[succID] == 0:
-                self.__backedges.append([vertexID, succID])
-        self.__vertexID2PostID[vertexID] = self.__postorderID
-        self.__postorder.append(vertexID)
-        self.__postorderID += 1
+        self.__postorderID = 1
+        self.setRootID(rootID)
+     
+    def __doSearch (self, directedg, rootID):
+        stack     = []
+        visitList = []
+        
+        stack.append(rootID)
+        visitList.append(rootID)
+        while stack:
+            vertexID = stack.pop()
+            self.__vertexID2PreID[vertexID] = self.__preorderID
+            self.__preorder.append(vertexID)
+            self.__preorderID += 1
+            self.__vertexToColor[vertexID] = DepthFirstSearch.Colors.GRAY
+            v = directedg.getVertex(vertexID)
+            for succID in v.getSuccessorIDs ():
+                if self.__vertexToColor[succID] == DepthFirstSearch.Colors.WHITE and succID not in stack:
+                    self.addEdge(vertexID, succID)
+                    stack.append(succID)
+                    visitList.append(succID)
+                elif self.__vertexToColor[succID] == DepthFirstSearch.Colors.GRAY:
+                    self.__backedges.append([vertexID, succID])
+        
+            while visitList and self.__vertexToColor[visitList[-1]] == DepthFirstSearch.Colors.GRAY:
+                poppedID = visitList.pop()
+                self.__vertexID2PostID[poppedID] = self.__postorderID
+                self.__postorder.append(poppedID)
+                self.__postorderID += 1
+                self.__vertexToColor[poppedID] = DepthFirstSearch.Colors.BLACK    
+      
+#      def __doSearch (self, directedg, vertexID):
+#         self.__vertexID2PreID[vertexID] = self.__preorderID
+#         self.__preorder.append(vertexID)
+#         self.__preorderID += 1
+#          
+#         v = directedg.getVertex(vertexID)
+#         for succID in v.getSuccessorIDs ():
+#             if self.__vertexID2PreID[succID] == 0:
+#                 self.addEdge(vertexID, succID)
+#                 self.__doSearch(directedg, succID)
+#             elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+#                 pass
+#             elif self.__vertexID2PostID[succID] == 0:
+#                 self.__backedges.append([vertexID, succID])
+#         self.__vertexID2PostID[vertexID] = self.__postorderID
+#         self.__postorder.append(vertexID)
+#         self.__postorderID += 1
         
     def getPreorder (self):
         return self.__preorder

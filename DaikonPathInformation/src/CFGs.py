@@ -1,8 +1,5 @@
 from DirectedGraphs import FlowGraph, DirectedGraph
-from Trees import DepthFirstSearch, Dominators
 from Vertices import dummyVertexID, Vertex, CFGEdge
-from SuperBlocks import DominatorGraph
-from Edges import PathInformationEdge, PathInformationEdgeType
 import Debug
 import copy
 
@@ -22,128 +19,6 @@ class Instruction ():
      
     def __str__(self):
         return "%s : %s" % (hex(self.__address), ' '.join(self.__instruction))
-    
-class PathInformationGraph (DirectedGraph):
-    def __init__ (self, cfg):
-        DirectedGraph.__init__(self)
-        self._name         = cfg.getName()
-        self.__enhancedCFG = EnhancedCFG(cfg)
-        predomTree         = Dominators(self.__enhancedCFG, self.__enhancedCFG.getEntryID())
-        reverseEnhancedCFG = self.__enhancedCFG.getReverseGraph()
-        postdomTree        = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
-        self.__dominatorg  = DominatorGraph(self.__enhancedCFG, predomTree, postdomTree)
-        monitoredCFGEdges  = self.__dominatorg.pinpointMonitoredCFGEdges()
-        reachability       = self.__computeReachability(self.__enhancedCFG, monitoredCFGEdges)
-        self.__monitoredEdges = {}
-        self.__addVertices(self.__enhancedCFG, monitoredCFGEdges)
-        self.__addEdges(reachability)
-        
-    def getEnhancedCFG (self):
-        return self.__enhancedCFG
-    
-    def getDominatorGraph (self):
-        return self.__dominatorg
-    
-    def numOfAlwaysExecuteEdges (self):
-        count = 0
-        for v in self:
-            if v.getLowerBound() > 0:
-                count += 1
-        return count
-    
-    def numOfNeverExecuteEdges (self):
-        count = 0
-        for v in self:
-            if v.getLowerBound() == 0 and v.getUpperBound() == 0:
-                count += 1
-        return count
-    
-    def mutualExclusionPairs (self):
-        edges = set([])
-        for v in self:
-            vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
-                succID = succe.getVertexID()
-                if succe.getType() == PathInformationEdgeType.EXCLUSION:
-                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
-                        edges.add((vertexID, succID))
-        return sorted(edges)
-    
-    def executionDependencies (self):
-        edges = set([])
-        for v in self:
-            vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
-                succID = succe.getVertexID()
-                succv  = self.getVertex(succID)
-                if succe.getType() == PathInformationEdgeType.INCLUSION and not succv.hasSuccessor(vertexID):
-                    edges.add((vertexID, succID))
-        return sorted(edges)
-    
-    def mutualInclusionPairs (self):
-        edges = set([])
-        for v in self:
-            vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
-                succID = succe.getVertexID()
-                succv  = self.getVertex(succID)
-                if succe.getType() == PathInformationEdgeType.INCLUSION and succv.hasSuccessor(vertexID):
-                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
-                        edges.add((vertexID, succID))
-        return sorted(edges)
-                            
-    def isMonitoredEdge (self, predID, succID):
-        if (predID, succID) in self.__monitoredEdges:
-            return self.__monitoredEdges[(predID, succID)]
-    
-    def __addVertices (self, enhancedCFG, monitoredCFGEdges):
-        for v in enhancedCFG:
-            if isinstance(v, CFGEdge) and v.getEdge() in monitoredCFGEdges:
-                copyv = copy.deepcopy(v)
-                copyv.removeAllSuccessors()
-                copyv.removeAllPredecessors()
-                self.vertices[copyv.getVertexID()] = copyv
-                self.__monitoredEdges[v.getEdge()] = copyv
-    
-    def __computeReachability (self, enhancedCFG, monitoredCFGEdges):
-        # Initialise data flow information
-        reachability = {}
-        for v in enhancedCFG:
-            reachability[v] = set([])
-        # Do data-flow analysis
-        dfs     = DepthFirstSearch(enhancedCFG, enhancedCFG.getEntryID())
-        changed = True
-        while changed:
-            changed = False
-            for vertexID in reversed(dfs.getPostorder()):
-                v       = enhancedCFG.getVertex(vertexID)
-                oldSize = len(reachability[v])
-                for predID in v.getPredecessorIDs():
-                    if predID != enhancedCFG.getExitID() and vertexID != enhancedCFG.getEntryID():
-                        predv = enhancedCFG.getVertex(predID)
-                        reachability[v].update(reachability[predv])
-                        if isinstance(predv, CFGEdge): 
-                            edge = predv.getEdge() 
-                            if edge in monitoredCFGEdges:
-                                reachability[v].add(predv)
-                if len(reachability[v]) != oldSize:
-                    changed = True
-        return reachability
-    
-    def __addEdges (self, reachabilityInformation):
-        for v1CFG, reachable in reachabilityInformation.iteritems():
-            vertexID1 = v1CFG.getVertexID()
-            if self.hasVertex(vertexID1):
-                for v2CFG in reachable:
-                    vertexID2 = v2CFG.getVertexID()
-                    # Avoid self-loops
-                    if vertexID1 != vertexID2:
-                        v1     = self.getVertex(vertexID1)
-                        v2     = self.getVertex(vertexID2)
-                        succe1 = PathInformationEdge(vertexID2, PathInformationEdgeType.INCLUSION)
-                        succe2 = PathInformationEdge(vertexID1, PathInformationEdgeType.INCLUSION)
-                        v1.addSuccessorEdge(succe1)
-                        v2.addSuccessorEdge(succe2)
 
 class EnhancedCFG (FlowGraph):
     def __init__ (self, cfg=None):
@@ -156,6 +31,10 @@ class EnhancedCFG (FlowGraph):
                 self.vertices[newVertexID] = newv
                 if newVertexID == cfg.getEntryID():
                     self._entryID = newVertexID
+                if newVertexID == cfg.getExitID():
+                    self._exitID = newVertexID
+            assert self._entryID != dummyVertexID
+            assert self._exitID != dummyVertexID
             for v in cfg:
                 vertexID = v.getVertexID()
                 for succID in v.getSuccessorIDs():
@@ -164,10 +43,6 @@ class EnhancedCFG (FlowGraph):
                     self.vertices[newVertexID] = newv
                     self.addEdge(vertexID, newVertexID)
                     self.addEdge(newVertexID, succID)
-                    if vertexID == cfg.getExitID():
-                        self._exitID = newVertexID
-            assert self._entryID != dummyVertexID
-            assert self._exitID != dummyVertexID
         
     def getReverseGraph (self):
         reverseg = EnhancedCFG() 

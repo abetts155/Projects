@@ -1,4 +1,5 @@
-from DirectedGraphs import DirectedGraph, FlowGraph
+from DirectedGraphs import DirectedGraph
+from CFGs import CFG
 from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock
 import Debug
 
@@ -719,16 +720,16 @@ class LoopNests (Tree):
     
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
-        headerID = headerv.getHeaderID()
-        flowg    = FlowGraph()
-        edges    = {}
-        worklist = []
+        headerID   = headerv.getHeaderID()
+        inducedCFG = CFG()
+        edges      = {}
+        worklist   = []
         worklist.extend(self.getLoopTails(headerID))
         while worklist:
             vertexID = worklist.pop()
-            if not flowg.hasVertex(vertexID):
+            if not inducedCFG.hasVertex(vertexID):
                 bb = BasicBlock(vertexID)
-                flowg.addVertex(bb)
+                inducedCFG.addVertex(bb)
                 # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])                        
                 originalv = self.__directedg.getVertex(vertexID)
@@ -747,27 +748,26 @@ class LoopNests (Tree):
         # Add edges in induced subgraph
         for vertexID, predIDs in edges.items():
             for predID in predIDs:
-                flowg.addEdge(predID, vertexID)
-        if not self.isDoWhileLoop(headerID): 
-            for sourceID, destinationIDs in self.__loopExits[headerID].iteritems():
-                for destinationID in destinationIDs:
-                    vertexID = flowg.getNextVertexID()
-                    edgev    = CFGEdge(vertexID, sourceID, destinationID)
-                    flowg.addVertex(edgev)
-                    flowg.addEdge(sourceID, vertexID)
-        # Add a dummy exit vertex to induced subgraph
-        exitID = flowg.getNextVertexID()
-        bb = BasicBlock(exitID)
-        flowg.addVertex(bb)
-        bb.setDummy()
-        # Add edges from tails and exits to dummy exit vertex
-        for v in flowg:
-            vertexID = v.getVertexID()
-            if v.numberOfSuccessors() == 0 and vertexID != exitID:
-                flowg.addEdge(vertexID, exitID)
-        # Set exit vertex of induced subgraph
-        flowg.setExitID(exitID)
+                inducedCFG.addEdge(predID, vertexID)
+        # Ensure the induced subgraph has a single exit point
+        exits = []
+        for v in inducedCFG:
+            if v.numberOfSuccessors() == 0:
+                exits.append(v)
+        assert exits
+        if len(exits) > 1:
+            # Add a dummy exit vertex to induced subgraph
+            exitID = inducedCFG.getNextVertexID()
+            bb = BasicBlock(exitID)
+            inducedCFG.addVertex(bb)
+            bb.setDummy()
+            for v in exits:
+                inducedCFG.addEdge(v.getVertexID(), exitID)
+            # Set exit vertex of induced subgraph
+            inducedCFG.setExitID(exitID)
+        else:
+            inducedCFG.setExitID(exits[0].getVertexID())
         # Set entry vertex of induced subgraph
-        flowg.setEntryID(headerv.getHeaderID())
-        return flowg
+        inducedCFG.setEntryID(headerv.getHeaderID())
+        return inducedCFG
 

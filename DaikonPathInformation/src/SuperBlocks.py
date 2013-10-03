@@ -1,7 +1,28 @@
 from DirectedGraphs import DirectedGraph
-from Vertices import Vertex, CFGEdge
+from CFGs import EnhancedCFG
+from Trees import Dominators, DepthFirstSearch
+from Vertices import Vertex, CFGEdge, HeaderVertex
+from Edges import PathInformationEdge, PathInformationEdgeType
 from Utils import enum
 import Debug
+import copy
+
+class SuperBlockLoopAnalysis:
+    def __init__ (self, cfg, lnt):
+        self.__cfg = cfg
+        self.__lnt = lnt
+        for level, vertices in lnt.levelIterator(True):
+            for v in vertices:
+                if isinstance(v, HeaderVertex):
+                    headerID = v.getHeaderID()
+                    Debug.debugMessage("Analysing header %d" % headerID, 1)
+                    forwardCFG         = lnt.induceSubgraph(v)
+                    enhancedCFG        = EnhancedCFG(forwardCFG)
+                    predomTree         = Dominators(enhancedCFG, enhancedCFG.getEntryID())
+                    reverseEnhancedCFG = enhancedCFG.getReverseGraph()
+                    postdomTree        = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
+                    dominatorg         = DominatorGraph(enhancedCFG, predomTree, postdomTree)
+                    pathg              = PathInformationGraph(enhancedCFG, dominatorg)
 
 # class SuperBlockGraph (DirectedGraph):
 #     def __init__ (self, icfg, lnt):
@@ -261,6 +282,126 @@ import Debug
 #         assert (predID, succID) in self.__monitoredEdges, "(%d, %d) is not a monitored CFG edge" % (predID, succID)
 #         return self.__monitoredEdges[(predID, succID)]
     
+
+class PathInformationGraph (DirectedGraph):
+    def __init__ (self, enhancedCFG, dominatorg):
+        DirectedGraph.__init__(self)
+        self._name         = enhancedCFG.getName()
+        self.__enhancedCFG = enhancedCFG
+        self.__dominatorg  = dominatorg
+        monitoredCFGEdges  = self.__dominatorg.pinpointMonitoredCFGEdges()
+        reachability       = self.__computeReachability(self.__enhancedCFG, monitoredCFGEdges)
+        self.__monitoredEdges = {}
+        self.__addVertices(self.__enhancedCFG, monitoredCFGEdges)
+        self.__addEdges(reachability)
+        
+    def getEnhancedCFG (self):
+        return self.__enhancedCFG
+    
+    def getDominatorGraph (self):
+        return self.__dominatorg
+    
+    def numOfAlwaysExecuteEdges (self):
+        count = 0
+        for v in self:
+            if v.getLowerBound() > 0:
+                count += 1
+        return count
+    
+    def numOfNeverExecuteEdges (self):
+        count = 0
+        for v in self:
+            if v.getLowerBound() == 0 and v.getUpperBound() == 0:
+                count += 1
+        return count
+    
+    def mutualExclusionPairs (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                if succe.getType() == PathInformationEdgeType.EXCLUSION:
+                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
+                        edges.add((vertexID, succID))
+        return sorted(edges)
+    
+    def executionDependencies (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                succv  = self.getVertex(succID)
+                if succe.getType() == PathInformationEdgeType.INCLUSION and not succv.hasSuccessor(vertexID):
+                    edges.add((vertexID, succID))
+        return sorted(edges)
+    
+    def mutualInclusionPairs (self):
+        edges = set([])
+        for v in self:
+            vertexID = v.getVertexID()
+            for succe in v.getSuccessorEdges():
+                succID = succe.getVertexID()
+                succv  = self.getVertex(succID)
+                if succe.getType() == PathInformationEdgeType.INCLUSION and succv.hasSuccessor(vertexID):
+                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
+                        edges.add((vertexID, succID))
+        return sorted(edges)
+                            
+    def isMonitoredEdge (self, predID, succID):
+        if (predID, succID) in self.__monitoredEdges:
+            return self.__monitoredEdges[(predID, succID)]
+    
+    def __addVertices (self, enhancedCFG, monitoredCFGEdges):
+        for v in enhancedCFG:
+            if isinstance(v, CFGEdge) and v.getEdge() in monitoredCFGEdges:
+                copyv = copy.deepcopy(v)
+                copyv.removeAllSuccessors()
+                copyv.removeAllPredecessors()
+                self.vertices[copyv.getVertexID()] = copyv
+                self.__monitoredEdges[v.getEdge()] = copyv
+    
+    def __computeReachability (self, enhancedCFG, monitoredCFGEdges):
+        # Initialise data flow information
+        reachability = {}
+        for v in enhancedCFG:
+            reachability[v] = set([])
+        # Do data-flow analysis
+        dfs     = DepthFirstSearch(enhancedCFG, enhancedCFG.getEntryID())
+        changed = True
+        while changed:
+            changed = False
+            for vertexID in reversed(dfs.getPostorder()):
+                v       = enhancedCFG.getVertex(vertexID)
+                oldSize = len(reachability[v])
+                for predID in v.getPredecessorIDs():
+                    if predID != enhancedCFG.getExitID() and vertexID != enhancedCFG.getEntryID():
+                        predv = enhancedCFG.getVertex(predID)
+                        reachability[v].update(reachability[predv])
+                        if isinstance(predv, CFGEdge): 
+                            edge = predv.getEdge() 
+                            if edge in monitoredCFGEdges:
+                                reachability[v].add(predv)
+                if len(reachability[v]) != oldSize:
+                    changed = True
+        return reachability
+    
+    def __addEdges (self, reachabilityInformation):
+        for v1CFG, reachable in reachabilityInformation.iteritems():
+            vertexID1 = v1CFG.getVertexID()
+            if self.hasVertex(vertexID1):
+                for v2CFG in reachable:
+                    vertexID2 = v2CFG.getVertexID()
+                    # Avoid self-loops
+                    if vertexID1 != vertexID2:
+                        v1     = self.getVertex(vertexID1)
+                        v2     = self.getVertex(vertexID2)
+                        succe1 = PathInformationEdge(vertexID2, PathInformationEdgeType.INCLUSION)
+                        succe2 = PathInformationEdge(vertexID1, PathInformationEdgeType.INCLUSION)
+                        v1.addSuccessorEdge(succe1)
+                        v2.addSuccessorEdge(succe2)    
+
 class DominatorGraph (DirectedGraph):
     def __init__ (self, enhancedCFG, predomTree, postdomTree):
         DirectedGraph.__init__(self)

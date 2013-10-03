@@ -1,7 +1,8 @@
 from DirectedGraphs import DirectedGraph
+from CFGs import EnhancedCFG
 from Vertices import CallGraphVertex, dummyVertexID
-from Trees import LoopNests, DepthFirstSearch
-from CFGs import PathInformationGraph
+from Trees import LoopNests, DepthFirstSearch, Dominators
+from SuperBlocks import PathInformationGraph, DominatorGraph
 from copy import deepcopy
 import Debug, UDrawGraph
 
@@ -214,8 +215,13 @@ class Program():
     
     def getPathInfoGraph (self, functionName):
         if functionName not in self.__pathgs:
-            cfg = self.getCFG(functionName)
-            self.__pathgs[functionName] = PathInformationGraph(cfg)
+            cfg                = self.getCFG(functionName)
+            enhancedCFG        = EnhancedCFG(cfg)
+            predomTree         = Dominators(enhancedCFG, enhancedCFG.getEntryID())
+            reverseEnhancedCFG = enhancedCFG.getReverseGraph()
+            postdomTree        = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
+            dominatorg         = DominatorGraph(enhancedCFG, predomTree, postdomTree)
+            self.__pathgs[functionName] = PathInformationGraph(enhancedCFG, dominatorg)
         return self.__pathgs[functionName]
 
     def getLNT (self, functionName):
