@@ -236,9 +236,9 @@ FUNCTION '%s'
         vertexID = pathv.getVertexID()
         self._executionCountsThisRun[pathg][vertexID] += 1
         if pathv.isEffectiveHeaderCounter():
-            headerID = pathv.getHeaderID()
-            self._relativeExecutionCountsThisRun[pathg][headerID] += 1
-            self._executionCountsThisRun[pathg][headerID] += 1
+            for headerID in pathv.getHeaderIDsForWhichToCount():
+                self._relativeExecutionCountsThisRun[pathg][headerID] += 1
+                self._executionCountsThisRun[pathg][headerID] += 1
         headerv = lnt.getVertex(lnt.getVertex(pathv.getHeaderID()).getParentID())
         self.__computeInnerRelativeBounds(pathg, lnt, headerv)
               
@@ -452,9 +452,10 @@ class Gem5Parser (TraceInformation):
                             self.__currentContextv = self.__contextg.getVertex(self.__contextg.getRootID())
                             self.__currentCFG      = self._program.getCFG(self.__currentContextv.getName())
                             self.__currentLNT      = self._program.getLNT(self.__currentContextv.getName())
-                            self.__currentPathg   = self._program.getPathInfoGraph(self.__currentContextv.getName())
+                            self.__currentPathg    = self._program.getPathInfoGraph(self.__currentContextv.getName())
                             self.__predBB          = None
                             self.__currentBB       = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
+                            self._analyseCFGVertex(self.__currentPathg, self.__currentLNT, self.__currentBB.getVertexID())     
                         if parsing:
                             self.__parseAddress (time, PC, runID)
                         if PC == self.__lastAddr:
@@ -465,7 +466,6 @@ class Gem5Parser (TraceInformation):
                             self._longestTime = max(self._longestTime, totalTime)
                             # Falsify conjectures
                             self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentPathg)
-                            self._endRun()
                     except ValueError:
                         Debug.exitMessage("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
@@ -496,7 +496,7 @@ class Gem5Parser (TraceInformation):
             elif self.__currentCFG.getExitID() == self.__currentBB.getVertexID():
                 self.__handleReturn()
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                self._analyseCFGEdge(self.__currentPathg, self.__predBB.getVertexID(), self.__currentBB.getVertexID()) 
+                self._analyseCFGEdge(self.__currentPathg, self.__currentLNT, self.__predBB.getVertexID(), self.__currentBB.getVertexID()) 
             else:
                 for succID in self.__currentBB.getSuccessorIDs():
                     succv = self.__currentCFG.getVertex(succID)
@@ -505,46 +505,9 @@ class Gem5Parser (TraceInformation):
                         self.__currentBB = succv
                         break
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
-                self._analyseCFGEdge(self.__currentPathg, self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
-            # Analyse loop bounds
-            if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()) and self.__currentBB.getVertexID() != self.__currentCFG.getEntryID():
-                # The header vertex in the LNT associated with this CFG loop header
-                headerv  = self.__currentLNT.getVertex(self.__currentLNT.getVertex(self.__currentBB.getVertexID()).getParentID())
-                parentv  = self.__currentLNT.getVertex(headerv.getParentID())
-                tupleKey = (self.__currentCFG.getName(), headerv.getHeaderID(), parentv.getHeaderID())
-                assert tupleKey in self._loopBounds 
-                assert tupleKey in self._loopBoundsInCurrentRun
-                self._loopBoundsInCurrentRun[tupleKey] += 1   
-                rootv = self.__currentLNT.getVertex(self.__currentLNT.getRootID())
-                if rootv.getVertexID() != parentv.getVertexID():
-                    tupleKey2 = (self.__currentCFG.getName(), headerv.getHeaderID(), rootv.getHeaderID())
-                    assert tupleKey2 in self._loopBounds 
-                    assert tupleKey2 in self._loopBoundsInCurrentRun
-                    self._loopBoundsInCurrentRun[tupleKey2] += 1   
-            elif self.__currentBB.getVertexID() == self.__currentCFG.getExitID():
-                rootv = self.__currentLNT.getVertex(self.__currentLNT.getRootID())
-                for level, vertices in self.__currentLNT.levelIterator(False):
-                    if level > 1:
-                        for v in vertices:
-                            if isinstance(v, HeaderVertex):
-                                tupleKey = (self.__currentCFG.getName(), v.getHeaderID(), rootv.getHeaderID())
-                                assert tupleKey in self._loopBounds 
-                                assert tupleKey in self._loopBoundsInCurrentRun
-                                self._loopBounds[tupleKey] = max(self._loopBounds[tupleKey], self._loopBoundsInCurrentRun[tupleKey])
-                                self._loopBoundsInCurrentRun[tupleKey] = 0
-            if self.__predBB:
-                # Check whether this edge is a loop-exit edge
-                # If it is the header ID of the exiting loop is returned
-                headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
-                if headerID:
-                    # The header vertex in the LNT associated with this CFG loop header
-                    headerv  = self.__currentLNT.getVertex(self.__currentLNT.getVertex(headerID).getParentID())
-                    parentv  = self.__currentLNT.getVertex(headerv.getParentID())
-                    tupleKey = (self.__currentCFG.getName(), headerv.getHeaderID(), parentv.getHeaderID())
-                    assert tupleKey in self._loopBounds and tupleKey in self._loopBoundsInCurrentRun
-                    self._loopBounds[tupleKey] = max(self._loopBounds[tupleKey], self._loopBoundsInCurrentRun[tupleKey])
-                    self._loopBoundsInCurrentRun[tupleKey] = 0 
-            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)    
+                self._analyseCFGEdge(self.__currentPathg, self.__currentLNT, self.__predBB.getVertexID(), self.__currentBB.getVertexID())     
+            Debug.debugMessage("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.getVertexID()), 10)   
+            self._analyseCFGVertex(self.__currentPathg, self.__currentLNT, self.__currentBB.getVertexID())     
             
     def __handleReturn (self):
         if self.__currentCFG.getExitID() == self.__currentBB.getVertexID() and self.__currentCFG != self.__rootCFG:

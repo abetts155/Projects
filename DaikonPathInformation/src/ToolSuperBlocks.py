@@ -60,13 +60,11 @@ if __name__ == "__main__":
     
     assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
     # Create the CFGs
-    Debug.verboseMessage("Reading in program file to do super block CFG analysis")
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
     UDrawGraph.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
-    Debug.verboseMessage("Analysing CFGs")
     totalSuperBlockProgramPoints = 0
     totalNaiveProgramPoints = 0
     for cfg in program.getCFGs():

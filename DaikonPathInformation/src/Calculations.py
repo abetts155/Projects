@@ -262,14 +262,6 @@ class CreateCFGCLP (CLP):
                             count += 1
                         self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(headerID), ECLIPSE.ltOrEqual, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine()) 
-        
-    def __getUpperCapacityBound (self, pathg, headerID):
-        upperCapacityBound = 0
-        for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
-            pathv = pathg.getProgramPointVertex(programPoint)
-            succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
-            upperCapacityBound = max(upperCapacityBound, succe.upper)
-        return upperCapacityBound
     
     def __getUpperBound (self, lnt, vertexID, headerID, headerToUpperCapacityBound):
         if lnt.isLoopHeader(vertexID):
@@ -280,7 +272,12 @@ class CreateCFGCLP (CLP):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         headerToUpperCapacityBound = {}
         for headerID in lnt.getHeaderIDs():
-            headerToUpperCapacityBound[headerID] = self.__getUpperCapacityBound(pathg, headerID)
+            upperCapacityBound = 0
+            for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
+                pathv = pathg.getProgramPointVertex(programPoint)
+                succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
+                upperCapacityBound = max(upperCapacityBound, succe.upper)
+            headerToUpperCapacityBound[headerID] = upperCapacityBound
         headerToUpperCapacityBound[cfg.getEntryID()] = 1
         
         # First add domains for basic blocks
@@ -317,10 +314,7 @@ class CreateCFGCLP (CLP):
                 headerBound2 = self.__getUpperBound(lnt, succID, headerv2.getHeaderID(), headerToUpperCapacityBound)
                 lowerCapacityBound = 0
                 upperCapacityBound = 0    
-                if headerv1 == headerv2:
-                    upperCapacityBound = headerBound1
-                else:
-                    upperCapacityBound = max(headerBound1, headerBound2)
+                upperCapacityBound = max(headerBound1, headerBound2)
                 if addPathInformation:
                     pathv = pathg.isMonitoredEdge(vertexID, succID)
                     if pathv:
@@ -607,13 +601,13 @@ class CreateCFGILPExtra (CreateCFGILP):
         CreateCFGILP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
-        self._createExecutionCountConstraints(data, cfg, lnt, pathg)
-        self._createLowerAndUpperBoundConstraints(data, cfg, pathg)
+        self._createExecutionCountConstraints(cfg, lnt, pathg)
+        self._createLowerAndUpperBoundConstraints(cfg, pathg)
         self._createIntegerConstraint()
         self._createObjectiveFunction(data, contextWCETs, contextv, cfg)
         self._outputConstraints()
         
-    def _createLowerAndUpperBoundConstraints (self, data, cfg, pathg):
+    def _createLowerAndUpperBoundConstraints (self, cfg, pathg):
         comment = LpSolve.getComment("Infeasible path constraints")
         self._constraints.append(comment)
         for pathv in pathg:
@@ -632,7 +626,7 @@ class CreateCFGILPExtra (CreateCFGILP):
                 constraint2 = LpSolve.getEdgeVariable(programPoint[0], programPoint[1])
             else:
                 constraint2 = LpSolve.getVertexVariable(programPoint)
-            constraint2 += LpSolve.gtOrEqual
+            constraint2 += LpSolve.ltOrEqual
             constraint2 += str(succe.upper)
             constraint2 += LpSolve.semiColon;
             constraint2 += getNewLine(2)

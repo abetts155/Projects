@@ -3,11 +3,11 @@ from Edges import Edge, CallGraphEdge, LoopBoundEdge, CapacityBoundEdge, PathInf
 dummyVertexID = -1
 
 class PathInformationVertex ():
-    def __init__ (self, vertexID, programPoint, headerID, isHeaderCounter):
+    def __init__ (self, vertexID, programPoint, headerID):
         self._vertexID = vertexID
         self._programPoint = programPoint
-        self._headerID = headerID 
-        self._isHeaderCounter = isHeaderCounter
+        self._headerID = headerID
+        self._counterForHeaderIDs = set([])
         self._successors = {}
         self._successors[PathInformationEdgeType.CAPACITY_BOUNDS] = []
         self._successors[PathInformationEdgeType.LOOP_BOUNDS]  = []
@@ -22,9 +22,16 @@ class PathInformationVertex ():
 
     def getHeaderID (self):
         return self._headerID
+        
+    def setCounterForHeaders (self, headerIDs):
+        assert isinstance(headerIDs, set)
+        self._counterForHeaderIDs = headerIDs
+        
+    def getHeaderIDsForWhichToCount (self):
+        return self._counterForHeaderIDs
     
     def isEffectiveHeaderCounter (self):
-        return self._isHeaderCounter
+        return len(self._counterForHeaderIDs) > 0
                
     def addSuccessorEdge (self, succID, edgeType):
         if edgeType == PathInformationEdgeType.LOOP_BOUNDS:
