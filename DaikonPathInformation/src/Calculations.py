@@ -248,7 +248,19 @@ class CreateCFGCLP (CLP):
                             pathv = pathg.getProgramPointVertex(programPoint)
                             succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
                             relativeBound = max(relativeBound, succe.relative)
-                        v = cfg.getVertex(headerID)
+                        v              = cfg.getVertex(headerID)
+                        loopBody       = lnt.getLoopBody(headerID)
+                        forwardSuccIDs = []
+                        for succID in v.getSuccessorIDs():
+                            if succID in loopBody:
+                                forwardSuccIDs.append((headerID, succID))
+                        lhs   = ""
+                        count = 1
+                        for edge in forwardSuccIDs:
+                            lhs += ECLIPSE.getEdgeCountVariable(edge[0], edge[1])
+                            if count < len(forwardSuccIDs):
+                                lhs += ECLIPSE.plus
+                            count += 1
                         forwardPredIDs = []
                         for prede in v.getPredecessorEdges():
                             if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
@@ -260,7 +272,7 @@ class CreateCFGCLP (CLP):
                             if count < len(forwardPredIDs):
                                 rhs += ECLIPSE.plus
                             count += 1
-                        self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(headerID), ECLIPSE.ltOrEqual, rhs, ECLIPSE.conjunct))
+                        self._lines.append("%s%s%s%s" % (lhs, ECLIPSE.ltOrEqual, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine()) 
     
     def __getUpperBound (self, lnt, vertexID, headerID, headerToUpperCapacityBound):
@@ -268,7 +280,7 @@ class CreateCFGCLP (CLP):
             return headerToUpperCapacityBound[vertexID]
         return headerToUpperCapacityBound[headerID]
     
-    def _addExecutionCountDomains (self, cfg, lnt, pathg, addPathInformation=False):
+    def _addExecutionCountDomains (self, cfg, lnt, pathg, addPathInformation):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
         headerToUpperCapacityBound = {}
         for headerID in lnt.getHeaderIDs():
@@ -298,7 +310,7 @@ class CreateCFGCLP (CLP):
                     lowerCapacityBound = succe.lower
                     upperCapacityBound = succe.upper
                 else:
-                    upperCapacityBound = self.__getUpperBound(lnt, vertexID, headerID, headerToUpperCapacityBound)                      
+                    upperCapacityBound = self.__getUpperBound(lnt, vertexID, headerID, headerToUpperCapacityBound)               
             line = "%s%s[%d..%d]%s" % (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, lowerCapacityBound, upperCapacityBound, ECLIPSE.conjunct)
             self._lines.append(line) 
                                 
@@ -345,7 +357,7 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
         self._addStructuralConstraints(cfg)
         self._addRelativeCapacityConstraints(cfg, lnt, pathg)
-        self._addExecutionCountDomains(cfg, lnt, pathg)
+        self._addExecutionCountDomains(cfg, lnt, pathg, False)
         self._addEpilogue()
         self._addOutputPredicates()
 
@@ -529,14 +541,27 @@ class CreateCFGILP (ILP):
                             pathv = pathg.getProgramPointVertex(programPoint)
                             succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
                             relativeBound = max(relativeBound, succe.relative)
-                        v = cfg.getVertex(headerID)
+                        # Edges entering the loop
+                        loopBody       = lnt.getLoopBody(headerID)
+                        v              = cfg.getVertex(headerID)
+                        forwardSuccIDs = []
+                        for succID in v.getSuccessorIDs():
+                            if succID in loopBody:
+                                forwardSuccIDs.append((headerID, succID))
+                        constraint = "" 
+                        count      = 1   
+                        for edge in forwardSuccIDs:
+                            constraint += "%s" % LpSolve.getEdgeVariable(edge[0], edge[1])
+                            if count < len(forwardSuccIDs):
+                                constraint += LpSolve.plus
+                            count += 1
+                        # Pre-header edges
                         forwardPredIDs = []
                         for prede in v.getPredecessorEdges():
                             if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
                                 forwardPredIDs.append((prede.getVertexID(), headerID))
-                        constraint = LpSolve.getVertexVariable(headerID)
-                        constraint += LpSolve.ltOrEqual
-                        count      = 1        
+                        constraint += LpSolve.ltOrEqual    
+                        count = 1
                         for edge in forwardPredIDs:
                             constraint += "%d %s" % (relativeBound, LpSolve.getEdgeVariable(edge[0], edge[1]))
                             if count < len(forwardPredIDs):

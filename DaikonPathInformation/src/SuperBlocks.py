@@ -27,13 +27,22 @@ class PathInformationGraph (DirectedGraph):
                     postdomTree           = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
                     dominatorg            = DominatorGraph(predomTree, postdomTree)
                     self.__monitoredLoopProgramPoints[headerID] = self.__pinpointMonitoredCFGEdges(headerID, dominatorg, lnt, cfg, enhancedCFG, bodyVertices, bodyEdges)
-                    self.__pinpointRelativeLoopBoundProgramPoints(treev, dominatorg, lnt, enhancedCFG)
+                    self.__pinpointRelativeLoopBoundProgramPoints(treev, dominatorg, lnt, enhancedCFG, reverseEnhancedCFG)
                     self.__monitoredProgramPoints.update(self.__monitoredLoopProgramPoints[headerID])
                     assert self.__monitoredLoopProgramPoints[headerID], "No program points identified for loop with header %d" % headerID
         reachability = self.__computeReachability(self.__enhancedCFG, self.__monitoredProgramPoints)
         self.__programPointToVertex = {}
         self.__addVertices()
         self.__addEdges(lnt, reachability)
+        
+    def __addHeaderIDs (self, lnt, enhancedCFG, monitoredProgramPoints, scc, programPoint):
+        for vertexID in scc:
+            enhancedv = enhancedCFG.getVertex(vertexID)
+            if isinstance(enhancedv, CFGEdge):
+                edge     = enhancedv.getEdge()
+                headerID = lnt.isLoopExitEdge(edge[0], edge[1])
+                if headerID:
+                    monitoredProgramPoints[programPoint].add(headerID)
     
     def __pinpointMonitoredCFGEdges (self, headerID, dominatorg, lnt, cfg, enhancedCFG, bodyVertices, bodyEdges): 
         self.__loopToSCCs[headerID] = StrongComponents(dominatorg)
@@ -68,41 +77,50 @@ class PathInformationGraph (DirectedGraph):
                                 break
                 assert programPoint
                 monitoredProgramPoints[programPoint] = set([])
-                for vertexID in scc:
-                    enhancedv = enhancedCFG.getVertex(vertexID)
-                    if not isinstance(enhancedv, CFGEdge):
-                        if lnt.isLoopHeader(vertexID) and headerID != vertexID:
-                            monitoredProgramPoints[programPoint].add(vertexID)
-        if headerID == cfg.getEntryID():
+                self.__addHeaderIDs(lnt, enhancedCFG, monitoredProgramPoints, scc, programPoint)         
+        if headerID == cfg.getEntryID() and cfg.getExitID() not in monitoredProgramPoints:
             # Ensure that the exit vertex is always an analysed program point
-            monitoredProgramPoints[cfg.getExitID()] = set([])
+            exitID = cfg.getExitID()
+            monitoredProgramPoints[exitID] = set([])
         return monitoredProgramPoints
     
-    def __pinpointRelativeLoopBoundProgramPoints (self, headerv, dominatorg, lnt, enhancedCFG):
+    def __doVisit (self, targetID, headerID, enhancedCFG):
+        added   = set([])
+        visited = set([])
+        stack   = []
+        stack.append(targetID)
+        while stack:
+            vertexID = stack.pop()
+            visited.add(vertexID)
+            enhancedv = enhancedCFG.getVertex(vertexID)
+            if isinstance(enhancedv, CFGEdge):
+                programPoint = enhancedv.getEdge()
+            else:
+                programPoint = vertexID
+            if programPoint in self.__monitoredLoopProgramPoints[headerID]:
+                self.__monitoredLoopProgramPoints[headerID][programPoint].add(targetID)
+                added.add(programPoint)
+            else:
+                for succID in enhancedv.getSuccessorIDs():
+                    if succID not in visited:
+                        stack.append(succID)
+        return added
+    
+    def __pinpointRelativeLoopBoundProgramPoints (self, headerv, dominatorg, lnt, enhancedCFG, reverseEnhancedCFG):
         headerID = headerv.getHeaderID()
-        # Now work out which program points in this region will contribute to relative bound
+        # Work out which program points in this loop region will contribute to the relative bound
         if headerv.getLevel() > 0:
-            headerID = headerv.getHeaderID() 
-            self.__effectiveLoopCounters[headerID] = set([])
-            stack   = []
-            visited = set([])
-            stack.append(headerID)
-            while stack:
-                vertexID = stack.pop()
-                visited.add(vertexID)
-                enhancedv = enhancedCFG.getVertex(vertexID)
-                if isinstance(enhancedv, CFGEdge):
-                    programPoint = enhancedv.getEdge()
-                else:
-                    programPoint = vertexID
-                if programPoint in self.__monitoredLoopProgramPoints[headerID]:
-                    self.__monitoredLoopProgramPoints[headerID][programPoint].add(headerID)
-                    self.__effectiveLoopCounters[headerID].add(programPoint)
-                else:
-                    for succID in enhancedv.getSuccessorIDs():
-                        if succID not in visited:
-                            stack.append(succID)
+            self.__doVisit(headerID, headerID, enhancedCFG)           
         
+        for succID in headerv.getSuccessorIDs():
+            succv = lnt.getVertex(succID)
+            if isinstance(succv, HeaderVertex):
+                innerHeaderID = succv.getHeaderID()
+                added = self.__doVisit(innerHeaderID, headerID, enhancedCFG)
+                if not added:
+                    added = self.__doVisit(innerHeaderID, headerID, reverseEnhancedCFG) 
+                    assert added                        
+                
     def getEnhancedCFG (self):
         return self.__enhancedCFG
     

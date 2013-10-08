@@ -163,8 +163,6 @@ class TraceInformation:
                     Debug.debugMessage("New conjecture: %s and %s are MUTUALLY EXCLUSIVE" % (v.__str__(), succv.__str__()), 1)
         
         for headerID in lnt.getHeaderIDs():
-            headerv = lnt.getVertex(lnt.getVertex(headerID).getParentID())
-            self.__computeInnerRelativeBounds(pathg, lnt, headerv)
             programPoint   = list(pathg.getLoopMonitoredProgramPoints(headerID))[0]
             pathv          = pathg.getProgramPointVertex(programPoint)
             succe          = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
@@ -218,7 +216,7 @@ FUNCTION '%s'
             self._executionTimes[tupleKey] *= pow(10,-3)
         self._longestTime *= pow(10,-3)
         
-    def __computeInnerRelativeBounds (self, pathg, lnt, headerv):
+    def __computeInnerRelativeBounds (self, pathg, lnt, pathv, headerv):
         for succID in headerv.getSuccessorIDs():
             succv = lnt.getVertex(succID)
             if isinstance(succv, HeaderVertex):
@@ -231,7 +229,7 @@ FUNCTION '%s'
                     Debug.debugMessage("Falsifying conjecture that %d executes at most %d times relative to its innermost enclosing loop. Found %d instead"  % (innerHeaderID, succe.relative, executionCount), 1)
                     succe.relative = executionCount
                 self._relativeExecutionCountsThisRun[pathg][innerHeaderID] = 0
-        
+    
     def __analyseProgramPoint (self, pathg, lnt, pathv):
         vertexID = pathv.getVertexID()
         self._executionCountsThisRun[pathg][vertexID] += 1
@@ -240,7 +238,7 @@ FUNCTION '%s'
                 self._relativeExecutionCountsThisRun[pathg][headerID] += 1
                 self._executionCountsThisRun[pathg][headerID] += 1
         headerv = lnt.getVertex(lnt.getVertex(pathv.getHeaderID()).getParentID())
-        self.__computeInnerRelativeBounds(pathg, lnt, headerv)
+        self.__computeInnerRelativeBounds(pathg, lnt, pathv, headerv)
               
     def _analyseCFGVertex (self, pathg, lnt, vertexID):
         pathv = pathg.isMonitoredVertex(vertexID)
