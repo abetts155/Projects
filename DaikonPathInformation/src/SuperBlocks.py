@@ -1,50 +1,97 @@
 from DirectedGraphs import DirectedGraph
 from CFGs import EnhancedCFG
 from Trees import Dominators, DepthFirstSearch
-from Vertices import Vertex, CFGEdge, HeaderVertex
-from Edges import PathInformationEdge, PathInformationEdgeType
+from Vertices import Vertex, CFGEdge, HeaderVertex, PathInformationVertex
+from Edges import PathInformationEdgeType
 from Utils import enum
 import Debug
-import copy
 
 class PathInformationGraph (DirectedGraph):
     def __init__ (self, cfg, lnt, enhancedCFG):
         DirectedGraph.__init__(self)
-        self._name         = cfg.getName()
-        self.__enhancedCFG = enhancedCFG
-        monitoredCFGEdges = set([])
+        self._name                        = cfg.getName()
+        self.__enhancedCFG                = enhancedCFG
+        self.__monitoredLoopProgramPoints = {}
+        self.__effectiveLoopCounters      = {}
+        self.__monitoredProgramPoints     = set([])
         for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, HeaderVertex):
-                    headerID = v.getHeaderID()
+            for treev in vertices:
+                if isinstance(treev, HeaderVertex):
+                    headerID = treev.getHeaderID()
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    forwardCFG         = lnt.induceSubgraph(v)
-                    enhancedCFG        = EnhancedCFG(forwardCFG)
-                    predomTree         = Dominators(enhancedCFG, enhancedCFG.getEntryID())
-                    reverseEnhancedCFG = enhancedCFG.getReverseGraph()
-                    postdomTree        = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
-                    dominatorg         = DominatorGraph(headerID, enhancedCFG, predomTree, postdomTree)
-                    monitoredLoopEdges = dominatorg.pinpointMonitoredCFGEdges(cfg.getEntryID())
-                    monitoredCFGEdges.update(monitoredLoopEdges)        
-        reachability = self.__computeReachability(self.__enhancedCFG, monitoredCFGEdges)
-        self.__monitoredEdges = {}
-        self.__addVertices(self.__enhancedCFG, monitoredCFGEdges)
-        self.__addEdges(reachability)
+                    forwardCFG, bodyVertices, bodyEdges = lnt.induceSubgraph(treev)
+                    enhancedCFG           = EnhancedCFG(forwardCFG)
+                    predomTree            = Dominators(enhancedCFG, enhancedCFG.getEntryID())
+                    reverseEnhancedCFG    = enhancedCFG.getReverseGraph()
+                    postdomTree           = Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
+                    dominatorg            = DominatorGraph(predomTree, postdomTree)
+                    self.__monitoredLoopProgramPoints[headerID] = dominatorg.pinpointMonitoredCFGEdges(enhancedCFG, bodyVertices, bodyEdges)
+                    if headerID == cfg.getEntryID():
+                        # Ensure that the exit vertex is always an analysed program point
+                        self.__monitoredLoopProgramPoints[headerID][cfg.getExitID()] = False
+                    self.__pinpointRelativeLoopBoundProgramPoints(treev, enhancedCFG)
+                    self.__monitoredProgramPoints.update(self.__monitoredLoopProgramPoints[headerID])
+                    assert self.__monitoredLoopProgramPoints[headerID], "No program points identified for loop with header %d" % headerID
+        print self.__monitoredProgramPoints
+        reachability = self.__computeReachability(self.__enhancedCFG, self.__monitoredProgramPoints)
+        self.__programPointToVertex = {}
+        self.__addVertices()
+        self.__addEdges(lnt, reachability)
+    
+    def __pinpointRelativeLoopBoundProgramPoints (self, headerv, enhancedCFG):
+        # Now work out which program points in this region will contribute to relative bound
+        if headerv.getLevel() > 0:
+            headerID = headerv.getHeaderID() 
+            self.__effectiveLoopCounters[headerID] = set([])
+            stack    = []
+            visited  = set([])
+            stack.append(headerID)
+            while stack:
+                vertexID = stack.pop()
+                visited.add(vertexID)
+                enhancedv = enhancedCFG.getVertex(vertexID)
+                if isinstance(enhancedv, CFGEdge):
+                    programPoint = enhancedv.getEdge()
+                else:
+                    programPoint = vertexID
+                if programPoint in self.__monitoredLoopProgramPoints[headerID]:
+                    self.__monitoredLoopProgramPoints[headerID][programPoint] = True
+                    self.__effectiveLoopCounters[headerID].add(programPoint)
+                else:
+                    for succID in enhancedv.getSuccessorIDs():
+                        if succID not in visited:
+                            stack.append(succID)
         
     def getEnhancedCFG (self):
         return self.__enhancedCFG
     
+    def getLoopMonitoredProgramPoints (self, headerID):
+        assert headerID in self.__monitoredLoopProgramPoints, "No program points found for header %d" % headerID
+        return self.__monitoredLoopProgramPoints[headerID]
+    
+    def getMonitoredProgramPoints (self):
+        return self.__monitoredProgramPoints
+    
+    def isExecutedFunction (self):
+        for v in self:
+            succe = v.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+            if succe.upper > 0:
+                return True
+        return False
+    
     def numOfAlwaysExecuteEdges (self):
         count = 0
         for v in self:
-            if v.getLowerBound() > 0:
+            succe = v.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+            if succe.lower > 0:
                 count += 1
         return count
     
     def numOfNeverExecuteEdges (self):
         count = 0
         for v in self:
-            if v.getLowerBound() == 0 and v.getUpperBound() == 0:
+            succe = v.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+            if succe.lower == 0 and succe.upper == 0:
                 count += 1
         return count
     
@@ -52,21 +99,20 @@ class PathInformationGraph (DirectedGraph):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
+            for succe in v.getSuccessorEdges(PathInformationEdgeType.EXCLUSION):
                 succID = succe.getVertexID()
-                if succe.getType() == PathInformationEdgeType.EXCLUSION:
-                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
-                        edges.add((vertexID, succID))
+                if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
+                    edges.add((vertexID, succID))
         return sorted(edges)
     
     def executionDependencies (self):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
+            for succe in v.getSuccessorEdges(PathInformationEdgeType.INCLUSION):
                 succID = succe.getVertexID()
                 succv  = self.getVertex(succID)
-                if succe.getType() == PathInformationEdgeType.INCLUSION and not succv.hasSuccessor(vertexID):
+                if not succv.hasSuccessorEdge(vertexID, PathInformationEdgeType.INCLUSION):
                     edges.add((vertexID, succID))
         return sorted(edges)
     
@@ -74,28 +120,41 @@ class PathInformationGraph (DirectedGraph):
         edges = set([])
         for v in self:
             vertexID = v.getVertexID()
-            for succe in v.getSuccessorEdges():
+            for succe in v.getSuccessorEdges(PathInformationEdgeType.INCLUSION):
                 succID = succe.getVertexID()
                 succv  = self.getVertex(succID)
-                if succe.getType() == PathInformationEdgeType.INCLUSION and succv.hasSuccessor(vertexID):
+                if succv.hasSuccessorEdge(vertexID, PathInformationEdgeType.INCLUSION):
                     if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
                         edges.add((vertexID, succID))
         return sorted(edges)
+    
+    def isMonitoredVertex (self, vertexID):
+        if vertexID in self.__programPointToVertex:
+            return self.__programPointToVertex[vertexID]
                             
     def isMonitoredEdge (self, predID, succID):
-        if (predID, succID) in self.__monitoredEdges:
-            return self.__monitoredEdges[(predID, succID)]
+        if (predID, succID) in self.__programPointToVertex:
+            return self.__programPointToVertex[(predID, succID)]
     
-    def __addVertices (self, enhancedCFG, monitoredCFGEdges):
-        for v in enhancedCFG:
-            if isinstance(v, CFGEdge) and v.getEdge() in monitoredCFGEdges:
-                copyv = copy.deepcopy(v)
-                copyv.removeAllSuccessors()
-                copyv.removeAllPredecessors()
-                self.vertices[copyv.getVertexID()] = copyv
-                self.__monitoredEdges[v.getEdge()] = copyv
+    def getProgramPointVertex (self, programPoint):
+        return self.__programPointToVertex[programPoint]
     
-    def __computeReachability (self, enhancedCFG, monitoredCFGEdges):
+    def __addVertices (self):
+        for headerID, programPoints in self.__monitoredLoopProgramPoints.iteritems():
+            for programPoint in programPoints.keys():
+                if isinstance(programPoint, tuple):
+                    enhancedv = self.__enhancedCFG.getVertexForCFGEdge(programPoint)
+                    vertexID  = enhancedv.getVertexID()
+                    pathv     = PathInformationVertex(vertexID, programPoint, headerID, programPoints[programPoint])
+                    self.vertices[vertexID] = pathv
+                    self.__programPointToVertex[programPoint] = pathv
+                else:
+                    vertexID  = programPoint
+                    pathv     = PathInformationVertex(vertexID, programPoint, headerID, programPoints[programPoint])
+                    self.vertices[vertexID] = pathv
+                    self.__programPointToVertex[vertexID] = pathv
+    
+    def __computeReachability (self, enhancedCFG, monitoredProgramPoints):
         # Initialise data flow information
         reachability = {}
         for v in enhancedCFG:
@@ -112,34 +171,36 @@ class PathInformationGraph (DirectedGraph):
                     if predID != enhancedCFG.getExitID() and vertexID != enhancedCFG.getEntryID():
                         predv = enhancedCFG.getVertex(predID)
                         reachability[v].update(reachability[predv])
+                        if isinstance(predv, Vertex): 
+                            if predID in monitoredProgramPoints:
+                                reachability[v].add(predv)
                         if isinstance(predv, CFGEdge): 
                             edge = predv.getEdge() 
-                            if edge in monitoredCFGEdges:
+                            if edge in monitoredProgramPoints:
                                 reachability[v].add(predv)
                 if len(reachability[v]) != oldSize:
                     changed = True
         return reachability
     
-    def __addEdges (self, reachabilityInformation):
+    def __addEdges (self, lnt, reachabilityInformation):
         for v1CFG, reachable in reachabilityInformation.iteritems():
             vertexID1 = v1CFG.getVertexID()
             if self.hasVertex(vertexID1):
+                # Add capacity-bound edge
+                v1 = self.getVertex(vertexID1)
+                v1.addSuccessorEdge(vertexID1, PathInformationEdgeType.CAPACITY_BOUNDS)
+                v1.addSuccessorEdge(vertexID1, PathInformationEdgeType.LOOP_BOUNDS)
                 for v2CFG in reachable:
                     vertexID2 = v2CFG.getVertexID()
-                    # Avoid self-loops
+                    # Add mutual-inclusion edge
                     if vertexID1 != vertexID2:
-                        v1     = self.getVertex(vertexID1)
-                        v2     = self.getVertex(vertexID2)
-                        succe1 = PathInformationEdge(vertexID2, PathInformationEdgeType.INCLUSION)
-                        succe2 = PathInformationEdge(vertexID1, PathInformationEdgeType.INCLUSION)
-                        v1.addSuccessorEdge(succe1)
-                        v2.addSuccessorEdge(succe2)    
+                        v2 = self.getVertex(vertexID2)
+                        v1.addSuccessorEdge(vertexID2, PathInformationEdgeType.INCLUSION)
+                        v2.addSuccessorEdge(vertexID1, PathInformationEdgeType.INCLUSION)    
 
 class DominatorGraph (DirectedGraph):
-    def __init__ (self, headerID, enhancedCFG, predomTree, postdomTree):
+    def __init__ (self, predomTree, postdomTree):
         DirectedGraph.__init__(self)
-        self._headerID     = headerID
-        self.__enhancedCFG = enhancedCFG
         self.__addVertices (predomTree, postdomTree)
         self.__addEdges (predomTree, postdomTree)
 
@@ -164,27 +225,34 @@ class DominatorGraph (DirectedGraph):
                 if not self.getVertex(vertexID).hasPredecessor(parentID):
                     self.addEdge(v.getParentID(), vertexID)
     
-    def pinpointMonitoredCFGEdges (self, entryID):
-        monitoredCFGEdges = set([])
+    def pinpointMonitoredCFGEdges (self, enhancedCFG, bodyVertices, bodyEdges):
+        monitoredProgramPoints = {}
         sccs = StrongComponents(self)
-        # Avoid the case where everything executes
-        if sccs.numberOfSCCs() > 1 and self._headerID != entryID:
-            for sccID in xrange(1, sccs.numberOfSCCs()+1):
-                scc           = sccs.getVertexIDs(sccID)
-                externalEdges = False
-                edgev         = None
+        for sccID in xrange(1, sccs.numberOfSCCs()+1):
+            scc           = sccs.getVertexIDs(sccID)
+            externalEdges = False
+            for vertexID in scc:
+                v = self.getVertex(vertexID)
+                for succID in v.getSuccessorIDs():
+                    if succID not in scc:
+                        externalEdges = True
+            if not externalEdges:
+                programPoint = None
                 for vertexID in scc:
-                    v         = self.getVertex(vertexID)
-                    enhancedv = self.__enhancedCFG.getVertex(vertexID)
-                    if isinstance(enhancedv, CFGEdge):
-                        edgev = enhancedv
-                    for succID in v.getSuccessorIDs():
-                        if succID not in scc:
-                            externalEdges = True
-                if not externalEdges:
-                    assert edgev
-                    monitoredCFGEdges.add(edgev.getEdge())
-        return monitoredCFGEdges
+                    enhancedv = enhancedCFG.getVertex(vertexID)
+                    if not isinstance(enhancedv, CFGEdge):
+                        bbID = enhancedv.getVertexID()
+                        if bbID in bodyVertices:
+                            programPoint = bbID
+                    else:
+                        edge = enhancedv.getEdge()
+                        if edge in bodyEdges:
+                            programPoint = edge
+                    if programPoint:
+                        break
+                assert programPoint
+                monitoredProgramPoints[programPoint] = False
+        return monitoredProgramPoints
 
 Colors = enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
 

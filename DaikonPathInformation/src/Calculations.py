@@ -16,12 +16,12 @@ class WCETCalculation:
         for vertexID in dfs.getPostorder():
             contextv     = contextg.getVertex(vertexID)
             functionName = contextv.getName()
-            if data.isExecutedFunction(functionName):
+            pathg        = program.getPathInfoGraph(functionName)
+            if pathg.isExecutedFunction():
                 Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
                 lnt   = program.getLNT(functionName)
-                pathg = program.getPathInfoGraph(functionName)
                 cfg   = program.getCFG(functionName)
-                ilp1  = CreateCFGILPVanilla(basepath, basename, data, self.__VanillaContextIDToWCET, contextv, cfg, lnt)
+                ilp1  = CreateCFGILPVanilla(basepath, basename, data, self.__VanillaContextIDToWCET, contextv, cfg, lnt, pathg)
                 ilp1WCET, ilp1SolvingTime = ilp1.solve()
                 Debug.verboseMessage("ILP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp1WCET, ilp1SolvingTime))
                 self.__VanillaContextIDToWCET[contextv.getVertexID()] = ilp1WCET
@@ -233,75 +233,102 @@ class CreateCFGCLP (CLP):
             self._lines.append("%s%s%s%s" % (lhs, ECLIPSE.equals, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
         
-    def _addRelativeCapacityConstraints (self, data, cfg, lnt):
+    def _addRelativeCapacityConstraints (self, cfg, lnt, pathg):
         self._lines.append(ECLIPSE.getComment("Relative capacity constraints"))
         for level, vertices in lnt.levelIterator(True):
             for treev in vertices:
                 if isinstance(treev, HeaderVertex):
                     headerID = treev.getHeaderID()
-                    self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))
+                    self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))    
                     if treev.getVertexID() == lnt.getRootID():
-                        self._lines.append("%s%s1%s" % (ECLIPSE.getEdgeCountVariable(cfg.getExitID(), cfg.getEntryID()), ECLIPSE.equals, ECLIPSE.conjunct))
+                        self._lines.append("%s%s%d%s" % (ECLIPSE.getEdgeCountVariable(cfg.getExitID(), cfg.getEntryID()), ECLIPSE.equals, 1, ECLIPSE.conjunct))
                     else:
+                        relativeBound = 0
+                        for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
+                            pathv = pathg.getProgramPointVertex(programPoint)
+                            succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
+                            relativeBound = max(relativeBound, succe.relative)
                         v = cfg.getVertex(headerID)
                         forwardPredIDs = []
                         for prede in v.getPredecessorEdges():
                             if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
                                 forwardPredIDs.append((prede.getVertexID(), headerID))
-                        parentv = lnt.getVertex(treev.getParentID())
-                        bound   = data.getLoopBound(cfg.getName(), headerID, parentv.getHeaderID())
                         rhs   = ""
                         count = 1
                         for edge in forwardPredIDs:
-                            rhs += "%d%s%s" % (bound, ECLIPSE.multiply, ECLIPSE.getEdgeCountVariable(edge[0], edge[1]))
+                            rhs += "%d%s%s" % (relativeBound, ECLIPSE.multiply, ECLIPSE.getEdgeCountVariable(edge[0], edge[1]))
                             if count < len(forwardPredIDs):
                                 rhs += ECLIPSE.plus
                             count += 1
                         self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(headerID), ECLIPSE.ltOrEqual, rhs, ECLIPSE.conjunct))
         self._lines.append(getNewLine()) 
+        
+    def __getUpperCapacityBound (self, pathg, headerID):
+        upperCapacityBound = 0
+        for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
+            pathv = pathg.getProgramPointVertex(programPoint)
+            succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
+            upperCapacityBound = max(upperCapacityBound, succe.upper)
+        return upperCapacityBound
     
-    def _addExecutionCountDomains (self, data, pathg, cfg, lnt, addPathInformation=False):
+    def __getUpperBound (self, lnt, vertexID, headerID, headerToUpperCapacityBound):
+        if lnt.isLoopHeader(vertexID):
+            return headerToUpperCapacityBound[vertexID]
+        return headerToUpperCapacityBound[headerID]
+    
+    def _addExecutionCountDomains (self, cfg, lnt, pathg, addPathInformation=False):
         self._lines.append(ECLIPSE.getComment("Execution count domains"))
-        rootv = lnt.getVertex(lnt.getRootID())
+        headerToUpperCapacityBound = {}
+        for headerID in lnt.getHeaderIDs():
+            headerToUpperCapacityBound[headerID] = self.__getUpperCapacityBound(pathg, headerID)
+        headerToUpperCapacityBound[cfg.getEntryID()] = 1
+        
         # First add domains for basic blocks
         for v in cfg:            
-            vertexID = v.getVertexID()
-            treev    = lnt.getVertex(vertexID)
-            headerv  = lnt.getVertex(treev.getParentID())
-            headerID = headerv.getHeaderID()
-            if headerID == cfg.getEntryID():
-                upperBound = 1
+            vertexID           = v.getVertexID()
+            treev              = lnt.getVertex(vertexID)
+            headerv            = lnt.getVertex(treev.getParentID())
+            headerID           = headerv.getHeaderID()
+            lowerCapacityBound = 0
+            upperCapacityBound = 0
+            if not addPathInformation:
+                lowerCapacityBound = 0
+                upperCapacityBound = self.__getUpperBound(lnt, vertexID, headerID, headerToUpperCapacityBound)
             else:
-                upperBound = data.getLoopBound(cfg.getName(), headerID, rootv.getHeaderID()) 
-            line = "%s%s[%d..%d]%s" % \
-            (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, 0, upperBound, ECLIPSE.conjunct)
-            self._lines.append(line)   
+                pathv = pathg.isMonitoredVertex(vertexID)
+                if pathv:
+                    succe = pathv.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+                    lowerCapacityBound = succe.lower
+                    upperCapacityBound = succe.upper
+                else:
+                    upperCapacityBound = self.__getUpperBound(lnt, vertexID, headerID, headerToUpperCapacityBound)                      
+            line = "%s%s[%d..%d]%s" % (ECLIPSE.getVertexCountVariable(vertexID), ECLIPSE.domainSep, lowerCapacityBound, upperCapacityBound, ECLIPSE.conjunct)
+            self._lines.append(line) 
                                 
         # Now add domains for edges
         for v in cfg:            
-            vertexID = v.getVertexID()
+            vertexID     = v.getVertexID()
+            treev1       = lnt.getVertex(vertexID)
+            headerv1     = lnt.getVertex(treev1.getParentID())    
+            headerBound1 = self.__getUpperBound(lnt, vertexID, headerv1.getHeaderID(), headerToUpperCapacityBound)
             for succID in v.getSuccessorIDs(): 
-                treev1     = lnt.getVertex(vertexID)
-                headerv1   = lnt.getVertex(treev1.getParentID())
-                treev2     = lnt.getVertex(succID)
-                headerv2   = lnt.getVertex(treev2.getParentID())  
-                lowerBound = 0            
+                treev2       = lnt.getVertex(succID)
+                headerv2     = lnt.getVertex(treev2.getParentID())  
+                headerBound2 = self.__getUpperBound(lnt, succID, headerv2.getHeaderID(), headerToUpperCapacityBound)
+                lowerCapacityBound = 0
+                upperCapacityBound = 0    
                 if headerv1 == headerv2:
-                    upperBound = data.getLoopBound(cfg.getName(), headerv1.getHeaderID(), rootv.getHeaderID())
+                    upperCapacityBound = headerBound1
                 else:
-                    rootv   = lnt.getVertex(lnt.getRootID())
-                    bound1 = data.getLoopBound(cfg.getName(), headerv1.getHeaderID(), rootv.getHeaderID())
-                    bound2 = data.getLoopBound(cfg.getName(), headerv2.getHeaderID(), rootv.getHeaderID())
-                    upperBound = max(bound1, bound2)
+                    upperCapacityBound = max(headerBound1, headerBound2)
                 if addPathInformation:
                     pathv = pathg.isMonitoredEdge(vertexID, succID)
                     if pathv:
-                        if pathv.getUpperBound() == 0:
-                            upperBound = 0
-                        else:
-                            lowerBound = pathv.getLowerBound()
+                        succe = pathv.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+                        lowerCapacityBound = succe.lower
+                        upperCapacityBound = succe.upper
                 line = "%s%s[%d..%d]%s" % \
-                (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSep, lowerBound, upperBound, ECLIPSE.conjunct)
+                (ECLIPSE.getEdgeCountVariable(vertexID, succID), ECLIPSE.domainSep, lowerCapacityBound, upperCapacityBound, ECLIPSE.conjunct)
                 self._lines.append(line)
         self._lines.append(getNewLine()) 
         
@@ -323,8 +350,8 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
         self._addStructuralConstraints(cfg)
-        self._addRelativeCapacityConstraints(data, cfg, lnt)
-        self._addExecutionCountDomains(data, pathg, cfg, lnt)
+        self._addRelativeCapacityConstraints(cfg, lnt, pathg)
+        self._addExecutionCountDomains(cfg, lnt, pathg)
         self._addEpilogue()
         self._addOutputPredicates()
 
@@ -336,32 +363,40 @@ class CreateCFGCLPExtra (CreateCFGCLP):
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
         self._addStructuralConstraints(cfg)
-        self._addRelativeCapacityConstraints(data, cfg, lnt)
-        self._addExecutionCountDomains(data, pathg, cfg, lnt, True)
-        self._addInfeasiblePathConstraints(data, pathg, cfg, lnt)
+        self._addRelativeCapacityConstraints(cfg, lnt, pathg)
+        self._addExecutionCountDomains(cfg, lnt, pathg, True)
+        self._addInfeasiblePathConstraints(cfg, lnt, pathg)
         self._addEpilogue()
         self._addOutputPredicates()
 
-    def _addInfeasiblePathConstraints (self, data, pathg, cfg, lnt):
+    def _addInfeasiblePathConstraints (self, cfg, lnt, pathg):
         self._lines.append(ECLIPSE.getComment("Infeasible path constraints"))
-        for v in pathg:
-            if v.getUpperBound() > 0:
-                edge1          = v.getEdge()
-                countVariable1 = ECLIPSE.getEdgeCountVariable(edge1[0], edge1[1])
-                for succID in v.getSuccessorIDs():
-                    succv          = pathg.getVertex(succID)
-                    succe          = v.getSuccessorEdge(succID)
-                    edge2          = succv.getEdge()
-                    countVariable2 = ECLIPSE.getEdgeCountVariable(edge2[0], edge2[1])
-                    assert isinstance(succe, PathInformationEdge)
-                    if succe.getType() == PathInformationEdgeType.INCLUSION:
-                        self._lines.append("%s%s0%s%s%s0%s" % \
-                                       (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.gt, ECLIPSE.conjunct))
-                    elif succe.getType() == PathInformationEdgeType.EXCLUSION:
-                        self._lines.append("%s%s0%s%s%s0%s" % \
-                                       (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
+        for pathv in pathg:
+            succe = pathv.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+            if succe.upper > 0:
+                programPoint = pathv.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    countVariable1 = ECLIPSE.getEdgeCountVariable(programPoint[0], programPoint[1])
+                else:
+                    countVariable1 = ECLIPSE.getVertexCountVariable(programPoint)
+                for succe in pathv.getSuccessorEdges(PathInformationEdgeType.INCLUSION):
+                    succv            = pathg.getVertex(succe.getVertexID())
+                    succProgramPoint = succv.getProgramPoint()
+                    if isinstance(succProgramPoint, tuple):
+                        countVariable2 = ECLIPSE.getEdgeCountVariable(succProgramPoint[0], succProgramPoint[1])
                     else:
-                        assert False
+                        countVariable2 = ECLIPSE.getVertexCountVariable(succProgramPoint)
+                    self._lines.append("%s%s0%s%s%s0%s" % \
+                                       (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.gt, ECLIPSE.conjunct))
+                for succe in pathv.getSuccessorEdges(PathInformationEdgeType.EXCLUSION):
+                    succv            = pathg.getVertex(succe.getVertexID())
+                    succProgramPoint = succv.getProgramPoint()
+                    if isinstance(succProgramPoint, tuple):
+                        countVariable2 = ECLIPSE.getEdgeCountVariable(succProgramPoint[0], succProgramPoint[1])
+                    else:
+                        countVariable2 = ECLIPSE.getVertexCountVariable(succProgramPoint)
+                    self._lines.append("%s%s0%s%s%s0%s" % \
+                                       (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.equals, ECLIPSE.conjunct))
         self._lines.append(getNewLine())
             
 class LpSolve:
@@ -478,41 +513,45 @@ class CreateCFGILP (ILP):
             constraint2 += getNewLine(2) 
             self._constraints.append(constraint2)
     
-    def _createExecutionCountConstraints (self, data, cfg, lnt):
+    def _createExecutionCountConstraints (self, cfg, lnt, pathg):
         for level, vertices in lnt.levelIterator(True):
-            for lntv in vertices:
-                if isinstance(lntv, HeaderVertex):
-                    headerID = lntv.getHeaderID()
-                    comment  = LpSolve.getComment("Capacity constraints on header %d" % headerID)
-                    self._constraints.append(comment)
-                    if lnt.getRootID() != lntv.getVertexID():
-                        parentv = lnt.getVertex(lntv.getParentID())
-                        # Relative bound
-                        forwardPredIDs = set([])
-                        for predID in cfg.getVertex(headerID).getPredecessorIDs():
-                            if not lnt.isLoopBackEdge(predID, headerID):
-                                forwardPredIDs.add(predID)
-                        constraint = ""
-                        constraint += LpSolve.getVertexVariable(headerID)
+            for treev in vertices:
+                if isinstance(treev, HeaderVertex):
+                    headerID = treev.getHeaderID()
+                    if treev.getVertexID() == lnt.getRootID():
+                        comment = LpSolve.getComment("Upper capacity constraint on header %d" % cfg.getEntryID())
+                        self._constraints.append(comment)
+                        constraint = LpSolve.getVertexVariable(cfg.getEntryID())
                         constraint += LpSolve.ltOrEqual
-                        count = 1
-                        for predID in forwardPredIDs:
-                            constraint += str(data.getLoopBound(cfg.getName(), headerID, parentv.getHeaderID()))
-                            constraint += LpSolve.getEdgeVariable(predID, headerID)
-                            if count < len(forwardPredIDs):
-                                constraint += LpSolve.plus
-                            count += 1
-                        constraint += LpSolve.semiColon
-                        constraint += getNewLine()
-                        self._constraints.append(constraint)                            
-                    else:
-                        constraint = LpSolve.getVertexVariable(headerID)
-                        constraint += LpSolve.equals
                         constraint += str(1)
                         constraint += LpSolve.semiColon
                         constraint += getNewLine(2)
                         self._constraints.append(constraint)
-                            
+                    else:
+                        comment = LpSolve.getComment("Relative capacity constraint on header %d" % headerID)
+                        self._constraints.append(comment)
+                        relativeBound = 0
+                        for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
+                            pathv = pathg.getProgramPointVertex(programPoint)
+                            succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
+                            relativeBound = max(relativeBound, succe.relative)
+                        v = cfg.getVertex(headerID)
+                        forwardPredIDs = []
+                        for prede in v.getPredecessorEdges():
+                            if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
+                                forwardPredIDs.append((prede.getVertexID(), headerID))
+                        constraint = LpSolve.getVertexVariable(headerID)
+                        constraint += LpSolve.ltOrEqual
+                        count      = 1        
+                        for edge in forwardPredIDs:
+                            constraint += "%d %s" % (relativeBound, LpSolve.getEdgeVariable(edge[0], edge[1]))
+                            if count < len(forwardPredIDs):
+                                constraint += LpSolve.plus
+                            count += 1
+                        constraint += LpSolve.semiColon
+                        constraint += getNewLine(2)
+                        self._constraints.append(constraint)
+        
     def _createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
         num        = 1
@@ -554,11 +593,11 @@ class CreateCFGILP (ILP):
                 ilpFile.write(constraint)
 
 class CreateCFGILPVanilla (CreateCFGILP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
         CreateCFGILP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
-        self._createExecutionCountConstraints(data, cfg, lnt)
+        self._createExecutionCountConstraints(cfg, lnt, pathg)
         self._createIntegerConstraint()
         self._createObjectiveFunction(data, contextWCETs, contextv, cfg)
         self._outputConstraints()
@@ -568,29 +607,35 @@ class CreateCFGILPExtra (CreateCFGILP):
         CreateCFGILP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
-        self._createExecutionCountConstraints(data, cfg, lnt)
-        self._createLowerAndUpperBoundConstraints(data, cfg, lnt, pathg)
+        self._createExecutionCountConstraints(data, cfg, lnt, pathg)
+        self._createLowerAndUpperBoundConstraints(data, cfg, pathg)
         self._createIntegerConstraint()
         self._createObjectiveFunction(data, contextWCETs, contextv, cfg)
         self._outputConstraints()
         
-    def _createLowerAndUpperBoundConstraints (self, data, cfg, lnt, pathg):
+    def _createLowerAndUpperBoundConstraints (self, data, cfg, pathg):
         comment = LpSolve.getComment("Infeasible path constraints")
         self._constraints.append(comment)
-        for v in pathg:
-            edge        = v.getEdge()
-            constraint1 = LpSolve.getEdgeVariable(edge[0], edge[1])
+        for pathv in pathg:
+            programPoint = pathv.getProgramPoint()
+            if isinstance(programPoint, tuple):
+                constraint1 = LpSolve.getEdgeVariable(programPoint[0], programPoint[1])
+            else:
+                constraint1 = LpSolve.getVertexVariable(programPoint)
+            succe = pathv.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS)[0]
             constraint1 += LpSolve.gtOrEqual
-            constraint1 += str(v.getLowerBound())
+            constraint1 += str(succe.lower)
             constraint1 += LpSolve.semiColon;
             constraint1 += getNewLine()
             self._constraints.append(constraint1)
-            if v.getUpperBound() < sys.maxint:
-                constraint2 = LpSolve.getEdgeVariable(edge[0], edge[1])
-                constraint2 += LpSolve.ltOrEqual
-                constraint2 += str(v.getUpperBound())
-                constraint2 += LpSolve.semiColon;
-                constraint2 += getNewLine(2)
-                self._constraints.append(constraint2)        
+            if isinstance(programPoint, tuple):
+                constraint2 = LpSolve.getEdgeVariable(programPoint[0], programPoint[1])
+            else:
+                constraint2 = LpSolve.getVertexVariable(programPoint)
+            constraint2 += LpSolve.gtOrEqual
+            constraint2 += str(succe.upper)
+            constraint2 += LpSolve.semiColon;
+            constraint2 += getNewLine(2)
+            self._constraints.append(constraint2)        
         
         

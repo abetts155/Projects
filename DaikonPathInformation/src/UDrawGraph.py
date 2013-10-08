@@ -84,14 +84,7 @@ def makeUdrawFile (g, fileNamePrefix):
                     if vertexID != g.getEntryID():
                         writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
             elif isinstance(g, SuperBlocks.PathInformationGraph):
-                bidirectionalEdges = {}
-                for v in g:
-                    vertexID = v.getVertexID()
-                    v        = g.getVertex(vertexID)
-                    for succID in v.getSuccessorIDs():
-                        succv = g.getVertex(succID)
-                        if succv.hasSuccessor(vertexID):
-                            bidirectionalEdges[(vertexID, succID)] = True
+                bidirectionalEdges = set([])
                 for v in g:
                     vertexID = v.getVertexID()
                     writePathInfoVertex(g, vertexID, bidirectionalEdges, f)    
@@ -156,43 +149,63 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
     v = g.getVertex(vertexID)        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    name = str(v.getEdge())
-    name += "%sID = %s" % (newLine, vertexID)
-    tooltip = ""
-    if v.getUpperBound() == 0:
-        f.write(setShape(SHAPE.TRIANGLE))
-        tooltip = "Upper bound = %d" % v.getUpperBound()
-    elif v.getLowerBound() > 0:
-        f.write(setShape(SHAPE.CIRCLE))
-        tooltip = "Lower bound = %d" % v.getLowerBound()
-    f.write(setToolTip(tooltip))
+    name = "%s%sID = %s" % (str(v.getProgramPoint()), newLine, vertexID)
     f.write(setName(name))
     f.write(endAttibutes)
     
     f.write(beginAttributes)
-    for succe in v.getSuccessorEdges():
+    for succe in v.getSuccessorEdges(PathInformationEdgeType.INCLUSION):
         succID = succe.getVertexID()
-        if (vertexID, succID) in bidirectionalEdges:
-            if bidirectionalEdges[(vertexID, succID)]:
-                bidirectionalEdges[(vertexID, succID)] = False
-                bidirectionalEdges[(succID, vertexID)] = False
+        succv  = g.getVertex(succID)
+        if succv.hasSuccessorEdge(vertexID, PathInformationEdgeType.INCLUSION):
+            if (vertexID, succID, PathInformationEdgeType.INCLUSION) not in bidirectionalEdges \
+            and (succID, vertexID, PathInformationEdgeType.INCLUSION) not in bidirectionalEdges:
+                bidirectionalEdges.add((vertexID, succID, PathInformationEdgeType.INCLUSION))
                 f.write(newEdge)
                 f.write(beginAttributes)
                 f.write(setEdgeDirection(DIRECTION.BOTH))
-                if succe.getType() == PathInformationEdgeType.EXCLUSION:
-                    f.write(setEdgeColor(COLOR.BLUE))
-                else:
-                    f.write(setEdgeColor(COLOR.RED))
+                f.write(setEdgeColor(COLOR.RED))
                 f.write(endAttibutes)
                 f.write(edgeLink(succID))
                 f.write(endEdge + ",\n")
         else:
-            assert succe.getType() == PathInformationEdgeType.INCLUSION
             f.write(newEdge)
             f.write(beginAttributes)
+            f.write(setEdgeColor(COLOR.RED))
             f.write(endAttibutes)
             f.write(edgeLink(succID))
             f.write(endEdge + ",\n")
+    for succe in v.getSuccessorEdges(PathInformationEdgeType.EXCLUSION):
+        succID = succe.getVertexID()
+        if (vertexID, succID, PathInformationEdgeType.EXCLUSION) not in bidirectionalEdges \
+        and (succID, vertexID, PathInformationEdgeType.EXCLUSION) not in bidirectionalEdges:
+            bidirectionalEdges.add((vertexID, succID, PathInformationEdgeType.EXCLUSION))
+            f.write(newEdge)
+            f.write(beginAttributes)
+            f.write(setEdgeDirection(DIRECTION.BOTH))
+            f.write(setEdgeColor(COLOR.BLUE))
+            f.write(endAttibutes)
+            f.write(edgeLink(succID))
+            f.write(endEdge + ",\n")
+    for succe in v.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS):    
+        succID = succe.getVertexID()
+        f.write(newEdge)
+        f.write(beginAttributes)
+        tooltip = "Upper = %d%sRelative = %d" % (succe.upper, newLine, succe.relative)
+        f.write(setName(tooltip))
+        f.write(setEdgeColor(COLOR.GREEN))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
+    for succe in v.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS):  
+        succID = succe.getVertexID()  
+        f.write(newEdge)
+        f.write(beginAttributes)
+        tooltip = "Lower = %d%sUpper = %d" % (succe.lower, newLine, succe.upper)
+        f.write(setName(tooltip))
+        f.write(endAttibutes)
+        f.write(edgeLink(succID))
+        f.write(endEdge + ",\n")
     f.write(endVertex + "\n") 
     
 def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):

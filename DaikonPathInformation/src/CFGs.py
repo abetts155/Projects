@@ -23,6 +23,7 @@ class Instruction ():
 class EnhancedCFG (FlowGraph):
     def __init__ (self, cfg=None):
         FlowGraph.__init__(self)
+        self.__edgeToVertex = {}
         if cfg:
             self._name = cfg.getName()
             for v in cfg:
@@ -40,9 +41,14 @@ class EnhancedCFG (FlowGraph):
                 for succID in v.getSuccessorIDs():
                     newVertexID = self.getNextVertexID()
                     newv        = CFGEdge(newVertexID, vertexID, succID)
+                    self.__edgeToVertex[(vertexID, succID)] = newv
                     self.vertices[newVertexID] = newv
                     self.addEdge(vertexID, newVertexID)
                     self.addEdge(newVertexID, succID)
+                    
+    def getVertexForCFGEdge (self, programPoint):
+        assert programPoint in self.__edgeToVertex
+        return self.__edgeToVertex[programPoint]
         
     def getReverseGraph (self):
         reverseg = EnhancedCFG() 

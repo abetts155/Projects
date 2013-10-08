@@ -1,8 +1,8 @@
 from DirectedGraphs import DirectedGraph
 from CFGs import EnhancedCFG
 from Vertices import CallGraphVertex, dummyVertexID
-from Trees import LoopNests, DepthFirstSearch, Dominators
-from SuperBlocks import PathInformationGraph, DominatorGraph
+from Trees import LoopNests, DepthFirstSearch
+from SuperBlocks import PathInformationGraph
 from copy import deepcopy
 import Debug, UDrawGraph
 

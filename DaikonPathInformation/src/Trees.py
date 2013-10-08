@@ -720,18 +720,19 @@ class LoopNests (Tree):
     
     def induceSubgraph (self, headerv):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
-        headerID   = headerv.getHeaderID()
-        inducedCFG = CFG()
-        edges      = {}
-        worklist   = []
+        headerID     = headerv.getHeaderID()
+        inducedCFG   = CFG()
+        vertices     = set([])
+        edges        = set([])
+        bodyVertices = set([])
+        bodyEdges    = set([])
+        worklist     = []
+        bodyVertices.add(headerID)
         worklist.extend(self.getLoopTails(headerID))
         while worklist:
             vertexID = worklist.pop()
+            vertices.add(vertexID)
             if not inducedCFG.hasVertex(vertexID):
-                bb = BasicBlock(vertexID)
-                inducedCFG.addVertex(bb)
-                # Now discover which edges are incident to this vertex
-                edges[vertexID] = set([])                        
                 originalv = self.__directedg.getVertex(vertexID)
                 for predID in originalv.getPredecessorIDs():
                     treePredv    = self.getVertex(predID)
@@ -740,21 +741,30 @@ class LoopNests (Tree):
                     if not self.__dfs.isDFSBackedge(predID, vertexID):
                         if predHeaderID == headerID:
                             worklist.append(predID)
-                            edges[vertexID].add(predID)
+                            bodyVertices.add(predID)
+                            edges.add((predID, vertexID))
+                            bodyEdges.add((predID, vertexID))
                         elif self.isNested(headerPredv.getVertexID(), headerv.getVertexID()):
-                            worklist.append(predHeaderID)
-                            edges[vertexID].add(predHeaderID)
-                            
-        # Add edges in induced subgraph
-        for vertexID, predIDs in edges.items():
-            for predID in predIDs:
-                inducedCFG.addEdge(predID, vertexID)
+                            worklist.append(predHeaderID)     
+                            vertices.add(predID)      
+                            if predHeaderID != predID:         
+                                edges.add((predHeaderID, predID))
+                            edges.add((predID, vertexID))
+                            bodyEdges.add((predID, vertexID))
+        
+        # Add vertices to induced subgraph
+        for vertexID in vertices:
+            bb = BasicBlock(vertexID)
+            inducedCFG.addVertex(bb)
+        # Add edges to induced subgraph
+        for (predID, succID) in edges:
+            inducedCFG.addEdge(predID, succID)
         # Ensure the induced subgraph has a single exit point
         exits = []
         for v in inducedCFG:
             if v.numberOfSuccessors() == 0:
                 exits.append(v)
-        assert exits
+        assert exits, "No exits found in header region %d" % headerID
         if len(exits) > 1:
             # Add a dummy exit vertex to induced subgraph
             exitID = inducedCFG.getNextVertexID()
@@ -769,5 +779,5 @@ class LoopNests (Tree):
             inducedCFG.setExitID(exits[0].getVertexID())
         # Set entry vertex of induced subgraph
         inducedCFG.setEntryID(headerv.getHeaderID())
-        return inducedCFG
+        return inducedCFG, bodyVertices, bodyEdges
 

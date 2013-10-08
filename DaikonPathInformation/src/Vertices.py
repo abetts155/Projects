@@ -1,8 +1,81 @@
-from Edges import Edge, CallGraphEdge
-import sys
+from Edges import Edge, CallGraphEdge, LoopBoundEdge, CapacityBoundEdge, PathInformationEdge, PathInformationEdgeType
 
 dummyVertexID = -1
 
+class PathInformationVertex ():
+    def __init__ (self, vertexID, programPoint, headerID, isHeaderCounter):
+        self._vertexID = vertexID
+        self._programPoint = programPoint
+        self._headerID = headerID 
+        self._isHeaderCounter = isHeaderCounter
+        self._successors = {}
+        self._successors[PathInformationEdgeType.CAPACITY_BOUNDS] = []
+        self._successors[PathInformationEdgeType.LOOP_BOUNDS]  = []
+        self._successors[PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[PathInformationEdgeType.INCLUSION] = set([])
+        
+    def getVertexID (self):
+        return self._vertexID
+        
+    def getProgramPoint (self):
+        return self._programPoint
+
+    def getHeaderID (self):
+        return self._headerID
+    
+    def isEffectiveHeaderCounter (self):
+        return self._isHeaderCounter
+               
+    def addSuccessorEdge (self, succID, edgeType):
+        if edgeType == PathInformationEdgeType.LOOP_BOUNDS:
+            succe = LoopBoundEdge(succID)
+            self._successors[edgeType].append(succe)
+        elif edgeType == PathInformationEdgeType.CAPACITY_BOUNDS:
+            succe = CapacityBoundEdge(succID)
+            self._successors[edgeType].append(succe)
+        else:
+            succe = PathInformationEdge(succID, edgeType)
+            self._successors[edgeType].add(succe)
+        
+    def removeSuccessorEdge (self, succID, edgeType):
+        theEdge = None
+        for succe in self._successors[edgeType]:
+            if succe.getVertexID() == succID:
+                theEdge = succe
+                break
+        if theEdge:
+            self._successors[edgeType].remove(succe)
+        
+    def hasSuccessorEdge (self, succID, edgeType):
+        for succe in self._successors[edgeType]:
+            if succe.getVertexID() == succID:
+                return True
+        return False
+    
+    def hasSuccessorEdges (self, edgeType):
+        return len(self._successors[edgeType]) > 0
+    
+    def getSuccessorEdge (self, succID, edgeType):
+        for succe in self._successors[edgeType]:
+            if succe.getVertexID() == succID:
+                return succe
+        assert False
+    
+    def getSuccessorEdges (self, edgeType):
+        return self._successors[edgeType]
+    
+    def numberOfSuccessors (self, edgeType=None):
+        if edgeType:
+            return len(self._successors[edgeType])
+        return len(self._successors)
+    
+    def removeAllSuccessors (self):
+        self._successors[PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[PathInformationEdgeType.INCLUSION] = set([])
+    
+    def __str__ (self):
+        return str(self._programPoint)
+    
 class Vertex ():
     def __init__ (self, vertexID):
         self._vertexID = vertexID
@@ -120,12 +193,6 @@ class HeaderVertex (TreeVertex):
     def __str__ (self):
         return TreeVertex.__str__(self)[:-1] + " (" + "*" * 3 + " HEADER " + "*" * 3 + ")\n" 
     
-class Enum(set):
-    def __getattr__(self, name):
-        if name in self:
-            return name
-        raise AttributeError
-    
 class CFGVertex (Vertex):
     def __init__ (self, vertexID, name=None):
         Vertex.__init__(self, vertexID)
@@ -144,21 +211,7 @@ class CFGVertex (Vertex):
 class CFGEdge (CFGVertex):
     def __init__ (self, vertexID, predID, succID):
         CFGVertex.__init__(self, vertexID)
-        self.__edge  = (predID, succID)  
-        self.__lowerBound = 0 
-        self.__upperBound = sys.maxint 
-    
-    def setLowerBound (self, bound): 
-        self.__lowerBound = bound
-        
-    def getLowerBound (self):
-        return self.__lowerBound
-    
-    def setUpperBound (self, bound): 
-        self.__upperBound = bound
-        
-    def getUpperBound (self):
-        return self.__upperBound
+        self.__edge  = (predID, succID)
         
     def getEdge (self):
         return self.__edge
@@ -169,9 +222,7 @@ class CFGEdge (CFGVertex):
         string += "succ     = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string 
 
-class BasicBlock (CFGVertex):
-    IpointPosition = Enum(['start', 'end'])
-    
+class BasicBlock (CFGVertex):    
     def __init__ (self, vertexID, name=None):
         CFGVertex.__init__(self, vertexID, name)
         self.__instructions = []
