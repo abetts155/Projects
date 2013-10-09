@@ -46,12 +46,15 @@
 int 
 fastDiscreteCosineTransform (short int *blk, int lx)
 {
-  #ifdef CBMC
-  int __count_3_2 = 0;
-  int __count_5_6 = 0;
-  int __count_L6 = 0;
-  int __count_L3 = 0;
-  #endif
+#ifdef CBMC
+//==========> fastdiscretecosinetransform : header 6
+int __count_6_5 = 0; //Loop counter
+//==========> fastdiscretecosinetransform : header 3
+int __count_3_2 = 0; //Loop counter
+//==========> fastdiscretecosinetransform : header 1
+int __count_7 = 0;
+int __count_3_4 = 0;
+#endif
 
   int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   int tmp10, tmp11, tmp12, tmp13;
@@ -67,11 +70,10 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 
   block=blk;
 
-  for (i=0; 
-    #ifdef CBMC
-    __count_L3++,
-    #endif
-  i<8; i++) // 3
+  #ifdef CBMC
+  __count_3_2 = 0;
+  #endif
+  for (i=0; i<8; i++) // 3
   {
     #ifdef CBMC
     __count_3_2++;
@@ -135,17 +137,22 @@ fastDiscreteCosineTransform (short int *blk, int lx)
     /* advance to next row */
     block += lx;
   }
+  #ifdef CBMC
+  __count_3_4++;
+  #endif
 
   /* Pass 2: process columns. */
 
   block=blk;
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L6++,
-    #endif
-  i<8; i++) // 6
+  #ifdef CBMC
+  __count_6_5 = 0;
+  #endif
+  for (i = 0; i<8; i++) // 6
   {
+    #ifdef CBMC
+    __count_6_5++;
+    #endif
     tmp0 = block[0] + block[7*lx];
     tmp7 = block[0] - block[7*lx];
     tmp1 = block[lx] + block[6*lx];
@@ -204,11 +211,11 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 
     /* advance to next column */
     block++;
-    #ifdef CBMC
-    __count_5_6++;
-    #endif
   }
   
+  #ifdef CBMC
+  __count_7++;
+  #endif
   return lx + block[0];
 }
 

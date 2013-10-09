@@ -3,14 +3,19 @@
 long 
 finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,long scale)
 {
-  #ifdef CBMC
-  int __count_24_25 = 0;
-  int __count_28_32 = 0;
-  int __count_29_30 = 0;
-  int __count_29_31 = 0;
-  int __count_L33 = 0;
-  int __count_L25 = 0;
-  #endif
+#ifdef CBMC
+//==========> finiteimpulseresponse : header 25
+int __count_25_24 = 0; //Loop counter
+//==========> finiteimpulseresponse : header 33
+int __count_27_28 = 0;
+int __count_29_30 = 0;
+int __count_29_31 = 0;
+int __count_33_23 = 0; //Loop counter
+//==========> finiteimpulseresponse : header 22
+int __count_34 = 0;
+int __count_33_34 = 0;
+#endif
+
   long i,j,coef_len2,acc_length;
   long acc;
   long *in_ptr,*data_ptr,*coef_start,*coef_ptr,*in_end;
@@ -26,40 +31,43 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
   /* initial value of accumulation length for startup */
   acc_length = coef_len2;
 
+  #ifdef CBMC
+  __count_33_23 = 0;
+  #endif
   for(i = 0 ; 
-    #ifdef CBMC
-    __count_L33++,
-    #endif
   i < in_len ; i++) // 33
   {
+    #ifdef CBMC
+    __count_33_23++;
+    #endif
     /* set up pointer for accumulation */
     data_ptr = in_ptr;
     coef_ptr = coef_start;
 
     /* do accumulation and write result with scale factor */
     acc = (long)(*coef_ptr++) * (*data_ptr--);
-    for(j = 1 ; 
-      #ifdef CBMC
-      __count_L25++,
-      #endif
-    j < acc_length ; j++) // 25
+
+    #ifdef CBMC
+    __count_25_24 = 0;
+    #endif
+    for(j = 1 ; j < acc_length ; j++) // 25
     {
-      acc += (long)(*coef_ptr++) * (*data_ptr--);
       #ifdef CBMC
-      __count_24_25++;
+      __count_25_24++;
       #endif
+      acc += (long)(*coef_ptr++) * (*data_ptr--);
     }
     *out++ = (int)(acc/scale);
 
     /* check for end case */
     if(in_ptr == in_end) // 27
     {
+      #ifdef CBMC
+      __count_27_28++;
+      #endif
       // 28
       acc_length--;       /* one shorter each time */
       coef_start++;       /* next coefficient each time */
-      #ifdef CBMC
-      __count_28_32++;
-      #endif
     }
     else 
     {
@@ -79,6 +87,10 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
     }
   }
   
+  #ifdef CBMC
+  __count_33_34++;
+  __count_34++;
+  #endif
   return *coef;
 }
 
