@@ -15,23 +15,32 @@ int
 swapIfLarger (int *a, int *b)
 {
   #ifdef CBMC
-  int __count_14_16 = 0;
-  int __count_15_17 = 0;
+//==========> swapiflarger : header 14
+int __count_17 = 0;
+int __count_14_15 = 0;
+int __count_16_17 = 0;
   #endif
 
   int tmp;
   if (*a > *b)
   {	
     #ifdef CBMC
-    __count_15_17++;
+    __count_14_15++;
     #endif
     tmp = *a;
     *a = *b;
     *b = tmp;
+    #ifdef CBMC
+    __count_17++;
+    #endif
     return 1;
   }
   #ifdef CBMC
-  else __count_14_16++;
+  else __count_16_17++;
+  #endif
+
+  #ifdef CBMC
+  __count_17++;
   #endif
   return 0;
 }
@@ -39,33 +48,41 @@ swapIfLarger (int *a, int *b)
 void
 bubblesort (int ARRAY_SIZE, int a[])
 {
+
   #ifdef CBMC
-  int __count_L10 = 0;
-  int __count_L7 = 0;
-  int __count_5_6 = 0;
-  int __count_8_9 = 0;
-  int __count_12_13 = 0;
-  int __count_4_6 = 0;
-  int __count_11_13 = 0;
+//==========> bubblesort : header 7
+int __count_4_6 = 0;
+int __count_5_6 = 0;
+int __count_7_3 = 0; //Loop counter
+//==========> bubblesort : header 10
+int __count_7_8 = 0;
+int __count_10_2 = 0; //Loop counter
+//==========> bubblesort : header 1
+int __count_13 = 0;
+int __count_8_12 = 0;
+int __count_10_11 = 0;
   #endif
 
   int i, j, tmp;
   int swapped = 0;
+  // header 10
   for (i = 0;
-       #ifdef CBMC
-       __count_L10++,
-       #endif
        i < ARRAY_SIZE - 1;
        i++)
   {
+    #ifdef CBMC
+    __count_10_2++;
+    __count_7_3 = 0;
+    #endif
     swapped = 0;
+    // header 7
     for (j = 0; 
-         #ifdef CBMC
-         __count_L7++,
-         #endif
          j < ARRAY_SIZE - 1 - i; 
          j++)
     {
+      #ifdef CBMC
+      __count_7_3++;
+      #endif
       if (swapIfLarger(&a[j], &a[j+1]))
       {        
         #ifdef CBMC
@@ -77,17 +94,23 @@ bubblesort (int ARRAY_SIZE, int a[])
       else __count_4_6++;
       #endif
     }
+    #ifdef CBMC
+    // asserts for header 7
+    
+    __count_7_8++;
+    #endif
     if (swapped == 0)
     {
       #ifdef CBMC
-      __count_12_13++;
+      __count_8_12++;
       #endif
       break;
     }
-    #ifdef CBMC
-    else __count_8_9++;
-    #endif
   }
+  #ifdef CBMC
+  __count_10_11++;
+  __count_13++;
+  #endif
 }
 
 int
