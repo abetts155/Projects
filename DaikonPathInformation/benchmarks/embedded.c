@@ -15,12 +15,15 @@ static char ipc2[49]={0,14,17,11,24,1,5,3,28,15,6,21,
 
 unsigned long 
 getbit (immense source, int bitno, int nbits) {
-  #ifdef CBMC
-  int __count_18_20 = 0;
-  int __count_19_20 = 0;
-  int __count_22_24 = 0;
-  int __count_23_24 = 0;
-  #endif
+#ifdef CBMC
+//==========> getbit : header 16
+int __count_24 = 0;
+int __count_17_18 = 0;
+int __count_17_19 = 0;
+int __count_21_22 = 0;
+int __count_21_23 = 0;
+#endif
+
   if (bitno <= nbits) // 16
   {
     // 17
@@ -28,12 +31,14 @@ getbit (immense source, int bitno, int nbits) {
     // TODO: check 
     if(bit[bitno] & source.r)
     {
-      __count_18_20++;
+      __count_17_18++;
+      __count_24++;
       return 1L;
     }
     else
     {
-      __count_19_20++;
+      __count_17_19++;
+      __count_24++;
       return 0L;
     }
     #else
@@ -47,12 +52,14 @@ getbit (immense source, int bitno, int nbits) {
     // TODO: check
     if (bit[bitno-nbits] & source.l)
     {
-      __count_22_24++;
+      __count_21_22++;
+      __count_24++;
       return 1L;
     }
     else
     {
-      __count_23_24++;
+      __count_21_23++;
+      __count_24++;
       return 0L;
     }
     #else
@@ -64,16 +71,21 @@ getbit (immense source, int bitno, int nbits) {
 void 
 ks (int n, great * kn) 
 {
-  #ifdef CBMC
-  int __count_1_5 = 0;
-  int __count_2_5 = 0;
-  int __count_3_5 = 0;
-  int __count_4_5 = 0;
-  int __count_8_7 = 0;
-  int __count_11_12 = 0;
-  int __count_L8 = 0;
-  int __count_L14 = 0;
-  #endif
+#ifdef CBMC
+//==========> ks : header 8
+int __count_8_7 = 0; //Loop counter
+//==========> ks : header 14
+int __count_10_11 = 0;
+int __count_14_10 = 0; //Loop counter
+//==========> ks : header 1
+int __count_15 = 0;
+int __count_1_5 = 0;
+int __count_2_5 = 0;
+int __count_3_5 = 0;
+int __count_4_5 = 0;
+int __count_8_9 = 0;
+#endif
+
   int i,j,k,l;
 
   if (n == 1 || n == 2 || n == 9 || n == 16) 
@@ -90,11 +102,10 @@ ks (int n, great * kn)
   }
   else
   {
-    for (i=1;
-      #ifdef CBMC
-      __count_L8++,
-      #endif
-    i<=2;i++) // 8
+    #ifdef CBMC
+    __count_8_7 = 0;
+    #endif
+    for (i=1;i<=2;i++) // 8
     {
       #ifdef CBMC
       __count_8_7++;
@@ -102,44 +113,57 @@ ks (int n, great * kn)
       icd.r = (icd.r | ((icd.r & 1L) << 28)) >> 1;
       icd.l = (icd.l | ((icd.l & 1L) << 28)) >> 1;
     }
+    #ifdef CBMC
+    __count_8_9++;
+    #endif
   } 
   
   (*kn).r=(*kn).c=(*kn).l=0;
-  for (j=16,k=32,l=48; 
-    #ifdef CBMC
-    __count_L14++,
-    #endif
-  j>=1; j--,k--,l--) // 14
+  #ifdef CBMC
+  __count_14_10 = 0;
+  #endif
+  for (j=16,k=32,l=48; j>=1; j--,k--,l--) // 14
   {
+    #ifdef CBMC
+    __count_14_10++;
+    #endif
     (*kn).r=((*kn).r <<= 1) | (unsigned short) getbit(icd,ipc2[j],28);
     (*kn).c=((*kn).c <<= 1) | (unsigned short) getbit(icd,ipc2[k],28);
     (*kn).l=((*kn).l <<= 1) | (unsigned short) getbit(icd,ipc2[l],28);
     #ifdef CBMC
-    __count_11_12++;
+    __count_10_11++;
     #endif
   }
+  #ifdef CBMC
+  __count_15++;
+  #endif
 }
 
 void 
 cyfun (unsigned long ir, great k, unsigned long * iout) 
 {
-  #ifdef CBMC
-  int __count_27_29 = 0;
-  int __count_28_29 = 0;
-  int __count_29_30 = 0;
-  int __count_29_31 = 0;
-  int __count_33_35 = 0;
-  int __count_34_35 = 0;
-  int __count_39_38 = 0;
-  int __count_42_41 = 0;
-  int __count_45_47 = 0;
-  int __count_46_47 = 0;
-  int __count_L48 = 0;
-  int __count_L42 = 0;
-  int __count_L39 = 0;
-  int __count_L36 = 0;
+#ifdef CBMC
+//==========> cyfun : header 48
+int __count_44_45 = 0;
+int __count_44_46 = 0;
+int __count_48_44 = 0; //Loop counter
+//==========> cyfun : header 42
+int __count_42_41 = 0; //Loop counter
+//==========> cyfun : header 39
+int __count_39_38 = 0; //Loop counter
+//==========> cyfun : header 36
+int __count_27_29 = 0;
+int __count_28_29 = 0;
+int __count_29_30 = 0;
+int __count_29_31 = 0;
+int __count_32_33 = 0;
+int __count_32_34 = 0;
+int __count_36_26 = 0; //Loop counter
+//==========> cyfun : header 25
+int __count_49 = 0;
+int __count_36_37 = 0;
+#endif
 
-  #endif
   static char iet[49]={0,32,1,2,3,4,5,4,5,6,7,8,9,8,9,
       10,11,12,13,12,13,14,15,16,17,16,17,18,19,
       20,21,20,21,22,23,24,25,24,25,26,27,28,29,
@@ -189,12 +213,15 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
 
   p = bit;
   ie.r=ie.c=ie.l=0;
-  for (j=16,l=32,m=48;
-    #ifdef CBMC
-    __count_L36++,
-    #endif
-  j>=1;j--,l--,m--) // 36
+  #ifdef CBMC
+  __count_36_26 = 0;
+  #endif
+  for (j=16,l=32,m=48;j>=1;j--,l--,m--) // 36
   {
+    #ifdef CBMC
+    __count_36_26++;
+    #endif
+
     #ifdef CBMC
     // TODO: check
     if (p[iet[j]] & ir) // 26
@@ -230,17 +257,20 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
     if (p[iet[m]] & ir) // 32
     {
       ie.l = (ie.l <<=1) | 1; // 33
-      __count_33_35++;
+      __count_32_33++;
     }
     else
     {
       ie.l = (ie.l <<=1) | 0; // 34
-      __count_34_35++;
+      __count_32_34++;
     }
     #else
     ie.l = (ie.l <<=1) | (p[iet[m]] & ir ? 1 : 0);
     #endif
   }
+  #ifdef CBMC
+  __count_36_37++;
+  #endif
   
   ie.r ^= k.r;
   ie.c ^= k.c;
@@ -248,11 +278,10 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
   ietmp1=((unsigned long) ie.c << 16)+(unsigned long) ie.r;
   ietmp2=((unsigned long) ie.l << 8)+((unsigned long) ie.c >> 8);
   
-  for (j=1,m=5;
-    #ifdef CBMC
-    __count_L39++,
-    #endif
-  j<=4;j++,m++) // 39
+  #ifdef CBMC
+  __count_39_38 = 0;
+  #endif
+  for (j=1,m=5;j<=4;j++,m++) // 39
   {
     #ifdef CBMC
     __count_39_38++;
@@ -264,11 +293,10 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
   }
   
   itmp=0L;
-  for (jj=8;
-    #ifdef CBMC
-    __count_L42++,
-    #endif
-  jj>=1;jj--) // 42
+  #ifdef CBMC
+  __count_42_41 = 0;
+  #endif
+  for (jj=8;jj>=1;jj--) // 42
   {
     #ifdef CBMC
     __count_42_41++;
@@ -282,50 +310,62 @@ cyfun (unsigned long ir, great k, unsigned long * iout)
   
   *iout=0L;
   p = bit;
-  for (j=32;
-    #ifdef CBMC
-    __count_L48++,
-    #endif
-  j>=1;j--) // 48
+  #ifdef CBMC
+  __count_48_44 = 0;
+  #endif
+  for (j=32; j>=1;j--) // 48
   {
+    #ifdef CBMC
+    __count_48_44++;
+    #endif
     #ifdef CBMC
     // TODO: check
     if(p[ipp[j]] & itmp) // 44
     {
+      __count_44_45++;
       *iout = (*iout <<= 1) | 1; // 45
-      __count_45_47++;
     }
     else
     {
+      __count_44_46++;
       *iout = (*iout <<= 1) | 0; // 46
-      __count_46_47++;
     }
     #else
     *iout = (*iout <<= 1) | (p[ipp[j]] & itmp ? 1 : 0);
     #endif
   }
+  #ifdef CBMC
+  __count_49++;
+  #endif
 }
   
 int 
 embedded (immense inp, immense key, int * newkey, int isw, immense * out) 
 {
-  #ifdef CBMC
-  int __count_50_54 = 0;
-  int __count_53_52 = 0;
-  int __count_54_64 = 0;
-  int __count_59_56 = 0;
-  int __count_63_61 = 0;
-  int __count_68_65 = 0;
-  int __count_71_73 = 0;
-  int __count_72_73 = 0;
-  int __count_80_77 = 0;
-  int __count_L63 = 0;
-  int __count_L59 = 0;
-  int __count_L80 = 0;
-  int __count_L75 = 0;
-  int __count_L53 = 0;
-  int __count_L68 = 0;
-  #endif
+#ifdef CBMC
+//==========> embedded : header 63
+int __count_61_62 = 0;
+int __count_63_61 = 0; //Loop counter
+//==========> embedded : header 59
+int __count_56_57 = 0;
+int __count_59_56 = 0; //Loop counter
+//==========> embedded : header 80
+int __count_80_77 = 0; //Loop counter
+//==========> embedded : header 75
+int __count_70_71 = 0;
+int __count_70_72 = 0;
+int __count_75_70 = 0; //Loop counter
+//==========> embedded : header 53
+int __count_53_52 = 0; //Loop counter
+//==========> embedded : header 68
+int __count_68_65 = 0; //Loop counter
+//==========> embedded : header 50
+int __count_81 = 0;
+int __count_50_54 = 0;
+int __count_53_54 = 0;
+int __count_54_64 = 0;
+int __count_59_60 = 0;
+#endif
   static char ip[65] =
       {0,58,50,42,34,26,18,10,2,60,52,44,36,
       28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,
@@ -349,17 +389,19 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
   {
     initflag=0;
     bit[1]=shifter=1L;
-    for(j=2;
-      #ifdef CBMC
-      __count_L53++,
-      #endif
-    j<=32;j++) // 53
+    #ifdef CBMC
+    __count_53_52 = 0;
+    #endif
+    for(j=2;j<=32;j++) // 53
     {
       #ifdef CBMC
       __count_53_52++;
       #endif
       bit[j] = (shifter <<= 1);
     }
+    #ifdef CBMC
+    __count_53_54++;
+    #endif
   }
   #ifdef CBMC
   else __count_50_54++;
@@ -369,28 +411,32 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
   {
     *newkey=0;
     icd.r=icd.l=0L;
-    for (j=28,k=56;
-      #ifdef CBMC
-      __count_L59++,
-      #endif
-    j>=1;j--,k--) // 59
+    #ifdef CBMC
+    __count_59_56 = 0;
+    #endif
+    for (j=28,k=56;j>=1;j--,k--) // 59
     {
       #ifdef CBMC
       __count_59_56++;
+      __count_56_57++;
       #endif
       icd.r = (icd.r <<= 1) | getbit(key,ipc1[j],32);
       icd.l = (icd.l <<= 1) | getbit(key,ipc1[k],32);
     }
+    #ifdef CBMC
+    __count_59_60++;
+    #endif
 
-    for (i=1;
-      #ifdef CBMC
-      __count_L63++,
-      #endif
-    i<=16;i++) // 63
+    #ifdef CBMC
+    __count_63_61 = 0;
+    #endif
+    for (i=1; i<=16;i++) // 63
     { 
       #ifdef CBMC
       __count_63_61++;
+      __count_61_62++;
       #endif
+      //62
       pg = kns[i]; ks(/* key,*/ i, &pg); kns[i] = pg;
     }
   }
@@ -400,11 +446,10 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
   
   itmp.r=itmp.l=0L;
   
-  for (j=32,k=64;
-    #ifdef CBMC
-    __count_L68++,
-    #endif
-  j>=1;j--,k--) // 68
+  #ifdef CBMC
+  __count_68_65 = 0;
+  #endif
+  for (j=32,k=64;j>=1;j--,k--) // 68
   {
     #ifdef CBMC
     __count_68_65++;
@@ -413,23 +458,23 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
     itmp.l = (itmp.l <<= 1) | getbit(inp,ip[k],32);
   }
   
-  for (i=1;
-    #ifdef CBMC
-    __count_L75++,
-    #endif
-  i<=16;i++) // 75
+  #ifdef CBMC
+  __count_75_70 = 0;
+  #endif
+  for (i=1;i<=16;i++) // 75
   {
     #ifdef CBMC
+    __count_75_70++;
     // TODO: check 
     if(isw == 1)
     {
       ii = 17-i; // 71
-      __count_71_73++;
+      __count_70_71++;
     }
     else
     {
       ii = i; // 72
-      __count_72_73++;
+      __count_70_72++;
     }
     #else
     ii = (isw == 1 ? 17-i : i);
@@ -445,11 +490,10 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
   itmp.l=ic;
   (*out).r=(*out).l=0L;
   
-  for (j=32,k=64; 
-    #ifdef CBMC
-    __count_L80++,
-    #endif
-  j >= 1; j--, k--) // 80
+  #ifdef CBMC
+  __count_80_77 = 0;
+  #endif
+  for (j=32,k=64; j >= 1; j--, k--) // 80
   {
     #ifdef CBMC
     __count_80_77++;
@@ -458,6 +502,9 @@ embedded (immense inp, immense key, int * newkey, int isw, immense * out)
     (*out).l = ((*out).l <<= 1) | getbit(itmp,ipm[k],32);
   }
   
+  #ifdef CBMC
+  __count_81++;
+  #endif
   return *newkey;
 }
 
