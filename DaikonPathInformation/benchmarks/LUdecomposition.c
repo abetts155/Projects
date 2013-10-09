@@ -65,22 +65,26 @@ double a[ARRAY_DIMENSION][ARRAY_DIMENSION], b[ARRAY_DIMENSION], x[ARRAY_DIMENSIO
 static double 
 fabs (double n)
 {
-  #ifdef CBMC
-  int __count_38_40 = 0;
-  int __count_39_40 = 0;
-  #endif
+#ifdef CBMC
+//==========> fabs : header 37
+int __count_40 = 0;
+int __count_37_38 = 0;
+int __count_37_39 = 0;
+#endif
 
   if (n >= 0)
   {
     #ifdef CBMC
-    __count_38_40++;
+    __count_37_38++;
+    __count_40++;
     #endif
     return n;
   }
   else
   {
     #ifdef CBMC
-    __count_39_40++; // TODO: check
+    __count_37_39++;
+    __count_40++;
     #endif
     return -n; // 39
   }
@@ -89,25 +93,38 @@ fabs (double n)
 int
 LUdecomposition (int n, double eps)
 {
-  #ifdef CBMC
-  int __count_1_3 = 0;
-  int __count_2_3 = 0;
-  int __count_7_36 = 0;
-  int __count_9_13 = 0;
-  int __count_12_11 = 0;
-  int __count_18_17 = 0;
-  int __count_26_25 = 0;
-  int __count_31_32 = 0;
-  int __count_L34 = 0;
-  int __count_L32 = 0;
-  int __count_L28 = 0;
-  int __count_L26 = 0;
-  int __count_L22 = 0;
-  int __count_L20 = 0;
-  int __count_L18 = 0;
-  int __count_L14 = 0;
-  int __count_L12 = 0;
-  #endif
+#ifdef CBMC
+//==========> ludecomposition : header 18
+int __count_18_17 = 0; //Loop counter
+//==========> ludecomposition : header 12
+int __count_12_11 = 0; //Loop counter
+//==========> ludecomposition : header 32
+int __count_32_31 = 0; //Loop counter
+//==========> ludecomposition : header 26
+int __count_26_25 = 0; //Loop counter
+//==========> ludecomposition : header 20
+int __count_18_19 = 0;
+int __count_20_16 = 0; //Loop counter
+//==========> ludecomposition : header 14
+int __count_9_13 = 0;
+int __count_12_13 = 0;
+int __count_14_9 = 0; //Loop counter
+//==========> ludecomposition : header 34
+int __count_32_33 = 0;
+int __count_34_30 = 0; //Loop counter
+//==========> ludecomposition : header 28
+int __count_26_27 = 0;
+int __count_28_24 = 0; //Loop counter
+//==========> ludecomposition : header 22
+int __count_14_15 = 0;
+int __count_22_5 = 0; //Loop counter
+//==========> ludecomposition : header 1
+int __count_36 = 0;
+int __count_1_3 = 0;
+int __count_2_3 = 0;
+int __count_6_7 = 0;
+int __count_34_35 = 0;
+#endif
 
   int i, j, k;
   double w, y[100];
@@ -117,118 +134,151 @@ LUdecomposition (int n, double eps)
     #ifdef CBMC
     if (n>99) __count_1_3++;
     else if (eps <= 0.0) __count_2_3++;
+
+    __count_36++;
     #endif
     return 999;
   }
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L22++,
-    #endif
-  i < n; i++) // 22
+  #ifdef CBMC
+  __count_22_5 = 0;
+  #endif
+  for (i = 0; i < n; i++) // 22
   {
+    #ifdef CBMC
+    __count_22_5++;
+    #endif
     if (fabs(a[i][i]) <= eps) // 6
     {
+      #ifdef CBMC
+      __count_6_7++;
+      #endif
       // 7
       #ifdef CBMC
-      __count_7_36++;
+      __count_36++;
       #endif
       return 1;
     }
   
-    for (j = i + 1; 
-      #ifdef CBMC
-      __count_L14++,
-      #endif
-    j <= n; j++) // 14
+    #ifdef CBMC
+    __count_14_9 = 0;
+    #endif
+    for (j = i + 1; j <= n; j++) // 14
     {
+      #ifdef CBMC
+      __count_14_9++;
+      #endif
       w = a[j][i];
       if (i != 0) // 9
       {  
-        for (k = 0; 
-          #ifdef CBMC
-          __count_L12++,
-          #endif
-        k < i; k++) // 12
+        #ifdef CBMC
+        __count_12_11 = 0;
+        #endif
+        for (k = 0; k < i; k++) // 12
         {
           #ifdef CBMC
           __count_12_11++;
           #endif
           w -= a[j][k] * a[k][i];
         }
+        #ifdef CBMC
+        __count_12_13++;
+        #endif
       }
       #ifdef CBMC
       else __count_9_13++;
       #endif
       a[j][i] = w / a[i][i];
     }
-    for (j = i + 1; 
-      #ifdef CBMC
-      __count_L20++,
-      #endif
-    j <= n; j++)  // 20
+    #ifdef CBMC
+    __count_14_15++;
+    #endif
+
+    #ifdef CBMC
+    __count_20_16 = 0;
+    #endif
+    for (j = i + 1; j <= n; j++)  // 20
     {
+      #ifdef CBMC
+      __count_20_16++;
+      #endif
       w = a[i + 1][j];
-      for (k = 0; 
-        #ifdef CBMC
-        __count_L18++,
-        #endif
-      k <= i; k++) // 18
+      #ifdef CBMC
+      __count_18_17 = 0;
+      #endif
+      for (k = 0; k <= i; k++) // 18
       {
         #ifdef CBMC
         __count_18_17++;
         #endif
         w -= a[i + 1][k] * a[k][j];
       }
+      #ifdef CBMC
+      __count_18_19++;
+      #endif
       a[i + 1][j] = w;
     }
   }
 
   y[0] = b[0];
   
-  for (i = 1; 
-    #ifdef CBMC
-    __count_L28++,
-    #endif
-  i <= n; i++) // 28
+  #ifdef CBMC
+  __count_28_24 = 0;
+  #endif
+  for (i = 1; i <= n; i++) // 28
   {
+    #ifdef CBMC
+    __count_28_24++;
+    #endif
     w = b[i];
-    for (j = 0; 
-      #ifdef CBMC
-      __count_L26++,
-      #endif
-    j < i; j++) // 26
+    #ifdef CBMC
+    __count_26_25 = 0;
+    #endif
+    for (j = 0; j < i; j++) // 26
     {
       #ifdef CBMC
       __count_26_25++;
       #endif
       w -= a[i][j] * y[j];
     }
+    #ifdef CBMC
+    __count_26_27++;
+    #endif
     y[i] = w;
   }
   
   x[n] = y[n] / a[n][n];
-  for (i = n - 1; 
-    #ifdef CBMC
-    __count_L34++,
-    #endif
-  i >= 0; i--) // 34
+  #ifdef CBMC
+  __count_34_30 = 0;
+  #endif
+  for (i = n - 1; i >= 0; i--) // 34
   {
+    #ifdef CBMC
+    __count_34_30++;
+    #endif
     w = y[i];
-    for (j = i + 1; 
-      #ifdef CBMC
-      __count_L32++,
-      #endif
-    j <= n; j++) // 32
+    #ifdef CBMC
+    __count_32_31 = 0;
+    #endif
+    for (j = i + 1; j <= n; j++) // 32
     {
-      w -= a[i][j] * x[j];
       #ifdef CBMC
-      __count_31_32++;
+      __count_32_31++;
       #endif
+      w -= a[i][j] * x[j];
     }
+    #ifdef CBMC
+    __count_32_33++;
+    #endif
     x[i] = w / a[i][i];
   }
+  #ifdef CBMC
+  __count_34_35++;
+  #endif
   
+  #ifdef CBMC
+  __count_36++;
+  #endif
   return 0;
 }
 
