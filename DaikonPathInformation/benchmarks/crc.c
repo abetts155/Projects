@@ -6,55 +6,70 @@ unsigned short
 icrc1 (unsigned short crc, unsigned char onech)
 {
   #ifdef CBMC
-  int __count_22_24 = 0;
-  int __count_23_24 = 0;
-  int __count_L25 = 0;
+//==========> icrc1 : header 25
+int __count_21_22 = 0;
+int __count_21_23 = 0;
+int __count_25_21 = 0; //Loop counter
+//==========> icrc1 : header 20
+int __count_26 = 0;
+int __count_25_26 = 0;
   #endif
 
   int i;
   unsigned short ans = (crc^onech << 8);
-  for (i=0;
-    #ifdef CBMC
-    __count_L25++,
-    #endif
-  i<8;i++)  // 25
+  #ifdef CBMC
+  __count_25_21 = 0;
+  #endif
+  for (i=0;i<8;i++)  // 25
   {
+    #ifdef CBMC
+    __count_25_21++;
+    #endif
     if (ans & 0x8000) // 21
     {
+      #ifdef CBMC
+      __count_21_22++;
+      #endif
       // 22
       ans = (ans <<= 1) ^ 4129;
-      #ifdef CBMC
-      __count_22_24++;
-      #endif
     }
     else
     {
+      #ifdef CBMC
+      __count_21_23++;
+      #endif
       // 23
       ans <<= 1;
-      #ifdef CBMC
-      __count_23_24++;
-      #endif
     }
   }
+  #ifdef CBMC
+  __count_25_26++;
+  __count_26++;
+  #endif
   return ans;
 }
 
 unsigned short 
 crc (unsigned short crc, unsigned long len, short jinit, int jrev, unsigned char* lin)
 {
-  #ifdef CBMC
-  int __count_1_6 = 0;
-  int __count_3_4 = 0;
-  int __count_7_10 = 0;
-  int __count_8_9 = 0;
-  int __count_8_10 = 0;
-  int __count_12_14 = 0;
-  int __count_13_14 = 0;
-  int __count_16_17 = 0;
-  int __count_16_18 = 0;
-  int __count_L15 = 0;
-  int __count_L5 = 0;
-  #endif
+#ifdef CBMC
+//==========> crc : header 15
+int __count_11_12 = 0;
+int __count_11_13 = 0;
+int __count_15_11 = 0; //Loop counter
+//==========> crc : header 5
+int __count_3_4 = 0;
+int __count_5_3 = 0; //Loop counter
+//==========> crc : header 1
+int __count_19 = 0;
+int __count_1_6 = 0;
+int __count_5_6 = 0;
+int __count_7_10 = 0;
+int __count_8_9 = 0;
+int __count_8_10 = 0;
+int __count_16_17 = 0;
+int __count_16_18 = 0;
+#endif
   static unsigned short icrctb[256],init=0;
   static unsigned char rchr[256];
   unsigned short tmp1, tmp2, j,cword=crc;
@@ -63,18 +78,23 @@ crc (unsigned short crc, unsigned long len, short jinit, int jrev, unsigned char
   if (!init) // 1
   {
     init=1;
-    for (j=0; 
-      #ifdef CBMC
-      __count_L5++,
-      #endif
-    j<=255; j++) // 5
+    #ifdef CBMC
+    __count_5_3 = 0;
+    #endif
+    for (j=0; j<=255; j++) // 5
     {
+      #ifdef CBMC
+      __count_5_3++;
+      #endif
       icrctb[j] = icrc1 (j << 8,(unsigned char)0);
       rchr[j]   = (unsigned char)(it[j & 0xF] << 4 | it[j >> 4]);
       #ifdef CBMC
       __count_3_4++;
       #endif
     }
+    #ifdef CBMC
+    __count_5_6++;
+    #endif
   }
   #ifdef CBMC
   else __count_1_6++;
@@ -100,27 +120,29 @@ crc (unsigned short crc, unsigned long len, short jinit, int jrev, unsigned char
   __count_8_10++;
   #endif
   
-  for (j=1; 
-    #ifdef CBMC
-    __count_L15++,
-    #endif
-  j<=len; j++) // 15
+  #ifdef CBMC
+  __count_15_11 = 0;
+  #endif
+  for (j=1; j<=len; j++) // 15
   {
+    #ifdef CBMC
+    __count_15_11++;
+    #endif
     if (jrev < 0) // 11
     {
+      #ifdef CBMC
+      __count_11_12++;
+      #endif
       // 12
       tmp1 = rchr[lin[j]]^ HIBYTE(cword);
-      #ifdef CBMC
-      __count_12_14++;
-      #endif
     }
     else 
     {
+      #ifdef CBMC
+      __count_11_13++;
+      #endif
       // 13
       tmp1 = lin[j]^ HIBYTE(cword);
-      #ifdef CBMC
-      __count_13_14++;
-      #endif
     }
     cword = icrctb[tmp1] ^ LOBYTE(cword) << 8;
   }
@@ -131,6 +153,9 @@ crc (unsigned short crc, unsigned long len, short jinit, int jrev, unsigned char
     __count_16_17++;
     #endif
     // 17
+    #ifdef CBMC
+    __count_19++;
+    #endif
     return cword;
   }
   else 
@@ -139,6 +164,9 @@ crc (unsigned short crc, unsigned long len, short jinit, int jrev, unsigned char
     __count_16_18++;
     #endif
     // 18
+    #ifdef CBMC
+    __count_19++;
+    #endif
     return rchr[HIBYTE(cword)] | rchr[LOBYTE(cword)] << 8;
   }
 }
