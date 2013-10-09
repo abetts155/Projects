@@ -6,23 +6,30 @@
 void
 vec_mpy1 (short y[], const short x[], short scaler)
 {
-  #ifdef CBMC
-  int __count_10_9 = 0;
-  int __count_L10 = 0;
-  #endif
+#ifdef CBMC
+//==========> vec_mpy1 : header 10
+int __count_10_9 = 0; //Loop counter
+//==========> vec_mpy1 : header 8
+int __count_11 = 0;
+int __count_10_11 = 0;
+#endif
+
   long int i;
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L10++,
-    #endif
-  i < 150; i++) // 10
+  #ifdef CBMC
+  __count_10_9 = 0;
+  #endif
+  for (i = 0; i < 150; i++) // 10
   {
     #ifdef CBMC
     __count_10_9++;
     #endif
     y[i] += ((scaler * x[i]) >> 15);
   }
+  #ifdef CBMC
+  __count_10_11++;
+  __count_11++;
+  #endif
 }
 
 /*****************************************************
@@ -31,18 +38,21 @@ vec_mpy1 (short y[], const short x[], short scaler)
 long int
 mac (const short *a, const short *b, long int sqr, long int *sum)
 {
-  #ifdef CBMC
-  int __count_31_30 = 0;
-  int __count_L31 = 0;
-  #endif
+#ifdef CBMC
+//==========> mac : header 31
+int __count_31_30 = 0; //Loop counter
+//==========> mac : header 29
+int __count_32 = 0;
+int __count_31_32 = 0;
+#endif
+
   long int i;
   long int dotp = *sum;
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L31++,
-    #endif
-  i < 150; i++) // 31
+  #ifdef CBMC
+  __count_31_30 = 0;
+  #endif
+  for (i = 0; i < 150; i++) // 31
   {
     #ifdef CBMC
     __count_31_30++;
@@ -52,6 +62,10 @@ mac (const short *a, const short *b, long int sqr, long int *sum)
   }
 
   *sum = dotp;
+  #ifdef CBMC
+  __count_31_32++;
+  __count_32++;
+  #endif
   return sqr;
 }
 
@@ -63,32 +77,45 @@ void
 fir (const short array1[], const short coeff[], long int output[])
 {
   #ifdef CBMC
-  int __count_4_3 = 0;
-  int __count_L6 = 0;
-  int __count_L4 = 0;
+//==========> fir : header 4
+int __count_4_3 = 0; //Loop counter
+//==========> fir : header 6
+int __count_4_5 = 0;
+int __count_6_2 = 0; //Loop counter
+//==========> fir : header 1
+int __count_7 = 0;
+int __count_6_7 = 0;
   #endif
   long int i, j, sum;
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L6++,
-    #endif
-  i < N - ORDER; i++) // 6
+  #ifdef CBMC
+  __count_6_2 = 0;
+  #endif
+  for (i = 0; i < N - ORDER; i++) // 6
   {
+    #ifdef CBMC
+    __count_6_2++;
+    #endif
     sum = 0;
-    for (j = 0; 
-      #ifdef CBMC
-      __count_L4++,
-      #endif
-    j < ORDER; j++) // 4
+    #ifdef CBMC
+    __count_4_3 = 0;
+    #endif
+    for (j = 0; j < ORDER; j++) // 4
     {
       #ifdef CBMC
       __count_4_3++;
       #endif
       sum += array1[i + j] * coeff[j];
     }
+    #ifdef CBMC
+    __count_4_5++;
+    #endif
     output[i] = sum >> 15;
   }
+  #ifdef CBMC
+  __count_6_7++;
+  __count_7++;
+  #endif
 }
 
 /****************************************************
@@ -101,29 +128,36 @@ This reduces memory bandwidth and power.
 void
 fir_no_red_ld (const short x[], const short h[], long int y[])
 {
-  #ifdef CBMC
-  int __count_36_35 = 0;
-  int __count_L38 = 0;
-  int __count_L36 = 0;
-  #endif
+#ifdef CBMC
+//==========> fir_no_red_ld : header 36
+int __count_36_35 = 0; //Loop counter
+//==========> fir_no_red_ld : header 38
+int __count_36_37 = 0;
+int __count_38_34 = 0; //Loop counter
+//==========> fir_no_red_ld : header 33
+int __count_39 = 0;
+int __count_38_39 = 0;
+#endif
+
   long int i, j;
   long int sum0, sum1;
   short x0, x1, h0, h1;
 
-  for (j = 0; 
-    #ifdef CBMC
-    __count_L38++,
-    #endif
-  j < 100; j += 2) // 38
+  #ifdef CBMC
+  __count_38_34 = 0;
+  #endif
+  for (j = 0; j < 100; j += 2) // 38
   {
+    #ifdef CBMC
+    __count_38_34++;
+    #endif
     sum0 = 0;
     sum1 = 0;
     x0 = x[j];
-    for (i = 0; 
-      #ifdef CBMC
-      __count_L36++,
-      #endif
-    i < 32; i += 2) // 36
+    #ifdef CBMC
+    __count_36_35 = 0;
+    #endif
+    for (i = 0; i < 32; i += 2) // 36
     {
       #ifdef CBMC
       __count_36_35++;
@@ -137,9 +171,16 @@ fir_no_red_ld (const short x[], const short h[], long int y[])
       sum0 += x1 * h1;
       sum1 += x0 * h1;
     }
+    #ifdef CBMC
+    __count_36_37++;
+    #endif
     y[j] = sum0 >> 15;
     y[j + 1] = sum1 >> 15;
   }
+  #ifdef CBMC
+  __count_38_39++;
+  __count_39++;
+  #endif
 }
 
 /*******************************************************
@@ -150,18 +191,21 @@ fir_no_red_ld (const short x[], const short h[], long int y[])
 long int
 latsynth (short b[], const short k[], long int n, long int f)
 {
-  #ifdef CBMC
-  int __count_14_13 = 0;
-  int __count_L14 = 0;
-  #endif
+#ifdef CBMC
+//==========> latsynth : header 14
+int __count_14_13 = 0; //Loop counter
+//==========> latsynth : header 12
+int __count_15 = 0;
+int __count_14_15 = 0;
+#endif
+
   long int i;
 
   f -= b[n - 1] * k[n - 1];
-  for (i = n - 2; 
-    #ifdef CBMC
-    __count_L14++,
-    #endif
-  i >= 0; i--)  // 14
+  #ifdef CBMC
+  __count_14_13 = 0;
+  #endif
+  for (i = n - 2; i >= 0; i--)  // 14
   {
     #ifdef CBMC
     __count_14_13++;
@@ -171,6 +215,10 @@ latsynth (short b[], const short k[], long int n, long int f)
   }
   
   b[0] = f >> 16;
+  #ifdef CBMC
+  __count_14_15++;
+  __count_15++;
+  #endif
   return f;
 }
 
@@ -180,20 +228,22 @@ latsynth (short b[], const short k[], long int n, long int f)
 void
 iir1 (const short *coefs, const short *input, long int *optr, long int *state)
 {
-  #ifdef CBMC
-  int __count_52_51 = 0;
-  int __count_L52 = 0;
-  #endif
+#ifdef CBMC
+//==========> iir1 : header 52
+int __count_52_51 = 0; //Loop counter
+//==========> iir1 : header 50
+int __count_53 = 0;
+int __count_52_53 = 0;
+#endif
   long int x;
   long int t;
   long int n;
 
   x = input[0];
-  for (n = 0; 
-    #ifdef CBMC
-    __count_L52++,
-    #endif
-  n < 50; n++) // 52
+  #ifdef CBMC
+  __count_52_51 = 0;
+  #endif
+  for (n = 0; n < 50; n++) // 52
   {
     #ifdef CBMC
     __count_52_51++;
@@ -207,6 +257,10 @@ iir1 (const short *coefs, const short *input, long int *optr, long int *state)
   }
 
   *optr++ = x;
+  #ifdef CBMC
+  __count_52_53++;
+  __count_53++;
+  #endif
 }
 
 /*****************************************************
@@ -215,23 +269,25 @@ iir1 (const short *coefs, const short *input, long int *optr, long int *state)
 long int
 codebook (long int mask, long int bitchanged, long int numbasis, long int codeword, long int g, const short *d, short ddim, short theta)
 {
-  #ifdef CBMC
-  int __count_26_27 = 0;
-  int __count_L27 = 0;
-  #endif
+#ifdef CBMC
+//==========> codebook : header 27
+int __count_27_26 = 0; //Loop counter
+//==========> codebook : header 25
+int __count_28 = 0;
+int __count_27_28 = 0;
+#endif
 
   long int j;
   long int tmpMask;
 
   tmpMask = mask << 1;
-  for (j = bitchanged + 1; 
-    #ifdef CBMC
-    __count_L27++,
-    #endif
-  j <= numbasis; j++) // 27
+  #ifdef CBMC
+  __count_27_26 = 0;
+  #endif
+  for (j = bitchanged + 1; j <= numbasis; j++) // 27
   {
     #ifdef CBMC
-    __count_26_27++;
+    __count_27_26++;
     #endif
 /*		
  * The following code is removed since it gave a memory access exception.
@@ -245,6 +301,10 @@ codebook (long int mask, long int bitchanged, long int numbasis, long int codewo
 		tmpMask <<= 1;
 */
   }
+  #ifdef CBMC
+  __count_27_28++;
+  __count_28++;
+  #endif
   return g;
 }
 
@@ -255,34 +315,46 @@ codebook (long int mask, long int bitchanged, long int numbasis, long int codewo
 void
 jpegdct(short *d, short *r)
 {
-  #ifdef CBMC
-  int __count_44_43 = 0;
-  int __count_L48 = 0;
-  int __count_L46 = 0;
-  int __count_L44 = 0;
-  #endif
+#ifdef CBMC
+//==========> jpegdct : header 44
+int __count_44_43 = 0; //Loop counter
+//==========> jpegdct : header 46
+int __count_44_45 = 0;
+int __count_46_42 = 0; //Loop counter
+//==========> jpegdct : header 48
+int __count_46_47 = 0;
+int __count_48_41 = 0; //Loop counter
+//==========> jpegdct : header 40
+int __count_49 = 0;
+int __count_48_49 = 0;
+#endif
   long int t[12];
   short i, j, k, m, n, p;
   
+  #ifdef CBMC
+  __count_48_41 = 0;
+  #endif
   for (k = 1, m = 0, n = 13, p = 8;
-        #ifdef CBMC
-         __count_L48++,
-         #endif 
        k <= 8; 
        k += 7, m += 3, n += 3, p -= 7, d -= 64) // 48
   {
-    for (i = 0; 
-      #ifdef CBMC
-      __count_L46++,
-      #endif
-         i < 8; 
-         i++, d += p) // 46
+    #ifdef CBMC
+    __count_48_41++;
+    #endif
+
+    #ifdef CBMC
+    __count_46_42 = 0;
+    #endif
+    for (i = 0; i < 8; i++, d += p) // 46
     {
-      for (j = 0; 
-        #ifdef CBMC
-        __count_L44++,
-        #endif
-      j < 4; j++) // 44
+      #ifdef CBMC
+      __count_46_42++;
+      #endif
+
+      #ifdef CBMC
+      __count_44_43 = 0;
+      #endif
+      for (j = 0; j < 4; j++) // 44
       {
         #ifdef CBMC
         __count_44_43++;
@@ -290,6 +362,9 @@ jpegdct(short *d, short *r)
         t[j] = d[k * j] + d[k * (7 - j)];
 	t[7 - j] = d[k * j] - d[k * (7 - j)];
       }
+      #ifdef CBMC
+      __count_44_45++;
+      #endif
     
       t[8] = t[0] + t[3];
       t[9] = t[0] - t[3];
@@ -312,12 +387,25 @@ jpegdct(short *d, short *r)
       d[3 * k] = (short) (t[6] * r[5] + t[1] + t[2]) >> n;
       d[1 * k] = (short) (t[7] * r[7] + t[0] + t[3]) >> n;
     }
+    #ifdef CBMC
+    __count_46_47++;
+    #endif
   }
+  #ifdef CBMC
+  __count_48_49++;
+  __count_49++;
+  #endif
 }
 
 int
 edn (short a[], short b[])
 {
+#ifdef CBMC
+//==========> edn : header 16
+int __count_24 = 0;
+int __count_16_17 = 0;
+#endif
+
   short c = 0x3;
   long int output[200];
   long int d = 0xAAAA;
@@ -332,6 +420,10 @@ edn (short a[], short b[])
   e[0] = codebook(d, 1, 17, e[0], d, a, c, 1);
   jpegdct(a, b);
   
+  #ifdef CBMC
+  __count_16_17++;
+  __count_24++;
+  #endif
   return e[0];
 }
 
