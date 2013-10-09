@@ -3,22 +3,22 @@ Found no solution with cost -27240.0 .. -23401.0
 
 Success, time = 0.0
 ============================================================
-0:00:00.010 - Start Program
+0:00:00.000 - Start Program
 ============================================================
 
 ********** Analysing program 'binary_search' **********
 Checking program configuration...
 ============================================================
-0:00:00.030 - COMPILING BEGIN
+0:00:00.010 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.040 - COMPILING END
+0:00:00.020 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.040 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.030 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -34,10 +34,10 @@ int __count_7_8 = 0;
 FUNCTION 'binary_search'
 ****************************************************************************************************
   IGNORING MUTUAL INCLUSION: 8 and (7, 8)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 3) and 8
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 3) and (4, 5)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 3) and (7, 8)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 3) and (4, 6)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 3) and 8
 ****************************************************************************************************
 FUNCTION 'binary_search'
 ****************************************************************************************************
@@ -57,6 +57,7 @@ DEPENDENT EXECUTION CONJECTURES
 ****************************************************************************************************
 FUNCTION 'binary_search'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_7_2  <= 18); // Loop counter property
 assert(__count_8 >= 1); // Lower capacity constraint
 assert(__count_8 <= 1); // Upper capacity constraint
@@ -71,11 +72,12 @@ assert(__count_4_5 > 0 ==> __count_8 > 0); // Execution dependence
 assert(__count_4_5 > 0 ==> __count_7_8 > 0); // Execution dependence
 assert(__count_4_6 > 0 ==> __count_8 > 0); // Execution dependence
 assert(__count_4_6 > 0 ==> __count_7_8 > 0); // Execution dependence
+#endif
 HWMT = 23400
 Doing WCET calculation on binary_search
-ILP(vanilla):: WCET(binary_search)=24720 (SOLVE TIME=0.00258)
+ILP(vanilla):: WCET(binary_search)=24720 (SOLVE TIME=0.00297)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.binary_search.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(binary_search)=23400 (SOLVE TIME=0.22139)
+CLP(extra):: WCET(binary_search)=23400 (SOLVE TIME=0.22879)
 In binary_search...
 ...#CFG edges              = 11
 ...#monitored              = 5
@@ -90,7 +92,7 @@ In binary_search...
 ...#TOTAL never execute          = 2
 ...#TOTAL always execute         = 2
 ============================================================
-0:02:17.950 - End Program
-Elapsed time: 0:02:17.940
+0:02:24.800 - End Program
+Elapsed time: 0:02:24.800
 ============================================================
 

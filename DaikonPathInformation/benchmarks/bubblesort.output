@@ -1,4 +1,3 @@
-==> ../src/ToolGem5.py bubblesort m5out/bubblesort.trace.*
 ============================================================
 0:00:00.010 - Start Program
 ============================================================
@@ -10,12 +9,12 @@ Checking program configuration...
 ============================================================
 
 ============================================================
-0:00:00.020 - COMPILING END
+0:00:00.040 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.030 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.050 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -80,6 +79,7 @@ DEPENDENT EXECUTION CONJECTURES
 ****************************************************************************************************
 FUNCTION 'bubblesort'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_7_3  <= 10); // Loop counter property
 assert(__count_10_2  <= 10); // Loop counter property
 assert(__count_13 >= 1); // Lower capacity constraint
@@ -87,7 +87,20 @@ assert(__count_13 <= 1); // Upper capacity constraint
 assert(__count_4_6 >= 3); // Lower capacity constraint
 assert(__count_4_6 <= 24); // Upper capacity constraint
 assert(__count_5_6 >= 12); // Lower capacity constraint
-assert(__count_5_6 <= 42); // Upper capacity constraint
+assertFound a solution with cost -780
+Found a solution with cost -1440
+Found no solution with cost -1470.0 .. -1441.0
+
+Success, time = 0.0
+Found a solution with cost -129090
+Found a solution with cost -130560
+Found a solution with cost -132030
+Found a solution with cost -133500
+Found a solution with cost -134970
+Found no solution with cost -149610.0 .. -134971.0
+
+Success, time = 0.0
+(__count_5_6 <= 42); // Upper capacity constraint
 assert(__count_7_8 >= 5); // Lower capacity constraint
 assert(__count_7_8 <= 9); // Upper capacity constraint
 assert(__count_8_12 <= 1); // Upper capacity constraint
@@ -100,37 +113,27 @@ assert(__count_10_11 > 0 ==> __count_13 > 0); // Execution dependence
 assert(__count_10_11 > 0 ==> __count_4_6 > 0); // Execution dependence
 assert(__count_10_11 > 0 ==> __count_5_6 > 0); // Execution dependence
 assert(__count_10_11 > 0 ==> __count_7_8 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'swapiflarger'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_16_17 <= 1); // Upper capacity constraint
 assert(__count_14_15 <= 1); // Upper capacity constraint
 assert(__count_17 >= 1); // Lower capacity constraint
 assert(__count_17 <= 1); // Upper capacity constraint
 assert(__count_16_17 > 0 ==> __count_17 > 0); // Execution dependence
 assert(__count_14_15 > 0 ==> __count_17 > 0); // Execution dependence
+#endif
 HWMT = 127110
 Doing WCET calculation on swapiflarger
-ILP(vanilla):: WCET(swapiflarger)=1440 (SOLVE TIME=0.08324)
+ILP(vanilla):: WCET(swapiflarger)=1440 (SOLVE TIME=0.00289)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.swapiflarger.context2.cfg.ecl.extra -e "solve(WCET)."'
-Found a solution with cost -780
-Found a solution with cost -1440
-Found no solution with cost -1470.0 .. -1441.0
-
-Success, time = 0.0
-CLP(extra):: WCET(swapiflarger)=1440 (SOLVE TIME=1.23763)
+CLP(extra):: WCET(swapiflarger)=1440 (SOLVE TIME=0.22309)
 Doing WCET calculation on bubblesort
-ILP(vanilla):: WCET(bubblesort)=275640 (SOLVE TIME=0.00272)
+ILP(vanilla):: WCET(bubblesort)=275640 (SOLVE TIME=0.00259)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.bubblesort.context1.cfg.ecl.extra -e "solve(WCET)."'
-Found a solution with cost -129090
-Found a solution with cost -130560
-Found a solution with cost -132030
-Found a solution with cost -133500
-Found a solution with cost -134970
-Found no solution with cost -149610.0 .. -134971.0
-
-Success, time = 0.01
-CLP(extra):: WCET(bubblesort)=134970 (SOLVE TIME=0.23555)
+CLP(extra):: WCET(bubblesort)=134970 (SOLVE TIME=0.23631)
 In bubblesort...
 ...#CFG edges              = 17
 ...#monitored              = 6
@@ -153,8 +156,7 @@ In swapiflarger...
 ...#TOTAL never execute          = 5
 ...#TOTAL always execute         = 5
 ============================================================
-0:03:05.840 - End Program
-Elapsed time: 0:03:05.830
+0:03:17.160 - End Program
+Elapsed time: 0:03:17.150
 ============================================================
-
 

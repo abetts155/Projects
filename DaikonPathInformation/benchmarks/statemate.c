@@ -1260,8 +1260,6 @@ int
 main ()
 {
   int val = statemate ();
-  
-  printf("%d", val);
 
   return 0;
 }
