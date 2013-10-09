@@ -29,6 +29,18 @@ class PathInformationGraph (DirectedGraph):
                     self.__monitoredLoopProgramPoints[headerID] = self.__pinpointMonitoredCFGEdges(headerID, dominatorg, lnt, cfg, enhancedCFG, bodyVertices, bodyEdges)
                     self.__pinpointRelativeLoopBoundProgramPoints(treev, dominatorg, lnt, enhancedCFG, reverseEnhancedCFG)
                     self.__monitoredProgramPoints.update(self.__monitoredLoopProgramPoints[headerID])
+                    print "==========>", self._name, ": header", headerID
+                    for programPoint in sorted(self.__monitoredLoopProgramPoints[headerID].keys()):
+                        if isinstance(programPoint, tuple):
+                            print "int __count_%d_%d = 0;" % (programPoint[0], programPoint[1])
+                        else:
+                            print "int __count_%d = 0;" % programPoint
+                    if headerID != cfg.getEntryID():
+                        loopBody = lnt.getLoopBody(headerID)
+                        v        = cfg.getVertex(headerID)
+                        for succID in v.getSuccessorIDs():
+                            if succID in loopBody:
+                                print "int __count_%d_%d = 0; //Loop counter" % (headerID, succID)                                
                     assert self.__monitoredLoopProgramPoints[headerID], "No program points identified for loop with header %d" % headerID
         reachability = self.__computeReachability(self.__enhancedCFG, self.__monitoredProgramPoints)
         self.__programPointToVertex = {}

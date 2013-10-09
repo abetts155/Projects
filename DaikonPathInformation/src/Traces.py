@@ -295,6 +295,101 @@ DEPENDENT EXECUTION CONJECTURES
                 v1 = pathg.getVertex(vertexID1)
                 v2 = pathg.getVertex(vertexID2)
                 Debug.verboseMessage("  ONE-WAY DEPENDENCY: %s on %s" % (v1.__str__(), v2.__str__()))
+                
+    def _outputCBMCConjectures (self): 
+        for cfg in self._program.getCFGs():
+            functionName = cfg.getName()
+            pathg        = self._program.getPathInfoGraph(functionName)
+            lnt          = self._program.getLNT(functionName)
+            Debug.verboseMessage(
+"""%s
+FUNCTION '%s'
+%s""" \
+% ('*' * 100, functionName, '*' * 100))
+            
+            for lntv in lnt:
+                if isinstance(lntv, HeaderVertex):
+                    headerID = lntv.getHeaderID()
+                    if headerID != cfg.getEntryID():
+                        loopBody = lnt.getLoopBody(headerID)
+                        v        = cfg.getVertex(headerID)
+                        forwardEdges = []
+                        for succID in v.getSuccessorIDs():
+                            if succID in loopBody:
+                                forwardEdges.append((headerID, succID))
+                        count = 1
+                        lhs   = ""
+                        for edge in forwardEdges:
+                            lhs += "__count_%d_%d " % (edge[0], edge[1])
+                            if count < len(forwardEdges):
+                                lhs += " + "
+                        relativeBound = 0
+                        for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
+                                pathv = pathg.getProgramPointVertex(programPoint)
+                                succe = pathv.getSuccessorEdges(PathInformationEdgeType.LOOP_BOUNDS)[0]
+                                relativeBound = max(relativeBound, succe.relative)
+                        Debug.verboseMessage("assert(%s <= %d); // Loop counter property" % (lhs, relativeBound))
+            
+            for v in pathg:
+                programPoint = v.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPointStr = "__count_%d_%d" % (programPoint[0], programPoint[1])
+                else:
+                    programPointStr = "__count_%d" % programPoint
+                for succe in v.getSuccessorEdges(PathInformationEdgeType.CAPACITY_BOUNDS):
+                    if succe.lower == 0 and succe.upper == 0:
+                        Debug.verboseMessage("assert(%s == 0); // Dead code" % (programPointStr))
+                    elif succe.lower > 0:
+                        Debug.verboseMessage("assert(%s >= %d); // Lower capacity constraint" % (programPointStr, succe.lower))
+                        Debug.verboseMessage("assert(%s <= %d); // Upper capacity constraint" % (programPointStr, succe.upper))
+                    else:
+                        Debug.verboseMessage("assert(%s <= %d); // Upper capacity constraint" % (programPointStr, succe.upper))
+                    
+            
+            for vertexID1, vertexID2 in pathg.mutualInclusionPairs():
+                v1 = pathg.getVertex(vertexID1)
+                v2 = pathg.getVertex(vertexID2)
+                programPoint1 = v1.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint1Str = "__count_%d_%d" % (programPoint1[0], programPoint1[1])
+                else:
+                    programPoint1Str = "__count_%d" % programPoint1
+                programPoint2 = v2.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint2Str = "__count_%d_%d" % (programPoint2[0], programPoint2[1])
+                else:
+                    programPoint2Str = "__count_%d" % programPoint2
+                Debug.verboseMessage("assert(%s > 0 => %s > 0); // Mutual inclusion" % (programPoint1Str, programPoint2Str))
+                Debug.verboseMessage("assert(%s > 0 => %s > 0); // Mutual inclusion" % (programPoint2Str, programPoint1Str))
+            for vertexID1, vertexID2 in pathg.mutualExclusionPairs():
+                v1 = pathg.getVertex(vertexID1)
+                v2 = pathg.getVertex(vertexID2)
+                programPoint1 = v1.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint1Str = "__count_%d_%d" % (programPoint1[0], programPoint1[1])
+                else:
+                    programPoint1Str = "__count_%d" % programPoint1
+                programPoint2 = v2.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint2Str = "__count_%d_%d" % (programPoint2[0], programPoint2[1])
+                else:
+                    programPoint2Str = "__count_%d" % programPoint2
+                Debug.verboseMessage("assert(%s > 0 => %s == 0); // Mutual exclusion" % (programPoint1Str, programPoint2Str))
+                Debug.verboseMessage("assert(%s > 0 => %s == 0); // Mutual exclusion" % (programPoint2Str, programPoint1Str))
+            for vertexID1, vertexID2 in pathg.executionDependencies():
+                v1 = pathg.getVertex(vertexID1)
+                v2 = pathg.getVertex(vertexID2)
+                programPoint1 = v1.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint1Str = "__count_%d_%d" % (programPoint1[0], programPoint1[1])
+                else:
+                    programPoint1Str = "__count_%d" % programPoint1
+                programPoint2 = v2.getProgramPoint()
+                if isinstance(programPoint, tuple):
+                    programPoint2Str = "__count_%d_%d" % (programPoint2[0], programPoint2[1])
+                else:
+                    programPoint2Str = "__count_%d" % programPoint2
+                Debug.verboseMessage("assert(%s > 0 => %s == 0); // Execution dependence" % (programPoint1Str, programPoint2Str))
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
@@ -402,6 +497,7 @@ class Gem5Parser (TraceInformation):
         self._end()
         self._normaliseData()
         self._outputConjectures()
+        self._outputCBMCConjectures()
         
     def __initialise (self):
         self.__currentContextv = None
