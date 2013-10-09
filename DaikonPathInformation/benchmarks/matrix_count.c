@@ -23,10 +23,16 @@ int
 matrix_count (matrix A)
 {
   #ifdef CBMC
-  int __count_3_5 = 0;
-  int __count_4_6 = 0;
-  int __count_L9 = 0;
-  int __count_L7 = 0;
+//==========> matrix_count : header 7
+int __count_4_6 = 0;
+int __count_5_6 = 0;
+int __count_7_3 = 0; //Loop counter
+//==========> matrix_count : header 9
+int __count_7_8 = 0;
+int __count_9_2 = 0; //Loop counter
+//==========> matrix_count : header 1
+int __count_10 = 0;
+int __count_9_10 = 0;
   #endif
   int i, j;
   int Ptotal = 0;
@@ -34,19 +40,24 @@ matrix_count (matrix A)
   int Pcnt = 0;
   int Ncnt = 0;
 
-  for (i = 0; 
   #ifdef CBMC
-  __count_L9++,
+  __count_9_2 = 0;
   #endif
-  i < UPPERLIMIT; ++i) // 9
+  for (i = 0; i < UPPERLIMIT; ++i) // 9
   {
-    for (j = 0; 
     #ifdef CBMC
-    __count_L7++,
+    __count_9_2++;
     #endif
-    j < UPPERLIMIT; ++j) // 7
+
+    #ifdef CBMC
+    __count_7_3 = 0;
+    #endif
+    for (j = 0; j < UPPERLIMIT; ++j) // 7
     {
-      if (A[i][j] < 0)
+      #ifdef CBMC
+      __count_7_3++;
+      #endif
+      if (A[i][j] < 0) // 3
       {
         // 4
         Ntotal += A[i][j];
@@ -58,12 +69,15 @@ matrix_count (matrix A)
       else
       {
         #ifdef CBMC
-        __count_3_5++;
+        __count_5_6++;
         #endif
         Ptotal += A[i][j];
         Pcnt++;
       }
     }
+    #ifdef CBMC
+    __count_7_8++;
+    #endif
   }
 
   Postotal = Ptotal;
@@ -71,6 +85,10 @@ matrix_count (matrix A)
   Negtotal = Ntotal;
   Negcnt = Ncnt;
   
+  #ifdef CBMC
+  __count_9_10++;
+  __count_10++;
+  #endif
   return Postotal + Poscnt + Negtotal + Negcnt;
 }
 
