@@ -100036,6 +100036,10 @@ binary_search (int x)
 
   while (low <= up) // 7
   {
+    #ifdef CBMC
+      __count_7_2++;
+    #endif
+  
     mid = (low + up) >> 1;
     if (data[mid].key == x) // 2
     {
@@ -100066,9 +100070,26 @@ binary_search (int x)
   
   #ifdef CBMC
   __count_7_8++;
-  __count_4_6++;
+  __count_8++;
   #endif
-  
+
+  #ifdef CBMC
+  assert(__count_7_2  <= 18); // Loop counter property
+assert(__count_8 >= 1); // Lower capacity constraint
+assert(__count_8 <= 1); // Upper capacity constraint
+assert(__count_7_8 >= 1); // Lower capacity constraint
+assert(__count_7_8 <= 1); // Upper capacity constraint
+assert(__count_2_3 == 0); // Dead code
+assert(__count_4_5 <= 16); // Upper capacity constraint
+assert(__count_4_6 <= 17); // Upper capacity constraint
+assert(__count_4_5 > 0 ==> __count_4_6 == 0); // Mutual exclusion
+assert(__count_4_6 > 0 ==> __count_4_5 == 0); // Mutual exclusion
+assert(__count_4_5 > 0 ==> __count_8 == 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_7_8 == 0); // Execution dependence
+assert(__count_4_6 > 0 ==> __count_8 == 0); // Execution dependence
+assert(__count_4_6 > 0 ==> __count_7_8 == 0); // Execution dependence
+  #endif
+    
   return low;
 }
 

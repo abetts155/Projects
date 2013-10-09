@@ -7,88 +7,12 @@
  *
  * For this program, a one-element test vector is expected.
  */
-
-int
-cover (int c)
+ 
+int 
+swi120 (int c)
 {
-#ifdef CBMC
-//==========> cover 208
-int __count_194_206 = 0;
-int __count_195_196 = 0;
-int __count_195_197 = 0;
-int __count_195_198 = 0;
-int __count_195_201 = 0;
-int __count_195_202 = 0;
-int __count_195_203 = 0;
-int __count_195_204 = 0;
-int __count_195_205 = 0;
-int __count_199_207 = 0;
-int __count_200_207 = 0;
-int __count_208_194 = 0; //Loop counter
-//==========> cover 192
-int __count_128_190 = 0;
-int __count_129_130 = 0;
-int __count_129_135 = 0;
-int __count_129_136 = 0;
-int __count_129_137 = 0;
-int __count_129_138 = 0;
-int __count_129_143 = 0;
-int __count_129_144 = 0;
-int __count_129_145 = 0;
-int __count_129_146 = 0;
-int __count_129_151 = 0;
-int __count_129_152 = 0;
-int __count_129_153 = 0;
-int __count_129_154 = 0;
-int __count_129_159 = 0;
-int __count_129_160 = 0;
-int __count_129_161 = 0;
-int __count_129_162 = 0;
-int __count_129_167 = 0;
-int __count_129_168 = 0;
-int __count_129_169 = 0;
-int __count_129_170 = 0;
-int __count_129_175 = 0;
-int __count_129_176 = 0;
-int __count_129_177 = 0;
-int __count_129_178 = 0;
-int __count_129_183 = 0;
-int __count_129_184 = 0;
-int __count_129_185 = 0;
-int __count_129_186 = 0;
-int __count_131_191 = 0;
-int __count_132_191 = 0;
-int __count_133_191 = 0;
-int __count_134_191 = 0;
-int __count_139_191 = 0;
-int __count_140_191 = 0;
-int __count_141_191 = 0;
-int __count_142_191 = 0;
-int __count_147_191 = 0;
-int __count_148_191 = 0;
-int __count_149_191 = 0;
-int __count_150_191 = 0;
-int __count_155_191 = 0;
-int __count_156_191 = 0;
-int __count_157_191 = 0;
-int __count_158_191 = 0;
-int __count_163_191 = 0;
-int __count_164_191 = 0;
-int __count_165_191 = 0;
-int __count_166_191 = 0;
-int __count_171_191 = 0;
-int __count_172_191 = 0;
-int __count_173_191 = 0;
-int __count_174_191 = 0;
-int __count_179_191 = 0;
-int __count_180_191 = 0;
-int __count_181_191 = 0;
-int __count_182_191 = 0;
-int __count_187_191 = 0;
-int __count_188_191 = 0;
-int __count_189_191 = 0;
-int __count_192_128 = 0; //Loop counter
-//==========> cover 126
+ #ifdef CBMC
+//==========> swi120 : header 126
 int __count_3_4 = 0;
 int __count_3_5 = 0;
 int __count_3_6 = 0;
@@ -211,13 +135,13 @@ int __count_122_125 = 0;
 int __count_123_125 = 0;
 int __count_124_125 = 0;
 int __count_126_2 = 0; //Loop counter
-//==========> cover 1
-int __count_209 = 0;
-int __count_192_193 = 0;
+//==========> swi120 : header 1
+int __count_127 = 0;
+int __count_126_127 = 0;
 #endif
 
   int i;
-
+  
   for (i = 0; i < 120; i++)
   {
     #ifdef CBMC
@@ -953,556 +877,16 @@ int __count_192_193 = 0;
         break;
     }
   }
-
-  for (i = 0; i < 50; i++)
-  {
-    #ifdef CBMC
-    __count_192_128++;
-    #endif  
-    switch (i)
-    {
-      case 0:
-      #ifdef CBMC
-      __count_129_130++;
-      #endif
-        c++;
-        break;
-      case 1:
-      #ifdef CBMC
-      __count_131_191++;
-      #endif
-        c++;
-        break;
-      case 2:
-      #ifdef CBMC
-      __count_132_191++;
-      #endif
-        c++;
-        break;
-      case 3:
-      #ifdef CBMC
-      __count_133_191++;
-      #endif
-        c++;
-        break;
-      case 4:
-      #ifdef CBMC
-      __count_134_191++;
-      #endif
-        c++;
-        break;
-      case 5:
-      #ifdef CBMC
-      __count_129_135++;
-      #endif
-        c++;
-        break;
-      case 6:
-      #ifdef CBMC
-      __count_129_136++;
-      #endif
-        c++;
-        break;
-      case 7:
-      #ifdef CBMC
-      __count_129_137++;
-      #endif
-        c++;
-        break;
-      case 8:
-      #ifdef CBMC
-      __count_129_138++;
-      #endif
-        c++;
-        break;
-      case 9:
-      #ifdef CBMC
-      __count_139_191++;
-      #endif
-        c++;
-        break;
-      case 10:
-      #ifdef CBMC
-      __count_140_191++;
-      #endif
-        c++;
-        break;
-      case 11:
-      #ifdef CBMC
-      __count_141_191++;
-      #endif
-        c++;
-        break;
-      case 12:
-      #ifdef CBMC
-      __count_142_191++;
-      #endif
-        c++;
-        break;
-      case 13:
-      #ifdef CBMC
-      __count_129_143++;
-      #endif
-        c++;
-        break;
-      case 14:
-      #ifdef CBMC
-       __count_129_144++;
-      #endif
-        c++;
-        break;
-      case 15:
-      #ifdef CBMC
-       __count_129_145++;
-      #endif
-        c++;
-        break;
-      case 16:
-      #ifdef CBMC
-       __count_129_146++;
-      #endif
-        c++;
-        break;
-      case 17:
-      #ifdef CBMC
-      __count_147_191++;
-      #endif
-        c++;
-        break;
-      case 18:
-      #ifdef CBMC
-      __count_148_191++;
-      #endif
-        c++;
-        break;
-      case 19:
-      #ifdef CBMC
-      __count_149_191++;
-      #endif
-        c++;
-        break;
-      case 20:
-      #ifdef CBMC
-      __count_150_191++;
-      #endif
-        c++;
-        break;
-      case 21:
-      #ifdef CBMC
-       __count_129_151++;
-      #endif
-        c++;
-        break;
-      case 22:
-      #ifdef CBMC
-       __count_129_152++;
-      #endif
-        c++;
-        break;
-      case 23:
-      #ifdef CBMC
-       __count_129_153++;
-      #endif
-        c++;
-        break;
-      case 24:
-      #ifdef CBMC
-       __count_129_154++;
-      #endif
-        c++;
-        break;
-      case 25:
-      #ifdef CBMC
-      __count_155_191++;
-      #endif
-        c++;
-        break;
-      case 26:
-      #ifdef CBMC
-      __count_156_191++;
-      #endif
-        c++;
-        break;
-      case 27:
-      #ifdef CBMC
-      __count_157_191++;
-      #endif
-        c++;
-        break;
-      case 28:
-      #ifdef CBMC
-      __count_158_191++;
-      #endif
-        c++;
-        break;
-      case 29:
-      #ifdef CBMC
-       __count_129_159++;
-      #endif
-        c++;
-        break;
-      case 30:
-      #ifdef CBMC
-       __count_129_160++;
-      #endif
-        c++;
-        break;
-      case 31:
-      #ifdef CBMC
-       __count_129_161++;
-      #endif
-        c++;
-        break;
-      case 32:
-      #ifdef CBMC
-       __count_129_162++;
-      #endif
-        c++;
-        break;
-      case 33:
-      #ifdef CBMC
-      __count_163_191++;
-      #endif
-        c++;
-        break;
-      case 34:
-      #ifdef CBMC
-      __count_164_191++;
-      #endif
-        c++;
-        break;
-      case 35:
-      #ifdef CBMC
-      __count_165_191++;
-      #endif
-        c++;
-        break;
-      case 36:
-      #ifdef CBMC
-      __count_166_191++;
-      #endif
-        c++;
-        break;
-      case 37:
-      #ifdef CBMC
-       __count_129_167++;
-      #endif
-        c++;
-        break;
-      case 38:
-      #ifdef CBMC
-       __count_129_168++;
-      #endif
-        c++;
-        break;
-      case 39:
-      #ifdef CBMC
-       __count_129_169++;
-      #endif
-        c++;
-        break;
-      case 40:
-      #ifdef CBMC
-       __count_129_170++;
-      #endif
-        c++;
-        break;
-      case 41:
-      #ifdef CBMC
-      __count_171_191++;
-      #endif
-        c++;
-        break;
-      case 42:
-      #ifdef CBMC
-      __count_172_191++;
-      #endif
-        c++;
-        break;
-      case 43:
-      #ifdef CBMC
-      __count_173_191++;
-      #endif
-        c++;
-        break;
-      case 44:
-      #ifdef CBMC
-      __count_174_191++;
-      #endif
-        c++;
-        break;
-      case 45:
-      #ifdef CBMC
-       __count_129_175++;
-      #endif
-        c++;
-        break;
-      case 46:
-      #ifdef CBMC
-       __count_129_176++;
-      #endif
-        c++;
-        break;
-      case 47:
-      #ifdef CBMC
-       __count_129_177++;
-      #endif
-        c++;
-        break;
-      case 48:
-      #ifdef CBMC
-       __count_129_178++;
-      #endif
-        c++;
-        break;
-      case 49:
-      #ifdef CBMC
-      __count_179_191++;
-      #endif
-        c++;
-        break;
-      case 50:
-      #ifdef CBMC
-      __count_180_191++;
-      #endif
-        c++;
-        break;
-      case 51:
-      #ifdef CBMC
-      __count_181_191++;
-      #endif
-        c++;
-        break;
-      case 52:
-      #ifdef CBMC
-      __count_182_191++;
-      #endif
-        c++;
-        break;
-      case 53:
-      #ifdef CBMC
-      __count_129_183++;
-      #endif
-        c++;
-        break;
-      case 54:
-      #ifdef CBMC
-      __count_129_184++;
-      #endif
-        c++;
-        break;
-      case 55:
-      #ifdef CBMC
-      __count_129_185++;
-      #endif
-        c++;
-        break;
-      case 56:
-      #ifdef CBMC
-      __count_129_186++;
-      #endif
-        c++;
-        break;
-      case 57:
-      #ifdef CBMC
-      __count_187_191++;
-      #endif
-        c++;
-        break;
-      case 58:
-      #ifdef CBMC
-      __count_188_191++;
-      #endif
-        c++;
-        break;
-      case 59:
-      #ifdef CBMC
-      __count_189_191++;
-      #endif
-        c++;
-        break;
-      default:
-      #ifdef CBMC
-      __count_128_190++;
-      #endif
-        c--;
-        break;
-    }
-  }
   
-  #ifdef CBMC
-  __count_192_193++; 
-  #endif
-
-  for (i = 0; i < 10; i++)
-  {
-    #ifdef CBMC
-    __count_208_194++;
-    #endif
-    switch (i)
-    {
-      case 0:
-      #ifdef CBMC
-      __count_195_196++;
-      #endif
-        c++;
-        break;
-      case 1:
-      #ifdef CBMC
-      __count_195_197++;
-      #endif
-        c++;
-        break;
-      case 2:
-      #ifdef CBMC
-      __count_195_198++;
-      #endif
-        c++;
-        break;
-      case 3:
-      #ifdef CBMC
-      __count_199_207++;
-      #endif
-        c++;
-        break;
-      case 4:
-      #ifdef CBMC
-      __count_200_207++;
-      #endif
-        c++;
-        break;
-      case 5:
-      #ifdef CBMC
-      __count_195_201++;
-      #endif
-        c++;
-        break;
-      case 6:
-      #ifdef CBMC
-      __count_195_202++;
-      #endif
-        c++;
-        break;
-      case 7:
-      #ifdef CBMC
-      __count_195_203++;
-      #endif
-        c++;
-        break;
-      case 8:
-      #ifdef CBMC
-      __count_195_204++;
-      #endif
-        c++;
-        break;
-      case 9:
-      #ifdef CBMC
-      __count_195_205++;
-      #endif
-        c++;
-        break;
-      default:
-      #ifdef CBMC
-      __count_194_206++; 
-      #endif
-        c--;
-        break;
-    }
-  }
-  
-  #ifdef CBMC
-  __count_209++; 
-  #endif
-  
-  #ifdef CBMC
-assert(__count_208_194  <= 11); // Loop counter property
-assert(__count_192_128  <= 51); // Loop counter property
+   #ifdef CBMC
+   __count_126_127++;
+   __count_127++;
+   #endif
+   
+   #ifdef CBMC
 assert(__count_126_2  <= 121); // Loop counter property
-assert(__count_129_183 == 0); // Dead code
-assert(__count_129_184 == 0); // Dead code
-assert(__count_129_185 == 0); // Dead code
-assert(__count_129_186 == 0); // Dead code
-assert(__count_131_191 >= 1); // Lower capacity constraint
-assert(__count_131_191 <= 1); // Upper capacity constraint
-assert(__count_132_191 >= 1); // Lower capacity constraint
-assert(__count_132_191 <= 1); // Upper capacity constraint
-assert(__count_133_191 >= 1); // Lower capacity constraint
-assert(__count_133_191 <= 1); // Upper capacity constraint
-assert(__count_134_191 >= 1); // Lower capacity constraint
-assert(__count_134_191 <= 1); // Upper capacity constraint
-assert(__count_139_191 >= 1); // Lower capacity constraint
-assert(__count_139_191 <= 1); // Upper capacity constraint
-assert(__count_140_191 >= 1); // Lower capacity constraint
-assert(__count_140_191 <= 1); // Upper capacity constraint
-assert(__count_141_191 >= 1); // Lower capacity constraint
-assert(__count_141_191 <= 1); // Upper capacity constraint
-assert(__count_142_191 >= 1); // Lower capacity constraint
-assert(__count_142_191 <= 1); // Upper capacity constraint
-assert(__count_147_191 >= 1); // Lower capacity constraint
-assert(__count_147_191 <= 1); // Upper capacity constraint
-assert(__count_148_191 >= 1); // Lower capacity constraint
-assert(__count_148_191 <= 1); // Upper capacity constraint
-assert(__count_149_191 >= 1); // Lower capacity constraint
-assert(__count_149_191 <= 1); // Upper capacity constraint
-assert(__count_150_191 >= 1); // Lower capacity constraint
-assert(__count_150_191 <= 1); // Upper capacity constraint
-assert(__count_155_191 >= 1); // Lower capacity constraint
-assert(__count_155_191 <= 1); // Upper capacity constraint
-assert(__count_156_191 >= 1); // Lower capacity constraint
-assert(__count_156_191 <= 1); // Upper capacity constraint
-assert(__count_157_191 >= 1); // Lower capacity constraint
-assert(__count_157_191 <= 1); // Upper capacity constraint
-assert(__count_158_191 >= 1); // Lower capacity constraint
-assert(__count_158_191 <= 1); // Upper capacity constraint
-assert(__count_163_191 >= 1); // Lower capacity constraint
-assert(__count_163_191 <= 1); // Upper capacity constraint
-assert(__count_164_191 >= 1); // Lower capacity constraint
-assert(__count_164_191 <= 1); // Upper capacity constraint
-assert(__count_165_191 >= 1); // Lower capacity constraint
-assert(__count_165_191 <= 1); // Upper capacity constraint
-assert(__count_166_191 >= 1); // Lower capacity constraint
-assert(__count_166_191 <= 1); // Upper capacity constraint
-assert(__count_171_191 >= 1); // Lower capacity constraint
-assert(__count_171_191 <= 1); // Upper capacity constraint
-assert(__count_172_191 >= 1); // Lower capacity constraint
-assert(__count_172_191 <= 1); // Upper capacity constraint
-assert(__count_173_191 >= 1); // Lower capacity constraint
-assert(__count_173_191 <= 1); // Upper capacity constraint
-assert(__count_174_191 >= 1); // Lower capacity constraint
-assert(__count_174_191 <= 1); // Upper capacity constraint
-assert(__count_179_191 >= 1); // Lower capacity constraint
-assert(__count_179_191 <= 1); // Upper capacity constraint
-assert(__count_180_191 == 0); // Dead code
-assert(__count_181_191 == 0); // Dead code
-assert(__count_182_191 == 0); // Dead code
-assert(__count_187_191 == 0); // Dead code
-assert(__count_188_191 == 0); // Dead code
-assert(__count_189_191 == 0); // Dead code
-assert(__count_192_193 >= 1); // Lower capacity constraint
-assert(__count_192_193 <= 1); // Upper capacity constraint
-assert(__count_194_206 == 0); // Dead code
-assert(__count_195_196 >= 1); // Lower capacity constraint
-assert(__count_195_196 <= 1); // Upper capacity constraint
-assert(__count_195_197 >= 1); // Lower capacity constraint
-assert(__count_195_197 <= 1); // Upper capacity constraint
-assert(__count_195_198 >= 1); // Lower capacity constraint
-assert(__count_195_198 <= 1); // Upper capacity constraint
-assert(__count_195_201 >= 1); // Lower capacity constraint
-assert(__count_195_201 <= 1); // Upper capacity constraint
-assert(__count_195_202 >= 1); // Lower capacity constraint
-assert(__count_195_202 <= 1); // Upper capacity constraint
-assert(__count_195_203 >= 1); // Lower capacity constraint
-assert(__count_195_203 <= 1); // Upper capacity constraint
-assert(__count_195_204 >= 1); // Lower capacity constraint
-assert(__count_195_204 <= 1); // Upper capacity constraint
-assert(__count_195_205 >= 1); // Lower capacity constraint
-assert(__count_195_205 <= 1); // Upper capacity constraint
-assert(__count_199_207 >= 1); // Lower capacity constraint
-assert(__count_199_207 <= 1); // Upper capacity constraint
-assert(__count_200_207 >= 1); // Lower capacity constraint
-assert(__count_200_207 <= 1); // Upper capacity constraint
-assert(__count_209 >= 1); // Lower capacity constraint
-assert(__count_209 <= 1); // Upper capacity constraint
+assert(__count_127 >= 1); // Lower capacity constraint
+assert(__count_127 <= 1); // Upper capacity constraint
 assert(__count_3_4 >= 1); // Lower capacity constraint
 assert(__count_3_4 <= 1); // Upper capacity constraint
 assert(__count_3_5 >= 1); // Lower capacity constraint
@@ -1744,66 +1128,741 @@ assert(__count_122_125 <= 1); // Upper capacity constraint
 assert(__count_123_125 >= 1); // Lower capacity constraint
 assert(__count_123_125 <= 1); // Upper capacity constraint
 assert(__count_124_125 == 0); // Dead code
-assert(__count_128_190 == 0); // Dead code
-assert(__count_129_130 >= 1); // Lower capacity constraint
-assert(__count_129_130 <= 1); // Upper capacity constraint
-assert(__count_129_135 >= 1); // Lower capacity constraint
-assert(__count_129_135 <= 1); // Upper capacity constraint
-assert(__count_129_136 >= 1); // Lower capacity constraint
-assert(__count_129_136 <= 1); // Upper capacity constraint
-assert(__count_129_137 >= 1); // Lower capacity constraint
-assert(__count_129_137 <= 1); // Upper capacity constraint
-assert(__count_129_138 >= 1); // Lower capacity constraint
-assert(__count_129_138 <= 1); // Upper capacity constraint
-assert(__count_129_143 >= 1); // Lower capacity constraint
-assert(__count_129_143 <= 1); // Upper capacity constraint
-assert(__count_129_144 >= 1); // Lower capacity constraint
-assert(__count_129_144 <= 1); // Upper capacity constraint
-assert(__count_129_145 >= 1); // Lower capacity constraint
-assert(__count_129_145 <= 1); // Upper capacity constraint
-assert(__count_129_146 >= 1); // Lower capacity constraint
-assert(__count_129_146 <= 1); // Upper capacity constraint
-assert(__count_129_151 >= 1); // Lower capacity constraint
-assert(__count_129_151 <= 1); // Upper capacity constraint
-assert(__count_129_152 >= 1); // Lower capacity constraint
-assert(__count_129_152 <= 1); // Upper capacity constraint
-assert(__count_129_153 >= 1); // Lower capacity constraint
-assert(__count_129_153 <= 1); // Upper capacity constraint
-assert(__count_129_154 >= 1); // Lower capacity constraint
-assert(__count_129_154 <= 1); // Upper capacity constraint
-assert(__count_129_159 >= 1); // Lower capacity constraint
-assert(__count_129_159 <= 1); // Upper capacity constraint
-assert(__count_129_160 >= 1); // Lower capacity constraint
-assert(__count_129_160 <= 1); // Upper capacity constraint
-assert(__count_129_161 >= 1); // Lower capacity constraint
-assert(__count_129_161 <= 1); // Upper capacity constraint
-assert(__count_129_162 >= 1); // Lower capacity constraint
-assert(__count_129_162 <= 1); // Upper capacity constraint
-assert(__count_129_167 >= 1); // Lower capacity constraint
-assert(__count_129_167 <= 1); // Upper capacity constraint
-assert(__count_129_168 >= 1); // Lower capacity constraint
-assert(__count_129_168 <= 1); // Upper capacity constraint
-assert(__count_129_169 >= 1); // Lower capacity constraint
-assert(__count_129_169 <= 1); // Upper capacity constraint
-assert(__count_129_170 >= 1); // Lower capacity constraint
-assert(__count_129_170 <= 1); // Upper capacity constraint
-assert(__count_129_175 >= 1); // Lower capacity constraint
-assert(__count_129_175 <= 1); // Upper capacity constraint
-assert(__count_129_176 >= 1); // Lower capacity constraint
-assert(__count_129_176 <= 1); // Upper capacity constraint
-assert(__count_129_177 >= 1); // Lower capacity constraint
-assert(__count_129_177 <= 1); // Upper capacity constraint
-assert(__count_129_178 >= 1); // Lower capacity constraint
-assert(__count_129_178 <= 1); // Upper capacity constraint
-  #endif
+assert(__count_126_127 >= 1); // Lower capacity constraint
+assert(__count_126_127 <= 1); // Upper capacity constraint
+   #endif
   
+  return c;
+} 
+
+int 
+swi50 (int c)
+{
+#ifdef CBMC
+//==========> swi50 : header 193
+int __count_129_191 = 0;
+int __count_130_131 = 0;
+int __count_130_136 = 0;
+int __count_130_137 = 0;
+int __count_130_138 = 0;
+int __count_130_139 = 0;
+int __count_130_144 = 0;
+int __count_130_145 = 0;
+int __count_130_146 = 0;
+int __count_130_147 = 0;
+int __count_130_152 = 0;
+int __count_130_153 = 0;
+int __count_130_154 = 0;
+int __count_130_155 = 0;
+int __count_130_160 = 0;
+int __count_130_161 = 0;
+int __count_130_162 = 0;
+int __count_130_163 = 0;
+int __count_130_168 = 0;
+int __count_130_169 = 0;
+int __count_130_170 = 0;
+int __count_130_171 = 0;
+int __count_130_176 = 0;
+int __count_130_177 = 0;
+int __count_130_178 = 0;
+int __count_130_179 = 0;
+int __count_130_184 = 0;
+int __count_130_185 = 0;
+int __count_130_186 = 0;
+int __count_130_187 = 0;
+int __count_132_192 = 0;
+int __count_133_192 = 0;
+int __count_134_192 = 0;
+int __count_135_192 = 0;
+int __count_140_192 = 0;
+int __count_141_192 = 0;
+int __count_142_192 = 0;
+int __count_143_192 = 0;
+int __count_148_192 = 0;
+int __count_149_192 = 0;
+int __count_150_192 = 0;
+int __count_151_192 = 0;
+int __count_156_192 = 0;
+int __count_157_192 = 0;
+int __count_158_192 = 0;
+int __count_159_192 = 0;
+int __count_164_192 = 0;
+int __count_165_192 = 0;
+int __count_166_192 = 0;
+int __count_167_192 = 0;
+int __count_172_192 = 0;
+int __count_173_192 = 0;
+int __count_174_192 = 0;
+int __count_175_192 = 0;
+int __count_180_192 = 0;
+int __count_181_192 = 0;
+int __count_182_192 = 0;
+int __count_183_192 = 0;
+int __count_188_192 = 0;
+int __count_189_192 = 0;
+int __count_190_192 = 0;
+int __count_193_129 = 0; //Loop counter
+//==========> swi50 : header 128
+int __count_194 = 0;
+int __count_193_194 = 0;
+#endif
+
+  int i;
+
+  for (i = 0; i < 50; i++)
+  {
+    #ifdef CBMC
+    __count_193_129++;
+    #endif  
+    switch (i)
+    {
+      case 0:
+      #ifdef CBMC
+      __count_130_131++;
+      #endif
+        c++;
+        break;
+      case 1:
+      #ifdef CBMC
+      __count_132_192++;
+      #endif
+        c++;
+        break;
+      case 2:
+      #ifdef CBMC
+      __count_133_192++;
+      #endif
+        c++;
+        break;
+      case 3:
+      #ifdef CBMC
+      __count_134_192++;
+      #endif
+        c++;
+        break;
+      case 4:
+      #ifdef CBMC
+      __count_135_192++;
+      #endif
+        c++;
+        break;
+      case 5:
+      #ifdef CBMC
+      __count_130_136++;
+      #endif
+        c++;
+        break;
+      case 6:
+      #ifdef CBMC
+      __count_130_137++;
+      #endif
+        c++;
+        break;
+      case 7:
+      #ifdef CBMC
+      __count_130_138++;
+      #endif
+        c++;
+        break;
+      case 8:
+      #ifdef CBMC
+      __count_130_139++;
+      #endif
+        c++;
+        break;
+      case 9:
+      #ifdef CBMC
+      __count_140_192++;
+      #endif
+        c++;
+        break;
+      case 10:
+      #ifdef CBMC
+      __count_141_192++;
+      #endif
+        c++;
+        break;
+      case 11:
+      #ifdef CBMC
+      __count_142_192++;
+      #endif
+        c++;
+        break;
+      case 12:
+      #ifdef CBMC
+      __count_143_192++;
+      #endif
+        c++;
+        break;
+      case 13:
+      #ifdef CBMC
+      __count_130_144++;
+      #endif
+        c++;
+        break;
+      case 14:
+      #ifdef CBMC
+      __count_130_145++;
+      #endif
+        c++;
+        break;
+      case 15:
+      #ifdef CBMC
+      __count_130_146++;
+      #endif
+        c++;
+        break;
+      case 16:
+      #ifdef CBMC
+      __count_130_147++;
+      #endif
+        c++;
+        break;
+      case 17:
+      #ifdef CBMC
+      __count_148_192++;
+      #endif
+        c++;
+        break;
+      case 18:
+      #ifdef CBMC
+      __count_149_192++;
+      #endif
+        c++;
+        break;
+      case 19:
+      #ifdef CBMC
+      __count_150_192++;
+      #endif
+        c++;
+        break;
+      case 20:
+      #ifdef CBMC
+      __count_151_192++;
+      #endif
+        c++;
+        break;
+      case 21:
+      #ifdef CBMC
+      __count_130_152++;
+      #endif
+        c++;
+        break;
+      case 22:
+      #ifdef CBMC
+      __count_130_153++;
+      #endif
+        c++;
+        break;
+      case 23:
+      #ifdef CBMC
+      __count_130_154++;
+      #endif
+        c++;
+        break;
+      case 24:
+      #ifdef CBMC
+      __count_130_155++;
+      #endif
+        c++;
+        break;
+      case 25:
+      #ifdef CBMC
+      __count_156_192++;
+      #endif
+        c++;
+        break;
+      case 26:
+      #ifdef CBMC
+      __count_157_192++;
+      #endif
+        c++;
+        break;
+      case 27:
+      #ifdef CBMC
+      __count_158_192++;
+      #endif
+        c++;
+        break;
+      case 28:
+      #ifdef CBMC
+      __count_159_192++;
+      #endif
+        c++;
+        break;
+      case 29:
+      #ifdef CBMC
+      __count_130_160++;
+      #endif
+        c++;
+        break;
+      case 30:
+      #ifdef CBMC
+      __count_130_161++;
+      #endif
+        c++;
+        break;
+      case 31:
+      #ifdef CBMC
+      __count_130_162++;
+      #endif
+        c++;
+        break;
+      case 32:
+      #ifdef CBMC
+      __count_130_163++;
+      #endif
+        c++;
+        break;
+      case 33:
+      #ifdef CBMC
+      __count_164_192++;
+      #endif
+        c++;
+        break;
+      case 34:
+      #ifdef CBMC
+      __count_165_192++;
+      #endif
+        c++;
+        break;
+      case 35:
+      #ifdef CBMC
+      __count_166_192++;
+      #endif
+        c++;
+        break;
+      case 36:
+      #ifdef CBMC
+      __count_167_192++;
+      #endif
+        c++;
+        break;
+      case 37:
+      #ifdef CBMC
+      __count_130_168++;
+      #endif
+        c++;
+        break;
+      case 38:
+      #ifdef CBMC
+      __count_130_169++;
+      #endif
+        c++;
+        break;
+      case 39:
+      #ifdef CBMC
+      __count_130_170++;
+      #endif
+        c++;
+        break;
+      case 40:
+      #ifdef CBMC
+      __count_130_171++;
+      #endif
+        c++;
+        break;
+      case 41:
+      #ifdef CBMC
+      __count_172_192++;
+      #endif
+        c++;
+        break;
+      case 42:
+      #ifdef CBMC
+      __count_173_192++;
+      #endif
+        c++;
+        break;
+      case 43:
+      #ifdef CBMC
+      __count_174_192++;
+      #endif
+        c++;
+        break;
+      case 44:
+      #ifdef CBMC
+      __count_175_192++;
+      #endif
+        c++;
+        break;
+      case 45:
+      #ifdef CBMC
+      __count_130_176++;
+      #endif
+        c++;
+        break;
+      case 46:
+      #ifdef CBMC
+      __count_130_177++;
+      #endif
+        c++;
+        break;
+      case 47:
+      #ifdef CBMC
+      __count_130_178++;
+      #endif
+        c++;
+        break;
+      case 48:
+      #ifdef CBMC
+      __count_130_179++;
+      #endif
+        c++;
+        break;
+      case 49:
+      #ifdef CBMC
+      __count_180_192++;
+      #endif
+        c++;
+        break;
+      case 50:
+      #ifdef CBMC
+      __count_181_192++;
+      #endif
+        c++;
+        break;
+      case 51:
+      #ifdef CBMC
+      __count_182_192++;
+      #endif
+        c++;
+        break;
+      case 52:
+      #ifdef CBMC
+      __count_183_192++;
+      #endif
+        c++;
+        break;
+      case 53:
+      #ifdef CBMC
+      __count_130_184++;
+      #endif
+        c++;
+        break;
+      case 54:
+      #ifdef CBMC
+      __count_130_185++;
+      #endif
+        c++;
+        break;
+      case 55:
+      #ifdef CBMC
+      __count_130_186++;
+      #endif
+        c++;
+        break;
+      case 56:
+      #ifdef CBMC
+      __count_130_187++;
+      #endif
+        c++;
+        break;
+      case 57:
+      #ifdef CBMC
+      __count_188_192++;
+      #endif
+        c++;
+        break;
+      case 58:
+      #ifdef CBMC
+      __count_189_192++;
+      #endif
+        c++;
+        break;
+      case 59:
+      #ifdef CBMC
+      __count_190_192++;
+      #endif
+        c++;
+        break;
+      default:
+      #ifdef CBMC
+      __count_129_191++;
+      #endif
+        c--;
+        break;
+    }
+  }
+  
+   #ifdef CBMC
+   __count_193_194++;
+   __count_194++;
+   #endif
+   
+#ifdef CBMC
+assert(__count_193_129  <= 51); // Loop counter property
+assert(__count_129_191 == 0); // Dead code
+assert(__count_130_131 >= 1); // Lower capacity constraint
+assert(__count_130_131 <= 1); // Upper capacity constraint
+assert(__count_130_136 >= 1); // Lower capacity constraint
+assert(__count_130_136 <= 1); // Upper capacity constraint
+assert(__count_130_137 >= 1); // Lower capacity constraint
+assert(__count_130_137 <= 1); // Upper capacity constraint
+assert(__count_130_138 >= 1); // Lower capacity constraint
+assert(__count_130_138 <= 1); // Upper capacity constraint
+assert(__count_130_139 >= 1); // Lower capacity constraint
+assert(__count_130_139 <= 1); // Upper capacity constraint
+assert(__count_133_192 >= 1); // Lower capacity constraint
+assert(__count_133_192 <= 1); // Upper capacity constraint
+assert(__count_130_144 >= 1); // Lower capacity constraint
+assert(__count_130_144 <= 1); // Upper capacity constraint
+assert(__count_130_145 >= 1); // Lower capacity constraint
+assert(__count_130_145 <= 1); // Upper capacity constraint
+assert(__count_130_146 >= 1); // Lower capacity constraint
+assert(__count_130_146 <= 1); // Upper capacity constraint
+assert(__count_130_147 >= 1); // Lower capacity constraint
+assert(__count_130_147 <= 1); // Upper capacity constraint
+assert(__count_130_152 >= 1); // Lower capacity constraint
+assert(__count_130_152 <= 1); // Upper capacity constraint
+assert(__count_130_153 >= 1); // Lower capacity constraint
+assert(__count_130_153 <= 1); // Upper capacity constraint
+assert(__count_130_154 >= 1); // Lower capacity constraint
+assert(__count_130_154 <= 1); // Upper capacity constraint
+assert(__count_130_155 >= 1); // Lower capacity constraint
+assert(__count_130_155 <= 1); // Upper capacity constraint
+assert(__count_130_160 >= 1); // Lower capacity constraint
+assert(__count_130_160 <= 1); // Upper capacity constraint
+assert(__count_130_161 >= 1); // Lower capacity constraint
+assert(__count_130_161 <= 1); // Upper capacity constraint
+assert(__count_130_162 >= 1); // Lower capacity constraint
+assert(__count_130_162 <= 1); // Upper capacity constraint
+assert(__count_130_163 >= 1); // Lower capacity constraint
+assert(__count_130_163 <= 1); // Upper capacity constraint
+assert(__count_130_168 >= 1); // Lower capacity constraint
+assert(__count_130_168 <= 1); // Upper capacity constraint
+assert(__count_130_169 >= 1); // Lower capacity constraint
+assert(__count_130_169 <= 1); // Upper capacity constraint
+assert(__count_130_170 >= 1); // Lower capacity constraint
+assert(__count_130_170 <= 1); // Upper capacity constraint
+assert(__count_130_171 >= 1); // Lower capacity constraint
+assert(__count_130_171 <= 1); // Upper capacity constraint
+assert(__count_130_176 >= 1); // Lower capacity constraint
+assert(__count_130_176 <= 1); // Upper capacity constraint
+assert(__count_130_177 >= 1); // Lower capacity constraint
+assert(__count_130_177 <= 1); // Upper capacity constraint
+assert(__count_130_178 >= 1); // Lower capacity constraint
+assert(__count_130_178 <= 1); // Upper capacity constraint
+assert(__count_130_179 >= 1); // Lower capacity constraint
+assert(__count_130_179 <= 1); // Upper capacity constraint
+assert(__count_130_184 == 0); // Dead code
+assert(__count_130_185 == 0); // Dead code
+assert(__count_130_186 == 0); // Dead code
+assert(__count_130_187 == 0); // Dead code
+assert(__count_132_192 >= 1); // Lower capacity constraint
+assert(__count_132_192 <= 1); // Upper capacity constraint
+assert(__count_194 >= 1); // Lower capacity constraint
+assert(__count_194 <= 1); // Upper capacity constraint
+assert(__count_134_192 >= 1); // Lower capacity constraint
+assert(__count_134_192 <= 1); // Upper capacity constraint
+assert(__count_135_192 >= 1); // Lower capacity constraint
+assert(__count_135_192 <= 1); // Upper capacity constraint
+assert(__count_140_192 >= 1); // Lower capacity constraint
+assert(__count_140_192 <= 1); // Upper capacity constraint
+assert(__count_141_192 >= 1); // Lower capacity constraint
+assert(__count_141_192 <= 1); // Upper capacity constraint
+assert(__count_142_192 >= 1); // Lower capacity constraint
+assert(__count_142_192 <= 1); // Upper capacity constraint
+assert(__count_143_192 >= 1); // Lower capacity constraint
+assert(__count_143_192 <= 1); // Upper capacity constraint
+assert(__count_148_192 >= 1); // Lower capacity constraint
+assert(__count_148_192 <= 1); // Upper capacity constraint
+assert(__count_149_192 >= 1); // Lower capacity constraint
+assert(__count_149_192 <= 1); // Upper capacity constraint
+assert(__count_150_192 >= 1); // Lower capacity constraint
+assert(__count_150_192 <= 1); // Upper capacity constraint
+assert(__count_151_192 >= 1); // Lower capacity constraint
+assert(__count_151_192 <= 1); // Upper capacity constraint
+assert(__count_156_192 >= 1); // Lower capacity constraint
+assert(__count_156_192 <= 1); // Upper capacity constraint
+assert(__count_157_192 >= 1); // Lower capacity constraint
+assert(__count_157_192 <= 1); // Upper capacity constraint
+assert(__count_158_192 >= 1); // Lower capacity constraint
+assert(__count_158_192 <= 1); // Upper capacity constraint
+assert(__count_159_192 >= 1); // Lower capacity constraint
+assert(__count_159_192 <= 1); // Upper capacity constraint
+assert(__count_164_192 >= 1); // Lower capacity constraint
+assert(__count_164_192 <= 1); // Upper capacity constraint
+assert(__count_165_192 >= 1); // Lower capacity constraint
+assert(__count_165_192 <= 1); // Upper capacity constraint
+assert(__count_166_192 >= 1); // Lower capacity constraint
+assert(__count_166_192 <= 1); // Upper capacity constraint
+assert(__count_167_192 >= 1); // Lower capacity constraint
+assert(__count_167_192 <= 1); // Upper capacity constraint
+assert(__count_172_192 >= 1); // Lower capacity constraint
+assert(__count_172_192 <= 1); // Upper capacity constraint
+assert(__count_173_192 >= 1); // Lower capacity constraint
+assert(__count_173_192 <= 1); // Upper capacity constraint
+assert(__count_174_192 >= 1); // Lower capacity constraint
+assert(__count_174_192 <= 1); // Upper capacity constraint
+assert(__count_175_192 >= 1); // Lower capacity constraint
+assert(__count_175_192 <= 1); // Upper capacity constraint
+assert(__count_180_192 >= 1); // Lower capacity constraint
+assert(__count_180_192 <= 1); // Upper capacity constraint
+assert(__count_181_192 == 0); // Dead code
+assert(__count_182_192 == 0); // Dead code
+assert(__count_183_192 == 0); // Dead code
+assert(__count_188_192 == 0); // Dead code
+assert(__count_189_192 == 0); // Dead code
+assert(__count_190_192 == 0); // Dead code
+assert(__count_193_194 >= 1); // Lower capacity constraint
+assert(__count_193_194 <= 1); // Upper capacity constraint
+#endif
+  
+  return c;
+} 
+
+int 
+swi10 (int c)
+{
+#ifdef CBMC
+//==========> swi10 : header 214
+int __count_200_212 = 0;
+int __count_201_202 = 0;
+int __count_201_203 = 0;
+int __count_201_204 = 0;
+int __count_201_207 = 0;
+int __count_201_208 = 0;
+int __count_201_209 = 0;
+int __count_201_210 = 0;
+int __count_201_211 = 0;
+int __count_205_213 = 0;
+int __count_206_213 = 0;
+int __count_214_200 = 0; //Loop counter
+//==========> swi10 : header 199
+int __count_215 = 0;
+int __count_214_215 = 0;
+#endif
+
+  int i;
+  
+  for (i = 0; i < 10; i++)
+  {
+    #ifdef CBMC
+    __count_214_200++;
+    #endif
+    switch (i)
+    {
+      case 0:
+      #ifdef CBMC
+      __count_201_202++;
+      #endif
+        c++;
+        break;
+      case 1:
+      #ifdef CBMC
+      __count_201_203++;
+      #endif
+        c++;
+        break;
+      case 2:
+      #ifdef CBMC
+      __count_201_204++;
+      #endif
+        c++;
+        break;
+      case 3:
+      #ifdef CBMC
+      __count_205_213++;
+      #endif
+        c++;
+        break;
+      case 4:
+      #ifdef CBMC
+      __count_206_213++;
+      #endif
+        c++;
+        break;
+      case 5:
+      #ifdef CBMC
+     __count_201_207++;
+      #endif
+        c++;
+        break;
+      case 6:
+      #ifdef CBMC
+      __count_201_208++;
+      #endif
+        c++;
+        break;
+      case 7:
+      #ifdef CBMC
+     __count_201_209++;
+      #endif
+        c++;
+        break;
+      case 8:
+      #ifdef CBMC
+      __count_201_210++;
+      #endif
+        c++;
+        break;
+      case 9:
+      #ifdef CBMC
+      __count_201_211++;
+      #endif
+        c++;
+        break;
+      default:
+      #ifdef CBMC
+      __count_200_212++; 
+      #endif
+        c--;
+        break;
+    }
+  }
+  
+   #ifdef CBMC
+   __count_214_215++;
+   __count_215++;
+   #endif
+   
+#ifdef CBMC
+assert(__count_214_200  <= 11); // Loop counter property
+assert(__count_200_212 == 0); // Dead code
+assert(__count_201_202 >= 1); // Lower capacity constraint
+assert(__count_201_202 <= 1); // Upper capacity constraint
+assert(__count_201_203 >= 1); // Lower capacity constraint
+assert(__count_201_203 <= 1); // Upper capacity constraint
+assert(__count_201_204 >= 1); // Lower capacity constraint
+assert(__count_201_204 <= 1); // Upper capacity constraint
+assert(__count_201_207 >= 1); // Lower capacity constraint
+assert(__count_201_207 <= 1); // Upper capacity constraint
+assert(__count_201_208 >= 1); // Lower capacity constraint
+assert(__count_201_208 <= 1); // Upper capacity constraint
+assert(__count_201_209 >= 1); // Lower capacity constraint
+assert(__count_201_209 <= 1); // Upper capacity constraint
+assert(__count_201_210 >= 1); // Lower capacity constraint
+assert(__count_201_210 <= 1); // Upper capacity constraint
+assert(__count_201_211 >= 1); // Lower capacity constraint
+assert(__count_201_211 <= 1); // Upper capacity constraint
+assert(__count_205_213 >= 1); // Lower capacity constraint
+assert(__count_205_213 <= 1); // Upper capacity constraint
+assert(__count_206_213 >= 1); // Lower capacity constraint
+assert(__count_206_213 <= 1); // Upper capacity constraint
+assert(__count_215 >= 1); // Lower capacity constraint
+assert(__count_215 <= 1); // Upper capacity constraint
+assert(__count_214_215 >= 1); // Lower capacity constraint
+assert(__count_214_215 <= 1); // Upper capacity constraint
+#endif
+  
+  return c;
+}
+
+int
+cover (int c)
+{
+  c = swi10(c);
+  c = swi50(c);
+  c = swi120(c);
+
   return c;
 }
 
 int
 main (int argc, char *argv[])
 {
-  int cnt;
+  volatile int cnt;
 
   /*
    * One integer value must be supplied
@@ -1815,7 +1874,6 @@ main (int argc, char *argv[])
 
   cnt = atoi (argv[1]);
   int val = cover(cnt);
-  printf("%d", val);
 
   return 0;
 }
