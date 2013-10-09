@@ -22761,3 +22761,574 @@ In quadraticroots...
 Elapsed time: 0:03:12.890
 ============================================================
 
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'select' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.040 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.050 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> select 20
+int __count_20_19 = 0;
+==========> select 17
+int __count_17_16 = 0;
+==========> select 25
+int __count_21_22 = 0;
+int __count_21_23 = 0;
+==========> select 30
+int __count_3_6 = 0;
+int __count_4_5 = 0;
+int __count_4_6 = 0;
+int __count_8_9 = 0;
+int __count_8_10 = 0;
+int __count_10_11 = 0;
+int __count_10_12 = 0;
+int __count_12_13 = 0;
+int __count_12_14 = 0;
+int __count_26_27 = 0;
+int __count_26_28 = 0;
+==========> select 1
+int __count_31 = 0;
+int __count_30_31 = 0;
+****************************************************************************************************
+FUNCTION 'select'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (4, 6) and 31
+  IGNORING MUTUAL INCLUSION: (4, 6) and (8, 9)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (8, 10)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (4, 6) and (30, 31)
+  IGNORING MUTUAL INCLUSION: (8, 9) and 31
+  IGNORING MUTUAL INCLUSION: (8, 9) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (8, 9) and (30, 31)
+  IGNORING MUTUAL INCLUSION: (8, 10) and 31
+  IGNORING MUTUAL INCLUSION: (8, 10) and (8, 9)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (8, 10) and (30, 31)
+  IGNORING MUTUAL INCLUSION: (10, 11) and 31
+  IGNORING MUTUAL INCLUSION: (10, 11) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (10, 11) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (10, 12) and 31
+  IGNORING MUTUAL INCLUSION: (10, 12) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (12, 13) and 31
+  IGNORING MUTUAL INCLUSION: (12, 13) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (12, 14) and 31
+  IGNORING MUTUAL INCLUSION: (12, 14) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (12, 14) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (12, 14) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (12, 14) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (12, 14) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (17, 16) and 31
+  IGNORING MUTUAL INCLUSION: (17, 16) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (17, 16) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (17, 16) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (20, 19) and 31
+  IGNORING MUTUAL INCLUSION: (20, 19) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (20, 19) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (21, 22) and 31
+  IGNORING MUTUAL INCLUSION: (21, 22) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (21, 23) and 31
+  IGNORING MUTUAL INCLUSION: (21, 23) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (21, 23) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (21, 23) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (21, 23) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (26, 27) and 31
+  IGNORING MUTUAL INCLUSION: (26, 28) and 31
+  IGNORING MUTUAL INCLUSION: (26, 28) and (4, 6)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (8, 9)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (8, 10)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (26, 27)
+  IGNORING MUTUAL INCLUSION: (26, 28) and (30, 31)
+  IGNORING MUTUAL INCLUSION: (30, 31) and 31
+  IGNORING MUTUAL INCLUSION: (30, 31) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (12, 14)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (17, 16)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (20, 19)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (21, 22)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (21, 23)
+  IGNORING MUTUAL INCLUSION: (30, 31) and (26, 27)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (26, 28)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (20, 19)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (21, 22)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (26, 27)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (4, 6)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (10, 12)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (12, 13)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (30, 31)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (21, 23)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and 31
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (8, 10)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (12, 14)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (17, 16)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (4, 5)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (10, 11)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (3, 6) and (8, 9)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (20, 19)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (8, 10)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (17, 16)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (12, 13)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (10, 12)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (26, 27)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and 31
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (26, 28)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (30, 31)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (4, 6)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (21, 23)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (10, 11)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (8, 9)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (12, 14)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (4, 5) and (21, 22)
+****************************************************************************************************
+FUNCTION 'select'
+****************************************************************************************************
+  NEVER EXECUTES: (3, 6)
+  NEVER EXECUTES: (4, 5)
+  ALWAYS EXECUTES: (26, 28), at least 10 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (4, 6), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (8, 10), at least 12 time(s), at most 414 time(s)
+  ALWAYS EXECUTES: (8, 9), at least 118 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (30, 31), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (10, 11), at least 12 time(s), at most 578 time(s)
+  ALWAYS EXECUTES: (10, 12), at least 15 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (12, 13), at least 10 time(s), at most 585 time(s)
+  ALWAYS EXECUTES: (12, 14), at least 16 time(s), at most 583 time(s)
+  ALWAYS EXECUTES: (21, 23), at least 248 time(s), at most 248 time(s)
+  ALWAYS EXECUTES: (17, 16), at least 146 time(s), at most 146 time(s)
+  ALWAYS EXECUTES: (20, 19), at least 354 time(s), at most 354 time(s)
+  ALWAYS EXECUTES: (21, 22), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (26, 27), at least 12 time(s), at most 583 time(s)
+  ALWAYS EXECUTES: 31, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+HWMT = 7081770
+Doing WCET calculation on select
+ILP(vanilla):: WCET(select)=2788050000 (SOLVE TIME=0.00492)
+ILP(extra):: WCET(select)=7890300 (SOLVE TIME=0.00632)
+In select...
+...#CFG edges              = 46
+...#monitored              = 17
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 2
+...#always execute         = 15
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 15
+...#TOTAL always execute         = 15
+============================================================
+1:07:46.940 - End Program
+Elapsed time: 1:07:46.930
+============================================================
+
+============================================================
+0:00:00.020 - Start Program
+============================================================
+
+********** Analysing program 'squareroot' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.020 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.030 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> squareroot : header 8
+int __count_4_7 = 0;
+int __count_5_6 = 0;
+int __count_5_7 = 0;
+int __count_8_4 = 0; //Loop counter
+==========> squareroot : header 1
+int __count_9 = 0;
+int __count_2_9 = 0;
+int __count_8_9 = 0;
+****************************************************************************************************
+FUNCTION 'squareroot'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: 9 and (5, 7)
+  IGNORING MUTUAL INCLUSION: 9 and (8, 9)
+  IGNORING MUTUAL INCLUSION: (5, 7) and (8, 9)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 9) and 9
+****************************************************************************************************
+FUNCTION 'squareroot'
+****************************************************************************************************
+  ALWAYS EXECUTES: 9, at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (2, 9)
+  MAY EXECUTE: (4, 7), at most 7 time(s)
+  MAY EXECUTE: (5, 6), at most 1 time(s)
+  ALWAYS EXECUTES: (5, 7), at least 11 time(s), at most 19 time(s)
+  ALWAYS EXECUTES: (8, 9), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (4, 7) and (5, 6)
+  ONE-WAY DEPENDENCY: (4, 7) on 9
+  ONE-WAY DEPENDENCY: (4, 7) on (5, 7)
+  ONE-WAY DEPENDENCY: (4, 7) on (8, 9)
+  ONE-WAY DEPENDENCY: (5, 6) on 9
+  ONE-WAY DEPENDENCY: (5, 6) on (5, 7)
+  ONE-WAY DEPENDENCY: (5, 6) on (8, 9)
+****************************************************************************************************
+FUNCTION 'squareroot'
+****************************************************************************************************
+assert(__count_8_4  <= 20); // Loop counter property
+assert(__count_9 >= 1); // Lower capacity constraint
+assert(__count_9 <= 1); // Upper capacity constraint
+assert(__count_2_9 == 0); // Dead code
+assert(__count_4_7 <= 7); // Upper capacity constraint
+assert(__count_5_6 <= 1); // Upper capacity constraint
+assert(__count_5_7 >= 11); // Lower capacity constraint
+assert(__count_5_7 <= 19); // Upper capacity constraint
+assert(__count_8_9 >= 1); // Lower capacity constraint
+assert(__count_8_9 <= 1); // Upper capacity constraint
+assert(__count_4_7 > 0 => __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 => __count_4_7 > 0); // Mutual inclusion
+============================================================
+0:04:17.990 - End Program
+Elapsed time: 0:04:17.970
+============================================================
+
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'statistics' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.040 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.040 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> statistics : header 1
+int __count_6 = 0;
+int __count_1_2 = 0;
+==========> calc_lincorrcoef : header 11
+int __count_8_9 = 0;
+int __count_11_8 = 0; //Loop counter
+==========> calc_lincorrcoef : header 7
+int __count_14 = 0;
+int __count_11_12 = 0;
+==========> sqrt : header 15
+int __count_15 = 0;
+==========> square : header 16
+int __count_16 = 0;
+==========> calc_sum_mean : header 19
+int __count_19_18 = 0;
+int __count_19_18 = 0; //Loop counter
+==========> calc_sum_mean : header 17
+int __count_20 = 0;
+int __count_19_20 = 0;
+==========> calc_var_stddev : header 24
+int __count_24_22 = 0;
+int __count_24_22 = 0; //Loop counter
+==========> calc_var_stddev : header 21
+int __count_26 = 0;
+int __count_24_25 = 0;
+****************************************************************************************************
+FUNCTION 'statistics'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: 6 and (1, 2)
+****************************************************************************************************
+FUNCTION 'calc_lincorrcoef'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (8, 9) and (11, 12)
+  IGNORING MUTUAL INCLUSION: (8, 9) and 14
+  IGNORING MUTUAL INCLUSION: 14 and (11, 12)
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+****************************************************************************************************
+FUNCTION 'square'
+****************************************************************************************************
+****************************************************************************************************
+FUNCTION 'calc_sum_mean'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (19, 18) and 20
+  IGNORING MUTUAL INCLUSION: (19, 20) and (19, 18)
+  IGNORING MUTUAL INCLUSION: (19, 20) and 20
+****************************************************************************************************
+FUNCTION 'calc_var_stddev'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (24, 25) and (24, 22)
+  IGNORING MUTUAL INCLUSION: 26 and (24, 25)
+  IGNORING MUTUAL INCLUSION: 26 and (24, 22)
+****************************************************************************************************
+FUNCTION 'statistics'
+****************************************************************************************************
+  ALWAYS EXECUTES: 6, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (1, 2), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'calc_lincorrcoef'
+****************************************************************************************************
+  ALWAYS EXECUTES: (8, 9), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: 14, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (11, 12), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+  ALWAYS EXECUTES: 15, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'square'
+****************************************************************************************************
+  ALWAYS EXECUTES: 16, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'calc_sum_mean'
+****************************************************************************************************
+  ALWAYS EXECUTES: (19, 20), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (19, 18), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: 20, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'calc_var_stddev'
+****************************************************************************************************
+  ALWAYS EXECUTES: 26, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (24, 25), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (24, 22), at least 10 time(s), at most 10 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'statistics'
+****************************************************************************************************
+assert(__count_6 >= 1); // Lower capacity constraint
+assert(__count_6 <= 1); // Upper capacity constraint
+assert(__count_1_2 >= 1); // Lower capacity constraint
+assert(__count_1_2 <= 1); // Upper capacity constraint
+****************************************************************************************************
+FUNCTION 'calc_lincorrcoef'
+****************************************************************************************************
+assert(__count_11_8  <= 11); // Loop counter property
+assert(__count_8_9 >= 10); // Lower capacity constraint
+assert(__count_8_9 <= 10); // Upper capacity constraint
+assert(__count_14 >= 1); // Lower capacity constraint
+assert(__count_14 <= 1); // Upper capacity constraint
+assert(__count_11_12 >= 1); // Lower capacity constraint
+assert(__count_11_12 <= 1); // Upper capacity constraint
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+assert(__count_15 >= 1); // Lower capacity constraint
+assert(__count_15 <= 1); // Upper capacity constraint
+****************************************************************************************************
+FUNCTION 'square'
+****************************************************************************************************
+assert(__count_16 >= 1); // Lower capacity constraint
+assert(__count_16 <= 1); // Upper capacity constraint
+****************************************************************************************************
+FUNCTION 'calc_sum_mean'
+****************************************************************************************************
+assert(__count_19_18  <= 11); // Loop counter property
+assert(__count_19_20 >= 1); // Lower capacity constraint
+assert(__count_19_20 <= 1); // Upper capacity constraint
+assert(__count_19_18 >= 10); // Lower capacity constraint
+assert(__count_19_18 <= 10); // Upper capacity constraint
+assert(__count_20 >= 1); // Lower capacity constraint
+assert(__count_20 <= 1); // Upper capacity constraint
+****************************************************************************************************
+FUNCTION 'calc_var_stddev'
+****************************************************************************************************
+assert(__count_24_22  <= 11); // Loop counter property
+assert(__count_26 >= 1); // Lower capacity constraint
+assert(__count_26 <= 1); // Upper capacity constraint
+assert(__count_24_25 >= 1); // Lower capacity constraint
+assert(__count_24_25 <= 1); // Upper capacity constraint
+assert(__count_24_22 >= 10); // Lower capacity constraint
+assert(__count_24_22 <= 10); // Upper capacity constraint
+HWMT = 111060
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00459)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00415)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00417)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00439)
+Doing WCET calculation on calc_var_stddev
+ILP(vanilla):: WCET(calc_var_stddev)=21360 (SOLVE TIME=0.00468)
+ILP(extra):: WCET(calc_var_stddev)=19680 (SOLVE TIME=0.00472)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00437)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00437)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00435)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00443)
+Doing WCET calculation on calc_var_stddev
+ILP(vanilla):: WCET(calc_var_stddev)=21360 (SOLVE TIME=0.00464)
+ILP(extra):: WCET(calc_var_stddev)=19680 (SOLVE TIME=0.00462)
+Doing WCET calculation on calc_sum_mean
+ILP(vanilla):: WCET(calc_sum_mean)=12150 (SOLVE TIME=0.00481)
+ILP(extra):: WCET(calc_sum_mean)=11190 (SOLVE TIME=0.00519)
+Doing WCET calculation on calc_sum_mean
+ILP(vanilla):: WCET(calc_sum_mean)=12150 (SOLVE TIME=0.00482)
+ILP(extra):: WCET(calc_sum_mean)=11190 (SOLVE TIME=0.00464)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00444)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00443)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00434)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00433)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00442)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00436)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00437)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00435)
+Doing WCET calculation on calc_lincorrcoef
+ILP(vanilla):: WCET(calc_lincorrcoef)=50790 (SOLVE TIME=0.00476)
+ILP(extra):: WCET(calc_lincorrcoef)=46530 (SOLVE TIME=0.00462)
+Doing WCET calculation on statistics
+ILP(vanilla):: WCET(statistics)=120600 (SOLVE TIME=0.00458)
+ILP(extra):: WCET(statistics)=111060 (SOLVE TIME=0.00450)
+In statistics...
+...#CFG edges              = 6
+...#monitored              = 2
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 2
+In calc_lincorrcoef...
+...#CFG edges              = 9
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In sqrt...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In square...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In calc_sum_mean...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In calc_var_stddev...
+...#CFG edges              = 7
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 13
+...#TOTAL always execute         = 13
+============================================================
+0:04:01.470 - End Program
+Elapsed time: 0:04:01.460
+============================================================
+
