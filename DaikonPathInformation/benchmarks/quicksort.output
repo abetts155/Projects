@@ -1,0 +1,184 @@
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'quicksort' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.050 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.060 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> quicksort : header 10
+int __count_11_9 = 0;
+int __count_10_11 = 0; //Loop counter
+==========> quicksort : header 6
+int __count_6_10 = 0;
+int __count_7_5 = 0;
+int __count_7_8 = 0;
+int __count_10_12 = 0;
+int __count_11_12 = 0;
+int __count_12_13 = 0;
+int __count_16_18 = 0;
+int __count_17_18 = 0;
+int __count_6_10 = 0; //Loop counter
+int __count_6_7 = 0; //Loop counter
+==========> quicksort : header 20
+int __count_14_19 = 0;
+int __count_20_3 = 0; //Loop counter
+==========> quicksort : header 1
+int __count_23 = 0;
+int __count_20_21 = 0;
+int __count_22_23 = 0;
+****************************************************************************************************
+FUNCTION 'quicksort'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (7, 8) and 23
+  IGNORING MUTUAL INCLUSION: (7, 8) and (7, 5)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (11, 9)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (11, 12)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (7, 8) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (7, 5) and 23
+  IGNORING MUTUAL INCLUSION: (7, 5) and (10, 12)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (11, 9)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (11, 12)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (7, 5) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (10, 12) and 23
+  IGNORING MUTUAL INCLUSION: (10, 12) and (11, 9)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (11, 12)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (10, 12) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (11, 9) and 23
+  IGNORING MUTUAL INCLUSION: (11, 9) and (11, 12)
+  IGNORING MUTUAL INCLUSION: (11, 9) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (11, 9) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (11, 9) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (11, 9) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (11, 9) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (11, 12) and 23
+  IGNORING MUTUAL INCLUSION: (11, 12) and (12, 13)
+  IGNORING MUTUAL INCLUSION: (11, 12) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (11, 12) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (11, 12) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (11, 12) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (12, 13) and 23
+  IGNORING MUTUAL INCLUSION: (12, 13) and (14, 19)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (12, 13) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (14, 19) and 23
+  IGNORING MUTUAL INCLUSION: (14, 19) and (16, 18)
+  IGNORING MUTUAL INCLUSION: (14, 19) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (14, 19) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (16, 18) and 23
+  IGNORING MUTUAL INCLUSION: (16, 18) and (17, 18)
+  IGNORING MUTUAL INCLUSION: (16, 18) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (17, 18) and 23
+  IGNORING MUTUAL INCLUSION: (17, 18) and (20, 21)
+  IGNORING MUTUAL INCLUSION: (20, 21) and 23
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (22, 23) and 23
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (11, 12)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (10, 12)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (17, 18)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (11, 9)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (20, 21)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (7, 8)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (16, 18)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (14, 19)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (12, 13)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and 23
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 10) and (7, 5)
+****************************************************************************************************
+FUNCTION 'quicksort'
+****************************************************************************************************
+  ALWAYS EXECUTES: (7, 8), at least 327 time(s), at most 353 time(s)
+  ALWAYS EXECUTES: (7, 5), at least 241 time(s), at most 516 time(s)
+  ALWAYS EXECUTES: (10, 12), at least 156 time(s), at most 169 time(s)
+  ALWAYS EXECUTES: (11, 9), at least 227 time(s), at most 500 time(s)
+  ALWAYS EXECUTES: (11, 12), at least 164 time(s), at most 197 time(s)
+  ALWAYS EXECUTES: (12, 13), at least 128 time(s), at most 154 time(s)
+  ALWAYS EXECUTES: (14, 19), at least 100 time(s), at most 100 time(s)
+  ALWAYS EXECUTES: (16, 18), at least 12 time(s), at most 31 time(s)
+  ALWAYS EXECUTES: (17, 18), at least 68 time(s), at most 87 time(s)
+  ALWAYS EXECUTES: (20, 21), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (22, 23)
+  ALWAYS EXECUTES: 23, at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (6, 10)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'quicksort'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_10_11  <= 60); // Loop counter property
+assert(__count_6_10  + __count_6_7  +  <= 138); // Loop counter property
+assert(__count_20_3  <= 101); // Loop counter property
+assert(__count_7_8 >= 327); // Lower capacity constraint
+assert(__count_7_8 <= 353); // Upper capacity constraint
+assert(__count_7_5 >= 241); // Lower capacity constraint
+assert(__count_7_5 <= 516); // Upper capacity constraint
+assert(__count_10_12 >= 156); // Lower capacity constraint
+assert(__count_10_12 <= 169); // Upper capacity constraint
+assert(__count_11_9 >= 227); // Lower capacity constraint
+assert(__count_11_9 <= 500); // Upper capacity constraint
+assert(__count_11_12 >= 164); // Lower capacity constraint
+assert(__count_11_12 <= 197); // Upper capacity constraint
+assert(__count_12_13 >= 128); // Lower capacity constraint
+assert(__count_12_13 <= 154); // Upper capacity constraint
+assert(__count_14_19 >= 100); // Lower capacity constraint
+assert(__count_14_19 <= 100); // Upper capacity constraint
+assert(__count_16_18 >= 12); // Lower capacity constraint
+assert(__count_16_18 <= 31); // Upper capacity constraint
+assert(__count_17_18 >= 68); // Lower capacity constraint
+assert(__count_17_18 <= 87); // Upper capacity constraint
+assert(__count_20_21 >= 1); // Lower capacity constraint
+assert(__count_20_21 <= 1); // Upper capacity constraint
+assert(__count_22_23 == 0); // Dead code
+assert(__count_23 >= 1); // Lower capacity constraint
+assert(__count_23 <= 1); // Upper capacity constraint
+assert(__count_6_10 == 0); // Dead code
+#endif
+HWMT = 1930500
+Doing WCET calculation on quicksort
+ILP(vanilla):: WCET(quicksort)=852516000 (SOLVE TIME=0.00448)
+ILP(extra):: WCET(quicksort)=2025030 (SOLVE TIME=0.00383)
+In quicksort...
+...#CFG edges              = 32
+...#monitored              = 13
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 2
+...#always execute         = 11
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 11
+...#TOTAL always execute         = 11
+============================================================
+0:32:22.710 - End Program
+Elapsed time: 0:32:22.700
+============================================================
+
