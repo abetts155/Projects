@@ -9,13 +9,18 @@
 float
 squareroot (float val)
 {
-  #ifdef CBMC
-  int __count_4_7 = 0;
-  int __count_5_7 = 0;
-  int __count_6_7 = 0;
-  int __count_2_9 = 0;
-  int __count_L10 = 0;
-  #endif
+#ifdef CBMC
+//==========> squareroot : header 8
+int __count_4_7 = 0;
+int __count_5_6 = 0;
+int __count_5_7 = 0;
+int __count_8_4 = 0; //Loop counter
+//==========> squareroot : header 1
+int __count_9 = 0;
+int __count_2_9 = 0;
+int __count_8_9 = 0;
+#endif
+
   float x = val / 10;
   float dx;
   double diff;
@@ -26,24 +31,29 @@ squareroot (float val)
   if (val == 0)
   {
     x = 0;
+    #ifdef CBMC
+    __count_2_9++;
+    #endif
   }
   else
   {
-    for (i = 1; 
-      #ifdef CBMC
-      __count_L10++,
-      #endif
-      i < 20; i++)
+    #ifdef CBMC
+    __count_8_4 = 0;
+    #endif
+    for (i = 1; i < 20; i++)
     {
+      #ifdef CBMC
+      __count_8_4++;
+      #endif
       if (!flag)
       {
         dx = (val - (x * x)) / (2.0 * x);
         x = x + dx;
         diff = val - (x * x);
-        if (fabs (diff) <= min_tol)
+        if (fabs (diff) <= min_tol) // 5
         {
           #ifdef CBMC
-          __count_6_7++;
+          __count_5_6++;
           #endif
           flag = 1;
         }
@@ -59,7 +69,13 @@ squareroot (float val)
         x = x;
       }
     }
+    #ifdef CBMC
+    __count_8_9++;
+    #endif
   }
+  #ifdef CBMC
+  __count_9++;
+  #endif
   return x;
 }
 
