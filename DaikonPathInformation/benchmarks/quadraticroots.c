@@ -22,13 +22,17 @@ fabs (double n)
 double
 sqrt (double val)
 {
-  #ifdef CBMC
-  int __count_2_9 = 0;
-  int __count_4_7 = 0;
-  int __count_5_7 = 0;
-  int __count_6_7 = 0;
-  int __count_L8 = 0;
-  #endif
+#ifdef CBMC
+//==========> sqrt : header 8
+int __count_4_7 = 0;
+int __count_5_6 = 0;
+int __count_5_7 = 0;
+int __count_8_4 = 0; //Loop counter
+//==========> sqrt : header 1
+int __count_9 = 0;
+int __count_2_9 = 0;
+int __count_8_9 = 0;
+#endif
   double x = val / 10;
   double dx;
   double diff;
@@ -45,12 +49,14 @@ sqrt (double val)
   }
   else
   {
-    for (i = 1; 
-      #ifdef CBMC
-      __count_L8++,
-      #endif
-      i < 20; i++)
+    #ifdef CBMC
+    __count_8_4 = 0;
+    #endif
+    for (i = 1; i < 20; i++) // 8
     {
+      #ifdef CBMC
+      __count_8_4++;
+      #endif
       if (!flag)
       {
         dx = (val - (x * x)) / (2.0 * x);
@@ -58,10 +64,10 @@ sqrt (double val)
         diff = val - (x * x);
         if (fabs (diff) <= min_tol)
         {
-          flag = 1;
           #ifdef CBMC
-          __count_6_7++;
+          __count_5_6++;
           #endif
+          flag = 1;
         }
         #ifdef CBMC
         else __count_5_7++;
@@ -75,29 +81,38 @@ sqrt (double val)
         #endif
       }
     }
+    #ifdef CBMC
+    __count_8_9++;
+    #endif
   }
+  #ifdef CBMC
+  __count_9++;
+  #endif
   return x;
 }
 
 void
 quadraticroots (double a[])
 {
-  #ifdef CBMC
-  int __count_13_18 = 0;
-  int __count_14_16 = 0;
-  int __count_15_18 = 0;
-  int __count_17_18 = 0;
-  #endif
+#ifdef CBMC
+//==========> quadraticroots : header 10
+int __count_18 = 0;
+int __count_10_17 = 0;
+int __count_12_13 = 0;
+int __count_14_15 = 0;
+int __count_16_18 = 0;
+#endif
   double x1[2];
   double x2[2];
   double d;
   double w1;
   double w2;
 
-  if (a[0] == 0.0)
+  if (a[0] == 0.0) // 10
   {
     #ifdef CBMC
-    __count_17_18++;
+    __count_10_17++;
+    __count_18++;
     #endif
     return 999;
   }
@@ -106,7 +121,7 @@ quadraticroots (double a[])
   w1 = 2.0 * a[0];
   w2 = sqrt (fabs (d));
 
-  if (d > 0.0)
+  if (d > 0.0) // 12
   {
 
     x1[0] = (-a[1] + w2) / w1;
@@ -114,7 +129,8 @@ quadraticroots (double a[])
     x2[0] = (-a[1] - w2) / w1;
     x2[1] = 0.0;
     #ifdef CBMC
-    __count_13_18++;
+    __count_12_13++;
+    __count_18++;
     #endif
     return 0;
   }
@@ -125,21 +141,24 @@ quadraticroots (double a[])
     x2[0] = x1[0];
     x2[1] = 0.0;
     #ifdef CBMC
-    __count_15_18++;
+    __count_14_15++;
+    __count_18++;
     #endif
     return 0;
   }
   else
   {
     #ifdef CBMC
-    // TODO: check
-    __count_14_16++;
+    __count_16_18++;
     #endif
     w2 /= w1;
     x1[0] = -a[1] / w1;
     x1[1] = w2;
     x2[0] = x1[0];
     x2[1] = -w2;
+    #ifdef CBMC
+    __count_18++;
+    #endif
     return 0;
   }
 }
