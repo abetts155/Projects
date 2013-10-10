@@ -10,33 +10,42 @@
 int
 insertsort (int ARRAY_SIZE, int a[])
 {
-  #ifdef CBMC
-  int __count_4_6 = 0;
-  int __count_5_3 = 0;
-  int __count_5_6 = 0;
-  int __count_L7 = 0;
-  int __count_L4 = 0;
-  #endif
+#ifdef CBMC
+//==========> insertsort : header 4
+int __count_4_5 = 0; //Loop counter
+//==========> insertsort : header 7
+int __count_4_6 = 0;
+int __count_5_6 = 0;
+int __count_7_2 = 0; //Loop counter
+//==========> insertsort : header 1
+int __count_8 = 0;
+int __count_7_8 = 0;
+#endif
   int i, j, key;
 
-  for (j = 1; 
-    #ifdef CBMC
-    __count_L7++,
-    #endif
-  j < ARRAY_SIZE; j++) // 7
+  #ifdef CBMC
+  __count_7_2 = 0;
+  #endif
+  for (j = 1; j < ARRAY_SIZE; j++) // 7
   {
+    #ifdef CBMC
+    __count_7_2++;
+    #endif
     key = a[j];
     i = j - 1;
 
-    while (
-      #ifdef CBMC
-      __count_L4++,
-      #endif
-    a[i] > key && i >= 0) // 4, 5
+    #ifdef CBMC
+    __count_4_5 = 0;
+    #endif
+    while (a[i] > key && 
+     (
+     #ifdef CBMC
+     __count_4_5++,
+     #endif
+     i >= 0
+     )
+    ) // 4, 5
     {
-      #ifdef CBMC
-      __count_5_3++;
-      #endif
       a[i+1] = a[i];
       i--;
     }
@@ -47,7 +56,11 @@ insertsort (int ARRAY_SIZE, int a[])
 
     a[i+1] = key;
   }
-  
+
+  #ifdef CBMC
+  __count_7_8++;
+  __count_8++;
+  #endif
   return a[0];
 }
 
