@@ -112,33 +112,34 @@ float arr[ARRAY_SIZE] =
 float
 select (unsigned long k)
 {
-  #ifdef CBMC
-  int __count_3_6 = 0;
-  int __count_4_5 = 0;
-  int __count_4_6 = 0;
-  int __count_7_30 = 0;
-  int __count_8_10 = 0;
-  int __count_9_10 = 0;
-  int __count_10_11 = 0;
-  int __count_10_12 = 0;
-  int __count_12_14 = 0;
-  int __count_13_14 = 0;
-  int __count_17_16 = 0;
-  int __count_20_19 = 0;
-  int __count_21_23 = 0;
-  int __count_22_23 = 0;
-  int __count_23_25 = 0;
-  int __count_24_25 = 0;
-  int __count_26_28 = 0;
-  int __count_27_28 = 0;
-  int __count_28_30 = 0;
-  int __count_29_30 = 0;
-  int __count_L30 = 0;
-  int __count_L25 = 0;
-  int __count_L20 = 0;
-  int __count_L17 = 0;
+#ifdef CBMC
+//==========> select : header 20
+int __count_20_19 = 0; //Loop counter
+//==========> select : header 17
+int __count_17_16 = 0; //Loop counter
+//==========> select : header 25
+int __count_21_22 = 0;
+int __count_21_23 = 0;
+int __count_25_15 = 0; //Loop counter
+//==========> select : header 30
+int __count_3_6 = 0;
+int __count_4_5 = 0;
+int __count_4_6 = 0;
+int __count_8_9 = 0;
+int __count_8_10 = 0;
+int __count_10_11 = 0;
+int __count_10_12 = 0;
+int __count_12_13 = 0;
+int __count_12_14 = 0;
+int __count_26_27 = 0;
+int __count_26_28 = 0;
+int __count_30_2 = 0; //Loop counter
+//==========> select : header 1
+int __count_31 = 0;
+int __count_30_31 = 0;
 
-  #endif
+#endif
+
   unsigned long i, ir, j, l, mid;
   float a, temp;
   int flag, flag2;
@@ -147,12 +148,14 @@ select (unsigned long k)
   ir = ARRAY_SIZE - 1;
   flag = flag2 = 0;
 
-  while (
-    #ifdef CBMC
-    __count_L30++,
-    #endif
-    !flag)
+  #ifdef CBMC
+  __count_30_2 = 0;
+  #endif
+  while (!flag)
   {
+    #ifdef CBMC
+    __count_30_2++;
+    #endif
     if (ir <= l + 1)
     {
       if (ir == l + 1)
@@ -179,10 +182,10 @@ select (unsigned long k)
       SWAP(arr[mid], arr[l + 1])
       if (arr[l + 1] > arr[ir])
       {
-        SWAP(arr[l + 1], arr[ir])
         #ifdef CBMC
-        __count_9_10++;
+        __count_8_9++;
         #endif
+        SWAP(arr[l + 1], arr[ir])
       }
       #ifdef CBMC
       else __count_8_10++;
@@ -199,10 +202,10 @@ select (unsigned long k)
       #endif
       if (arr[l + 1] > arr[l])
       {
-        SWAP(arr[l + 1], arr[l])
         #ifdef CBMC
-        __count_13_14++;
+        __count_12_13++;
         #endif
+        SWAP(arr[l + 1], arr[l])
       }
       #ifdef CBMC
       else __count_12_14++;
@@ -210,18 +213,19 @@ select (unsigned long k)
       i = l + 1;
       j = ir;
       a = arr[l];
-      while (
-        #ifdef CBMC
-        __count_L25++,
-        #endif
-        !flag2)
+      #ifdef CBMC
+      __count_25_15 = 0;
+      #endif
+      while (!flag2)
       {
+        #ifdef CBMC
+        __count_25_15++;
+        #endif
         i++;
-        while (
-          #ifdef CBMC
-          __count_L17++,
-          #endif
-          arr[i] < a)
+        #ifdef CBMC
+        __count_17_16 = 0;
+        #endif
+        while (arr[i] < a)
         {
           #ifdef CBMC
           __count_17_16++;
@@ -229,11 +233,10 @@ select (unsigned long k)
           i++;
         }
         j--;
-        while (
-          #ifdef CBMC
-          __count_L20++,
-          #endif
-          arr[j] > a)
+        #ifdef CBMC
+        __count_20_19 = 0;
+        #endif
+        while (arr[j] > a)
         {
           #ifdef CBMC
           __count_20_19++;
@@ -242,10 +245,10 @@ select (unsigned long k)
         }
         if (j < i)
         {
-          flag2 = 1;
           #ifdef CBMC
-          __count_22_23++;
+          __count_21_22++;
           #endif
+          flag2 = 1;
         }
         #ifdef CBMC
         else __count_21_23++;
@@ -253,22 +256,16 @@ select (unsigned long k)
         if (!flag2)
         {
           SWAP(arr[i], arr[j])
-          #ifdef CBMC
-          __count_24_25++;
-          #endif
         }
-        #ifdef CBMC
-        else __count_23_25++;
-        #endif
       }
       arr[l] = arr[j];
       arr[j] = a;
       if (j >= k)
       {
-        ir = j - 1;
         #ifdef CBMC
-        __count_27_28++;
+        __count_26_27++;
         #endif
+        ir = j - 1;
       }
       #ifdef CBMC
       else __count_26_28++;
@@ -276,18 +273,13 @@ select (unsigned long k)
       if (j <= k)
       {
         l = i;
-        #ifdef CBMC
-        __count_29_30++;
-        #endif
       }
-      #ifdef CBMC
-      __count_28_30++;
-      #endif
     }
-    #ifdef CBMC
-    else __count_7_30++;
-    #endif
   }
+  #ifdef CBMC
+  __count_30_31++;
+  __count_31++;
+  #endif
   return arr[k];
 }
 
