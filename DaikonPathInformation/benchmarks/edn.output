@@ -1,0 +1,459 @@
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'edn' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.070 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.080 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> fir : header 4
+int __count_4_3 = 0;
+int __count_4_3 = 0; //Loop counter
+==========> fir : header 6
+int __count_4_5 = 0;
+int __count_6_2 = 0; //Loop counter
+==========> fir : header 1
+int __count_7 = 0;
+int __count_6_7 = 0;
+==========> vec_mpy1 : header 10
+int __count_10_9 = 0;
+int __count_10_9 = 0; //Loop counter
+==========> vec_mpy1 : header 8
+int __count_11 = 0;
+int __count_10_11 = 0;
+==========> latsynth : header 14
+int __count_14_13 = 0;
+int __count_14_13 = 0; //Loop counter
+==========> latsynth : header 12
+int __count_15 = 0;
+int __count_14_15 = 0;
+==========> edn : header 16
+int __count_24 = 0;
+int __count_16_17 = 0;
+==========> codebook : header 27
+int __count_27_26 = 0;
+int __count_27_26 = 0; //Loop counter
+==========> codebook : header 25
+int __count_28 = 0;
+int __count_27_28 = 0;
+==========> mac : header 31
+int __count_31_30 = 0;
+int __count_31_30 = 0; //Loop counter
+==========> mac : header 29
+int __count_32 = 0;
+int __count_31_32 = 0;
+==========> fir_no_red_ld : header 36
+int __count_36_35 = 0;
+int __count_36_35 = 0; //Loop counter
+==========> fir_no_red_ld : header 38
+int __count_36_37 = 0;
+int __count_38_34 = 0; //Loop counter
+==========> fir_no_red_ld : header 33
+int __count_39 = 0;
+int __count_38_39 = 0;
+==========> jpegdct : header 44
+int __count_44_43 = 0;
+int __count_44_43 = 0; //Loop counter
+==========> jpegdct : header 46
+int __count_44_45 = 0;
+int __count_46_42 = 0; //Loop counter
+==========> jpegdct : header 48
+int __count_46_47 = 0;
+int __count_48_41 = 0; //Loop counter
+==========> jpegdct : header 40
+int __count_49 = 0;
+int __count_48_49 = 0;
+==========> iir1 : header 52
+int __count_52_51 = 0;
+int __count_52_51 = 0; //Loop counter
+==========> iir1 : header 50
+int __count_53 = 0;
+int __count_52_53 = 0;
+****************************************************************************************************
+FUNCTION 'fir'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: 7 and (4, 5)
+  IGNORING MUTUAL INCLUSION: 7 and (6, 7)
+  IGNORING MUTUAL INCLUSION: (4, 3) and 7
+  IGNORING MUTUAL INCLUSION: (4, 3) and (4, 5)
+  IGNORING MUTUAL INCLUSION: (4, 3) and (6, 7)
+  IGNORING MUTUAL INCLUSION: (4, 5) and (6, 7)
+****************************************************************************************************
+FUNCTION 'vec_mpy1'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (10, 9) and (10, 11)
+  IGNORING MUTUAL INCLUSION: (10, 9) and 11
+  IGNORING MUTUAL INCLUSION: 11 and (10, 11)
+****************************************************************************************************
+FUNCTION 'latsynth'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (14, 13) and (14, 15)
+  IGNORING MUTUAL INCLUSION: (14, 13) and 15
+  IGNORING MUTUAL INCLUSION: (14, 15) and 15
+****************************************************************************************************
+FUNCTION 'edn'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: 24 and (16, 17)
+****************************************************************************************************
+FUNCTION 'codebook'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (27, 26) and 28
+  IGNORING MUTUAL INCLUSION: (27, 28) and (27, 26)
+  IGNORING MUTUAL INCLUSION: (27, 28) and 28
+****************************************************************************************************
+FUNCTION 'mac'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (31, 32) and (31, 30)
+  IGNORING MUTUAL INCLUSION: 32 and (31, 32)
+  IGNORING MUTUAL INCLUSION: 32 and (31, 30)
+****************************************************************************************************
+FUNCTION 'fir_no_red_ld'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (36, 35) and (36, 37)
+  IGNORING MUTUAL INCLUSION: (36, 35) and 39
+  IGNORING MUTUAL INCLUSION: (36, 37) and 39
+  IGNORING MUTUAL INCLUSION: (38, 39) and (36, 35)
+  IGNORING MUTUAL INCLUSION: (38, 39) and (36, 37)
+  IGNORING MUTUAL INCLUSION: (38, 39) and 39
+****************************************************************************************************
+FUNCTION 'jpegdct'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (44, 43) and (44, 45)
+  IGNORING MUTUAL INCLUSION: (44, 43) and 49
+  IGNORING MUTUAL INCLUSION: (44, 45) and 49
+  IGNORING MUTUAL INCLUSION: (46, 47) and (44, 43)
+  IGNORING MUTUAL INCLUSION: (46, 47) and (44, 45)
+  IGNORING MUTUAL INCLUSION: (46, 47) and (48, 49)
+  IGNORING MUTUAL INCLUSION: (46, 47) and 49
+  IGNORING MUTUAL INCLUSION: (48, 49) and (44, 43)
+  IGNORING MUTUAL INCLUSION: (48, 49) and (44, 45)
+  IGNORING MUTUAL INCLUSION: (48, 49) and 49
+****************************************************************************************************
+FUNCTION 'iir1'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (52, 51) and (52, 53)
+  IGNORING MUTUAL INCLUSION: (52, 51) and 53
+  IGNORING MUTUAL INCLUSION: (52, 53) and 53
+****************************************************************************************************
+FUNCTION 'fir'
+****************************************************************************************************
+  ALWAYS EXECUTES: (4, 3), at least 2500 time(s), at most 2500 time(s)
+  ALWAYS EXECUTES: 7, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (4, 5), at least 50 time(s), at most 50 time(s)
+  ALWAYS EXECUTES: (6, 7), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'vec_mpy1'
+****************************************************************************************************
+  ALWAYS EXECUTES: (10, 9), at least 150 time(s), at most 150 time(s)
+  ALWAYS EXECUTES: 11, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (10, 11), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'latsynth'
+****************************************************************************************************
+  ALWAYS EXECUTES: (14, 13), at least 99 time(s), at most 99 time(s)
+  ALWAYS EXECUTES: (14, 15), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: 15, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'edn'
+****************************************************************************************************
+  ALWAYS EXECUTES: 24, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (16, 17), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'codebook'
+****************************************************************************************************
+  ALWAYS EXECUTES: (27, 28), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (27, 26), at least 16 time(s), at most 16 time(s)
+  ALWAYS EXECUTES: 28, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'mac'
+****************************************************************************************************
+  ALWAYS EXECUTES: 32, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (31, 32), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (31, 30), at least 150 time(s), at most 150 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'fir_no_red_ld'
+****************************************************************************************************
+  ALWAYS EXECUTES: (38, 39), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (36, 35), at least 800 time(s), at most 800 time(s)
+  ALWAYS EXECUTES: (36, 37), at least 50 time(s), at most 50 time(s)
+  ALWAYS EXECUTES: 39, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'jpegdct'
+****************************************************************************************************
+  ALWAYS EXECUTES: (46, 47), at least 2 time(s), at most 2 time(s)
+  ALWAYS EXECUTES: (48, 49), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (44, 43), at least 64 time(s), at most 64 time(s)
+  ALWAYS EXECUTES: (44, 45), at least 16 time(s), at most 16 time(s)
+  ALWAYS EXECUTES: 49, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'iir1'
+****************************************************************************************************
+  ALWAYS EXECUTES: (52, 51), at least 50 time(s), at most 50 time(s)
+  ALWAYS EXECUTES: (52, 53), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: 53, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'fir'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_4_3  <= 51); // Loop counter property
+assert(__count_6_2  <= 51); // Loop counter property
+assert(__count_4_3 >= 2500); // Lower capacity constraint
+assert(__count_4_3 <= 2500); // Upper capacity constraint
+assert(__count_7 >= 1); // Lower capacity constraint
+assert(__count_7 <= 1); // Upper capacity constraint
+assert(__count_4_5 >= 50); // Lower capacity constraint
+assert(__count_4_5 <= 50); // Upper capacity constraint
+assert(__count_6_7 >= 1); // Lower capacity constraint
+assert(__count_6_7 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'vec_mpy1'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_10_9  <= 151); // Loop counter property
+assert(__count_10_9 >= 150); // Lower capacity constraint
+assert(__count_10_9 <= 150); // Upper capacity constraint
+assert(__count_11 >= 1); // Lower capacity constraint
+assert(__count_11 <= 1); // Upper capacity constraint
+assert(__count_10_11 >= 1); // Lower capacity constraint
+assert(__count_10_11 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'latsynth'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_14_13  <= 100); // Loop counter property
+assert(__count_14_13 >= 99); // Lower capacity constraint
+assert(__count_14_13 <= 99); // Upper capacity constraint
+assert(__count_14_15 >= 1); // Lower capacity constraint
+assert(__count_14_15 <= 1); // Upper capacity constraint
+assert(__count_15 >= 1); // Lower capacity constraint
+assert(__count_15 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'edn'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_24 >= 1); // Lower capacity constraint
+assert(__count_24 <= 1); // Upper capacity constraint
+assert(__count_16_17 >= 1); // Lower capacity constraint
+assert(__count_16_17 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'codebook'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_27_26  <= 17); // Loop counter property
+assert(__count_27_28 >= 1); // Lower capacity constraint
+assert(__count_27_28 <= 1); // Upper capacity constraint
+assert(__count_27_26 >= 16); // Lower capacity constraint
+assert(__count_27_26 <= 16); // Upper capacity constraint
+assert(__count_28 >= 1); // Lower capacity constraint
+assert(__count_28 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'mac'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_31_30  <= 151); // Loop counter property
+assert(__count_32 >= 1); // Lower capacity constraint
+assert(__count_32 <= 1); // Upper capacity constraint
+assert(__count_31_32 >= 1); // Lower capacity constraint
+assert(__count_31_32 <= 1); // Upper capacity constraint
+assert(__count_31_30 >= 150); // Lower capacity constraint
+assert(__count_31_30 <= 150); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'fir_no_red_ld'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_38_34  <= 51); // Loop counter property
+assert(__count_36_35  <= 17); // Loop counter property
+assert(__count_38_39 >= 1); // Lower capacity constraint
+assert(__count_38_39 <= 1); // Upper capacity constraint
+assert(__count_36_35 >= 800); // Lower capacity constraint
+assert(__count_36_35 <= 800); // Upper capacity constraint
+assert(__count_36_37 >= 50); // Lower capacity constraint
+assert(__count_36_37 <= 50); // Upper capacity constraint
+assert(__count_39 >= 1); // Lower capacity constraint
+assert(__count_39 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'jpegdct'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_44_43  <= 5); // Loop counter property
+assert(__count_46_42  <= 9); // Loop counter property
+assert(__count_48_41  <= 3); // Loop counter property
+assert(__count_46_47 >= 2); // Lower capacity constraint
+assert(__count_46_47 <= 2); // Upper capacity constraint
+assert(__count_48_49 >= 1); // Lower capacity constraint
+assert(__count_48_49 <= 1); // Upper capacity constraint
+assert(__count_44_43 >= 64); // Lower capacity constraint
+assert(__count_44_43 <= 64); // Upper capacity constraint
+assert(__count_44_45 >= 16); // Lower capacity constraint
+assert(__count_44_45 <= 16); // Upper capacity constraint
+assert(__count_49 >= 1); // Lower capacity constraint
+assert(__count_49 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'iir1'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_52_51  <= 51); // Loop counter property
+assert(__count_52_51 >= 50); // Lower capacity constraint
+assert(__count_52_51 <= 50); // Upper capacity constraint
+assert(__count_52_53 >= 1); // Lower capacity constraint
+assert(__count_52_53 <= 1); // Upper capacity constraint
+assert(__count_53 >= 1); // Lower capacity constraint
+assert(__count_53 <= 1); // Upper capacity constraint
+#endif
+HWMT = 6874020
+Doing WCET calculation on iir1
+ILP(vanilla):: WCET(iir1)=154350 (SOLVE TIME=0.03094)
+ILP(extra):: WCET(iir1)=151350 (SOLVE TIME=0.00206)
+Doing WCET calculation on jpegdct
+ILP(vanilla):: WCET(jpegdct)=691380 (SOLVE TIME=0.00219)
+ILP(extra):: WCET(jpegdct)=372060 (SOLVE TIME=0.00217)
+Doing WCET calculation on fir_no_red_ld
+ILP(vanilla):: WCET(fir_no_red_ld)=2878650 (SOLVE TIME=0.00209)
+ILP(extra):: WCET(fir_no_red_ld)=2661720 (SOLVE TIME=0.00208)
+Doing WCET calculation on mac
+ILP(vanilla):: WCET(mac)=277530 (SOLVE TIME=0.00203)
+ILP(extra):: WCET(mac)=275700 (SOLVE TIME=0.00200)
+Doing WCET calculation on vec_mpy1
+ILP(vanilla):: WCET(vec_mpy1)=204660 (SOLVE TIME=0.00201)
+ILP(extra):: WCET(vec_mpy1)=203310 (SOLVE TIME=0.00200)
+Doing WCET calculation on latsynth
+ILP(vanilla):: WCET(latsynth)=224070 (SOLVE TIME=0.00202)
+ILP(extra):: WCET(latsynth)=221850 (SOLVE TIME=0.00203)
+Doing WCET calculation on codebook
+ILP(vanilla):: WCET(codebook)=7230 (SOLVE TIME=0.00208)
+ILP(extra):: WCET(codebook)=6870 (SOLVE TIME=0.00205)
+Doing WCET calculation on fir
+ILP(vanilla):: WCET(fir)=3095910 (SOLVE TIME=0.00207)
+ILP(extra):: WCET(fir)=2976720 (SOLVE TIME=0.00205)
+Doing WCET calculation on edn
+ILP(vanilla):: WCET(edn)=7538220 (SOLVE TIME=0.00209)
+ILP(extra):: WCET(edn)=6874020 (SOLVE TIME=0.00205)
+In fir...
+...#CFG edges              = 9
+...#monitored              = 4
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 4
+In vec_mpy1...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In latsynth...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In edn...
+...#CFG edges              = 9
+...#monitored              = 2
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 2
+In codebook...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In mac...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In fir_no_red_ld...
+...#CFG edges              = 9
+...#monitored              = 4
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 4
+In jpegdct...
+...#CFG edges              = 13
+...#monitored              = 5
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 5
+In iir1...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 30
+...#TOTAL always execute         = 30
+============================================================
+1:54:50.650 - End Program
+Elapsed time: 1:54:50.639
+============================================================
+
