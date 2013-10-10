@@ -12,41 +12,62 @@ typedef int matrix[UPPERLIMIT][UPPERLIMIT];
 int
 matrixmultiply (matrix A, matrix B, matrix C)
 {
-  #ifdef CBMC
-  int __count_5_4 = 0;
-  int __count_L9 = 0;
-  int __count_L7 = 0;
-  int __count_L5 = 0;
-  #endif
+#ifdef CBMC
+//==========> matrixmultiply : header 5
+int __count_5_4 = 0; //Loop counter
+//==========> matrixmultiply : header 7
+int __count_5_6 = 0;
+int __count_7_3 = 0; //Loop counter
+//==========> matrixmultiply : header 9
+int __count_7_8 = 0;
+int __count_9_2 = 0; //Loop counter
+//==========> matrixmultiply : header 1
+int __count_10 = 0;
+int __count_9_10 = 0;
+#endif
+
   int i, j, k;
 
-  for (i = 0; 
-    #ifdef CBMC
-    __count_L9++,
-    #endif
-    i < UPPERLIMIT; ++i)
+  #ifdef CBMC
+  __count_9_2 = 0;
+  #endif
+  for (i = 0; i < UPPERLIMIT; ++i) // 9
   {
-    for (j = 0; 
-      #ifdef CBMC
-      __count_L7++,
-      #endif
-      j < UPPERLIMIT; ++j)
+    #ifdef CBMC
+    __count_9_2++;
+    #endif
+
+    #ifdef CBMC
+    __count_7_3 = 0;
+    #endif
+    for (j = 0; j < UPPERLIMIT; ++j) // 7
     {
+      #ifdef CBMC
+      __count_7_3++;
+      #endif
       C[i][j] = 0;
-      for (k = 0; 
-        #ifdef CBMC
-        __count_L5++,
-        #endif
-        k < UPPERLIMIT; ++k)
+      #ifdef CBMC
+      __count_5_4 = 0;
+      #endif
+      for (k = 0; k < UPPERLIMIT; ++k) // 5
       {
         #ifdef CBMC
         __count_5_4++;
         #endif
         C[i][j] += A[j][k] * B[k][j];
       }
+      #ifdef CBMC
+      __count_5_6++;
+      #endif
     }
+    #ifdef CBMC
+    __count_7_8++;
+    #endif
   }
-  
+  #ifdef CBMC
+  __count_9_10++;
+  __count_10++;
+  #endif
   return C[0][0];
 }
 
