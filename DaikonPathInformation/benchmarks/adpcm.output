@@ -1,20 +1,21 @@
+==> ../src/ToolGem5.py adpcm m5out/adpcm.trace.*
 ============================================================
-0:00:00.000 - Start Program
+0:00:00.010 - Start Program
 ============================================================
 
 ********** Analysing program 'adpcm' **********
 Checking program configuration...
 ============================================================
-0:00:00.010 - COMPILING BEGIN
+0:00:00.020 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.130 - COMPILING END
+0:00:00.220 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.130 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.230 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -127,7 +128,7 @@ int __count_125_124 = 0; //Loop counter
 int __count_133 = 0;
 int __count_125_126 = 0;
 int __count_132_133 = 0;
-****************************************************************************************************
+^[[A****************************************************************************************************
 FUNCTION 'reset'
 ****************************************************************************************************
   IGNORING MUTUAL INCLUSION: 13 and (3, 2)
@@ -248,15 +249,15 @@ FUNCTION 'uppol1'
   IGNORING MUTUAL INCLUSION: (119, 121) and 121
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and (119, 121)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and (117, 118)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and 121
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and (119, 120)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and (117, 119)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (116, 117) and 121
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (117, 118) and (119, 121)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (117, 118) and (119, 120)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (117, 118) and 121
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (117, 118) and (119, 120)
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (117, 118) and (115, 117)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (119, 120) and 121
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (119, 120) and (115, 117)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (119, 120) and 121
   IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (119, 120) and (117, 119)
 ****************************************************************************************************
 FUNCTION 'upzero'
@@ -460,6 +461,7 @@ DEPENDENT EXECUTION CONJECTURES
 ****************************************************************************************************
 FUNCTION 'reset'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_12_11  <= 12); // Loop counter property
 assert(__count_9_8  <= 24); // Loop counter property
 assert(__count_6_5  <= 7); // Loop counter property
@@ -476,9 +478,11 @@ assert(__count_9_8 >= 23); // Lower capacity constraint
 assert(__count_9_8 <= 23); // Upper capacity constraint
 assert(__count_12_11 >= 11); // Lower capacity constraint
 assert(__count_12_11 <= 11); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'logscl'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_16_17 == 0); // Dead code
 assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
@@ -490,9 +494,11 @@ assert(__count_14_16 > 0 ==> __count_16_18 > 0); // Execution dependence
 assert(__count_14_16 > 0 ==> __count_18 > 0); // Execution dependence
 assert(__count_14_15 > 0 ==> __count_16_18 > 0); // Execution dependence
 assert(__count_14_15 > 0 ==> __count_18 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'adpcm'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_27_25  <= 3); // Loop counter property
 assert(__count_23_21  <= 3); // Loop counter property
 assert(__count_27_25 >= 2); // Lower capacity constraint
@@ -503,18 +509,22 @@ assert(__count_28 >= 1); // Lower capacity constraint
 assert(__count_28 <= 1); // Upper capacity constraint
 assert(__count_23_24 >= 1); // Lower capacity constraint
 assert(__count_23_24 <= 1); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'my_abs'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_40_41 <= 1); // Upper capacity constraint
 assert(__count_38_39 <= 1); // Upper capacity constraint
 assert(__count_41 >= 1); // Lower capacity constraint
 assert(__count_41 <= 1); // Upper capacity constraint
 assert(__count_40_41 > 0 ==> __count_41 > 0); // Execution dependence
 assert(__count_38_39 > 0 ==> __count_41 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'logsch'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_33_34 <= 1); // Upper capacity constraint
 assert(__count_33_35 <= 1); // Upper capacity constraint
 assert(__count_35_36 == 0); // Dead code
@@ -526,9 +536,11 @@ assert(__count_33_34 > 0 ==> __count_35_37 > 0); // Execution dependence
 assert(__count_33_34 > 0 ==> __count_37 > 0); // Execution dependence
 assert(__count_33_35 > 0 ==> __count_35_37 > 0); // Execution dependence
 assert(__count_33_35 > 0 ==> __count_37 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'decode'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_61_60  <= 11); // Loop counter property
 assert(__count_58_57  <= 11); // Loop counter property
 assert(__count_58_57 >= 10); // Lower capacity constraint
@@ -539,19 +551,25 @@ assert(__count_61_60 >= 10); // Lower capacity constraint
 assert(__count_61_60 <= 10); // Upper capacity constraint
 assert(__count_62 >= 1); // Lower capacity constraint
 assert(__count_62 <= 1); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'scalel'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_63 >= 1); // Lower capacity constraint
 assert(__count_63 <= 1); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'filtep'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_64 >= 1); // Lower capacity constraint
 assert(__count_64 <= 1); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'encode'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_70_69  <= 23); // Loop counter property
 assert(__count_67_66  <= 11); // Loop counter property
 assert(__count_67_66 >= 10); // Lower capacity constraint
@@ -580,9 +598,11 @@ assert(__count_85_87 > 0 ==> __count_67_66 > 0); // Execution dependence
 assert(__count_85_87 > 0 ==> __count_70_69 > 0); // Execution dependence
 assert(__count_85_87 > 0 ==> __count_82_84 > 0); // Execution dependence
 assert(__count_85_87 > 0 ==> __count_92 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'uppol2'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_96_98 >= 1); // Lower capacity constraint
 assert(__count_96_98 <= 1); // Upper capacity constraint
 assert(__count_97_98 == 0); // Dead code
@@ -597,9 +617,11 @@ assert(__count_101_102 == 0); // Dead code
 assert(__count_93_94 >= 1); // Lower capacity constraint
 assert(__count_93_94 <= 1); // Upper capacity constraint
 assert(__count_93_95 == 0); // Dead code
+#endif
 ****************************************************************************************************
 FUNCTION 'quantl'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_107_105  <= 31); // Loop counter property
 assert(__count_105_109 <= 1); // Upper capacity constraint
 assert(__count_107_105 >= 1); // Lower capacity constraint
@@ -617,25 +639,15 @@ assert(__count_105_109 > 0 ==> __count_113 > 0); // Execution dependence
 assert(__count_107_108 > 0 ==> __count_107_105 > 0); // Execution dependence
 assert(__count_107_108 > 0 ==> __count_113 > 0); // Execution dependence
 assert(__count_110_112 > 0 ==> __count_107_105 > 0); // Execution dependence
-assert(__count_110_112 > 0 ==> __count_107_108 > 0); //Found a solution with cost -600
-Found no solution with cost -690.0 .. -601.0
-
-Success, time = 0.0
-Found a solution with cost -30810
-Found no solution with cost -31140.0 .. -30811.0
-
-Success, time = 0.0
-Found a solution with cost -600
-Found no solution with cost -690.0 .. -601.0
-
-Success, time = 0.0
- Execution dependence
+assert(__count_110_112 > 0 ==> __count_107_108 > 0); // Execution dependence
 assert(__count_110_112 > 0 ==> __count_113 > 0); // Execution dependence
 assert(__count_110_111 > 0 ==> __count_107_105 > 0); // Execution dependence
 assert(__count_110_111 > 0 ==> __count_113 > 0); // Execution dependence
+#endif
 ****************************************************************************************************
 FUNCTION 'filtez'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_31_30  <= 6); // Loop counter property
 assert(__count_32 >= 1); // Lower capacity constraint
 assert(__count_32 <= 1); // Upper capacity constraint
@@ -643,9 +655,11 @@ assert(__count_31_32 >= 1); // Lower capacity constraint
 assert(__count_31_32 <= 1); // Upper capacity constraint
 assert(__count_31_30 >= 5); // Lower capacity constraint
 assert(__count_31_30 <= 5); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'uppol1'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_115_117 >= 1); // Lower capacity constraint
 assert(__count_115_117 <= 1); // Upper capacity constraint
 assert(__count_116_117 == 0); // Dead code
@@ -657,9 +671,11 @@ assert(__count_119_121 >= 1); // Lower capacity constraint
 assert(__count_119_121 <= 1); // Upper capacity constraint
 assert(__count_121 >= 1); // Lower capacity constraint
 assert(__count_121 <= 1); // Upper capacity constraint
+#endif
 ****************************************************************************************************
 FUNCTION 'upzero'
 ****************************************************************************************************
+#ifdef CBMC
 assert(__count_132_128  <= 7); // Loop counter property
 assert(__count_125_124  <= 7); // Loop counter property
 assert(__count_129_131 <= 6); // Upper capacity constraint
@@ -677,158 +693,171 @@ assert(__count_129_131 > 0 ==> __count_133 > 0); // Execution dependence
 assert(__count_132_133 > 0 ==> __count_133 > 0); // Execution dependence
 assert(__count_125_124 > 0 ==> __count_133 > 0); // Execution dependence
 assert(__count_125_126 > 0 ==> __count_133 > 0); // Execution dependence
+#endif
 HWMT = 524040
 Doing WCET calculation on my_abs
-ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.04675)
+ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.03563)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.my_abs.context4.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.36324)
-Doing WCET calculation on quantl
-ILP(vanilla):: WCET(quantl)=31770 (SOLVE TIME=0.02735)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.quantl.context3.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(quantl)=30810 (SOLVE TIME=0.22180)
-Doing WCET calculation on uppol2
-ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00260)
-ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00228)
-Doing WCET calculation on uppol2
-ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00227)
-ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00229)
-Doing WCET calculation on my_abs
-ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.00219)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.my_abs.context5.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.20915)
-Doing WCET calculFound a solution with cost -1470
+Found a solution with cost -600
+Found no solution with cost -690.0 .. -601.0
 
 Success, time = 0.0
+CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.28101)
+Doing WCET calculation on quantl
+ILP(vanilla):: WCET(quantl)=31770 (SOLVE TIME=0.00267)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.quantl.context3.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -30810
+Found no solution with cost -31140.0 .. -30811.0
+
+Success, time = 0.0
+CLP(extra):: WCET(quantl)=30810 (SOLVE TIME=0.22512)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00269)
+ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00238)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00235)
+ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00228)
+Doing WCET calculation on my_abs
+ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.00215)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.my_abs.context5.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -600
+Found no solution with cost -690.0 .. -601.0
+
+Success, time = 0.0
+CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.21659)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00275)
+ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00228)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00229)
+ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00233)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00234)
+ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00234)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00242)
+ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00226)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00217)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00228)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00218)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00214)
+Doing WCET calculation on scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00215)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00209)
+Doing WCET calculation on scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00208)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00213)
+Doing WCET calculation on logsch
+ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00225)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logsch.context25.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -1470
+
+Success, time = 0.0
+CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.22020)
+Doing WCET calculation on logscl
+ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00253)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context27.cfg.ecl.extra -e "solve(WCET)."'
 Found a solution with cost -1350
 Found a solution with cost -1440
 
 Success, time = 0.0
+CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.22055)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00273)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context30.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.00999999999999998
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22604)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00276)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context31.cfg.ecl.extra -e "solve(WCET)."'
 Found a solution with cost -12150
 Found no solution with cost -18030.0 .. -12151.0
 
 Success, time = 0.0
-Found a solution with cost -12150
-Found no solution with cost -18030.0 .. -12151.0
-
-Success, time = 0.01
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22587)
+Doing WCET calculation on encode
+ILP(vanilla):: WCET(encode)=156870 (SOLVE TIME=0.00324)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.encode.context2.cfg.ecl.extra -e "solve(WCET)."'
 Found a solution with cost -147930
 Found no solution with cost -148080.0 .. -147931.0
 
 Success, time = 0.0
-ation on uppol1
-ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00257)
-ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00220)
-Doing WCET calculation on uppol1
-ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00223)
-ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00225)
-Doing WCET calculation on filtez
-ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00229)
-ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00229)
-Doing WCET calculation on filtez
-ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00220)
-ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00219)
-Doing WCET calculation on filtep
-ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00219)
-ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00212)
-Doing WCET calculation on filtep
-ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00214)
-ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00219)
-Doing WCET calculation on scalel
-ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00202)
-ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00207)
-Doing WCET calculation on scalel
-ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00203)
-ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00205)
-Doing WCET calculation on logsch
-ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00224)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logsch.context25.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.21452)
-Doing WCET calculation on logscl
-ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00250)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context27.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.21306)
-Doing WCET calculation on upzero
-ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00281)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context30.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22163)
-Doing WCET calculation on upzero
-ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00272)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context31.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22038)
-Doing WCET calculation on encode
-ILP(vanilla):: WCET(encode)=156870 (SOLVE TIME=0.00318)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.encode.context2.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(encode)=147930 (SOLVE TIME=0.23662)
+CLP(extra):: WCET(encode)=147930 (SOLVE TIME=0.24006)
 Doing WCET calculation on reset
-ILP(vanilla):: WCET(reset)=52800 (SOLVE TIME=0.00276)
-ILP(extra):: WCET(reset)=48690 (SOLVE TIME=0.00233)
+ILP(vanilla):: WCET(reset)=52800 (SOLVE TIME=0.00273)
+ILP(extra):: WCET(reset)=48690 (SOLVE TIME=0.00239)
 Doing WCET calculation on uppol2
 ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00231)
-ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00225)
+ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00226)
 Doing WCET calculation on uppol2
-ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00261)
-ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00252)
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00234)
+ILP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.00235)
 Doing WCET calculation on uppol1
-ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00226)
-ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00220)
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00228)
+ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00230)
 Doing WCET calculation on uppol1
-ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00221)
-ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00217)
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00229)
+ILP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.00223)
 Doing WCET calculation on filtez
-ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00229)
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00228)
 ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00221)
 Doing WCET calculation on filtez
-ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00224)
-ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00219)
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00232)
+ILP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.00224)
 Doing WCET calculation on filtep
-ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00216)
-ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00217)
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00220)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00220)
 Doing WCET calculation on filtep
-ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00215)
-ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00215)
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00218)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00223)
 Doing WCET calculation on scalel
-ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00202)
-ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00210)
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00211)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00221)
 Doing WCET calculation on scalel
-ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00202)
-ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00208)
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00208)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00224)
 Doing WCET calculation on logsch
-ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00215)
-Running commanFound a solution with cost -1470
+ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00224)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logsch.context24.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -1470
 
 Success, time = 0.0
+CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.21731)
+Doing WCET calculation on logscl
+ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00257)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context26.cfg.ecl.extra -e "solve(WCET)."'
 Found a solution with cost -1350
 Found a solution with cost -1440
 
 Success, time = 0.0
-Found a solution with cost -12150
-Found no solution with cost -18030.0 .. -12151.0
-
-Success, time = 0.0
-Found a solution with cost -12150
-Found no solution with cost -18030.0 .. -12151.0
-
-Success, time = 0.0
-d 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logsch.context24.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.21898)
-Doing WCET calculation on logscl
-ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00251)
-Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context26.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.21196)
+CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.22131)
 Doing WCET calculation on upzero
-ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00285)
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00280)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context28.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22125)
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22731)
 Doing WCET calculation on upzero
-ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00277)
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00281)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context29.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22129)
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.23147)
 Doing WCET calculation on decode
-ILP(vanilla):: WCET(decode)=117960 (SOLVE TIME=0.00280)
-ILP(extra):: WCET(decode)=109500 (SOLVE TIME=0.00248)
+ILP(vanilla):: WCET(decode)=117960 (SOLVE TIME=0.00286)
+ILP(extra):: WCET(decode)=109500 (SOLVE TIME=0.00267)
 Doing WCET calculation on adpcm
-ILP(vanilla):: WCET(adpcm)=886590 (SOLVE TIME=0.00226)
-ILP(extra):: WCET(adpcm)=570030 (SOLVE TIME=0.00228)
+ILP(vanilla):: WCET(adpcm)=886590 (SOLVE TIME=0.00236)
+ILP(extra):: WCET(adpcm)=570030 (SOLVE TIME=0.00232)
 In reset...
 ...#CFG edges              = 17
 ...#monitored              = 6
@@ -947,7 +976,7 @@ In upzero...
 ...#TOTAL never execute          = 39
 ...#TOTAL always execute         = 39
 ============================================================
-7:07:14.560 - End Program
-Elapsed time: 7:07:14.560
+7:53:20.710 - End Program
+Elapsed time: 7:53:20.700
 ============================================================
 
