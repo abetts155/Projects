@@ -1,3 +1,4 @@
+==> ../src/ToolGem5.py quadraticroots m5out/quadraticroots.trace.*
 ============================================================
 0:00:00.020 - Start Program
 ============================================================
@@ -9,12 +10,164 @@ Checking program configuration...
 ============================================================
 
 ============================================================
-0:00:00.050 - COMPILING END
+0:00:00.060 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.060 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.070 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> sqrt : header 8
+int __count_4_7 = 0;
+int __count_5_6 = 0;
+int __count_5_7 = 0;
+int __count_8_4 = 0; //Loop counter
+==========> sqrt : header 1
+int __count_9 = 0;
+int __count_2_9 = 0;
+int __count_8_9 = 0;
+==========> quadraticroots : header 10
+int __count_18 = 0;
+int __count_10_17 = 0;
+int __count_12_13 = 0;
+int __count_14_15 = 0;
+int __count_16_18 = 0;
+^[[A
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: 9 and (4, 7)
+  IGNORING MUTUAL INCLUSION: 9 and (5, 6)
+  IGNORING MUTUAL INCLUSION: 9 and (5, 7)
+  IGNORING MUTUAL INCLUSION: 9 and (8, 9)
+  IGNORING MUTUAL INCLUSION: (4, 7) and (5, 6)
+  IGNORING MUTUAL INCLUSION: (4, 7) and (5, 7)
+  IGNORING MUTUAL INCLUSION: (4, 7) and (8, 9)
+  IGNORING MUTUAL INCLUSION: (5, 6) and (5, 7)
+  IGNORING MUTUAL INCLUSION: (5, 6) and (8, 9)
+  IGNORING MUTUAL INCLUSION: (5, 7) and (8, 9)
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 9) and 9
+****************************************************************************************************
+FUNCTION 'quadraticroots'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (14, 15) and 18
+  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (10, 17) and 18
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+  ALWAYS EXECUTES: 9, at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (2, 9)
+  ALWAYS EXECUTES: (4, 7), at least 11 time(s), at most 15 time(s)
+  ALWAYS EXECUTES: (5, 6), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (5, 7), at least 3 time(s), at most 7 time(s)
+  ALWAYS EXECUTES: (8, 9), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'quadraticroots'
+****************************************************************************************************
+  NEVER EXECUTES: (14, 15)
+  NEVER EXECUTES: (10, 17)
+  ALWAYS EXECUTES: 18, at least 1 time(s), at most 1 time(s)
+  MAY EXECUTE: (16, 18), at most 1 time(s)
+  MAY EXECUTE: (12, 13), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  ONE-WAY DEPENDENCY: (12, 13) on 18
+  ONE-WAY DEPENDENCY: (16, 18) on 18
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_8_4  <= 20); // Loop counter property
+assert(__count_9 >= 1); // Lower capacity constraint
+assert(__count_9 <= 1); // Upper capacity constraint
+assert(__count_2_9 == 0); // Dead code
+assert(__count_4_7 >= 11); // Lower capacity constraint
+assert(__count_4_7 <= 15); // Upper capacity constraint
+assert(__count_5_6 >= 1); // Lower capacity constraint
+assert(__count_5_6 <= 1); // Upper capacity constraint
+assert(__count_5_7 >= 3); // Lower capacity constraint
+assert(__count_5_7 <= 7); // Upper capacity constraint
+assert(__count_8_9 >= 1); // Lower capacity constraint
+assert(__count_8_9 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'quadraticroots'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_14_15 == 0); // Dead code
+assert(__count_10_17 == 0); // Dead code
+assert(__count_18 >= 1); // Lower capacity constraint
+assert(__count_18 <= 1); // Upper capacity constraint
+assert(__count_16_18 <= 1); // Upper capacity constraint
+assert(__count_12_13 <= 1); // Upper capacity constraint
+assert(__count_12_13 > 0 ==> __count_18 > 0); // Execution dependence
+assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
+#endif
+HWMT = 29940
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=53160 (SOLVE TIME=0.00258)
+ILP(extra):: WCET(sqrt)=26400 (SOLVE TIME=0.00433)
+Doing WCET calculation on quadraticroots
+ILP(vanilla):: WCET(quadraticroots)=57120 (SOLVE TIME=0.00223)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.quadraticroots.context1.cfg.ecl.extra -e "solve(WCET)."'
+Found a solution with cost -30330
+Found a solution with cost -30360
+Found no solution with cost -31950.0 .. -30361.0
+
+Success, time = 0.0
+CLP(extra):: WCET(quadraticroots)=30360 (SOLVE TIME=0.36604)
+In sqrt...
+...#CFG edges              = 13
+...#monitored              = 6
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 1
+...#always execute         = 5
+In quadraticroots...
+...#CFG edges              = 12
+...#monitored              = 5
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 2
+...#never execute          = 2
+...#always execute         = 1
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 2
+...#TOTAL never execute          = 6
+...#TOTAL always execute         = 6
+============================================================
+0:04:24.940 - End Program
+Elapsed time: 0:04:24.920
+============================================================
+
+
+[adam@~/WCET/DaikonPathInformation/benchmarks]
+==> ../src/ToolGem5.py quadraticroots m5out/quadraticroots.trace.*
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'quadraticroots' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.030 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.040 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -87,12 +240,7 @@ assert(__count_9 <= 1); // Upper capacity constraint
 assert(__count_2_9 == 0); // Dead code
 assert(__count_4_7 >= 11); // Lower capacity constraint
 assert(__count_4_7 <= 15); // Upper capacity constraint
-assert(__couFound a solution with cost -30330
-Found a solution with cost -30360
-Found no solution with cost -31950.0 .. -30361.0
-
-Success, time = 0.0
-nt_5_6 >= 1); // Lower capacity constraint
+assert(__count_5_6 >= 1); // Lower capacity constraint
 assert(__count_5_6 <= 1); // Upper capacity constraint
 assert(__count_5_7 >= 3); // Lower capacity constraint
 assert(__count_5_7 <= 7); // Upper capacity constraint
@@ -114,12 +262,17 @@ assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
 #endif
 HWMT = 29940
 Doing WCET calculation on sqrt
-ILP(vanilla):: WCET(sqrt)=53160 (SOLVE TIME=0.00306)
+ILP(vanilla):: WCET(sqrt)=53160 (SOLVE TIME=0.00255)
 ILP(extra):: WCET(sqrt)=26400 (SOLVE TIME=0.00218)
 Doing WCET calculation on quadraticroots
-ILP(vanilla):: WCET(quadraticroots)=57120 (SOLVE TIME=0.00215)
+ILP(vanilla):: WCET(quadraticroots)=57120 (SOLVE TIME=0.00217)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.quadraticroots.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(quadraticroots)=30360 (SOLVE TIME=0.23140)
+Found a solution with cost -30330
+Found a solution with cost -30360
+Found no solution with cost -31950.0 .. -30361.0
+
+Success, time = 0.0
+CLP(extra):: WCET(quadraticroots)=30360 (SOLVE TIME=0.22920)
 In sqrt...
 ...#CFG edges              = 13
 ...#monitored              = 6
@@ -142,7 +295,7 @@ In quadraticroots...
 ...#TOTAL never execute          = 6
 ...#TOTAL always execute         = 6
 ============================================================
-0:03:27.440 - End Program
-Elapsed time: 0:03:27.420
+0:03:29.460 - End Program
+Elapsed time: 0:03:29.450
 ============================================================
 

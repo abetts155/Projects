@@ -1,0 +1,102 @@
+============================================================
+0:00:00.010 - Start Program
+============================================================
+
+********** Analysing program 'finiteImpulseResponse' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.020 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.030 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> finiteimpulseresponse : header 25
+int __count_25_24 = 0;
+int __count_25_24 = 0; //Loop counter
+==========> finiteimpulseresponse : header 33
+int __count_27_28 = 0;
+int __count_29_30 = 0;
+int __count_29_31 = 0;
+int __count_33_23 = 0; //Loop counter
+==========> finiteimpulseresponse : header 22
+int __count_34 = 0;
+int __count_33_34 = 0;
+****************************************************************************************************
+FUNCTION 'finiteimpulseresponse'
+****************************************************************************************************
+  IGNORING MUTUAL INCLUSION: (33, 34) and (25, 24)
+  IGNORING MUTUAL INCLUSION: (33, 34) and (27, 28)
+  IGNORING MUTUAL INCLUSION: (33, 34) and (29, 30)
+  IGNORING MUTUAL INCLUSION: (33, 34) and (29, 31)
+  IGNORING MUTUAL INCLUSION: (33, 34) and 34
+  IGNORING MUTUAL INCLUSION: (25, 24) and (27, 28)
+  IGNORING MUTUAL INCLUSION: (25, 24) and (29, 30)
+  IGNORING MUTUAL INCLUSION: (25, 24) and (29, 31)
+  IGNORING MUTUAL INCLUSION: (25, 24) and 34
+  IGNORING MUTUAL INCLUSION: (27, 28) and (29, 30)
+  IGNORING MUTUAL INCLUSION: (27, 28) and (29, 31)
+  IGNORING MUTUAL INCLUSION: (27, 28) and 34
+  IGNORING MUTUAL INCLUSION: (29, 30) and (29, 31)
+  IGNORING MUTUAL INCLUSION: 34 and (29, 30)
+  IGNORING MUTUAL INCLUSION: 34 and (29, 31)
+****************************************************************************************************
+FUNCTION 'finiteimpulseresponse'
+****************************************************************************************************
+  ALWAYS EXECUTES: (33, 34), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (25, 24), at least 23494 time(s), at most 23494 time(s)
+  ALWAYS EXECUTES: (27, 28), at least 18 time(s), at most 18 time(s)
+  ALWAYS EXECUTES: 34, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (29, 30), at least 17 time(s), at most 17 time(s)
+  ALWAYS EXECUTES: (29, 31), at least 665 time(s), at most 665 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'finiteimpulseresponse'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_25_24  <= 35); // Loop counter property
+assert(__count_33_23  <= 701); // Loop counter property
+assert(__count_33_34 >= 1); // Lower capacity constraint
+assert(__count_33_34 <= 1); // Upper capacity constraint
+assert(__count_25_24 >= 23494); // Lower capacity constraint
+assert(__count_25_24 <= 23494); // Upper capacity constraint
+assert(__count_27_28 >= 18); // Lower capacity constraint
+assert(__count_27_28 <= 18); // Upper capacity constraint
+assert(__count_34 >= 1); // Lower capacity constraint
+assert(__count_34 <= 1); // Upper capacity constraint
+assert(__count_29_30 >= 17); // Lower capacity constraint
+assert(__count_29_30 <= 17); // Upper capacity constraint
+assert(__count_29_31 >= 665); // Lower capacity constraint
+assert(__count_29_31 <= 665); // Upper capacity constraint
+#endif
+HWMT = 29225940
+Doing WCET calculation on finiteimpulseresponse
+ILP(vanilla):: WCET(finiteimpulseresponse)=27761500 (SOLVE TIME=0.01923)
+ILP(extra):: WCET(finiteimpulseresponse)=26542100 (SOLVE TIME=0.00231)
+In finiteimpulseresponse...
+...#CFG edges              = 17
+...#monitored              = 6
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 6
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 0
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 6
+...#TOTAL always execute         = 6
+============================================================
+5:59:31.600 - End Program
+Elapsed time: 5:59:31.590
+============================================================
+
