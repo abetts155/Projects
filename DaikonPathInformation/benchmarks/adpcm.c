@@ -132,23 +132,47 @@ int
 my_abs (int n)
 {
   #ifdef CBMC
-  int __count_38_40 = 0;
-  int __count_39_41 = 0;
+//==========> my_abs : header 38
+int __count_41 = 0;
+int __count_38_39 = 0;
+int __count_40_41 = 0;
   #endif
   if (n >= 0)  // 38
   {
     // 39
     #ifdef CBMC
-    __count_39_41++;
+    __count_38_39++;
+    __count_41++;
     #endif
+
+#ifdef CBMC
+assert(__count_40_41 <= 1); // Upper capacity constraint
+assert(__count_38_39 <= 1); // Upper capacity constraint
+assert(__count_41 >= 1); // Lower capacity constraint
+assert(__count_41 <= 1); // Upper capacity constraint
+assert(__count_40_41 > 0 ==> __count_41 > 0); // Execution dependence
+assert(__count_38_39 > 0 ==> __count_41 > 0); // Execution dependence
+#endif
+
     return n;
   }
   else
   {
     #ifdef CBMC
-    __count_38_40++;
+    __count_40_41++;
+    __count_41++;
     #endif
     // 40
+
+#ifdef CBMC
+assert(__count_40_41 <= 1); // Upper capacity constraint
+assert(__count_38_39 <= 1); // Upper capacity constraint
+assert(__count_41 >= 1); // Lower capacity constraint
+assert(__count_41 <= 1); // Upper capacity constraint
+assert(__count_40_41 > 0 ==> __count_41 > 0); // Execution dependence
+assert(__count_38_39 > 0 ==> __count_41 > 0); // Execution dependence
+#endif
+
     return-n; 
   }
 }
@@ -196,55 +220,72 @@ void
 upzero (int dlt,int *dlti,int *bli)
 {
   #ifdef CBMC
-  int __count_125_124 = 0;
-  int __count_128_129 = 0;
-  int __count_128_130 = 0;
-  int __count_L132 = 0;
-  int __count_L125 = 0;
+//==========> upzero : header 132
+int __count_129_131 = 0;
+int __count_130_131 = 0;
+int __count_132_128 = 0; //Loop counter
+//==========> upzero : header 125
+int __count_125_124 = 0;
+int __count_125_124_L = 0; //Loop counter
+//==========> upzero : header 122
+int __count_133 = 0;
+int __count_125_126 = 0;
+int __count_132_133 = 0;
+
   #endif
 
   int i,wd2,wd3;
   if(dlt == 0) // 122
   {
-    for(i = 0 ; 
-      #ifdef CBMC
-      __count_L125++,
-      #endif
-    i < 6 ; i++) // 125
+    #ifdef CBMC
+    __count_125_124_L = 0;
+    #endif
+    for(i = 0 ; i < 6 ; i++) // 125
     {
       #ifdef CBMC
       __count_125_124++;
+      __count_125_124_L++;
       #endif
       bli[i] = (int)((255L*bli[i]) >> 8L); 
     }
+    #ifdef CBMC
+    assert(__count_125_124_L  <= 7); // Loop counter property
+    __count_125_126++;
+    #endif
   }
   else 
   {
-    for(i = 0 ; 
-      #ifdef CBMC
-      __count_L132++,
-      #endif
-    i < 6 ; i++) // 132
+    #ifdef CBMC
+    __count_132_128 = 0;
+    #endif
+    for(i = 0 ; i < 6 ; i++) // 132
     {
+      #ifdef CBMC
+      __count_132_128++;
+      #endif
       if ((long)dlt*dlti[i] >= 0) // 128
       { 
-        #ifdef CBMC
-        __count_128_129++;
-        #endif
         // 129
         wd2 = 128;
+        #ifdef CBMC
+        __count_129_131++;
+        #endif
       }
       else
       { 
-        #ifdef CBMC
-        __count_128_130++;
-        #endif
         // 130
         wd2 = -128;
+        #ifdef CBMC
+        __count_130_131++;
+        #endif
       }
       wd3 = (int)((255L*bli[i]) >> 8L);  
       bli[i] = wd2 + wd3;
      }
+     #ifdef CBMC
+     assert(__count_132_128  <= 7); // Loop counter property
+     __count_132_133++;
+     #endif
   }
   
   dlti[5] = dlti[4];
@@ -252,6 +293,29 @@ upzero (int dlt,int *dlti,int *bli)
   dlti[3] = dlti[2];
   dlti[1] = dlti[0];
   dlti[0] = dlt;
+
+#ifdef CBMC
+__count_133++;
+#endif
+
+#ifdef CBMC
+assert(__count_129_131 <= 6); // Upper capacity constraint
+assert(__count_130_131 == 0); // Dead code
+assert(__count_133 >= 1); // Lower capacity constraint
+assert(__count_133 <= 1); // Upper capacity constraint
+assert(__count_132_133 <= 1); // Upper capacity constraint
+assert(__count_125_124 <= 6); // Upper capacity constraint
+assert(__count_125_126 <= 1); // Upper capacity constraint
+assert(__count_129_131 > 0 ==> __count_132_133 > 0); // Mutual inclusion
+assert(__count_132_133 > 0 ==> __count_129_131 > 0); // Mutual inclusion
+assert(__count_125_124 > 0 ==> __count_125_126 > 0); // Mutual inclusion
+assert(__count_125_126 > 0 ==> __count_125_124 > 0); // Mutual inclusion
+assert(__count_129_131 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_132_133 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_125_124 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_125_126 > 0 ==> __count_133 > 0); // Execution dependence
+#endif
+
 }
 
 
@@ -259,14 +323,19 @@ int
 encode (int xin1,int xin2)
 {
   #ifdef CBMC
-  int __count_66_67 = 0;
-  int __count_70_69 = 0;
-  int __count_82_84 = 0;
-  int __count_83_84 = 0;
-  int __count_85_87 = 0;
-  int __count_86_87 = 0;
-  int __count_L70 = 0;
-  int __count_L67 = 0;
+//==========> encode : header 70
+int __count_70_69 = 0;
+int __count_70_69_L = 0; //Loop counter
+//==========> encode : header 67
+int __count_67_66 = 0;
+int __count_67_66_L = 0; //Loop counter
+//==========> encode : header 65
+int __count_92 = 0;
+int __count_81_83 = 0;
+int __count_82_84 = 0;
+int __count_85_86 = 0;
+int __count_85_87 = 0;
+
   #endif
   int i;
   int *h_ptr,*tqmf_ptr,*tqmf_ptr1;
@@ -278,34 +347,40 @@ encode (int xin1,int xin2)
   xa = (long)(*tqmf_ptr++) * (*h_ptr++);
   xb = (long)(*tqmf_ptr++) * (*h_ptr++);
   
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L67++,
-    #endif
-  i < 10 ; i++) // 67
+  #ifdef CBMC
+  __count_67_66_L = 0;
+  #endif
+  for(i = 0 ; i < 10 ; i++) // 67
   {
+    #ifdef CBMC
+    __count_67_66++;
+    __count_67_66_L++;
+    #endif
     xa += (long)(*tqmf_ptr++) * (*h_ptr++);
     xb += (long)(*tqmf_ptr++) * (*h_ptr++);
-    #ifdef CBMC
-    __count_66_67++;
-    #endif
   }
+  #ifdef CBMC
+  assert(__count_67_66_L  <= 11); // Loop counter property
+  #endif
   
   xa += (long)(*tqmf_ptr++) * (*h_ptr++);
   xb += (long)(*tqmf_ptr) * (*h_ptr++);
   tqmf_ptr1 = tqmf_ptr - 2;
   
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L70++,
-    #endif
-  i < 22 ; i++) // 70
+  #ifdef CBMC
+  __count_70_69_L = 0;
+  #endif
+  for(i = 0 ; i < 22 ; i++) // 70
   {
     #ifdef CBMC
     __count_70_69++;
+    __count_70_69_L++;
     #endif
     *tqmf_ptr-- = *tqmf_ptr1--;
   }
+  #ifdef CBMC
+  assert(__count_70_69_L  <= 23); // Loop counter property
+  #endif
   
   *tqmf_ptr-- = xin1;
   *tqmf_ptr = xin2;
@@ -345,22 +420,22 @@ encode (int xin1,int xin2)
   }
   else
   {
+    #ifdef CBMC
+    __count_81_83++;
+    #endif
     // 83
     ih = 1;
-    #ifdef CBMC
-    __count_83_84++;
-    #endif
   }
   
   decis = (564L*(long)deth) >> 12L;
   
   if(my_abs(eh) > decis) // 85
   { 
+    #ifdef CBMC
+    __count_85_86++;
+    #endif
     // 86
     ih--;
-    #ifdef CBMC
-    __count_86_87++;
-    #endif
   }
   #ifdef CBMC
   else __count_85_87++;
@@ -382,6 +457,39 @@ encode (int xin1,int xin2)
   ph2 = ph1;
   ph1 = ph;
 
+#ifdef CBMC
+__count_92++;
+#endif
+
+#ifdef CBMC
+assert(__count_67_66 >= 10); // Lower capacity constraint
+assert(__count_67_66 <= 10); // Upper capacity constraint
+assert(__count_70_69 >= 22); // Lower capacity constraint
+assert(__count_70_69 <= 22); // Upper capacity constraint
+assert(__count_81_83 <= 1); // Upper capacity constraint
+assert(__count_82_84 <= 1); // Upper capacity constraint
+assert(__count_85_86 <= 1); // Upper capacity constraint
+assert(__count_85_87 <= 1); // Upper capacity constraint
+assert(__count_92 >= 1); // Lower capacity constraint
+assert(__count_92 <= 1); // Upper capacity constraint
+assert(__count_81_83 > 0 ==> __count_85_87 == 0); // Mutual exclusion
+assert(__count_85_87 > 0 ==> __count_81_83 == 0); // Mutual exclusion
+assert(__count_81_83 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_85_86 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_82_84 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_92 > 0); // Execution dependence
+#endif
+
   return il | (ih << 6);
 }
 
@@ -389,10 +497,16 @@ void
 decode (int input)
 {
   #ifdef CBMC
-  int __count_58_57 = 0;
-  int __count_61_60 = 0;
-  int __count_L58 = 0;
-  int __count_L61 = 0;
+//==========> decode : header 61
+int __count_61_60 = 0;
+int __count_61_60_L = 0; //Loop counter
+//==========> decode : header 58
+int __count_58_57 = 0;
+int __count_58_57_L = 0; //Loop counter
+//==========> decode : header 42
+int __count_62 = 0;
+int __count_58_59 = 0;
+
   #endif
   int i;
   long int xa1,xa2;  
@@ -441,18 +555,22 @@ decode (int input)
   xa1 = (long)xd * (*h_ptr++);
   xa2 = (long)xs * (*h_ptr++);
 
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L58++,
-    #endif
-  i < 10 ; i++) // 58
+  #ifdef CBMC
+  __count_58_57_L = 0;
+  #endif
+  for(i = 0 ; i < 10 ; i++) // 58
   {
     #ifdef CBMC
     __count_58_57++;
+    __count_58_57_L++;
     #endif
     xa1 += (long)(*ac_ptr++) * (*h_ptr++);
     xa2 += (long)(*ad_ptr++) * (*h_ptr++);
   }
+  #ifdef CBMC
+  assert(__count_58_57_L  <= 11); // Loop counter property
+  __count_58_59++;
+  #endif
 
   xa1 += (long)(*ac_ptr) * (*h_ptr++);
   xa2 += (long)(*ad_ptr) * (*h_ptr++);
@@ -463,35 +581,62 @@ decode (int input)
   ac_ptr1 = ac_ptr - 1;
   ad_ptr1 = ad_ptr - 1;
   
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L61++,
-    #endif
-  i < 10 ; i++) // 61
+  #ifdef CBMC
+  __count_61_60_L = 0;
+  #endif
+  for(i = 0 ; i < 10 ; i++) // 61
   {
     #ifdef CBMC
     __count_61_60++;
+    __count_61_60_L++;
     #endif
     *ac_ptr-- = *ac_ptr1--;
     *ad_ptr-- = *ad_ptr1--;
   }
+  #ifdef CBMC
+  assert(__count_61_60_L  <= 11); // Loop counter property
+  #endif
   
   *ac_ptr = xd;
   *ad_ptr = xs;
+
+  #ifdef CBMC
+  __count_62++;
+  #endif
+
+#ifdef CBMC
+assert(__count_58_57 >= 10); // Lower capacity constraint
+assert(__count_58_57 <= 10); // Upper capacity constraint
+assert(__count_58_59 >= 1); // Lower capacity constraint
+assert(__count_58_59 <= 1); // Upper capacity constraint
+assert(__count_61_60 >= 10); // Lower capacity constraint
+assert(__count_61_60 <= 10); // Upper capacity constraint
+assert(__count_62 >= 1); // Lower capacity constraint
+assert(__count_62 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 void 
 reset ()
 {
   #ifdef CBMC
-  int __count_2_3 = 0;
-  int __count_6_5 = 0;
-  int __count_8_9 = 0;
-  int __count_12_11 = 0;
-  int __count_L3 = 0;
-  int __count_L6 = 0;
-  int __count_L9 = 0;
-  int __count_L12 = 0;
+//==========> reset : header 12
+int __count_12_11 = 0;
+int __count_12_11_L = 0; //Loop counter
+//==========> reset : header 9
+int __count_9_8 = 0;
+int __count_9_8_L = 0; //Loop counter
+//==========> reset : header 6
+int __count_6_5 = 0;
+int __count_6_5_L = 0; //Loop counter
+//==========> reset : header 3
+int __count_3_2 = 0;
+int __count_3_2_L = 0; //Loop counter
+//==========> reset : header 1
+int __count_13 = 0;
+int __count_3_4 = 0;
+
   #endif
 
   int i;
@@ -503,95 +648,160 @@ reset ()
   dec_nbl = dec_al1 = dec_al2 = dec_plt1 = dec_plt2 = dec_rlt1 = dec_rlt2 = 0;
   dec_nbh = dec_ah1 = dec_ah2 = dec_ph1 = dec_ph2 = dec_rh1 = dec_rh2 = 0;
 
-  for(i = 0;
-    #ifdef CBMC
-    __count_L3++,
-    #endif
-      i < 6; i++) // 3
+  #ifdef CBMC
+  __count_3_2_L = 0;
+  #endif
+  for(i = 0; i < 6; i++) // 3
   {
+    #ifdef CBMC
+    __count_3_2++;
+    __count_3_2_L++;
+    #endif
     delay_dltx[i] = 0;
     delay_dhx[i] = 0;
     dec_del_dltx[i] = 0;
     dec_del_dhx[i] = 0;
-    #ifdef CBMC
-    __count_2_3++;
-    #endif
   }
+  #ifdef CBMC
+  assert(__count_3_2_L  <= 7); // Loop counter property
+  __count_3_4++;
+  #endif
 
-  for(i = 0; 
-    #ifdef CBMC
-    __count_L6++,
-    #endif
-      i < 6 ; i++) // 6
+  #ifdef CBMC
+  __count_6_5_L = 0;
+  #endif
+  for(i = 0; i < 6 ; i++) // 6
   {
     #ifdef CBMC
     __count_6_5++;
+    __count_6_5_L++;
     #endif
     delay_bpl[i] = 0;
     delay_bph[i] = 0;
     dec_del_bpl[i] = 0;
     dec_del_bph[i] = 0;
   }
+  #ifdef CBMC
+  assert(__count_6_5_L  <= 7); // Loop counter property
+  #endif
 
-  for(i = 0;
-    #ifdef CBMC
-    __count_L9++,
-    #endif
-      i < 23 ; i++) // 9
+  #ifdef CBMC
+  __count_9_8_L = 0;
+  #endif
+  for(i = 0; i < 23 ; i++) // 9
   {
+    #ifdef CBMC
+    __count_9_8++;
+    __count_9_8_L++;
+    #endif
     tqmf[i] = 0;
-    #ifdef CBMC
-    __count_8_9++;
-    #endif
   }
+  #ifdef CBMC
+  assert(__count_9_8_L  <= 24); // Loop counter property
+  #endif
   
-  for(i = 0;
-    #ifdef CBMC
-    __count_L12++,
-    #endif
-      i < 11 ; i++) // 12
+  #ifdef CBMC
+  __count_12_11_L = 0;
+  #endif
+  for(i = 0; i < 11 ; i++) // 12
   {
     #ifdef CBMC
+    __count_12_11_L++;
     __count_12_11++;
     #endif
     accumc[i] = 0;
     accumd[i] = 0;
   }
-  
+  #ifdef CBMC
+  assert(__count_12_11_L  <= 12); // Loop counter property
+  __count_13++;
+  #endif
+
+#ifdef CBMC
+assert(__count_13 >= 1); // Lower capacity constraint
+assert(__count_13 <= 1); // Upper capacity constraint
+assert(__count_3_2 >= 6); // Lower capacity constraint
+assert(__count_3_2 <= 6); // Upper capacity constraint
+assert(__count_3_4 >= 1); // Lower capacity constraint
+assert(__count_3_4 <= 1); // Upper capacity constraint
+assert(__count_6_5 >= 6); // Lower capacity constraint
+assert(__count_6_5 <= 6); // Upper capacity constraint
+assert(__count_9_8 >= 23); // Lower capacity constraint
+assert(__count_9_8 <= 23); // Upper capacity constraint
+assert(__count_12_11 >= 11); // Lower capacity constraint
+assert(__count_12_11 <= 11); // Upper capacity constraint
+#endif
+
 }
 
 int 
 filtez (int *bpl,int *dlt)
 {
   #ifdef CBMC
-  int __count_31_30 = 0;
-  int __count_L31 = 0;
+//==========> filtez : header 31
+int __count_31_30 = 0;
+int __count_31_30_L = 0; //Loop counter
+//==========> filtez : header 29
+int __count_32 = 0;
+int __count_31_32 = 0;
+
   #endif
   int i;
   long int zl;
   zl = (long)(*bpl++) * (*dlt++);
-  for(i = 1 ; 
-    #ifdef CBMC
-    __count_L31++,
-    #endif
-  i < 6 ; i++) // 31
+  #ifdef CBMC
+  __count_31_30_L = 0;
+  #endif
+  for(i = 1 ; i < 6 ; i++) // 31
   {
     #ifdef CBMC
     __count_31_30++;
+    __count_31_30_L++;
     #endif
     zl += (long)(*bpl++) * (*dlt++);
   }
+  #ifdef CBMC
+  assert(__count_31_30_L  <= 6); // Loop counter property
+  __count_31_32++;
+  #endif
+
+  #ifdef CBMC
+  __count_32++;
+  #endif
+
+#ifdef CBMC
+assert(__count_32 >= 1); // Lower capacity constraint
+assert(__count_32 <= 1); // Upper capacity constraint
+assert(__count_31_32 >= 1); // Lower capacity constraint
+assert(__count_31_32 <= 1); // Upper capacity constraint
+assert(__count_31_30 >= 5); // Lower capacity constraint
+assert(__count_31_30 <= 5); // Upper capacity constraint
+#endif
+
   return (int)(zl >> 14);
 }
 
 int 
 filtep (int rlt1,int al1,int rlt2,int al2)
 {
+#ifdef CBMC
+//==========> filtep : header 64
+int __count_64 = 0;
+#endif
   long int pl,pl2;
   pl = 2*rlt1;
   pl = (long)al1*pl;
   pl2 = 2*rlt2;
   pl += (long)al2*pl2;
+  #ifdef CBMC
+  __count_64++;
+  #endif
+
+#ifdef CBMC
+assert(__count_64 >= 1); // Lower capacity constraint
+assert(__count_64 <= 1); // Upper capacity constraint
+#endif
+
   return (int)(pl >> 15);
 }
 
@@ -599,13 +809,16 @@ int
 quantl (int el,int detl)
 {
   #ifdef CBMC
-  int __count_105_109 = 0;
-  int __count_106_107 = 0;
-  int __count_107_108 = 0;
-  int __count_111_113 = 0;
-  int __count_112_113 = 0;
+//==========> quantl : header 107
+int __count_107_105 = 0;
+int __count_107_105_L = 0; //Loop counter
+//==========> quantl : header 103
+int __count_113 = 0;
+int __count_105_109 = 0;
+int __count_107_108 = 0;
+int __count_110_111 = 0;
+int __count_110_112 = 0;
 
-  int __count_L107 = 0;
 
   // TODO: check
   int did_break = 0;
@@ -613,12 +826,15 @@ quantl (int el,int detl)
   int ril,mil;
   long int wd,decis;
   wd = my_abs(el);
-  for(mil = 0 ; 
-    #ifdef CBMC
-    __count_L107++,
-    #endif
-  mil < 30 ; mil++) // 107
+  #ifdef CBMC
+  __count_107_105_L = 0;
+  #endif
+  for(mil = 0 ; mil < 30 ; mil++) // 107
   {
+    #ifdef CBMC
+    __count_107_105_L++;
+    __count_107_105++;
+    #endif
     decis = (decis_levl[mil]*(long)detl) >> 15L;
     if(wd <= decis) // 105
     { 
@@ -629,10 +845,10 @@ quantl (int el,int detl)
       // 109
       break;
     }
-    #ifdef CBMC
-    __count_106_107++;
-    #endif
   }
+  #ifdef CBMC
+  assert(__count_107_105_L  <= 31); // Loop counter property
+  #endif
 
   #ifdef CBMC
   // exit without break
@@ -643,20 +859,48 @@ quantl (int el,int detl)
 
   if (el >= 0) // 110
   {
+    #ifdef CBMC
+    __count_110_111++;
+    #endif
     // 111
     ril = quant26bt_pos[mil];
-    #ifdef CBMC
-    __count_111_113++;
-    #endif
   }
   else
   { 
+    #ifdef CBMC
+    __count_110_112++;
+    #endif
     // 112
     ril = quant26bt_neg[mil];
-    #ifdef CBMC
-    __count_112_113++;
-    #endif
   }
+
+#ifdef CBMC
+__count_113++;
+#endif
+
+#ifdef CBMC
+assert(__count_105_109 <= 1); // Upper capacity constraint
+assert(__count_107_105 >= 1); // Lower capacity constraint
+assert(__count_107_105 <= 30); // Upper capacity constraint
+assert(__count_107_108 <= 1); // Upper capacity constraint
+assert(__count_110_112 <= 1); // Upper capacity constraint
+assert(__count_110_111 <= 1); // Upper capacity constraint
+assert(__count_113 >= 1); // Lower capacity constraint
+assert(__count_113 <= 1); // Upper capacity constraint
+assert(__count_105_109 > 0 ==> __count_110_112 == 0); // Mutual exclusion
+assert(__count_110_112 > 0 ==> __count_105_109 == 0); // Mutual exclusion
+assert(__count_105_109 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_105_109 > 0 ==> __count_110_111 > 0); // Execution dependence
+assert(__count_105_109 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_107_108 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_107_108 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_107_108 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_110_111 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_110_111 > 0 ==> __count_113 > 0); // Execution dependence
+#endif
+
   return ril;
 }
 
@@ -664,11 +908,14 @@ int
 logscl (int il,int nbl)
 {
   #ifdef CBMC
-  int __count_14_15 = 0;
-  int __count_14_16 = 0;
-  int __count_16_18 = 0;
-  int __count_17_18 = 0;
+//==========> logscl : header 14
+int __count_18 = 0;
+int __count_14_15 = 0;
+int __count_14_16 = 0;
+int __count_16_17 = 0;
+int __count_16_18 = 0;
   #endif
+
   long int wd;  
   wd = ((long)nbl * 127L) >> 7L; 
   nbl = (int)wd + wl_code_table[il >> 2];
@@ -686,27 +933,57 @@ logscl (int il,int nbl)
   
   if (nbl > 18432) // 16
   {
+    #ifdef CBMC
+    __count_16_17++;
+    #endif
     // 17
     nbl = 18432;
-    #ifdef CBMC
-    __count_17_18++;
-    #endif
   }
   #ifdef CBMC
   else __count_16_18++;
   #endif
   
-  
+  #ifdef CBMC
+  __count_18++;
+  #endif
+
+#ifdef CBMC
+assert(__count_16_17 == 0); // Dead code
+assert(__count_18 >= 1); // Lower capacity constraint
+assert(__count_18 <= 1); // Upper capacity constraint
+assert(__count_16_18 >= 1); // Lower capacity constraint
+assert(__count_16_18 <= 1); // Upper capacity constraint
+assert(__count_14_16 <= 1); // Upper capacity constraint
+assert(__count_14_15 <= 1); // Upper capacity constraint
+assert(__count_14_16 > 0 ==> __count_16_18 > 0); // Execution dependence
+assert(__count_14_16 > 0 ==> __count_18 > 0); // Execution dependence
+assert(__count_14_15 > 0 ==> __count_16_18 > 0); // Execution dependence
+assert(__count_14_15 > 0 ==> __count_18 > 0); // Execution dependence
+#endif
+
   return nbl;
 }
 
 int 
 scalel (int nbl,int shift_constant)
 {
+#ifdef CBMC
+//==========> scalel : header 63
+int __count_63 = 0;
+#endif
   int wd1,wd2,wd3;
   wd1 = (nbl >> 6) & 31;
   wd2 = nbl >> 11;
   wd3 = ilb_table[wd1] >> (shift_constant + 1 - wd2);
+  #ifdef CBMC
+  __count_63++;
+  #endif
+
+#ifdef CBMC
+assert(__count_63 >= 1); // Lower capacity constraint
+assert(__count_63 <= 1); // Upper capacity constraint
+#endif
+
   return wd3 << 3;
 }
 
@@ -714,14 +991,16 @@ int
 uppol2 (int al1,int al2,int plt,int plt1,int plt2)
 {
   #ifdef CBMC
-  int __count_93_95 = 0;
-  int __count_94_95 = 0;
-  int __count_95_96 = 0;
-  int __count_95_97 = 0;
-  int __count_98_100 = 0;
-  int __count_99_100 = 0;
-  int __count_100_101 = 0;
-  int __count_100_102 = 0;
+//==========> uppol2 : header 93
+int __count_102 = 0;
+int __count_93_94 = 0;
+int __count_93_95 = 0;
+int __count_96_98 = 0;
+int __count_97_98 = 0;
+int __count_98_99 = 0;
+int __count_98_100 = 0;
+int __count_100_102 = 0;
+int __count_101_102 = 0;
   #endif
 
   long int wd2,wd4;
@@ -729,10 +1008,10 @@ uppol2 (int al1,int al2,int plt,int plt1,int plt2)
   wd2 = 4L*(long)al1;
   if ((long)plt*plt1 >= 0L) // 93
   {
-    wd2 = -wd2;
     #ifdef CBMC
-    __count_94_95++;
+    __count_93_94++;
     #endif
+    wd2 = -wd2;
   }   
   #ifdef CBMC
   else __count_93_95++;
@@ -741,28 +1020,28 @@ uppol2 (int al1,int al2,int plt,int plt1,int plt2)
   wd2 = wd2 >> 7;                  
   if((long)plt*plt2 >= 0L) // 95
   {
-    #ifdef CBMC
-    __count_95_96++;
-    #endif
     // 96
     wd4 = wd2 + 128;    
+    #ifdef CBMC
+    __count_96_98++;
+    #endif
   }
   else 
   {
-    #ifdef CBMC
-    __count_95_97++;
-    #endif
     // 97
     wd4 = wd2 - 128;
+    #ifdef CBMC
+    __count_97_98++;
+    #endif
   }
   apl2 = wd4 + (127L*(long)al2 >> 7L);
 
   if (apl2 > 12288) // 98
   {
-   apl2 = 12288;
    #ifdef CBMC
-   __count_99_100++;
+   __count_98_99++;
    #endif
+   apl2 = 12288;
   }
   #ifdef CBMC
   else __count_98_100++;
@@ -770,14 +1049,36 @@ uppol2 (int al1,int al2,int plt,int plt1,int plt2)
 
   if (apl2 < -12288) // 100
   {
-    #ifdef CBMC
-    __count_100_101++;
-    #endif
    apl2 = -12288;
+    #ifdef CBMC
+    __count_101_102++;
+    #endif
   }
   #ifdef CBMC
   else __count_100_102++;
   #endif
+
+#ifdef CBMC
+__count_102++;
+#endif
+
+#ifdef CBMC
+assert(__count_96_98 >= 1); // Lower capacity constraint
+assert(__count_96_98 <= 1); // Upper capacity constraint
+assert(__count_97_98 == 0); // Dead code
+assert(__count_98_99 == 0); // Dead code
+assert(__count_98_100 >= 1); // Lower capacity constraint
+assert(__count_98_100 <= 1); // Upper capacity constraint
+assert(__count_102 >= 1); // Lower capacity constraint
+assert(__count_102 <= 1); // Upper capacity constraint
+assert(__count_100_102 >= 1); // Lower capacity constraint
+assert(__count_100_102 <= 1); // Upper capacity constraint
+assert(__count_101_102 == 0); // Dead code
+assert(__count_93_94 >= 1); // Lower capacity constraint
+assert(__count_93_94 <= 1); // Upper capacity constraint
+assert(__count_93_95 == 0); // Dead code
+#endif
+
   return apl2;
 }
 
@@ -785,12 +1086,15 @@ int
 uppol1 (int al1,int apl2,int plt,int plt1)
 {
   #ifdef CBMC
-  int __count_114_115 = 0;
-  int __count_114_116 = 0;
-  int __count_117_119 = 0;
-  int __count_118_119 = 0;
-  int __count_119_121 = 0;
-  int __count_120_121 = 0;
+//==========> uppol1 : header 114
+int __count_121 = 0;
+int __count_115_117 = 0;
+int __count_116_117 = 0;
+int __count_117_118 = 0;
+int __count_117_119 = 0;
+int __count_119_120 = 0;
+int __count_119_121 = 0;
+
   #endif
 
   long int wd2;
@@ -799,28 +1103,28 @@ uppol1 (int al1,int apl2,int plt,int plt1)
   wd2 = ((long)al1*255L) >> 8L;  
   if((long)plt*plt1 >= 0L) // 114
   {
-    #ifdef CBMC
-    __count_114_115++;
-    #endif
     // 115
     apl1 = (int)wd2 + 192;   
+    #ifdef CBMC
+    __count_115_117++;
+    #endif
   }
   else 
   {
-    #ifdef CBMC
-    __count_114_116++;
-    #endif
     // 116
     apl1 = (int)wd2 - 192;
+    #ifdef CBMC
+    __count_116_117++;
+    #endif
   }
     
   wd3 = 15360 - apl2;          
   if(apl1 > wd3) // 117
   {
-    apl1 = wd3;
     #ifdef CBMC
-    __count_118_119++;
+    __count_117_118++;
     #endif
+    apl1 = wd3;
   }
   #ifdef CBMC
   else __count_117_119++;
@@ -828,14 +1132,33 @@ uppol1 (int al1,int apl2,int plt,int plt1)
 
   if(apl1 < -wd3) // 119
   { 
-    apl1 = -wd3;
     #ifdef CBMC
-    __count_120_121++;
+    __count_119_120++;
     #endif
+    apl1 = -wd3;
   }
   #ifdef CBMC
   else __count_119_121++;
   #endif
+
+#ifdef CBMC
+__count_121++;
+#endif
+
+#ifdef CBMC
+assert(__count_115_117 >= 1); // Lower capacity constraint
+assert(__count_115_117 <= 1); // Upper capacity constraint
+assert(__count_116_117 == 0); // Dead code
+assert(__count_117_118 == 0); // Dead code
+assert(__count_117_119 >= 1); // Lower capacity constraint
+assert(__count_117_119 <= 1); // Upper capacity constraint
+assert(__count_119_120 == 0); // Dead code
+assert(__count_119_121 >= 1); // Lower capacity constraint
+assert(__count_119_121 <= 1); // Upper capacity constraint
+assert(__count_121 >= 1); // Lower capacity constraint
+assert(__count_121 <= 1); // Upper capacity constraint
+#endif
+
   return apl1;
 }
 
@@ -843,10 +1166,13 @@ int
 logsch (int ih,int nbh)
 {
   #ifdef CBMC
-  int __count_33_35 = 0;
-  int __count_34_35 = 0;
-  int __count_35_37 = 0;
-  int __count_36_37 = 0;
+//==========> logsch : header 33
+int __count_37 = 0;
+int __count_33_34 = 0;
+int __count_33_35 = 0;
+int __count_35_36 = 0;
+int __count_35_37 = 0;
+
   #endif
 
   int wd;
@@ -858,7 +1184,7 @@ logsch (int ih,int nbh)
     // 34
     nbh = 0;
     #ifdef CBMC
-    __count_34_35++;
+    __count_33_34++;
     #endif
   }
   #ifdef CBMC
@@ -869,13 +1195,31 @@ logsch (int ih,int nbh)
     // 36
     nbh = 22528;
     #ifdef CBMC
-    __count_36_37++;
+    __count_35_36++;
     #endif
   }  
   #ifdef CBMC
   else __count_35_37++;
   #endif
   
+  #ifdef CBMC
+  __count_37++;
+  #endif
+
+#ifdef CBMC
+assert(__count_33_34 <= 1); // Upper capacity constraint
+assert(__count_33_35 <= 1); // Upper capacity constraint
+assert(__count_35_36 == 0); // Dead code
+assert(__count_37 >= 1); // Lower capacity constraint
+assert(__count_37 <= 1); // Upper capacity constraint
+assert(__count_35_37 >= 1); // Lower capacity constraint
+assert(__count_35_37 <= 1); // Upper capacity constraint
+assert(__count_33_34 > 0 ==> __count_35_37 > 0); // Execution dependence
+assert(__count_33_34 > 0 ==> __count_37 > 0); // Execution dependence
+assert(__count_33_35 > 0 ==> __count_35_37 > 0); // Execution dependence
+assert(__count_33_35 > 0 ==> __count_37 > 0); // Execution dependence
+#endif
+
   return nbh;
 }
 
@@ -883,10 +1227,16 @@ void
 adpcm (int test_data[])
 {
   #ifdef CBMC
-  int __count_23_21 = 0;
-  int __count_26_27 = 0;
-  int __count_L27 = 0;
-  int __count_L23 = 0;
+//==========> adpcm : header 27
+int __count_27_25 = 0;
+int __count_27_25_L = 0; //Loop counter
+//==========> adpcm : header 23
+int __count_21_22 = 0;
+int __count_23_21 = 0; //Loop counter
+//==========> adpcm : header 19
+int __count_28 = 0;
+int __count_23_24 = 0;
+
   #endif
   int compressed[2];
   int result[4];
@@ -894,31 +1244,54 @@ adpcm (int test_data[])
   reset();
   
   int i;
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L23++,
-    #endif
-  i < TEST_VECTOR_LENGTH; i += 2) // 23
+  #ifdef CBMC
+  __count_23_21 = 0;
+  #endif
+  for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2) // 23
   {
     #ifdef CBMC
     __count_23_21++;
+    __count_21_22++;
     #endif
     compressed[i/2] = encode(test_data[i],test_data[i+1]);
   }
+  #ifdef CBMC
+  assert(__count_23_21  <= 3); // Loop counter property
+  __count_23_24++;
+  #endif
   
-  for(i = 0 ; 
-    #ifdef CBMC
-    __count_L27++,
-    #endif
-  i < TEST_VECTOR_LENGTH; i += 2) // 27
+  #ifdef CBMC
+  __count_27_25_L = 0;
+  #endif
+  for(i = 0 ; i < TEST_VECTOR_LENGTH; i += 2) // 27
   {
+    #ifdef CBMC
+    __count_27_25++;
+    __count_27_25_L++;
+    #endif
     decode(compressed[i/2]);
     result[i] = xout1;
     result[i+1] = xout2;
-    #ifdef CBMC
-    __count_26_27++;
-    #endif
   }
+  #ifdef CBMC
+  assert(__count_27_25_L  <= 3); // Loop counter property
+  #endif
+  
+  #ifdef CBMC
+  __count_28++;
+  #endif
+
+#ifdef CBMC
+assert(__count_27_25 >= 2); // Lower capacity constraint
+assert(__count_27_25 <= 2); // Upper capacity constraint
+assert(__count_21_22 >= 2); // Lower capacity constraint
+assert(__count_21_22 <= 2); // Upper capacity constraint
+assert(__count_28 >= 1); // Lower capacity constraint
+assert(__count_28 <= 1); // Upper capacity constraint
+assert(__count_23_24 >= 1); // Lower capacity constraint
+assert(__count_23_24 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 int
