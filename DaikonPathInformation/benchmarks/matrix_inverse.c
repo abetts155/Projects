@@ -22,7 +22,8 @@ matrix_inverse (double a[][UPPERLIMIT], int row, int col, double eps)
 {
 #ifdef CBMC
 //==========> matrix_inverse : header 38
-int __count_38_37 = 0; //Loop counter
+int __count_38_37 = 0
+int __count_38_37_L = 0; //Loop counter
 //==========> matrix_inverse : header 28
 int __count_25_26 = 0;
 int __count_25_27 = 0;
@@ -31,14 +32,16 @@ int __count_28_25 = 0; //Loop counter
 int __count_38_39 = 0;
 int __count_35_36 = 0; //Loop counter
 //==========> matrix_inverse : header 17
-int __count_17_16 = 0; //Loop counter
+int __count_17_16 = 0;
+int __count_17_16_L = 0; //Loop counter
 //==========> matrix_inverse : header 31
 int __count_22_30 = 0;
 int __count_23_30 = 0;
 int __count_28_29 = 0;
 int __count_31_22 = 0; //Loop counter
 //==========> matrix_inverse : header 20
-int __count_20_19 = 0; //Loop counter
+int __count_20_19 = 0;
+int __count_20_19_L = 0; //Loop counter
 //==========> matrix_inverse : header 12
 int __count_9_10 = 0;
 int __count_9_11 = 0;
@@ -51,7 +54,8 @@ int __count_14_18 = 0;
 int __count_17_18 = 0;
 int __count_33_8 = 0; //Loop counter
 //==========> matrix_inverse : header 6
-int __count_6_5 = 0; //Loop counter
+int __count_6_5 = 0;
+int __count_6_5_L = 0; //Loop counter
 //==========> matrix_inverse : header 1
 int __count_45 = 0;
 int __count_1_43 = 0;
@@ -100,15 +104,19 @@ int __count_33_34 = 0;
 
   w1 = 1.0;
   #ifdef CBMC
-  __count_6_5 = 0;
+  __count_6_5_L = 0;
   #endif
   for (i = 0; i < row; i++) // 6
   {
     #ifdef CBMC
     __count_6_5++;
+    __count_6_5_L++;
     #endif
     work[i] = i;
   }
+  #ifdef CBMC
+  assert(__count_6_5_L  <= 6); // Loop counter property
+  #endif
 
   #ifdef CBMC
   __count_33_8 = 0;
@@ -140,6 +148,9 @@ int __count_33_34 = 0;
       else __count_9_11++;
       #endif
     }
+    #ifdef CBMC
+    assert(__count_12_9  <= 6); // Loop counter property
+    #endif
     pivot = a[r][k];
     api = fabs (pivot);
 
@@ -164,11 +175,12 @@ int __count_33_34 = 0;
       work[k] = work[r];
       work[r] = iw;
       #ifdef CBMC
-      __count_17_16 = 0;
+      __count_17_16_L = 0;
       #endif
       for (j = 0; j < row; j++) // 17
       {
         #ifdef CBMC
+        __count_17_16_L++;
         __count_17_16++;
         #endif
         s = u + j;
@@ -178,6 +190,7 @@ int __count_33_34 = 0;
         a[r][j] = w;
       }
       #ifdef CBMC
+      assert(__count_17_16_L  <= 6); // Loop counter property
       __count_17_18++;
       #endif
     }
@@ -186,15 +199,19 @@ int __count_33_34 = 0;
     #endif
 
     #ifdef CBMC
-    __count_20_19 = 0;
+    __count_20_19_L = 0;
     #endif
     for (i = 0; i < row; i++) // 20
     {
       #ifdef CBMC
+      __count_20_19_L++;
       __count_20_19++;
       #endif
       a[k][i] /= pivot;
     }
+    #ifdef CBMC
+    assert(__count_20_19_L  <= 6); // Loop counter property
+    #endif
 
     #ifdef CBMC
     __count_31_22 = 0;
@@ -231,6 +248,7 @@ int __count_33_34 = 0;
             #endif
           }
           #ifdef CBMC
+          assert(__count_28_25  <= 6); // Loop counter property
           __count_28_29++;
           #endif
           a[i][k] = -w / pivot;
@@ -243,9 +261,13 @@ int __count_33_34 = 0;
       else __count_22_30++;
       #endif
     }
+    #ifdef CBMC
+    assert(__count_31_22  <= 6); // Loop counter property
+    #endif
     a[k][k] = 1.0 / pivot;
   }
   #ifdef CBMC
+  assert(__count_33_8  <= 6); // Loop counter property
   __count_33_34++;
   #endif
 
@@ -276,11 +298,12 @@ int __count_33_34 = 0;
       work[k] = work[i];
       work[i] = iw;
       #ifdef CBMC
-      __count_38_37 = 0;
+      __count_38_37_L = 0;
       #endif
       for (j = 0; j < row; j++) // 38
       {
         #ifdef CBMC
+        __count_38_37_L++;
         __count_38_37++;
         #endif
         u = j * col;
@@ -291,16 +314,61 @@ int __count_33_34 = 0;
         a[k][k] = w;
       }
       #ifdef CBMC
+      assert(__count_38_37_L  <= 6); // Loop counter property
       __count_38_39++;
       #endif
     }
     #ifdef CBMC
+    assert(__count_35_36  <= 5); // Loop counter property
     __count_35_40++;
     #endif
   }
   #ifdef CBMC
+  assert(__count_41_35  <= 6); // Loop counter property
   __count_45++;
   #endif
+
+#ifdef CBMC
+
+
+assert(__count_13_44 == 0); // Dead code
+assert(__count_35_40 >= 5); // Lower capacity constraint
+assert(__count_35_40 <= 5); // Upper capacity constraint
+assert(__count_14_18 >= 1); // Lower capacity constraint
+assert(__count_14_18 <= 4); // Upper capacity constraint
+assert(__count_38_37 >= 5); // Lower capacity constraint
+assert(__count_38_37 <= 20); // Upper capacity constraint
+assert(__count_38_39 >= 1); // Lower capacity constraint
+assert(__count_38_39 <= 4); // Upper capacity constraint
+assert(__count_17_16 >= 5); // Lower capacity constraint
+assert(__count_17_16 <= 20); // Upper capacity constraint
+assert(__count_17_18 >= 1); // Lower capacity constraint
+assert(__count_17_18 <= 4); // Upper capacity constraint
+assert(__count_23_30 == 0); // Dead code
+assert(__count_20_19 >= 25); // Lower capacity constraint
+assert(__count_20_19 <= 25); // Upper capacity constraint
+assert(__count_45 >= 1); // Lower capacity constraint
+assert(__count_45 <= 1); // Upper capacity constraint
+assert(__count_22_30 >= 5); // Lower capacity constraint
+assert(__count_22_30 <= 5); // Upper capacity constraint
+assert(__count_1_43 == 0); // Dead code
+assert(__count_2_43 == 0); // Dead code
+assert(__count_3_43 == 0); // Dead code
+assert(__count_25_27 >= 20); // Lower capacity constraint
+assert(__count_25_27 <= 20); // Upper capacity constraint
+assert(__count_25_26 >= 80); // Lower capacity constraint
+assert(__count_25_26 <= 80); // Upper capacity constraint
+assert(__count_6_5 >= 5); // Lower capacity constraint
+assert(__count_6_5 <= 5); // Upper capacity constraint
+assert(__count_28_29 >= 20); // Lower capacity constraint
+assert(__count_28_29 <= 20); // Upper capacity constraint
+assert(__count_9_10 >= 6); // Lower capacity constraint
+assert(__count_9_10 <= 13); // Upper capacity constraint
+assert(__count_9_11 >= 2); // Lower capacity constraint
+assert(__count_9_11 <= 9); // Upper capacity constraint
+assert(__count_33_34 >= 1); // Lower capacity constraint
+assert(__count_33_34 <= 1); // Upper capacity constraint
+#endif
 }
 
 int

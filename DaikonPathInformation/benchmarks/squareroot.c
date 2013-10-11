@@ -70,12 +70,35 @@ int __count_8_9 = 0;
       }
     }
     #ifdef CBMC
+    assert(__count_8_4  <= 20); // Loop counter property
     __count_8_9++;
     #endif
   }
   #ifdef CBMC
   __count_9++;
   #endif
+
+#ifdef CBMC
+
+assert(__count_9 >= 1); // Lower capacity constraint
+assert(__count_9 <= 1); // Upper capacity constraint
+assert(__count_2_9 == 0); // Dead code
+assert(__count_4_7 <= 7); // Upper capacity constraint
+assert(__count_5_6 <= 1); // Upper capacity constraint
+assert(__count_5_7 >= 11); // Lower capacity constraint
+assert(__count_5_7 <= 19); // Upper capacity constraint
+assert(__count_8_9 >= 1); // Lower capacity constraint
+assert(__count_8_9 <= 1); // Upper capacity constraint
+assert(__count_4_7 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+assert(__count_4_7 > 0 ==> __count_9 > 0); // Execution dependence
+assert(__count_4_7 > 0 ==> __count_5_7 > 0); // Execution dependence
+assert(__count_4_7 > 0 ==> __count_8_9 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_9 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_5_7 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_8_9 > 0); // Execution dependence
+#endif
+
   return x;
 }
 

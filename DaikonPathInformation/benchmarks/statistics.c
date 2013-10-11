@@ -28,6 +28,12 @@ int __count_15 = 0;
   #ifdef CBMC
   __count_15++;
   #endif
+
+#ifdef CBMC
+assert(__count_15 >= 1); // Lower capacity constraint
+assert(__count_15 <= 1); // Upper capacity constraint
+#endif
+
   return u.x;
 } 
 
@@ -42,6 +48,12 @@ int __count_16 = 0;
   #ifdef CBMC
   __count_16++;
   #endif
+
+#ifdef CBMC
+assert(__count_16 >= 1); // Lower capacity constraint
+assert(__count_16 <= 1); // Upper capacity constraint
+#endif
+
   return x * x;
 }
 
@@ -50,7 +62,8 @@ Calc_Sum_Mean (double Array[], double * Sum, double * Mean, int ARRAY_SIZE)
 {
 #ifdef CBMC
 //==========> calc_sum_mean : header 19
-int __count_19_18 = 0; //Loop counter
+int __count_19_18 = 0;
+int __count_19_18_L = 0; //Loop counter
 //==========> calc_sum_mean : header 17
 int __count_20 = 0;
 int __count_19_20 = 0;
@@ -60,16 +73,18 @@ int __count_19_20 = 0;
 
   *Sum = 0;
   #ifdef CBMC
-  __count_19_18 = 0;
+  __count_19_18_L = 0;
   #endif
   for (i = 0; i < ARRAY_SIZE; i++)
   {
     #ifdef CBMC
+    __count_19_18_L++;
     __count_19_18++;
     #endif
     *Sum += Array[i];
   }
   #ifdef CBMC
+  assert(__count_19_18_L  <= 11); // Loop counter property
   __count_19_20++;
   #endif
 
@@ -78,6 +93,16 @@ int __count_19_20 = 0;
   #ifdef CBMC
   __count_20++;
   #endif
+
+
+#ifdef CBMC
+assert(__count_19_20 >= 1); // Lower capacity constraint
+assert(__count_19_20 <= 1); // Upper capacity constraint
+assert(__count_19_18 >= 10); // Lower capacity constraint
+assert(__count_19_18 <= 10); // Upper capacity constraint
+assert(__count_20 >= 1); // Lower capacity constraint
+assert(__count_20 <= 1); // Upper capacity constraint
+#endif
 }
 
 void
@@ -86,7 +111,8 @@ Calc_Var_Stddev (double Array[], double Mean, double * Var, double * Stddev,
 {
 #ifdef CBMC
 //==========> calc_var_stddev : header 24
-int __count_24_22 = 0; //Loop counter
+int __count_24_22 = 0;
+int __count_24_22_L = 0; //Loop counter
 //==========> calc_var_stddev : header 21
 int __count_26 = 0;
 int __count_24_25 = 0;
@@ -96,16 +122,18 @@ int __count_24_25 = 0;
   double diffs = 0.0;
 
   #ifdef CBMC
-  __count_24_22 = 0;
+  __count_24_22_L = 0;
   #endif
   for (i = 0; i < ARRAY_SIZE; i++)
   {
     #ifdef CBMC
+    __count_24_22_L++;
     __count_24_22++;
     #endif
     diffs += Square (Array[i] - Mean);
   }
   #ifdef CBMC
+  assert(__count_24_22_L  <= 11); // Loop counter property
   __count_24_25++;
   #endif
 
@@ -115,6 +143,16 @@ int __count_24_25 = 0;
   #ifdef CBMC
   __count_26++;
   #endif
+
+#ifdef CBMC
+
+assert(__count_26 >= 1); // Lower capacity constraint
+assert(__count_26 <= 1); // Upper capacity constraint
+assert(__count_24_25 >= 1); // Lower capacity constraint
+assert(__count_24_25 <= 1); // Upper capacity constraint
+assert(__count_24_22 >= 10); // Lower capacity constraint
+assert(__count_24_22 <= 10); // Upper capacity constraint
+#endif
 }
 
 void
@@ -150,12 +188,24 @@ int __count_11_12 = 0;
     Bterm += Square (ArrayB[i] - MeanB);
   }
   #ifdef CBMC
+  assert(__count_11_8  <= 11); // Loop counter property
   __count_11_12++;
   #endif
   Coef = numerator / (sqrt (Aterm) * sqrt (Bterm));
   #ifdef CBMC
   __count_14++;
   #endif
+
+
+#ifdef CBMC
+assert(__count_8_9 >= 10); // Lower capacity constraint
+assert(__count_8_9 <= 10); // Upper capacity constraint
+assert(__count_14 >= 1); // Lower capacity constraint
+assert(__count_14 <= 1); // Upper capacity constraint
+assert(__count_11_12 >= 1); // Lower capacity constraint
+assert(__count_11_12 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 int
@@ -189,6 +239,14 @@ int __count_1_2 = 0;
   #ifdef CBMC
   __count_6++;
   #endif
+
+#ifdef CBMC
+assert(__count_6 >= 1); // Lower capacity constraint
+assert(__count_6 <= 1); // Upper capacity constraint
+assert(__count_1_2 >= 1); // Lower capacity constraint
+assert(__count_1_2 <= 1); // Upper capacity constraint
+#endif
+
   return ArrayA[0];
 }
 

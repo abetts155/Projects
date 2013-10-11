@@ -114,9 +114,11 @@ select (unsigned long k)
 {
 #ifdef CBMC
 //==========> select : header 20
-int __count_20_19 = 0; //Loop counter
+int __count_20_19 = 0;
+int __count_20_19_L = 0; //Loop counter
 //==========> select : header 17
-int __count_17_16 = 0; //Loop counter
+int __count_17_16 = 0;
+int __count_17_16_L = 0; //Loop counter
 //==========> select : header 25
 int __count_21_22 = 0;
 int __count_21_23 = 0;
@@ -223,26 +225,34 @@ int __count_30_31 = 0;
         #endif
         i++;
         #ifdef CBMC
-        __count_17_16 = 0;
+        __count_17_16_L = 0;
         #endif
         while (arr[i] < a)
         {
           #ifdef CBMC
+          __count_17_16_L++;
           __count_17_16++;
           #endif
           i++;
         }
+        #ifdef CBMC
+        assert(__count_17_16_L  <= 6); // Loop counter property
+        #endif
         j--;
         #ifdef CBMC
-        __count_20_19 = 0;
+        __count_20_19_L = 0;
         #endif
         while (arr[j] > a)
         {
           #ifdef CBMC
+          __count_20_19_L++;
           __count_20_19++;
           #endif
           j--;
         }
+        #ifdef CBMC
+        assert(__count_20_19_L  <= 12); // Loop counter property
+        #endif
         if (j < i)
         {
           #ifdef CBMC
@@ -258,6 +268,9 @@ int __count_30_31 = 0;
           SWAP(arr[i], arr[j])
         }
       }
+      #ifdef CBMC
+      assert(__count_25_15  <= 250); // Loop counter property
+      #endif
       arr[l] = arr[j];
       arr[j] = a;
       if (j >= k)
@@ -277,9 +290,45 @@ int __count_30_31 = 0;
     }
   }
   #ifdef CBMC
+  assert(__count_30_2  <= 603); // Loop counter property
   __count_30_31++;
   __count_31++;
   #endif
+
+#ifdef CBMC
+assert(__count_3_6 == 0); // Dead code
+assert(__count_4_5 == 0); // Dead code
+assert(__count_26_28 >= 10); // Lower capacity constraint
+assert(__count_26_28 <= 589); // Upper capacity constraint
+assert(__count_4_6 >= 1); // Lower capacity constraint
+assert(__count_4_6 <= 1); // Upper capacity constraint
+assert(__count_8_10 >= 12); // Lower capacity constraint
+assert(__count_8_10 <= 414); // Upper capacity constraint
+assert(__count_8_9 >= 118); // Lower capacity constraint
+assert(__count_8_9 <= 589); // Upper capacity constraint
+assert(__count_30_31 >= 1); // Lower capacity constraint
+assert(__count_30_31 <= 1); // Upper capacity constraint
+assert(__count_10_11 >= 12); // Lower capacity constraint
+assert(__count_10_11 <= 578); // Upper capacity constraint
+assert(__count_10_12 >= 15); // Lower capacity constraint
+assert(__count_10_12 <= 589); // Upper capacity constraint
+assert(__count_12_13 >= 10); // Lower capacity constraint
+assert(__count_12_13 <= 585); // Upper capacity constraint
+assert(__count_12_14 >= 16); // Lower capacity constraint
+assert(__count_12_14 <= 583); // Upper capacity constraint
+assert(__count_21_23 >= 248); // Lower capacity constraint
+assert(__count_21_23 <= 248); // Upper capacity constraint
+assert(__count_17_16 >= 146); // Lower capacity constraint
+assert(__count_17_16 <= 146); // Upper capacity constraint
+assert(__count_20_19 >= 354); // Lower capacity constraint
+assert(__count_20_19 <= 354); // Upper capacity constraint
+assert(__count_21_22 >= 1); // Lower capacity constraint
+assert(__count_21_22 <= 1); // Upper capacity constraint
+assert(__count_26_27 >= 12); // Lower capacity constraint
+assert(__count_26_27 <= 583); // Upper capacity constraint
+assert(__count_31 >= 1); // Lower capacity constraint
+assert(__count_31 <= 1); // Upper capacity constraint
+#endif
   return arr[k];
 }
 
