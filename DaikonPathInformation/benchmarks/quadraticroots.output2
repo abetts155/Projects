@@ -9,7 +9,7 @@ Checking program configuration...
 ============================================================
 
 ============================================================
-0:00:00.060 - COMPILING END
+0:00:00.050 - COMPILING END
 ============================================================
 
 ...all good
@@ -36,25 +36,6 @@ int __count_16_18 = 0;
 ****************************************************************************************************
 FUNCTION 'sqrt'
 ****************************************************************************************************
-  IGNORING MUTUAL INCLUSION: 9 and (4, 7)
-  IGNORING MUTUAL INCLUSION: 9 and (5, 6)
-  IGNORING MUTUAL INCLUSION: 9 and (5, 7)
-  IGNORING MUTUAL INCLUSION: 9 and (8, 9)
-  IGNORING MUTUAL INCLUSION: (4, 7) and (5, 6)
-  IGNORING MUTUAL INCLUSION: (4, 7) and (5, 7)
-  IGNORING MUTUAL INCLUSION: (4, 7) and (8, 9)
-  IGNORING MUTUAL INCLUSION: (5, 6) and (5, 7)
-  IGNORING MUTUAL INCLUSION: (5, 6) and (8, 9)
-  IGNORING MUTUAL INCLUSION: (5, 7) and (8, 9)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 9) and 9
-****************************************************************************************************
-FUNCTION 'quadraticroots'
-****************************************************************************************************
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (14, 15) and 18
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (10, 17) and 18
-****************************************************************************************************
-FUNCTION 'sqrt'
-****************************************************************************************************
   ALWAYS EXECUTES: 9, at least 1 time(s), at most 1 time(s)
   NEVER EXECUTES: (2, 9)
   ALWAYS EXECUTES: (4, 7), at least 11 time(s), at most 15 time(s)
@@ -64,6 +45,17 @@ FUNCTION 'sqrt'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  MUTUALLY INCLUSIVE: 9 and (4, 7)
+  MUTUALLY INCLUSIVE: 9 and (5, 6)
+  MUTUALLY INCLUSIVE: 9 and (5, 7)
+  MUTUALLY INCLUSIVE: 9 and (8, 9)
+  MUTUALLY INCLUSIVE: (4, 7) and (5, 6)
+  MUTUALLY INCLUSIVE: (4, 7) and (5, 7)
+  MUTUALLY INCLUSIVE: (4, 7) and (8, 9)
+  MUTUALLY INCLUSIVE: (5, 6) and (5, 7)
+  MUTUALLY INCLUSIVE: (5, 6) and (8, 9)
+  MUTUALLY INCLUSIVE: (5, 7) and (8, 9)
+  ONE-WAY DEPENDENCY: (2, 9) on 9
 ****************************************************************************************************
 FUNCTION 'quadraticroots'
 ****************************************************************************************************
@@ -75,7 +67,9 @@ FUNCTION 'quadraticroots'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  ONE-WAY DEPENDENCY: (10, 17) on 18
   ONE-WAY DEPENDENCY: (12, 13) on 18
+  ONE-WAY DEPENDENCY: (14, 15) on 18
   ONE-WAY DEPENDENCY: (16, 18) on 18
 ****************************************************************************************************
 FUNCTION 'sqrt'
@@ -87,17 +81,42 @@ assert(__count_9 <= 1); // Upper capacity constraint
 assert(__count_2_9 == 0); // Dead code
 assert(__count_4_7 >= 11); // Lower capacity constraint
 assert(__count_4_7 <= 15); // Upper capacity constraint
-assert(__couFound a solution with cost -30330
-Found a solution with cost -30360
-Found no solution with cost -31950.0 .. -30361.0
-
-Success, time = 0.0
-nt_5_6 >= 1); // Lower capacity constraint
+assert(__count_5_6 >= 1); // Lower capacity constraint
 assert(__count_5_6 <= 1); // Upper capacity constraint
 assert(__count_5_7 >= 3); // Lower capacity constraint
 assert(__count_5_7 <= 7); // Upper capacity constraint
 assert(__count_8_9 >= 1); // Lower capacity constraint
 assert(__count_8_9 <= 1); // Upper capacity constraint
+assert(__count_9 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+assert(__count_4_7 > 0 ==> __count_9 > 0); // Mutual inclusion
+assert(__count_9 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_9 > 0); // Mutual inclusion
+assert(__count_9 > 0 ==> __count_Found a solution with cost -25980
+Found no solution with cost -26160.0 .. -25981.0
+
+Success, time = 0.01
+Found a solution with cost -29910
+Found a solution with cost -29940
+Found no solution with cost -31530.0 .. -29941.0
+
+Success, time = 0.0
+5_7 > 0); // Mutual inclusion
+assert(__count_5_7 > 0 ==> __count_9 > 0); // Mutual inclusion
+assert(__count_9 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_9 > 0); // Mutual inclusion
+assert(__count_4_7 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+assert(__count_4_7 > 0 ==> __count_5_7 > 0); // Mutual inclusion
+assert(__count_5_7 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+assert(__count_4_7 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_5_7 > 0); // Mutual inclusion
+assert(__count_5_7 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_7 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_5_7 > 0); // Mutual inclusion
+assert(__count_2_9 > 0 ==> __count_9 > 0); // Execution dependence
 #endif
 ****************************************************************************************************
 FUNCTION 'quadraticroots'
@@ -109,23 +128,26 @@ assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
 assert(__count_16_18 <= 1); // Upper capacity constraint
 assert(__count_12_13 <= 1); // Upper capacity constraint
+assert(__count_10_17 > 0 ==> __count_18 > 0); // Execution dependence
 assert(__count_12_13 > 0 ==> __count_18 > 0); // Execution dependence
+assert(__count_14_15 > 0 ==> __count_18 > 0); // Execution dependence
 assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
 #endif
 HWMT = 29940
 Doing WCET calculation on sqrt
-ILP(vanilla):: WCET(sqrt)=53160 (SOLVE TIME=0.02216)
-ILP(extra):: WCET(sqrt)=26400 (SOLVE TIME=0.00581)
+ILP(vanilla):: WCET(sqrt)=53160 (SOLVE TIME=0.01863)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.sqrt.context2.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(sqrt)=25980 (SOLVE TIME=0.97026)
 Doing WCET calculation on quadraticroots
-ILP(vanilla):: WCET(quadraticroots)=57120 (SOLVE TIME=0.00315)
+ILP(vanilla):: WCET(quadraticroots)=57120 (SOLVE TIME=0.00366)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.quadraticroots.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(quadraticroots)=30360 (SOLVE TIME=0.82904)
+CLP(extra):: WCET(quadraticroots)=29940 (SOLVE TIME=1.32330)
 In sqrt...
 ...#CFG edges              = 13
 ...#monitored              = 6
 ...#mutual exclusion pairs = 0
-...#mutual inclusion pairs = 0
-...#execution dependencies = 0
+...#mutual inclusion pairs = 10
+...#execution dependencies = 1
 ...#never execute          = 1
 ...#always execute         = 5
 In quadraticroots...
@@ -133,16 +155,16 @@ In quadraticroots...
 ...#monitored              = 5
 ...#mutual exclusion pairs = 0
 ...#mutual inclusion pairs = 0
-...#execution dependencies = 2
+...#execution dependencies = 4
 ...#never execute          = 2
 ...#always execute         = 1
 ...#TOTAL mutual exclusion pairs = 0
-...#TOTAL mutual inclusion pairs = 0
-...#TOTAL execution dependencies = 2
+...#TOTAL mutual inclusion pairs = 10
+...#TOTAL execution dependencies = 5
 ...#TOTAL never execute          = 6
 ...#TOTAL always execute         = 6
 ============================================================
-0:06:13.520 - End Program
-Elapsed time: 0:06:13.500
+0:06:26.190 - End Program
+Elapsed time: 0:06:26.170
 ============================================================
 

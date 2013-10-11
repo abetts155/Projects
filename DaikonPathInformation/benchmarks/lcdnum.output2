@@ -1,20 +1,20 @@
 ============================================================
-0:00:00.020 - Start Program
+0:00:00.010 - Start Program
 ============================================================
 
 ********** Analysing program 'lcdnum' **********
 Checking program configuration...
 ============================================================
-0:00:00.030 - COMPILING BEGIN
+0:00:00.020 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.040 - COMPILING END
+0:00:00.030 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.050 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.040 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -40,15 +40,6 @@ int __count_18_20 = 0;
 ****************************************************************************************************
 FUNCTION 'lcdnum'
 ****************************************************************************************************
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 13) and 20
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 14) and 20
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (7, 20) and 20
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (16, 20) and 20
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (1, 19) and 20
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (2, 17) and 20
-****************************************************************************************************
-FUNCTION 'lcdnum'
-****************************************************************************************************
   MAY EXECUTE: (2, 12), at most 1 time(s)
   NEVER EXECUTES: (2, 13)
   NEVER EXECUTES: (2, 14)
@@ -70,16 +61,22 @@ FUNCTION 'lcdnum'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  ONE-WAY DEPENDENCY: (1, 19) on 20
   ONE-WAY DEPENDENCY: (2, 4) on 20
   ONE-WAY DEPENDENCY: (2, 5) on 20
   ONE-WAY DEPENDENCY: (2, 6) on 20
   ONE-WAY DEPENDENCY: (2, 9) on 20
   ONE-WAY DEPENDENCY: (2, 12) on 20
+  ONE-WAY DEPENDENCY: (2, 13) on 20
+  ONE-WAY DEPENDENCY: (2, 14) on 20
+  ONE-WAY DEPENDENCY: (2, 17) on 20
   ONE-WAY DEPENDENCY: (3, 20) on 20
+  ONE-WAY DEPENDENCY: (7, 20) on 20
   ONE-WAY DEPENDENCY: (8, 20) on 20
   ONE-WAY DEPENDENCY: (10, 20) on 20
   ONE-WAY DEPENDENCY: (11, 20) on 20
   ONE-WAY DEPENDENCY: (15, 20) on 20
+  ONE-WAY DEPENDENCY: (16, 20) on 20
   ONE-WAY DEPENDENCY: (18, 20) on 20
 ****************************************************************************************************
 FUNCTION 'lcdnum'
@@ -98,49 +95,55 @@ assert(__count_15_20 <= 1); // Upper capacity constraint
 assert(__count_16_20 == 0); // Dead code
 assert(__count_1_19 == 0); // Dead code
 assert(__count_2_5 <= 1); // Upper capacity constraint
-asseFound a solution with cost -690
-Found a solution with cost -720
-Found no solution with cost -1470.0 .. -721.0
-
-Success, time = 0.01
-rt(__count_2_4 <= 1); // Upper capacity constraint
+assert(__count_2_4 <= 1); // Upper capacity constraint
 assert(__count_20 >= 1); // Lower capacity constraint
 assert(__count_20 <= 1); // Upper capacity constraint
 assert(__count_2_6 <= 1); // Upper capacity constraint
 assert(__count_2_9 <= 1); // Upper capacity constraint
 assert(__count_2_17 == 0); // Dead code
-assert(__count_2_4 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_1_19 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_2Found a solution with cost -690
+Found a solution with cost -720
+Found no solution with cost -1470.0 .. -721.0
+
+Success, time = 0.0
+_4 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_2_5 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_2_6 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_2_9 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_2_12 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_2_13 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_2_14 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_2_17 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_3_20 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_7_20 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_8_20 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_10_20 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_11_20 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_15_20 > 0 ==> __count_20 > 0); // Execution dependence
+assert(__count_16_20 > 0 ==> __count_20 > 0); // Execution dependence
 assert(__count_18_20 > 0 ==> __count_20 > 0); // Execution dependence
 #endif
 HWMT = 720
 Doing WCET calculation on lcdnum
-ILP(vanilla):: WCET(lcdnum)=720 (SOLVE TIME=0.00414)
+ILP(vanilla):: WCET(lcdnum)=720 (SOLVE TIME=0.04704)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/lcdnum.lcdnum.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(lcdnum)=720 (SOLVE TIME=1.47345)
+CLP(extra):: WCET(lcdnum)=720 (SOLVE TIME=1.09329)
 In lcdnum...
 ...#CFG edges              = 36
 ...#monitored              = 18
 ...#mutual exclusion pairs = 0
 ...#mutual inclusion pairs = 0
-...#execution dependencies = 11
+...#execution dependencies = 17
 ...#never execute          = 6
 ...#always execute         = 1
 ...#TOTAL mutual exclusion pairs = 0
 ...#TOTAL mutual inclusion pairs = 0
-...#TOTAL execution dependencies = 11
+...#TOTAL execution dependencies = 17
 ...#TOTAL never execute          = 1
 ...#TOTAL always execute         = 1
 ============================================================
-0:03:27.410 - End Program
-Elapsed time: 0:03:27.390
+0:03:25.700 - End Program
+Elapsed time: 0:03:25.690
 ============================================================
 

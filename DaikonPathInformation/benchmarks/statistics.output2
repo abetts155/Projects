@@ -1,0 +1,308 @@
+============================================================
+0:00:00.020 - Start Program
+============================================================
+
+********** Analysing program 'statistics' **********
+Checking program configuration...
+============================================================
+0:00:00.030 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.060 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.080 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> statistics : header 1
+int __count_6 = 0;
+int __count_1_2 = 0;
+==========> calc_lincorrcoef : header 11
+int __count_8_9 = 0;
+int __count_11_8 = 0; //Loop counter
+==========> calc_lincorrcoef : header 7
+int __count_14 = 0;
+int __count_11_12 = 0;
+==========> sqrt : header 15
+int __count_15 = 0;
+==========> square : header 16
+int __count_16 = 0;
+==========> calc_sum_mean : header 19
+int __count_19_18 = 0;
+int __count_19_18 = 0; //Loop counter
+==========> calc_sum_mean : header 17
+int __count_20 = 0;
+int __count_19_20 = 0;
+==========> calc_var_stddev : header 24
+int __count_24_22 = 0;
+int __count_24_22 = 0; //Loop counter
+==========> calc_var_stddev : header 21
+int __count_26 = 0;
+int __count_24_25 = 0;
+****************************************************************************************************
+FUNCTION 'statistics'
+****************************************************************************************************
+  ALWAYS EXECUTES: 6, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (1, 2), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: 6 and (1, 2)
+****************************************************************************************************
+FUNCTION 'calc_lincorrcoef'
+****************************************************************************************************
+  ALWAYS EXECUTES: (8, 9), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: 14, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (11, 12), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (8, 9) and (11, 12)
+  MUTUALLY INCLUSIVE: (8, 9) and 14
+  MUTUALLY INCLUSIVE: 14 and (11, 12)
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+  ALWAYS EXECUTES: 15, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'square'
+****************************************************************************************************
+  ALWAYS EXECUTES: 16, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'calc_sum_mean'
+****************************************************************************************************
+  ALWAYS EXECUTES: (19, 20), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (19, 18), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: 20, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (19, 18) and 20
+  MUTUALLY INCLUSIVE: (19, 20) and (19, 18)
+  MUTUALLY INCLUSIVE: (19, 20) and 20
+****************************************************************************************************
+FUNCTION 'calc_var_stddev'
+****************************************************************************************************
+  ALWAYS EXECUTES: 26, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (24, 25), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (24, 22), at least 10 time(s), at most 10 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (24, 25) and (24, 22)
+  MUTUALLY INCLUSIVE: 26 and (24, 25)
+  MUTUALLY INCLUSIVE: 26 and (24, 22)
+****************************************************************************************************
+FUNCTION 'statistics'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_6 >= 1); // Lower capacity constraint
+assert(__count_6 <= 1); // Upper capacity constraint
+assert(__count_1_2 >= 1); // Lower capacity constraint
+assert(__count_1_2 <= 1); // Upper capacity constraint
+assert(__count_6 > 0 ==> __count_1_2 > 0); // Mutual inclusion
+assert(__count_1_2 > 0 ==> __count_6 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'calc_lincorrcoef'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_11_8  <= 11); // Loop counter property
+assert(__count_8_9 >= 10); // Lower capacity constraint
+assert(__count_8_9 <= 10); // Upper capacity constraint
+assert(__count_14 >= 1); // Lower capacity constraint
+assert(__count_14 <= 1); // Upper capacity constraint
+assert(__count_11_12 >= 1); // Lower capacity constraint
+assert(__count_11_12 <= 1); // Upper capacity constraint
+assert(__count_8_9 > 0 ==> __count_11_12 > 0); // Mutual inclusion
+assert(__count_11_12 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_14 > 0); // Mutual inclusion
+assert(__count_14 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_14 > 0 ==> __count_11_12 > 0); // Mutual inclusion
+assert(__count_11_12 > 0 ==> __count_14 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'sqrt'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_15 >= 1); // Lower capacity constraint
+assert(__count_15 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'square'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_16 >= 1); // Lower capacity constraint
+assert(__count_16 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'calc_sum_mean'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_19_18  <= 11); // Loop counter property
+assert(__count_19_20 >= 1); // Lower capacity constraint
+assert(__count_19_20 <= 1); // Upper capacity constraint
+assert(__count_19_18 >= 10); // Lower capacity constraint
+assert(__count_19_18 <= 10); // Upper capacity constraint
+assert(__count_20 >= 1); // Lower capacity constraint
+assert(__count_20 <= 1); // Upper capacity constraint
+assert(__count_19_18 > 0 ==> __count_20 > 0); // Mutual inclusion
+assert(__count_20 > 0 ==> __count_19_18 > 0); // Mutual inclusion
+assert(__count_19_20 > 0 ==> __count_19_18 > 0); // Mutual inclusion
+assert(__count_19_18 > 0 ==> __count_19_20 > 0); // Mutual inclusion
+assert(__count_19_20 > 0 ==> __count_20 > 0); // Mutual inclusion
+assert(__count_20 > 0 ==> __count_19_20 > 0); // Mutual inclusion
+#endiFound a solution with cost -19680
+
+Success, time = 0.0
+Found a solution with cost -19680
+
+Success, time = 0.0
+Found a solution with cost -11190
+
+Success, time = 0.0
+Found a solution with cost -11190
+
+Success, time = 0.0
+Found a solution with cost -46530
+
+Success, time = 0.0
+Found a solution with cost -111060
+
+Success, time = 0.0
+f
+****************************************************************************************************
+FUNCTION 'calc_var_stddev'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_24_22  <= 11); // Loop counter property
+assert(__count_26 >= 1); // Lower capacity constraint
+assert(__count_26 <= 1); // Upper capacity constraint
+assert(__count_24_25 >= 1); // Lower capacity constraint
+assert(__count_24_25 <= 1); // Upper capacity constraint
+assert(__count_24_22 >= 10); // Lower capacity constraint
+assert(__count_24_22 <= 10); // Upper capacity constraint
+assert(__count_24_25 > 0 ==> __count_24_22 > 0); // Mutual inclusion
+assert(__count_24_22 > 0 ==> __count_24_25 > 0); // Mutual inclusion
+assert(__count_26 > 0 ==> __count_24_25 > 0); // Mutual inclusion
+assert(__count_24_25 > 0 ==> __count_26 > 0); // Mutual inclusion
+assert(__count_26 > 0 ==> __count_24_22 > 0); // Mutual inclusion
+assert(__count_24_22 > 0 ==> __count_26 > 0); // Mutual inclusion
+#endif
+HWMT = 111060
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.01776)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00326)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00287)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.01323)
+Doing WCET calculation on calc_var_stddev
+ILP(vanilla):: WCET(calc_var_stddev)=21360 (SOLVE TIME=0.00344)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.calc_var_stddev.context2.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(calc_var_stddev)=19680 (SOLVE TIME=0.82453)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00328)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00607)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00951)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00300)
+Doing WCET calculation on calc_var_stddev
+ILP(vanilla):: WCET(calc_var_stddev)=21360 (SOLVE TIME=0.00610)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.calc_var_stddev.context3.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(calc_var_stddev)=19680 (SOLVE TIME=1.02062)
+Doing WCET calculation on calc_sum_mean
+ILP(vanilla):: WCET(calc_sum_mean)=12150 (SOLVE TIME=0.00344)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.calc_sum_mean.context4.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(calc_sum_mean)=11190 (SOLVE TIME=0.80260)
+Doing WCET calculation on calc_sum_mean
+ILP(vanilla):: WCET(calc_sum_mean)=12150 (SOLVE TIME=0.00929)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.calc_sum_mean.context5.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(calc_sum_mean)=11190 (SOLVE TIME=0.85351)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00944)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00324)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00599)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00931)
+Doing WCET calculation on sqrt
+ILP(vanilla):: WCET(sqrt)=960 (SOLVE TIME=0.00949)
+ILP(extra):: WCET(sqrt)=960 (SOLVE TIME=0.00334)
+Doing WCET calculation on square
+ILP(vanilla):: WCET(square)=750 (SOLVE TIME=0.00602)
+ILP(extra):: WCET(square)=750 (SOLVE TIME=0.00948)
+Doing WCET calculation on calc_lincorrcoef
+ILP(vanilla):: WCET(calc_lincorrcoef)=50790 (SOLVE TIME=0.00653)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.calc_lincorrcoef.context6.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(calc_lincorrcoef)=46530 (SOLVE TIME=0.81455)
+Doing WCET calculation on statistics
+ILP(vanilla):: WCET(statistics)=120600 (SOLVE TIME=0.00356)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/statistics.statistics.context1.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(statistics)=111060 (SOLVE TIME=0.67197)
+In statistics...
+...#CFG edges              = 6
+...#monitored              = 2
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 1
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 2
+In calc_lincorrcoef...
+...#CFG edges              = 9
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 3
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In sqrt...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In square...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In calc_sum_mean...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 3
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In calc_var_stddev...
+...#CFG edges              = 7
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 3
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 10
+...#TOTAL execution dependencies = 0
+...#TOTAL never execute          = 13
+...#TOTAL always execute         = 13
+============================================================
+0:07:48.200 - End Program
+Elapsed time: 0:07:48.180
+============================================================
+

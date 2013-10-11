@@ -1,0 +1,515 @@
+============================================================
+0:00:00.020 - Start Program
+============================================================
+
+********** Analysing program 'select' **********
+Checking program configuration...
+============================================================
+0:00:00.020 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.070 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.080 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> select : header 20
+int __count_20_19 = 0;
+int __count_20_19 = 0; //Loop counter
+==========> select : header 17
+int __count_17_16 = 0;
+int __count_17_16 = 0; //Loop counter
+==========> select : header 25
+int __count_21_22 = 0;
+int __count_21_23 = 0;
+int __count_25_15 = 0; //Loop counter
+==========> select : header 30
+int __count_3_6 = 0;
+int __count_4_5 = 0;
+int __count_4_6 = 0;
+int __count_8_9 = 0;
+int __count_8_10 = 0;
+int __count_10_11 = 0;
+int __count_10_12 = 0;
+int __count_12_13 = 0;
+int __count_12_14 = 0;
+int __count_26_27 = 0;
+int __count_26_28 = 0;
+int __count_30_2 = 0; //Loop counter
+==========> select : header 1
+int __count_31 = 0;
+int __count_30_31 = 0;
+****************************************************************************************************
+FUNCTION 'select'
+****************************************************************************************************
+  NEVER EXECUTES: (3, 6)
+  NEVER EXECUTES: (4, 5)
+  ALWAYS EXECUTES: (26, 28), at least 10 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (4, 6), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (8, 10), at least 12 time(s), at most 414 time(s)
+  ALWAYS EXECUTES: (8, 9), at least 118 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (30, 31), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (10, 11), at least 12 time(s), at most 578 time(s)
+  ALWAYS EXECUTES: (10, 12), at least 15 time(s), at most 589 time(s)
+  ALWAYS EXECUTES: (12, 13), at least 10 time(s), at most 585 time(s)
+  ALWAYS EXECUTES: (12, 14), at least 16 time(s), at most 583 time(s)
+  ALWAYS EXECUTES: (21, 23), at least 248 time(s), at most 248 time(s)
+  ALWAYS EXECUTES: (17, 16), at least 146 time(s), at most 146 time(s)
+  ALWAYS EXECUTES: (20, 19), at least 354 time(s), at most 354 time(s)
+  ALWAYS EXECUTES: (21, 22), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (26, 27), at least 12 time(s), at most 583 time(s)
+  ALWAYS EXECUTES: 31, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (3, 6) and (4, 5)
+  MUTUALLY INCLUSIVE: (4, 6) and 31
+  MUTUALLY INCLUSIVE: (4, 6) and (8, 9)
+  MUTUALLY INCLUSIVE: (4, 6) and (8, 10)
+  MUTUALLY INCLUSIVE: (4, 6) and (10, 11)
+  MUTUALLY INCLUSIVE: (4, 6) and (10, 12)
+  MUTUALLY INCLUSIVE: (4, 6) and (12, 13)
+  MUTUALLY INCLUSIVE: (4, 6) and (12, 14)
+  MUTUALLY INCLUSIVE: (4, 6) and (17, 16)
+  MUTUALLY INCLUSIVE: (4, 6) and (20, 19)
+  MUTUALLY INCLUSIVE: (4, 6) and (21, 22)
+  MUTUALLY INCLUSIVE: (4, 6) and (21, 23)
+  MUTUALLY INCLUSIVE: (4, 6) and (26, 27)
+  MUTUALLY INCLUSIVE: (4, 6) and (30, 31)
+  MUTUALLY INCLUSIVE: (8, 9) and 31
+  MUTUALLY INCLUSIVE: (8, 9) and (10, 11)
+  MUTUALLY INCLUSIVE: (8, 9) and (10, 12)
+  MUTUALLY INCLUSIVE: (8, 9) and (12, 13)
+  MUTUALLY INCLUSIVE: (8, 9) and (12, 14)
+  MUTUALLY INCLUSIVE: (8, 9) and (17, 16)
+  MUTUALLY INCLUSIVE: (8, 9) and (20, 19)
+  MUTUALLY INCLUSIVE: (8, 9) and (21, 22)
+  MUTUALLY INCLUSIVE: (8, 9) and (21, 23)
+  MUTUALLY INCLUSIVE: (8, 9) and (26, 27)
+  MUTUALLY INCLUSIVE: (8, 9) and (30, 31)
+  MUTUALLY INCLUSIVE: (8, 10) and 31
+  MUTUALLY INCLUSIVE: (8, 10) and (8, 9)
+  MUTUALLY INCLUSIVE: (8, 10) and (10, 11)
+  MUTUALLY INCLUSIVE: (8, 10) and (10, 12)
+  MUTUALLY INCLUSIVE: (8, 10) and (12, 13)
+  MUTUALLY INCLUSIVE: (8, 10) and (12, 14)
+  MUTUALLY INCLUSIVE: (8, 10) and (17, 16)
+  MUTUALLY INCLUSIVE: (8, 10) and (20, 19)
+  MUTUALLY INCLUSIVE: (8, 10) and (21, 22)
+  MUTUALLY INCLUSIVE: (8, 10) and (21, 23)
+  MUTUALLY INCLUSIVE: (8, 10) and (26, 27)
+  MUTUALLY INCLUSIVE: (8, 10) and (30, 31)
+  MUTUALLY INCLUSIVE: (10, 11) and 31
+  MUTUALLY INCLUSIVE: (10, 11) and (10, 12)
+  MUTUALLY INCLUSIVE: (10, 11) and (12, 13)
+  MUTUALLY INCLUSIVE: (10, 11) and (12, 14)
+  MUTUALLY INCLUSIVE: (10, 11) and (17, 16)
+  MUTUALLY INCLUSIVE: (10, 11) and (20, 19)
+  MUTUALLY INCLUSIVE: (10, 11) and (21, 22)
+  MUTUALLY INCLUSIVE: (10, 11) and (21, 23)
+  MUTUALLY INCLUSIVE: (10, 11) and (26, 27)
+  MUTUALLY INCLUSIVE: (10, 12) and 31
+  MUTUALLY INCLUSIVE: (10, 12) and (12, 13)
+  MUTUALLY INCLUSIVE: (10, 12) and (12, 14)
+  MUTUALLY INCLUSIVE: (10, 12) and (17, 16)
+  MUTUALLY INCLUSIVE: (10, 12) and (20, 19)
+  MUTUALLY INCLUSIVE: (10, 12) and (21, 22)
+  MUTUALLY INCLUSIVE: (10, 12) and (21, 23)
+  MUTUALLY INCLUSIVE: (10, 12) and (26, 27)
+  MUTUALLY INCLUSIVE: (12, 13) and 31
+  MUTUALLY INCLUSIVE: (12, 13) and (12, 14)
+  MUTUALLY INCLUSIVE: (12, 13) and (17, 16)
+  MUTUALLY INCLUSIVE: (12, 13) and (20, 19)
+  MUTUALLY INCLUSIVE: (12, 13) and (21, 22)
+  MUTUALLY INCLUSIVE: (12, 13) and (21, 23)
+  MUTUALLY INCLUSIVE: (12, 13) and (26, 27)
+  MUTUALLY INCLUSIVE: (12, 14) and 31
+  MUTUALLY INCLUSIVE: (12, 14) and (17, 16)
+  MUTUALLY INCLUSIVE: (12, 14) and (20, 19)
+  MUTUALLY INCLUSIVE: (12, 14) and (21, 22)
+  MUTUALLY INCLUSIVE: (12, 14) and (21, 23)
+  MUTUALLY INCLUSIVE: (12, 14) and (26, 27)
+  MUTUALLY INCLUSIVE: (17, 16) and 31
+  MUTUALLY INCLUSIVE: (17, 16) and (20, 19)
+  MUTUALLY INCLUSIVE: (17, 16) and (21, 22)
+  MUTUALLY INCLUSIVE: (17, 16) and (26, 27)
+  MUTUALLY INCLUSIVE: (20, 19) and 31
+  MUTUALLY INCLUSIVE: (20, 19) and (21, 22)
+  MUTUALLY INCLUSIVE: (20, 19) and (26, 27)
+  MUTUALLY INCLUSIVE: (21, 22) and 31
+  MUTUALLY INCLUSIVE: (21, 22) and (26, 27)
+  MUTUALLY INCLUSIVE: (21, 23) and 31
+  MUTUALLY INCLUSIVE: (21, 23) and (17, 16)
+  MUTUALLY INCLUSIVE: (21, 23) and (20, 19)
+  MUTUALLY INCLUSIVE: (21, 23) and (21, 22)
+  MUTUALLY INCLUSIVE: (21, 23) and (26, 27)
+  MUTUALLY INCLUSIVE: (26, 27) and 31
+  MUTUALLY INCLUSIVE: (26, 28) and 31
+  MUTUALLY INCLUSIVE: (26, 28) and (4, 6)
+  MUTUALLY INCLUSIVE: (26, 28) and (8, 9)
+  MUTUALLY INCLUSIVE: (26, 28) and (8, 10)
+  MUTUALLY INCLUSIVE: (26, 28) and (10, 11)
+  MUTUALLY INCLUSIVE: (26, 28) and (10, 12)
+  MUTUALLY INCLUSIVE: (26, 28) and (12, 13)
+  MUTUALLY INCLUSIVE: (26, 28) and (12, 14)
+  MUTUALLY INCLUSIVE: (26, 28) and (17, 16)
+  MUTUALLY INCLUSIVE: (26, 28) and (20, 19)
+  MUTUALLY INCLUSIVE: (26, 28) and (21, 22)
+  MUTUALLY INCLUSIVE: (26, 28) and (21, 23)
+  MUTUALLY INCLUSIVE: (26, 28) and (26, 27)
+  MUTUALLY INCLUSIVE: (26, 28) and (30, 31)
+  MUTUALLY INCLUSIVE: (30, 31) and 31
+  MUTUALLY INCLUSIVE: (30, 31) and (10, 11)
+  MUTUALLY INCLUSIVE: (30, 31) and (10, 12)
+  MUTUALLY INCLUSIVE: (30, 31) and (12, 13)
+  MUTUALLY INCLUSIVE: (30, 31) and (12, 14)
+  MUTUALLY INCLUSIVE: (30, 31) and (17, 16)
+  MUTUALLY INCLUSIVE: (30, 31) and (20, 19)
+  MUTUALLY INCLUSIVE: (30, 31) and (21, 22)
+  MUTUALLY INCLUSIVE: (30, 31) and (21, 23)
+  MUTUALLY INCLUSIVE: (30, 31) and (26, 27)
+  ONE-WAY DEPENDENCY: (3, 6) on 31
+  ONE-WAY DEPENDENCY: (3, 6) on (4, 6)
+  ONE-WAY DEPENDENCY: (3, 6) on (8, 9)
+  ONE-WAY DEPENDENCY: (3, 6) on (8, 10)
+  ONE-WAY DEPENDENCY: (3, 6) on (10, 11)
+  ONE-WAY DEPENDENCY: (3, 6) on (10, 12)
+  ONE-WAY DEPENDENCY: (3, 6) on (12, 13)
+  ONE-WAY DEPENDENCY: (3, 6) on (12, 14)
+  ONE-WAY DEPENDENCY: (3, 6) on (17, 16)
+  ONE-WAY DEPENDENCY: (3, 6) on (20, 19)
+  ONE-WAY DEPENDENCY: (3, 6) on (21, 22)
+  ONE-WAY DEPENDENCY: (3, 6) on (21, 23)
+  ONE-WAY DEPENDENCY: (3, 6) on (26, 27)
+  ONE-WAY DEPENDENCY: (3, 6) on (26, 28)
+  ONE-WAY DEPENDENCY: (3, 6) on (30, 31)
+  ONE-WAY DEPENDENCY: (4, 5) on 31
+  ONE-WAY DEPENDENCY: (4, 5) on (4, 6)
+  ONE-WAY DEPENDENCY: (4, 5) on (8, 9)
+  ONE-WAY DEPENDENCY: (4, 5) on (8, 10)
+  ONE-WAY DEPENDENCY: (4, 5) on (10, 11)
+  ONE-WAY DEPENDENCY: (4, 5) on (10, 12)
+  ONE-WAY DEPENDENCY: (4, 5) on (12, 13)
+  ONE-WAY DEPENDENCY: (4, 5) on (12, 14)
+  ONE-WAY DEPENDENCY: (4, 5) on (17, 16)
+  ONE-WAY DEPENDENCY: (4, 5) on (20, 19)
+  ONE-WAY DEPENDENCY: (4, 5) on (21, 22)
+  ONE-WAY DEPENDENCY: (4, 5) on (21, 23)
+  ONE-WAY DEPENDENCY: (4, 5) on (26, 27)
+  ONE-WAY DEPENDENCY: (4, 5) on (26, 28)
+  ONE-WAY DEPENDENCY: (4, 5) on (30, 31)
+****************************************************************************************************
+FUNCTION 'select'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_20_19  <= 12); // Loop counter property
+assert(__count_17_16  <= 6); // Loop counter property
+assert(__count_25_15  <= 250); // Loop counter property
+assert(__count_30_2  <= 603); // Loop counter property
+assert(__count_3_6 == 0); // Dead code
+assert(__count_4_5 == 0); // Dead code
+assert(__count_26_28 >= 10); // Lower capacity constraint
+assert(__count_26_28 <= 589); // Upper capacity constraint
+assert(__count_4_6 >= 1); // Lower capacity constraint
+assert(__count_4_6 <= 1); // Upper capacity constraint
+assert(__count_8_10 >= 12); // Lower capacity constraint
+assert(__count_8_10 <= 414); // Upper capacity constraint
+assert(__count_8_9 >= 118); // Lower capacity constraint
+assert(__count_8_9 <= 589); // Upper capacity constraint
+assert(__count_30_31 >= 1); // Lower capacity constraint
+assert(__count_30_31 <= 1); // Upper capacity constraint
+assert(__count_10_11 >= 12); // Lower capacity constraint
+assert(__count_10_11 <= 578); // Upper capacity constraint
+assert(__count_10_12 >= 15); // Lower capacity constraint
+assert(__count_10_12 <= 589); // Upper capacity constraint
+assert(__count_12_13 >= 10); // Lower capacity constraint
+assert(__count_12_13 <= 585); // Upper capacity constraint
+assert(__count_12_14 >= 16); // Lower capacity constraint
+assert(__count_12_14 <= 583); // Upper capacity constraint
+assert(__count_21_23 >= 248); // Lower capacity constraint
+assert(__count_21_23 <= 248); // Upper capacity constraint
+assert(__count_17_16 >= 146); // Lower capacity constraint
+assert(__count_17_16 <= 146); // Upper capacity constraint
+assert(__count_20_19 >= 354); // Lower capacity constraint
+assert(__count_20_19 <= 354); // Upper capacity constraint
+assert(__count_21_22 >= 1); // Lower capacity constraint
+assert(__count_21_22 <= 1); // Upper capacity constraint
+assert(__count_26_27 >= 12); // Lower capacity constraint
+assert(__count_26_27 <= 583); // Upper capacity constraint
+assert(__count_31 >= 1); // Lower capacity constraint
+assert(__count_31 <= 1); // Upper capacity constraint
+assert(__count_3_6 > 0 ==> __count_4_5 > 0); // Mutual inclusion
+assert(__count_4_5 > 0 ==> __count_3_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+assert(__count_8_9 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_8_10 > 0); // Mutual inclusion
+assert(__count_8_10 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_26_28 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_26_28 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_31 > 0); // Mutual inclusion
+assert(__count_31 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_10_11 > 0); // Mutual inclusion
+assert(__count_10_11 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_10_12 > 0); // Mutual inclusion
+assert(__count_10_12 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+assert(__count_12_13 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_12_14 > 0); // Mutual inclusion
+assert(__count_12_14 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __couFound a solution with cost -7883340
+Found no solution with cost -7893540.0 .. -7883341.0
+
+Success, time = 1.55
+nt_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_21_23 > 0); // Mutual inclusion
+assert(__count_21_23 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_30_31 > 0 ==> __count_26_27 > 0); // Mutual inclusion
+assert(__count_26_27 > 0 ==> __count_30_31 > 0); // Mutual inclusion
+assert(__count_3_6 > 0 ==> __count_31 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_4_6 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_8_9 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_8_10 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_10_11 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_10_12 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_12_13 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_12_14 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_17_16 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_20_19 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_21_22 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_21_23 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_26_27 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_26_28 > 0); // Execution dependence
+assert(__count_3_6 > 0 ==> __count_30_31 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_31 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_4_6 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_8_9 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_8_10 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_10_11 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_10_12 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_12_13 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_12_14 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_17_16 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_20_19 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_21_22 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_21_23 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_26_27 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_26_28 > 0); // Execution dependence
+assert(__count_4_5 > 0 ==> __count_30_31 > 0); // Execution dependence
+#endif
+HWMT = 7081770
+Doing WCET calculation on select
+ILP(vanilla):: WCET(select)=2788050000 (SOLVE TIME=0.00349)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/select.select.context1.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(select)=7883340 (SOLVE TIME=1.93809)
+In select...
+...#CFG edges              = 46
+...#monitored              = 17
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 106
+...#execution dependencies = 30
+...#never execute          = 2
+...#always execute         = 15
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 106
+...#TOTAL execution dependencies = 30
+...#TOTAL never execute          = 15
+...#TOTAL always execute         = 15
+============================================================
+1:33:37.120 - End Program
+Elapsed time: 1:33:37.099
+============================================================
+

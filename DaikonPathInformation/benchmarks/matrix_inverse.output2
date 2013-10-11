@@ -1,0 +1,596 @@
+============================================================
+0:00:00.020 - Start Program
+============================================================
+
+********** Analysing program 'matrix_inverse' **********
+Checking program configuration...
+============================================================
+0:00:00.030 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.090 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.100 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> matrix_inverse : header 38
+int __count_38_37 = 0;
+int __count_38_37 = 0; //Loop counter
+==========> matrix_inverse : header 28
+int __count_25_26 = 0;
+int __count_25_27 = 0;
+int __count_28_25 = 0; //Loop counter
+==========> matrix_inverse : header 35
+int __count_38_39 = 0;
+int __count_35_36 = 0; //Loop counter
+==========> matrix_inverse : header 17
+int __count_17_16 = 0;
+int __count_17_16 = 0; //Loop counter
+==========> matrix_inverse : header 31
+int __count_22_30 = 0;
+int __count_23_30 = 0;
+int __count_28_29 = 0;
+int __count_31_22 = 0; //Loop counter
+==========> matrix_inverse : header 20
+int __count_20_19 = 0;
+int __count_20_19 = 0; //Loop counter
+==========> matrix_inverse : header 12
+int __count_9_10 = 0;
+int __count_9_11 = 0;
+int __count_12_9 = 0; //Loop counter
+==========> matrix_inverse : header 41
+int __count_35_40 = 0;
+int __count_41_35 = 0; //Loop counter
+==========> matrix_inverse : header 33
+int __count_14_18 = 0;
+int __count_17_18 = 0;
+int __count_33_8 = 0; //Loop counter
+==========> matrix_inverse : header 6
+int __count_6_5 = 0;
+int __count_6_5 = 0; //Loop counter
+==========> matrix_inverse : header 1
+int __count_45 = 0;
+int __count_1_43 = 0;
+int __count_2_43 = 0;
+int __count_3_43 = 0;
+int __count_13_44 = 0;
+int __count_33_34 = 0;
+****************************************************************************************************
+FUNCTION 'matrix_inverse'
+****************************************************************************************************
+  NEVER EXECUTES: (13, 44)
+  ALWAYS EXECUTES: (35, 40), at least 5 time(s), at most 5 time(s)
+  ALWAYS EXECUTES: (14, 18), at least 1 time(s), at most 4 time(s)
+  ALWAYS EXECUTES: (38, 37), at least 5 time(s), at most 20 time(s)
+  ALWAYS EXECUTES: (38, 39), at least 1 time(s), at most 4 time(s)
+  ALWAYS EXECUTES: (17, 16), at least 5 time(s), at most 20 time(s)
+  ALWAYS EXECUTES: (17, 18), at least 1 time(s), at most 4 time(s)
+  NEVER EXECUTES: (23, 30)
+  ALWAYS EXECUTES: (20, 19), at least 25 time(s), at most 25 time(s)
+  ALWAYS EXECUTES: 45, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (22, 30), at least 5 time(s), at most 5 time(s)
+  NEVER EXECUTES: (1, 43)
+  NEVER EXECUTES: (2, 43)
+  NEVER EXECUTES: (3, 43)
+  ALWAYS EXECUTES: (25, 27), at least 20 time(s), at most 20 time(s)
+  ALWAYS EXECUTES: (25, 26), at least 80 time(s), at most 80 time(s)
+  ALWAYS EXECUTES: (6, 5), at least 5 time(s), at most 5 time(s)
+  ALWAYS EXECUTES: (28, 29), at least 20 time(s), at most 20 time(s)
+  ALWAYS EXECUTES: (9, 10), at least 6 time(s), at most 13 time(s)
+  ALWAYS EXECUTES: (9, 11), at least 2 time(s), at most 9 time(s)
+  ALWAYS EXECUTES: (33, 34), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: 45 and (6, 5)
+  MUTUALLY INCLUSIVE: 45 and (9, 10)
+  MUTUALLY INCLUSIVE: 45 and (9, 11)
+  MUTUALLY INCLUSIVE: 45 and (22, 30)
+  MUTUALLY INCLUSIVE: 45 and (25, 26)
+  MUTUALLY INCLUSIVE: 45 and (25, 27)
+  MUTUALLY INCLUSIVE: 45 and (28, 29)
+  MUTUALLY INCLUSIVE: 45 and (33, 34)
+  MUTUALLY INCLUSIVE: (6, 5) and (9, 10)
+  MUTUALLY INCLUSIVE: (6, 5) and (9, 11)
+  MUTUALLY INCLUSIVE: (6, 5) and (28, 29)
+  MUTUALLY INCLUSIVE: (6, 5) and (33, 34)
+  MUTUALLY INCLUSIVE: (9, 10) and (9, 11)
+  MUTUALLY INCLUSIVE: (9, 10) and (33, 34)
+  MUTUALLY INCLUSIVE: (9, 11) and (33, 34)
+  MUTUALLY INCLUSIVE: (13, 44) and (23, 30)
+  MUTUALLY INCLUSIVE: (14, 18) and 45
+  MUTUALLY INCLUSIVE: (14, 18) and (6, 5)
+  MUTUALLY INCLUSIVE: (14, 18) and (9, 10)
+  MUTUALLY INCLUSIVE: (14, 18) and (9, 11)
+  MUTUALLY INCLUSIVE: (14, 18) and (17, 16)
+  MUTUALLY INCLUSIVE: (14, 18) and (17, 18)
+  MUTUALLY INCLUSIVE: (14, 18) and (20, 19)
+  MUTUALLY INCLUSIVE: (14, 18) and (22, 30)
+  MUTUALLY INCLUSIVE: (14, 18) and (25, 26)
+  MUTUALLY INCLUSIVE: (14, 18) and (25, 27)
+  MUTUALLY INCLUSIVE: (14, 18) and (28, 29)
+  MUTUALLY INCLUSIVE: (14, 18) and (33, 34)
+  MUTUALLY INCLUSIVE: (14, 18) and (38, 37)
+  MUTUALLY INCLUSIVE: (14, 18) and (38, 39)
+  MUTUALLY INCLUSIVE: (17, 16) and 45
+  MUTUALLY INCLUSIVE: (17, 16) and (6, 5)
+  MUTUALLY INCLUSIVE: (17, 16) and (9, 10)
+  MUTUALLY INCLUSIVE: (17, 16) and (9, 11)
+  MUTUALLY INCLUSIVE: (17, 16) and (17, 18)
+  MUTUALLY INCLUSIVE: (17, 16) and (20, 19)
+  MUTUALLY INCLUSIVE: (17, 16) and (22, 30)
+  MUTUALLY INCLUSIVE: (17, 16) and (25, 26)
+  MUTUALLY INCLUSIVE: (17, 16) and (25, 27)
+  MUTUALLY INCLUSIVE: (17, 16) and (28, 29)
+  MUTUALLY INCLUSIVE: (17, 16) and (33, 34)
+  MUTUALLY INCLUSIVE: (17, 18) and 45
+  MUTUALLY INCLUSIVE: (17, 18) and (6, 5)
+  MUTUALLY INCLUSIVE: (17, 18) and (9, 10)
+  MUTUALLY INCLUSIVE: (17, 18) and (9, 11)
+  MUTUALLY INCLUSIVE: (17, 18) and (20, 19)
+  MUTUALLY INCLUSIVE: (17, 18) and (22, 30)
+  MUTUALLY INCLUSIVE: (17, 18) and (25, 26)
+  MUTUALLY INCLUSIVE: (17, 18) and (25, 27)
+  MUTUALLY INCLUSIVE: (17, 18) and (28, 29)
+  MUTUALLY INCLUSIVE: (17, 18) and (33, 34)
+  MUTUALLY INCLUSIVE: (20, 19) and 45
+  MUTUALLY INCLUSIVE: (20, 19) and (6, 5)
+  MUTUALLY INCLUSIVE: (20, 19) and (9, 10)
+  MUTUALLY INCLUSIVE: (20, 19) and (9, 11)
+  MUTUALLY INCLUSIVE: (20, 19) and (22, 30)
+  MUTUALLY INCLUSIVE: (20, 19) and (25, 26)
+  MUTUALLY INCLUSIVE: (20, 19) and (25, 27)
+  MUTUALLY INCLUSIVE: (20, 19) and (28, 29)
+  MUTUALLY INCLUSIVE: (20, 19) and (33, 34)
+  MUTUALLY INCLUSIVE: (22, 30) and (6, 5)
+  MUTUALLY INCLUSIVE: (22, 30) and (9, 10)
+  MUTUALLY INCLUSIVE: (22, 30) and (9, 11)
+  MUTUALLY INCLUSIVE: (22, 30) and (25, 26)
+  MUTUALLY INCLUSIVE: (22, 30) and (25, 27)
+  MUTUALLY INCLUSIVE: (22, 30) and (28, 29)
+  MUTUALLY INCLUSIVE: (22, 30) and (33, 34)
+  MUTUALLY INCLUSIVE: (25, 26) and (6, 5)
+  MUTUALLY INCLUSIVE: (25, 26) and (9, 10)
+  MUTUALLY INCLUSIVE: (25, 26) and (9, 11)
+  MUTUALLY INCLUSIVE: (25, 26) and (28, 29)
+  MUTUALLY INCLUSIVE: (25, 26) and (33, 34)
+  MUTUALLY INCLUSIVE: (25, 27) and (6, 5)
+  MUTUALLY INCLUSIVE: (25, 27) and (9, 10)
+  MUTUALLY INCLUSIVE: (25, 27) and (9, 11)
+  MUTUALLY INCLUSIVE: (25, 27) and (25, 26)
+  MUTUALLY INCLUSIVE: (25, 27) and (28, 29)
+  MUTUALLY INCLUSIVE: (25, 27) and (33, 34)
+  MUTUALLY INCLUSIVE: (28, 29) and (9, 10)
+  MUTUALLY INCLUSIVE: (28, 29) and (9, 11)
+  MUTUALLY INCLUSIVE: (28, 29) and (33, 34)
+  MUTUALLY INCLUSIVE: (35, 40) and 45
+  MUTUALLY INCLUSIVE: (35, 40) and (6, 5)
+  MUTUALLY INCLUSIVE: (35, 40) and (9, 10)
+  MUTUALLY INCLUSIVE: (35, 40) and (9, 11)
+  MUTUALLY INCLUSIVE: (35, 40) and (14, 18)
+  MUTUALLY INCLUSIVE: (35, 40) and (17, 16)
+  MUTUALLY INCLUSIVE: (35, 40) and (17, 18)
+  MUTUALLY INCLUSIVE: (35, 40) and (20, 19)
+  MUTUALLY INCLUSIVE: (35, 40) and (22, 30)
+  MUTUALLY INCLUSIVE: (35, 40) and (25, 26)
+  MUTUALLY INCLUSIVE: (35, 40) and (25, 27)
+  MUTUALLY INCLUSIVE: (35, 40) and (28, 29)
+  MUTUALLY INCLUSIVE: (35, 40) and (33, 34)
+  MUTUALLY INCLUSIVE: (35, 40) and (38, 37)
+  MUTUALLY INCLUSIVE: (35, 40) and (38, 39)
+  MUTUALLY INCLUSIVE: (38, 37) and 45
+  MUTUALLY INCLUSIVE: (38, 37) and (6, 5)
+  MUTUALLY INCLUSIVE: (38, 37) and (9, 10)
+  MUTUALLY INCLUSIVE: (38, 37) and (9, 11)
+  MUTUALLY INCLUSIVE: (38, 37) and (17, 16)
+  MUTUALLY INCLUSIVE: (38, 37) and (17, 18)
+  MUTUALLY INCLUSIVE: (38, 37) and (20, 19)
+  MUTUALLY INCLUSIVE: (38, 37) and (22, 30)
+  MUTUALLY INCLUSIVE: (38, 37) and (25, 26)
+  MUTUALLY INCLUSIVE: (38, 37) and (25, 27)
+  MUTUALLY INCLUSIVE: (38, 37) and (28, 29)
+  MUTUALLY INCLUSIVE: (38, 37) and (33, 34)
+  MUTUALLY INCLUSIVE: (38, 37) and (38, 39)
+  MUTUALLY INCLUSIVE: (38, 39) and 45
+  MUTUALLY INCLUSIVE: (38, 39) and (6, 5)
+  MUTUALLY INCLUSIVE: (38, 39) and (9, 10)
+  MUTUALLY INCLUSIVE: (38, 39) and (9, 11)
+  MUTUALLY INCLUSIVE: (38, 39) and (17, 16)
+  MUTUALLY INCLUSIVE: (38, 39) and (17, 18)
+  MUTUALLY INCLUSIVE: (38, 39) and (20, 19)
+  MUTUALLY INCLUSIVE: (38, 39) and (22, 30)
+  MUTUALLY INCLUSIVE: (38, 39) and (25, 26)
+  MUTUALLY INCLUSIVE: (38, 39) and (25, 27)
+  MUTUALLY INCLUSIVE: (38, 39) and (28, 29)
+  MUTUALLY INCLUSIVE: (38, 39) and (33, 34)
+  ONE-WAY DEPENDENCY: (1, 43) on 45
+  ONE-WAY DEPENDENCY: (2, 43) on 45
+  ONE-WAY DEPENDENCY: (3, 43) on 45
+  ONE-WAY DEPENDENCY: (13, 44) on 45
+  ONE-WAY DEPENDENCY: (13, 44) on (6, 5)
+  ONE-WAY DEPENDENCY: (13, 44) on (9, 10)
+  ONE-WAY DEPENDENCY: (13, 44) on (9, 11)
+  ONE-WAY DEPENDENCY: (13, 44) on (14, 18)
+  ONE-WAY DEPENDENCY: (13, 44) on (17, 16)
+  ONE-WAY DEPENDENCY: (13, 44) on (17, 18)
+  ONE-WAY DEPENDENCY: (13, 44) on (20, 19)
+  ONE-WAY DEPENDENCY: (13, 44) on (22, 30)
+  ONE-WAY DEPENDENCY: (13, 44) on (25, 26)
+  ONE-WAY DEPENDENCY: (13, 44) on (25, 27)
+  ONE-WAY DEPENDENCY: (13, 44) on (28, 29)
+  ONE-WAY DEPENDENCY: (23, 30) on 45
+  ONE-WAY DEPENDENCY: (23, 30) on (6, 5)
+  ONE-WAY DEPENDENCY: (23, 30) on (9, 10)
+  ONE-WAY DEPENDENCY: (23, 30) on (9, 11)
+  ONE-WAY DEPENDENCY: (23, 30) on (14, 18)
+  ONE-WAY DEPENDENCY: (23, 30) on (17, 16)
+  ONE-WAY DEPENDENCY: (23, 30) on (17, 18)
+  ONE-WAY DEPENDENCY: (23, 30) on (20, 19)
+  ONE-WAY DEPENDENCY: (23, 30) on (22, 30)
+  ONE-WAY DEPENDENCY: (23, 30) on (25, 26)
+  ONE-WAY DEPENDENCY: (23, 30) on (25, 27)
+  ONE-WAY DEPENDENCY: (23, 30) on (28, 29)
+  ONE-WAY DEPENDENCY: (23, 30) on (33, 34)
+  ONE-WAY DEPENDENCY: (23, 30) on (35, 40)
+  ONE-WAY DEPENDENCY: (23, 30) on (38, 37)
+  ONE-WAY DEPENDENCY: (23, 30) on (38, 39)
+****************************************************************************************************
+FUNCTION 'matrix_inverse'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_38_37  <= 6); // Loop counter property
+assert(__count_35_36  <= 5); // Loop counter property
+assert(__count_41_35  <= 6); // Loop counter property
+assert(__count_17_16  <= 6); // Loop counter property
+assert(__count_28_25  <= 6); // Loop counter property
+assert(__count_31_22  <= 6); // Loop counter property
+assert(__count_20_19  <= 6); // Loop counter property
+assert(__count_12_9  <= 6); // Loop counter property
+assert(__count_33_8  <= 6); // Loop counter property
+assert(__count_6_5  <= 6); // Loop counter property
+assert(__count_13_44 == 0); // Dead code
+assert(__count_35_40 >= 5); // Lower capacity constraint
+assert(__count_35_40 <= 5); // Upper capacity constraint
+assert(__count_14_18 >= 1); // Lower capacity constraint
+assert(__count_14_18 <= 4); // Upper capacity constraint
+assert(__count_38_37 >= 5); // Lower capacity constraint
+assert(__count_38_37 <= 20); // Upper capacity constraint
+assert(__count_38_39 >= 1); // Lower capacity constraint
+assert(__count_38_39 <= 4); // Upper capacity constraint
+assert(__count_17_16 >= 5); // Lower capacity constraint
+assert(__count_17_16 <= 20); // Upper capacity constraint
+assert(__count_17_18 >= 1); // Lower capacity constraint
+assert(__count_17_18 <= 4); // Upper capacity constraint
+assert(__count_23_30 == 0); // Dead code
+assert(__count_20_19 >= 25); // Lower capacity constraint
+assert(__count_20_19 <= 25); // Upper capacity constraint
+assert(__count_45 >= 1); // Lower capacity constraint
+assert(__count_45 <= 1); // Upper capacity constraint
+assert(__count_22_30 >= 5); // Lower capacity constraint
+assert(__count_22_30 <= 5); // Upper capacity constraint
+assert(__count_1_43 == 0); // Dead code
+assert(__count_2_43 == 0); // Dead code
+assert(__count_3_43 == 0); // Dead code
+assert(__count_25_27 >= 20); // Lower capacity constraint
+assert(__count_25_27 <= 20); // Upper capacity constraint
+assert(__count_25_26 >= 80); // Lower capacity constraint
+assert(__count_25_26 <= 80); // Upper capacity constraint
+assert(__count_6_5 >= 5); // Lower capacity constraint
+assert(__count_6_5 <= 5); // Upper capacity constraint
+assert(__count_28_29 >= 20); // Lower capacity constraint
+assert(__count_28_29 <= 20); // Upper capacity constraint
+assert(__count_9_10 >= 6); // Lower capacity constraint
+assert(__count_9_10 <= 13); // Upper capacity constraint
+assert(__count_9_11 >= 2); // Lower capacity constraint
+assert(__count_9_11 <= 9); // Upper capacity constraint
+assert(__count_33_34 >= 1); // Lower capacity constraint
+assert(__count_33_34 <= 1); // Upper capacity constraint
+assert(__count_45 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_13_44 > 0 ==> __count_23_30 > 0); // Mutual inclusion
+assert(__count_23_30 > 0 ==> __count_13_44 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_14_18 > 0); // Mutual inclusion
+assert(__count_14_18 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_35_40 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_35_40 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_37 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_38_37 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_45 > 0); // Mutual inclusion
+assert(__count_45 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_9_11 > 0); // Mutual inclusion
+assert(__count_9_11 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_17_16 > 0); // Mutual inclusion
+assert(__count_17_16 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_17_18 > 0); // Mutual inclusion
+assert(__count_17_18 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_20_19 > 0); // Mutual inclusion
+assert(__count_20_19 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_3Found a solution with cost -516300
+Found a solution with cost -538860
+Found a solution with cost -561420
+Found a solution with cost -569820
+Found no solution with cost -577980.0 .. -569821.0
+
+Success, time = 0.0299999999999999
+8_39 > 0 ==> __count_22_30 > 0); // Mutual inclusion
+assert(__count_22_30 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_25_26 > 0); // Mutual inclusion
+assert(__count_25_26 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_25_27 > 0); // Mutual inclusion
+assert(__count_25_27 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_28_29 > 0); // Mutual inclusion
+assert(__count_28_29 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_38_39 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_38_39 > 0); // Mutual inclusion
+assert(__count_1_43 > 0 ==> __count_45 > 0); // Execution dependence
+assert(__count_2_43 > 0 ==> __count_45 > 0); // Execution dependence
+assert(__count_3_43 > 0 ==> __count_45 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_45 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_6_5 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_9_10 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_9_11 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_14_18 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_17_16 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_17_18 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_20_19 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_22_30 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_25_26 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_25_27 > 0); // Execution dependence
+assert(__count_13_44 > 0 ==> __count_28_29 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_45 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_6_5 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_9_10 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_9_11 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_14_18 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_17_16 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_17_18 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_20_19 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_22_30 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_25_26 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_25_27 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_28_29 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_33_34 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_35_40 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_38_37 > 0); // Execution dependence
+assert(__count_23_30 > 0 ==> __count_38_39 > 0); // Execution dependence
+#endif
+HWMT = 569520
+Doing WCET calculation on matrix_inverse
+ILP(vanilla):: WCET(matrix_inverse)=1767390 (SOLVE TIME=0.00707)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.matrix_inverse.context1.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(matrix_inverse)=569820 (SOLVE TIME=0.82975)
+In matrix_inverse...
+...#CFG edges              = 64
+...#monitored              = 21
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 121
+...#execution dependencies = 31
+...#never execute          = 5
+...#always execute         = 16
+...#TOTAL mutual exclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 121
+...#TOTAL execution dependencies = 31
+...#TOTAL never execute          = 16
+...#TOTAL always execute         = 16
+============================================================
+0:18:43.100 - End Program
+Elapsed time: 0:18:43.080
+============================================================
+

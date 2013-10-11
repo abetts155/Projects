@@ -36,18 +36,6 @@ int __count_16_17 = 0;
 ****************************************************************************************************
 FUNCTION 'bubblesort'
 ****************************************************************************************************
-  IGNORING MUTUAL INCLUSION: 13 and (4, 6)
-  IGNORING MUTUAL INCLUSION: 13 and (5, 6)
-  IGNORING MUTUAL INCLUSION: 13 and (7, 8)
-  IGNORING MUTUAL INCLUSION: (4, 6) and (5, 6)
-  IGNORING MUTUAL INCLUSION: (4, 6) and (7, 8)
-  IGNORING MUTUAL INCLUSION: (5, 6) and (7, 8)
-****************************************************************************************************
-FUNCTION 'swapiflarger'
-****************************************************************************************************
-****************************************************************************************************
-FUNCTION 'bubblesort'
-****************************************************************************************************
   ALWAYS EXECUTES: 13, at least 1 time(s), at most 1 time(s)
   ALWAYS EXECUTES: (4, 6), at least 3 time(s), at most 24 time(s)
   ALWAYS EXECUTES: (5, 6), at least 12 time(s), at most 42 time(s)
@@ -57,6 +45,12 @@ FUNCTION 'bubblesort'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  MUTUALLY INCLUSIVE: 13 and (4, 6)
+  MUTUALLY INCLUSIVE: 13 and (5, 6)
+  MUTUALLY INCLUSIVE: 13 and (7, 8)
+  MUTUALLY INCLUSIVE: (4, 6) and (5, 6)
+  MUTUALLY INCLUSIVE: (4, 6) and (7, 8)
+  MUTUALLY INCLUSIVE: (5, 6) and (7, 8)
   ONE-WAY DEPENDENCY: (8, 12) on 13
   ONE-WAY DEPENDENCY: (8, 12) on (4, 6)
   ONE-WAY DEPENDENCY: (8, 12) on (5, 6)
@@ -87,7 +81,15 @@ assert(__count_13 <= 1); // Upper capacity constraint
 assert(__count_4_6 >= 3); // Lower capacity constraint
 assert(__count_4_6 <= 24); // Upper capacity constraint
 assert(__count_5_6 >= 12); // Lower capacity constraint
-assertFound a solution with cost -780
+assert(__count_5_6 <= 42); // Upper capacity constraint
+assert(__count_7_8 >= 5); // Lower capacity constraint
+assert(__count_7_8 <= 9); // Upper capacity constraint
+assert(__count_8_12 <= 1); // Upper capacity constraint
+assert(__count_10_11 <= 1); // Upper capacity constraint
+assert(__count_13 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> Found a solution with cost -780
 Found a solution with cost -1440
 Found no solution with cost -1470.0 .. -1441.0
 
@@ -100,11 +102,15 @@ Found a solution with cost -134970
 Found no solution with cost -149610.0 .. -134971.0
 
 Success, time = 0.01
-(__count_5_6 <= 42); // Upper capacity constraint
-assert(__count_7_8 >= 5); // Lower capacity constraint
-assert(__count_7_8 <= 9); // Upper capacity constraint
-assert(__count_8_12 <= 1); // Upper capacity constraint
-assert(__count_10_11 <= 1); // Upper capacity constraint
+__count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_5_6 > 0); // Mutual inclusion
 assert(__count_8_12 > 0 ==> __count_13 > 0); // Execution dependence
 assert(__count_8_12 > 0 ==> __count_4_6 > 0); // Execution dependence
 assert(__count_8_12 > 0 ==> __count_5_6 > 0); // Execution dependence
@@ -127,18 +133,18 @@ assert(__count_14_15 > 0 ==> __count_17 > 0); // Execution dependence
 #endif
 HWMT = 127110
 Doing WCET calculation on swapiflarger
-ILP(vanilla):: WCET(swapiflarger)=1440 (SOLVE TIME=0.02406)
+ILP(vanilla):: WCET(swapiflarger)=1440 (SOLVE TIME=0.00761)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.swapiflarger.context2.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(swapiflarger)=1440 (SOLVE TIME=0.87487)
+CLP(extra):: WCET(swapiflarger)=1440 (SOLVE TIME=1.58551)
 Doing WCET calculation on bubblesort
-ILP(vanilla):: WCET(bubblesort)=275640 (SOLVE TIME=0.00999)
+ILP(vanilla):: WCET(bubblesort)=275640 (SOLVE TIME=0.02245)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.bubblesort.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(bubblesort)=134970 (SOLVE TIME=0.83854)
+CLP(extra):: WCET(bubblesort)=134970 (SOLVE TIME=1.68601)
 In bubblesort...
 ...#CFG edges              = 17
 ...#monitored              = 6
 ...#mutual exclusion pairs = 0
-...#mutual inclusion pairs = 0
+...#mutual inclusion pairs = 6
 ...#execution dependencies = 8
 ...#never execute          = 0
 ...#always execute         = 4
@@ -151,12 +157,12 @@ In swapiflarger...
 ...#never execute          = 0
 ...#always execute         = 1
 ...#TOTAL mutual exclusion pairs = 0
-...#TOTAL mutual inclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 6
 ...#TOTAL execution dependencies = 10
 ...#TOTAL never execute          = 5
 ...#TOTAL always execute         = 5
 ============================================================
-0:05:10.060 - End Program
-Elapsed time: 0:05:10.050
+0:06:01.450 - End Program
+Elapsed time: 0:06:01.440
 ============================================================
 

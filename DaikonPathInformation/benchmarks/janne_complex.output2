@@ -14,7 +14,7 @@ Checking program configuration...
 
 ...all good
 ============================================================
-0:00:00.050 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.040 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -34,17 +34,6 @@ int __count_11_12 = 0;
 ****************************************************************************************************
 FUNCTION 'janne_complex'
 ****************************************************************************************************
-  IGNORING MUTUAL INCLUSION: 12 and (11, 12)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (2, 4)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (11, 12)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (9, 10)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (5, 8)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (6, 8)
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and 12
-  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: (6, 7) and (2, 3)
-****************************************************************************************************
-FUNCTION 'janne_complex'
-****************************************************************************************************
   ALWAYS EXECUTES: 12, at least 1 time(s), at most 1 time(s)
   MAY EXECUTE: (2, 3), at most 5 time(s)
   MAY EXECUTE: (2, 4), at most 7 time(s)
@@ -56,6 +45,7 @@ FUNCTION 'janne_complex'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  MUTUALLY INCLUSIVE: 12 and (11, 12)
   MUTUALLY INCLUSIVE: (2, 3) and (6, 8)
   MUTUALLY INCLUSIVE: (2, 3) and (9, 10)
   MUTUALLY INCLUSIVE: (2, 4) and (5, 8)
@@ -74,6 +64,13 @@ DEPENDENT EXECUTION CONJECTURES
   ONE-WAY DEPENDENCY: (5, 8) on (11, 12)
   ONE-WAY DEPENDENCY: (6, 8) on 12
   ONE-WAY DEPENDENCY: (6, 8) on (11, 12)
+  ONE-WAY DEPENDENCY: (6, 7) on 12
+  ONE-WAY DEPENDENCY: (6, 7) on (2, 3)
+  ONE-WAY DEPENDENCY: (6, 7) on (2, 4)
+  ONE-WAY DEPENDENCY: (6, 7) on (5, 8)
+  ONE-WAY DEPENDENCY: (6, 7) on (6, 8)
+  ONE-WAY DEPENDENCY: (6, 7) on (9, 10)
+  ONE-WAY DEPENDENCY: (6, 7) on (11, 12)
   ONE-WAY DEPENDENCY: (9, 10) on 12
   ONE-WAY DEPENDENCY: (9, 10) on (11, 12)
 ****************************************************************************************************
@@ -89,16 +86,18 @@ assert(__count_2_4 <= 7); // Upper capacity constraint
 assert(__count_5_8 <= 7); // Upper capacity constraint
 assert(__count_6_8 <= 5); // Upper capacity constraint
 assert(__count_6_7 == 0); // Dead code
-assert(__count_9_10 <= 10); // UFound a solution with cost -14850
+assert(__count_9_10 <= 10); // Upper capacity constraint
+assert(__count_11_12 >= 1); // Lower capacity constraint
+assert(__count_11_12 <= 1); // Upper capacity constraint
+assert(__count_12 > 0 ==> __count_11_12 > 0); // Mutual inclusion
+assert(__count_11_12 > 0 ==> __count_12 > 0); // Mutual inclusion
+assert(__count_2_3 > 0 ==> __count_6_8 > 0); // Mutual inclusion
+assert(__count_6_8 > 0 ==> __count_2_3 > 0); // Mutual inclusion
+assert(__count_2_3 > 0 ==> __count_9Found a solution with cost -14850
 Found no solution with cost -16110.0 .. -14851.0
 
 Success, time = 0.01
-pper capacity constraint
-assert(__count_11_12 >= 1); // Lower capacity constraint
-assert(__count_11_12 <= 1); // Upper capacity constraint
-assert(__count_2_3 > 0 ==> __count_6_8 > 0); // Mutual inclusion
-assert(__count_6_8 > 0 ==> __count_2_3 > 0); // Mutual inclusion
-assert(__count_2_3 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+_10 > 0); // Mutual inclusion
 assert(__count_9_10 > 0 ==> __count_2_3 > 0); // Mutual inclusion
 assert(__count_2_4 > 0 ==> __count_5_8 > 0); // Mutual inclusion
 assert(__count_5_8 > 0 ==> __count_2_4 > 0); // Mutual inclusion
@@ -118,29 +117,36 @@ assert(__count_5_8 > 0 ==> __count_9_10 > 0); // Execution dependence
 assert(__count_5_8 > 0 ==> __count_11_12 > 0); // Execution dependence
 assert(__count_6_8 > 0 ==> __count_12 > 0); // Execution dependence
 assert(__count_6_8 > 0 ==> __count_11_12 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_2_3 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_2_4 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_5_8 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_6_8 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_9_10 > 0); // Execution dependence
+assert(__count_6_7 > 0 ==> __count_11_12 > 0); // Execution dependence
 assert(__count_9_10 > 0 ==> __count_12 > 0); // Execution dependence
 assert(__count_9_10 > 0 ==> __count_11_12 > 0); // Execution dependence
 #endif
 HWMT = 14490
 Doing WCET calculation on janne_complex
-ILP(vanilla):: WCET(janne_complex)=81120 (SOLVE TIME=0.00892)
+ILP(vanilla):: WCET(janne_complex)=81120 (SOLVE TIME=0.02691)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/janne_complex.janne_complex.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(janne_complex)=14850 (SOLVE TIME=0.86209)
+CLP(extra):: WCET(janne_complex)=14850 (SOLVE TIME=1.38769)
 In janne_complex...
 ...#CFG edges              = 17
 ...#monitored              = 8
 ...#mutual exclusion pairs = 0
-...#mutual inclusion pairs = 4
-...#execution dependencies = 16
+...#mutual inclusion pairs = 5
+...#execution dependencies = 23
 ...#never execute          = 1
 ...#always execute         = 2
 ...#TOTAL mutual exclusion pairs = 0
-...#TOTAL mutual inclusion pairs = 4
-...#TOTAL execution dependencies = 16
+...#TOTAL mutual inclusion pairs = 5
+...#TOTAL execution dependencies = 23
 ...#TOTAL never execute          = 2
 ...#TOTAL always execute         = 2
 ============================================================
-0:04:01.980 - End Program
-Elapsed time: 0:04:01.959
+0:03:55.350 - End Program
+Elapsed time: 0:03:55.329
 ============================================================
 

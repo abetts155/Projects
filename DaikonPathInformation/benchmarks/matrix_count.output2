@@ -1,15 +1,15 @@
 ============================================================
-0:00:00.000 - Start Program
+0:00:00.010 - Start Program
 ============================================================
 
 ********** Analysing program 'matrix_count' **********
 Checking program configuration...
 ============================================================
-0:00:00.010 - COMPILING BEGIN
+0:00:00.020 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.020 - COMPILING END
+0:00:00.030 - COMPILING END
 ============================================================
 
 ...all good
@@ -31,19 +31,6 @@ int __count_9_10 = 0;
 ****************************************************************************************************
 FUNCTION 'matrix_count'
 ****************************************************************************************************
-  IGNORING MUTUAL INCLUSION: 10 and (4, 6)
-  IGNORING MUTUAL INCLUSION: 10 and (9, 10)
-  IGNORING MUTUAL INCLUSION: (5, 6) and 10
-  IGNORING MUTUAL INCLUSION: (5, 6) and (4, 6)
-  IGNORING MUTUAL INCLUSION: (5, 6) and (7, 8)
-  IGNORING MUTUAL INCLUSION: (5, 6) and (9, 10)
-  IGNORING MUTUAL INCLUSION: (7, 8) and 10
-  IGNORING MUTUAL INCLUSION: (7, 8) and (4, 6)
-  IGNORING MUTUAL INCLUSION: (7, 8) and (9, 10)
-  IGNORING MUTUAL INCLUSION: (9, 10) and (4, 6)
-****************************************************************************************************
-FUNCTION 'matrix_count'
-****************************************************************************************************
   ALWAYS EXECUTES: (5, 6), at least 4 time(s), at most 17 time(s)
   ALWAYS EXECUTES: (7, 8), at least 5 time(s), at most 5 time(s)
   ALWAYS EXECUTES: 10, at least 1 time(s), at most 1 time(s)
@@ -52,6 +39,16 @@ FUNCTION 'matrix_count'
 --------------------------------------------------
 DEPENDENT EXECUTION CONJECTURES
 --------------------------------------------------
+  MUTUALLY INCLUSIVE: 10 and (4, 6)
+  MUTUALLY INCLUSIVE: 10 and (9, 10)
+  MUTUALLY INCLUSIVE: (5, 6) and 10
+  MUTUALLY INCLUSIVE: (5, 6) and (4, 6)
+  MUTUALLY INCLUSIVE: (5, 6) and (7, 8)
+  MUTUALLY INCLUSIVE: (5, 6) and (9, 10)
+  MUTUALLY INCLUSIVE: (7, 8) and 10
+  MUTUALLY INCLUSIVE: (7, 8) and (4, 6)
+  MUTUALLY INCLUSIVE: (7, 8) and (9, 10)
+  MUTUALLY INCLUSIVE: (9, 10) and (4, 6)
 ****************************************************************************************************
 FUNCTION 'matrix_count'
 ****************************************************************************************************
@@ -68,26 +65,51 @@ assert(__count_9_10 >= 1); // Lower capacity constraint
 assert(__count_9_10 <= 1); // Upper capacity constraint
 assert(__count_4_6 >= 8); // Lower capacity constraint
 assert(__count_4_6 <= 21); // Upper capacity constraint
+assert(__count_10 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_10 > 0); // Mutual inclusion
+assert(__count_10 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_10 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_10 > 0); // Mutual inclusion
+assert(__count_10 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_10 > 0); // Mutual inclusion
+assert(__count_10 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_7_8 > 0 ==> __count_9_10 > 0); // Mutual incluFound a solution with cost -42690
+Found no solution with cost -52800.0 .. -42691.0
+
+Success, time = 0.0
+sion
+assert(__count_9_10 > 0 ==> __count_7_8 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_4_6 > 0); // Mutual inclusion
+assert(__count_4_6 > 0 ==> __count_9_10 > 0); // Mutual inclusion
 #endif
 HWMT = 42690
 Doing WCET calculation on matrix_count
-ILP(vanilla):: WCET(matrix_count)=59850 (SOLVE TIME=0.01684)
-ILP(extra):: WCET(matrix_count)=50040 (SOLVE TIME=0.01410)
+ILP(vanilla):: WCET(matrix_count)=59850 (SOLVE TIME=0.00397)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/matrix_count.matrix_count.context1.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(matrix_count)=42690 (SOLVE TIME=0.65269)
 In matrix_count...
 ...#CFG edges              = 13
 ...#monitored              = 5
 ...#mutual exclusion pairs = 0
-...#mutual inclusion pairs = 0
+...#mutual inclusion pairs = 10
 ...#execution dependencies = 0
 ...#never execute          = 0
 ...#always execute         = 5
 ...#TOTAL mutual exclusion pairs = 0
-...#TOTAL mutual inclusion pairs = 0
+...#TOTAL mutual inclusion pairs = 10
 ...#TOTAL execution dependencies = 0
 ...#TOTAL never execute          = 5
 ...#TOTAL always execute         = 5
 ============================================================
-0:09:07.490 - End Program
-Elapsed time: 0:09:07.490
+0:09:33.620 - End Program
+Elapsed time: 0:09:33.610
 ============================================================
 
