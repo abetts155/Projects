@@ -1,0 +1,1454 @@
+adpcm.output:465:assert(__count_12_11  <= 12); // Loop counter property
+adpcm.output:466:assert(__count_9_8  <= 24); // Loop counter property
+adpcm.output:467:assert(__count_6_5  <= 7); // Loop counter property
+adpcm.output:468:assert(__count_3_2  <= 7); // Loop counter property
+adpcm.output:469:assert(__count_13 >= 1); // Lower capacity constraint
+adpcm.output:470:assert(__count_13 <= 1); // Upper capacity constraint
+adpcm.output:471:assert(__count_3_2 >= 6); // Lower capacity constraint
+adpcm.output:472:assert(__count_3_2 <= 6); // Upper capacity constraint
+adpcm.output:473:assert(__count_3_4 >= 1); // Lower capacity constraint
+adpcm.output:474:assert(__count_3_4 <= 1); // Upper capacity constraint
+adpcm.output:475:assert(__count_6_5 >= 6); // Lower capacity constraint
+adpcm.output:476:assert(__count_6_5 <= 6); // Upper capacity constraint
+adpcm.output:477:assert(__count_9_8 >= 23); // Lower capacity constraint
+adpcm.output:478:assert(__count_9_8 <= 23); // Upper capacity constraint
+adpcm.output:479:assert(__count_12_11 >= 11); // Lower capacity constraint
+adpcm.output:480:assert(__count_12_11 <= 11); // Upper capacity constraint
+adpcm.output:486:assert(__count_16_17 == 0); // Dead code
+adpcm.output:487:assert(__count_18 >= 1); // Lower capacity constraint
+adpcm.output:488:assert(__count_18 <= 1); // Upper capacity constraint
+adpcm.output:489:assert(__count_16_18 >= 1); // Lower capacity constraint
+adpcm.output:490:assert(__count_16_18 <= 1); // Upper capacity constraint
+adpcm.output:491:assert(__count_14_16 <= 1); // Upper capacity constraint
+adpcm.output:492:assert(__count_14_15 <= 1); // Upper capacity constraint
+adpcm.output:493:assert(__count_14_16 > 0 ==> __count_16_18 > 0); // Execution dependence
+adpcm.output:494:assert(__count_14_16 > 0 ==> __count_18 > 0); // Execution dependence
+adpcm.output:495:assert(__count_14_15 > 0 ==> __count_16_18 > 0); // Execution dependence
+adpcm.output:496:assert(__count_14_15 > 0 ==> __count_18 > 0); // Execution dependence
+adpcm.output:502:assert(__count_27_25  <= 3); // Loop counter property
+adpcm.output:503:assert(__count_23_21  <= 3); // Loop counter property
+adpcm.output:504:assert(__count_27_25 >= 2); // Lower capacity constraint
+adpcm.output:505:assert(__count_27_25 <= 2); // Upper capacity constraint
+adpcm.output:506:assert(__count_21_22 >= 2); // Lower capacity constraint
+adpcm.output:507:assert(__count_21_22 <= 2); // Upper capacity constraint
+adpcm.output:508:assert(__count_28 >= 1); // Lower capacity constraint
+adpcm.output:509:assert(__count_28 <= 1); // Upper capacity constraint
+adpcm.output:510:assert(__count_23_24 >= 1); // Lower capacity constraint
+adpcm.output:511:assert(__count_23_24 <= 1); // Upper capacity constraint
+adpcm.output:517:assert(__count_40_41 <= 1); // Upper capacity constraint
+adpcm.output:518:assert(__count_38_39 <= 1); // Upper capacity constraint
+adpcm.output:519:assert(__count_41 >= 1); // Lower capacity constraint
+adpcm.output:520:assert(__count_41 <= 1); // Upper capacity constraint
+adpcm.output:521:assert(__count_40_41 > 0 ==> __count_41 > 0); // Execution dependence
+adpcm.output:522:assert(__count_38_39 > 0 ==> __count_41 > 0); // Execution dependence
+adpcm.output:528:assert(__count_33_34 <= 1); // Upper capacity constraint
+adpcm.output:529:assert(__count_33_35 <= 1); // Upper capacity constraint
+adpcm.output:530:assert(__count_35_36 == 0); // Dead code
+adpcm.output:531:assert(__count_37 >= 1); // Lower capacity constraint
+adpcm.output:532:assert(__count_37 <= 1); // Upper capacity constraint
+adpcm.output:533:assert(__count_35_37 >= 1); // Lower capacity constraint
+adpcm.output:534:assert(__count_35_37 <= 1); // Upper capacity constraint
+adpcm.output:535:assert(__count_33_34 > 0 ==> __count_35_37 > 0); // Execution dependence
+adpcm.output:536:assert(__count_33_34 > 0 ==> __count_37 > 0); // Execution dependence
+adpcm.output:537:assert(__count_33_35 > 0 ==> __count_35_37 > 0); // Execution dependence
+adpcm.output:538:assert(__count_33_35 > 0 ==> __count_37 > 0); // Execution dependence
+adpcm.output:544:assert(__count_61_60  <= 11); // Loop counter property
+adpcm.output:545:assert(__count_58_57  <= 11); // Loop counter property
+adpcm.output:546:assert(__count_58_57 >= 10); // Lower capacity constraint
+adpcm.output:547:assert(__count_58_57 <= 10); // Upper capacity constraint
+adpcm.output:548:assert(__count_58_59 >= 1); // Lower capacity constraint
+adpcm.output:549:assert(__count_58_59 <= 1); // Upper capacity constraint
+adpcm.output:550:assert(__count_61_60 >= 10); // Lower capacity constraint
+adpcm.output:551:assert(__count_61_60 <= 10); // Upper capacity constraint
+adpcm.output:552:assert(__count_62 >= 1); // Lower capacity constraint
+adpcm.output:553:assert(__count_62 <= 1); // Upper capacity constraint
+adpcm.output:559:assert(__count_63 >= 1); // Lower capacity constraint
+adpcm.output:560:assert(__count_63 <= 1); // Upper capacity constraint
+adpcm.output:566:assert(__count_64 >= 1); // Lower capacity constraint
+adpcm.output:567:assert(__count_64 <= 1); // Upper capacity constraint
+adpcm.output:573:assert(__count_70_69  <= 23); // Loop counter property
+adpcm.output:574:assert(__count_67_66  <= 11); // Loop counter property
+adpcm.output:575:assert(__count_67_66 >= 10); // Lower capacity constraint
+adpcm.output:576:assert(__count_67_66 <= 10); // Upper capacity constraint
+adpcm.output:577:assert(__count_70_69 >= 22); // Lower capacity constraint
+adpcm.output:578:assert(__count_70_69 <= 22); // Upper capacity constraint
+adpcm.output:579:assert(__count_81_83 <= 1); // Upper capacity constraint
+adpcm.output:580:assert(__count_82_84 <= 1); // Upper capacity constraint
+adpcm.output:581:assert(__count_85_86 <= 1); // Upper capacity constraint
+adpcm.output:582:assert(__count_85_87 <= 1); // Upper capacity constraint
+adpcm.output:583:assert(__count_92 >= 1); // Lower capacity constraint
+adpcm.output:584:assert(__count_92 <= 1); // Upper capacity constraint
+adpcm.output:585:assert(__count_81_83 > 0 ==> __count_85_87 == 0); // Mutual exclusion
+adpcm.output:586:assert(__count_85_87 > 0 ==> __count_81_83 == 0); // Mutual exclusion
+adpcm.output:587:assert(__count_81_83 > 0 ==> __count_67_66 > 0); // Execution dependence
+adpcm.output:588:assert(__count_81_83 > 0 ==> __count_70_69 > 0); // Execution dependence
+adpcm.output:589:assert(__count_81_83 > 0 ==> __count_85_86 > 0); // Execution dependence
+adpcm.output:590:assert(__count_81_83 > 0 ==> __count_92 > 0); // Execution dependence
+adpcm.output:591:assert(__count_82_84 > 0 ==> __count_67_66 > 0); // Execution dependence
+adpcm.output:592:assert(__count_82_84 > 0 ==> __count_70_69 > 0); // Execution dependence
+adpcm.output:593:assert(__count_82_84 > 0 ==> __count_92 > 0); // Execution dependence
+adpcm.output:594:assert(__count_85_86 > 0 ==> __count_67_66 > 0); // Execution dependence
+adpcm.output:595:assert(__count_85_86 > 0 ==> __count_70_69 > 0); // Execution dependence
+adpcm.output:596:assert(__count_85_86 > 0 ==> __count_92 > 0); // Execution dependence
+adpcm.output:597:assert(__count_85_87 > 0 ==> __count_67_66 > 0); // Execution dependence
+adpcm.output:598:assert(__count_85_87 > 0 ==> __count_70_69 > 0); // Execution dependence
+adpcm.output:599:assert(__count_85_87 > 0 ==> __count_82_84 > 0); // Execution dependence
+adpcm.output:600:assert(__count_85_87 > 0 ==> __count_92 > 0); // Execution dependence
+adpcm.output:606:assert(__count_96_98 >= 1); // Lower capacity constraint
+adpcm.output:607:assert(__count_96_98 <= 1); // Upper capacity constraint
+adpcm.output:608:assert(__count_97_98 == 0); // Dead code
+adpcm.output:609:assert(__count_98_99 == 0); // Dead code
+adpcm.output:610:assert(__count_98_100 >= 1); // Lower capacity constraint
+adpcm.output:611:assert(__count_98_100 <= 1); // Upper capacity constraint
+adpcm.output:612:assert(__count_102 >= 1); // Lower capacity constraint
+adpcm.output:613:assert(__count_102 <= 1); // Upper capacity constraint
+adpcm.output:614:assert(__count_100_102 >= 1); // Lower capacity constraint
+adpcm.output:615:assert(__count_100_102 <= 1); // Upper capacity constraint
+adpcm.output:616:assert(__count_101_102 == 0); // Dead code
+adpcm.output:617:assert(__count_93_94 >= 1); // Lower capacity constraint
+adpcm.output:618:assert(__count_93_94 <= 1); // Upper capacity constraint
+adpcm.output:619:assert(__count_93_95 == 0); // Dead code
+adpcm.output:625:assert(__count_107_105  <= 31); // Loop counter property
+adpcm.output:626:assert(__count_105_109 <= 1); // Upper capacity constraint
+adpcm.output:627:assert(__count_107_105 >= 1); // Lower capacity constraint
+adpcm.output:628:assert(__count_107_105 <= 30); // Upper capacity constraint
+adpcm.output:629:assert(__count_107_108 <= 1); // Upper capacity constraint
+adpcm.output:630:assert(__count_110_112 <= 1); // Upper capacity constraint
+adpcm.output:631:assert(__count_110_111 <= 1); // Upper capacity constraint
+adpcm.output:632:assert(__count_113 >= 1); // Lower capacity constraint
+adpcm.output:633:assert(__count_113 <= 1); // Upper capacity constraint
+adpcm.output:634:assert(__count_105_109 > 0 ==> __count_110_112 == 0); // Mutual exclusion
+adpcm.output:635:assert(__count_110_112 > 0 ==> __count_105_109 == 0); // Mutual exclusion
+adpcm.output:636:assert(__count_105_109 > 0 ==> __count_107_105 > 0); // Execution dependence
+adpcm.output:637:assert(__count_105_109 > 0 ==> __count_110_111 > 0); // Execution dependence
+adpcm.output:638:assert(__count_105_109 > 0 ==> __count_113 > 0); // Execution dependence
+adpcm.output:639:assert(__count_107_108 > 0 ==> __count_107_105 > 0); // Execution dependence
+adpcm.output:640:assert(__count_107_108 > 0 ==> __count_113 > 0); // Execution dependence
+adpcm.output:641:assert(__count_110_112 > 0 ==> __count_107_105 > 0); // Execution dependence
+adpcm.output:642:assert(__count_110_112 > 0 ==> __count_107_108 > 0); // Execution dependence
+adpcm.output:643:assert(__count_110_112 > 0 ==> __count_113 > 0); // Execution dependence
+adpcm.output:644:assert(__count_110_111 > 0 ==> __count_107_105 > 0); // Execution dependence
+adpcm.output:645:assert(__count_110_111 > 0 ==> __count_113 > 0); // Execution dependence
+adpcm.output:651:assert(__count_31_30  <= 6); // Loop counter property
+adpcm.output:652:assert(__count_32 >= 1); // Lower capacity constraint
+adpcm.output:653:assert(__count_32 <= 1); // Upper capacity constraint
+adpcm.output:654:assert(__count_31_32 >= 1); // Lower capacity constraint
+adpcm.output:655:assert(__count_31_32 <= 1); // Upper capacity constraint
+adpcm.output:656:assert(__count_31_30 >= 5); // Lower capacity constraint
+adpcm.output:657:assert(__count_31_30 <= 5); // Upper capacity constraint
+adpcm.output:663:assert(__count_115_117 >= 1); // Lower capacity constraint
+adpcm.output:664:assert(__count_115_117 <= 1); // Upper capacity constraint
+adpcm.output:665:assert(__count_116_117 == 0); // Dead code
+adpcm.output:666:assert(__count_117_118 == 0); // Dead code
+adpcm.output:667:assert(__count_117_119 >= 1); // Lower capacity constraint
+adpcm.output:668:assert(__count_117_119 <= 1); // Upper capacity constraint
+adpcm.output:669:assert(__count_119_120 == 0); // Dead code
+adpcm.output:670:assert(__count_119_121 >= 1); // Lower capacity constraint
+adpcm.output:671:assert(__count_119_121 <= 1); // Upper capacity constraint
+adpcm.output:672:assert(__count_121 >= 1); // Lower capacity constraint
+adpcm.output:673:assert(__count_121 <= 1); // Upper capacity constraint
+adpcm.output:679:assert(__count_132_128  <= 7); // Loop counter property
+adpcm.output:680:assert(__count_125_124  <= 7); // Loop counter property
+adpcm.output:681:assert(__count_129_131 <= 6); // Upper capacity constraint
+adpcm.output:682:assert(__count_130_131 == 0); // Dead code
+adpcm.output:683:assert(__count_133 >= 1); // Lower capacity constraint
+adpcm.output:684:assert(__count_133 <= 1); // Upper capacity constraint
+adpcm.output:685:assert(__count_132_133 <= 1); // Upper capacity constraint
+adpcm.output:686:assert(__count_125_124 <= 6); // Upper capacity constraint
+adpcm.output:687:assert(__count_125_126 <= 1); // Upper capacity constraint
+adpcm.output:688:assert(__count_129_131 > 0 ==> __count_132_133 > 0); // Mutual inclusion
+adpcm.output:689:assert(__count_132_133 > 0 ==> __count_129_131 > 0); // Mutual inclusion
+adpcm.output:690:assert(__count_125_124 > 0 ==> __count_125_126 > 0); // Mutual inclusion
+adpcm.output:691:assert(__count_125_126 > 0 ==> __count_125_124 > 0); // Mutual inclusion
+adpcm.output:692:assert(__count_129_131 > 0 ==> __count_133 > 0); // Execution dependence
+adpcm.output:693:assert(__count_132_133 > 0 ==> __count_133 > 0); // Execution dependence
+adpcm.output:694:assert(__count_125_124 > 0 ==> __count_133 > 0); // Execution dependence
+adpcm.output:695:assert(__count_125_126 > 0 ==> __count_133 > 0); // Execution dependence
+binary_search.output:61:assert(__count_7_2  <= 18); // Loop counter property
+binary_search.output:62:assert(__count_8 >= 1); // Lower capacity constraint
+binary_search.output:63:assert(__count_8 <= 1); // Upper capacity constraint
+binary_search.output:64:assert(__count_7_8 >= 1); // Lower capacity constraint
+binary_search.output:65:assert(__count_7_8 <= 1); // Upper capacity constraint
+binary_search.output:66:assert(__count_2_3 == 0); // Dead code
+binary_search.output:67:assert(__count_4_5 <= 16); // Upper capacity constraint
+binary_search.output:68:assert(__count_4_6 <= 17); // Upper capacity constraint
+binary_search.output:69:assert(__count_4_5 > 0 ==> __count_4_6 == 0); // Mutual exclusion
+binary_search.output:70:assert(__count_4_6 > 0 ==> __count_4_5 == 0); // Mutual exclusion
+binary_search.output:71:assert(__count_4_5 > 0 ==> __count_8 > 0); // Execution dependence
+binary_search.output:72:assert(__count_4_5 > 0 ==> __count_7_8 > 0); // Execution dependence
+binary_search.output:73:assert(__count_4_6 > 0 ==> __count_8 > 0); // Execution dependence
+binary_search.output:74:assert(__count_4_6 > 0 ==> __count_7_8 > 0); // Execution dependence
+bubblesort.output:83:assert(__count_7_3  <= 10); // Loop counter property
+bubblesort.output:84:assert(__count_10_2  <= 10); // Loop counter property
+bubblesort.output:85:assert(__count_13 >= 1); // Lower capacity constraint
+bubblesort.output:86:assert(__count_13 <= 1); // Upper capacity constraint
+bubblesort.output:87:assert(__count_4_6 >= 3); // Lower capacity constraint
+bubblesort.output:88:assert(__count_4_6 <= 24); // Upper capacity constraint
+bubblesort.output:89:assert(__count_5_6 >= 12); // Lower capacity constraint
+bubblesort.output:90:assertFound a solution with cost -780
+bubblesort.output:104:assert(__count_7_8 >= 5); // Lower capacity constraint
+bubblesort.output:105:assert(__count_7_8 <= 9); // Upper capacity constraint
+bubblesort.output:106:assert(__count_8_12 <= 1); // Upper capacity constraint
+bubblesort.output:107:assert(__count_10_11 <= 1); // Upper capacity constraint
+bubblesort.output:108:assert(__count_8_12 > 0 ==> __count_13 > 0); // Execution dependence
+bubblesort.output:109:assert(__count_8_12 > 0 ==> __count_4_6 > 0); // Execution dependence
+bubblesort.output:110:assert(__count_8_12 > 0 ==> __count_5_6 > 0); // Execution dependence
+bubblesort.output:111:assert(__count_8_12 > 0 ==> __count_7_8 > 0); // Execution dependence
+bubblesort.output:112:assert(__count_10_11 > 0 ==> __count_13 > 0); // Execution dependence
+bubblesort.output:113:assert(__count_10_11 > 0 ==> __count_4_6 > 0); // Execution dependence
+bubblesort.output:114:assert(__count_10_11 > 0 ==> __count_5_6 > 0); // Execution dependence
+bubblesort.output:115:assert(__count_10_11 > 0 ==> __count_7_8 > 0); // Execution dependence
+bubblesort.output:121:assert(__count_16_17 <= 1); // Upper capacity constraint
+bubblesort.output:122:assert(__count_14_15 <= 1); // Upper capacity constraint
+bubblesort.output:123:assert(__count_17 >= 1); // Lower capacity constraint
+bubblesort.output:124:assert(__count_17 <= 1); // Upper capacity constraint
+bubblesort.output:125:assert(__count_16_17 > 0 ==> __count_17 > 0); // Execution dependence
+bubblesort.output:126:assert(__count_14_15 > 0 ==> __count_17 > 0); // Execution dependence
+compress.output:498:assert(__count_3_8 >= 9223372036854775807); // Lower capacity constraint
+compress.output:499:assert(__count_3_8 <= 0); // Upper capacity constraint
+compress.output:500:assert(__count_14 >= 9223372036854775807); // Lower capacity constraint
+compress.output:501:assert(__count_14 <= 0); // Upper capacity constraint
+compress.output:502:assert(__count_4_6 >= 9223372036854775807); // Lower capacity constraint
+compress.output:503:assert(__count_4_6 <= 0); // Upper capacity constraint
+compress.output:504:assert(__count_5_10 >= 9223372036854775807); // Lower capacity constraint
+compress.output:505:assert(__count_5_10 <= 0); // Upper capacity constraint
+compress.output:506:assert(__count_11_14 >= 9223372036854775807); // Lower capacity constraint
+compress.output:507:assert(__count_11_14 <= 0); // Upper capacity constraint
+compress.output:508:assert(__count_12_13 >= 9223372036854775807); // Lower capacity constraint
+compress.output:509:assert(__count_12_13 <= 0); // Upper capacity constraint
+compress.output:515:assert(__count_17_18  <= 0); // Loop counter property
+compress.output:516:assert(__count_17_19 >= 9223372036854775807); // Lower capacity constraint
+compress.output:517:assert(__count_17_19 <= 0); // Upper capacity constraint
+compress.output:518:assert(__count_17_18 >= 9223372036854775807); // Lower capacity constraint
+compress.output:519:assert(__count_17_18 <= 0); // Upper capacity constraint
+compress.output:520:assert(__count_19 >= 9223372036854775807); // Lower capacity constraint
+compress.output:521:assert(__count_19 <= 0); // Upper capacity constraint
+compress.output:522:assert(__count_18_19 >= 9223372036854775807); // Lower capacity constraint
+compress.output:523:assert(__count_18_19 <= 0); // Upper capacity constraint
+compress.output:529:assert(__count_76 >= 1); // Lower capacity constraint
+compress.output:530:assert(__count_76 <= 1); // Upper capacity constraint
+compress.output:531:assert(__count_72_75 == 0); // Dead code
+compress.output:532:assert(__count_73_74 >= 1); // Lower capacity constraint
+compress.output:533:assert(__count_73_74 <= 1); // Upper capacity constraint
+compress.output:534:assert(__count_73_75 == 0); // Dead code
+compress.output:540:assert(__count_47_48  + __count_47_49  +  <= 7); // Loop counter property
+compress.output:541:assert(__count_60_40  <= 50); // Loop counter property
+compress.output:542:assert(__count_37_36  <= 9); // Loop counter property
+compress.output:543:assert(__count_54_55 <= 49); // Upper capacity constraint
+compress.output:544:assert(__count_32_34 <= 1); // Upper capacity constraint
+compress.output:545:assert(__count_33_34 == 0); // Dead code
+compress.output:546:assert(__count_57_58 == 0); // Dead code
+compress.output:547:assert(__count_37_36 <= 8); // Upper capacity constraint
+compress.output:548:assert(__count_55_56 <= 49); // Upper capacity constraint
+compress.output:549:assert(__count_61_62 == 0); // Dead code
+compress.output:550:assert(__count_61_63 <= 1); // Upper capacity constraint
+compress.output:551:assert(__count_41_42 == 0); // Dead code
+compress.output:552:assert(__count_44_45 <= 2); // Upper capacity constraint
+compress.output:553:assert(__count_44_47 <= 18); // Upper capacity constraint
+compress.output:554:assert(__count_47_48 <= 34); // Upper capacity constraint
+compress.output:555:assert(__count_47_49 <= 11); // Upper capacity constraint
+compress.output:556:assert(__count_49_50 == 0); // Dead code
+compress.output:557:assert(__count_51_55 <= 18); // Upper capacity constraint
+compress.output:558:assert(__count_52_53 == 0); // Dead code
+compress.output:559:assert(__count_63 <= 1); // Upper capacity constraint
+compress.output:560:assert(__count_32_34 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+compress.output:561:assert(__count_37_36 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+compress.output:562:assert(__count_32_34 > 0 ==> __count_63 > 0); // Mutual inclusion
+compress.output:563:assert(__count_63 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+compress.output:564:assert(__count_32_34 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+compress.output:565:assert(__count_55_56 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+compress.output:566:assert(__count_32_34 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+compress.output:567:assert(__count_61_63 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+compress.output:568:assert(__count_37_36 > 0 ==> __count_63 > 0); // Mutual inclusion
+compress.output:569:assert(__count_63 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+compress.output:570:assert(__count_37_36 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+compress.output:571:assert(__count_55_56 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+compress.output:572:assert(__count_37_36 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+compress.output:573:assert(__count_61_63 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+compress.output:574:assert(__count_44_47 > 0 ==> __count_47_48 > 0); // Mutual inclusion
+compress.output:575:assert(__count_47_48 > 0 ==> __count_44_47 > 0); // Mutual inclusion
+compress.output:576:assert(__count_44_47 > 0 ==> __count_51_55 > 0); // Mutual inclusion
+compress.output:577:assert(__count_51_55 > 0 ==> __count_44_47 > 0); // Mutual inclusion
+compress.output:578:assert(__count_47_48 > 0 ==> __count_51_55 > 0); // Mutual inclusion
+compress.output:579:assert(__count_51_55 > 0 ==> __count_47_48 > 0); // Mutual inclusion
+compress.output:580:assert(__count_54_55 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+compress.output:581:assert(__count_32_34 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+compress.output:582:assert(__count_54_55 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+compress.output:583:assert(__count_37_36 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+compress.output:584:assert(__count_54_55 > 0 ==> __count_63 > 0); // Mutual inclusion
+compress.output:585:assert(__count_63 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+compress.output:586:assert(__count_54_55 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+compress.output:587:assert(__count_55_56 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+compress.output:588:assert(__count_54_55 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+compress.output:589:assert(__count_61_63 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+compress.output:590:assert(__count_55_56 > 0 ==> __count_63 > 0); // Mutual inclusion
+compress.output:591:assert(__count_63 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+compress.output:592:assert(__count_55_56 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+compress.output:593:assert(__count_61_63 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+compress.output:594:assert(__count_61_63 > 0 ==> __count_63 > 0); // Mutual inclusion
+compress.output:595:assert(__count_63 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+compress.output:596:assert(__count_44_45 > 0 ==> __count_32_34 > 0); // Execution dependence
+compress.output:597:assert(__count_44_45 > 0 ==> __count_37_36 > 0); // Execution dependence
+compress.output:598:assert(__count_44_45 > 0 ==> __count_44_47 > 0); // Execution dependence
+compress.output:599:assert(__count_44_45 > 0 ==> __count_47_48 > 0); // Execution dependence
+compress.output:600:assert(__count_44_45 > 0 ==> __count_51_55 > 0); // Execution dependence
+compress.output:601:assert(__count_44_45 > 0 ==> __count_63 > 0); // Execution dependence
+compress.output:602:assert(__count_44_45 > 0 ==> __count_54_55 > 0); // Execution dependence
+compress.output:603:assert(__count_44_45 > 0 ==> __count_55_56 > 0); // Execution dependence
+compress.output:604:assert(__count_44_45 > 0 ==> __count_61_63 > 0); // Execution dependence
+compress.output:605:assert(__count_44_47 > 0 ==> __count_32_34 > 0); // Execution dependence
+compress.output:606:assert(__count_44_47 > 0 ==> __count_37_36 > 0); // Execution dependence
+compress.output:607:assert(__count_44_47 > 0 ==> __count_63 > 0); // Execution dependence
+compress.output:608:assert(__count_44_47 > 0 ==> __count_54_55 > 0); // Execution dependence
+compress.output:609:assert(__count_44_47 > 0 ==> __count_55_56 > 0); // Execution dependence
+compress.output:610:assert(__count_44_47 > 0 ==> __count_61_63 > 0); // Execution dependence
+compress.output:611:assert(__count_47_48 > 0 ==> __count_32_34 > 0); // Execution dependence
+compress.output:612:assert(__count_47_48 > 0 ==> __count_37_36 > 0); // Execution dependence
+compress.output:613:assert(__count_47_48 > 0 ==> __count_63 > 0); // Execution dependence
+compress.output:614:assert(__count_47_48 > 0 ==> __count_54_55 > 0); // Execution dependence
+compress.output:615:assert(__count_47_48 > 0 ==> __count_55_56 > 0); // Execution dependence
+compress.output:616:assert(__count_47_48 > 0 ==> __count_61_63 > 0); // Execution dependence
+compress.output:617:assert(__count_47_49 > 0 ==> __count_32_34 > 0); // Execution dependence
+compress.output:618:assert(__count_47_49 > 0 ==> __count_37_36 > 0); // Execution dependence
+compress.output:619:assert(__count_47_49 > 0 ==> __count_44_47 > 0); // Execution dependence
+compress.output:620:assert(__count_47_49 > 0 ==> __count_47_48 > 0); // Execution dependence
+compress.output:621:assert(__count_47_49 > 0 ==> __count_51_55 > 0); // Execution dependence
+compress.output:622:assert(__count_47_49 > 0 ==> __count_63 > 0); // Execution dependence
+compress.output:623:assert(__count_47_49 > 0 ==> __count_54_55 > 0); // Execution dependence
+compress.output:624:assert(__count_47_49 > 0 ==> __count_55_56 > 0); // Execution dependence
+compress.output:625:assert(__count_47_49 > 0 ==> __count_61_63 > 0); // Execution dependence
+compress.output:626:assert(__count_51_55 > 0 ==> __count_32_34 > 0); // Execution dependence
+compress.output:627:assert(__count_51_55 > 0 ==> __count_37_36 > 0); // Execution dependence
+compress.output:628:assert(__count_51_55 > 0 ==> __count_63 > 0); // Execution dependence
+compress.output:629:assert(__count_51_55 > 0 ==> __count_54_55 > 0); // Execution dependence
+compress.output:630:assert(__count_51_55 > 0 ==> __count_55_56 > 0); // Execution dependence
+compress.output:631:assert(__count_51_55 > 0 ==> __count_61_63 > 0); // Execution dependence
+compress.output:637:assert(__count_81_80  <= 2); // Loop counter property
+compress.output:638:assert(__count_78_78  <= 2); // Loop counter property
+compress.output:639:assert(__count_82 >= 1); // Lower capacity constraint
+compress.output:640:assert(__count_82 <= 1); // Upper capacity constraint
+compress.output:641:assert(__count_78 >= 3); // Lower capacity constraint
+compress.output:642:assert(__count_78 <= 3); // Upper capacity constraint
+compress.output:643:assert(__count_81_80 >= 1); // Lower capacity constraint
+compress.output:644:assert(__count_81_80 <= 1); // Upper capacity constraint
+compress.output:645:assert(__count_81_82 >= 1); // Lower capacity constraint
+compress.output:646:assert(__count_81_82 <= 1); // Upper capacity constraint
+compress.output:652:assert(__count_90_91  <= 0); // Loop counter property
+compress.output:653:assert(__count_103_107 >= 9223372036854775807); // Lower capacity constraint
+compress.output:654:assert(__count_103_107 <= 0); // Upper capacity constraint
+compress.output:655:assert(__count_104_105 >= 9223372036854775807); // Lower capacity constraint
+compress.output:656:assert(__count_104_105 <= 0); // Upper capacity constraint
+compress.output:657:assert(__count_104_106 >= 9223372036854775807); // Lower capacity constraint
+compress.output:658:assert(__count_104_106 <= 0); // Upper capacity constraint
+compress.output:659:assert(__count_84_85 >= 9223372036854775807); // Lower capacity constraint
+compress.output:660:assert(__count_84_85 <= 0); // Upper capacity constraint
+compress.output:661:assert(__count_84_86 >= 9223372036854775807); // Lower capacity constraint
+compress.output:662:assert(__count_84_86 <= 0); // Upper capacity constraint
+compress.output:663:assert(__count_86_88 >= 9223372036854775807); // Lower capacity constraint
+compress.output:664:assert(__count_86_88 <= 0); // Upper capacity constraint
+compress.output:665:assert(__count_87_88 >= 9223372036854775807); // Lower capacity constraint
+compress.output:666:assert(__count_87_88 <= 0); // Upper capacity constraint
+compress.output:667:assert(__count_88_94 >= 9223372036854775807); // Lower capacity constraint
+compress.output:668:assert(__count_88_94 <= 0); // Upper capacity constraint
+compress.output:669:assert(__count_107 >= 9223372036854775807); // Lower capacity constraint
+compress.output:670:assert(__count_107 <= 0); // Upper capacity constraint
+compress.output:671:assert(__count_90_91 >= 9223372036854775807); // Lower capacity constraint
+compress.output:672:assert(__count_90_91 <= 0); // Upper capacity constraint
+compress.output:673:assert(__count_91_93 >= 9223372036854775807); // Lower capacity constraiFound a solution with cost -383610
+compress.output:689:assert(__count_91_93 <= 0); // Upper capacity constraint
+compress.output:690:assert(__count_92_93 >= 9223372036854775807); // Lower capacity constraint
+compress.output:691:assert(__count_92_93 <= 0); // Upper capacity constraint
+compress.output:692:assert(__count_94_96 >= 9223372036854775807); // Lower capacity constraint
+compress.output:693:assert(__count_94_96 <= 0); // Upper capacity constraint
+compress.output:694:assert(__count_95_96 >= 9223372036854775807); // Lower capacity constraint
+compress.output:695:assert(__count_95_96 <= 0); // Upper capacity constraint
+compress.output:696:assert(__count_95_107 >= 9223372036854775807); // Lower capacity constraint
+compress.output:697:assert(__count_95_107 <= 0); // Upper capacity constraint
+compress.output:698:assert(__count_96_99 >= 9223372036854775807); // Lower capacity constraint
+compress.output:699:assert(__count_96_99 <= 0); // Upper capacity constraint
+compress.output:700:assert(__count_98_99 >= 9223372036854775807); // Lower capacity constraint
+compress.output:701:assert(__count_98_99 <= 0); // Upper capacity constraint
+compress.output:702:assert(__count_99_100 >= 9223372036854775807); // Lower capacity constraint
+compress.output:703:assert(__count_99_100 <= 0); // Upper capacity constraint
+compress.output:704:assert(__count_101_102 >= 9223372036854775807); // Lower capacity constraint
+compress.output:705:assert(__count_101_102 <= 0); // Upper capacity constraint
+compress.output:711:assert(__count_108 >= 9223372036854775807); // Lower capacity constraint
+compress.output:712:assert(__count_108 <= 0); // Upper capacity constraint
+cover.output:10007:assert(__count_126_2  <= 121); // Loop counter property
+cover.output:10008:assert(__count_127 >= 1); // Lower capacity constraint
+cover.output:10009:assert(__count_127 <= 1); // Upper capacity constraint
+cover.output:10010:assert(__count_3_4 >= 1); // Lower capacity constraint
+cover.output:10011:assert(__count_3_4 <= 1); // Upper capacity constraint
+cover.output:10012:assert(__count_3_5 >= 1); // Lower capacity constraint
+cover.output:10013:assert(__count_3_5 <= 1); // Upper capacity constraint
+cover.output:10014:assert(__count_3_6 >= 1); // Lower capacity constraint
+cover.output:10015:assert(__count_3_6 <= 1); // Upper capacity constraint
+cover.output:10016:assert(__count_3_7 >= 1); // Lower capacity constraint
+cover.output:10017:assert(__count_3_7 <= 1); // Upper capacity constraint
+cover.output:10018:assert(__count_3_9 >= 1); // Lower capacity constraint
+cover.output:10019:assert(__count_3_9 <= 1); // Upper capacity constraint
+cover.output:10020:assert(__count_3_12 >= 1); // Lower capacity constraint
+cover.output:10021:assert(__count_3_12 <= 1); // Upper capacity constraint
+cover.output:10022:assert(__count_3_13 >= 1); // Lower capacity constraint
+cover.output:10023:assert(__count_3_13 <= 1); // Upper capacity constraint
+cover.output:10024:assert(__count_3_14 >= 1); // Lower capacity constraint
+cover.output:10025:assert(__count_3_14 <= 1); // Upper capacity constraint
+cover.output:10026:assert(__count_3_17 >= 1); // Lower capacity constraint
+cover.output:10027:assert(__count_3_17 <= 1); // Upper capacity constraint
+cover.output:10028:assert(__count_3_20 >= 1); // Lower capacity constraint
+cover.output:10029:assert(__count_3_20 <= 1); // Upper capacity constraint
+cover.output:10030:assert(__count_3_21 >= 1); // Lower capacity constraint
+cover.output:10031:assert(__count_3_21 <= 1); // Upper capacity constraint
+cover.output:10032:assert(__count_3_22 >= 1); // Lower capacity constraint
+cover.output:10033:assert(__count_3_22 <= 1); // Upper capacity constraint
+cover.output:10034:assert(__count_3_25 >= 1); // Lower capacity constraint
+cover.output:10035:assert(__count_3_25 <= 1); // Upper capacity constraint
+cover.output:10036:assert(__count_3_28 >= 1); // Lower capacity constraint
+cover.output:10037:assert(__count_3_28 <= 1); // Upper capacity constraint
+cover.output:10038:assert(__count_3_29 >= 1); // Lower capacity constraint
+cover.output:10039:assert(__count_3_29 <= 1); // Upper capacity constraint
+cover.output:10040:assert(__count_3_30 >= 1); // Lower capacity constraint
+cover.output:10041:assert(__count_3_30 <= 1); // Upper capacity constraint
+cover.output:10042:assert(__count_3_33 >= 1); // Lower capacity constraint
+cover.output:10043:assert(__count_3_33 <= 1); // Upper capacity constraint
+cover.output:10044:assert(__count_3_36 >= 1); // Lower capacity constraint
+cover.output:10045:assert(__count_3_36 <= 1); // Upper capacity constraint
+cover.output:10046:assert(__count_3_37 >= 1); // Lower capacity constraint
+cover.output:10047:assert(__count_3_37 <= 1); // Upper capacity constraint
+cover.output:10048:assert(__count_3_38 >= 1); // Lower capacity constraint
+cover.output:10049:assert(__count_3_38 <= 1); // Upper capacity constraint
+cover.output:10050:assert(__count_3_41 >= 1); // Lower capacity constraint
+cover.output:10051:assert(__count_3_41 <= 1); // Upper capacity constraint
+cover.output:10052:assert(__count_3_44 >= 1); // Lower capacity constraint
+cover.output:10053:assert(__count_3_44 <= 1); // Upper capacity constraint
+cover.output:10054:assert(__count_3_45 >= 1); // Lower capacity constraint
+cover.output:10055:assert(__count_3_45 <= 1); // Upper capacity constraint
+cover.output:10056:assert(__count_3_46 >= 1); // Lower capacity constraint
+cover.output:10057:assert(__count_3_46 <= 1); // Upper capacity constraint
+cover.output:10058:assert(__count_3_49 >= 1); // Lower capacity constraint
+cover.output:10059:assert(__count_3_49 <= 1); // Upper capacity constraint
+cover.output:10060:assert(__count_3_52 >= 1); // Lower capacity constraint
+cover.output:10061:assert(__count_3_52 <= 1); // Upper capacity constraint
+cover.output:10062:assert(__count_3_53 >= 1); // Lower capacity constraint
+cover.output:10063:assert(__count_3_53 <= 1); // Upper capacity constraint
+cover.output:10064:assert(__count_3_54 >= 1); // Lower capacity constraint
+cover.output:10065:assert(__count_3_54 <= 1); // Upper capacity constraint
+cover.output:10066:assert(__count_3_57 >= 1); // Lower capacity constraint
+cover.output:10067:assert(__count_3_57 <= 1); // Upper capacity constraint
+cover.output:10068:assert(__count_3_60 >= 1); // Lower capacity constraint
+cover.output:10069:assert(__count_3_60 <= 1); // Upper capacity constraint
+cover.output:10070:assert(__count_3_61 >= 1); // Lower capacity constraint
+cover.output:10071:assert(__count_3_61 <= 1); // Upper capacity constraint
+cover.output:10072:assert(__count_3_62 >= 1); // Lower capacity constraint
+cover.output:10073:assert(__count_3_62 <= 1); // Upper capacity constraint
+cover.output:10074:assert(__count_3_65 >= 1); // Lower capacity constraint
+cover.output:10075:assert(__count_3_65 <= 1); // Upper capacity constraint
+cover.output:10076:assert(__count_3_68 >= 1); // Lower capacity constraint
+cover.output:10077:assert(__count_3_68 <= 1); // Upper capacity constraint
+cover.output:10078:assert(__count_3_69 >= 1); // Lower capacity constraint
+cover.output:10079:assert(__count_3_69 <= 1); // Upper capacity constraint
+cover.output:10080:assert(__count_3_70 >= 1); // Lower capacity constraint
+cover.output:10081:assert(__count_3_70 <= 1); // Upper capacity constraint
+cover.output:10082:assert(__count_3_73 >= 1); // Lower capacity constraint
+cover.output:10083:assert(__count_3_73 <= 1); // Upper capacity constraint
+cover.output:10084:assert(__count_3_76 >= 1); // Lower capacity constraint
+cover.output:10085:assert(__count_3_76 <= 1); // Upper capacity constraint
+cover.output:10086:assert(__count_3_77 >= 1); // Lower capacity constraint
+cover.output:10087:assert(__count_3_77 <= 1); // Upper capacity constraint
+cover.output:10088:assert(__count_3_78 >= 1); // Lower capacity constraint
+cover.output:10089:assert(__count_3_78 <= 1); // Upper capacity constraint
+cover.output:10090:assert(__count_3_81 >= 1); // Lower capacity constraint
+cover.output:10091:assert(__count_3_81 <= 1); // Upper capacity constraint
+cover.output:10092:assert(__count_3_84 >= 1); // Lower capacity constraint
+cover.output:10093:assert(__count_3_84 <= 1); // Upper capacity constraint
+cover.output:10094:assert(__count_3_85 >= 1); // Lower capacity constraint
+cover.output:10095:assert(__count_3_85 <= 1); // Upper capacity constraint
+cover.output:10096:assert(__count_3_86 >= 1); // Lower capacity constraint
+cover.output:10097:assert(__count_3_86 <= 1); // Upper capacity constraint
+cover.output:10098:assert(__count_3_89 >= 1); // Lower capacity constraint
+cover.output:10099:assert(__count_3_89 <= 1); // Upper capacity constraint
+cover.output:10100:assert(__count_3_92 >= 1); // Lower capacity constraint
+cover.output:10101:assert(__count_3_92 <= 1); // Upper capacity constraint
+cover.output:10102:assert(__count_3_93 >= 1); // Lower capacity constraint
+cover.output:10103:assert(__count_3_93 <= 1); // Upper capacity constraint
+cover.output:10104:assert(__count_3_94 >= 1); // Lower capacity constraint
+cover.output:10105:assert(__count_3_94 <= 1); // Upper capacity constraint
+cover.output:10106:assert(__count_3_97 >= 1); // Lower capacity constraint
+cover.output:10107:assert(__count_3_97 <= 1); // Upper capacity constraint
+cover.output:10108:assert(__count_3_100 >= 1); // Lower capacity constraint
+cover.output:10109:assert(__count_3_100 <= 1); // Upper capacity constraint
+cover.output:10110:assert(__count_3_101 >= 1); // Lower capacity constraint
+cover.output:10111:assert(__count_3_101 <= 1); // Upper capacity constraint
+cover.output:10112:assert(__count_3_102 >= 1); // Lower capacity constraint
+cover.output:10113:assert(__count_3_102 <= 1); // Upper capacity constraint
+cover.output:10114:assert(__count_3_105 >= 1); // Lower capacity constraint
+cover.output:10115:assert(__count_3_105 <= 1); // Upper capacity constraint
+cover.output:10116:assert(__count_3_108 >= 1); // Lower capacity constraint
+cover.output:10117:assert(__count_3_108 <= 1); // Upper capacity constraint
+cover.output:10118:assert(__count_3_109 >= 1); // Lower capacity constraint
+cover.output:10119:assert(__count_3_109 <= 1); // Upper capacity constraint
+cover.output:10120:assert(__count_3_110 >= 1); // Lower capacity constraint
+cover.output:10121:assert(__count_3_110 <= 1); // Upper capacity constraint
+cover.output:10122:assert(__count_3_113 >= 1); // Lower capacity constraint
+cover.output:10123:assert(__count_3_113 <= 1); // Upper capacity constraint
+cover.output:10124:assert(__count_3_116 >= 1); // Lower capacity constraint
+cover.output:10125:assert(__count_3_116 <= 1); // Upper capacity constraint
+cover.output:10126:assert(__count_3_117 >= 1); // Lower capacity constraint
+cover.output:10127:assert(__count_3_117 <= 1); // Upper capacity constraint
+cover.output:10128:assert(__count_3_118 >= 1); // Lower capacity constraint
+cover.output:10129:assert(__count_3_118 <= 1); // Upper capacity constraint
+cover.output:10130:assert(__count_3_121 >= 1); // Lower capacity constraint
+cover.output:10131:assert(__count_3_121 <= 1); // Upper capacity constraint
+cover.output:10132:assert(__count_8_125 >= 1); // Lower capacity constraint
+cover.output:10133:assert(__count_8_125 <= 1); // Upper capacity constraint
+cover.output:10134:assert(__count_10_125 >= 1); // Lower capacity constraint
+cover.output:10135:assert(__count_10_125 <= 1); // Upper capacity constraint
+cover.output:10136:assert(__count_11_125 >= 1); // Lower capacity constraint
+cover.output:10137:assert(__count_11_125 <= 1); // Upper capacity constraint
+cover.output:10138:assert(__count_15_125 >= 1); // Lower capacity constraint
+cover.output:10139:assert(__count_15_125 <= 1); // Upper capacity constraint
+cover.output:10140:assert(__count_16_125 >= 1); // Lower capacity constraint
+cover.output:10141:assert(__count_16_125 <= 1); // Upper capacity constraint
+cover.output:10142:assert(__count_18_125 >= 1); // Lower capacity constraint
+cover.output:10143:assert(__count_18_125 <= 1); // Upper capacity constraint
+cover.output:10144:assert(__count_19_125 >= 1); // Lower capacity constraint
+cover.output:10145:assert(__count_19_125 <= 1); // Upper capacity constraint
+cover.output:10146:assert(__count_23_125 >= 1); // Lower capacity constraint
+cover.output:10147:assert(__count_23_125 <= 1); // Upper capacity constraint
+cover.output:10148:assert(__count_24_125 >= 1); // Lower capacity constraint
+cover.output:10149:assert(__count_24_125 <= 1); // Upper capacity constraint
+cover.output:10150:assert(__count_26_125 >= 1); // Lower capacity constraint
+cover.output:10151:assert(__count_26_125 <= 1); // Upper capacity constraint
+cover.output:10152:assert(__count_27_125 >= 1); // Lower capacity constraint
+cover.output:10153:assert(__count_27_125 <= 1); // Upper capacity constraint
+cover.output:10154:assert(__count_31_125 >= 1); // Lower capacity constraint
+cover.output:10155:assert(__count_31_125 <= 1); // Upper capacity constraint
+cover.output:10156:assert(__count_32_125 >= 1); // Lower capacity constraint
+cover.output:10157:assert(__count_32_125 <= 1); // Upper capacity constraint
+cover.output:10158:assert(__count_34_125 >= 1); // Lower capacity constraint
+cover.output:10159:assert(__count_34_125 <= 1); // Upper capacity constraint
+cover.output:10160:assert(__count_35_125 >= 1); // Lower capacity constraint
+cover.output:10161:assert(__count_35_125 <= 1); // Upper capacity constraint
+cover.output:10162:assert(__count_39_125 >= 1); // Lower capacity constraint
+cover.output:10163:assert(__count_39_125 <= 1); // Upper capacity constraint
+cover.output:10164:assert(__count_40_125 >= 1); // Lower capacity constraint
+cover.output:10165:assert(__count_40_125 <= 1); // Upper capacity constraint
+cover.output:10166:assert(__count_42_125 >= 1); // Lower capacity constraint
+cover.output:10167:assert(__count_42_125 <= 1); // Upper capacity constraint
+cover.output:10168:assert(__count_43_125 >= 1); // Lower capacity constraint
+cover.output:10169:assert(__count_43_125 <= 1); // Upper capacity constraint
+cover.output:10170:assert(__count_47_125 >= 1); // Lower capacity constraint
+cover.output:10171:assert(__count_47_125 <= 1); // Upper capacity constraint
+cover.output:10172:assert(__count_48_125 >= 1); // Lower capacity constraint
+cover.output:10173:assert(__count_48_125 <= 1); // Upper capacity constraint
+cover.output:10174:assert(__count_50_125 >= 1); // Lower capacity constraint
+cover.output:10175:assert(__count_50_125 <= 1); // Upper capacity constraint
+cover.output:10176:assert(__count_51_125 >= 1); // Lower capacity constraint
+cover.output:10177:assert(__count_51_125 <= 1); // Upper capacity constraint
+cover.output:10178:assert(__count_55_125 >= 1); // Lower capacity constraint
+cover.output:10179:assert(__count_55_125 <= 1); // Upper capacity constraint
+cover.output:10180:assert(__count_56_125 >= 1); // Lower capacity constraint
+cover.output:10181:assert(__count_56_125 <= 1); // Upper capacity constraint
+cover.output:10182:assert(__count_58_125 >= 1); // Lower capacity constraint
+cover.output:10183:assert(__count_58_125 <= 1); // Upper capacity constraint
+cover.output:10184:assert(__count_59_125 >= 1); // Lower capacity constraint
+cover.output:10185:assert(__count_59_125 <= 1); // Upper capacity constraint
+cover.output:10186:assert(__count_63_125 >= 1); // Lower capacity constraint
+cover.output:10187:assert(__count_63_125 <= 1); // Upper capacity constraint
+cover.output:10188:assert(__count_64_125 >= 1); // Lower capacity constraint
+cover.output:10189:assert(__count_64_125 <= 1); // Upper capacity constraint
+cover.output:10190:assert(__count_66_125 >= 1); // Lower capacity constraint
+cover.output:10191:assert(__count_66_125 <= 1); // Upper capacity constraint
+cover.output:10192:assert(__count_67_125 >= 1); // Lower capacity constraint
+cover.output:10193:assert(__count_67_125 <= 1); // Upper capacity constraint
+cover.output:10194:assert(__count_71_125 >= 1); // Lower capacity constraint
+cover.output:10195:assert(__count_71_125 <= 1); // Upper capacity constraint
+cover.output:10196:assert(__count_72_125 >= 1); // Lower capacity constraint
+cover.output:10197:assert(__count_72_125 <= 1); // Upper capacity constraint
+cover.output:10198:assert(__count_74_125 >= 1); // Lower capacity constraint
+cover.output:10199:assert(__count_74_125 <= 1); // Upper capacity constraint
+cover.output:10200:assert(__count_75_125 >= 1); // Lower capacity constraint
+cover.output:10201:assert(__count_75_125 <= 1); // Upper capacity constraint
+cover.output:10202:assert(__count_79_125 >= 1); // Lower capacity constraint
+cover.output:10203:assert(__count_79_125 <= 1); // Upper capacity constraint
+cover.output:10204:assert(__count_80_125 >= 1); // Lower capacity constraint
+cover.output:10205:assert(__count_80_125 <= 1); // Upper capacity constraint
+cover.output:10206:assert(__count_82_125 >= 1); // Lower capacity constraint
+cover.output:10207:assert(__count_82_125 <= 1); // Upper capacity constraint
+cover.output:10208:assert(__count_83_125 >= 1); // Lower capacity constraint
+cover.output:10209:assert(__count_83_125 <= 1); // Upper capacity constraint
+cover.output:10210:assert(__count_87_125 >= 1); // Lower capacity constraint
+cover.output:10211:assert(__count_87_125 <= 1); // Upper capacity constraint
+cover.output:10212:assert(__count_88_125 >= 1); // Lower capacity constraint
+cover.output:10213:assert(__count_88_125 <= 1); // Upper capacity constraint
+cover.output:10214:assert(__count_90_125 >= 1); // Lower capacity constraint
+cover.output:10215:assert(__count_90_125 <= 1); // Upper capacity constraint
+cover.output:10216:assert(__count_91_125 >= 1); // Lower capacity constraint
+cover.output:10217:assert(__count_91_125 <= 1); // Upper capacity constraint
+cover.output:10218:assert(__count_95_125 >= 1); // Lower capacity constraint
+cover.output:10219:assert(__count_95_125 <= 1); // Upper capacity constraint
+cover.output:10220:assert(__count_96_125 >= 1); // Lower capacity constraint
+cover.output:10221:assert(__count_96_125 <= 1); // Upper capacity constraint
+cover.output:10222:assert(__count_98_125 >= 1); // Lower capacity constraint
+cover.output:10223:assert(__count_98_125 <= 1); // Upper capacity constraint
+cover.output:10224:assert(__count_99_125 >= 1); // Lower capacity constraint
+cover.output:10225:assert(__count_99_125 <= 1); // Upper capacity constraint
+cover.output:10226:assert(__count_103_125 >= 1); // Lower capacity constraint
+cover.output:10227:assert(__count_103_125 <= 1); // Upper capacity constraint
+cover.output:10228:assert(__count_104_125 >= 1); // Lower capacity constraint
+cover.output:10229:assert(__count_104_125 <= 1); // Upper capacity constraint
+cover.output:10230:assert(__count_106_125 >= 1); // Lower capacity constraint
+cover.output:10231:assert(__count_106_125 <= 1); // Upper capacity constraint
+cover.output:10232:assert(__count_107_125 >= 1); // Lower capacity constraint
+cover.output:10233:assert(__count_107_125 <= 1); // Upper capacity constraint
+cover.output:10234:assert(__count_111_125 >= 1); // Lower capacity constraint
+cover.output:10235:assert(__count_111_125 <= 1); // Upper capacity constraint
+cover.output:10236:assert(__count_112_125 >= 1); // Lower capacity constraint
+cover.output:10237:assert(__count_112_125 <= 1); // Upper capacity constraint
+cover.output:10238:assert(__count_114_125 >= 1); // Lower capacity constraint
+cover.output:10239:assert(__count_114_125 <= 1); // Upper capacity constraint
+cover.output:10240:assert(__count_115_125 >= 1); // Lower capacity constraint
+cover.output:10241:assert(__count_115_125 <= 1); // Upper capacity constraint
+cover.output:10242:assert(__count_119_125 >= 1); // Lower capacity constraint
+cover.output:10243:assert(__count_119_125 <= 1); // Upper capacity constraint
+cover.output:10244:assert(__count_120_125 >= 1); // Lower capacity constraint
+cover.output:10245:assert(__count_120_125 <= 1); // Upper capacity constraint
+cover.output:10246:assert(__count_122_125 >= 1); // Lower capacity constraint
+cover.output:10247:assert(__count_122_125 <= 1); // Upper capacity constraint
+cover.output:10248:assert(__count_123_125 >= 1); // Lower capacity constraint
+cover.output:10249:assert(__count_123_125 <= 1); // Upper capacity constraint
+cover.output:10250:assert(__count_124_125 == 0); // Dead code
+cover.output:10251:assert(__count_126_127 >= 1); // Lower capacity constraint
+cover.output:10252:assert(__count_126_127 <= 1); // Upper capacity constraint
+cover.output:10256:assert(__count_193_129  <= 51); // Loop counter property
+cover.output:10257:assert(__count_129_191 == 0); // Dead code
+cover.output:10258:assert(__count_130_131 >= 1); // Lower capacity constraint
+cover.output:10259:assert(__count_130_131 <= 1); // Upper capacity constraint
+cover.output:10260:assert(__count_130_136 >= 1); // Lower capacity constraint
+cover.output:10261:assert(__count_130_136 <= 1); // Upper capacity constraint
+cover.output:10262:assert(__count_130_137 >= 1); // Lower capacity constraint
+cover.output:10263:assert(__count_130_137 <= 1); // Upper capacity constraint
+cover.output:10264:assert(__count_130_138 >= 1); // Lower capacity constraint
+cover.output:10265:assert(__count_130_138 <= 1); // Upper capacity constraint
+cover.output:10266:assert(__count_130_139 >= 1); // Lower capacity constraint
+cover.output:10267:assert(__count_130_139 <= 1); // Upper capacity constraint
+cover.output:10268:assert(__count_133_192 >= 1); // Lower capacity constraint
+cover.output:10269:assert(__count_133_192 <= 1); // Upper capacity constraint
+cover.output:10270:assert(__count_130_144 >= 1); // Lower capacity constraint
+cover.output:10271:assert(__count_130_144 <= 1); // Upper capacity constraint
+cover.output:10272:assert(__count_130_145 >= 1); // Lower capacity constraint
+cover.output:10273:assert(__count_130_145 <= 1); // Upper capacity constraint
+cover.output:10274:assert(__count_130_146 >= 1); // Lower capacity constraint
+cover.output:10275:assert(__count_130_146 <= 1); // Upper capacity constraint
+cover.output:10276:assert(__count_130_147 >= 1); // Lower capacity constraint
+cover.output:10277:assert(__count_130_147 <= 1); // Upper capacity constraint
+cover.output:10278:assert(__count_130_152 >= 1); // Lower capacity constraint
+cover.output:10279:assert(__count_130_152 <= 1); // Upper capacity constraint
+cover.output:10280:assert(__count_130_153 >= 1); // Lower capacity constraint
+cover.output:10281:assert(__count_130_153 <= 1); // Upper capacity constraint
+cover.output:10282:assert(__count_130_154 >= 1); // Lower capacity constraint
+cover.output:10283:assert(__count_130_154 <= 1); // Upper capacity constraint
+cover.output:10284:assert(__count_130_155 >= 1); // Lower capacity constraint
+cover.output:10285:assert(__count_130_155 <= 1); // Upper capacity constraint
+cover.output:10286:assert(__count_130_160 >= 1); // Lower capacity constraint
+cover.output:10287:assert(__count_130_160 <= 1); // Upper capacity constraint
+cover.output:10288:assert(__count_130_161 >= 1); // Lower capacity constraint
+cover.output:10289:assert(__count_130_161 <= 1); // Upper capacity constraint
+cover.output:10290:assert(__count_130_162 >= 1); // Lower capacity constraint
+cover.output:10291:assert(__count_130_162 <= 1); // Upper capacity constraint
+cover.output:10292:assert(__count_130_163 >= 1); // Lower capacity constraint
+cover.output:10293:assert(__count_130_163 <= 1); // Upper capacity constraint
+cover.output:10294:assert(__count_130_168 >= 1); // Lower capacity constraint
+cover.output:10295:assert(__count_130_168 <= 1); // Upper capacity constraint
+cover.output:10296:assert(__count_130_169 >= 1); // Lower capacity constraint
+cover.output:10297:assert(__count_130_169 <= 1); // Upper capacity constraint
+cover.output:10298:assert(__count_130_170 >= 1); // Lower capacity constraint
+cover.output:10299:assert(__count_130_170 <= 1); // Upper capacity constraint
+cover.output:10300:assert(__count_130_171 >= 1); // Lower capacity constraint
+cover.output:10301:assert(__count_130_171 <= 1); // Upper capacity constraint
+cover.output:10302:assert(__count_130_176 >= 1); // Lower capacity constraint
+cover.output:10303:assert(__count_130_176 <= 1); // Upper capacity constraint
+cover.output:10304:assert(__count_130_177 >= 1); // Lower capacity constraint
+cover.output:10305:assert(__count_130_177 <= 1); // Upper capacity constraint
+cover.output:10306:assert(__count_130_178 >= 1); // Lower capacity constraint
+cover.output:10307:assert(__count_130_178 <= 1); // Upper capacity constraint
+cover.output:10308:assert(__count_130_179 >= 1); // Lower capacity constraint
+cover.output:10309:assert(__count_130_179 <= 1); // Upper capacity constraint
+cover.output:10310:assert(__count_130_184 == 0); // Dead code
+cover.output:10311:assert(__count_130_185 == 0); // Dead code
+cover.output:10312:assert(__count_130_186 == 0); // Dead code
+cover.output:10313:assert(__count_130_187 == 0); // Dead code
+cover.output:10314:assert(__count_132_192 >= 1); // Lower capacity constraint
+cover.output:10315:assert(__count_132_192 <= 1); // Upper capacity constraint
+cover.output:10316:assert(__count_194 >= 1); // Lower capacity constraint
+cover.output:10317:assert(__count_194 <= 1); // Upper capacity constraint
+cover.output:10318:assert(__count_134_192 >= 1); // Lower capacity constraint
+cover.output:10319:assert(__count_134_192 <= 1); // Upper capacity constraint
+cover.output:10320:assert(__count_135_192 >= 1); // Lower capacity constraint
+cover.output:10321:assert(__count_135_192 <= 1); // Upper capacity constraint
+cover.output:10322:assert(__count_140_192 >= 1); // Lower capacity constraint
+cover.output:10323:assert(__count_140_192 <= 1); // Upper capacity constraint
+cover.output:10324:assert(__count_141_192 >= 1); // Lower capacity constraint
+cover.output:10325:assert(__count_141_192 <= 1); // Upper capacity constraint
+cover.output:10326:assert(__count_142_192 >= 1); // Lower capacity constraint
+cover.output:10327:assert(__count_142_192 <= 1); // Upper capacity constraint
+cover.output:10328:assert(__count_143_192 >= 1); // Lower capacity constraint
+cover.output:10329:assert(__count_143_192 <= 1); // Upper capacity constraint
+cover.output:10330:assert(__count_148_192 >= 1); // Lower capacity constraint
+cover.output:10331:assert(__count_148_192 <= 1); // Upper capacity constraint
+cover.output:10332:assert(__count_149_192 >= 1); // Lower capacity constraint
+cover.output:10333:assert(__count_149_192 <= 1); // Upper capacity constraint
+cover.output:10334:assert(__count_150_192 >= 1); // Lower capacity constraint
+cover.output:10335:assert(__count_150_192 <= 1); // Upper capacity constraint
+cover.output:10336:assert(__count_151_192 >= 1); // Lower capacity constraint
+cover.output:10337:assert(__count_151_192 <= 1); // Upper capacity constraint
+cover.output:10338:assert(__count_156_192 >= 1); // Lower capacity constraint
+cover.output:10339:assert(__count_156_192 <= 1); // Upper capacity constraint
+cover.output:10340:assert(__count_157_192 >= 1); // Lower capacity constraint
+cover.output:10341:assert(__count_157_192 <= 1); // Upper capacity constraint
+cover.output:10342:assert(__count_158_192 >= 1); // Lower capacity constraint
+cover.output:10343:assert(__count_158_192 <= 1); // Upper capacity constraint
+cover.output:10344:assert(__count_159_192 >= 1); // Lower capacity constraint
+cover.output:10345:assert(__count_159_192 <= 1); // Upper capacity constraint
+cover.output:10346:assert(__count_164_192 >= 1); // Lower capacity constraint
+cover.output:10347:assert(__count_164_192 <= 1); // Upper capacity constraint
+cover.output:10348:assert(__count_165_192 >= 1); // Lower capacity constraint
+cover.output:10349:assert(__count_165_192 <= 1); // Upper capacity constraint
+cover.output:10350:assert(__count_166_192 >= 1); // Lower capacity constraint
+cover.output:10351:assert(__count_166_192 <= 1); // Upper capacity constraint
+cover.output:10352:assert(__count_167_192 >= 1); // Lower capacity constraint
+cover.output:10353:assert(__count_167_192 <= 1); // Upper capacity constraint
+cover.output:10354:assert(__count_172_192 >= 1); // Lower capacity constraint
+cover.output:10355:assert(__count_172_192 <= 1); // Upper capacity constraint
+cover.output:10356:assert(__count_173_192 >= 1); // Lower capacity constraint
+cover.output:10357:assert(__count_173_192 <= 1); // Upper capacity constraint
+cover.output:10358:assert(__count_174_192 >= 1); // Lower capacity constraint
+cover.output:10359:assert(__count_174_192 <= 1); // Upper capacity constraint
+cover.output:10360:assert(__count_175_192 >= 1); // Lower capacity constraint
+cover.output:10361:assert(__count_175_192 <= 1); // Upper capacity constraint
+cover.output:10362:assert(__count_180_192 >= 1); // Lower capacity constraint
+cover.output:10363:assert(__count_180_192 <= 1); // Upper capacity constraint
+cover.output:10364:assert(__count_181_192 == 0); // Dead code
+cover.output:10365:assert(__count_182_192 == 0); // Dead code
+cover.output:10366:assert(__count_183_192 == 0); // Dead code
+cover.output:10367:assert(__count_188_192 == 0); // Dead code
+cover.output:10368:assert(__count_189_192 == 0); // Dead code
+cover.output:10369:assert(__count_190_192 == 0); // Dead code
+cover.output:10370:assert(__count_193_194 >= 1); // Lower capacity constraint
+cover.output:10371:assert(__count_193_194 <= 1); // Upper capacity constraint
+cover.output:10375:assert(__count_195_196 >= 1); // Lower capacity constraint
+cover.output:10376:assert(__count_195_196 <= 1); // Upper capacity constraint
+cover.output:10377:assert(__count_198 >= 1); // Lower capacity constraint
+cover.output:10378:assert(__count_198 <= 1); // Upper capacity constraint
+cover.output:10382:assert(__count_214_200  <= 11); // Loop counter property
+cover.output:10383:assert(__count_200_212 == 0); // Dead code
+cover.output:10384:assert(__count_201_202 >= 1); // Lower capacity constraint
+cover.output:10385:assert(__count_201_202 <= 1); // Upper capacity constraint
+cover.output:10386:assert(__count_201_203 >= 1); // Lower capacity constraint
+cover.output:10387:assert(__count_201_203 <= 1); // Upper capacity constraint
+cover.output:10388:assert(__count_201_204 >= 1); // Lower capacity constraint
+cover.output:10389:assert(__count_201_204 <= 1); // Upper capacity constraint
+cover.output:10390:assert(__count_201_207 >= 1); // Lower capacity constraint
+cover.output:10391:assert(__count_201_207 <= 1); // Upper capacity constraint
+cover.output:10392:assert(__count_201_208 >= 1); // Lower capacity constraint
+cover.output:10393:assert(__count_201_208 <= 1); // Upper capacity constraint
+cover.output:10394:assert(__count_201_209 >= 1); // Lower capacity constraint
+cover.output:10395:assert(__count_201_209 <= 1); // Upper capacity constraint
+cover.output:10396:assert(__count_201_210 >= 1); // Lower capacity constraint
+cover.output:10397:assert(__count_201_210 <= 1); // Upper capacity constraint
+cover.output:10398:assert(__count_201_211 >= 1); // Lower capacity constraint
+cover.output:10399:assert(__count_201_211 <= 1); // Upper capacity constraint
+cover.output:10400:assert(__count_205_213 >= 1); // Lower capacity constraint
+cover.output:10401:assert(__count_205_213 <= 1); // Upper capacity constraint
+cover.output:10402:assert(__count_206_213 >= 1); // Lower capacity constraint
+cover.output:10403:assert(__count_206_213 <= 1); // Upper capacity constraint
+cover.output:10404:assert(__count_215 >= 1); // Lower capacity constraint
+cover.output:10405:assert(__count_215 <= 1); // Upper capacity constraint
+cover.output:10406:assert(__count_214_215 >= 1); // Lower capacity constraint
+cover.output:10407:assert(__count_214_215 <= 1); // Upper capacity constraint
+crc.output:135:assert(__count_15_11  <= 43); // Loop counter property
+crc.output:136:assert(__count_5_3  <= 257); // Loop counter property
+crc.output:137:assert(__count_11_12 == 0); // Dead code
+crc.output:138:assert(__count_11_13 >= 40); // Lower capacity constraint
+crc.output:139:assert(__count_11_13 <= 42); // Upper capacity constraint
+crc.output:140:assert(__count_16_17 >= 1); // Lower capacity constraint
+crc.output:141:assert(__count_16_17 <= 1); // Upper capacity constraint
+crc.output:142:assert(__count_16_18 == 0); // Dead code
+crc.output:143:assert(__count_19 >= 1); // Lower capacity constraint
+crc.output:144:assert(__count_19 <= 1); // Upper capacity constraint
+crc.output:145:assert(__count_1_6 <= 1); // Upper capacity constraint
+crc.output:146:assert(__count_3_4 <= 256); // Upper capacity constraint
+crc.output:147:assert(__count_5_6 <= 1); // Upper capacity constraint
+crc.output:148:assert(__count_7_10 >= 1); // Lower capacity constraint
+crc.output:149:assert(__count_7_10 <= 1); // Upper capacity constraint
+crc.output:150:assert(__count_8_9 == 0); // Dead code
+crc.output:151:assert(__count_8_10 == 0); // Dead code
+crc.output:152:assert(__count_3_4 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+crc.output:153:assert(__count_5_6 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+crc.output:154:assert(__count_1_6 > 0 ==> __count_19 > 0); // Execution dependence
+crc.output:155:assert(__count_1_6 > 0 ==> __count_7_10 > 0); // Execution dependence
+crc.output:156:assert(__count_1_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+crc.output:157:assert(__count_1_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+crc.output:158:assert(__count_3_4 > 0 ==> __count_19 > 0); // Execution dependence
+crc.output:159:assert(__count_3_4 > 0 ==> __count_7_10 > 0); // Execution dependence
+crc.output:160:assert(__count_3_4 > 0 ==> __count_11_13 > 0); // Execution dependence
+crc.output:161:assert(__count_3_4 > 0 ==> __count_16_17 > 0); // Execution dependence
+crc.output:162:assert(__count_5_6 > 0 ==> __count_19 > 0); // Execution dependence
+crc.output:163:assert(__count_5_6 > 0 ==> __count_7_10 > 0); // Execution depFound a solution with cost -7620
+crc.output:171:assert(__count_5_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+crc.output:172:assert(__count_5_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+crc.output:178:assert(__count_25_21  <= 9); // Loop counter property
+crc.output:179:assert(__count_21_22 <= 8); // Upper capacity constraint
+crc.output:180:assert(__count_21_23 <= 8); // Upper capacity constraint
+crc.output:181:assert(__count_26 >= 1); // Lower capacity constraint
+crc.output:182:assert(__count_26 <= 1); // Upper capacity constraint
+crc.output:183:assert(__count_25_26 >= 1); // Lower capacity constraint
+crc.output:184:assert(__count_25_26 <= 1); // Upper capacity constraint
+crc.output:185:assert(__count_21_22 > 0 ==> __count_25_26 > 0); // Execution dependence
+crc.output:186:assert(__count_21_22 > 0 ==> __count_26 > 0); // Execution dependence
+crc.output:187:assert(__count_21_23 > 0 ==> __count_25_26 > 0); // Execution dependence
+crc.output:188:assert(__count_21_23 > 0 ==> __count_26 > 0); // Execution dependence
+edn.output:238:assert(__count_4_3  <= 51); // Loop counter property
+edn.output:239:assert(__count_6_2  <= 51); // Loop counter property
+edn.output:240:assert(__count_4_3 >= 2500); // Lower capacity constraint
+edn.output:241:assert(__count_4_3 <= 2500); // Upper capacity constraint
+edn.output:242:assert(__count_7 >= 1); // Lower capacity constraint
+edn.output:243:assert(__count_7 <= 1); // Upper capacity constraint
+edn.output:244:assert(__count_4_5 >= 50); // Lower capacity constraint
+edn.output:245:assert(__count_4_5 <= 50); // Upper capacity constraint
+edn.output:246:assert(__count_6_7 >= 1); // Lower capacity constraint
+edn.output:247:assert(__count_6_7 <= 1); // Upper capacity constraint
+edn.output:253:assert(__count_10_9  <= 151); // Loop counter property
+edn.output:254:assert(__count_10_9 >= 150); // Lower capacity constraint
+edn.output:255:assert(__count_10_9 <= 150); // Upper capacity constraint
+edn.output:256:assert(__count_11 >= 1); // Lower capacity constraint
+edn.output:257:assert(__count_11 <= 1); // Upper capacity constraint
+edn.output:258:assert(__count_10_11 >= 1); // Lower capacity constraint
+edn.output:259:assert(__count_10_11 <= 1); // Upper capacity constraint
+edn.output:265:assert(__count_14_13  <= 100); // Loop counter property
+edn.output:266:assert(__count_14_13 >= 99); // Lower capacity constraint
+edn.output:267:assert(__count_14_13 <= 99); // Upper capacity constraint
+edn.output:268:assert(__count_14_15 >= 1); // Lower capacity constraint
+edn.output:269:assert(__count_14_15 <= 1); // Upper capacity constraint
+edn.output:270:assert(__count_15 >= 1); // Lower capacity constraint
+edn.output:271:assert(__count_15 <= 1); // Upper capacity constraint
+edn.output:277:assert(__count_24 >= 1); // Lower capacity constraint
+edn.output:278:assert(__count_24 <= 1); // Upper capacity constraint
+edn.output:279:assert(__count_16_17 >= 1); // Lower capacity constraint
+edn.output:280:assert(__count_16_17 <= 1); // Upper capacity constraint
+edn.output:286:assert(__count_27_26  <= 17); // Loop counter property
+edn.output:287:assert(__count_27_28 >= 1); // Lower capacity constraint
+edn.output:288:assert(__count_27_28 <= 1); // Upper capacity constraint
+edn.output:289:assert(__count_27_26 >= 16); // Lower capacity constraint
+edn.output:290:assert(__count_27_26 <= 16); // Upper capacity constraint
+edn.output:291:assert(__count_28 >= 1); // Lower capacity constraint
+edn.output:292:assert(__count_28 <= 1); // Upper capacity constraint
+edn.output:298:assert(__count_31_30  <= 151); // Loop counter property
+edn.output:299:assert(__count_32 >= 1); // Lower capacity constraint
+edn.output:300:assert(__count_32 <= 1); // Upper capacity constraint
+edn.output:301:assert(__count_31_32 >= 1); // Lower capacity constraint
+edn.output:302:assert(__count_31_32 <= 1); // Upper capacity constraint
+edn.output:303:assert(__count_31_30 >= 150); // Lower capacity constraint
+edn.output:304:assert(__count_31_30 <= 150); // Upper capacity constraint
+edn.output:310:assert(__count_38_34  <= 51); // Loop counter property
+edn.output:311:assert(__count_36_35  <= 17); // Loop counter property
+edn.output:312:assert(__count_38_39 >= 1); // Lower capacity constraint
+edn.output:313:assert(__count_38_39 <= 1); // Upper capacity constraint
+edn.output:314:assert(__count_36_35 >= 800); // Lower capacity constraint
+edn.output:315:assert(__count_36_35 <= 800); // Upper capacity constraint
+edn.output:316:assert(__count_36_37 >= 50); // Lower capacity constraint
+edn.output:317:assert(__count_36_37 <= 50); // Upper capacity constraint
+edn.output:318:assert(__count_39 >= 1); // Lower capacity constraint
+edn.output:319:assert(__count_39 <= 1); // Upper capacity constraint
+edn.output:325:assert(__count_44_43  <= 5); // Loop counter property
+edn.output:326:assert(__count_46_42  <= 9); // Loop counter property
+edn.output:327:assert(__count_48_41  <= 3); // Loop counter property
+edn.output:328:assert(__count_46_47 >= 2); // Lower capacity constraint
+edn.output:329:assert(__count_46_47 <= 2); // Upper capacity constraint
+edn.output:330:assert(__count_48_49 >= 1); // Lower capacity constraint
+edn.output:331:assert(__count_48_49 <= 1); // Upper capacity constraint
+edn.output:332:assert(__count_44_43 >= 64); // Lower capacity constraint
+edn.output:333:assert(__count_44_43 <= 64); // Upper capacity constraint
+edn.output:334:assert(__count_44_45 >= 16); // Lower capacity constraint
+edn.output:335:assert(__count_44_45 <= 16); // Upper capacity constraint
+edn.output:336:assert(__count_49 >= 1); // Lower capacity constraint
+edn.output:337:assert(__count_49 <= 1); // Upper capacity constraint
+edn.output:343:assert(__count_52_51  <= 51); // Loop counter property
+edn.output:344:assert(__count_52_51 >= 50); // Lower capacity constraint
+edn.output:345:assert(__count_52_51 <= 50); // Upper capacity constraint
+edn.output:346:assert(__count_52_53 >= 1); // Lower capacity constraint
+edn.output:347:assert(__count_52_53 <= 1); // Upper capacity constraint
+edn.output:348:assert(__count_53 >= 1); // Lower capacity constraint
+edn.output:349:assert(__count_53 <= 1); // Upper capacity constraint
+embedded.output:299:assert(__count_8_7  <= 3); // Loop counter property
+embedded.output:300:assert(__count_14_10  <= 17); // Loop counter property
+embedded.output:301:assert(__count_15 >= 1); // Lower capacity constraint
+embedded.output:302:assert(__count_15 <= 1); // Upper capacity constraint
+embedded.output:303:assert(__count_1_5 <= 1); // Upper capacity constraint
+embedded.output:304:assert(__count_2_5 <= 1); // Upper capacity constraint
+embedded.output:305:assert(__count_3_5 <= 1); // Upper capacity constraint
+embedded.output:306:assert(__count_4_5 <= 1); // Upper capacity constraint
+embedded.output:307:assert(__count_8_9 <= 1); // Upper capacity constraint
+embedded.output:308:assert(__count_8_7 <= 2); // Upper capacity constraint
+embedded.output:309:assert(__count_10_11 >= 16); // Lower capacity constraint
+embedded.output:310:assert(__count_10_11 <= 16); // Upper capacity constraint
+embedded.output:311:assert(__count_8_9 > 0 ==> __count_8_7 > 0); // Mutual inclusion
+embedded.output:312:assert(__count_8_7 > 0 ==> __count_8_9 > 0); // Mutual inclusion
+embedded.output:313:assert(__count_1_5 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:314:assert(__count_1_5 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:315:assert(__count_2_5 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:316:assert(__count_2_5 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:317:assert(__count_3_5 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:318:assert(__count_3_5 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:319:assert(__count_4_5 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:320:assert(__count_4_5 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:321:assert(__count_8_9 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:322:assert(__count_8_9 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:323:assert(__count_8_7 > 0 ==> __count_15 > 0); // Execution dependence
+embedded.output:324:assert(__count_8_7 > 0 ==> __count_10_11 > 0); // Execution dependence
+embedded.output:330:assert(__count_21_22 <= 1); // Upper capacity constraint
+embedded.output:331:assert(__count_21_23 <= 1); // Upper capacity constraint
+embedded.output:332:assert(__count_17_18 <= 1); // Upper capacity constraint
+embedded.output:333:assert(__count_17_19 <= 1); // Upper capacity constraint
+embedded.output:334:assert(__count_24 >= 1); // Lower capacity constraint
+embedded.output:335:assert(__count_24 <= 1); // Upper capacity constraint
+embedded.output:336:assert(__count_17_18 > 0 ==> __count_24 > 0); // Execution dependence
+embedded.output:337:assert(__count_17_19 > 0 ==> __count_24 > 0); // Execution dependence
+embedded.output:338:assert(__count_21_22 > 0 ==> __count_24 > 0); // Execution dependence
+embedded.output:339:assert(__count_21_23 > 0 ==> __count_24 > 0); // Execution dependence
+embedded.output:345:assert(__count_48_44  <= 33); // Loop counter property
+embedded.output:346:assert(__count_42_41  <= 9); // Loop counter property
+embedded.output:347:assert(__count_39_38  <= 5); // Loop counter property
+embedded.output:348:assert(__count_36_26  <= 17); // Loop counter property
+embedded.output:349:assert(__count_27_29 <= 16); // Upper capacity constraint
+embedded.output:350:assert(__count_28_29 <= 16); // Upper capacity constraint
+embedded.output:351:assert(__count_29_30 <= 16); // Upper capacity constraint
+embedded.output:352:assert(__count_29_31 <= 16); // Upper capacity constraint
+embedded.output:353:assert(__count_32_33 <= 15); // Upper capacity constraint
+embedded.output:354:assert(__count_32_34 >= 1); // Lower capacity constraint
+embedded.output:355:assert(__count_32_34 <= 16); // Upper capacity constraint
+embedded.output:356:assert(__count_36_37 >= 1); // Lower capacity constraint
+embedded.output:357:assert(__count_36_37 <= 1); // Upper capacity constraint
+embedded.output:358:assert(__count_49 >= 1); // Lower capacity constraint
+embedded.output:359:assert(__count_49 <= 1); // Upper capacity constraint
+embedded.output:360:assert(__count_44_45 >= 8); // Lower capacity constraint
+embedded.output:361:assert(__count_44_45 <= 23); // Upper capacity constraint
+embedded.output:362:assert(__count_44_46 >= 9); // Lower capacity constraint
+embedded.output:363:assert(__count_44_46 <= 24); // Upper capacity constraint
+embedded.output:364:assert(__count_42_41 >= 8); // Lower capacity constraint
+embedded.output:365:assert(__count_42_41 <= 8); // Upper capacity constraint
+embedded.output:366:assert(__count_39_38 >= 4); // Lower capacity constraint
+embedded.output:367:assert(__count_39_38 <= 4); // Upper capacity constraint
+embedded.output:368:assert(__count_27_29 > 0 ==> __count_32_34 > 0); // Execution dependence
+embedded.output:369:assert(__count_27_29 > 0 ==> __count_36_37 > 0); // Execution dependence
+embedded.output:370:assert(__count_27_29 > 0 ==> __count_39_38 > 0); // Execution dependence
+embedded.output:371:assert(__count_27_29 > 0 ==> __count_42_41 > 0); // Execution dependence
+embedded.output:372:assert(__count_27_29 > 0 ==> __count_49 > 0); // Execution dependence
+embedded.output:373:assert(__count_27_29 > 0 ==> __count_44_45 > 0); // Execution dependence
+embedded.output:374:assert(__count_27_29 > 0 ==> __count_44_46 > 0); // Execution dependence
+embedded.output:375:assert(__count_28_29 > 0 ==> __count_32_34 > 0); // Execution dependence
+embedded.output:376:assert(__count_28_29 > 0 ==> __count_36_37 > 0); // Execution dependence
+embedded.output:377:assert(__count_28_29 > 0 ==> __count_39_38 > 0); // Execution dependence
+embedded.output:378:assert(__count_28_29 > 0 ==> __count_42_41 > 0); // Execution dependence
+embedded.output:379:assert(__count_28_29 > 0 ==> __count_49 > 0); // Execution dependence
+embedded.output:380:assert(__count_28_29 > 0 ==> __count_44_45 > 0); // Execution dependence
+embedded.output:381:assert(__count_28_29 > 0 ==> __count_44_46 > 0); // Execution dependence
+embedded.output:382:assert(__count_29_30 > 0 ==> __count_32_34 > 0); // Execution dependence
+embedded.output:383:assert(__count_29_30 > 0 ==> __count_36_37 > 0); // Execution dependence
+embedded.output:384:assert(__count_29_30 > 0 ==> __count_39_38 > 0); // Execution dependence
+embedded.output:385:assert(__count_29_30 > 0 ==> __count_42_41 > 0); // Execution dependence
+embedded.output:386:assert(__count_29_30 > 0 ==> __count_49 > 0); // Execution dependence
+embedded.output:387:assert(__count_29_30 > 0 ==> __count_44_45 > 0); // Execution dependence
+embedded.output:388:assert(__count_29_30 > 0 ==> __count_44_46 > 0); // Execution dependence
+embedded.output:389:assert(__count_29_31 > 0 ==> __count_32_34 > 0); // Execution dependence
+embedded.output:390:assert(__count_29_31 > 0 ==> __count_36_37 > 0); // Execution dependence
+embedded.output:391:assert(__count_29_31 > 0 ==> __count_39_38 > 0); // Execution dependence
+embedded.output:392:assert(__count_29_31 > 0 ==> __count_42_41 > 0); // Execution dependence
+embedded.output:393:assert(__count_29_31 > 0 ==> __count_49 > 0); // Execution dependence
+embedded.output:394:assert(__count_29_31 > 0 ==> __count_44_45 > 0); // Execution dependence
+embedded.output:395:assert(__count_29_31 > 0 ==> __count_44_46 > 0); // Execution dependence
+embedded.output:396:assert(__count_32_33 > 0 ==> __count_32_34 > 0); // Execution dependence
+embedded.output:397:assert(__count_32_33 > 0 ==> __count_36_37 > 0); // Execution dependence
+embedded.output:398:assert(__count_32_33 > 0 ==> __count_39_38 > 0); // Execution dependence
+embedded.output:399:assert(__count_32_33 > 0 ==> __count_42_41 > 0); // Execution dependence
+embedded.output:400:assert(__count_32_33 > 0 ==> __count_49 > 0); // Execution dependence
+embedded.output:401:assert(__count_32_33 > 0 ==> __count_44_45 > 0); // Execution dependence
+embedded.output:402:assert(__count_32_33 > 0 ==> __count_44_46 > 0); // Execution dependence
+embedded.output:408:assert(__count_63_61  <= 17); // Loop counter property
+embedded.output:409:assert(__count_59_56  <= 29); // Loop counter property
+embedded.output:410:assert(__count_80_77  <= 33); // Loop counter property
+embedded.output:411:assert(__count_75_70  <= 17); // Loop counter property
+embedded.output:412:assert(__count_68_65  <= 33); // Loop counter property
+embedded.output:413:assert(__count_53_52  <= 32); // Loop counter property
+embedded.output:414:assert(__count_50_54 == 0); // Dead code
+embedded.output:415:assert(__count_53_52 >= 31); // Lower capacity constraint
+embedded.output:416:assert(__count_53_52 <= 31); // Upper capacity constraint
+embedded.output:417:assert(__count_53_54 >= 1); // Lower capacity constraint
+embedded.output:418:assert(__count_53_54 <= 1); // Upper capacity constraint
+embedded.output:419:assert(__count_54_64 == 0); // Dead code
+embedded.output:420:assert(__count_80_77 >= 32); // Lower capacity constraint
+embedded.output:421:assert(__count_80_77 <= 32); // Upper capacity constraint
+embedded.output:422:assert(__count_56_57 >= 28); // Lower capacity constraint
+embedded.output:423:assert(__count_56_57 <= 28); // Upper capacity constraint
+embedded.output:424:assert(__count_59_60 >= 1); // Lower capacity constraint
+embedded.output:425:assert(__count_59_60 <= 1); // Upper capacity constraint
+embedded.output:426:assert(__count_61_62 >= 16); // Lower capacity constraint
+embedded.output:427:assert(__count_61_62 <= 16); // Upper capacity constraint
+embedded.output:428:assert(__count_81 >= 1); // Lower capacity constraint
+embedded.output:429:assert(__count_81 <= 1); // Upper capacity constraint
+embedded.output:430:assert(__count_68_65 >= 32); // Lower capacity constraint
+embedded.output:431:assert(__count_68_65 <= 32); // Upper capacity constraint
+embedded.output:432:assert(__count_70_72 >= 16); // Lower capacity constraint
+embedded.output:433:assert(__count_70_72 <= 16); // Upper capacity constraint
+embedded.output:434:assert(__count_70_71 == 0); // Dead code
+fastDiscreteCosineTransform.output:54:assert(__count_6_5  <= 9); // Loop counter property
+fastDiscreteCosineTransform.output:55:assert(__count_3_2  <= 9); // Loop counter property
+fastDiscreteCosineTransform.output:56:assert(__count_3_2 >= 8); // Lower capacity constraint
+fastDiscreteCosineTransform.output:57:assert(__count_3_2 <= 8); // Upper capacity constraint
+fastDiscreteCosineTransform.output:58:assert(__count_3_4 >= 1); // Lower capacity constraint
+fastDiscreteCosineTransform.output:59:assert(__count_3_4 <= 1); // Upper capacity constraint
+fastDiscreteCosineTransform.output:60:assert(__count_6_5 >= 8); // Lower capacity constraint
+fastDiscreteCosineTransform.output:61:assert(__count_6_5 <= 8); // Upper capacity constraint
+fastDiscreteCosineTransform.output:62:assert(__count_7 >= 1); // Lower capacity constraint
+fastDiscreteCosineTransform.output:63:assert(__count_7 <= 1); // Upper capacity constraint
+fft.output:235:assert(__count_2 >= 1); // Lower capacity constraint
+fft.output:236:assert(__count_2 <= 1); // Upper capacity constraint
+fft.output:237:assert(__count_1_2 >= 1); // Lower capacity constraint
+fft.output:238:assert(__count_1_2 <= 1); // Upper capacity constraint
+fft.output:244:assert(__count_19_18  <= 2); // Loop counter property
+fft.output:245:assert(__count_21_15  <= 5); // Loop counter property
+fft.output:246:assert(__count_37_36  <= 9); // Loop counter property
+fft.output:247:assert(__count_30_29  <= 3); // Loop counter property
+fft.output:248:assert(__count_32_25  <= 8); // Loop counter property
+fft.output:249:assert(__count_23_14  <= 2); // Loop counter property
+fft.output:250:assert(__count_9_8  <= 2); // Loop counter property
+fft.output:251:assert(__count_25_26 >= 2); // Lower capacity constraint
+fft.output:252:assert(__count_25_26 <= 2); // Upper capacity constraint
+fft.output:253:assert(__count_25_27 >= 5); // Lower capacity constraint
+fft.output:254:assert(__count_25_27 <= 5); // Upper capacity constraint
+fft.output:255:assert(__count_30_29 >= 4); // Lower capacity constraint
+fft.output:256:assert(__count_30_29 <= 4); // Upper capacity constraint
+fft.output:257:assert(__count_37_38 <= 1); // Upper capacity constraint
+fft.output:258:assert(__count_39 >= 1); // Lower capacity constraint
+fft.output:259:assert(__count_39 <= 1); // Upper capacity constraint
+fft.output:260:assert(__count_37_36 <= 8); // Upper capacity constraint
+fft.output:261:assert(__count_33_34 <= 1); // Upper capacity constraint
+fft.output:262:assert(__count_9_8 >= 1); // Lower capacity constraint
+fft.output:263:assert(__count_9_8 <= 1); // Upper capacity constraint
+fft.output:264:assert(__count_11_13 <= 1); // Upper capacity constraint
+fft.output:265:assert(__count_12_13 <= 1); // Upper capacity constraint
+fft.output:266:assert(__count_19_18 >= 4); // Lower capacity constraint
+fft.output:267:assert(__count_19_18 <= 4); // Upper capacity constraint
+fft.output:268:assert(__count_19_20 >= 4); // Lower capacity constraint
+fft.output:269:assert(__count_19_20 <= 4); // Upper capacity constraint
+fft.output:270:assert(__count_21_22 >= 1); // Lower capacity constraint
+fft.output:271:assert(__count_21_22 <= 1); // Upper capacity constraint
+fft.output:272:assert(__count_4_39 == 0); // Dead code
+fft.output:273:assert(__count_33_34 > 0 ==> __count_12_13 > 0); // Mutual inclusion
+fft.output:274:assert(__count_12_13 > 0 ==> __count_33_34 > 0); // Mutual inclusion
+fft.output:275:assert(__count_37_36 > 0 ==> __count_11_13 > 0); // Mutual inclusion
+fft.output:276:assert(__count_11_13 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+fft.output:277:assert(__count_37_38 > 0 ==> __count_11_13 > 0); // Mutual inclusion
+fft.output:278:assert(__count_11_13 > 0 ==> __count_37_38 > 0); // Mutual inclusion
+fft.output:279:assert(__count_37_38 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+fft.output:280:assert(__count_37_36 > 0 ==> __count_37_38 > 0); // Mutual inclusion
+fft.output:281:assert(__count_33_34 > 0 ==> __count_11_13 == 0); // Mutual exclusion
+fft.output:282:assert(__count_11_13 > 0 ==> __count_33_34 == 0); // Mutual exclusion
+fft.output:283:assert(__count_37_36 > 0 ==> __count_12_13 == 0); // Mutual exclusion
+fft.output:284:assert(__count_12_13 > 0 ==> __count_37_36 == 0); // Mutual exclusion
+fft.output:285:assert(__count_37_38 > 0 ==> __count_12_13 == 0); // Mutual exclusion
+fft.output:286:assert(__count_12_13 > 0 ==> __count_37_38 == 0); // Mutual exclusion
+fft.output:287:assert(__count_11_13 > 0 ==> __count_39 > 0); // Execution dependence
+fft.output:288:assert(__count_11_13 > 0 ==> __count_9_8 > 0); // Execution dependence
+fft.output:289:assert(__count_11_13 > 0 ==> __count_19_18 > 0); // Execution dependence
+fft.output:290:assert(__count_11_13 > 0 ==> __count_19_20 > 0); // Execution dependence
+fft.output:291:assert(__count_11_13 > 0 ==> __count_21_22 > 0); // Execution dependence
+fft.output:292:assert(__count_11_13 > 0 ==> __count_25_26 > 0); // Execution dependence
+fft.output:293:assert(__count_11_13 > 0 ==> __count_25_27 > 0); // Execution dependence
+fft.output:294:assert(__count_11_13 > 0 ==> __count_30_29 > 0); // Execution dependence
+fft.output:295:assert(__count_12_13 > 0 ==> __count_39 > 0); // Execution dependence
+fft.output:296:assert(__count_12_13 > 0 ==> __count_9_8 > 0); // Execution dependence
+fft.output:297:assert(__count_12_13 > 0 ==> __count_19_18 > 0); // Execution dependence
+fft.output:298:assert(__count_12_13 > 0 ==> __count_19_20 > 0); // Execution dependence
+fft.output:299:assert(__count_12_13 > 0 ==> __count_21_22 > 0); // Execution dependence
+fft.output:300:assert(__count_12_13 > 0 ==> __count_25_26 > 0); // Execution dependence
+fft.output:301:assert(__count_12_13 > 0 ==> __count_25_27 > 0); // Execution dependence
+fft.output:302:assert(__count_12_13 > 0 ==> __count_30_29 > 0); // Execution dependence
+fft.output:303:assert(__count_33_34 > 0 ==> __count_39 > 0); // Execution dependence
+fft.output:304:assert(__count_33_34 > 0 ==> __count_9_8 > 0); // Execution dependence
+fft.output:305:assert(__count_33_34 > 0 ==> __count_19_18 > 0); // Execution dependence
+fft.output:306:assert(__count_33_34 > 0 ==> __count_19_20 > 0); // Execution dependence
+fft.output:307:assert(__count_33_34 > 0 ==> __count_21_22 > 0); // Execution dependence
+fft.output:308:assert(__count_33_34 > 0 ==> __count_25_26 > 0); // Execution dependence
+fft.output:309:assert(__count_33_34 > 0 ==> __count_25_27 > 0); // Execution dependence
+fft.output:310:assert(__count_33_34 > 0 ==> __count_30_29 > 0); // Execution dependence
+fft.output:311:assert(__count_37_36 > 0 ==> __count_39 > 0); // Execution dependence
+fft.output:312:assert(__count_37_36 > 0 ==> __count_9_8 > 0); // Execution dependence
+fft.output:313:assert(__count_37_36 > 0 ==> __count_19_18 > 0); // Execution dependence
+fft.output:314:assert(__count_37_36 > 0 ==> __count_19_20 > 0); // Execution dependence
+fft.output:315:assert(__count_37_36 > 0 ==> __count_21_22 > 0); // Execution dependence
+fft.output:316:assert(__count_37_36 > 0 ==> __count_25_26 > 0); // Execution dependence
+fft.output:317:assert(__count_37_36 > 0 ==> __count_25_27 > 0); // Execution dependence
+fft.output:318:assert(__count_37_36 > 0 ==> __count_30_29 > 0); // Execution dependence
+fft.output:319:assert(__count_37_38 > 0 ==> __count_39 > 0); // Execution dependence
+fft.output:320:assert(__count_37_38 > 0 ==> __count_9_8 > 0); // Execution dependence
+fft.output:321:assert(__count_37_38 > 0 ==> __count_19_18 > 0); // Execution dependence
+fft.output:322:assert(__count_37_38 > 0 ==> __count_19_20 > 0); // Execution dependence
+fft.output:323:assert(__count_37_38 > 0 ==> __count_21_22 > 0); // Execution dependence
+fft.output:324:assert(__count_37_38 > 0 ==> __count_25_26 > 0); // Execution dependence
+fft.output:325:assert(__count_37_38 > 0 ==> __count_25_27 > 0); // Execution dependence
+fft.output:326:assert(__count_37_38 > 0 ==> __count_30_29 > 0); // Execution dependence
+fft.output:332:assert(__count_48_49  <= 8); // Loop counter property
+fft.output:333:assert(__count_45_44  <= 1); // Loop counter property
+fft.output:334:assert(__count_42_41  <= 1); // Loop counter property
+fft.output:335:assert(__count_42_41 == 0); // Dead code
+fft.output:336:assert(__count_50 >= 1); // Lower capacity constraint
+fft.output:337:assert(__count_50 <= 1); // Upper capacity constraint
+fft.output:338:assert(__count_48_49 >= 1); // Lower capacity constraint
+fft.output:339:assert(__count_48_49 <= 7); // Upper capacity constraint
+fft.output:340:assert(__count_42_43 >= 1); // Lower capacity constraint
+fft.output:341:assert(__count_42_43 <= 1); // Upper capacity constraint
+fft.output:342:assert(__count_45_44 == 0); // Dead code
+fft.output:348:assert(__count_51_52 <= 1); // Upper capacity constraint
+fft.output:349:assert(__count_51_53 <= 1); // Upper capacity constraint
+fft.output:350:assert(__count_54 >= 1); // Lower capacity constraint
+fft.output:351:assert(__count_54 <= 1); // Upper capacity constraint
+fft.output:352:assert(__count_51_52 > 0 ==> __count_54 > 0); // Execution dependence
+fft.output:353:assert(__count_51_53 > 0 ==> __count_54 > 0); // Execution dependence
+fft.output:359:assert(__count_55 >= 1); // Lower capacity constraint
+fft.output:360:assert(__count_55 <= 1); // Upper capacity constraint
+finiteImpulseResponse.output:66:assert(__count_25_24  <= 35); // Loop counter property
+finiteImpulseResponse.output:67:assert(__count_33_23  <= 701); // Loop counter property
+finiteImpulseResponse.output:68:assert(__count_33_34 >= 1); // Lower capacity constraint
+finiteImpulseResponse.output:69:assert(__count_33_34 <= 1); // Upper capacity constraint
+finiteImpulseResponse.output:70:assert(__count_25_24 >= 23494); // Lower capacity constraint
+finiteImpulseResponse.output:71:assert(__count_25_24 <= 23494); // Upper capacity constraint
+finiteImpulseResponse.output:72:assert(__count_27_28 >= 18); // Lower capacity constraint
+finiteImpulseResponse.output:73:assert(__count_27_28 <= 18); // Upper capacity constraint
+finiteImpulseResponse.output:74:assert(__count_34 >= 1); // Lower capacity constraint
+finiteImpulseResponse.output:75:assert(__count_34 <= 1); // Upper capacity constraint
+finiteImpulseResponse.output:76:assert(__count_29_30 >= 17); // Lower capacity constraint
+finiteImpulseResponse.output:77:assert(__count_29_30 <= 17); // Upper capacity constraint
+finiteImpulseResponse.output:78:assert(__count_29_31 >= 665); // Lower capacity constraint
+finiteImpulseResponse.output:79:assert(__count_29_31 <= 665); // Upper capacity constraint
+insertsort.output:59:assert(__count_4_5  <= 98); // Loop counter property
+insertsort.output:60:assert(__count_7_2  <= 100); // Loop counter property
+insertsort.output:61:assert(__count_8 >= 1); // Lower capacity constraint
+insertsort.output:62:assert(__count_8 <= 1); // Upper capacity constraint
+insertsort.output:63:assert(__count_7_8 >= 1); // Lower capacity constraint
+insertsort.output:64:assert(__count_7_8 <= 1); // Upper capacity constraint
+insertsort.output:65:assert(__count_4_5 >= 1979); // Lower capacity constraint
+insertsort.output:66:assert(__count_4_5 <= 3385); // Upper capacity constraint
+insertsort.output:67:assert(__count_4_6 >= 99); // Lower capacity constraint
+insertsort.output:68:assert(__count_4_6 <= 99); // Upper capacity constraint
+insertsort.output:69:assert(__count_5_6 == 0); // Dead code
+janne_complex.output:83:assert(__count_9_2  <= 7); // Loop counter property
+janne_complex.output:84:assert(__count_11_9  <= 11); // Loop counter property
+janne_complex.output:85:assert(__count_12 >= 1); // Lower capacity constraint
+janne_complex.output:86:assert(__count_12 <= 1); // Upper capacity constraint
+janne_complex.output:87:assert(__count_2_3 <= 5); // Upper capacity constraint
+janne_complex.output:88:assert(__count_2_4 <= 7); // Upper capacity constraint
+janne_complex.output:89:assert(__count_5_8 <= 7); // Upper capacity constraint
+janne_complex.output:90:assert(__count_6_8 <= 5); // Upper capacity constraint
+janne_complex.output:91:assert(__count_6_7 == 0); // Dead code
+janne_complex.output:92:assert(__count_9_10 <= 10); // UFound a solution with cost -14850
+janne_complex.output:97:assert(__count_11_12 >= 1); // Lower capacity constraint
+janne_complex.output:98:assert(__count_11_12 <= 1); // Upper capacity constraint
+janne_complex.output:99:assert(__count_2_3 > 0 ==> __count_6_8 > 0); // Mutual inclusion
+janne_complex.output:100:assert(__count_6_8 > 0 ==> __count_2_3 > 0); // Mutual inclusion
+janne_complex.output:101:assert(__count_2_3 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+janne_complex.output:102:assert(__count_9_10 > 0 ==> __count_2_3 > 0); // Mutual inclusion
+janne_complex.output:103:assert(__count_2_4 > 0 ==> __count_5_8 > 0); // Mutual inclusion
+janne_complex.output:104:assert(__count_5_8 > 0 ==> __count_2_4 > 0); // Mutual inclusion
+janne_complex.output:105:assert(__count_6_8 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+janne_complex.output:106:assert(__count_9_10 > 0 ==> __count_6_8 > 0); // Mutual inclusion
+janne_complex.output:107:assert(__count_2_3 > 0 ==> __count_12 > 0); // Execution dependence
+janne_complex.output:108:assert(__count_2_3 > 0 ==> __count_11_12 > 0); // Execution dependence
+janne_complex.output:109:assert(__count_2_4 > 0 ==> __count_12 > 0); // Execution dependence
+janne_complex.output:110:assert(__count_2_4 > 0 ==> __count_2_3 > 0); // Execution dependence
+janne_complex.output:111:assert(__count_2_4 > 0 ==> __count_6_8 > 0); // Execution dependence
+janne_complex.output:112:assert(__count_2_4 > 0 ==> __count_9_10 > 0); // Execution dependence
+janne_complex.output:113:assert(__count_2_4 > 0 ==> __count_11_12 > 0); // Execution dependence
+janne_complex.output:114:assert(__count_5_8 > 0 ==> __count_12 > 0); // Execution dependence
+janne_complex.output:115:assert(__count_5_8 > 0 ==> __count_2_3 > 0); // Execution dependence
+janne_complex.output:116:assert(__count_5_8 > 0 ==> __count_6_8 > 0); // Execution dependence
+janne_complex.output:117:assert(__count_5_8 > 0 ==> __count_9_10 > 0); // Execution dependence
+janne_complex.output:118:assert(__count_5_8 > 0 ==> __count_11_12 > 0); // Execution dependence
+janne_complex.output:119:assert(__count_6_8 > 0 ==> __count_12 > 0); // Execution dependence
+janne_complex.output:120:assert(__count_6_8 > 0 ==> __count_11_12 > 0); // Execution dependence
+janne_complex.output:121:assert(__count_9_10 > 0 ==> __count_12 > 0); // Execution dependence
+janne_complex.output:122:assert(__count_9_10 > 0 ==> __count_11_12 > 0); // Execution dependence
+lcdnum.output:89:assert(__count_2_12 <= 1); // Upper capacity constraint
+lcdnum.output:90:assert(__count_2_13 == 0); // Dead code
+lcdnum.output:91:assert(__count_2_14 == 0); // Dead code
+lcdnum.output:92:assert(__count_18_20 <= 1); // Upper capacity constraint
+lcdnum.output:93:assert(__count_3_20 <= 1); // Upper capacity constraint
+lcdnum.output:94:assert(__count_7_20 == 0); // Dead code
+lcdnum.output:95:assert(__count_8_20 <= 1); // Upper capacity constraint
+lcdnum.output:96:assert(__count_10_20 <= 1); // Upper capacity constraint
+lcdnum.output:97:assert(__count_11_20 <= 1); // Upper capacity constraint
+lcdnum.output:98:assert(__count_15_20 <= 1); // Upper capacity constraint
+lcdnum.output:99:assert(__count_16_20 == 0); // Dead code
+lcdnum.output:100:assert(__count_1_19 == 0); // Dead code
+lcdnum.output:101:assert(__count_2_5 <= 1); // Upper capacity constraint
+lcdnum.output:102:assert(__count_2_4 <= 1); // Upper capacity constraint
+lcdnum.output:103:assert(__count_20 >= 1); // Lower capacity constraint
+lcdnum.output:104:assert(__count_20 <= 1); // Upper capacity constraint
+lcdnum.output:105:assert(__count_2_6 <= 1); // Upper capacity constraint
+lcdnum.output:106:assert(__count_2_9 <= 1); // Upper capacity constraint
+lcdnum.output:107:assert(__count_2_17 == 0); // Dead code
+lcdnum.output:108:assert(__count_2_4 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:109:assert(__count_2_5 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:110:assert(__count_2_6 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:111:assert(__count_2_9 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:112:assert(__count_2_12 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:113:assert(__count_3_20 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:114:assert(__count_8_20 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:115:assert(__count_10_20 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:116:assert(__count_11_20 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:117:assert(__count_15_20 > 0 ==> __count_20 > 0); // Execution dependence
+lcdnum.output:118:assert(__count_18_20 > 0 ==> __count_20 > 0); // Execution dependence
+LUdecomposition.output:180:assert(__count_32_31  <= 6); // Loop counter property
+LUdecomposition.output:181:assert(__count_34_30  <= 6); // Loop counter property
+LUdecomposition.output:182:assert(__count_26_25  <= 6); // Loop counter property
+LUdecomposition.output:183:assert(__count_28_24  <= 6); // Loop counter property
+LUdecomposition.output:184:assert(__count_18_17  <= 6); // Loop counter property
+LUdecomposition.output:185:assert(__count_20_16  <= 6); // Loop counter property
+LUdecomposition.output:186:assert(__count_12_11  <= 5); // Loop counter property
+LUdecomposition.output:187:assert(__count_14_9  <= 6); // Loop counter property
+LUdecomposition.output:188:assert(__count_22_5  <= 6); // Loop counter property
+LUdecomposition.output:189:assert(__count_36 >= 1); // Lower capacity constraint
+LUdecomposition.output:190:assert(__count_36 <= 1); // Upper capacity constraint
+LUdecomposition.output:191:assert(__count_1_3 == 0); // Dead code
+LUdecomposition.output:192:assert(__count_2_3 == 0); // Dead code
+LUdecomposition.output:193:assert(__count_26_27 >= 5); // Lower capacity constraint
+LUdecomposition.output:194:assert(__count_26_27 <= 5); // Upper capacity constraint
+LUdecomposition.output:195:assert(__count_26_25 >= 15); // Lower capacity constraint
+LUdecomposition.output:196:assert(__count_26_25 <= 15); // Upper capacity constraint
+LUdecomposition.output:197:assert(__count_6_7 == 0); // Dead code
+LUdecomposition.output:198:assert(__count_32_33 >= 5); // Lower capacity constraint
+LUdecomposition.output:199:assert(__count_32_33 <= 5); // Upper capacity constraint
+LUdecomposition.output:200:assert(__count_32_31 >= 15); // Lower capacity constraint
+LUdecomposition.output:201:assert(__count_32_31 <= 15); // Upper capacity constraint
+LUdecomposition.output:202:assert(__count_9_13 >= 5); // Lower capacity constraint
+LUdecomposition.output:203:assert(__count_9_13 <= 5); // Upper capacity constraint
+LUdecomposition.output:204:assert(__count_34_35 >= 1); // Lower capacity constraint
+LUdecomposition.output:205:assert(__count_34_35 <= 1); // Upper capacity constraint
+LUdecomposition.output:206:assert(__count_12_11 >= 20); // Lower capacity constraint
+LUdecomposition.output:207:assert(__count_12_11 <= 20); // Upper capacity constraint
+LUdecomposition.output:208:assert(__count_12_13 >= 10); // Lower capacity constraint
+LUdecomposition.output:209:assert(__count_12_13 <= 10); // Upper capacity constraint
+LUdecomposition.output:210:assert(__count_14_15 >= 5); // Lower capacity constraint
+LUdecomposition.output:211:assert(__count_14_15 <= 5); // Upper capacity constraint
+LUdecomposition.output:212:assert(__count_18_17 >= 35); // Lower capacity constraint
+LUdecomposition.output:213:assert(__count_18_17 <= 35); // Upper capacity constraint
+LUdecomposition.output:214:assert(__count_18_19 >= 15); // Lower capacity constraint
+LUdecomposition.output:215:assert(__count_18_19 <= 15); // Upper capacity constraint
+LUdecomposition.output:221:assert(__count_40 >= 1); // Lower capacity constraint
+LUdecomposition.output:222:assert(__count_40 <= 1); // Upper capacity constraint
+LUdecomposition.output:223:assert(__count_37_38 <= 1); // Upper capacity constraint
+LUdecomposition.output:224:assert(__count_37_39 <= 1); // Upper capacity constraint
+LUdecomposition.output:225:assert(__count_37_38 > 0 ==> __count_40 > 0); // Execution dependence
+LUdecomposition.output:226:assert(__count_37_39 > 0 ==> __count_40 > 0); // Execution dependence
+matrix_count.output:59:assert(__count_7_3  <= 6); // Loop counter property
+matrix_count.output:60:assert(__count_9_2  <= 6); // Loop counter property
+matrix_count.output:61:assert(__count_5_6 >= 4); // Lower capacity constraint
+matrix_count.output:62:assert(__count_5_6 <= 17); // Upper capacity constraint
+matrix_count.output:63:assert(__count_7_8 >= 5); // Lower capacity constraint
+matrix_count.output:64:assert(__count_7_8 <= 5); // Upper capacity constraint
+matrix_count.output:65:assert(__count_10 >= 1); // Lower capacity constraint
+matrix_count.output:66:assert(__count_10 <= 1); // Upper capacity constraint
+matrix_count.output:67:assert(__count_9_10 >= 1); // Lower capacity constraint
+matrix_count.output:68:assert(__count_9_10 <= 1); // Upper capacity constraint
+matrix_count.output:69:assert(__count_4_6 >= 8); // Lower capacity constraint
+matrix_count.output:70:assert(__count_4_6 <= 21); // Upper capacity constraint
+matrix_inverse.output:249:assert(__count_38_37  <= 6); // Loop counter property
+matrix_inverse.output:250:assert(__count_35_36  <= 5); // Loop counter property
+matrix_inverse.output:251:assert(__count_41_35  <= 6); // Loop counter property
+matrix_inverse.output:252:assert(__count_17_16  <= 6); // Loop counter property
+matrix_inverse.output:253:assert(__count_28_25  <= 6); // Loop counter property
+matrix_inverse.output:254:assert(__count_31_22  <= 6); // Loop counter property
+matrix_inverse.output:255:assert(__count_20_19  <= 6); // Loop counter property
+matrix_inverse.output:256:assert(__count_12_9  <= 6); // Loop counter property
+matrix_inverse.output:257:assert(__count_33_8  <= 6); // Loop counter property
+matrix_inverse.output:258:assert(__count_6_5  <= 6); // Loop counter property
+matrix_inverse.output:259:assert(__count_13_44 == 0); // Dead code
+matrix_inverse.output:260:assert(__count_35_40 >= 5); // Lower capacity constraint
+matrix_inverse.output:261:assert(__count_35_40 <= 5); // Upper capacity constraint
+matrix_inverse.output:262:assert(__count_14_18 >= 1); // Lower capacity constraint
+matrix_inverse.output:263:assert(__count_14_18 <= 4); // Upper capacity constraint
+matrix_inverse.output:264:assert(__count_38_37 >= 5); // Lower capacity constraint
+matrix_inverse.output:265:assert(__count_38_37 <= 20); // Upper capacity constraint
+matrix_inverse.output:266:assert(__count_38_39 >= 1); // Lower capacity constraint
+matrix_inverse.output:267:assert(__count_38_39 <= 4); // Upper capacity constraint
+matrix_inverse.output:268:assert(__count_17_16 >= 5); // Lower capacity constraint
+matrix_inverse.output:269:assert(__count_17_16 <= 20); // Upper capacity constraint
+matrix_inverse.output:270:assert(__count_17_18 >= 1); // Lower capacity constraint
+matrix_inverse.output:271:assert(__count_17_18 <= 4); // Upper capacity constraint
+matrix_inverse.output:272:assert(__count_23_30 == 0); // Dead code
+matrix_inverse.output:273:assert(__count_20_19 >= 25); // Lower capacity constraint
+matrix_inverse.output:274:assert(__count_20_19 <= 25); // Upper capacity constraint
+matrix_inverse.output:275:assert(__count_45 >= 1); // Lower capacity constraint
+matrix_inverse.output:276:assert(__count_45 <= 1); // Upper capacity constraint
+matrix_inverse.output:277:assert(__count_22_30 >= 5); // Lower capacity constraint
+matrix_inverse.output:278:assert(__count_22_30 <= 5); // Upper capacity constraint
+matrix_inverse.output:279:assert(__count_1_43 == 0); // Dead code
+matrix_inverse.output:280:assert(__count_2_43 == 0); // Dead code
+matrix_inverse.output:281:assert(__count_3_43 == 0); // Dead code
+matrix_inverse.output:282:assert(__count_25_27 >= 20); // Lower capacity constraint
+matrix_inverse.output:283:assert(__count_25_27 <= 20); // Upper capacity constraint
+matrix_inverse.output:284:assert(__count_25_26 >= 80); // Lower capacity constraint
+matrix_inverse.output:285:assert(__count_25_26 <= 80); // Upper capacity constraint
+matrix_inverse.output:286:assert(__count_6_5 >= 5); // Lower capacity constraint
+matrix_inverse.output:287:assert(__count_6_5 <= 5); // Upper capacity constraint
+matrix_inverse.output:288:assert(__count_28_29 >= 20); // Lower capacity constraint
+matrix_inverse.output:289:assert(__count_28_29 <= 20); // Upper capacity constraint
+matrix_inverse.output:290:assert(__count_9_10 >= 6); // Lower capacity constraint
+matrix_inverse.output:291:assert(__count_9_10 <= 13); // Upper capacity constraint
+matrix_inverse.output:292:assert(__count_9_11 >= 2); // Lower capacity constraint
+matrix_inverse.output:293:assert(__count_9_11 <= 9); // Upper capacity constraint
+matrix_inverse.output:294:assert(__count_33_34 >= 1); // Lower capacity constraint
+matrix_inverse.output:295:assert(__count_33_34 <= 1); // Upper capacity constraint
+matrixmultiply.output:61:assert(__count_5_4  <= 6); // Loop counter property
+matrixmultiply.output:62:assert(__count_7_3  <= 6); // Loop counter property
+matrixmultiply.output:63:assert(__count_9_2  <= 6); // Loop counter property
+matrixmultiply.output:64:assert(__count_5_6 >= 25); // Lower capacity constraint
+matrixmultiply.output:65:assert(__count_5_6 <= 25); // Upper capacity constraint
+matrixmultiply.output:66:assert(__count_7_8 >= 5); // Lower capacity constraint
+matrixmultiply.output:67:assert(__count_7_8 <= 5); // Upper capacity constraint
+matrixmultiply.output:68:assert(__count_10 >= 1); // Lower capacity constraint
+matrixmultiply.output:69:assert(__count_10 <= 1); // Upper capacity constraint
+matrixmultiply.output:70:assert(__count_9_10 >= 1); // Lower capacity constraint
+matrixmultiply.output:71:assert(__count_9_10 <= 1); // Upper capacity constraint
+matrixmultiply.output:72:assert(__count_5_4 >= 125); // Lower capacity constraint
+matrixmultiply.output:73:assert(__count_5_4 <= 125); // Upper capacity constraint
+quadraticroots.output:86:assert(__count_8_4  <= 20); // Loop counter property
+quadraticroots.output:87:assert(__count_9 >= 1); // Lower capacity constraint
+quadraticroots.output:88:assert(__count_9 <= 1); // Upper capacity constraint
+quadraticroots.output:89:assert(__count_2_9 == 0); // Dead code
+quadraticroots.output:90:assert(__count_4_7 >= 11); // Lower capacity constraint
+quadraticroots.output:91:assert(__count_4_7 <= 15); // Upper capacity constraint
+quadraticroots.output:92:assert(__count_5_6 >= 1); // Lower capacity constraint
+quadraticroots.output:93:assert(__count_5_6 <= 1); // Upper capacity constraint
+quadraticroots.output:94:assert(__count_5_7 >= 3); // Lower capacity constraint
+quadraticroots.output:95:assert(__count_5_7 <= 7); // Upper capacity constraint
+quadraticroots.output:96:assert(__count_8_9 >= 1); // Lower capacity constraint
+quadraticroots.output:97:assert(__count_8_9 <= 1); // Upper capacity constraint
+quadraticroots.output:103:assert(__count_14_15 == 0); // Dead code
+quadraticroots.output:104:assert(__count_10_17 == 0); // Dead code
+quadraticroots.output:105:assert(__count_18 >= 1); // Lower capacity constraint
+quadraticroots.output:106:assert(__count_18 <= 1); // Upper capacity constraint
+quadraticroots.output:107:assert(__count_16_18 <= 1); // Upper capacity constraint
+quadraticroots.output:108:assert(__count_12_13 <= 1); // Upper capacity constraint
+quadraticroots.output:109:assert(__count_12_13 > 0 ==> __count_18 > 0); // Execution dependence
+quadraticroots.output:110:assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
+quicksort.output:135:assert(__count_10_11  <= 60); // Loop counter property
+quicksort.output:136:assert(__count_6_10  + __count_6_7  +  <= 138); // Loop counter property
+quicksort.output:137:assert(__count_20_3  <= 101); // Loop counter property
+quicksort.output:138:assert(__count_7_8 >= 327); // Lower capacity constraint
+quicksort.output:139:assert(__count_7_8 <= 353); // Upper capacity constraint
+quicksort.output:140:assert(__count_7_5 >= 241); // Lower capacity constraint
+quicksort.output:141:assert(__count_7_5 <= 516); // Upper capacity constraint
+quicksort.output:142:assert(__count_10_12 >= 156); // Lower capacity constraint
+quicksort.output:143:assert(__count_10_12 <= 169); // Upper capacity constraint
+quicksort.output:144:assert(__count_11_9 >= 227); // Lower capacity constraint
+quicksort.output:145:assert(__count_11_9 <= 500); // Upper capacity constraint
+quicksort.output:146:assert(__count_11_12 >= 164); // Lower capacity constraint
+quicksort.output:147:assert(__count_11_12 <= 197); // Upper capacity constraint
+quicksort.output:148:assert(__count_12_13 >= 128); // Lower capacity constraint
+quicksort.output:149:assert(__count_12_13 <= 154); // Upper capacity constraint
+quicksort.output:150:assert(__count_14_19 >= 100); // Lower capacity constraint
+quicksort.output:151:assert(__count_14_19 <= 100); // Upper capacity constraint
+quicksort.output:152:assert(__count_16_18 >= 12); // Lower capacity constraint
+quicksort.output:153:assert(__count_16_18 <= 31); // Upper capacity constraint
+quicksort.output:154:assert(__count_17_18 >= 68); // Lower capacity constraint
+quicksort.output:155:assert(__count_17_18 <= 87); // Upper capacity constraint
+quicksort.output:156:assert(__count_20_21 >= 1); // Lower capacity constraint
+quicksort.output:157:assert(__count_20_21 <= 1); // Upper capacity constraint
+quicksort.output:158:assert(__count_22_23 == 0); // Dead code
+quicksort.output:159:assert(__count_23 >= 1); // Lower capacity constraint
+quicksort.output:160:assert(__count_23 <= 1); // Upper capacity constraint
+quicksort.output:161:assert(__count_6_10 == 0); // Dead code
+select.output:214:assert(__count_20_19  <= 12); // Loop counter property
+select.output:215:assert(__count_17_16  <= 6); // Loop counter property
+select.output:216:assert(__count_25_15  <= 250); // Loop counter property
+select.output:217:assert(__count_30_2  <= 603); // Loop counter property
+select.output:218:assert(__count_3_6 == 0); // Dead code
+select.output:219:assert(__count_4_5 == 0); // Dead code
+select.output:220:assert(__count_26_28 >= 10); // Lower capacity constraint
+select.output:221:assert(__count_26_28 <= 589); // Upper capacity constraint
+select.output:222:assert(__count_4_6 >= 1); // Lower capacity constraint
+select.output:223:assert(__count_4_6 <= 1); // Upper capacity constraint
+select.output:224:assert(__count_8_10 >= 12); // Lower capacity constraint
+select.output:225:assert(__count_8_10 <= 414); // Upper capacity constraint
+select.output:226:assert(__count_8_9 >= 118); // Lower capacity constraint
+select.output:227:assert(__count_8_9 <= 589); // Upper capacity constraint
+select.output:228:assert(__count_30_31 >= 1); // Lower capacity constraint
+select.output:229:assert(__count_30_31 <= 1); // Upper capacity constraint
+select.output:230:assert(__count_10_11 >= 12); // Lower capacity constraint
+select.output:231:assert(__count_10_11 <= 578); // Upper capacity constraint
+select.output:232:assert(__count_10_12 >= 15); // Lower capacity constraint
+select.output:233:assert(__count_10_12 <= 589); // Upper capacity constraint
+select.output:234:assert(__count_12_13 >= 10); // Lower capacity constraint
+select.output:235:assert(__count_12_13 <= 585); // Upper capacity constraint
+select.output:236:assert(__count_12_14 >= 16); // Lower capacity constraint
+select.output:237:assert(__count_12_14 <= 583); // Upper capacity constraint
+select.output:238:assert(__count_21_23 >= 248); // Lower capacity constraint
+select.output:239:assert(__count_21_23 <= 248); // Upper capacity constraint
+select.output:240:assert(__count_17_16 >= 146); // Lower capacity constraint
+select.output:241:assert(__count_17_16 <= 146); // Upper capacity constraint
+select.output:242:assert(__count_20_19 >= 354); // Lower capacity constraint
+select.output:243:assert(__count_20_19 <= 354); // Upper capacity constraint
+select.output:244:assert(__count_21_22 >= 1); // Lower capacity constraint
+select.output:245:assert(__count_21_22 <= 1); // Upper capacity constraint
+select.output:246:assert(__count_26_27 >= 12); // Lower capacity constraint
+select.output:247:assert(__count_26_27 <= 583); // Upper capacity constraint
+select.output:248:assert(__count_31 >= 1); // Lower capacity constraint
+select.output:249:assert(__count_31 <= 1); // Upper capacity constraint
+squareroot.output:64:assert(__count_8_4  <= 20); // Loop counter property
+squareroot.output:65:assert(__count_9 >= 1); // Lower capacity constraint
+squareroot.output:66:assert(__count_9 <= 1); // Upper capacity constraint
+squareroot.output:67:assert(__count_2_9 == 0); // Dead code
+squareroot.output:68:assert(__count_4_7 <= 7); // Upper capacity constraint
+squareroot.output:69:assert(__count_5_6 <= 1); // Upper capacity constraint
+squareroot.output:70:assert(__count_5_7 >= 11); // Lower capacity constraint
+squareroot.output:71:assert(__count_5_7 <= 19); // Upper capacity constraint
+squareroot.output:72:assert(__count_8_9 >= 1); // Lower capacity constraint
+squareroot.output:73:assert(__count_8_9 <= 1); // Upper capacity constraint
+squareroot.output:74:assert(__count_4_7 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+squareroot.output:75:assert(__count_5_6 > 0 ==> __count_4_7 > 0); // Mutual inclusion
+squareroot.output:76:assert(__count_4_7 > 0 ==> __count_9 > 0); // Execution dependence
+squareroot.output:77:assert(__count_4_7 > 0 ==> __count_5_7 > 0); // Execution dependence
+squareroot.output:78:assert(__count_4_7 > 0 ==> __count_8_9 > 0); // Execution dependence
+squareroot.output:79:assert(__count_5_6 > 0 ==> __count_9 > 0); // Execution dependence
+squareroot.output:80:assert(__count_5_6 > 0 ==> __count_5_7 > 0); // Execution dependence
+squareroot.output:81:assert(__count_5_6 > 0 ==> __count_8_9 > 0); // Execution dependence
+statistics.output:127:assert(__count_6 >= 1); // Lower capacity constraint
+statistics.output:128:assert(__count_6 <= 1); // Upper capacity constraint
+statistics.output:129:assert(__count_1_2 >= 1); // Lower capacity constraint
+statistics.output:130:assert(__count_1_2 <= 1); // Upper capacity constraint
+statistics.output:136:assert(__count_11_8  <= 11); // Loop counter property
+statistics.output:137:assert(__count_8_9 >= 10); // Lower capacity constraint
+statistics.output:138:assert(__count_8_9 <= 10); // Upper capacity constraint
+statistics.output:139:assert(__count_14 >= 1); // Lower capacity constraint
+statistics.output:140:assert(__count_14 <= 1); // Upper capacity constraint
+statistics.output:141:assert(__count_11_12 >= 1); // Lower capacity constraint
+statistics.output:142:assert(__count_11_12 <= 1); // Upper capacity constraint
+statistics.output:148:assert(__count_15 >= 1); // Lower capacity constraint
+statistics.output:149:assert(__count_15 <= 1); // Upper capacity constraint
+statistics.output:155:assert(__count_16 >= 1); // Lower capacity constraint
+statistics.output:156:assert(__count_16 <= 1); // Upper capacity constraint
+statistics.output:162:assert(__count_19_18  <= 11); // Loop counter property
+statistics.output:163:assert(__count_19_20 >= 1); // Lower capacity constraint
+statistics.output:164:assert(__count_19_20 <= 1); // Upper capacity constraint
+statistics.output:165:assert(__count_19_18 >= 10); // Lower capacity constraint
+statistics.output:166:assert(__count_19_18 <= 10); // Upper capacity constraint
+statistics.output:167:assert(__count_20 >= 1); // Lower capacity constraint
+statistics.output:168:assert(__count_20 <= 1); // Upper capacity constraint
+statistics.output:174:assert(__count_24_22  <= 11); // Loop counter property
+statistics.output:175:assert(__count_26 >= 1); // Lower capacity constraint
+statistics.output:176:assert(__count_26 <= 1); // Upper capacity constraint
+statistics.output:177:assert(__count_24_25 >= 1); // Lower capacity constraint
+statistics.output:178:assert(__count_24_25 <= 1); // Upper capacity constraint
+statistics.output:179:assert(__count_24_22 >= 10); // Lower capacity constraint
+statistics.output:180:assert(__count_24_22 <= 10); // Upper capacity constraint

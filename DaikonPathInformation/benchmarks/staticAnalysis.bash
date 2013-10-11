@@ -9,7 +9,6 @@ python ../src/ToolSuperBlocks.py crc.txt
 python ../src/ToolSuperBlocks.py edn.txt 
 python ../src/ToolSuperBlocks.py fastDiscreteCosineTransform.txt 
 python ../src/ToolSuperBlocks.py fft.txt 
-python ../src/ToolSuperBlocks.py finiteImpulseResponse.txt
 python ../src/ToolSuperBlocks.py insertsort.txt 
 python ../src/ToolSuperBlocks.py janne_complex.txt
 python ../src/ToolSuperBlocks.py lcdnum.txt 
@@ -17,7 +16,6 @@ python ../src/ToolSuperBlocks.py LUdecomposition.txt
 python ../src/ToolSuperBlocks.py matrix_inverse.txt
 python ../src/ToolSuperBlocks.py matrixmultiply.txt
 python ../src/ToolSuperBlocks.py embedded.txt 
-python ../src/ToolSuperBlocks.py petri.txt
 python ../src/ToolSuperBlocks.py quicksort.txt 
 python ../src/ToolSuperBlocks.py quadraticroots.txt
 python ../src/ToolSuperBlocks.py select.txt
