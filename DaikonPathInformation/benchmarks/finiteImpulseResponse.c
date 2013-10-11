@@ -5,7 +5,8 @@ finiteImpulseResponse (long* in,long* out,long in_len, long* coef,long coef_len,
 {
 #ifdef CBMC
 //==========> finiteimpulseresponse : header 25
-int __count_25_24 = 0; //Loop counter
+int __count_25_24 = 0;
+int __count_25_24_L = 0; //Loop counter
 //==========> finiteimpulseresponse : header 33
 int __count_27_28 = 0;
 int __count_29_30 = 0;
@@ -48,15 +49,19 @@ int __count_33_34 = 0;
     acc = (long)(*coef_ptr++) * (*data_ptr--);
 
     #ifdef CBMC
-    __count_25_24 = 0;
+    __count_25_24_L = 0;
     #endif
     for(j = 1 ; j < acc_length ; j++) // 25
     {
       #ifdef CBMC
+      __count_25_24_L++;
       __count_25_24++;
       #endif
       acc += (long)(*coef_ptr++) * (*data_ptr--);
     }
+    #ifdef CBMC
+    assert(__count_25_24_L  <= 35); // Loop counter property
+    #endif
     *out++ = (int)(acc/scale);
 
     /* check for end case */
@@ -86,11 +91,30 @@ int __count_33_34 = 0;
       in_ptr++;
     }
   }
+  #ifdef CBMC
+  assert(__count_33_23  <= 701); // Loop counter property
+  #endif
   
   #ifdef CBMC
   __count_33_34++;
   __count_34++;
   #endif
+
+#ifdef CBMC
+assert(__count_33_34 >= 1); // Lower capacity constraint
+assert(__count_33_34 <= 1); // Upper capacity constraint
+assert(__count_25_24 >= 23494); // Lower capacity constraint
+assert(__count_25_24 <= 23494); // Upper capacity constraint
+assert(__count_27_28 >= 18); // Lower capacity constraint
+assert(__count_27_28 <= 18); // Upper capacity constraint
+assert(__count_34 >= 1); // Lower capacity constraint
+assert(__count_34 <= 1); // Upper capacity constraint
+assert(__count_29_30 >= 17); // Lower capacity constraint
+assert(__count_29_30 <= 17); // Upper capacity constraint
+assert(__count_29_31 >= 665); // Lower capacity constraint
+assert(__count_29_31 <= 665); // Upper capacity constraint
+#endif
+
   return *coef;
 }
 
