@@ -4,7 +4,7 @@ import sys, os
 def runCBMC (cbmc, program):
     from subprocess import Popen, PIPE
     cmd = '%s -DCBMC %s' % (cbmc, program)
-    Debug.verboseMessage("Running '%s'" % cmd, 1)
+    Debug.verboseMessage("Running '%s'" % cmd)
     proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)    
     returncode = proc.wait()
     if returncode:
@@ -19,6 +19,10 @@ def commandLine ():
     
     cmdline.add_argument("program",
                          help="a '.c' file with CBMC instrumentation and assertions")
+    
+    cmdline.add_argument("--CBMC",
+                         dest="cbmc",
+                         help="path to CBMC")
     
     cmdline.add_argument("-d",
                          "--debug",
@@ -36,19 +40,20 @@ def commandLine ():
 
 if __name__ == "__main__":
     import Debug
-    
-    cbmc = "/home/adam/CBMC/cbmc"
-    assert os.path.exists(cbmc), "The CBMC path '%s' does not exist" % cbmc
-    assert os.path.isfile(cbmc), "'%s' is not a file" % cbmc
-    
     args          = commandLine()
     Debug.verbose = args.verbose
     Debug.debug   = args.debug    
+    
+    assert args.cbmc, "You need to pass the path to CBMC"
+    assert os.path.exists(args.cbmc), "The CBMC path '%s' does not exist" % args.cbmc
+    assert os.path.isfile(args.cbmc), "'%s' is not a file" % args.cbmc
+    args.cbmc = os.path.abspath(args.cbmc)
+    
     assert args.program.endswith('.c'), "Please pass a program file with a '.c' suffix"
-    assert args.program.exists('.c'), "The program file '%s' does not exist" % args.program
-    assert os.path.isfile(cbmc), "The program '%s' is not a file" % args.program
-    args.program  = os.path.abspath(args.program)
-    runCBMC(cbmc, args.program)
+    assert os.path.exists(args.program), "The program file '%s' does not exist" % args.program
+    assert os.path.isfile(args.program), "The program '%s' is not a file" % args.program
+    args.program = os.path.abspath(args.program)
+    runCBMC(args.cbmc, args.program)
     
     
     
