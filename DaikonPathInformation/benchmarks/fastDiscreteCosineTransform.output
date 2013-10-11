@@ -1,3 +1,4 @@
+==> ../src/ToolGem5.py fastDiscreteCosineTransform m5out/fastDiscreteCosineTransform.trace.*
 ============================================================
 0:00:00.020 - Start Program
 ============================================================
@@ -5,16 +6,16 @@
 ********** Analysing program 'fastDiscreteCosineTransform' **********
 Checking program configuration...
 ============================================================
-0:00:00.020 - COMPILING BEGIN
+0:00:00.030 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.090 - COMPILING END
+0:00:00.100 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.100 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.110 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -63,8 +64,8 @@ assert(__count_7 <= 1); // Upper capacity constraint
 #endif
 HWMT = 252300
 Doing WCET calculation on fastdiscretecosinetransform
-ILP(vanilla):: WCET(fastdiscretecosinetransform)=283650 (SOLVE TIME=0.00356)
-ILP(extra):: WCET(fastdiscretecosinetransform)=252300 (SOLVE TIME=0.00314)
+ILP(vanilla):: WCET(fastdiscretecosinetransform)=283650 (SOLVE TIME=0.00298)
+ILP(extra):: WCET(fastdiscretecosinetransform)=252300 (SOLVE TIME=0.00216)
 In fastdiscretecosinetransform...
 ...#CFG edges              = 9
 ...#monitored              = 4
@@ -79,7 +80,7 @@ In fastdiscretecosinetransform...
 ...#TOTAL never execute          = 4
 ...#TOTAL always execute         = 4
 ============================================================
-0:16:24.540 - End Program
-Elapsed time: 0:16:24.520
+0:12:08.960 - End Program
+Elapsed time: 0:12:08.940
 ============================================================
 

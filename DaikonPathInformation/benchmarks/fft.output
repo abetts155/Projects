@@ -1,20 +1,21 @@
+==> ../src/ToolGem5.py fft m5out/fft.trace.*
 ============================================================
-0:00:00.020 - Start Program
+0:00:00.000 - Start Program
 ============================================================
 
 ********** Analysing program 'fft' **********
 Checking program configuration...
 ============================================================
-0:00:00.030 - COMPILING BEGIN
+0:00:00.010 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.090 - COMPILING END
+0:00:00.040 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.100 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.060 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -319,19 +320,7 @@ assert(__count_37_38 > 0 ==> __count_39 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_9_8 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_19_18 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_19_20 > 0); // Execution dependence
-assert(__count_37_38 > 0 ==> __count_21_22 > 0); // Execution dependeFound a solution with cost -960
-Found no solution with cost -1050.0 .. -961.0
-
-Success, time = 0.0
-Found a solution with cost -960
-Found no solution with cost -1050.0 .. -961.0
-
-Success, time = 0.0
-Found a solution with cost -242850
-Found no solution with cost -243030.0 .. -242851.0
-
-Success, time = 0.01
-nce
+assert(__count_37_38 > 0 ==> __count_21_22 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_25_26 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_25_27 > 0); // Execution dependence
 assert(__count_37_38 > 0 ==> __count_30_29 > 0); // Execution dependence
@@ -372,32 +361,44 @@ assert(__count_55 <= 1); // Upper capacity constraint
 #endif
 HWMT = 172620
 Doing WCET calculation on log
-ILP(vanilla):: WCET(log)=510 (SOLVE TIME=0.00336)
-ILP(extra):: WCET(log)=510 (SOLVE TIME=0.00287)
+ILP(vanilla):: WCET(log)=510 (SOLVE TIME=0.00333)
+ILP(extra):: WCET(log)=510 (SOLVE TIME=0.00310)
 Doing WCET calculation on log
 ILP(vanilla):: WCET(log)=510 (SOLVE TIME=0.00285)
-ILP(extra):: WCET(log)=510 (SOLVE TIME=0.00284)
+ILP(extra):: WCET(log)=510 (SOLVE TIME=0.00283)
 Doing WCET calculation on fabs
-ILP(vanilla):: WCET(fabs)=960 (SOLVE TIME=0.00297)
+ILP(vanilla):: WCET(fabs)=960 (SOLVE TIME=0.00296)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/fft.fabs.context8.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(fabs)=960 (SOLVE TIME=0.38401)
+Found a solution with cost -960
+Found no solution with cost -1050.0 .. -961.0
+
+Success, time = 0.0
+CLP(extra):: WCET(fabs)=960 (SOLVE TIME=0.38246)
 Doing WCET calculation on sin
-ILP(vanilla):: WCET(sin)=25410 (SOLVE TIME=0.00377)
-ILP(extra):: WCET(sin)=21780 (SOLVE TIME=0.00338)
+ILP(vanilla):: WCET(sin)=25410 (SOLVE TIME=0.00370)
+ILP(extra):: WCET(sin)=21780 (SOLVE TIME=0.00317)
 Doing WCET calculation on cos
-ILP(vanilla):: WCET(cos)=26310 (SOLVE TIME=0.00292)
-ILP(extra):: WCET(cos)=22680 (SOLVE TIME=0.00293)
+ILP(vanilla):: WCET(cos)=26310 (SOLVE TIME=0.00289)
+ILP(extra):: WCET(cos)=22680 (SOLVE TIME=0.00285)
 Doing WCET calculation on fabs
-ILP(vanilla):: WCET(fabs)=960 (SOLVE TIME=0.00302)
+ILP(vanilla):: WCET(fabs)=960 (SOLVE TIME=0.00299)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/fft.fabs.context7.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(fabs)=960 (SOLVE TIME=0.37661)
+Found a solution with cost -960
+Found no solution with cost -1050.0 .. -961.0
+
+Success, time = 0.0
+CLP(extra):: WCET(fabs)=960 (SOLVE TIME=0.37645)
 Doing WCET calculation on sin
-ILP(vanilla):: WCET(sin)=25410 (SOLVE TIME=0.00368)
-ILP(extra):: WCET(sin)=21780 (SOLVE TIME=0.00328)
+ILP(vanilla):: WCET(sin)=25410 (SOLVE TIME=0.00363)
+ILP(extra):: WCET(sin)=21780 (SOLVE TIME=0.00314)
 Doing WCET calculation on fft
-ILP(vanilla):: WCET(fft)=703950 (SOLVE TIME=0.00498)
+ILP(vanilla):: WCET(fft)=703950 (SOLVE TIME=0.00491)
 Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/fft.fft.context1.cfg.ecl.extra -e "solve(WCET)."'
-CLP(extra):: WCET(fft)=242850 (SOLVE TIME=0.47686)
+Found a solution with cost -242850
+Found no solution with cost -243030.0 .. -242851.0
+
+Success, time = 0.02
+CLP(extra):: WCET(fft)=242850 (SOLVE TIME=0.48565)
 In cos...
 ...#CFG edges              = 2
 ...#monitored              = 2
@@ -444,7 +445,7 @@ In log...
 ...#TOTAL never execute          = 15
 ...#TOTAL always execute         = 15
 ============================================================
-0:17:17.550 - End Program
-Elapsed time: 0:17:17.530
+0:12:55.060 - End Program
+Elapsed time: 0:12:55.060
 ============================================================
 

@@ -1,3 +1,4 @@
+==> ../src/ToolGem5.py edn m5out/edn.trace.*
 ============================================================
 0:00:00.010 - Start Program
 ============================================================
@@ -5,16 +6,16 @@
 ********** Analysing program 'edn' **********
 Checking program configuration...
 ============================================================
-0:00:00.020 - COMPILING BEGIN
+0:00:00.030 - COMPILING BEGIN
 ============================================================
 
 ============================================================
-0:00:00.070 - COMPILING END
+0:00:00.120 - COMPILING END
 ============================================================
 
 ...all good
 ============================================================
-0:00:00.080 - TRACE PARSING RUN #1 (NO INLINING)
+0:00:00.130 - TRACE PARSING RUN #1 (NO INLINING)
 ============================================================
 
 Parsing gem5 traces
@@ -349,32 +350,32 @@ assert(__count_53 <= 1); // Upper capacity constraint
 #endif
 HWMT = 6874020
 Doing WCET calculation on iir1
-ILP(vanilla):: WCET(iir1)=154350 (SOLVE TIME=0.03094)
-ILP(extra):: WCET(iir1)=151350 (SOLVE TIME=0.00206)
+ILP(vanilla):: WCET(iir1)=154350 (SOLVE TIME=0.00490)
+ILP(extra):: WCET(iir1)=151350 (SOLVE TIME=0.00440)
 Doing WCET calculation on jpegdct
-ILP(vanilla):: WCET(jpegdct)=691380 (SOLVE TIME=0.00219)
-ILP(extra):: WCET(jpegdct)=372060 (SOLVE TIME=0.00217)
+ILP(vanilla):: WCET(jpegdct)=691380 (SOLVE TIME=0.00480)
+ILP(extra):: WCET(jpegdct)=372060 (SOLVE TIME=0.00478)
 Doing WCET calculation on fir_no_red_ld
-ILP(vanilla):: WCET(fir_no_red_ld)=2878650 (SOLVE TIME=0.00209)
-ILP(extra):: WCET(fir_no_red_ld)=2661720 (SOLVE TIME=0.00208)
+ILP(vanilla):: WCET(fir_no_red_ld)=2878650 (SOLVE TIME=0.00471)
+ILP(extra):: WCET(fir_no_red_ld)=2661720 (SOLVE TIME=0.00465)
 Doing WCET calculation on mac
-ILP(vanilla):: WCET(mac)=277530 (SOLVE TIME=0.00203)
-ILP(extra):: WCET(mac)=275700 (SOLVE TIME=0.00200)
+ILP(vanilla):: WCET(mac)=277530 (SOLVE TIME=0.00459)
+ILP(extra):: WCET(mac)=275700 (SOLVE TIME=0.00451)
 Doing WCET calculation on vec_mpy1
-ILP(vanilla):: WCET(vec_mpy1)=204660 (SOLVE TIME=0.00201)
-ILP(extra):: WCET(vec_mpy1)=203310 (SOLVE TIME=0.00200)
+ILP(vanilla):: WCET(vec_mpy1)=204660 (SOLVE TIME=0.00451)
+ILP(extra):: WCET(vec_mpy1)=203310 (SOLVE TIME=0.00452)
 Doing WCET calculation on latsynth
-ILP(vanilla):: WCET(latsynth)=224070 (SOLVE TIME=0.00202)
-ILP(extra):: WCET(latsynth)=221850 (SOLVE TIME=0.00203)
+ILP(vanilla):: WCET(latsynth)=224070 (SOLVE TIME=0.00451)
+ILP(extra):: WCET(latsynth)=221850 (SOLVE TIME=0.00449)
 Doing WCET calculation on codebook
-ILP(vanilla):: WCET(codebook)=7230 (SOLVE TIME=0.00208)
-ILP(extra):: WCET(codebook)=6870 (SOLVE TIME=0.00205)
+ILP(vanilla):: WCET(codebook)=7230 (SOLVE TIME=0.00470)
+ILP(extra):: WCET(codebook)=6870 (SOLVE TIME=0.00463)
 Doing WCET calculation on fir
-ILP(vanilla):: WCET(fir)=3095910 (SOLVE TIME=0.00207)
-ILP(extra):: WCET(fir)=2976720 (SOLVE TIME=0.00205)
+ILP(vanilla):: WCET(fir)=3095910 (SOLVE TIME=0.00467)
+ILP(extra):: WCET(fir)=2976720 (SOLVE TIME=0.00464)
 Doing WCET calculation on edn
-ILP(vanilla):: WCET(edn)=7538220 (SOLVE TIME=0.00209)
-ILP(extra):: WCET(edn)=6874020 (SOLVE TIME=0.00205)
+ILP(vanilla):: WCET(edn)=7538220 (SOLVE TIME=0.00468)
+ILP(extra):: WCET(edn)=6874020 (SOLVE TIME=0.00462)
 In fir...
 ...#CFG edges              = 9
 ...#monitored              = 4
@@ -453,7 +454,7 @@ In iir1...
 ...#TOTAL never execute          = 30
 ...#TOTAL always execute         = 30
 ============================================================
-1:54:50.650 - End Program
-Elapsed time: 1:54:50.639
+1:34:38.540 - End Program
+Elapsed time: 1:34:38.530
 ============================================================
 
