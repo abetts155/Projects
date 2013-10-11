@@ -5,11 +5,17 @@ def runCBMC (cbmc, program):
     from subprocess import Popen, PIPE
     cmd = '%s -DCBMC %s' % (cbmc, program)
     Debug.verboseMessage("Running '%s'" % cmd)
-    proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)    
-    returncode = proc.wait()
-    if returncode:
-        sys.exit("Running '%s' failed" % cmd)
-    Debug.verboseMessage("All conjectures in '%s' verify!" % program)
+    proc = Popen(cmd, shell=True, stdout=PIPE, stderr=sys.stdout)    
+    proc.wait()
+    success = False
+    for line in proc.stdout.readlines():
+        if line.startswith("VERIFICATION SUCCESSFUL"):
+            success = True
+            break
+    if success:
+        Debug.verboseMessage("All conjectures in '%s' verify!" % program)
+    else:
+        Debug.verboseMessage("The following fail in '%s'!" % program)
 
 def commandLine ():
     from argparse import ArgumentParser
