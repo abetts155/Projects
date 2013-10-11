@@ -14,7 +14,8 @@ matrixmultiply (matrix A, matrix B, matrix C)
 {
 #ifdef CBMC
 //==========> matrixmultiply : header 5
-int __count_5_4 = 0; //Loop counter
+int __count_5_4 = 0;
+int __count_5_4_L = 0; //Loop counter
 //==========> matrixmultiply : header 7
 int __count_5_6 = 0;
 int __count_7_3 = 0; //Loop counter
@@ -47,27 +48,45 @@ int __count_9_10 = 0;
       #endif
       C[i][j] = 0;
       #ifdef CBMC
-      __count_5_4 = 0;
+      __count_5_4_L = 0;
       #endif
       for (k = 0; k < UPPERLIMIT; ++k) // 5
       {
         #ifdef CBMC
         __count_5_4++;
+        __count_5_4_L++;
         #endif
         C[i][j] += A[j][k] * B[k][j];
       }
       #ifdef CBMC
+      assert(__count_5_4_L  <= 6); // Loop counter property
       __count_5_6++;
       #endif
     }
     #ifdef CBMC
+    assert(__count_7_3  <= 6); // Loop counter property
     __count_7_8++;
     #endif
   }
   #ifdef CBMC
+  assert(__count_9_2  <= 6); // Loop counter property
   __count_9_10++;
   __count_10++;
   #endif
+
+#ifdef CBMC
+assert(__count_5_6 >= 25); // Lower capacity constraint
+assert(__count_5_6 <= 25); // Upper capacity constraint
+assert(__count_7_8 >= 5); // Lower capacity constraint
+assert(__count_7_8 <= 5); // Upper capacity constraint
+assert(__count_10 >= 1); // Lower capacity constraint
+assert(__count_10 <= 1); // Upper capacity constraint
+assert(__count_9_10 >= 1); // Lower capacity constraint
+assert(__count_9_10 <= 1); // Upper capacity constraint
+assert(__count_5_4 >= 125); // Lower capacity constraint
+assert(__count_5_4 <= 125); // Upper capacity constraint
+#endif
+
   return C[0][0];
 }
 
