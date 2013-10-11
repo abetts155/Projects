@@ -72,15 +72,55 @@ int __count_11_12 = 0;
       }
     }
     #ifdef CBMC
+    assert(__count_9_2  <= 7); // Loop counter property
     __count_9_10++;
     #endif
     a = a + 2;
     b = b - 10;
   }
   #ifdef CBMC
+  assert(__count_11_9  <= 11); // Loop counter property
   __count_11_12++;
   __count_12++;
   #endif
+
+#ifdef CBMC
+assert(__count_12 >= 1); // Lower capacity constraint
+assert(__count_12 <= 1); // Upper capacity constraint
+assert(__count_2_3 <= 5); // Upper capacity constraint
+assert(__count_2_4 <= 7); // Upper capacity constraint
+assert(__count_5_8 <= 7); // Upper capacity constraint
+assert(__count_6_8 <= 5); // Upper capacity constraint
+assert(__count_6_7 == 0); // Dead code
+assert(__count_9_10 <= 10); // Upper capacity constraint
+assert(__count_11_12 >= 1); // Lower capacity constraint
+assert(__count_11_12 <= 1); // Upper capacity constraint
+assert(__count_2_3 > 0 ==> __count_6_8 > 0); // Mutual inclusion
+assert(__count_6_8 > 0 ==> __count_2_3 > 0); // Mutual inclusion
+assert(__count_2_3 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_2_3 > 0); // Mutual inclusion
+assert(__count_2_4 > 0 ==> __count_5_8 > 0); // Mutual inclusion
+assert(__count_5_8 > 0 ==> __count_2_4 > 0); // Mutual inclusion
+assert(__count_6_8 > 0 ==> __count_9_10 > 0); // Mutual inclusion
+assert(__count_9_10 > 0 ==> __count_6_8 > 0); // Mutual inclusion
+assert(__count_2_3 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_2_3 > 0 ==> __count_11_12 > 0); // Execution dependence
+assert(__count_2_4 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_2_4 > 0 ==> __count_2_3 > 0); // Execution dependence
+assert(__count_2_4 > 0 ==> __count_6_8 > 0); // Execution dependence
+assert(__count_2_4 > 0 ==> __count_9_10 > 0); // Execution dependence
+assert(__count_2_4 > 0 ==> __count_11_12 > 0); // Execution dependence
+assert(__count_5_8 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_5_8 > 0 ==> __count_2_3 > 0); // Execution dependence
+assert(__count_5_8 > 0 ==> __count_6_8 > 0); // Execution dependence
+assert(__count_5_8 > 0 ==> __count_9_10 > 0); // Execution dependence
+assert(__count_5_8 > 0 ==> __count_11_12 > 0); // Execution dependence
+assert(__count_6_8 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_6_8 > 0 ==> __count_11_12 > 0); // Execution dependence
+assert(__count_9_10 > 0 ==> __count_12 > 0); // Execution dependence
+assert(__count_9_10 > 0 ==> __count_11_12 > 0); // Execution dependence
+#endif
+
   return a;
 }
 

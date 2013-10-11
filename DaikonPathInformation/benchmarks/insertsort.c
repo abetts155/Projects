@@ -12,7 +12,8 @@ insertsort (int ARRAY_SIZE, int a[])
 {
 #ifdef CBMC
 //==========> insertsort : header 4
-int __count_4_5 = 0; //Loop counter
+int __count_4_5 = 0;
+int __count_4_5_L = 0; //Loop counter
 //==========> insertsort : header 7
 int __count_4_6 = 0;
 int __count_5_6 = 0;
@@ -35,12 +36,15 @@ int __count_7_8 = 0;
     i = j - 1;
 
     #ifdef CBMC
-    __count_4_5 = 0;
+    __count_4_5_L = 0;
     #endif
     while (a[i] > key && 
      (
      #ifdef CBMC
-     __count_4_5++,
+     (
+      __count_4_5_L++,
+      __count_4_5++
+     ),
      #endif
      i >= 0
      )
@@ -50,17 +54,37 @@ int __count_7_8 = 0;
       i--;
     }
     #ifdef CBMC
+    assert(__count_4_5_L  <= 98); // Loop counter property
+    #endif
+
+    #ifdef CBMC
     if (a[i] <= key) __count_4_6++;
     else __count_5_6++;
     #endif
 
     a[i+1] = key;
   }
+  #ifdef CBMC
+  assert(__count_7_2  <= 100); // Loop counter property
+  #endif
 
   #ifdef CBMC
   __count_7_8++;
   __count_8++;
   #endif
+
+#ifdef CBMC
+assert(__count_8 >= 1); // Lower capacity constraint
+assert(__count_8 <= 1); // Upper capacity constraint
+assert(__count_7_8 >= 1); // Lower capacity constraint
+assert(__count_7_8 <= 1); // Upper capacity constraint
+assert(__count_4_5 >= 1979); // Lower capacity constraint
+assert(__count_4_5 <= 3385); // Upper capacity constraint
+assert(__count_4_6 >= 99); // Lower capacity constraint
+assert(__count_4_6 <= 99); // Upper capacity constraint
+assert(__count_5_6 == 0); // Dead code
+#endif
+
   return a[0];
 }
 

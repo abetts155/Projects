@@ -8,7 +8,8 @@ vec_mpy1 (short y[], const short x[], short scaler)
 {
 #ifdef CBMC
 //==========> vec_mpy1 : header 10
-int __count_10_9 = 0; //Loop counter
+int __count_10_9 = 0;
+int __count_10_9_L = 0; //Loop counter
 //==========> vec_mpy1 : header 8
 int __count_11 = 0;
 int __count_10_11 = 0;
@@ -17,19 +18,31 @@ int __count_10_11 = 0;
   long int i;
 
   #ifdef CBMC
-  __count_10_9 = 0;
+  __count_10_9_L = 0;
   #endif
   for (i = 0; i < 150; i++) // 10
   {
     #ifdef CBMC
+    __count_10_9_L++;
     __count_10_9++;
     #endif
     y[i] += ((scaler * x[i]) >> 15);
   }
   #ifdef CBMC
+  assert(__count_10_9_L  <= 151); // Loop counter property
   __count_10_11++;
   __count_11++;
   #endif
+
+#ifdef CBMC
+assert(__count_10_9 >= 150); // Lower capacity constraint
+assert(__count_10_9 <= 150); // Upper capacity constraint
+assert(__count_11 >= 1); // Lower capacity constraint
+assert(__count_11 <= 1); // Upper capacity constraint
+assert(__count_10_11 >= 1); // Lower capacity constraint
+assert(__count_10_11 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 /*****************************************************
@@ -40,7 +53,8 @@ mac (const short *a, const short *b, long int sqr, long int *sum)
 {
 #ifdef CBMC
 //==========> mac : header 31
-int __count_31_30 = 0; //Loop counter
+int __count_31_30 = 0;
+int __count_31_30_L = 0; //Loop counter
 //==========> mac : header 29
 int __count_32 = 0;
 int __count_31_32 = 0;
@@ -50,22 +64,36 @@ int __count_31_32 = 0;
   long int dotp = *sum;
 
   #ifdef CBMC
-  __count_31_30 = 0;
+  __count_31_30_L = 0;
   #endif
   for (i = 0; i < 150; i++) // 31
   {
     #ifdef CBMC
+    __count_31_30_L++;
     __count_31_30++;
     #endif
     dotp += b[i] * a[i];
     sqr += b[i] * b[i];
   }
+  #ifdef CBMC
+  assert(__count_31_30_L  <= 151); // Loop counter property
+  #endif
 
   *sum = dotp;
   #ifdef CBMC
   __count_31_32++;
   __count_32++;
   #endif
+
+#ifdef CBMC
+assert(__count_32 >= 1); // Lower capacity constraint
+assert(__count_32 <= 1); // Upper capacity constraint
+assert(__count_31_32 >= 1); // Lower capacity constraint
+assert(__count_31_32 <= 1); // Upper capacity constraint
+assert(__count_31_30 >= 150); // Lower capacity constraint
+assert(__count_31_30 <= 150); // Upper capacity constraint
+#endif
+
   return sqr;
 }
 
@@ -78,7 +106,8 @@ fir (const short array1[], const short coeff[], long int output[])
 {
   #ifdef CBMC
 //==========> fir : header 4
-int __count_4_3 = 0; //Loop counter
+int __count_4_3 = 0;
+int __count_4_3_L = 0; //Loop counter
 //==========> fir : header 6
 int __count_4_5 = 0;
 int __count_6_2 = 0; //Loop counter
@@ -98,24 +127,39 @@ int __count_6_7 = 0;
     #endif
     sum = 0;
     #ifdef CBMC
-    __count_4_3 = 0;
+    __count_4_3_L = 0;
     #endif
     for (j = 0; j < ORDER; j++) // 4
     {
       #ifdef CBMC
+      __count_4_3_L++;
       __count_4_3++;
       #endif
       sum += array1[i + j] * coeff[j];
     }
     #ifdef CBMC
+    assert(__count_4_3_L  <= 51); // Loop counter property
     __count_4_5++;
     #endif
     output[i] = sum >> 15;
   }
   #ifdef CBMC
+  assert(__count_6_2  <= 51); // Loop counter property
   __count_6_7++;
   __count_7++;
   #endif
+
+#ifdef CBMC
+assert(__count_4_3 >= 2500); // Lower capacity constraint
+assert(__count_4_3 <= 2500); // Upper capacity constraint
+assert(__count_7 >= 1); // Lower capacity constraint
+assert(__count_7 <= 1); // Upper capacity constraint
+assert(__count_4_5 >= 50); // Lower capacity constraint
+assert(__count_4_5 <= 50); // Upper capacity constraint
+assert(__count_6_7 >= 1); // Lower capacity constraint
+assert(__count_6_7 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 /****************************************************
@@ -130,7 +174,8 @@ fir_no_red_ld (const short x[], const short h[], long int y[])
 {
 #ifdef CBMC
 //==========> fir_no_red_ld : header 36
-int __count_36_35 = 0; //Loop counter
+int __count_36_35 = 0;
+int __count_36_35_L = 0; //Loop counter
 //==========> fir_no_red_ld : header 38
 int __count_36_37 = 0;
 int __count_38_34 = 0; //Loop counter
@@ -155,11 +200,12 @@ int __count_38_39 = 0;
     sum1 = 0;
     x0 = x[j];
     #ifdef CBMC
-    __count_36_35 = 0;
+    __count_36_35_L = 0;
     #endif
     for (i = 0; i < 32; i += 2) // 36
     {
       #ifdef CBMC
+      __count_36_35_L++;
       __count_36_35++;
       #endif
       x1 = x[j + i + 1];
@@ -172,15 +218,29 @@ int __count_38_39 = 0;
       sum1 += x0 * h1;
     }
     #ifdef CBMC
+    assert(__count_36_35_L  <= 17); // Loop counter property
     __count_36_37++;
     #endif
     y[j] = sum0 >> 15;
     y[j + 1] = sum1 >> 15;
   }
   #ifdef CBMC
+  assert(__count_38_34  <= 51); // Loop counter property
   __count_38_39++;
   __count_39++;
   #endif
+
+#ifdef CBMC
+assert(__count_38_39 >= 1); // Lower capacity constraint
+assert(__count_38_39 <= 1); // Upper capacity constraint
+assert(__count_36_35 >= 800); // Lower capacity constraint
+assert(__count_36_35 <= 800); // Upper capacity constraint
+assert(__count_36_37 >= 50); // Lower capacity constraint
+assert(__count_36_37 <= 50); // Upper capacity constraint
+assert(__count_39 >= 1); // Lower capacity constraint
+assert(__count_39 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 /*******************************************************
@@ -193,7 +253,8 @@ latsynth (short b[], const short k[], long int n, long int f)
 {
 #ifdef CBMC
 //==========> latsynth : header 14
-int __count_14_13 = 0; //Loop counter
+int __count_14_13 = 0;
+int __count_14_13_L = 0; //Loop counter
 //==========> latsynth : header 12
 int __count_15 = 0;
 int __count_14_15 = 0;
@@ -203,22 +264,36 @@ int __count_14_15 = 0;
 
   f -= b[n - 1] * k[n - 1];
   #ifdef CBMC
-  __count_14_13 = 0;
+  __count_14_13_L = 0;
   #endif
   for (i = n - 2; i >= 0; i--)  // 14
   {
     #ifdef CBMC
+    __count_14_13_L++;
     __count_14_13++;
     #endif
     f -= b[i] * k[i];
     b[i + 1] = b[i] + ((k[i] * (f >> 16)) >> 16);
   }
+  #ifdef CBMC
+  assert(__count_14_13_L  <= 100); // Loop counter property
+  #endif
   
   b[0] = f >> 16;
   #ifdef CBMC
   __count_14_15++;
   __count_15++;
   #endif
+
+#ifdef CBMC
+assert(__count_14_13 >= 99); // Lower capacity constraint
+assert(__count_14_13 <= 99); // Upper capacity constraint
+assert(__count_14_15 >= 1); // Lower capacity constraint
+assert(__count_14_15 <= 1); // Upper capacity constraint
+assert(__count_15 >= 1); // Lower capacity constraint
+assert(__count_15 <= 1); // Upper capacity constraint
+#endif
+
   return f;
 }
 
@@ -230,7 +305,8 @@ iir1 (const short *coefs, const short *input, long int *optr, long int *state)
 {
 #ifdef CBMC
 //==========> iir1 : header 52
-int __count_52_51 = 0; //Loop counter
+int __count_52_51 = 0;
+int __count_52_51_L = 0; //Loop counter
 //==========> iir1 : header 50
 int __count_53 = 0;
 int __count_52_53 = 0;
@@ -241,11 +317,12 @@ int __count_52_53 = 0;
 
   x = input[0];
   #ifdef CBMC
-  __count_52_51 = 0;
+  __count_52_51_L = 0;
   #endif
   for (n = 0; n < 50; n++) // 52
   {
     #ifdef CBMC
+    __count_52_51_L++;
     __count_52_51++;
     #endif
     t = x + ((coefs[2] * state[0] + coefs[3] * state[1]) >> 15);
@@ -255,12 +332,25 @@ int __count_52_53 = 0;
     coefs += 4;	/* point to next filter coefs  */
     state += 2;	/* point to next filter states */
   }
+  #ifdef CBMC
+  assert(__count_52_51_L  <= 51); // Loop counter property
+  #endif
 
   *optr++ = x;
   #ifdef CBMC
   __count_52_53++;
   __count_53++;
   #endif
+
+#ifdef CBMC
+assert(__count_52_51 >= 50); // Lower capacity constraint
+assert(__count_52_51 <= 50); // Upper capacity constraint
+assert(__count_52_53 >= 1); // Lower capacity constraint
+assert(__count_52_53 <= 1); // Upper capacity constraint
+assert(__count_53 >= 1); // Lower capacity constraint
+assert(__count_53 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 /*****************************************************
@@ -271,7 +361,8 @@ codebook (long int mask, long int bitchanged, long int numbasis, long int codewo
 {
 #ifdef CBMC
 //==========> codebook : header 27
-int __count_27_26 = 0; //Loop counter
+int __count_27_26 = 0;
+int __count_27_26_L = 0; //Loop counter
 //==========> codebook : header 25
 int __count_28 = 0;
 int __count_27_28 = 0;
@@ -282,11 +373,12 @@ int __count_27_28 = 0;
 
   tmpMask = mask << 1;
   #ifdef CBMC
-  __count_27_26 = 0;
+  __count_27_26_L = 0;
   #endif
   for (j = bitchanged + 1; j <= numbasis; j++) // 27
   {
     #ifdef CBMC
+    __count_27_26_L++;
     __count_27_26++;
     #endif
 /*		
@@ -302,9 +394,20 @@ int __count_27_28 = 0;
 */
   }
   #ifdef CBMC
+  assert(__count_27_26_L  <= 17); // Loop counter property
   __count_27_28++;
   __count_28++;
   #endif
+
+#ifdef CBMC
+assert(__count_27_28 >= 1); // Lower capacity constraint
+assert(__count_27_28 <= 1); // Upper capacity constraint
+assert(__count_27_26 >= 16); // Lower capacity constraint
+assert(__count_27_26 <= 16); // Upper capacity constraint
+assert(__count_28 >= 1); // Lower capacity constraint
+assert(__count_28 <= 1); // Upper capacity constraint
+#endif
+
   return g;
 }
 
@@ -317,7 +420,8 @@ jpegdct(short *d, short *r)
 {
 #ifdef CBMC
 //==========> jpegdct : header 44
-int __count_44_43 = 0; //Loop counter
+int __count_44_43 = 0;
+int __count_44_43_L = 0; //Loop counter
 //==========> jpegdct : header 46
 int __count_44_45 = 0;
 int __count_46_42 = 0; //Loop counter
@@ -352,17 +456,19 @@ int __count_48_49 = 0;
       #endif
 
       #ifdef CBMC
-      __count_44_43 = 0;
+      __count_44_43_L = 0;
       #endif
       for (j = 0; j < 4; j++) // 44
       {
         #ifdef CBMC
+        __count_44_43_L++;
         __count_44_43++;
         #endif
         t[j] = d[k * j] + d[k * (7 - j)];
 	t[7 - j] = d[k * j] - d[k * (7 - j)];
       }
       #ifdef CBMC
+      assert(__count_44_43_L  <= 5); // Loop counter property
       __count_44_45++;
       #endif
     
@@ -388,13 +494,29 @@ int __count_48_49 = 0;
       d[1 * k] = (short) (t[7] * r[7] + t[0] + t[3]) >> n;
     }
     #ifdef CBMC
+    assert(__count_46_42  <= 9); // Loop counter property
     __count_46_47++;
     #endif
   }
   #ifdef CBMC
+  assert(__count_48_41  <= 3); // Loop counter property
   __count_48_49++;
   __count_49++;
   #endif
+
+#ifdef CBMC
+assert(__count_46_47 >= 2); // Lower capacity constraint
+assert(__count_46_47 <= 2); // Upper capacity constraint
+assert(__count_48_49 >= 1); // Lower capacity constraint
+assert(__count_48_49 <= 1); // Upper capacity constraint
+assert(__count_44_43 >= 64); // Lower capacity constraint
+assert(__count_44_43 <= 64); // Upper capacity constraint
+assert(__count_44_45 >= 16); // Lower capacity constraint
+assert(__count_44_45 <= 16); // Upper capacity constraint
+assert(__count_49 >= 1); // Lower capacity constraint
+assert(__count_49 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 int
@@ -424,6 +546,14 @@ int __count_16_17 = 0;
   __count_16_17++;
   __count_24++;
   #endif
+
+#ifdef CBMC
+assert(__count_24 >= 1); // Lower capacity constraint
+assert(__count_24 <= 1); // Upper capacity constraint
+assert(__count_16_17 >= 1); // Lower capacity constraint
+assert(__count_16_17 <= 1); // Upper capacity constraint
+#endif
+
   return e[0];
 }
 

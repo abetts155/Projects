@@ -54,7 +54,8 @@ cl_hash (count_int hsize)		/* reset code table */
 {
 #ifdef CBMC
 //==========> cl_hash : header 81
-int __count_81_80 = 0; //Loop counter
+int __count_81_80 = 0;
+int __count_81_80_L = 0; //Loop counter
 //==========> cl_hash : header 78
 int __count_78 = 0;
 int __count_78_78 = 0; //Loop counter
@@ -97,18 +98,39 @@ int __count_81_82 = 0;
       *(htab_p-1) = m1;
       htab_p -= 16;
    } while ((i -= 16) >= 0);
-   
+   #ifdef CBMC
+   assert(__count_78_78  <= 2); // Loop counter property
+   #endif
+
+   #ifdef CBMC
+   __count_81_80_L = 0;
+   #endif
    for (i += 16; i > 0; i--) // 81
    {
       #ifdef CBMC
+      __count_81_80_L++;
       __count_81_80++;
       #endif
       *--htab_p = m1; //80
    }
    #ifdef CBMC
+   assert(__count_81_80_L  <= 2); // Loop counter property
+
    __count_81_82++;
    __count_82++;
    #endif
+
+#ifdef CBMC
+assert(__count_82 >= 1); // Lower capacity constraint
+assert(__count_82 <= 1); // Upper capacity constraint
+assert(__count_78 >= 3); // Lower capacity constraint
+assert(__count_78 <= 3); // Upper capacity constraint
+assert(__count_81_80 >= 1); // Lower capacity constraint
+assert(__count_81_80 <= 1); // Upper capacity constraint
+assert(__count_81_82 >= 1); // Lower capacity constraint
+assert(__count_81_82 <= 1); // Upper capacity constraint
+#endif
+
 }
 
 void 
@@ -122,6 +144,12 @@ int __count_108 = 0;
 #ifdef CBMC
 __count_108++;
 #endif
+
+#ifdef CBMC
+assert(__count_108 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_108 <= 0); // Upper capacity constraint
+#endif
+
 }
 
 void 
@@ -129,7 +157,8 @@ writebytes (char *buf, int n)
 {
 #ifdef CBMC
 //==========> writebytes : header 17
-int __count_17_18 = 0; //Loop counter
+int __count_17_18 = 0;
+int __count_17_18_L = 0; //Loop counter
 //==========> writebytes : header 15
 int __count_19 = 0;
 int __count_17_19 = 0;
@@ -137,13 +166,22 @@ int __count_18_19 = 0;
 #endif
 
   int i;
+  #ifdef CBMC
+  __count_17_18_L = 0;
+  #endif
   for (i=0; (i<n) && (i < BITS); i++) // 17
   {
     #ifdef CBMC
+    __count_17_18_L++;
     __count_17_18++;
     #endif
     *OutBuff++ = buf[i];       		 /* apsim_unknown comp_text_buffer */
   }
+  #ifdef CBMC
+  assert(__count_17_18_L  <= 0); // Loop counter property
+  #endif
+
+
   #ifdef CBMC
   if(i<n)
   {
@@ -156,6 +194,18 @@ int __count_18_19 = 0;
 
   __count_19++;
   #endif
+
+#ifdef CBMC
+assert(__count_17_19 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_17_19 <= 0); // Upper capacity constraint
+assert(__count_17_18 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_17_18 <= 0); // Upper capacity constraint
+assert(__count_19 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_19 <= 0); // Upper capacity constraint
+assert(__count_18_19 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_18_19 <= 0); // Upper capacity constraint
+#endif
+
 }
 
 void 
@@ -163,7 +213,8 @@ output (code_int code)
 {
 #ifdef CBMC
 //==========> output : header 90
-int __count_90_91 = 0; //Loop counter
+int __count_90_91 = 0;
+int __count_90_91_L = 0; //Loop counter
 //==========> output : header 83
 int __count_107 = 0;
 int __count_84_85 = 0;
@@ -251,16 +302,20 @@ int __count_104_106 = 0;
       bits = n_bits;
       bytes_out += bits;
       #ifdef CBMC
-      __count_90_91=0;
+      __count_90_91_L=0;
       #endif
       do // 90
       {
         #ifdef CBMC
+        __count_90_91_L++;
         __count_90_91++;
         #endif
         putbyte(*bp++);
       }     // 91, 92
       while(( --bits) && ((bp - buf < BITS)));
+      #ifdef CBMC
+      assert(__count_90_91_L  <= 0); // Loop counter property
+      #endif
       
       #ifdef CBMC
       if(bits)
@@ -380,6 +435,48 @@ int __count_104_106 = 0;
   #ifdef CBMC
   __count_107++;
   #endif
+
+#ifdef CBMC
+assert(__count_103_107 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_103_107 <= 0); // Upper capacity constraint
+assert(__count_104_105 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_104_105 <= 0); // Upper capacity constraint
+assert(__count_104_106 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_104_106 <= 0); // Upper capacity constraint
+assert(__count_84_85 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_84_85 <= 0); // Upper capacity constraint
+assert(__count_84_86 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_84_86 <= 0); // Upper capacity constraint
+assert(__count_86_88 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_86_88 <= 0); // Upper capacity constraint
+assert(__count_87_88 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_87_88 <= 0); // Upper capacity constraint
+assert(__count_88_94 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_88_94 <= 0); // Upper capacity constraint
+assert(__count_107 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_107 <= 0); // Upper capacity constraint
+assert(__count_90_91 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_90_91 <= 0); // Upper capacity constraint
+assert(__count_91_93 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_91_93 <= 0); // Upper capacity constraint
+assert(__count_92_93 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_92_93 <= 0); // Upper capacity constraint
+assert(__count_94_96 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_94_96 <= 0); // Upper capacity constraint
+assert(__count_95_96 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_95_96 <= 0); // Upper capacity constraint
+assert(__count_95_107 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_95_107 <= 0); // Upper capacity constraint
+assert(__count_96_99 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_96_99 <= 0); // Upper capacity constraint
+assert(__count_98_99 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_98_99 <= 0); // Upper capacity constraint
+assert(__count_99_100 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_99_100 <= 0); // Upper capacity constraint
+assert(__count_101_102 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_101_102 <= 0); // Upper capacity constraint
+#endif
+
 }
 
 void 
@@ -452,6 +549,22 @@ cl_block ()		/* table clear for block compress */
    #ifdef CBMC
    __count_14++;
    #endif
+
+#ifdef CBMC
+assert(__count_3_8 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_3_8 <= 0); // Upper capacity constraint
+assert(__count_14 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_14 <= 0); // Upper capacity constraint
+assert(__count_4_6 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_4_6 <= 0); // Upper capacity constraint
+assert(__count_5_10 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_5_10 <= 0); // Upper capacity constraint
+assert(__count_11_14 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_11_14 <= 0); // Upper capacity constraint
+assert(__count_12_13 >= 9223372036854775807); // Lower capacity constraint
+assert(__count_12_13 <= 0); // Upper capacity constraint
+#endif
+
 }
 
 unsigned int 
@@ -472,6 +585,16 @@ int __count_73_75 = 0;
     __count_73_74++;
     __count_76++;
     #endif
+
+#ifdef CBMC
+assert(__count_76 >= 1); // Lower capacity constraint
+assert(__count_76 <= 1); // Upper capacity constraint
+assert(__count_72_75 == 0); // Dead code
+assert(__count_73_74 >= 1); // Lower capacity constraint
+assert(__count_73_74 <= 1); // Upper capacity constraint
+assert(__count_73_75 == 0); // Dead code
+#endif
+
     return (unsigned int)*InBuff++;
   } 
   else 
@@ -492,6 +615,16 @@ int __count_73_75 = 0;
     #ifdef CBMC
     __count_76++;
     #endif
+
+#ifdef CBMC
+assert(__count_76 >= 1); // Lower capacity constraint
+assert(__count_76 <= 1); // Upper capacity constraint
+assert(__count_72_75 == 0); // Dead code
+assert(__count_73_74 >= 1); // Lower capacity constraint
+assert(__count_73_74 <= 1); // Upper capacity constraint
+assert(__count_73_75 == 0); // Dead code
+#endif
+
     return -1;
   }
 }
@@ -501,8 +634,10 @@ compress ()
 {
 #ifdef CBMC
 //==========> compress : header 47
-int __count_47_48 = 0; //Loop counter
-int __count_47_49 = 0; //Loop counter
+int __count_47_48 = 0;
+int __count_47_49 = 0;
+int __count_47_48_L = 0; //Loop counter
+int __count_47_49_L = 0; //Loop counter
 //==========> compress : header 60
 int __count_41_42 = 0;
 int __count_44_45 = 0;
@@ -515,7 +650,8 @@ int __count_55_56 = 0;
 int __count_57_58 = 0;
 int __count_60_40 = 0; //Loop counter
 //==========> compress : header 37
-int __count_37_36 = 0; //Loop counter
+int __count_37_36_L = 0; //Loop counter
+int __count_37_36 = 0;
 //==========> compress : header 31
 int __count_63 = 0;
 int __count_32_34 = 0;
@@ -557,13 +693,20 @@ int __count_61_63 = 0;
   hshift = 0;
   
   // 37
+  #ifdef CBMC
+  __count_37_36_L = 0;
+  #endif
   for (fcode = (long) hsize; fcode < 65536L; fcode *= 2L)
   {
     #ifdef CBMC
+    __count_37_36_L++;
     __count_37_36++;
     #endif
     hshift++;
   }
+  #ifdef CBMC
+  assert(__count_37_36_L  <= 9); // Loop counter property
+  #endif
 
   hshift = 8 - hshift;	/* set hash code range bound */
   hsize_reg = hsize;
@@ -618,21 +761,26 @@ int __count_61_63 = 0;
     else __count_44_47++;
     #endif
 #ifdef CBMC
-__count_47_48=0;
-__count_47_49=0;
+__count_47_48_L=0;
+__count_47_49_L=0;
 #endif
 probe:
     // 47
     if ((i -= disp) < 0) 
     {  /* apsim_loop 111 11 */
       #ifdef CBMC
+      __count_47_48_L++;
       __count_47_48++;
       #endif
       // 48
       i += hsize_reg;
     }
     #ifdef CBMC
-    else __count_47_49++;
+    else
+    {
+      __count_47_49_L++;
+      __count_47_49++;
+    }
     #endif
 
     // 49
@@ -646,12 +794,18 @@ probe:
       continue;
     }
 
-    // 51, 52 (53)
+    // 51, 52
     if ((long) htab[i] > 0 && (++apsim_bound111 < in_count))
     {
       // 46
       goto probe;
     }
+    // 53
+
+    #ifdef CBMC
+    assert(__count_47_48_L  + __count_47_49_L  +  <= 7); // Loop counter property
+    #endif
+
     #ifdef CBMC
     if((long) htab[i] > 0)
     {
@@ -691,6 +845,9 @@ nomatch:
       cl_block ();
     }
   }
+  #ifdef CBMC
+  assert(__count_60_40  <= 50); // Loop counter property
+  #endif
    
   if (bytes_out > in_count) // 61
   { 
@@ -708,6 +865,99 @@ nomatch:
   #ifdef CBMC
   __count_63++;
   #endif
+
+#ifdef CBMC
+assert(__count_54_55 <= 49); // Upper capacity constraint
+assert(__count_32_34 <= 1); // Upper capacity constraint
+assert(__count_33_34 == 0); // Dead code
+assert(__count_57_58 == 0); // Dead code
+assert(__count_37_36 <= 8); // Upper capacity constraint
+assert(__count_55_56 <= 49); // Upper capacity constraint
+assert(__count_61_62 == 0); // Dead code
+assert(__count_61_63 <= 1); // Upper capacity constraint
+assert(__count_41_42 == 0); // Dead code
+assert(__count_44_45 <= 2); // Upper capacity constraint
+assert(__count_44_47 <= 18); // Upper capacity constraint
+assert(__count_47_48 <= 34); // Upper capacity constraint
+assert(__count_47_49 <= 11); // Upper capacity constraint
+assert(__count_49_50 == 0); // Dead code
+assert(__count_51_55 <= 18); // Upper capacity constraint
+assert(__count_52_53 == 0); // Dead code
+assert(__count_63 <= 1); // Upper capacity constraint
+assert(__count_32_34 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+assert(__count_37_36 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+assert(__count_32_34 > 0 ==> __count_63 > 0); // Mutual inclusion
+assert(__count_63 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+assert(__count_32_34 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+assert(__count_55_56 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+assert(__count_32_34 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+assert(__count_61_63 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+assert(__count_37_36 > 0 ==> __count_63 > 0); // Mutual inclusion
+assert(__count_63 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+assert(__count_37_36 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+assert(__count_55_56 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+assert(__count_37_36 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+assert(__count_61_63 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+assert(__count_44_47 > 0 ==> __count_47_48 > 0); // Mutual inclusion
+assert(__count_47_48 > 0 ==> __count_44_47 > 0); // Mutual inclusion
+assert(__count_44_47 > 0 ==> __count_51_55 > 0); // Mutual inclusion
+assert(__count_51_55 > 0 ==> __count_44_47 > 0); // Mutual inclusion
+assert(__count_47_48 > 0 ==> __count_51_55 > 0); // Mutual inclusion
+assert(__count_51_55 > 0 ==> __count_47_48 > 0); // Mutual inclusion
+assert(__count_54_55 > 0 ==> __count_32_34 > 0); // Mutual inclusion
+assert(__count_32_34 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+assert(__count_54_55 > 0 ==> __count_37_36 > 0); // Mutual inclusion
+assert(__count_37_36 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+assert(__count_54_55 > 0 ==> __count_63 > 0); // Mutual inclusion
+assert(__count_63 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+assert(__count_54_55 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+assert(__count_55_56 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+assert(__count_54_55 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+assert(__count_61_63 > 0 ==> __count_54_55 > 0); // Mutual inclusion
+assert(__count_55_56 > 0 ==> __count_63 > 0); // Mutual inclusion
+assert(__count_63 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+assert(__count_55_56 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+assert(__count_61_63 > 0 ==> __count_55_56 > 0); // Mutual inclusion
+assert(__count_61_63 > 0 ==> __count_63 > 0); // Mutual inclusion
+assert(__count_63 > 0 ==> __count_61_63 > 0); // Mutual inclusion
+assert(__count_44_45 > 0 ==> __count_32_34 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_37_36 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_44_47 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_47_48 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_51_55 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_63 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_54_55 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_55_56 > 0); // Execution dependence
+assert(__count_44_45 > 0 ==> __count_61_63 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_32_34 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_37_36 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_63 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_54_55 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_55_56 > 0); // Execution dependence
+assert(__count_44_47 > 0 ==> __count_61_63 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_32_34 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_37_36 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_63 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_54_55 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_55_56 > 0); // Execution dependence
+assert(__count_47_48 > 0 ==> __count_61_63 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_32_34 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_37_36 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_44_47 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_47_48 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_51_55 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_63 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_54_55 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_55_56 > 0); // Execution dependence
+assert(__count_47_49 > 0 ==> __count_61_63 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_32_34 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_37_36 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_63 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_54_55 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_55_56 > 0); // Execution dependence
+assert(__count_51_55 > 0 ==> __count_61_63 > 0); // Execution dependence
+#endif
+
   return exit_stat;
 }
 

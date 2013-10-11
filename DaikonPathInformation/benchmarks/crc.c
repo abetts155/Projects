@@ -43,9 +43,24 @@ int __count_25_26 = 0;
     }
   }
   #ifdef CBMC
+  assert(__count_25_21  <= 9); // Loop counter property
   __count_25_26++;
   __count_26++;
   #endif
+
+#ifdef CBMC
+assert(__count_21_22 <= 8); // Upper capacity constraint
+assert(__count_21_23 <= 8); // Upper capacity constraint
+assert(__count_26 >= 1); // Lower capacity constraint
+assert(__count_26 <= 1); // Upper capacity constraint
+assert(__count_25_26 >= 1); // Lower capacity constraint
+assert(__count_25_26 <= 1); // Upper capacity constraint
+assert(__count_21_22 > 0 ==> __count_25_26 > 0); // Execution dependence
+assert(__count_21_22 > 0 ==> __count_26 > 0); // Execution dependence
+assert(__count_21_23 > 0 ==> __count_25_26 > 0); // Execution dependence
+assert(__count_21_23 > 0 ==> __count_26 > 0); // Execution dependence
+#endif
+
   return ans;
 }
 
@@ -93,6 +108,7 @@ int __count_16_18 = 0;
       #endif
     }
     #ifdef CBMC
+    assert(__count_5_3  <= 257); // Loop counter property
     __count_5_6++;
     #endif
   }
@@ -146,6 +162,9 @@ int __count_16_18 = 0;
     }
     cword = icrctb[tmp1] ^ LOBYTE(cword) << 8;
   }
+  #ifdef CBMC
+  assert(__count_15_11  <= 43); // Loop counter property
+  #endif
   
   if (jrev >= 0) // 16
   {
@@ -156,6 +175,39 @@ int __count_16_18 = 0;
     #ifdef CBMC
     __count_19++;
     #endif
+
+#ifdef CBMC
+assert(__count_11_12 == 0); // Dead code
+assert(__count_11_13 >= 40); // Lower capacity constraint
+assert(__count_11_13 <= 42); // Upper capacity constraint
+assert(__count_16_17 >= 1); // Lower capacity constraint
+assert(__count_16_17 <= 1); // Upper capacity constraint
+assert(__count_16_18 == 0); // Dead code
+assert(__count_19 >= 1); // Lower capacity constraint
+assert(__count_19 <= 1); // Upper capacity constraint
+assert(__count_1_6 <= 1); // Upper capacity constraint
+assert(__count_3_4 <= 256); // Upper capacity constraint
+assert(__count_5_6 <= 1); // Upper capacity constraint
+assert(__count_7_10 >= 1); // Lower capacity constraint
+assert(__count_7_10 <= 1); // Upper capacity constraint
+assert(__count_8_9 == 0); // Dead code
+assert(__count_8_10 == 0); // Dead code
+assert(__count_3_4 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_1_6 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_16_17 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+#endif
+
     return cword;
   }
   else 
@@ -167,6 +219,41 @@ int __count_16_18 = 0;
     #ifdef CBMC
     __count_19++;
     #endif
+
+
+#ifdef CBMC
+assert(__count_11_12 == 0); // Dead code
+assert(__count_11_13 >= 40); // Lower capacity constraint
+assert(__count_11_13 <= 42); // Upper capacity constraint
+assert(__count_16_17 >= 1); // Lower capacity constraint
+assert(__count_16_17 <= 1); // Upper capacity constraint
+assert(__count_16_18 == 0); // Dead code
+assert(__count_19 >= 1); // Lower capacity constraint
+assert(__count_19 <= 1); // Upper capacity constraint
+assert(__count_1_6 <= 1); // Upper capacity constraint
+assert(__count_3_4 <= 256); // Upper capacity constraint
+assert(__count_5_6 <= 1); // Upper capacity constraint
+assert(__count_7_10 >= 1); // Lower capacity constraint
+assert(__count_7_10 <= 1); // Upper capacity constraint
+assert(__count_8_9 == 0); // Dead code
+assert(__count_8_10 == 0); // Dead code
+assert(__count_3_4 > 0 ==> __count_5_6 > 0); // Mutual inclusion
+assert(__count_5_6 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_1_6 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_1_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_3_4 > 0 ==> __count_16_17 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_19 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_7_10 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_11_13 > 0); // Execution dependence
+assert(__count_5_6 > 0 ==> __count_16_17 > 0); // Execution dependence
+#endif
+
+
     return rchr[HIBYTE(cword)] | rchr[LOBYTE(cword)] << 8;
   }
 }

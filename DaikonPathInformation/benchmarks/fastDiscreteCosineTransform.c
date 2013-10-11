@@ -48,9 +48,11 @@ fastDiscreteCosineTransform (short int *blk, int lx)
 {
 #ifdef CBMC
 //==========> fastdiscretecosinetransform : header 6
-int __count_6_5 = 0; //Loop counter
+int __count_6_5 = 0;
+int __count_6_5_L = 0; //Loop counter
 //==========> fastdiscretecosinetransform : header 3
-int __count_3_2 = 0; //Loop counter
+int __count_3_2 = 0;
+int __count_3_2_L = 0; //Loop counter
 //==========> fastdiscretecosinetransform : header 1
 int __count_7 = 0;
 int __count_3_4 = 0;
@@ -71,11 +73,12 @@ int __count_3_4 = 0;
   block=blk;
 
   #ifdef CBMC
-  __count_3_2 = 0;
+  __count_3_2_L = 0;
   #endif
   for (i=0; i<8; i++) // 3
   {
     #ifdef CBMC
+    __count_3_2_L++;
     __count_3_2++;
     #endif
     tmp0 = block[0] + block[7];
@@ -138,6 +141,7 @@ int __count_3_4 = 0;
     block += lx;
   }
   #ifdef CBMC
+  assert(__count_3_2_L  <= 9); // Loop counter property
   __count_3_4++;
   #endif
 
@@ -146,11 +150,12 @@ int __count_3_4 = 0;
   block=blk;
 
   #ifdef CBMC
-  __count_6_5 = 0;
+  __count_6_5_L = 0;
   #endif
   for (i = 0; i<8; i++) // 6
   {
     #ifdef CBMC
+    __count_6_5_L++;
     __count_6_5++;
     #endif
     tmp0 = block[0] + block[7*lx];
@@ -214,8 +219,21 @@ int __count_3_4 = 0;
   }
   
   #ifdef CBMC
+  assert(__count_6_5_L  <= 9); // Loop counter property
   __count_7++;
   #endif
+
+#ifdef CBMC
+assert(__count_3_2 >= 8); // Lower capacity constraint
+assert(__count_3_2 <= 8); // Upper capacity constraint
+assert(__count_3_4 >= 1); // Lower capacity constraint
+assert(__count_3_4 <= 1); // Upper capacity constraint
+assert(__count_6_5 >= 8); // Lower capacity constraint
+assert(__count_6_5 <= 8); // Upper capacity constraint
+assert(__count_7 >= 1); // Lower capacity constraint
+assert(__count_7 <= 1); // Upper capacity constraint
+#endif
+
   return lx + block[0];
 }
 
