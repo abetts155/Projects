@@ -496,7 +496,7 @@ class Gem5Parser (TraceInformation):
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(traceFiles)
-        #self._end()
+        self._end()
         self._normaliseData()
         self._outputConjectures()
         self._outputCBMCConjectures()

@@ -54,6 +54,7 @@ def timeout(seconds=10):
         def _handle_timeout(signum, frame):
             if not CBMCproc.poll():
                 CBMCproc.kill()
+                Debug.verboseMessage("TIMEOUT reached!")
                 raise TimeoutException()
             
         def wrapper(*args, **kwargs):
