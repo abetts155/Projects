@@ -1,0 +1,1155 @@
+============================================================
+0:00:00.000 - Start Program
+============================================================
+
+********** Analysing program 'adpcm' **********
+Checking program configuration...
+============================================================
+0:00:00.010 - COMPILING BEGIN
+============================================================
+
+============================================================
+0:00:00.120 - COMPILING END
+============================================================
+
+...all good
+============================================================
+0:00:00.130 - TRACE PARSING RUN #1 (NO INLINING)
+============================================================
+
+Parsing gem5 traces
+==========> reset : header 12
+int __count_12_11 = 0;
+int __count_12_11 = 0; //Loop counter
+==========> reset : header 9
+int __count_9_8 = 0;
+int __count_9_8 = 0; //Loop counter
+==========> reset : header 6
+int __count_6_5 = 0;
+int __count_6_5 = 0; //Loop counter
+==========> reset : header 3
+int __count_3_2 = 0;
+int __count_3_2 = 0; //Loop counter
+==========> reset : header 1
+int __count_13 = 0;
+int __count_3_4 = 0;
+==========> logscl : header 14
+int __count_18 = 0;
+int __count_14_15 = 0;
+int __count_14_16 = 0;
+int __count_16_17 = 0;
+int __count_16_18 = 0;
+==========> adpcm : header 27
+int __count_27_25 = 0;
+int __count_27_25 = 0; //Loop counter
+==========> adpcm : header 23
+int __count_21_22 = 0;
+int __count_23_21 = 0; //Loop counter
+==========> adpcm : header 19
+int __count_28 = 0;
+int __count_23_24 = 0;
+==========> my_abs : header 38
+int __count_41 = 0;
+int __count_38_39 = 0;
+int __count_40_41 = 0;
+==========> logsch : header 33
+int __count_37 = 0;
+int __count_33_34 = 0;
+int __count_33_35 = 0;
+int __count_35_36 = 0;
+int __count_35_37 = 0;
+==========> decode : header 61
+int __count_61_60 = 0;
+int __count_61_60 = 0; //Loop counter
+==========> decode : header 58
+int __count_58_57 = 0;
+int __count_58_57 = 0; //Loop counter
+==========> decode : header 42
+int __count_62 = 0;
+int __count_58_59 = 0;
+==========> scalel : header 63
+int __count_63 = 0;
+==========> filtep : header 64
+int __count_64 = 0;
+==========> encode : header 70
+int __count_70_69 = 0;
+int __count_70_69 = 0; //Loop counter
+==========> encode : header 67
+int __count_67_66 = 0;
+int __count_67_66 = 0; //Loop counter
+==========> encode : header 65
+int __count_92 = 0;
+int __count_81_83 = 0;
+int __count_82_84 = 0;
+int __count_85_86 = 0;
+int __count_85_87 = 0;
+==========> uppol2 : header 93
+int __count_102 = 0;
+int __count_93_94 = 0;
+int __count_93_95 = 0;
+int __count_96_98 = 0;
+int __count_97_98 = 0;
+int __count_98_99 = 0;
+int __count_98_100 = 0;
+int __count_100_102 = 0;
+int __count_101_102 = 0;
+==========> quantl : header 107
+int __count_107_105 = 0;
+int __count_107_105 = 0; //Loop counter
+==========> quantl : header 103
+int __count_113 = 0;
+int __count_105_109 = 0;
+int __count_107_108 = 0;
+int __count_110_111 = 0;
+int __count_110_112 = 0;
+==========> filtez : header 31
+int __count_31_30 = 0;
+int __count_31_30 = 0; //Loop counter
+==========> filtez : header 29
+int __count_32 = 0;
+int __count_31_32 = 0;
+==========> uppol1 : header 114
+int __count_121 = 0;
+int __count_115_117 = 0;
+int __count_116_117 = 0;
+int __count_117_118 = 0;
+int __count_117_119 = 0;
+int __count_119_120 = 0;
+int __count_119_121 = 0;
+==========> upzero : header 132
+int __count_129_131 = 0;
+int __count_130_131 = 0;
+int __count_132_128 = 0; //Loop counter
+==========> upzero : header 125
+int __count_125_124 = 0;
+int __count_125_124 = 0; //Loop counter
+==========> upzero : header 122
+int __count_133 = 0;
+int __count_125_126 = 0;
+int __count_132_133 = 0;
+****************************************************************************************************
+FUNCTION 'reset'
+****************************************************************************************************
+  ALWAYS EXECUTES: 13, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (3, 2), at least 6 time(s), at most 6 time(s)
+  ALWAYS EXECUTES: (3, 4), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (6, 5), at least 6 time(s), at most 6 time(s)
+  ALWAYS EXECUTES: (9, 8), at least 23 time(s), at most 23 time(s)
+  ALWAYS EXECUTES: (12, 11), at least 11 time(s), at most 11 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: 13 and (3, 2)
+  MUTUALLY INCLUSIVE: 13 and (3, 4)
+  MUTUALLY INCLUSIVE: 13 and (6, 5)
+  MUTUALLY INCLUSIVE: 13 and (9, 8)
+  MUTUALLY INCLUSIVE: 13 and (12, 11)
+  MUTUALLY INCLUSIVE: (3, 2) and (3, 4)
+  MUTUALLY INCLUSIVE: (3, 2) and (6, 5)
+  MUTUALLY INCLUSIVE: (3, 2) and (9, 8)
+  MUTUALLY INCLUSIVE: (3, 2) and (12, 11)
+  MUTUALLY INCLUSIVE: (3, 4) and (6, 5)
+  MUTUALLY INCLUSIVE: (3, 4) and (9, 8)
+  MUTUALLY INCLUSIVE: (3, 4) and (12, 11)
+  MUTUALLY INCLUSIVE: (6, 5) and (9, 8)
+  MUTUALLY INCLUSIVE: (6, 5) and (12, 11)
+  MUTUALLY INCLUSIVE: (9, 8) and (12, 11)
+****************************************************************************************************
+FUNCTION 'logscl'
+****************************************************************************************************
+  NEVER EXECUTES: (16, 17)
+  ALWAYS EXECUTES: 18, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (16, 18), at least 1 time(s), at most 1 time(s)
+  MAY EXECUTE: (14, 16), at most 1 time(s)
+  MAY EXECUTE: (14, 15), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: 18 and (16, 18)
+  ONE-WAY DEPENDENCY: (16, 17) on (14, 16)
+  ONE-WAY DEPENDENCY: (16, 17) on (14, 15)
+  ONE-WAY DEPENDENCY: (16, 17) on 18
+  ONE-WAY DEPENDENCY: (14, 16) on (16, 18)
+  ONE-WAY DEPENDENCY: (14, 16) on 18
+  ONE-WAY DEPENDENCY: (14, 15) on (16, 18)
+  ONE-WAY DEPENDENCY: (14, 15) on 18
+****************************************************************************************************
+FUNCTION 'adpcm'
+****************************************************************************************************
+  ALWAYS EXECUTES: (27, 25), at least 2 time(s), at most 2 time(s)
+  ALWAYS EXECUTES: (21, 22), at least 2 time(s), at most 2 time(s)
+  ALWAYS EXECUTES: 28, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (23, 24), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (21, 22) and (23, 24)
+  MUTUALLY INCLUSIVE: (21, 22) and 28
+  MUTUALLY INCLUSIVE: (27, 25) and (21, 22)
+  MUTUALLY INCLUSIVE: (27, 25) and (23, 24)
+  MUTUALLY INCLUSIVE: (27, 25) and 28
+  MUTUALLY INCLUSIVE: 28 and (23, 24)
+****************************************************************************************************
+FUNCTION 'my_abs'
+****************************************************************************************************
+  MAY EXECUTE: (40, 41), at most 1 time(s)
+  MAY EXECUTE: (38, 39), at most 1 time(s)
+  ALWAYS EXECUTES: 41, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  ONE-WAY DEPENDENCY: (40, 41) on 41
+  ONE-WAY DEPENDENCY: (38, 39) on 41
+****************************************************************************************************
+FUNCTION 'logsch'
+****************************************************************************************************
+  MAY EXECUTE: (33, 34), at most 1 time(s)
+  MAY EXECUTE: (33, 35), at most 1 time(s)
+  NEVER EXECUTES: (35, 36)
+  ALWAYS EXECUTES: 37, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (35, 37), at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: 37 and (35, 37)
+  ONE-WAY DEPENDENCY: (33, 34) on (35, 37)
+  ONE-WAY DEPENDENCY: (33, 34) on 37
+  ONE-WAY DEPENDENCY: (33, 35) on (35, 37)
+  ONE-WAY DEPENDENCY: (33, 35) on 37
+  ONE-WAY DEPENDENCY: (35, 36) on (33, 34)
+  ONE-WAY DEPENDENCY: (35, 36) on (33, 35)
+  ONE-WAY DEPENDENCY: (35, 36) on 37
+****************************************************************************************************
+FUNCTION 'decode'
+****************************************************************************************************
+  ALWAYS EXECUTES: (58, 57), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: (58, 59), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (61, 60), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: 62, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (58, 57) and (58, 59)
+  MUTUALLY INCLUSIVE: (58, 57) and (61, 60)
+  MUTUALLY INCLUSIVE: (58, 57) and 62
+  MUTUALLY INCLUSIVE: (58, 59) and (61, 60)
+  MUTUALLY INCLUSIVE: (58, 59) and 62
+  MUTUALLY INCLUSIVE: (61, 60) and 62
+****************************************************************************************************
+FUNCTION 'scalel'
+****************************************************************************************************
+  ALWAYS EXECUTES: 63, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'filtep'
+****************************************************************************************************
+  ALWAYS EXECUTES: 64, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+****************************************************************************************************
+FUNCTION 'encode'
+****************************************************************************************************
+  ALWAYS EXECUTES: (67, 66), at least 10 time(s), at most 10 time(s)
+  ALWAYS EXECUTES: (70, 69), at least 22 time(s), at most 22 time(s)
+  MAY EXECUTE: (81, 83), at most 1 time(s)
+  MAY EXECUTE: (82, 84), at most 1 time(s)
+  MAY EXECUTE: (85, 86), at most 1 time(s)
+  MAY EXECUTE: (85, 87), at most 1 time(s)
+  ALWAYS EXECUTES: 92, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (67, 66) and (70, 69)
+  MUTUALLY INCLUSIVE: (67, 66) and 92
+  MUTUALLY INCLUSIVE: (70, 69) and 92
+  MUTUALLY EXCLUSIVE: (81, 83) and (85, 87)
+  ONE-WAY DEPENDENCY: (81, 83) on (67, 66)
+  ONE-WAY DEPENDENCY: (81, 83) on (70, 69)
+  ONE-WAY DEPENDENCY: (81, 83) on (85, 86)
+  ONE-WAY DEPENDENCY: (81, 83) on 92
+  ONE-WAY DEPENDENCY: (82, 84) on (67, 66)
+  ONE-WAY DEPENDENCY: (82, 84) on (70, 69)
+  ONE-WAY DEPENDENCY: (82, 84) on 92
+  ONE-WAY DEPENDENCY: (85, 86) on (67, 66)
+  ONE-WAY DEPENDENCY: (85, 86) on (70, 69)
+  ONE-WAY DEPENDENCY: (85, 86) on 92
+  ONE-WAY DEPENDENCY: (85, 87) on (67, 66)
+  ONE-WAY DEPENDENCY: (85, 87) on (70, 69)
+  ONE-WAY DEPENDENCY: (85, 87) on (82, 84)
+  ONE-WAY DEPENDENCY: (85, 87) on 92
+****************************************************************************************************
+FUNCTION 'uppol2'
+****************************************************************************************************
+  ALWAYS EXECUTES: (96, 98), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (97, 98)
+  NEVER EXECUTES: (98, 99)
+  ALWAYS EXECUTES: (98, 100), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: 102, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (100, 102), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (101, 102)
+  ALWAYS EXECUTES: (93, 94), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (93, 95)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (96, 98) and (98, 100)
+  MUTUALLY INCLUSIVE: (96, 98) and (100, 102)
+  MUTUALLY INCLUSIVE: (96, 98) and (93, 94)
+  MUTUALLY INCLUSIVE: (96, 98) and 102
+  MUTUALLY INCLUSIVE: (97, 98) and (98, 99)
+  MUTUALLY INCLUSIVE: (97, 98) and (101, 102)
+  MUTUALLY INCLUSIVE: (97, 98) and (93, 95)
+  MUTUALLY INCLUSIVE: (98, 99) and (101, 102)
+  MUTUALLY INCLUSIVE: (98, 99) and (93, 95)
+  MUTUALLY INCLUSIVE: (98, 100) and (100, 102)
+  MUTUALLY INCLUSIVE: (98, 100) and (93, 94)
+  MUTUALLY INCLUSIVE: (98, 100) and 102
+  MUTUALLY INCLUSIVE: (100, 102) and (93, 94)
+  MUTUALLY INCLUSIVE: (101, 102) and (93, 95)
+  MUTUALLY INCLUSIVE: 102 and (100, 102)
+  MUTUALLY INCLUSIVE: 102 and (93, 94)
+  ONE-WAY DEPENDENCY: (97, 98) on (98, 100)
+  ONE-WAY DEPENDENCY: (97, 98) on (100, 102)
+  ONE-WAY DEPENDENCY: (97, 98) on (93, 94)
+  ONE-WAY DEPENDENCY: (97, 98) on 102
+  ONE-WAY DEPENDENCY: (98, 99) on (96, 98)
+  ONE-WAY DEPENDENCY: (98, 99) on (100, 102)
+  ONE-WAY DEPENDENCY: (98, 99) on (93, 94)
+  ONE-WAY DEPENDENCY: (98, 99) on 102
+  ONE-WAY DEPENDENCY: (101, 102) on (96, 98)
+  ONE-WAY DEPENDENCY: (101, 102) on (98, 100)
+  ONE-WAY DEPENDENCY: (101, 102) on (93, 94)
+  ONE-WAY DEPENDENCY: (101, 102) on 102
+  ONE-WAY DEPENDENCY: (93, 95) on (96, 98)
+  ONE-WAY DEPENDENCY: (93, 95) on (98, 100)
+  ONE-WAY DEPENDENCY: (93, 95) on (100, 102)
+  ONE-WAY DEPENDENCY: (93, 95) on 102
+****************************************************************************************************
+FUNCTION 'quantl'
+****************************************************************************************************
+  MAY EXECUTE: (105, 109), at most 1 time(s)
+  ALWAYS EXECUTES: (107, 105), at least 1 time(s), at most 30 time(s)
+  MAY EXECUTE: (107, 108), at most 1 time(s)
+  MAY EXECUTE: (110, 112), at most 1 time(s)
+  MAY EXECUTE: (110, 111), at most 1 time(s)
+  ALWAYS EXECUTES: 113, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (107, 105) and 113
+  MUTUALLY EXCLUSIVE: (105, 109) and (110, 112)
+  ONE-WAY DEPENDENCY: (105, 109) on (107, 105)
+  ONE-WAY DEPENDENCY: (105, 109) on (110, 111)
+  ONE-WAY DEPENDENCY: (105, 109) on 113
+  ONE-WAY DEPENDENCY: (107, 108) on (107, 105)
+  ONE-WAY DEPENDENCY: (107, 108) on 113
+  ONE-WAY DEPENDENCY: (110, 112) on (107, 105)
+  ONE-WAY DEPENDENCY: (110, 112) on (107, 108)
+  ONE-WAY DEPENDENCY: (110, 112) on 113
+  ONE-WAY DEPENDENCY: (110, 111) on (107, 105)
+  ONE-WAY DEPENDENCY: (110, 111) on 113
+****************************************************************************************************
+FUNCTION 'filtez'
+****************************************************************************************************
+  ALWAYS EXECUTES: 32, at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (31, 32), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: (31, 30), at least 5 time(s), at most 5 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (31, 32) and (31, 30)
+  MUTUALLY INCLUSIVE: 32 and (31, 32)
+  MUTUALLY INCLUSIVE: 32 and (31, 30)
+****************************************************************************************************
+FUNCTION 'uppol1'
+****************************************************************************************************
+  ALWAYS EXECUTES: (115, 117), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (116, 117)
+  NEVER EXECUTES: (117, 118)
+  ALWAYS EXECUTES: (117, 119), at least 1 time(s), at most 1 time(s)
+  NEVER EXECUTES: (119, 120)
+  ALWAYS EXECUTES: (119, 121), at least 1 time(s), at most 1 time(s)
+  ALWAYS EXECUTES: 121, at least 1 time(s), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (115, 117) and (117, 119)
+  MUTUALLY INCLUSIVE: (115, 117) and (119, 121)
+  MUTUALLY INCLUSIVE: (115, 117) and 121
+  MUTUALLY INCLUSIVE: (116, 117) and (117, 118)
+  MUTUALLY INCLUSIVE: (116, 117) and (119, 120)
+  MUTUALLY INCLUSIVE: (117, 118) and (119, 120)
+  MUTUALLY INCLUSIVE: (117, 119) and (119, 121)
+  MUTUALLY INCLUSIVE: (117, 119) and 121
+  MUTUALLY INCLUSIVE: (119, 121) and 121
+  ONE-WAY DEPENDENCY: (116, 117) on (117, 119)
+  ONE-WAY DEPENDENCY: (116, 117) on (119, 121)
+  ONE-WAY DEPENDENCY: (116, 117) on 121
+  ONE-WAY DEPENDENCY: (117, 118) on (115, 117)
+  ONE-WAY DEPENDENCY: (117, 118) on (119, 121)
+  ONE-WAY DEPENDENCY: (117, 118) on 121
+  ONE-WAY DEPENDENCY: (119, 120) on (115, 117)
+  ONE-WAY DEPENDENCY: (119, 120) on (117, 119)
+  ONE-WAY DEPENDENCY: (119, 120) on 121
+****************************************************************************************************
+FUNCTION 'upzero'
+****************************************************************************************************
+  MAY EXECUTE: (129, 131), at most 6 time(s)
+  NEVER EXECUTES: (130, 131)
+  ALWAYS EXECUTES: 133, at least 1 time(s), at most 1 time(s)
+  MAY EXECUTE: (132, 133), at most 1 time(s)
+  MAY EXECUTE: (125, 124), at most 6 time(s)
+  MAY EXECUTE: (125, 126), at most 1 time(s)
+--------------------------------------------------
+DEPENDENT EXECUTION CONJECTURES
+--------------------------------------------------
+  MUTUALLY INCLUSIVE: (129, 131) and (132, 133)
+  MUTUALLY INCLUSIVE: (125, 124) and (125, 126)
+  ONE-WAY DEPENDENCY: (129, 131) on 133
+  ONE-WAY DEPENDENCY: (130, 131) on (129, 131)
+  ONE-WAY DEPENDENCY: (130, 131) on (132, 133)
+  ONE-WAY DEPENDENCY: (130, 131) on 133
+  ONE-WAY DEPENDENCY: (132, 133) on 133
+  ONE-WAY DEPENDENCY: (125, 124) on 133
+  ONE-WAY DEPENDENCY: (125, 126) on 133
+****************************************************************************************************
+FUNCTION 'reset'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_12_11  <= 12); // Loop counter property
+assert(__count_9_8  <= 24); // Loop counter property
+assert(__count_6_5  <= 7); // Loop counter property
+assert(__count_3_2  <= 7); // Loop counter property
+assert(__count_13 >= 1); // Lower capacity constraint
+assert(__count_13 <= 1); // Upper capacity constraint
+assert(__count_3_2 >= 6); // Lower capacity constraint
+assert(__count_3_2 <= 6); // Upper capacity constraint
+assert(__count_3_4 >= 1); // Lower capacity constraint
+assert(__count_3_4 <= 1); // Upper capacity constraint
+assert(__count_6_5 >= 6); // Lower capacity constraint
+assert(__count_6_5 <= 6); // Upper capacity constraint
+assert(__count_9_8 >= 23); // Lower capacity constraint
+assert(__count_9_8 <= 23); // Upper capacity constraint
+assert(__count_12_11 >= 11); // Lower capacity constraint
+assert(__count_12_11 <= 11); // Upper capacity constraint
+assert(__count_13 > 0 ==> __count_3_2 > 0); // Mutual inclusion
+assert(__count_3_2 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_3_4 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_9_8 > 0); // Mutual inclusion
+assert(__count_9_8 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_13 > 0 ==> __count_12_11 > 0); // Mutual inclusion
+assert(__count_12_11 > 0 ==> __count_13 > 0); // Mutual inclusion
+assert(__count_3_2 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_3_4 > 0 ==> __count_3_2 > 0); // Mutual inclusion
+assert(__count_3_2 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_3_2 > 0); // Mutual inclusion
+assert(__count_3_2 > 0 ==> __count_9_8 > 0); // Mutual inclusion
+assert(__count_9_8 > 0 ==> __count_3_2 > 0); // Mutual inclusion
+assert(__count_3_2 > 0 ==> __count_12_11 > 0); // Mutual inclusion
+assert(__count_12_11 > 0 ==> __count_3_2 > 0); // Mutual inclusion
+assert(__count_3_4 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_3_4 > 0 ==> __count_9_8 > 0); // Mutual inclusion
+assert(__count_9_8 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_3_4 > 0 ==> __count_12_11 > 0); // Mutual inclusion
+assert(__count_12_11 > 0 ==> __count_3_4 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_9_8 > 0); // Mutual inclusion
+assert(__count_9_8 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_6_5 > 0 ==> __count_12_11 > 0); // Mutual inclusion
+assert(__count_12_11 > 0 ==> __count_6_5 > 0); // Mutual inclusion
+assert(__count_9_8 > 0 ==> __count_12_11 > 0); // Mutual inclusion
+assert(__count_12_11 > 0 ==> __count_9_8 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'logscl'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_16_17 == 0); // Dead code
+assert(__count_18 >= 1); // Lower capacity constraint
+assert(__count_18 <= 1); // Upper capacity constraint
+assert(__count_16_18 >= 1); // Lower capacity constraint
+assert(__count_16_18 <= 1); // Upper capacity constraint
+assert(__count_14_16 <= 1); // Upper capacity constraint
+assert(__count_14_15 <= 1); // Upper capacity constraint
+assert(__count_18 > 0 ==> __count_16_18 > 0); // Mutual inclusion
+assert(__count_16_18 > 0 ==> __count_18 > 0); // Mutual inclusion
+assert(__count_16_17 > 0 ==> __count_14_16 > 0); // Execution dependence
+assert(__count_16_17 > 0 ==> __count_14_15 > 0); // Execution dependence
+assert(__count_16_17 > 0 ==> __count_18 > 0); // Execution dependence
+assert(__count_14_16 > 0 ==> __count_16_18 > 0); // Execution dependence
+assert(__count_14_16 > 0 ==> __count_18 > 0); // Execution dependence
+assert(__count_14_15 > 0 ==> __count_16_18 > 0); // Execution dependence
+assert(__count_14_15 > 0 ==> __count_18 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'adpcm'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_27_25  <= 3); // Loop counter property
+assert(__count_23_21  <= 3); // Loop counter property
+assert(__count_27_25 >= 2); // Lower capacity constraint
+assert(__count_27_25 <= 2); // Upper capacity constraint
+assert(__count_21_22 >= 2); // Lower capacity constraint
+assert(__count_21_22 <= 2); // Upper capacity constraint
+assert(__count_28 >= 1); // Lower capacity constraint
+assert(__count_28 <= 1); // Upper capacity constraint
+assert(__count_23_24 >= 1); // Lower capacity constraint
+assert(__count_23_24 <= 1); // Upper capacity constraint
+assert(__count_21_22 > 0 ==> __count_23_24 > 0); // Mutual inclusion
+assert(__count_23_24 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_28 > 0); // Mutual inclusion
+assert(__count_28 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_27_25 > 0 ==> __count_21_22 > 0); // Mutual inclusion
+assert(__count_21_22 > 0 ==> __count_27_25 > 0); // Mutual inclusion
+assert(__count_27_25 > 0 ==> __count_23_24 > 0); // Mutual inclusion
+assert(__count_23_24 > 0 ==> __count_27_25 > 0); // Mutual inclusion
+assert(__count_27_25 > 0 ==> __count_28 > 0); // Mutual inclusion
+assert(__count_28 > 0 ==> __count_27_25 > 0); // Mutual inclusion
+assert(__count_28 > 0 ==> __count_23_24 > 0); // Mutual inclusion
+assert(__count_23_24 > 0 ==> __count_28 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'my_abs'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_40_41 <= 1); // Upper capacity constraint
+assert(__count_38_39 <= 1); // Upper capacity constraint
+assert(__count_41 >= 1); // Lower capacity constraint
+assert(__count_41 <= 1); // Upper capacity constraint
+assert(__count_40_41 > 0 ==> __count_41 > 0); // Execution dependence
+assert(__count_38_39 > 0 ==> __count_41 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'logsch'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_33_34 <= 1); // Upper capacity constraint
+assert(__count_33_35 <= 1); // Upper capacity constraint
+assert(__count_35_36 == 0); // Dead code
+assert(__count_37 >= 1); // Lower capacity constraint
+assert(__count_37 <= 1); // Upper capacity constraint
+assert(__count_35_37 >= 1); // Lower capacity constraint
+assert(__count_35_37 <= 1); // Upper capacity constraint
+assert(__count_37 > 0 ==> __count_35_37 > 0); // Mutual inclusion
+assert(__count_35_37 > 0 ==> __count_37 > 0); // Mutual inclusion
+assert(__count_33_34 > 0 ==> __count_35_37 > 0); // Execution dependence
+assert(__count_33_34 > 0 ==> __count_37 > 0); // Execution dependence
+assert(__count_33_35 > 0 ==> __count_35_37 > 0); // Execution dependence
+assert(__count_33_35 > 0 ==> __count_37 > 0); // Execution dependence
+assert(__count_35_36 > 0 ==> __count_33_34 > 0); // Execution dependence
+assert(__count_35_36 > 0 ==> __count_33_35 > 0); // Execution dependence
+assert(__count_35_36 > 0 ==> __count_37 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'decode'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_61_60  <= 11); // Loop counter property
+assert(__count_58_57  <= 11); // Loop counter property
+assert(__count_58_57 >= 10); // Lower capacity constraint
+assert(__count_58_57 <= 10); // Upper capacity constraint
+assert(__count_58_59 >= 1); // Lower capacity constraint
+assert(__count_58_59 <= 1); // Upper capacity constraint
+assert(__count_61_60 >= 10); // Lower capacity constraint
+assert(__count_61_60 <= 10); // Upper capacity constraint
+assert(__count_62 >= 1); // Lower capacity constraint
+assert(__count_62 <= 1); // Upper capacity constraint
+assert(__count_58_57 > 0 ==> __count_58_59 > 0); // Mutual inclusion
+assert(__count_58_59 > 0 ==> __count_58_57 > 0); // Mutual inclusion
+assert(__count_58_57 > 0 ==> __count_61_60 > 0); // Mutual inclusion
+assert(__count_61_60 > 0 ==> __count_58_57 > 0); // Mutual inclusion
+assert(__count_58_57 > 0 ==> __count_62 > 0); // Mutual inclusion
+assert(__count_62 > 0 ==> __count_58_57 > 0); // Mutual inclusion
+assert(__count_58_59 > 0 ==> __count_61_60 > 0); // Mutual inclusion
+assert(__count_61_60 > 0 ==> __count_58_59 > 0); // Mutual inclusion
+assert(__count_58_59 > 0 ==> __count_62 > 0); // Mutual inclusion
+assert(__count_62 > 0 ==> __count_58_59 > 0); // Mutual inclusion
+assert(__count_61_60 > 0 ==> __count_62 > 0); // Mutual inclusion
+assert(__count_62 > 0 ==> __count_61_60 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'scalel'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_63 >= 1); // Lower capacity constraint
+assert(__count_63 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'filtep'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_64 >= 1); // Lower capacity constraint
+assert(__count_64 <= 1); // Upper capacity constraint
+#endif
+****************************************************************************************************
+FUNCTION 'encode'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_70_69  <= 23); // Loop counter property
+assert(__count_67_66  <= 11); // Loop counter property
+assert(__count_67_66 >= 10); // Lower capacity constraint
+assert(__count_67_66 <= 10); // Upper capacity constraint
+assert(__count_70_69 >= 22); // Lower capacity constraint
+assert(__count_70_69 <= 22); // Upper capacity constraint
+assert(__count_81_83 <= 1); // Upper capacity constraint
+assert(__count_82_84 <= 1); // Upper capacity constraint
+assert(__count_85_86 <= 1); // Upper capacity constraint
+assert(__count_85_87 <= 1); // Upper capacity constraint
+assert(__count_92 >= 1); // Lower capacity constraint
+assert(__count_92 <= 1); // Upper capacity constraint
+assert(__count_67_66 > 0 ==> __count_70_69 > 0); // Mutual inclusion
+assert(__count_70_69 > 0 ==> __count_67_66 > 0); // Mutual inclusion
+assert(__count_67_66 > 0 ==> __count_92 > 0); // Mutual inclusion
+assert(__count_92 > 0 ==> __count_67_66 > 0); // Mutual inclusion
+assert(__count_70_69 > 0 ==> __count_92 > 0); // Mutual inclusion
+assert(__count_92 > 0 ==> __count_70_69 > 0); // Mutual inclusion
+assert(__count_81_83 > 0 ==> __count_85_87 == 0); // Mutual exclusion
+assert(__count_85_87 > 0 ==> __count_81_83 == 0); // Mutual exclusion
+assert(__count_81_83 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_85_86 > 0); // Execution dependence
+assert(__count_81_83 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_82_84 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_85_86 > 0 ==> __count_92 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_67_66 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_70_69 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_82_84 > 0); // Execution dependence
+assert(__count_85_87 > 0 ==> __count_92 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'uppol2'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_96_98 >= 1); // Lower capacity constraint
+assert(__count_96_98 <= 1); // Upper capacity constraint
+assert(__count_97_98 == 0); // Dead code
+assert(__count_98_99 == 0); // Dead code
+assert(__count_98_100 >= 1); // Lower capacity constraint
+assert(__count_98_100 <= 1); // Upper capacity constraint
+assert(__count_102 >= 1); // Lower capacity constraint
+assert(__count_102 <= 1); // Upper capacity constraint
+assert(__count_100_102 >= 1); // Lower capacity constraint
+assert(__count_100_102 <= 1); // Upper capacity constraint
+assert(__count_101_102 == 0); // Dead code
+assert(__count_93_94 >= 1); // Lower capacity constraint
+assert(__count_93_94 <= 1); // Upper capacity constraint
+assert(__count_93_95 == 0); // Dead code
+assert(__count_96_98 > 0 ==> __count_98_100 > 0); // Mutual inclusion
+assert(__count_98_100 > 0 ==> __count_96_98 > 0); // Mutual inclusion
+assert(__count_96_98 > 0 ==> __count_100_102 > 0); // Mutual inclusion
+assert(__count_100_102 > 0 ==> __count_96_98 > 0); // Mutual inclusion
+assert(__count_96_98 > 0 ==> __count_93_94 > 0); // Mutual inclusion
+assert(__count_93_94 > 0 ==> __count_96_98 > 0); // Mutual inclusion
+assert(__count_96_98 > 0 ==> __count_102 > 0); // Mutual inclusion
+assert(__count_102 > 0 ==> __count_96_98 > 0); // Mutual inclusion
+assert(__count_97_98 > 0 ==> __count_98_99 > 0); // Mutual inclusion
+assert(__count_98_99 > 0 ==> __count_97_98 > 0); // Mutual inclusion
+assert(__count_97_98 > 0 ==> __count_101_102 > 0); // Mutual inclusion
+assert(__count_101_102 > 0 ==> __count_97_98 > 0); // Mutual inclusion
+assert(__count_97_98 > 0 ==> __count_93_95 > 0); // Mutual inclusion
+assert(__count_93_95 > 0 ==> __count_97_98 > 0); // Mutual inclusion
+assert(__count_98_99 > 0 ==> __count_101_102 > 0); // Mutual inclusion
+assert(__count_101_102 > 0 ==> __count_98_99 > 0); // Mutual inclusion
+assert(__count_98_99 > 0 ==> __count_93_95 > 0); // Mutual inclusion
+assert(__count_93_95 > 0 ==> __count_98_99 > 0); // Mutual inclusion
+assert(__count_98_100 > 0 ==> __count_100_102 > 0); // Mutual inclusion
+assert(__count_100_102 > 0 ==> __count_98_100 > 0); // Mutual inclusion
+assert(__count_98_100 > 0 ==> __count_93_94 > 0); // Mutual inclusion
+assert(__count_93_94 > 0 ==> __count_98_100 > 0); // Mutual inclusion
+assert(__count_98_100 > 0 ==> __count_102 > 0); // Mutual inclusion
+assert(__count_102 > 0 ==> __count_98_100 > 0); // Mutual inclusion
+assert(__count_100_102 > 0 ==> __count_93_94 > 0); // Mutual inclusion
+assert(__count_93_94 > 0 ==> __count_100_102 > 0); // Mutual inclusion
+assert(__count_101_102 > 0 ==> __count_93_95 > 0); // Mutual inclusion
+assert(__count_93_95 > 0 ==> __count_101_102 > 0); // Mutual inclusion
+assert(__count_102 > 0 ==> __count_100_102 > 0); // Mutual inclusion
+assert(__count_100_102 > 0 ==> __count_102 > 0); // Mutual inclusion
+assert(__count_102 > 0 ==> __count_93_94 > 0); // Mutual inclusion
+assert(__count_93_94 > 0 ==> __count_102 > 0); // Mutual inclusion
+assert(__count_97_98 > 0 ==> __count_98_100 > 0); // Execution dependence
+assert(__count_97_98 > 0 ==> __count_100_102 > 0); // Execution dependence
+assert(__count_97_98 > 0 ==> __count_93_94 > 0); // Execution dependence
+assert(__count_97_98 > 0 ==> __count_102 > 0); // Execution dependence
+assert(__count_98_99 > 0 ==> __count_96_98 > 0); // Execution dependence
+assert(__count_98_99 > 0 ==> __count_100_102 > 0); // Execution dependence
+assert(__count_98_99 > 0 ==> __count_93_94 > 0); // Execution dependence
+assert(__count_98_99 > 0 ==> __count_102 > 0); // Execution dependence
+assert(__count_101_102 > 0 ==> __count_96_98 > 0); // Execution dependence
+assert(__count_101_102 > 0 ==> __count_98_100 > 0); // Execution dependence
+assert(__count_101_102 > 0 ==> __count_93_94 > 0); // Execution dependence
+assert(__count_101_102 > 0 ==> __count_102 > 0); // Execution dependence
+assert(__count_93_95 > 0 ==> __count_96_98 > 0); // Execution dependence
+assert(__count_93_95 > 0 ==> __count_98_100 > 0); // Execution dependence
+assert(__count_93_95 > 0 ==> __count_100_102 > 0); // Execution dependence
+assert(__count_93_95 > 0 ==> __count_102 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'quantl'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_107_105  <= 31); // Loop counter property
+assert(__count_105_109 <= 1); // Upper capacity constraint
+assert(__count_107_105 >= 1); // Lower capacity constraint
+assert(__count_107_105 <= 30); // Upper capacity constraint
+assert(__count_107_108 <= 1); // Upper capacity constraint
+assert(__count_110_112 <= 1); // Upper capacity constraint
+assert(__count_110_111 <= 1); // Upper capacity constraint
+assert(__count_113 >= 1); // Lower capacity constraint
+assert(__count_113 <= 1); // Upper capacity constraint
+assert(__count_107_105 > 0 ==> __count_113 > 0); // Mutual inclusion
+assert(__count_113 > 0 ==> __count_107_105 > 0); // Mutual inclusion
+assert(__count_105_109 > 0 ==> __count_110_112 == 0); // Mutual exclusion
+assert(__count_110_112 > 0 ==> __count_105_109 == 0); // Mutual exclusion
+assert(__count_105_109 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_105_109 > 0 ==> __count_110_111 > 0); // Execution dependence
+assert(__count_105_109 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_107_108 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_107_108 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_107_108 > 0); // Execution dependence
+assert(__count_110_112 > 0 ==> __count_113 > 0); // Execution dependence
+assert(__count_110_111 > 0 ==> __count_107_105 > 0); // Execution dependence
+assert(__count_110_111 > 0 ==> __count_113 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'filtez'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_31_30  <= 6); // Loop counter property
+assert(__count_32 >= 1); // Lower capacity constraint
+assert(__count_32 <= 1); // Upper capacity constraint
+assert(__count_31_32 >= 1); // Lower capacity constraint
+assert(__count_31_32 <= 1); // Upper capacity constraint
+assert(__count_31_30 >= 5); // Lower capacity constraint
+assert(__count_31_30 <= 5); // Upper capacity constraint
+assert(__count_31_32 > 0 ==> __count_31_30 > 0); // Mutual inclusion
+assert(__count_31_30 > 0 ==> __count_31_32 > 0); // Mutual inclusion
+assert(__count_32 > 0 ==> __count_31_32 > 0); // Mutual inclusion
+assert(__count_31_32 > 0 ==> __count_32 > 0); // Mutual inclusion
+assert(__count_32 > 0 ==> __count_31_30 > 0); // Mutual inclusion
+assert(__count_31_30 > 0 ==> __count_32 > 0); // Mutual inclusion
+#endif
+****************************************************************************************************
+FUNCTION 'uppol1'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_115_117 >= 1); // Lower capacity constraint
+assert(__count_115_117 <= 1); // Upper capacity constraint
+assert(__count_116_117 == 0); // Dead code
+assert(__count_117_118 == 0); // Dead code
+assert(__count_117_119 >= 1); // Lower capacity constraint
+assert(__count_117_119 <= 1); // Upper capacity constraint
+assert(__count_119_120 == 0); // Dead code
+assert(__count_119_121 >= 1); // Lower capacity constraint
+assert(__count_119_121 <= 1); // Upper capacity constraint
+assert(__count_121 >= 1); // Lower capacity constraint
+assert(__count_121 <= 1); // Upper capacity constraint
+assert(__count_115_117 > 0 ==> __count_117_119 > 0); // Mutual inclusion
+assert(__count_117_119 > 0 ==> __count_115_117 > 0); // Mutual inclusion
+assert(__count_115_117 > 0 ==> __count_119_121 > 0); // Mutual inclusion
+assert(__count_119_121 > 0 ==> __count_115_117 > 0); // Mutual inclusion
+assert(__count_115_117 > 0 ==> __count_121 > 0); // Mutual inclusion
+assert(__count_121 > 0 ==> __count_115_117 > 0); // Mutual inclusion
+assert(__count_116_117 > 0 ==> __count_117_118 > 0); // Mutual inclusion
+assert(__count_117_118 > 0 ==> __count_116_117 > 0); // Mutual inclusion
+assert(__count_116_117 > 0 ==> __count_119_120 > 0); // Mutual inclusion
+assert(__count_119_120 > 0 ==> __count_116_117 > 0); // Mutual inclusion
+assert(__count_117_118 > 0 ==> __count_119_120 > 0); // Mutual inclusion
+assert(__count_119_120 > 0 ==> __count_117_118 > 0); // Mutual inclusion
+assert(__count_117_119 > 0 ==> __count_119_121 > 0); // Mutual inclusion
+assert(__count_119_121 > 0 ==> __count_117_119 > 0); // Mutual inclusion
+assert(__count_117_119 > 0 ==> __count_121 > 0); // Mutual inclusion
+assert(__count_121 > 0 ==> __count_117_119 > 0); // Mutual inclusion
+assert(__count_119_121 > 0 ==> __count_121 > 0); // Mutual inclusion
+assert(__count_121 > 0 ==> __count_119_121 > 0); // Mutual inclusion
+assert(__count_116_117 > 0 ==> __count_117_119 > 0); // Execution dependence
+assert(__count_116_117 > 0 ==> __count_119_121 > 0); // Execution dependence
+assert(__count_116_117 > 0 ==> __count_121 > 0); // Execution dependence
+assert(__count_117_118 > 0 ==> __count_115_117 > 0); // Execution dependence
+assert(__count_117_118 > 0 ==> __count_119_121 > 0); // Execution dependence
+assert(__count_117_118 > 0 ==> __count_121 > 0); // Execution dependence
+assert(__count_119_120 > 0 ==> __count_115_117 > 0); // Execution dependence
+assert(__count_119_120 > 0 ==> __count_117_119 > 0); // Execution dependence
+assert(__count_119_120 > 0 ==> __count_121 > 0); // Execution dependence
+#endif
+****************************************************************************************************
+FUNCTION 'upzero'
+****************************************************************************************************
+#ifdef CBMC
+assert(__count_132_128  <= 7); // Loop counter property
+assert(__count_125_124  <= 7); // Loop counter property
+assert(__count_129_Found a solution with cost -600
+Found no solution with cost -690.0 .. -601.0
+
+Success, time = 0.0
+Found a solution with cost -30810
+Found no solution with cost -31140.0 .. -30811.0
+
+Success, time = 0.0
+Found a solution with cost -2340
+
+Success, time = 0.0
+Found a solution with cost -2340
+
+Success, time = 0.0
+Found a solution with cost -600
+Found no solution with cost -690.0 .. -601.0
+
+Success, time = 0.0
+Found a solution with cost -1890
+
+Success, time = 0.0
+Found a solution with cost -1890
+
+Success, time = 0.0
+Found a solution with cost -6450
+
+Success, time = 0.0
+Found a solution with cost -6450
+
+Success, time = 0.0
+131 <= 6); // Upper capacity constraint
+assert(__count_130_131 == 0); // Dead code
+assert(__count_133 >= 1); // Lower capacity constraint
+assert(__count_133 <= 1); // Upper capacity constraint
+assert(__count_132_133 <= 1); // Upper capacity constraint
+assert(__count_125_124 <= 6); // Upper capacity constraint
+assert(__count_125_126 <= 1); // Upper capacity constraint
+assert(__count_129_131 > 0 ==> __count_132_133 > 0); // Mutual inclusion
+assert(__count_132_133 > 0 ==> __count_129_131 > 0); // Mutual inclusion
+assert(__count_125_124 > 0 ==> __count_125_126 > 0); // Mutual inclusion
+assert(__count_125_126 > 0 ==> __count_125_124 > 0); // Mutual inclusion
+assert(__count_129_131 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_130_131 > 0 ==> __count_129_131 > 0); // Execution dependence
+assert(__count_130_131 > 0 ==> __count_132_133 > 0); // Execution dependence
+assert(__count_130_131 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_132_133 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_125_124 > 0 ==> __count_133 > 0); // Execution dependence
+assert(__count_125_126 > 0 ==> __count_133 > 0); // Execution dependence
+#endif
+HWMT = 524040
+Doing WCET calculation on my_abs
+ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.06909)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.my_abs.context4.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.27122)
+Doing WCET calculation on quantl
+ILP(vanilla):: WCET(quantl)=31770 (SOLVE TIME=0.00532)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.quantl.context3.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(quantl)=30810 (SOLVE TIME=0.23547)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00515)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol2.context34.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.23475)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00509)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol2.context35.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.23338)
+Doing WCET calculation on my_abs
+ILP(vanilla):: WCET(my_abs)=600 (SOLVE TIME=0.00405)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.my_abs.context5.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(my_abs)=600 (SOLVE TIME=0.22069)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00411)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol1.context10.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.22753)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00517)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol1.context11.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.23083)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00525)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.filtez.context14.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.22475)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00414)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.filtez.context15.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.22559)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00501)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00462)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00472)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00467)
+Doing WCET calculation on scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00441)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00445)
+Doing WCET calculation onFound a solution with cost -1470
+
+Success, time = 0.0
+Found a solution with cost -1350
+Found a solution with cost -1440
+
+Success, time = 0.0
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+Found a solution with cost -147930
+Found no solution with cost -148080.0 .. -147931.0
+
+Success, time = 0.0
+Found a solution with cost -48690
+
+Success, time = 0.0
+Found a solution with cost -2340
+
+Success, time = 0.0
+Found a solution with cost -2340
+
+Success, time = 0.0
+Found a solution with cost -1890
+
+Success, time = 0.0
+Found a solution with cost -1890
+
+Success, time = 0.0
+Found a solution with cost -6450
+
+Success, time = 0.0
+Found a solution with cost -6450
+
+Success, time = 0.0
+ scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00440)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00443)
+Doing WCET calculation on logsch
+ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00471)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logsch.context25.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.22535)
+Doing WCET calculation on logscl
+ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00443)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context27.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.22532)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00537)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context30.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.22763)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00559)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context31.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.23344)
+Doing WCET calculation on encode
+ILP(vanilla):: WCET(encode)=156870 (SOLVE TIME=0.00498)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.encode.context2.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(encode)=147930 (SOLVE TIME=0.24631)
+Doing WCET calculation on reset
+ILP(vanilla):: WCET(reset)=52800 (SOLVE TIME=0.00556)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.reset.context6.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(reset)=48690 (SOLVE TIME=0.24340)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00537)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol2.context32.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.23488)
+Doing WCET calculation on uppol2
+ILP(vanilla):: WCET(uppol2)=2340 (SOLVE TIME=0.00508)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol2.context33.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol2)=2340 (SOLVE TIME=0.23543)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00519)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol1.context8.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.22613)
+Doing WCET calculation on uppol1
+ILP(vanilla):: WCET(uppol1)=1890 (SOLVE TIME=0.00514)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.uppol1.context9.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(uppol1)=1890 (SOLVE TIME=0.23057)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00525)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.filtez.context12.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.21728)
+Doing WCET calculation on filtez
+ILP(vanilla):: WCET(filtez)=7440 (SOLVE TIME=0.00483)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.filtez.context13.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(filtez)=6450 (SOLVE TIME=0.22541)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00398)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00360)
+Doing WCET calculation on filtep
+ILP(vanilla):: WCET(filtep)=1530 (SOLVE TIME=0.00364)
+ILP(extra):: WCET(filtep)=1530 (SOLVE TIME=0.00467)
+Doing WCET calculation on scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00444)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00450)
+Doing WCET calculation on scalel
+ILP(vanilla):: WCET(scalel)=1440 (SOLVE TIME=0.00449)
+ILP(extra):: WCET(scalel)=1440 (SOLVE TIME=0.00445)
+Doing WCET calculation on logsch
+ILP(vanilla):: WCET(logsch)=1470 (SOLVE TIME=0.00472)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformFound a solution with cost -1470
+
+Success, time = 0.0
+Found a solution with cost -1350
+Found a solution with cost -1440
+
+Success, time = 0.0
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+Found a solution with cost -12150
+Found no solution with cost -18030.0 .. -12151.0
+
+Success, time = 0.0
+Found a solution with cost -109500
+
+Success, time = 0.0
+Found a solution with cost -570030
+
+Success, time = 0.0
+ation/benchmarks/adpcm.logsch.context24.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(logsch)=1470 (SOLVE TIME=0.21995)
+Doing WCET calculation on logscl
+ILP(vanilla):: WCET(logscl)=1440 (SOLVE TIME=0.00506)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.logscl.context26.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(logscl)=1440 (SOLVE TIME=0.22505)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00559)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context28.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.23252)
+Doing WCET calculation on upzero
+ILP(vanilla):: WCET(upzero)=13800 (SOLVE TIME=0.00556)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.upzero.context29.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(upzero)=12150 (SOLVE TIME=0.23005)
+Doing WCET calculation on decode
+ILP(vanilla):: WCET(decode)=117960 (SOLVE TIME=0.00576)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.decode.context7.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(decode)=109500 (SOLVE TIME=0.23678)
+Doing WCET calculation on adpcm
+ILP(vanilla):: WCET(adpcm)=886590 (SOLVE TIME=0.00531)
+Running command 'jeclipse -b /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.adpcm.context1.cfg.ecl.extra -e "solve(WCET)."'
+CLP(extra):: WCET(adpcm)=570030 (SOLVE TIME=0.23191)
+In reset...
+...#CFG edges              = 17
+...#monitored              = 6
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 15
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 6
+In logscl...
+...#CFG edges              = 7
+...#monitored              = 5
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 1
+...#execution dependencies = 7
+...#never execute          = 1
+...#always execute         = 2
+In adpcm...
+...#CFG edges              = 12
+...#monitored              = 4
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 6
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 4
+In my_abs...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 2
+...#never execute          = 0
+...#always execute         = 1
+In logsch...
+...#CFG edges              = 7
+...#monitored              = 5
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 1
+...#execution dependencies = 7
+...#never execute          = 1
+...#always execute         = 2
+In decode...
+...#CFG edges              = 23
+...#monitored              = 4
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 6
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 4
+In scalel...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In filtep...
+...#CFG edges              = 1
+...#monitored              = 1
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 0
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 1
+In encode...
+...#CFG edges              = 32
+...#monitored              = 7
+...#mutual exclusion pairs = 1
+...#mutual inclusion pairs = 3
+...#execution dependencies = 14
+...#never execute          = 0
+...#always execute         = 3
+In uppol2...
+...#CFG edges              = 14
+...#monitored              = 9
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 16
+...#execution dependencies = 16
+...#never execute          = 4
+...#always execute         = 5
+In quantl...
+...#CFG edges              = 14
+...#monitored              = 6
+...#mutual exclusion pairs = 1
+...#mutual inclusion pairs = 1
+...#execution dependencies = 10
+...#never execute          = 0
+...#always execute         = 2
+In filtez...
+...#CFG edges              = 5
+...#monitored              = 3
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 3
+...#execution dependencies = 0
+...#never execute          = 0
+...#always execute         = 3
+In uppol1...
+...#CFG edges              = 11
+...#monitored              = 7
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 9
+...#execution dependencies = 9
+...#never execute          = 3
+...#always execute         = 4
+In upzero...
+...#CFG edges              = 16
+...#monitored              = 6
+...#mutual exclusion pairs = 0
+...#mutual inclusion pairs = 2
+...#execution dependencies = 7
+...#never execute          = 1
+...#always execute         = 1
+...#TOTAL mutual exclusion pairs = 2
+...#TOTAL mutual inclusion pairs = 63
+...#TOTAL execution dependencies = 72
+...#TOTAL never execute          = 39
+...#TOTAL always execute         = 39
+============================================================
+7:07:57.650 - End Program
+Elapsed time: 7:07:57.650
+============================================================
+

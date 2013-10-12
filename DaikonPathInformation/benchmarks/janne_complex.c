@@ -134,9 +134,16 @@ main (int argc, char *argv[])
   {
     return 1;
   }
+  
+  int arg1 = atoi(argv[1]);
+  int arg2 = atoi(argv[2]);
+  
+  #ifdef CBMC
+  __CPROVER_assume(arg1 >= 1 && arg1 <= 50);
+  __CPROVER_assume(arg1 >= 2 && arg2 <= 50);
+  #endif
 
-  int val = janne_complex (atoi(argv[1]), atoi(argv[2]));
-  printf("%d", val);
+  int val = janne_complex (arg1, arg2);
 
   return 0;
 }

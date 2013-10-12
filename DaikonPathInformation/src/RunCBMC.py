@@ -18,7 +18,7 @@ def commandLine ():
     cmdline.add_argument("--timeout",
                          type=int,
                          help="set number of seconds at which to timeout",
-                         default=60)
+                         default=600)
     
     cmdline.add_argument("--uncomment",
                          action="store_true",
@@ -70,11 +70,13 @@ def timeout(seconds=10):
 
 def countAsserts (filename):
     from subprocess import Popen, PIPE
-    cmd  = "ack --count assert %s" % filename
+    cmd  = "ack-grep --count assert %s" % filename
     proc = Popen(cmd, shell=True, stdout=PIPE) 
     proc.wait()
-    line = proc.stdout.readlines()[0].strip()
-    return int(line)
+    line  = proc.stdout.readlines()[0].strip()
+    print line
+    count = re.findall(r':[0-9]+', line)[0]
+    return int(count[1:])
 
 def uncommentFailingAsserts (filename):
     from subprocess import Popen

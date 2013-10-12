@@ -164,9 +164,6 @@ main (int argc, char *argv[])
   const int ARRAY_SIZE = argc - 1;
   int TV[ARRAY_SIZE];
   int i;
-  #ifdef CBMC
-  __CPROVER_assume(ARRAY_SIZE == 10);
-  #endif
 
   /*
    * At least one integer value must be supplied
@@ -180,6 +177,10 @@ main (int argc, char *argv[])
   {
     TV[i] = atoi (argv[i + 1]);
   }
+  
+  #ifdef CBMC
+  __CPROVER_assume(ARRAY_SIZE >= 1 && ARRAY_SIZE <= 100);
+  #endif
 
   bubblesort (ARRAY_SIZE, TV);
 

@@ -98,7 +98,7 @@ int __count_19_20 = 0;
 #ifdef CBMC
 assert(__count_19_20 >= 1); // Lower capacity constraint
 assert(__count_19_20 <= 1); // Upper capacity constraint
-assert(__count_19_18 >= 10); // Lower capacity constraint
+//assert(__count_19_18 >= 10); // Lower capacity constraint
 assert(__count_19_18 <= 10); // Upper capacity constraint
 assert(__count_20 >= 1); // Lower capacity constraint
 assert(__count_20 <= 1); // Upper capacity constraint
@@ -150,7 +150,7 @@ assert(__count_26 >= 1); // Lower capacity constraint
 assert(__count_26 <= 1); // Upper capacity constraint
 assert(__count_24_25 >= 1); // Lower capacity constraint
 assert(__count_24_25 <= 1); // Upper capacity constraint
-assert(__count_24_22 >= 10); // Lower capacity constraint
+//assert(__count_24_22 >= 10); // Lower capacity constraint
 assert(__count_24_22 <= 10); // Upper capacity constraint
 #endif
 }
@@ -198,7 +198,7 @@ int __count_11_12 = 0;
 
 
 #ifdef CBMC
-assert(__count_8_9 >= 10); // Lower capacity constraint
+//assert(__count_8_9 >= 10); // Lower capacity constraint
 assert(__count_8_9 <= 10); // Upper capacity constraint
 assert(__count_14 >= 1); // Lower capacity constraint
 assert(__count_14 <= 1); // Upper capacity constraint
