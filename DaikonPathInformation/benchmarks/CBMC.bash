@@ -1,0 +1,23 @@
+#/!/bin/bash
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc adpcm.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc binary_search.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc bubblesort.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc matrix_count.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc compress.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc cover.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc crc.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc edn.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc fastDiscreteCosineTransform.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc fft.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc insertsort.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc janne_complex.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc lcdnum.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc LUdecomposition.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc matrix_inverse.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc matrixmultiply.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc embedded.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc quicksort.c 
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc quadraticroots.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc select.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc squareroot.c
+python ../src/RunCBMC.py --CBMC /usr/bin/cbmc statistics.c
