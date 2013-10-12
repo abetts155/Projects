@@ -1,5 +1,8 @@
-cover,          128, 0 out of 388, No
+adpcm,          32,  8 out of 172, No
+binary_search,
+bubblesort,
 maxtrix_count,  8,   0 out of 12,  No
+cover,          128, 0 out of 388, No
 janne_complex   64,  0 out of 36,  TIMEOUT
 lcdnum,         4,   1 out of 12,  No
 matrixmultiply, 8,   0 out of 13,  No

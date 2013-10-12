@@ -100079,7 +100079,7 @@ assert(__count_8 >= 1); // Lower capacity constraint
 assert(__count_8 <= 1); // Upper capacity constraint
 assert(__count_7_8 >= 1); // Lower capacity constraint
 assert(__count_7_8 <= 1); // Upper capacity constraint
-assert(__count_2_3 == 0); // Dead code
+//assert(__count_2_3 == 0); // Dead code
 assert(__count_4_5 <= 16); // Upper capacity constraint
 assert(__count_4_6 <= 17); // Upper capacity constraint
 assert(__count_4_5 > 0 ==> __count_4_6 == 0); // Mutual exclusion
