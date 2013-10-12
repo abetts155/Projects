@@ -95,16 +95,16 @@ int __count_9_10 = 0;
   #endif
 
 #ifdef CBMC
-assert(__count_5_6 >= 4); // Lower capacity constraint
-assert(__count_5_6 <= 17); // Upper capacity constraint
+//assert(__count_5_6 >= 4); // Lower capacity constraint
+//assert(__count_5_6 <= 17); // Upper capacity constraint
 assert(__count_7_8 >= 5); // Lower capacity constraint
 assert(__count_7_8 <= 5); // Upper capacity constraint
 assert(__count_10 >= 1); // Lower capacity constraint
 assert(__count_10 <= 1); // Upper capacity constraint
 assert(__count_9_10 >= 1); // Lower capacity constraint
 assert(__count_9_10 <= 1); // Upper capacity constraint
-assert(__count_4_6 >= 8); // Lower capacity constraint
-assert(__count_4_6 <= 21); // Upper capacity constraint
+//assert(__count_4_6 >= 8); // Lower capacity constraint
+//assert(__count_4_6 <= 21); // Upper capacity constraint
 #endif
 
   return Postotal + Poscnt + Negtotal + Negcnt;
