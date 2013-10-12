@@ -1,19 +1,19 @@
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc adpcm.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc binary_search.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc bubblesort.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc compress.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc crc.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc edn.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc fastDiscreteCosineTransform.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc fft.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc insertsort.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc LUdecomposition.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc matrix_inverse.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc embedded.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc quicksort.c 
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc quadraticroots.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc select.c
-python ../src/RunCBMC.py --CBMC /usr/bin/cbmc squareroot.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc adpcm.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc binary_search.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc bubblesort.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc compress.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc crc.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc edn.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc fastDiscreteCosineTransform.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc fft.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc insertsort.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc LUdecomposition.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc matrix_inverse.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc embedded.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc quicksort.c 
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc quadraticroots.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc select.c
+python ../src/RunCBMC.py --CBMC /home/adam/CBMC/cbmc squareroot.c
 python ../src/ToolGem5.py adpcm m5out/adpcm.trace*
 python ../src/ToolGem5.py binary_search m5out/binary_search.trace*
 python ../src/ToolGem5.py bubblesort m5out/bubblesort.trace*
