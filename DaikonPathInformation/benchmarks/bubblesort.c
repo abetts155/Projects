@@ -115,7 +115,7 @@ int __count_10_11 = 0;
       #endif
     }
     #ifdef CBMC
-    assert(__count_7_3  <= 10); // Loop counter property
+    //assert(__count_7_3 <= 10); // Loop counter property
 
     // asserts for header 7
     
@@ -130,7 +130,7 @@ int __count_10_11 = 0;
     }
   }
   #ifdef CBMC
-  assert(__count_10_2  <= 10); // Loop counter property
+  assert(__count_10_2 <= 10); // Loop counter property
   __count_10_11++;
   __count_13++;
   #endif
@@ -138,22 +138,22 @@ int __count_10_11 = 0;
 #ifdef CBMC
 assert(__count_13 >= 1); // Lower capacity constraint
 assert(__count_13 <= 1); // Upper capacity constraint
-assert(__count_4_6 >= 3); // Lower capacity constraint
+//assert(__count_4_6 >= 3); // Lower capacity constraint
 assert(__count_4_6 <= 24); // Upper capacity constraint
-assert(__count_5_6 >= 12); // Lower capacity constraint
+//assert(__count_5_6 >= 12); // Lower capacity constraint
 assert(__count_5_6 <= 42); // Upper capacity constraint
-assert(__count_7_8 >= 5); // Lower capacity constraint
+//assert(__count_7_8 >= 5); // Lower capacity constraint
 assert(__count_7_8 <= 9); // Upper capacity constraint
 assert(__count_8_12 <= 1); // Upper capacity constraint
 assert(__count_10_11 <= 1); // Upper capacity constraint
 assert(__count_8_12 > 0 ==> __count_13 > 0); // Execution dependence
 assert(__count_8_12 > 0 ==> __count_4_6 > 0); // Execution dependence
-assert(__count_8_12 > 0 ==> __count_5_6 > 0); // Execution dependence
+//assert(__count_8_12 > 0 ==> __count_5_6 > 0); // Execution dependence
 assert(__count_8_12 > 0 ==> __count_7_8 > 0); // Execution dependence
 assert(__count_10_11 > 0 ==> __count_13 > 0); // Execution dependence
-assert(__count_10_11 > 0 ==> __count_4_6 > 0); // Execution dependence
-assert(__count_10_11 > 0 ==> __count_5_6 > 0); // Execution dependence
-assert(__count_10_11 > 0 ==> __count_7_8 > 0); // Execution dependence
+//assert(__count_10_11 > 0 ==> __count_4_6 > 0); // Execution dependence
+//assert(__count_10_11 > 0 ==> __count_5_6 > 0); // Execution dependence
+//assert(__count_10_11 > 0 ==> __count_7_8 > 0); // Execution dependence
 #endif
 
 }

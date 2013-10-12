@@ -22,7 +22,7 @@ matrix_inverse (double a[][UPPERLIMIT], int row, int col, double eps)
 {
 #ifdef CBMC
 //==========> matrix_inverse : header 38
-int __count_38_37 = 0
+int __count_38_37 = 0;
 int __count_38_37_L = 0; //Loop counter
 //==========> matrix_inverse : header 28
 int __count_25_26 = 0;

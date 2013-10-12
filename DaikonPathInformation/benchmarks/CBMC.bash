@@ -1,4 +1,3 @@
-#/!/bin/bash
 python ../src/RunCBMC.py --CBMC /usr/bin/cbmc adpcm.c 
 python ../src/RunCBMC.py --CBMC /usr/bin/cbmc binary_search.c 
 python ../src/RunCBMC.py --CBMC /usr/bin/cbmc bubblesort.c
