@@ -1,9 +1,403 @@
-adpcm,          32,  8 out of 172, No
-binary_search,
-bubblesort,
-maxtrix_count,  8,   0 out of 12,  No
-cover,          128, 0 out of 388, No
-janne_complex   64,  0 out of 36,  TIMEOUT
-lcdnum,         4,   1 out of 12,  No
-matrixmultiply, 8,   0 out of 13,  No
-statistics,     8,   3 out of 29,  No
+adpcm,                          32,   8 out of 172, No
+binary_search,                  8,    1 out of 14,  TIMEOUT
+bubblesort,                     64,   8 out of 33,  TIMEOUT
+maxtrix_count,                  8,    0 out of 12,  No
+compress,                       16,   3 out of 176, No
+cover,                          128,  0 out of 388, No
+crc,                            2048, 2 out of 72,  TIMEOUT
+edn,                            256,  0 out of 72,  No
+fastDiscreteCosineTransform,    16,   0 out of 10,  No
+fft,                            4,    0 out of 263, TIMEOUT
+insertsort,                     64,   3 out of 11,  TIMEOUT
+janne_complex,                  64,   0 out of 36,  TIMEOUT
+lcdnum,                         4,    1 out of 12,  No
+LUdecomposition,
+matrix_inverse,
+matrixmultiply,                 8,    0 out of 13,  No
+embedded,
+quicksort,
+quadraticroots,                 32,   4 out of 44,  TIMEOUT
+select,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+squareroot,                     32,   6 out of 18,  TIMEOUT
+statistics,                     8,    3 out of 29,  No
+
+
+
+
+
+
+
+
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c --function adpcm'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c --function adpcm'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c --function adpcm'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c --function adpcm'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_105_109 > 0 ==> __count_110_112 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_81_83 > 0 ==> __count_85_87 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_85_87 > 0 ==> __count_81_83 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_110_112 > 0 ==> __count_105_109 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_105_109 > 0 ==> __count_110_111 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_81_83 > 0 ==> __count_85_86 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_110_112 > 0 ==> __count_107_108 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+Assertion '__count_85_87 > 0 ==> __count_82_84 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 389 function encode: function `c::filtez' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 390 function encode: function `c::filtep' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 393 function encode: function `c::quantl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 395 function encode: function `c::logscl' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 396 function encode: function `c::scalel' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 400 function encode: function `c::uppol2' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 401 function encode: function `c::uppol1' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 445 function encode: function `c::logsch' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c line 1313 function main: function `c::atoi' is not declared
+/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c:172
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/adpcm.c', 8 asserts out of 172 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c --function binary_search'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100107 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100108 function main: function `c::printf' is not declared
+Assertion '__count_2_3 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100107 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100108 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c --function binary_search'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100107 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c line 100108 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c:14
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/binary_search.c', 1 asserts out of 14 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c --function bubblesort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_4_6 >= 3' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_5_6 >= 12' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_7_8 >= 5' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_10_11 > 0 ==> __count_4_6 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_10_11 > 0 ==> __count_5_6 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_10_11 > 0 ==> __count_7_8 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_8_12 > 0 ==> __count_5_6 > 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c --function bubblesort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c --function bubblesort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Assertion '__count_7_3 <= 10' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c --function bubblesort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 64 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c --function bubblesort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c line 178 function main: function `c::atoi' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c:33
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/bubblesort.c', 8 asserts out of 33 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/compress.c --function compress'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/compress.c line 806: syntax error before `<='
+PARSING ERROR
+/home/adam/WCET/DaikonPathInformation/benchmarks/compress.c:176
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/compress.c', 0 asserts out of 176 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 64 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 128 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 256 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 512 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Assertion '__count_11_13 >= 40' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/crc.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 1024 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Assertion '__count_11_12 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/crc.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 2048 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c --function crc'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/crc.c line 287 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/crc.c:71
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/crc.c', 2 asserts out of 71 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 64 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 128 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 256 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c --function edn'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 579 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/edn.c line 590 function main: function `c::printf' is not declared
+/home/adam/WCET/DaikonPathInformation/benchmarks/edn.c:72
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/edn.c', 0 asserts out of 72 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c --function fastDiscreteCosineTransform'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 255 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 259 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c --function fastDiscreteCosineTransform'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 255 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 259 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c --function fastDiscreteCosineTransform'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 255 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c line 259 function main: function `c::printf' is not declared
+/home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c:10
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/fastDiscreteCosineTransform.c', 0 asserts out of 10 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/fft.c --function fft'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fft.c line 727 function main: function `c::sscanf' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/fft.c line 738 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/fft.c:263
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/fft.c', 0 asserts out of 263 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c --function insertsort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Assertion '__count_4_5 >= 1979' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c --function insertsort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c --function insertsort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Assertion '__count_4_6 >= 99' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Assertion '__count_5_6 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c --function insertsort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 64 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c --function insertsort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c line 108 function main: function `c::atoi' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c:11
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/insertsort.c', 3 asserts out of 11 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/LUdecomposition.c --function LUdecomposition'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/LUdecomposition.c line 440 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/LUdecomposition.c line 452 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/LUdecomposition.c:102
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/LUdecomposition.c', 0 asserts out of 102 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.c --function matrix_inverse'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.c line 396 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.c line 403 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.c:47
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/matrix_inverse.c', 0 asserts out of 47 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c --function embedded'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 525 function main: function `c::atol' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 529 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 535 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c --function embedded'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 525 function main: function `c::atol' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 529 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 535 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c --function embedded'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 525 function main: function `c::atol' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 529 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 535 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c --function embedded'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 525 function main: function `c::atol' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 529 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c line 535 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c:0
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/embedded.c', 0 asserts out of 0 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c --function quicksort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c line 132 function main: function `c::atoi' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c --function quicksort'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c line 132 function main: function `c::atoi' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c:0
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/quicksort.c', 0 asserts out of 0 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.c --function quadraticroots'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.c line 245 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.c line 250 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.c:44
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/quadraticroots.c', 0 asserts out of 44 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 8 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 16 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 32 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 64 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 128 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+Insufficient unwinding
+Running '/home/adam/CBMC/cbmc --unwind 256 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/select.c --function select'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 348 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/select.c line 350 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/select.c:36
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/select.c', 0 asserts out of 36 failed
+Running '/home/adam/CBMC/cbmc --unwind 4 -DCBMC /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c --function squareroot'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 53 function squareroot: function `c::fabs' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 119 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 122 function main: function `c::printf' is not declared
+Assertion '__count_2_9 == 0' failed in '/home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c'
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 53 function squareroot: function `c::fabs' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 119 function main: function `c::atoi' is not declared
+file /home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c line 122 function main: function `c::printf' is not declared
+TIMEOUT reached!
+/home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c:18
+In '/home/adam/WCET/DaikonPathInformation/benchmarks/squareroot.c', 0 asserts out of 18 failed
+

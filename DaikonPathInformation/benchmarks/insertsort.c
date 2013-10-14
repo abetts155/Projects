@@ -78,11 +78,11 @@ assert(__count_8 >= 1); // Lower capacity constraint
 assert(__count_8 <= 1); // Upper capacity constraint
 assert(__count_7_8 >= 1); // Lower capacity constraint
 assert(__count_7_8 <= 1); // Upper capacity constraint
-assert(__count_4_5 >= 1979); // Lower capacity constraint
+//assert(__count_4_5 >= 1979); // Lower capacity constraint
 assert(__count_4_5 <= 3385); // Upper capacity constraint
-assert(__count_4_6 >= 99); // Lower capacity constraint
+//assert(__count_4_6 >= 99); // Lower capacity constraint
 assert(__count_4_6 <= 99); // Upper capacity constraint
-assert(__count_5_6 == 0); // Dead code
+//assert(__count_5_6 == 0); // Dead code
 #endif
 
   return a[0];

@@ -95,12 +95,12 @@ int __count_8_9 = 0;
 assert(__count_9 >= 1); // Lower capacity constraint
 assert(__count_9 <= 1); // Upper capacity constraint
 assert(__count_2_9 == 0); // Dead code
-assert(__count_4_7 >= 11); // Lower capacity constraint
+//assert(__count_4_7 >= 11); // Lower capacity constraint
 assert(__count_4_7 <= 15); // Upper capacity constraint
-assert(__count_5_6 >= 1); // Lower capacity constraint
+//assert(__count_5_6 >= 1); // Lower capacity constraint
 assert(__count_5_6 <= 1); // Upper capacity constraint
 assert(__count_5_7 >= 3); // Lower capacity constraint
-assert(__count_5_7 <= 7); // Upper capacity constraint
+//assert(__count_5_7 <= 7); // Upper capacity constraint
 assert(__count_8_9 >= 1); // Lower capacity constraint
 assert(__count_8_9 <= 1); // Upper capacity constraint
 #endif
@@ -133,7 +133,7 @@ int __count_16_18 = 0;
 
 #ifdef CBMC
 assert(__count_14_15 == 0); // Dead code
-assert(__count_10_17 == 0); // Dead code
+//assert(__count_10_17 == 0); // Dead code
 assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
 assert(__count_16_18 <= 1); // Upper capacity constraint
@@ -163,7 +163,7 @@ assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
 
 #ifdef CBMC
 assert(__count_14_15 == 0); // Dead code
-assert(__count_10_17 == 0); // Dead code
+//assert(__count_10_17 == 0); // Dead code
 assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
 assert(__count_16_18 <= 1); // Upper capacity constraint
@@ -187,7 +187,7 @@ assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
 
 #ifdef CBMC
 assert(__count_14_15 == 0); // Dead code
-assert(__count_10_17 == 0); // Dead code
+//assert(__count_10_17 == 0); // Dead code
 assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
 assert(__count_16_18 <= 1); // Upper capacity constraint
@@ -214,7 +214,7 @@ assert(__count_16_18 > 0 ==> __count_18 > 0); // Execution dependence
 
 #ifdef CBMC
 assert(__count_14_15 == 0); // Dead code
-assert(__count_10_17 == 0); // Dead code
+//assert(__count_10_17 == 0); // Dead code
 assert(__count_18 >= 1); // Lower capacity constraint
 assert(__count_18 <= 1); // Upper capacity constraint
 assert(__count_16_18 <= 1); // Upper capacity constraint

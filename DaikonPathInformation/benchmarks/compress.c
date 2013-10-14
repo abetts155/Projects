@@ -99,7 +99,7 @@ int __count_81_82 = 0;
       htab_p -= 16;
    } while ((i -= 16) >= 0);
    #ifdef CBMC
-   assert(__count_78_78  <= 2); // Loop counter property
+   //assert(__count_78_78 <= 2); // Loop counter property
    #endif
 
    #ifdef CBMC
@@ -589,8 +589,8 @@ int __count_73_75 = 0;
 #ifdef CBMC
 assert(__count_76 >= 1); // Lower capacity constraint
 assert(__count_76 <= 1); // Upper capacity constraint
-assert(__count_72_75 == 0); // Dead code
-assert(__count_73_74 >= 1); // Lower capacity constraint
+//assert(__count_72_75 == 0); // Dead code
+//assert(__count_73_74 >= 1); // Lower capacity constraint
 assert(__count_73_74 <= 1); // Upper capacity constraint
 assert(__count_73_75 == 0); // Dead code
 #endif
@@ -619,8 +619,8 @@ assert(__count_73_75 == 0); // Dead code
 #ifdef CBMC
 assert(__count_76 >= 1); // Lower capacity constraint
 assert(__count_76 <= 1); // Upper capacity constraint
-assert(__count_72_75 == 0); // Dead code
-assert(__count_73_74 >= 1); // Lower capacity constraint
+//assert(__count_72_75 == 0); // Dead code
+//assert(__count_73_74 >= 1); // Lower capacity constraint
 assert(__count_73_74 <= 1); // Upper capacity constraint
 assert(__count_73_75 == 0); // Dead code
 #endif
@@ -803,7 +803,7 @@ probe:
     // 53
 
     #ifdef CBMC
-    assert(__count_47_48_L  + __count_47_49_L  +  <= 7); // Loop counter property
+    assert(__count_47_48_L  + __count_47_49_L  <= 7); // Loop counter property
     #endif
 
     #ifdef CBMC

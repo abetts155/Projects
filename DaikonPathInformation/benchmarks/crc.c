@@ -177,8 +177,8 @@ int __count_16_18 = 0;
     #endif
 
 #ifdef CBMC
-assert(__count_11_12 == 0); // Dead code
-assert(__count_11_13 >= 40); // Lower capacity constraint
+//assert(__count_11_12 == 0); // Dead code
+//assert(__count_11_13 >= 40); // Lower capacity constraint
 assert(__count_11_13 <= 42); // Upper capacity constraint
 assert(__count_16_17 >= 1); // Lower capacity constraint
 assert(__count_16_17 <= 1); // Upper capacity constraint
@@ -222,8 +222,8 @@ assert(__count_5_6 > 0 ==> __count_16_17 > 0); // Execution dependence
 
 
 #ifdef CBMC
-assert(__count_11_12 == 0); // Dead code
-assert(__count_11_13 >= 40); // Lower capacity constraint
+//assert(__count_11_12 == 0); // Dead code
+//assert(__count_11_13 >= 40); // Lower capacity constraint
 assert(__count_11_13 <= 42); // Upper capacity constraint
 assert(__count_16_17 >= 1); // Lower capacity constraint
 assert(__count_16_17 <= 1); // Upper capacity constraint

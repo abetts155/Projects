@@ -115,12 +115,11 @@ def getFailingAssert (filename):
         return CBMCAssertFailure.ASSERTION, line
 
 def runCBMC (cbmc, unwind, program, rootFunction):
-    global CBMCproc
+    global CBMCproc, totalAssertFailures
     from subprocess import Popen
     cmd = '%s --unwind %d -DCBMC %s --function %s' % (cbmc, unwind, program, rootFunction)
     Debug.verboseMessage("Running '%s'" % cmd)
     success = False
-    totalAssertFailures = 0
     cbmcOutput = os.path.abspath(os.getcwd() + os.sep + '%s.cbmc' % rootFunction)
     while not success:
         with open(cbmcOutput,'wb') as out:
@@ -140,8 +139,8 @@ def runCBMC (cbmc, unwind, program, rootFunction):
                 commentOutFailingAssert(program, failedAssert)
             else:
                 Debug.verboseMessage("Insufficient unwinding")
-                return success, totalAssertFailures
-    return success, totalAssertFailures
+                return success
+    return success
 
 @timeout(args.timeout)
 def run (cbmc, program, rootFunction):
@@ -149,8 +148,7 @@ def run (cbmc, program, rootFunction):
     unwind  = 4
     success = False
     while not success:
-        success, newAssertFailures = runCBMC(cbmc, unwind, program, rootFunction)
-        totalAssertFailures += newAssertFailures
+        success = runCBMC(cbmc, unwind, program, rootFunction)
         unwind *= 2
 
 if __name__ == "__main__":
