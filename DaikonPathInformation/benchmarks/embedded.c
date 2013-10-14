@@ -73,7 +73,8 @@ ks (int n, great * kn)
 {
 #ifdef CBMC
 //==========> ks : header 8
-int __count_8_7 = 0; //Loop counter
+int __count_8_7 = 0;
+int __count_8_7_L = 0; //Loop counter
 //==========> ks : header 14
 int __count_10_11 = 0;
 int __count_14_10 = 0; //Loop counter
@@ -103,11 +104,12 @@ int __count_8_9 = 0;
   else
   {
     #ifdef CBMC
-    __count_8_7 = 0;
+    __count_8_7_L = 0;
     #endif
     for (i=1;i<=2;i++) // 8
     {
       #ifdef CBMC
+      __count_8_7_L++;
       __count_8_7++;
       #endif
       icd.r = (icd.r | ((icd.r & 1L) << 28)) >> 1;
@@ -148,9 +150,11 @@ int __count_44_45 = 0;
 int __count_44_46 = 0;
 int __count_48_44 = 0; //Loop counter
 //==========> cyfun : header 42
-int __count_42_41 = 0; //Loop counter
+int __count_42_41 = 0;
+int __count_42_41_L = 0; //Loop counter
 //==========> cyfun : header 39
-int __count_39_38 = 0; //Loop counter
+int __count_39_38 = 0;
+int __count_39_38_L = 0; //Loop counter
 //==========> cyfun : header 36
 int __count_27_29 = 0;
 int __count_28_29 = 0;
@@ -279,11 +283,12 @@ int __count_36_37 = 0;
   ietmp2=((unsigned long) ie.l << 8)+((unsigned long) ie.c >> 8);
   
   #ifdef CBMC
-  __count_39_38 = 0;
+  __count_39_38_L = 0;
   #endif
   for (j=1,m=5;j<=4;j++,m++) // 39
   {
     #ifdef CBMC
+    __count_39_38_L++;
     __count_39_38++;
     #endif
     iec[j]=ietmp1 & 0x3fL;
@@ -294,11 +299,12 @@ int __count_36_37 = 0;
   
   itmp=0L;
   #ifdef CBMC
-  __count_42_41 = 0;
+  __count_42_41_L = 0;
   #endif
   for (jj=8;jj>=1;jj--) // 42
   {
     #ifdef CBMC
+    __count_42_41_L++;
     __count_42_41++;
     #endif
     j =iec[jj];
@@ -350,15 +356,18 @@ int __count_63_61 = 0; //Loop counter
 int __count_56_57 = 0;
 int __count_59_56 = 0; //Loop counter
 //==========> embedded : header 80
-int __count_80_77 = 0; //Loop counter
+int __count_80_77 = 0;
+int __count_80_77_L = 0; //Loop counter
 //==========> embedded : header 75
 int __count_70_71 = 0;
 int __count_70_72 = 0;
 int __count_75_70 = 0; //Loop counter
 //==========> embedded : header 53
-int __count_53_52 = 0; //Loop counter
+int __count_53_52 = 0;
+int __count_53_52_L = 0; //Loop counter
 //==========> embedded : header 68
-int __count_68_65 = 0; //Loop counter
+int __count_68_65 = 0;
+int __count_68_65_L = 0; //Loop counter
 //==========> embedded : header 50
 int __count_81 = 0;
 int __count_50_54 = 0;
@@ -390,11 +399,12 @@ int __count_59_60 = 0;
     initflag=0;
     bit[1]=shifter=1L;
     #ifdef CBMC
-    __count_53_52 = 0;
+    __count_53_52_L = 0;
     #endif
     for(j=2;j<=32;j++) // 53
     {
       #ifdef CBMC
+      __count_53_52_L++;
       __count_53_52++;
       #endif
       bit[j] = (shifter <<= 1);
@@ -447,11 +457,12 @@ int __count_59_60 = 0;
   itmp.r=itmp.l=0L;
   
   #ifdef CBMC
-  __count_68_65 = 0;
+  __count_68_65_L = 0;
   #endif
   for (j=32,k=64;j>=1;j--,k--) // 68
   {
     #ifdef CBMC
+    __count_68_65_L++;
     __count_68_65++;
     #endif
     itmp.r = (itmp.r <<= 1) | getbit(inp,ip[j],32);
@@ -491,11 +502,12 @@ int __count_59_60 = 0;
   (*out).r=(*out).l=0L;
   
   #ifdef CBMC
-  __count_80_77 = 0;
+  __count_80_77_L = 0;
   #endif
   for (j=32,k=64; j >= 1; j--, k--) // 80
   {
     #ifdef CBMC
+    __count_80_77_L++;
     __count_80_77++;
     #endif
     (*out).r = ((*out).r <<= 1) | getbit(itmp,ipm[j],32);
