@@ -30,7 +30,7 @@ int __count_11_12 = 0;
 int __count_12_13 = 0;
 int __count_16_18 = 0;
 int __count_17_18 = 0;
-int __count_6_10 = 0; //Loop counter
+int __count_6_10_L = 0; //Loop counter
 int __count_6_7 = 0; //Loop counter
 //==========> quicksort : header 20
 int __count_14_19 = 0;
@@ -50,11 +50,41 @@ int __count_22_23 = 0;
   int pivot;
   int tmp;
 
-  if (ARRAY_SIZE < 2)
+  if (ARRAY_SIZE < 2) // 1
   {
+  	// 22
    #ifdef CBMC
    __count_22_23++;
+   __count_23++;
    #endif
+
+#ifdef CBMC
+assert(__count_7_8 >= 327); // Lower capacity constraint
+assert(__count_7_8 <= 353); // Upper capacity constraint
+assert(__count_7_5 >= 241); // Lower capacity constraint
+assert(__count_7_5 <= 516); // Upper capacity constraint
+assert(__count_10_12 >= 156); // Lower capacity constraint
+assert(__count_10_12 <= 169); // Upper capacity constraint
+assert(__count_11_9 >= 227); // Lower capacity constraint
+assert(__count_11_9 <= 500); // Upper capacity constraint
+assert(__count_11_12 >= 164); // Lower capacity constraint
+assert(__count_11_12 <= 197); // Upper capacity constraint
+assert(__count_12_13 >= 128); // Lower capacity constraint
+assert(__count_12_13 <= 154); // Upper capacity constraint
+assert(__count_14_19 >= 100); // Lower capacity constraint
+assert(__count_14_19 <= 100); // Upper capacity constraint
+assert(__count_16_18 >= 12); // Lower capacity constraint
+assert(__count_16_18 <= 31); // Upper capacity constraint
+assert(__count_17_18 >= 68); // Lower capacity constraint
+assert(__count_17_18 <= 87); // Upper capacity constraint
+assert(__count_20_21 >= 1); // Lower capacity constraint
+assert(__count_20_21 <= 1); // Upper capacity constraint
+assert(__count_22_23 == 0); // Dead code
+assert(__count_23 >= 1); // Lower capacity constraint
+assert(__count_23 <= 1); // Upper capacity constraint
+assert(__count_6_10 == 0); // Dead code
+#endif
+
     return;
   }
 
@@ -64,12 +94,16 @@ int __count_22_23 = 0;
   sp->hi = ARRAY_SIZE;
   sp++;
 
-  while (sp > stack)
-  {
   #ifdef CBMC
-  __count_20_3++;
+  __count_20_3 = 0;
   #endif
-  
+  while (sp > stack) // 20
+  {
+	#ifdef CBMC
+	__count_20_3++;
+	#endif
+	// 3
+
     /* pop lo and hi off the stack */
     sp--;
     high = sp->hi;
@@ -80,43 +114,84 @@ int __count_22_23 = 0;
 
     pivot = a[lo];
 
-    while (1)
+    #ifdef CBMC
+    __count_6_10_L = 0;
+    #endif
+    while (1) // 6?
     {
-      while (
+      #ifdef CBMC
+      __count_6_7 = 0;
+      #endif
+      while ( 
+      lo < high &&  // 6
+      (
       #ifdef CBMC 
       __count_6_7++,
-      __count_6_10++,  
       #endif
-      lo < high && 
-      a[lo] < pivot)
+      a[lo] < pivot) // 7
+      )
       {
         #ifdef CBMC
-        __count_6_10--;
         __count_7_5++;
         #endif
         lo++;
       }
 
+      #ifdef CBMC
+      if(lo < high)
+      {
+      	__count_7_8++; // (then 8->10)
+      }
+      else
+      {
+      	__count_6_10++;
+      	__count_6_10_L++;
+      }
+      #endif
+
+
+      #ifdef CBMC
+      __count_10_11 = 0;
+      #endif
+      // 10
       while (
-      #ifdef CBMC 
-      __count_10_11++, 
-      __count_10_12++, 
-      #endif 
-      hi > low && 
-      a[hi] >= pivot)
+      hi > low && // 10
+      (
+      #ifdef CBMC
+      __count_10_11++,
+      #endif
+      a[hi] >= pivot) // 11
+      )
       {
         #ifdef CBMC
-        __count_10_12--; 
         __count_11_9++;
         #endif
+        // 9
         hi--;
       }
+      #ifdef CBMC
+      assert(__count_10_11  <= 60); // Loop counter property
+      #endif
+      
+      #ifdef CBMC
+      if(hi > low)
+      {
+      	__count_11_12++;
+      }
+      else
+      {
+      	__count_10_12++;
+      }
+      #endif
 
+
+      // 12
       if (lo < hi)
       {
         #ifdef CBMC
         __count_12_13++;
         #endif
+      	// 13
       
         /* swap */
         tmp = a[lo];
@@ -127,24 +202,29 @@ int __count_22_23 = 0;
       else
       {
         hi++;
-
+        // 14
         if (hi == high)
         {
-        #ifdef CBMC
-        __count_14_19++;
-        #endif
+          // 19
+          #ifdef CBMC
+          __count_14_19++;
+          #endif
           /* done with this segment */
           break;
         }
 
+
         /* push the larger segment onto the
          * stack and continue sorting the
          * smaller segment. */
+
+        // 15
         if ((hi - low) > (high - hi))
         {
-        #ifdef CBMC
-        __count_17_18++;
-        #endif
+        	// 16
+          #ifdef CBMC
+        	__count_16_18++;
+          #endif
         
           sp->lo = low;
           sp->hi = hi;
@@ -155,8 +235,9 @@ int __count_22_23 = 0;
         }
         else
         {
+        	// 17
         #ifdef CBMC
-        __count_16_18++;
+          __count_17_18++;
         #endif
           sp->hi = high;
           sp->lo = hi;
@@ -165,22 +246,26 @@ int __count_22_23 = 0;
           high = hi;
           lo = low;
         }
-
+        // 18
         pivot = a[lo];
         hi--;
       }
     }
+    #ifdef CBMC
+    assert(__count_6_10_L  + __count_6_7  <= 138); // Loop counter property
+    #endif
   }
-  
   #ifdef CBMC
-  __count_23++;
+  assert(__count_20_3  <= 101); // Loop counter property
+  #endif
+
+  // 21
+  #ifdef CBMC
   __count_20_21++;
+  __count_23++;
   #endif
   
-  #ifdef CBMC
-assert(__count_10_11  <= 60); // Loop counter property
-assert(__count_6_10  + __count_6_7  <= 138); // Loop counter property
-assert(__count_20_3  <= 101); // Loop counter property
+#ifdef CBMC
 assert(__count_7_8 >= 327); // Lower capacity constraint
 assert(__count_7_8 <= 353); // Upper capacity constraint
 assert(__count_7_5 >= 241); // Lower capacity constraint
