@@ -1,4 +1,4 @@
-import Debug, Programs, Trees, CFGs, Vertices, UDrawGraph
+import Debug, Programs, Trees, CFGs, Vertices
 import random, math
 
 singleVertices = None
@@ -78,7 +78,47 @@ def connectRemainingVertices ():
     return masterSese
 
 def findMergeVerticesToRemove ():
-    pass
+    global currentCFG
+    disconnectedVertices = []
+    lnt = Trees.LoopNests(currentCFG, currentCFG.getEntryID())
+    for v in currentCFG:
+        vertexID = v.getVertexID()
+        if v.numberOfPredecessors() > 1 \
+        and bool(random.getrandbits(1)) \
+        and not (lnt.isLoopHeader(vertexID) or 
+             lnt.isLoopTail(vertexID) or 
+             lnt.isLoopExitSource(vertexID) or 
+             lnt.isLoopExitDestination(vertexID) or 
+             currentCFG.getExitID() == vertexID):
+            for predID in v.getPredecessorIDs():
+                for succID in v.getSuccessorIDs():
+                    currentCFG.addEdge(predID, succID)
+            for predID in v.getPredecessorIDs():
+                currentCFG.removeEdge(predID, vertexID)
+            for succID in v.getSuccessorIDs():
+                currentCFG.removeEdge(vertexID, succID)
+            disconnectedVertices.append(v)
+    candidateSources = []
+    for v in currentCFG:
+        if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
+            assert v not in disconnectedVertices
+            candidateSources.append(v)
+    for v in disconnectedVertices:
+        vertexID = v.getVertexID()
+        if candidateSources and bool(random.getrandbits(1)):
+            index   = random.randint(0, len(candidateSources) - 1)
+            otherv  = candidateSources[index]
+            otherID = otherv.getVertexID()
+            for succID in otherv.getSuccessorIDs():
+                currentCFG.addEdge(vertexID, succID)
+            currentCFG.addEdge(otherID, vertexID)
+        else:
+            currentCFG.addEdge(vertexID, currentCFG.getEntryID())
+            currentCFG.removeEdge(currentCFG.getExitID(), currentCFG.getEntryID())
+            currentCFG.addEdge(currentCFG.getExitID(), vertexID)
+            currentCFG.setEntryID(vertexID)
+    assert currentCFG.getVertex(currentCFG.getEntryID()).numberOfPredecessors() == 1, "entry = %s" % currentCFG.getVertex(currentCFG.getEntryID())
+    assert currentCFG.getVertex(currentCFG.getExitID()).numberOfSuccessors() == 1, "exit = %s" % currentCFG.getVertex(currentCFG.getExitID())
 
 def connectDisconnectedComponents ():
     global currentCFG
@@ -331,6 +371,7 @@ def generateCFG (cfgVertices,
                  loops, 
                  selfLoops, 
                  nestingDepth,
+                 unstructured,
                  breaks, 
                  continues):
     global currentCFG
@@ -354,7 +395,6 @@ def generateCFG (cfgVertices,
             singleVertices, numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches = decideWhichAcyclicComponents(verticesInLoop)
             addAcyclicComponents(numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches)
             connectDisconnectedComponents()
-            findMergeVerticesToRemove()
             sese = connectRemainingVertices()
             loopRegions[treev] = createLoopComponent(sese)
             if level == 0:
@@ -369,6 +409,8 @@ def generateCFG (cfgVertices,
         for treev in vertices:
             if treev.numberOfSuccessors() > 0:
                 connectNestedLoops(lnt, treev, loopRegions)
+    if unstructured:
+        findMergeVerticesToRemove()
 
 def isConnected ():
     global currentCFG
@@ -451,7 +493,7 @@ def cutEdgesFromCallGraph (program):
             predIDs = callv.getPredecessorIDs()
             index   = random.randint(0,len(predIDs)-1)
             predID  = predIDs[index]
-            callg.removeEdge(predID, callv.getVertexID())    
+            callg.removeEdge(predID, callv.getVertexID()) 
     
 def generate (subprograms, 
               cfgVertices, 
@@ -459,6 +501,7 @@ def generate (subprograms,
               loops, 
               selfLoops, 
               nestingDepth,
+              unstructured,
               breaks, 
               continues):
     maxFanOut          = fanOut
@@ -470,9 +513,9 @@ def generate (subprograms,
         candidateCallSites[subprogramName] = []
         levelInCallgraph[subprogramName]   = 0
         Debug.debugMessage("Generating subprogram %s" % subprogramName, 1)
-        generateCFG (cfgVertices, loops, selfLoops, nestingDepth, breaks, continues)
+        generateCFG (cfgVertices, loops, selfLoops, nestingDepth, unstructured, breaks, continues)
         program.addCFG(currentCFG, subprogramName)
-        UDrawGraph.makeUdrawFile(currentCFG, subprogramName)
+        currentCFG.setName(subprogramName)
         isConnected()
         for v in currentCFG:
             if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
@@ -481,5 +524,4 @@ def generate (subprograms,
     addTreeEdgesToCallGraph(program, candidateCallSites)
     addOtherEdgesToCallGraph(program, candidateCallSites)
     cutEdgesFromCallGraph(program)
-    UDrawGraph.makeUdrawFile(program.getCallGraph(), "callg")
     return program
