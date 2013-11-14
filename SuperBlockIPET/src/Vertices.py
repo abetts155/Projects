@@ -7,6 +7,7 @@ class Vertex ():
         self._vertexID = vertexID
         self._predecessors = {}
         self._successors = {}
+        self._dummy = False
         
     def setVertexID (self, vertexID):
         self._vertexID = vertexID
@@ -75,6 +76,12 @@ class Vertex ():
     def getSuccessorEdge (self, succID):
         assert succID in self._successors, "Vertex %d is not a successor of %d" % (succID, self._vertexID)
         return self._successors[succID]
+           
+    def setDummy (self):
+        self._dummy = True
+        
+    def isDummy (self):
+        return self._dummy
     
     def __str__ (self):
         string = "Vertex ID = " + str(self._vertexID) + "\n"
@@ -129,20 +136,13 @@ class CFGVertex (Vertex):
     def __init__ (self, vertexID, name=None):
         Vertex.__init__(self, vertexID)
         self.__name  = name
-        self.__dummy = False
-           
-    def setDummy (self):
-        self.__dummy = True
-        
-    def isDummy (self):
-        return self.__dummy
     
     def getName (self):
         return self.__name
     
-class CFGEdge (CFGVertex):
+class CFGEdge (Vertex):
     def __init__ (self, vertexID, predID, succID):
-        CFGVertex.__init__(self, vertexID)
+        Vertex.__init__(self, vertexID)
         self.edge = (predID, succID)    
 
 class BasicBlock (CFGVertex):

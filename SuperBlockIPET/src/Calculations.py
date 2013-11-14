@@ -1,19 +1,18 @@
-from Vertices import HeaderVertex, AdditionVertex, MultiplicationVertex, MaximumVertex, SuperBlock
+from Vertices import HeaderVertex, SuperBlock
 from Trees import DepthFirstSearch
-from DirectedGraphs import DirectedGraph
-import Debug, Visualisation
-import os, re, timeit
+import Debug
+import os, timeit
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename, repeatability):
-        AETSolvingTime = 0
-        ILPSolvingTime = 0
-        AETConstructionTime = 0
-        ILPConstructionTime = 0
+        ILPSolvingTime_CFG        = 0
+        ILPConstructionTime_CFG   = 0
+        ILPSolvingTime_SBCFG      = 0
+        ILPConstructionTime_SBCFG = 0
         for i in xrange(0, repeatability):
             data.assignRandomWCETs()
-            self.__contextDataTrees = {}
-            self.__contextDataILPs  = {}
+            self.__contextData_CFG   = {}
+            self.__contextData_SBCFG = {}
             contextg = program.getContextGraph()
             dfs      = DepthFirstSearch(contextg, contextg.getRootID())
             for vertexID in dfs.getPostorder():
@@ -22,288 +21,40 @@ class WCETCalculation:
                 Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
                 cfg         = program.getCFG(functionName)
                 lnt         = program.getLNT(functionName)
-                superg      = program.getSuperBlockCFG(functionName)
-                arithmetict = ArithmeticExpressionTree(functionName, superg, cfg, lnt)
-                treeWCET    = arithmetict.evaluate(data, self.__contextDataTrees, contextv)
-                Debug.verboseMessage("Tree:: WCET(%s)=%s (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
-                                                                                                        treeWCET, 
-                                                                                                        arithmetict.solvingTime, 
-                                                                                                        arithmetict.constructionTime,
-                                                                                                        arithmetict.solvingTime + arithmetict.constructionTime))
-                AETSolvingTime += arithmetict.solvingTime
-                AETConstructionTime += arithmetict.constructionTime
-                self.__contextDataTrees[contextv.getVertexID()] = treeWCET
-                Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
-                Visualisation.makeUdrawFile(arithmetict, "%s.%s" % (functionName, "aet"))
-                ilp     = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
-                ilpWCET = ilp.solve()
-                Debug.verboseMessage("ILP::  WCET(%s)=%d (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
+                # The calculation based on the CFG
+                ilp         = CreateCFGILP(basepath, basename, data, self.__contextData_CFG, contextv, cfg, lnt)
+                ilpWCET     = ilp.solve()
+                Debug.verboseMessage("ILP-CFG::    WCET(%s)=%d (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
                                                                                                         ilpWCET, 
                                                                                                         ilp.solvingTime, 
                                                                                                         ilp.constructionTime,
                                                                                                         ilp.solvingTime + ilp.constructionTime))
-                ILPSolvingTime += ilp.solvingTime
-                ILPConstructionTime += ilp.constructionTime
-                self.__contextDataILPs[contextv.getVertexID()] = ilpWCET
-                if ilpWCET != treeWCET:
-                    Debug.verboseMessage("*************** WCET estimate discrepancy detected ***************")
+                ILPSolvingTime_CFG += ilp.solvingTime
+                ILPConstructionTime_CFG += ilp.constructionTime
+                self.__contextData_CFG[contextv.getVertexID()] = ilpWCET
+                # The calculation based on the super block CFG
+                ilp2        = CreateSuperBlockCFGILP(basepath, basename, data, self.__contextData_SBCFG, contextv, cfg, lnt, program.getSuperBlockCFG(functionName))
+                ilpWCET2    = ilp2.solve()
+                Debug.verboseMessage("ILP-SBCFG::  WCET(%s)=%d (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
+                                                                                                        ilpWCET2, 
+                                                                                                        ilp2.solvingTime, 
+                                                                                                        ilp2.constructionTime,
+                                                                                                        ilp2.solvingTime + ilp2.constructionTime))
+                ILPSolvingTime_SBCFG += ilp.solvingTime
+                ILPConstructionTime_SBCFG += ilp.constructionTime
+                self.__contextData_SBCFG[contextv.getVertexID()] = ilpWCET2
                 if i == 0:
-                    Debug.verboseMessage("CFG size:: vertices=%d edges=%d" % (cfg.numOfVertices(), cfg.numOfEdges()))
-                    Debug.verboseMessage("AET size:: vertices=%d edges=%d" % (arithmetict.numOfVertices(), arithmetict.numOfEdges()))
-                    Debug.verboseMessage("ILP size:: constraints=%d variables=%d" % (ilp.numOfConstraints(), ilp.numOfVariables()))
-        Debug.verboseMessage("TREE:: (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
-                             (AETSolvingTime/repeatability, 
-                              AETConstructionTime/repeatability,
-                              (AETSolvingTime+AETConstructionTime)/repeatability))
-        Debug.verboseMessage("ILP::  (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
-                             (ILPSolvingTime/repeatability, 
-                              ILPConstructionTime/repeatability,
-                              (ILPSolvingTime+ILPConstructionTime)/repeatability))
-                 
-class ArithmeticExpressionTree (DirectedGraph):
-    def __init__(self, functionName, superg, cfg, lnt):
-        start = timeit.default_timer()
-        DirectedGraph.__init__(self)
-        self.__functionName = functionName
-        self.__superg = superg
-        self.__cfg = cfg
-        self.__lnt = lnt
-        self.__superBlocksToAETSuperBlocks = {}
-        self.__headerSuperBlocks = set([])
-        self.__addSuperBlocks()
-        self.__addOperators()
-        self.constructionTime = (timeit.default_timer() - start)
-    
-    def __addSuperBlocks (self):
-        supervToHeaderSuperv = {}
-        largestVertexID = 0
-        for superv in self.__superg:
-            self.__superBlocksToAETSuperBlocks[superv] = []
-            bbIDs     = set([])
-            headerIDs = set([])
-            for bbID in superv.getBasicBlockIDs():
-                if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
-                    bbIDs.add(bbID)
-                else:
-                    headerIDs.add(bbID)
-            if bbIDs or superv.numberOfEdges() > 0:
-                supervID  = superv.getVertexID()
-                newSuperv = SuperBlock(supervID)
-                self.vertices[supervID] = newSuperv
-                largestVertexID = max(largestVertexID, supervID)
-                newSuperv.addBasicBlocks(bbIDs)
-                newSuperv.setLoopHeader(superv.getLoopHeader())
-                newSuperv.addEdges(superv.getEdges())
-                self.__superBlocksToAETSuperBlocks[superv].append(newSuperv)
-            if headerIDs:
-                supervToHeaderSuperv[superv] = headerIDs
-        self.__nextVertexID = largestVertexID
-        for superv, headerIDs in supervToHeaderSuperv.iteritems():
-            newSupervID = self.getNextVertexID()
-            newSuperv   = SuperBlock(newSupervID)
-            newSuperv.addBasicBlocks(headerIDs)
-            self.vertices[newSupervID] = newSuperv
-            self.__superBlocksToAETSuperBlocks[superv].append(newSuperv)
-            self.__headerSuperBlocks.add(newSupervID)
-            
-    def getNextVertexID (self):
-        self.__nextVertexID += 1
-        return self.__nextVertexID
-    
-    def __addOperators (self):
-        self.__supervToTreeVertex    = {}
-        self.__iterationPathsRootIDs = {}
-        self.__exitPathsRootIDs      = {}
-        self.__iterationPathsAETs    = {}
-        self.__exitPathsAETs         = {}
-        for level, vertices in self.__lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, HeaderVertex):
-                    headerID = v.getHeaderID()
-                    if v.getVertexID() != self.__lnt.getRootID():
-                        supergRegion     = self.__superg.getIterationPathsSuperBlockRegion(headerID)
-                        supergRegionRoot = self.__superg.getIterationPathsSuperBlockRegionRoot(headerID)
-                        subgraph, root   = self.__buildSubtree(headerID, supergRegion, supergRegionRoot, False)
-                        self.__iterationPathsRootIDs[headerID] = root
-                        self.__iterationPathsAETs[headerID] = subgraph
-                        if not self.__lnt.isDoWhileLoop(headerID):
-                            supergRegion2     = self.__superg.getExitPathsSuperBlockRegion(headerID)
-                            supergRegionRoot2 = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
-                            subgraph, root = self.__buildSubtree(headerID, supergRegion2, supergRegionRoot2, True)
-                            self.__exitPathsRootIDs[headerID] = root
-                            self.__exitPathsAETs[headerID] = subgraph
-                    else:
-                        supergRegion2 = self.__superg.getExitPathsSuperBlockRegion(headerID)
-                        rootv2        = self.__superg.getExitPathsSuperBlockRegionRoot(headerID)
-                        subgraph, root = self.__buildSubtree(headerID, supergRegion2, rootv2, True)
-                        self.__iterationPathsRootIDs[headerID] = root
-                        self.__iterationPathsAETs[headerID] = subgraph
-                        
-    def __addVertex (self, subgraph, vertexID, v):
-        subgraph.vertices[vertexID] = v
-        self.vertices[vertexID] = v
-              
-    def __buildSubtree (self, headerID, supergRegion, rootv, acyclicRegion):
-        Visualisation.generateGraphviz(supergRegion, "superg.%d" % headerID)
-        subgraph = DirectedGraph()
-        dfs      = DepthFirstSearch(supergRegion, rootv.getVertexID())
-        for supervID in dfs.getPostorder():
-            originalSuperv = self.__superg.getVertex(supervID)
-            supervs = self.__superBlocksToAETSuperBlocks[originalSuperv]
-            assert supervs, "Unable to find super blocks in AET for super block %s" % originalSuperv
-            if len(supervs) == 2:
-                bbSuperv     = supervs[0]
-                assert bbSuperv.getVertexID() == supervID
-                headerSuperv = supervs[1]
-                subgraph.vertices[bbSuperv.getVertexID()] = bbSuperv
-                subgraph.vertices[headerSuperv.getVertexID()] = headerSuperv
-                # Addition vertex to sum up WCETs of basic blocks within super block
-                addvID = self.getNextVertexID()
-                addv   = AdditionVertex(addvID, headerID, acyclicRegion)
-                self.__addVertex(subgraph, addvID, addv)
-                self.addEdge(addvID, supervID)
-                # Multiplication vertex to factor WCET contribution of super block
-                multiplyvID = self.getNextVertexID()
-                multiplyv   = MultiplicationVertex(multiplyvID, headerID, acyclicRegion)
-                self.__addVertex(subgraph, multiplyvID, multiplyv)
-                self.addEdge(multiplyvID, addvID)
-                self.__supervToTreeVertex[supervID] = multiplyvID
-                # Addition vertex to include contribution of inner loops
-                addvID2 = self.getNextVertexID()
-                addv2   = AdditionVertex(addvID2, headerID, acyclicRegion)
-                self.__addVertex(subgraph, addvID2, addv2)
-                self.addEdge(addvID2, multiplyvID)
-                self.addEdge(addvID2, headerSuperv.getVertexID())
-                self.__supervToTreeVertex[supervID] = addvID2
-            else:
-                newSuperv = supervs[0]
-                subgraph.vertices[newSuperv.getVertexID()] = newSuperv
-                if newSuperv.getVertexID() not in self.__headerSuperBlocks:
-                    # Addition vertex to sum up WCETs of basic blocks within super block
-                    addvID = self.getNextVertexID()
-                    addv   = AdditionVertex(addvID, headerID, acyclicRegion)
-                    self.__addVertex(subgraph, addvID, addv)
-                    self.addEdge(addvID, supervID)
-                    # Multiplication vertex to factor WCET contribution of super block
-                    multiplyvID = self.getNextVertexID()
-                    multiplyv   = MultiplicationVertex(multiplyvID, headerID, acyclicRegion)
-                    self.__addVertex(subgraph, multiplyvID, multiplyv)
-                    self.addEdge(multiplyvID, addvID)
-                    self.__supervToTreeVertex[supervID] = multiplyvID
-                else:
-                    # Addition vertex to include contribution of inner loops
-                    addvID = self.getNextVertexID()
-                    addv   = AdditionVertex(addvID, headerID, acyclicRegion)
-                    self.__addVertex(subgraph, addvID, addv)
-                    self.addEdge(addvID, newSuperv.getVertexID())
-                    self.__supervToTreeVertex[supervID] = addvID
-                    
-            if originalSuperv.numberOfSuccessors(): 
-                addvID = self.getNextVertexID()
-                addv   = AdditionVertex(addvID, headerID, acyclicRegion)
-                self.__addVertex(subgraph, addvID, addv)
-                self.addEdge(addvID, self.__supervToTreeVertex[supervID])
-                self.__supervToTreeVertex[supervID] = addvID
-                for succEdges in originalSuperv.getBranchPartitions().values():
-                    if len(succEdges) == 1:
-                        succe  = succEdges[0]
-                        succID = succe.getVertexID()
-                        self.addEdge(addvID, self.__supervToTreeVertex[succID])
-                    else:
-                        maxvID = self.getNextVertexID()
-                        maxv   = MaximumVertex(maxvID, headerID, acyclicRegion)
-                        self.__addVertex(subgraph, maxvID, maxv)
-                        self.addEdge(addvID, maxvID)
-                        for succe in succEdges:
-                            succID = succe.getVertexID()
-                            multiplyvID = self.__supervToTreeVertex[succID]
-                            self.addEdge(maxvID, multiplyvID)                          
-        return subgraph, self.__supervToTreeVertex[rootv.getVertexID()]
-        
-    def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv):
-        wcet = 0
-        for bbID in superv.getBasicBlockIDs():
-            if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
-                wcet += data.getExecutionTime(self.__functionName, bbID)
-                if self.__cfg.isCallSite(bbID):
-                    calleeContextID   = contextv.getSuccessorWithCallSite(bbID)
-                    calleeContextWCET = contextWCETs[calleeContextID]
-                    wcet += calleeContextWCET
-            if self.__lnt.isLoopHeader(bbID) and superv.getLoopHeader() != bbID:
-                wcet += self.__headerToWCET[bbID]
-        return wcet
-    
-    def __propagateBounds (self, headerv, data):
-        headerID = headerv.getHeaderID()
-        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID():
-            # If not a do-while loop and not the dummy loop, peel off the iterations which came from outside the loop body
-            headerInvocations = data.getBound(self.__functionName, headerID)
-            freshInvocations  = data.getFreshInvocations(self.__functionName, headerID)
-            totalCount        = headerInvocations - freshInvocations
-        else:
-            totalCount = data.getBound(self.__functionName, headerID)
-        iterationAET = self.__iterationPathsAETs[headerID]
-        for v in iterationAET:
-            if not isinstance(v, SuperBlock):
-                v.setBound(totalCount)
-        #  Now propagate bound downwards to acyclic region
-        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID(): 
-            totalCount = data.getFreshInvocations(self.__functionName, headerID)
-            exitAET    = self.__exitPathsAETs[headerID]
-            for v in exitAET:
-                if not isinstance(v, SuperBlock):
-                    v.setBound(totalCount)
-                    
-    def __evaluateDFS (self, dfs, data, contextWCETs, contextv):
-        for vertexID in dfs.getPostorder():
-            v = self.getVertex(vertexID)
-            if isinstance(v, AdditionVertex):
-                time  = 0
-                for succID in v.getSuccessorIDs():
-                    succv = self.getVertex(succID)
-                    if isinstance(succv, SuperBlock):
-                        time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv)
-                    else:
-                        time += succv.getWCET()
-                v.setWCET(time)
-            elif isinstance(v, MultiplicationVertex):
-                # Get only child of multiplication vertex
-                assert v.numberOfSuccessors() == 1
-                addv = self.getVertex(v.getSuccessorIDs()[0])
-                v.setWCET(addv.getWCET() * v.getBound())
-            elif isinstance(v, MaximumVertex):
-                time = 0
-                for succID in v.getSuccessorIDs():
-                    succv = self.getVertex(succID)
-                    time  = max(time, succv.getWCET())
-                v.setWCET(time)
-    
-    def evaluate (self, data, contextWCETs, contextv):
-        start = timeit.default_timer()
-        self.__headerToWCET = {}
-        for level, vertices in self.__lnt.levelIterator(True):
-            for lntv in vertices:
-                if isinstance(lntv, HeaderVertex):
-                    # Propagate bounds downwards in tree
-                    self.__propagateBounds(lntv, data)
-                    headerID = lntv.getHeaderID()
-                    iterationAET       = self.__iterationPathsAETs[headerID]
-                    iterationAETRootID = self.__iterationPathsRootIDs[headerID]
-                    dfs                = DepthFirstSearch(iterationAET, iterationAETRootID)
-                    self.__evaluateDFS(dfs, data, contextWCETs, contextv)
-                    iterationAETWCET   = iterationAET.getVertex(iterationAETRootID).getWCET()
-                    if not self.__lnt.isDoWhileLoop(headerID) and lntv.getVertexID() != self.__lnt.getRootID():
-                        exitAET       = self.__exitPathsAETs[headerID]
-                        exitAETRootID = self.__exitPathsRootIDs[headerID]
-                        dfs2          = DepthFirstSearch(exitAET, exitAETRootID)
-                        self.__evaluateDFS(dfs2, data, contextWCETs, contextv)
-                        exitAETWCET   = exitAET.getVertex(exitAETRootID).getWCET()
-                        self.__headerToWCET[headerID] = iterationAETWCET + exitAETWCET
-                    else:
-                        self.__headerToWCET[headerID] = iterationAETWCET
-        self.solvingTime = (timeit.default_timer() - start)
-        lntRootv = self.__lnt.getVertex(self.__lnt.getRootID())
-        return self.__headerToWCET[lntRootv.getHeaderID()] 
+                    Debug.verboseMessage("CFG size::       vertices=%d edges=%d" % (cfg.numOfVertices(), cfg.numOfEdges()))
+                    Debug.verboseMessage("ILP-CFG size::   constraints=%d variables=%d" % (ilp.numOfConstraints(), ilp.numOfVariables()))
+                    Debug.verboseMessage("ILP-SBCFG size:: constraints=%d variables=%d" % (ilp2.numOfConstraints(), ilp2.numOfVariables()))
+        Debug.verboseMessage("ILP-CFG::    (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
+                             (ILPSolvingTime_CFG/repeatability, 
+                              ILPConstructionTime_CFG/repeatability,
+                              (ILPSolvingTime_CFG+ILPConstructionTime_CFG)/repeatability))
+        Debug.verboseMessage("ILP-SBCFG::  (OVERALL SOLVE TIME=%.5f) (OVERALL CONSTRUCTION TIME=%.5f) (OVERALL TIME=%.5f)" % 
+                             (ILPSolvingTime_SBCFG/repeatability, 
+                              ILPConstructionTime_SBCFG/repeatability,
+                              (ILPSolvingTime_SBCFG+ILPConstructionTime_SBCFG)/repeatability))
 
 def getNewLine (num=1):
     return "\n" * num 
@@ -674,16 +425,16 @@ class ILP ():
     def __init__ (self):
         self._wcet = 0
         self._variableToExecutionCount = {}
-        self._constraints = []
+        self._lines = []
         self._variables = set([])
         self._filename = None
         
     def numOfConstraints (self):
-        count = 0
-        for constraint in self._constraints:
-            if not re.match(r'//.*', constraint):
-                count += 1
-        return count
+        nonconstraints = 0
+        for line in self._lines:
+            if line.startswith("max") or line.startswith("int") or line.startswith("\n") or line.startswith("//"):
+                nonconstraints += 1
+        return len(self._lines) - nonconstraints
     
     def numOfVariables (self):
         return len(self._variables)
@@ -714,197 +465,153 @@ class ILP ():
         return self._wcet
                     
 class CreateSuperBlockCFGILP (ILP):
-    def __init__ (self, basepath, basename, superg, lnt, soughtSolutions=1):
+    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, superg):
+        start = timeit.default_timer()
         ILP.__init__(self)
-        self._variables   = set([])
-        self.__createConstraints(superg, lnt)
-        self.__createObjectiveFunction(lnt)
+        self.__createConstraints(data, lnt, superg)
+        self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
         self.__createIntegerConstraint()
-        filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, superg.getName(), "superg", LpSolve.fileSuffix)
-        solution = True
-        while solution and soughtSolutions:
-            soughtSolutions -= 1
-            if self._wcet != -1:
-                self.__addMaximumWCETConstraint()
-            with open(filename, 'w') as ilpFile:
-                for constraint in self._constraints:
-                    ilpFile.write(constraint)        
-            solution = self._solve(filename)
-            if solution:
-                Debug.verboseMessage("IPET:: WCET(%s) = %d" % (superg.getName(), self._wcet))
-            
-    def __addMaximumWCETConstraint (self):
-        intConstraint = self._constraints.pop()
-        constraint    = self._constraints[0][len(LpSolve.max_):-self.__endOfObjectiveFunction]
-        constraint    += LpSolve.ltOrEqual
-        constraint    += str(self._wcet - 1)
-        constraint    += LpSolve.semiColon
-        constraint    += getNewLine()
-        self._constraints.append(constraint)
-        self._constraints.append(intConstraint)
+        self._filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "superg", LpSolve.fileSuffix)
+        with open(self._filename, 'w') as ilpFile:
+            for line in self._lines:
+                ilpFile.write(line)
+        self.constructionTime = (timeit.default_timer() - start)
         
-    def __createConstraints(self, superg, lnt):
+    def __createConstraints(self, data, lnt, superg):
         for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, HeaderVertex):
-                    headerID = v.getHeaderID()
+            for treev in vertices:
+                if isinstance(treev, HeaderVertex):
+                    headerID = treev.getHeaderID()
                     Debug.debugMessage("Analysing header %d" % headerID, 1)
-                    supergRegion = superg.getIterationPathSuperBlockRegion(headerID)
-                    self.__createCapacityConstraints(v, lnt)
-                    self.__createFlowConstraints(headerID, supergRegion)
-                    self.__addExclusiveConstraints(superg, headerID)
-        
-    def __addExclusiveConstraints (self, superg, headerID):
-        for exclusiveTuple in superg.getSuperBlockPathInformationGraph().exclusiveTuples:
-            comment = LpSolve.getComment("Mutual exclusive constraint")
-            self._constraints.append(comment)
-            constraint = ""
-            sizeOfExclusiveSet = len(exclusiveTuple)
-            num = 1
-            for superv in exclusiveTuple:
-                if superv.getBasicBlockIDs():
-                    constraint += LpSolve.getVertexVariable(superv.getRepresentativeID(), headerID)
-                else:
-                    edges = superv.getEdges()
-                    assert len(edges) == 1
-                    edge = list(edges)[0]
-                    constraint += LpSolve.getEdgeVariable(edge[0], edge[1], headerID)
-                if num < sizeOfExclusiveSet:
-                    constraint += LpSolve.plus
-                num += 1
-            constraint += LpSolve.ltOrEqual
-            constraint += str(sizeOfExclusiveSet - 1)
-            constraint += LpSolve.semiColon
-            constraint += getNewLine(2)
-            self._constraints.append(constraint)
+                    supergRegion = superg.getSubregion(headerID)
+                    self.__createCapacityConstraints(data, lnt, treev)
+                    self.__createFlowConstraints(lnt, headerID, supergRegion)
     
-    def __createCapacityConstraints (self, treev, lnt):
-        comment = LpSolve.getComment("Capacity constraints on header %d" % treev.getHeaderID())
-        self._constraints.append(comment)
+    def __createCapacityConstraints (self, data, lnt, treev):
+        headerID = treev.getHeaderID()
+        comment = LpSolve.getComment("Capacity constraints on header %d" % headerID)
+        self._lines.append(comment)
         if treev.getVertexID() == lnt.getRootID():
-            constraint = LpSolve.getVertexVariable(treev.getHeaderID(), treev.getHeaderID())
+            constraint = LpSolve.getVertexVariable(headerID)
             constraint += LpSolve.equals
             constraint += "1"
             constraint += LpSolve.semiColon
             constraint += getNewLine(2)
-            self._constraints.append(constraint)
+            self._lines.append(constraint)
         else:
             for ancestorv in lnt.getAllProperAncestors(treev.getVertexID()):
                 if ancestorv.getVertexID() == treev.getParentID():
-                    constraint = LpSolve.getVertexVariable(treev.getHeaderID(), treev.getHeaderID())
+                    constraint = LpSolve.getVertexVariable(headerID)
                     constraint += LpSolve.equals
-                    constraint += "%d " % (ancestorv.getLevel() * 10 + 1)
-                    constraint += LpSolve.getVertexVariable(treev.getHeaderID(), ancestorv.getHeaderID())
+                    constraint += "%d " % (data.getRelativeBound(lnt.getName(), headerID))
+                    constraint += LpSolve.getVertexVariable(ancestorv.getHeaderID())
                     constraint += LpSolve.semiColon
                     constraint += getNewLine(2)
-                    self._constraints.append(constraint)
+                    self._lines.append(constraint)
                 else:
                     pass
          
-    def __createFlowConstraints (self, headerID, supergRegion):
+    def __createFlowConstraints (self, lnt, headerID, supergRegion):
         for superv in supergRegion:
-            for basicBlockID in superv.getBasicBlockIDs():
-                self._variables.add(LpSolve.getVertexVariable(basicBlockID, headerID))            
-            # Handle super blocks with more than one basic block
-            if superv.numberOfBasicBlocks() > 1:
-                repID = superv.getRepresentativeID()
-                comment = LpSolve.getComment("Intra-super block constraints for %d. Representative ID = %d" % (superv.getVertexID(), repID))
-                self._constraints.append(comment)
-                for basicBlockID in superv.getBasicBlockIDs():
-                    if repID != basicBlockID:
-                        constraint = LpSolve.getVertexVariable(basicBlockID, headerID)
-                        constraint += LpSolve.equals
-                        constraint += LpSolve.getVertexVariable(repID, headerID)
-                        constraint += LpSolve.semiColon
-                        constraint += getNewLine()
-                        self._constraints.append(constraint)
-                self._constraints.append(getNewLine())
-                        
-            # Handle super blocks with more than one successor
-            if superv.numberOfSuccessors() > 1:
-                self.__createBranchConstraints(supergRegion, superv, headerID)
-            # Handle super blocks with more than one predecessor
-            if superv.numberOfPredecessors() > 1:
-                self.__createMergeConstraints(supergRegion, superv, headerID)
+            bbIDs = superv.getBasicBlockIDs()
+            if bbIDs.issubset(lnt.getLoopBody(headerID)):
+                for bbID in bbIDs:
+                    self._variables.add(LpSolve.getVertexVariable(bbID))            
+                # Handle super blocks with more than one basic block
+                if len(bbIDs) > 1:
+                    repID = superv.getRepresentativeID()
+                    comment = LpSolve.getComment("Intra-super block constraints on super block %d. Representative ID = %d" % (superv.getVertexID(), repID))
+                    self._lines.append(comment)
+                    for bbID in bbIDs:
+                        if repID != bbID:
+                            constraint = LpSolve.getVertexVariable(bbID)
+                            constraint += LpSolve.equals
+                            constraint += LpSolve.getVertexVariable(repID)
+                            constraint += LpSolve.semiColon
+                            constraint += getNewLine()
+                            self._lines.append(constraint)
+                    self._lines.append(getNewLine())
+                            
+                # Handle super blocks with more than one successor
+                if superv.numberOfSuccessors() > 1:
+                    self.__createBranchConstraints(supergRegion, superv, headerID)
+                # Handle super blocks with more than one predecessor
+                if superv.numberOfPredecessors() > 1:
+                    self.__createMergeConstraints(supergRegion, superv, headerID)
     
     def __createBranchConstraints (self, superg, superv, headerID):
         repID   = superv.getRepresentativeID()
         comment = LpSolve.getComment("Branch super block constraints for %d. Representative ID = %d" % (superv.getVertexID(), repID))
-        self._constraints.append(comment)
+        self._lines.append(comment)
         for branchID, superedges in superv.getBranchPartitions().iteritems():
             comment = LpSolve.getComment("Basic block branch = %d" % branchID)
-            self._constraints.append(comment)
+            self._lines.append(comment)
             # The LHS of the constraint
-            constraint = LpSolve.getVertexVariable(repID, headerID)
+            constraint = LpSolve.getVertexVariable(repID)
             constraint += LpSolve.equals
             # The RHS of the constraint
             num = 1
             for supere in superedges:
                 succSuperv = superg.getVertex(supere.getVertexID())
                 if succSuperv.isUnstructuredMerge():
-                    dummyvar = LpSolve.getDummyVariable(supere.getEdgeID(), headerID)
+                    dummyvar = LpSolve.getDummyVariable(supere.getEdgeID())
                     self._variables.add(dummyvar)    
                     constraint += dummyvar
                 elif succSuperv.numberOfBasicBlocks() == 0:
                     edges = succSuperv.getEdges()
                     assert len(edges) == 1
                     edge = list(edges)[0]
-                    dummyvar = LpSolve.getEdgeVariable(edge[0], edge[1], headerID)
+                    dummyvar = LpSolve.getEdgeVariable(edge[0], edge[1])
                     self._variables.add(dummyvar)    
                     constraint += dummyvar
                 else:
                     succRepID = succSuperv.getRepresentativeID()
-                    constraint += LpSolve.getVertexVariable(succRepID, headerID)
+                    constraint += LpSolve.getVertexVariable(succRepID)
                 if num < len(superedges):
                     constraint += LpSolve.plus
                 num += 1
             constraint += LpSolve.semiColon 
             constraint += getNewLine(2)
-            self._constraints.append(constraint)
+            self._lines.append(constraint)
     
     def __createMergeConstraints (self, superg, superv, headerID):
         repID   = superv.getRepresentativeID()
         comment = LpSolve.getComment("Merge super block constraints for %d. Representative ID = %d" % (superv.getVertexID(), repID))
-        self._constraints.append(comment)
+        self._lines.append(comment)
         # The LHS of the constraint
-        constraint = LpSolve.getVertexVariable(repID, headerID)
+        constraint = LpSolve.getVertexVariable(repID)
         constraint += LpSolve.equals
         # The RHS of the constraint
         num = 1
         for supere in superv.getPredecessorEdges():
             predSuperv = superg.getVertex(supere.getVertexID())
             if predSuperv.numberOfSuccessors() > 1:
-                dummyvar = LpSolve.getDummyVariable(supere.getEdgeID(), headerID)
+                dummyvar = LpSolve.getDummyVariable(supere.getEdgeID())
                 self._variables.add(dummyvar)    
                 constraint += dummyvar
             else:
                 predRepID = predSuperv.getRepresentativeID()
-                constraint += LpSolve.getVertexVariable(predRepID, headerID)
+                constraint += LpSolve.getVertexVariable(predRepID)
             if num < superv.numberOfPredecessors():
                 constraint += LpSolve.plus
             num += 1
         constraint += LpSolve.semiColon 
         constraint += getNewLine(2)
-        self._constraints.append(constraint)
+        self._lines.append(constraint)
        
-    def __createObjectiveFunction (self, lnt):
+    def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
         num        = 1
         for var in self._variables:
             if var.startswith(LpSolve.vertexPrefix):
                 lIndex       = var.find('_')
-                rIndex       = var.rfind('_')
-                basicBlockID = int(var[lIndex+1:rIndex])
-                if lnt.isLoopHeader(basicBlockID):
-                    headerID = int(var[rIndex+1:])       
-                    if not lnt.isDoWhileLoop(basicBlockID):
-                        constraint += "%d %s" % (basicBlockID, var)
-                    elif basicBlockID == headerID:
-                        constraint += "%d %s" % (basicBlockID, var)
-                    else:
-                        constraint += "%d %s" % (0, var)
-                else:
-                    constraint += "%d %s" % (basicBlockID, var)
+                basicBlockID = int(var[lIndex+1:])
+                wcet         = data.getExecutionTime(cfg.getName(), basicBlockID)
+                if cfg.isCallSite(basicBlockID):
+                    calleeContextID   = contextv.getSuccessorWithCallSite(basicBlockID)
+                    calleeContextWCET = contextWCETs[calleeContextID]
+                    wcet += calleeContextWCET
+                constraint += "%d %s" % (wcet, var)
             else:
                 constraint += "%d %s" % (0, var)
             if num < len(self._variables):
@@ -914,7 +621,7 @@ class CreateSuperBlockCFGILP (ILP):
             num += 1
         constraint += LpSolve.semiColon 
         constraint += getNewLine(2)
-        self._constraints.insert(0, constraint)
+        self._lines.insert(0, constraint)
         self.__endOfObjectiveFunction = 3            
     
     def __createIntegerConstraint (self):
@@ -926,7 +633,7 @@ class CreateSuperBlockCFGILP (ILP):
                 constraint += LpSolve.comma
             num += 1
         constraint += LpSolve.semiColon + getNewLine()
-        self._constraints.append(constraint)
+        self._lines.append(constraint)
 
 class CreateCFGILP (ILP):
     def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt):
@@ -938,15 +645,15 @@ class CreateCFGILP (ILP):
         self.__createObjectiveFunction(data, contextWCETs, contextv, cfg)
         self._filename = "%s.%s.context%s.%s.%s" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
         with open(self._filename, 'w') as ilpFile:
-            for constraint in self._constraints:
-                ilpFile.write(constraint)
+            for line in self._lines:
+                ilpFile.write(line)
         self.constructionTime = (timeit.default_timer() - start)
             
     def __createStructuralConstraints (self, cfg):
         for v in cfg:
             vertexID = v.getVertexID()
             comment  = LpSolve.getComment("Basic block = %d" % vertexID)
-            self._constraints.append(comment)
+            self._lines.append(comment)
             self._variables.add(LpSolve.getVertexVariable(vertexID))
             constraint1 = LpSolve.getVertexVariable(vertexID)
             constraint1 += LpSolve.equals
@@ -960,7 +667,7 @@ class CreateCFGILP (ILP):
                 num += 1
             constraint1 += LpSolve.semiColon
             constraint1 += getNewLine() 
-            self._constraints.append(constraint1)
+            self._lines.append(constraint1)
             
             constraint2 = ""
             num = 1
@@ -980,7 +687,7 @@ class CreateCFGILP (ILP):
                 num += 1
             constraint2 += LpSolve.semiColon
             constraint2 += getNewLine(2) 
-            self._constraints.append(constraint2)
+            self._lines.append(constraint2)
     
     def __createExecutionCountConstraints (self, data, cfg, lnt):
         for level, vertices in lnt.levelIterator(True):
@@ -988,7 +695,7 @@ class CreateCFGILP (ILP):
                 if isinstance(lntv, HeaderVertex):
                     headerID = lntv.getHeaderID()
                     comment  = LpSolve.getComment("Capacity constraints on header %d" % headerID)
-                    self._constraints.append(comment)
+                    self._lines.append(comment)
                     if lnt.getRootID() != lntv.getVertexID():
                         # Relative bound
                         forwardPredIDs = set([])
@@ -1000,52 +707,13 @@ class CreateCFGILP (ILP):
                         constraint += LpSolve.ltOrEqual
                         count = 1
                         for predID in forwardPredIDs:
-                            constraint += str(data.getRelativeBound(cfg.getName(), headerID))
-                            constraint += LpSolve.getEdgeVariable(predID, headerID)
+                            constraint += "%d %s" %  (data.getRelativeBound(cfg.getName(), headerID), LpSolve.getEdgeVariable(predID, headerID))
                             if count < len(forwardPredIDs):
                                 constraint += LpSolve.plus
                             count += 1
                         constraint += LpSolve.semiColon
-                        constraint += getNewLine()
-                        self._constraints.append(constraint)
-                        if lnt.isDoWhileLoop(headerID):
-                            bound      = data.getBound(cfg.getName(), headerID)
-                            constraint = LpSolve.getVertexVariable(headerID)
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(bound)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine(2)
-                            self._constraints.append(constraint)
-                        else:                                
-                            # Bound on back-edge executions
-                            headerInvocations = data.getBound(cfg.getName(), headerID)
-                            freshInvocations  = data.getFreshInvocations(cfg.getName(), headerID)
-                            constraint = ""
-                            count = 1
-                            tails = lnt.getLoopTails(headerID)
-                            for tailID in tails:
-                                constraint += LpSolve.getEdgeVariable(tailID, headerID)
-                                if count < len(tails):
-                                    constraint += LpSolve.plus 
-                                count += 1
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(headerInvocations - freshInvocations)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine()
-                            self._constraints.append(constraint)
-                            # Bound on exit-edge executions
-                            constraint = ""
-                            count = 1
-                            exits = lnt.getLoopExits(headerID)
-                            for predID, succID in exits:
-                                constraint += LpSolve.getEdgeVariable(predID, succID)
-                                if count < len(exits):
-                                    constraint += LpSolve.plus 
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(freshInvocations)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine(2)
-                            self._constraints.append(constraint)                            
+                        constraint += getNewLine(2)
+                        self._lines.append(constraint)                            
                     else:
                         bound      = data.getBound(cfg.getName(), headerID)
                         constraint = LpSolve.getVertexVariable(headerID)
@@ -1053,7 +721,7 @@ class CreateCFGILP (ILP):
                         constraint += str(bound)
                         constraint += LpSolve.semiColon
                         constraint += getNewLine(2)
-                        self._constraints.append(constraint)
+                        self._lines.append(constraint)
                             
     def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_
@@ -1077,7 +745,7 @@ class CreateCFGILP (ILP):
             num += 1
         constraint += LpSolve.semiColon 
         constraint += getNewLine(2)
-        self._constraints.insert(0, constraint) 
+        self._lines.insert(0, constraint)
     
     def __createIntegerConstraint (self):
         constraint = LpSolve.int_ + " "
@@ -1088,21 +756,4 @@ class CreateCFGILP (ILP):
                 constraint += LpSolve.comma
             num += 1
         constraint += LpSolve.semiColon + getNewLine()
-        self._constraints.append(constraint)
-
-class InstructionWCETDatabase:
-    ARM = {}
-    ARM['nop']   = 1
-    ARM['ldr']   = 20
-    ARM['str']   = 15
-    ARM['lsl']   = 2
-    ARM['lsr']   = 2
-    ARM['orr']   = 2
-    ARM['mov']   = 2
-    ARM['add']   = 2
-    ARM['sub']   = 2
-    ARM['cmp']   = 2
-    ARM['b']     = 4
-    ARM['push']  = 5
-    ARM['pop']   = 5
-    ARM['stmdb'] = 10
+        self._lines.append(constraint)
