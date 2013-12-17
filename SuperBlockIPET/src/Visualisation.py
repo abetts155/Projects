@@ -1,11 +1,13 @@
+import os
 import pydot
-import Trees, CFGs, SuperBlocks, Programs, Vertices, Calculations
+import Trees, CFGs, SuperBlocks, Programs, Vertices
 
 enabled  = False
+basepath = os.curdir
 basename = ""
 
 def generateGraphviz (g, fileNamePrefix):
-    global basename
+    global basepath, basename
     if enabled:
         graph = None
         # CFG or Instrumented CFG
@@ -17,10 +19,8 @@ def generateGraphviz (g, fileNamePrefix):
             graph = generateCallGraph(g)
         elif isinstance(g, Trees.LoopNests):
             graph = generateLNT(g)
-        elif isinstance(g, Calculations.ArithmeticExpressionTree):
-            graph = generateAET(g)
         assert graph
-        filename = "%s.%s" % (basename, fileNamePrefix + ".png")
+        filename = "%s.%s" % (basepath + os.sep + basename, fileNamePrefix + ".png")
         graph.write_png(filename)
     
 def handleCFG (cfg):
@@ -59,11 +59,14 @@ def handleSuperBlockCFG (superg):
 
 def handleSuperBlock (superv):
     label = "super ID = %d\n" % (superv.getVertexID())
-    if superv.getBasicBlockIDs():
-        label += "{%s}" % ', '.join(str(vertexID) for vertexID in superv.getBasicBlockIDs())
-    if superv.getEdges ():
+    if superv.basicBlocks:
+        label += "{%s}" % ', '.join(str(vertexID) for vertexID in superv.basicBlocks)
+    if superv.outOfScope:
         label += "\n" 
-        label += "{%s}" % ', '.join(str(edge) for edge in superv.getEdges())
+        label += "other = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScope)
+    if superv.edges:
+        label += "\n" 
+        label += "{%s}" % ', '.join(str(edge) for edge in superv.edges)
     node = pydot.Node(label)
     return node
 
@@ -102,41 +105,6 @@ def generateLNT (lnt):
     for v in lnt:
         for succID in v.getSuccessorIDs():
             succv = lnt.getVertex(succID)
-            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
-            graph.add_edge(edge)
-    return graph
-
-def generateAET (aet):
-    graph        = pydot.Dot(graph_type='graph')
-    vertexToNode = {}
-    for v in aet:
-        if isinstance(v, Vertices.SuperBlock):
-            node = handleSuperBlock(v)
-            graph.add_node(node)
-            vertexToNode[v] = node
-        else:
-            op    = v.getOperator()
-            label = "op %s (vertex=%d)" % (op, v.getVertexID())
-            label += "\nbound = %d" % v.getBound()
-            label += "\nWCET = %d" % v.getWCET()
-            if v.isAcyclicRegion():
-                label += "\nExit path"
-            else:
-                label += "\nIteration path"
-            if op == '+':
-                node = pydot.Node(label, shape="box", fillcolor="#05EDFF", style="filled")
-            elif op == 'max':            
-                node = pydot.Node(label, shape="box", fillcolor="#D44942", style="filled")
-            elif op == 'union':
-                node = pydot.Node(label, shape="box", fillcolor="#003F87", style="filled")
-            else:
-                node = pydot.Node(label, shape="box", fillcolor="#EEC900", style="filled")
-            graph.add_node(node)
-            vertexToNode[v] = node
-                
-    for v in aet:
-        for succID in v.getSuccessorIDs():
-            succv = aet.getVertex(succID)
             edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
             graph.add_edge(edge)
     return graph
@@ -203,26 +171,10 @@ def setEdgePattern (shape, width):
 def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
-def generateUdraw (g, fileNamePrefix):
-    assert isinstance(g, CFGs.CFG)
-    if enabled:
-        filename = "%s.%s" % (basename, fileNamePrefix + ".udraw")
-        with open(filename, 'w') as f:
-            f.write(beginGraph)
-            colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
-            colorsIterator = iter(colors) 
-            colorMapping   = {}
-            writeCFGVertex(colorMapping, colorsIterator, g, g.getEntryID(), f)
-            for v in g:
-                vertexID = v.getVertexID()
-                if vertexID != g.getEntryID():
-                    writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f) 
-            f.write(endGraph)    
-
 def makeUdrawFile (g, fileNamePrefix):
-    global basename
+    global basepath, basename
     if enabled:
-        filename = "%s.%s" % (basename, fileNamePrefix + fileNameSuffix)
+        filename = "%s.%s" % (basepath + os.sep + basename, fileNamePrefix + fileNameSuffix)
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
@@ -251,9 +203,6 @@ def makeUdrawFile (g, fileNamePrefix):
             elif isinstance(g, Trees.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.getVertexID(), f)
-            elif isinstance(g, Calculations.ArithmeticExpressionTree):
-                for v in g:
-                    writeArithmeticVertex(g, v.getVertexID(), f)
             else:
                 for v in g:
                     writeVertex(g, v.getVertexID(), f)
@@ -332,47 +281,18 @@ def writeCallGraphVertex (callg, vertexID, f):
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
     
-def writeArithmeticVertex (arithmetict, vertexID, f):
-    v = arithmetict.getVertex(vertexID)
-    if isinstance(v, Vertices.SuperBlock):
-        writeSuperBlockVertex(v, f)
-    else:
-        f.write(newVertex(vertexID))
-        f.write(beginAttributes)
-        op   = v.getOperator()
-        name = ""
-        name += "op        = " + op + newLine
-        name += "WCET  = %d" % v.getWCET() + newLine
-        name += "bound = %d" % v.getBound()
-        if op == '+':
-            f.write(setColor('#05EDFF'))
-        elif op == 'max':            
-            f.write(setColor('#D44942'))
-        elif op == 'union':
-            f.write(setColor('#003F87'))
-        else:
-            f.write(setColor('#EEC900'))
-        f.write(setName(name))
-        f.write(endAttibutes)
-    
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-    
 def writeSuperBlockVertex (superv, f):
     f.write(newVertex(superv.getVertexID()))
     f.write(beginAttributes)
     name = "super ID = %d%s" % (superv.getVertexID(), newLine)
-    if superv.getBasicBlockIDs():
-        name += "{%s}" % ', '.join(str(vertexID) for vertexID in superv.getBasicBlockIDs())
-    if superv.getEdges ():
+    if superv.basicBlocks:
+        name += "blocks = {%s}" % ', '.join(str(vertexID) for vertexID in superv.basicBlocks)
+    if superv.outOfScope:
+        name += newLine
+        name += "other = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScope)
+    if superv.edges:
         name += newLine 
-        name += "{%s}" % ', '.join(str(edge) for edge in superv.getEdges())
+        name += "edges = {%s}" % ', '.join(str(edge) for edge in superv.edges)
     f.write(setName(name))
     f.write(endAttibutes)
     

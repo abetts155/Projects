@@ -756,10 +756,12 @@ class LoopNests (Tree):
         assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         headerID = headerv.getHeaderID()
         edges    = set([])
+        analysed = set([])
         worklist = []
         worklist.extend(self.getLoopTails(headerID))
-        while worklist:
+        while worklist:                        
             vertexID = worklist.pop()
+            analysed.add(vertexID)
             v = self.__directedg.getVertex(vertexID)
             for predID in v.getPredecessorIDs():
                 treePredv    = self.getVertex(predID)
@@ -767,10 +769,12 @@ class LoopNests (Tree):
                 predHeaderID = headerPredv.getHeaderID()
                 if not self.__dfs.isDFSBackedge(predID, vertexID):
                     if predHeaderID == headerID:
-                        worklist.append(predID)
+                        if predID not in analysed:
+                            worklist.append(predID)
                         edges.add((predID, vertexID))
                     elif self.isNested(headerPredv.getVertexID(), headerv.getVertexID()):
-                        worklist.append(predHeaderID)
+                        if predHeaderID not in analysed:
+                            worklist.append(predHeaderID)
                         for sourceID, destinationID in self.getLoopExits(predHeaderID):
                             edges.add((sourceID, destinationID))
                             if predHeaderID != sourceID:

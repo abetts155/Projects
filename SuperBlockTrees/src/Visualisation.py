@@ -117,8 +117,8 @@ def generateAET (aet):
         else:
             op    = v.getOperator()
             label = "op %s (vertex=%d)" % (op, v.getVertexID())
-            label += "\nbound = %d" % v.getBound()
-            label += "\nWCET = %d" % v.getWCET()
+            label += "\nbound = %s" % v.boundVector
+            label += "\nWCET = %s" % v.wcet
             if v.isAcyclicRegion():
                 label += "\nExit path"
             else:
@@ -342,8 +342,8 @@ def writeArithmeticVertex (arithmetict, vertexID, f):
         op   = v.getOperator()
         name = ""
         name += "op        = " + op + newLine
-        name += "WCET  = %d" % v.getWCET() + newLine
-        name += "bound = %d" % v.getBound()
+        name += "WCET  = %s" % v.wcet + newLine
+        name += "bound = %s" % v.boundVector
         if op == '+':
             f.write(setColor('#05EDFF'))
         elif op == 'max':            

@@ -302,27 +302,15 @@ class ArithmeticOperatorVertex (Vertex):
         Vertex.__init__(self, vertexID)
         self._headerID = headerID
         self._operator = operator
-        self._bound = 0
         self._acyclicRegion = acyclicRegion
-        self._wcet = 0
-    
-    def setWCET (self, wcet):
-        self._wcet = wcet
-        
-    def getWCET (self):
-        return self._wcet
+        self.wcet = []
+        self.boundVector = []
     
     def getHeaderID (self):
         return self._headerID
     
     def getOperator (self):
         return self._operator
-
-    def setBound (self, bound):
-        self._bound = bound
-
-    def getBound (self):
-        return self._bound
     
     def isAcyclicRegion (self):
         return self._acyclicRegion

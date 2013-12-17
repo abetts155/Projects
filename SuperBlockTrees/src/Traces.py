@@ -1,4 +1,4 @@
-import Debug
+import Debug, Vertices
 import random, os, shlex
 
 newTrace = "=>"
@@ -93,43 +93,58 @@ class TraceInformation:
     def _initialiseRequiredWCETInformation (self):
         self._longestTime = 0
         self._executionTimes = {}
-        self._bounds = {}
-        self._boundsCurrent = {}
-        self._freshInvocations = {}
-        self._freshInvocationsCurrent = {}
-        self._relativeBoundToInnermostLoop = {}
-        for superg in self._program.getSuperBlockCFGs():
-            functionName = superg.getName()
-            for v in superg:
-                for bbID in v.getBasicBlockIDs():
-                    self._executionTimes[(functionName, bbID)] = 0
-                    self._bounds[(functionName, bbID)] = 0
-                    self._boundsCurrent[(functionName, bbID)] = 0  
-                if not v.getBasicBlockIDs():    
-                    for edge in v.getEdges():
-                        self._bounds[(functionName, edge)] = 0
-                        self._boundsCurrent[(functionName, edge)] = 0
+        self._iterationBounds = {}
+        self._iterationBoundsCurrent = {}
+        self._exitBounds = {}
+        self._exitBoundsCurrent = {}
+        self._innerHeaderToOutermostHeader = {}
+        for cfg in self._program.getCFGs():
+            functionName = cfg.getName()
+            for v in cfg:
+                tupleKey = (functionName, v.getVertexID())
+                self._executionTimes[tupleKey] = 0
+                self._iterationBounds[tupleKey]        = {}
+                self._iterationBoundsCurrent[tupleKey] = {}
+                self._exitBounds[tupleKey]        = {}
+                self._exitBoundsCurrent[tupleKey] = {}
+            lnt = self._program.getLNT(functionName)
+            for level, vertices in lnt.levelIterator(True):
+                if level > 1:
+                    for lntv in vertices:
+                        if isinstance(lntv, Vertices.HeaderVertex): 
+                            parentv = lnt.getVertex(lntv.getParentID())
+                            while parentv.getLevel() > 1:
+                                parentv = lnt.getVertex(parentv.getParentID())
+                            tupleKey = (functionName, lntv.getHeaderID())
+                            self._innerHeaderToOutermostHeader[tupleKey] = parentv.getHeaderID()
+                            
+    def _completeLoopBoundProfiles (self):
         for lnt in self._program.getLNTs():
             functionName = lnt.getName()
-            for headerID in lnt.getHeaderIDs():
-                self._freshInvocations[(functionName, headerID)] = 0
-                self._freshInvocationsCurrent[(functionName, headerID)] = 0  
-                self._relativeBoundToInnermostLoop[(functionName, headerID)] = 0
-            
-    def getBound (self, functionName, vertexID):
-        tupleKey = (functionName, vertexID)
-        assert tupleKey in self._bounds
-        return self._bounds[tupleKey]
-    
-    def getRelativeBound (self, functionName, headerID):
-        tupleKey = (functionName, headerID)
-        assert tupleKey in self._relativeBoundToInnermostLoop
-        return self._relativeBoundToInnermostLoop[tupleKey]
-    
-    def getFreshInvocations (self, functionName, headerID):
-        tupleKey = (functionName, headerID)
-        assert tupleKey in self._freshInvocations
-        return self._freshInvocations[tupleKey]
+            for level, vertices in lnt.levelIterator(True):
+                for lntv in vertices:
+                    if isinstance(lntv, Vertices.HeaderVertex):
+                        headerID = lntv.getHeaderID()
+                        if level > 1: 
+                            # Ensure that the iteration space has the same dimension as the outermost loop's iteration space
+                            # We fill in the gaps by taking the maximum
+                            tupleKey = (functionName, headerID)
+                            maxBound = 0
+                            for bound in self._iterationBounds[tupleKey].values():
+                                maxBound = max(bound, maxBound)
+                            outerHeaderID = self._innerHeaderToOutermostHeader[tupleKey]
+                            tupleKey2     = (functionName, outerHeaderID)
+                            for iteration in xrange(1, len(self._iterationBounds[tupleKey2]) + 1):
+                                if iteration not in self._iterationBounds[tupleKey]:
+                                    self._iterationBounds[tupleKey][iteration] = maxBound
+                            # Do the same for the exit path iteration space
+                            if not lnt.isDoWhileLoop(headerID):
+                                maxBound      = 0
+                                for bound in self._exitBounds[tupleKey].values():
+                                    maxBound = max(bound, maxBound)
+                                for iteration in xrange(1, len(self._iterationBounds[tupleKey2]) + 1):
+                                    if iteration not in self._exitBounds[tupleKey]:
+                                        self._exitBounds[tupleKey][iteration] = maxBound
 
     def getExecutionTime (self, functionName, vertexID):
         tupleKey = (functionName, vertexID)
@@ -142,30 +157,49 @@ class TraceInformation:
             for v in cfg:
                 tupleKey = (functionName, v.getVertexID())
                 self._executionTimes[tupleKey] = random.randint(1,200)
+                
+    def getIterationPathsProfile (self, functionName, headerID):
+        tupleKey = (functionName, headerID)
+        assert tupleKey in self._iterationBounds
+        lnt     = self._program.getLNT(functionName)
+        headerv = lnt.getVertex(lnt.getVertex(headerID).getParentID())
+        if headerv.getLevel() == 1 and not lnt.isDoWhileLoop(headerID):
+            clone  = dict(self._iterationBounds[tupleKey])
+            lastIt = len(clone)
+            del clone[lastIt]
+            return clone
+        else:  
+            return self._iterationBounds[tupleKey]
+    
+    def getExitPathsProfile (self, functionName, headerID):
+        tupleKey = (functionName, headerID)
+        assert tupleKey in self._exitBounds
+        lnt     = self._program.getLNT(functionName)
+        headerv = lnt.getVertex(lnt.getVertex(headerID).getParentID())
+        if headerv.getLevel() == 1 and not lnt.isDoWhileLoop(headerID):
+            clone  = {}
+            lastIt = len(self._iterationBounds[tupleKey])
+            clone[lastIt] = self._iterationBounds[tupleKey][lastIt]
+            return clone
+        else:  
+            return self._exitBounds[tupleKey]
     
     def output (self):
         for cfg in self._program.getCFGs():
             functionName = cfg.getName()
-            lnt = self._program.getLNT(functionName)
             for v in cfg:
-                vertexID = v.getVertexID()
-                tupleKey = (functionName, vertexID)
-                if not lnt.isLoopHeader(vertexID):
-                    Debug.debugMessage("%s: WCET = %d\tCount = %d" % (tupleKey, 
-                                                                        self._executionTimes[tupleKey], 
-                                                                        self._bounds[tupleKey]), 10)
-                else:
-                    Debug.debugMessage("%s: WCET = %d\tCount = %d\tInvocations = %d\tRelative = %d" % (tupleKey, 
-                                                                        self._executionTimes[tupleKey], 
-                                                                        self._bounds[tupleKey],
-                                                                        self._freshInvocations[tupleKey],
-                                                                        self._relativeBoundToInnermostLoop[tupleKey]), 10)
+                tupleKey = (functionName,  v.getVertexID())
+                Debug.debugMessage("%s: WCET = %d" % (tupleKey, self._executionTimes[tupleKey]), 10)
+                if self._iterationBounds[tupleKey]:
+                    Debug.debugMessage("Iteration profile = %s\nExit profile = %s" % (self._iterationBounds[tupleKey], self._exitBounds[tupleKey]), 10)
+                    
     
 class ParseTraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(tracefile)
+        self._completeLoopBoundProfiles()
         self.output()
                 
     def __initialise (self):
@@ -177,7 +211,6 @@ class ParseTraces (TraceInformation):
         self.__currentHeaderID = None
         self.__currentSuperg   = None
         self.__stack           = []
-        self.__relativeBounds  = []
         self.__contextg        = self._program.getContextGraph()
         rootv                  = self.__contextg.getVertex(self.__contextg.getRootID())
         self.__rootCFG         = self._program.getCFG(rootv.getName())
@@ -192,19 +225,17 @@ class ParseTraces (TraceInformation):
         self.__currentSuperg   = self._program.getSuperBlockCFG(self.__currentContextv.getName())
         self.__predBB          = None
         self.__currentBB       = None
-        self.__relativeBounds  = []
         
     def __parse (self, tracefile):
         runID = 0
         with open(tracefile, 'r') as f:
             for line in f:
                 if line.startswith(newTrace):
-                    assert not self.__relativeBounds, self.__relativeBounds.__str__()
                     runID += 1
                     self._allruns.add(runID)
                     self.__reset()
                 elif line.startswith(endTrace):
-                    self.__computeMaximumBounds()
+                    pass
                 else:
                     lexemes = shlex.split(line)
                     for lex in lexemes:
@@ -221,7 +252,6 @@ class ParseTraces (TraceInformation):
                                     break
                             if not found:
                                 if self.__currentBB.getVertexID() == self.__currentCFG.getExitID():
-                                    self.__computeMaximumBounds()
                                     self.__handleReturn()
                                     succIDs = self.__currentBB.getSuccessorIDs()
                                     assert len(succIDs) == 1
@@ -230,48 +260,72 @@ class ParseTraces (TraceInformation):
                                     self.__currentBB = succv
                                 else:
                                     self.__handleCall(nextID) 
-                        self.__incrementBounds()    
+                        self.__computeExecutionCounts()    
     
-    def __incrementBounds (self):
-        tupleKey = (self.__currentCFG.getName(), self.__currentBB.getVertexID())
-        self._boundsCurrent[tupleKey] += 1 
-        if self.__currentLNT.isLoopHeader(self.__currentBB.getVertexID()):
-            headerID = self.__currentBB.getVertexID()
-            if not self.__predBB or not self.__currentLNT.isLoopBackEdge(self.__predBB.getVertexID(), headerID):
-                self._freshInvocationsCurrent[tupleKey] += 1
+    def __computeExecutionCounts (self):
+        vertexID = self.__currentBB.getVertexID()
+        if self.__currentLNT.isLoopHeader(vertexID):
+            treev   = self.__currentLNT.getVertex(vertexID)
+            headerv = self.__currentLNT.getVertex(treev.getParentID())
+            if headerv.getLevel() <= 1:
+                # An outermost enclosing loop has been discovered
+                # Extend its iteration space profile by one 
+                tupleKey         = (self.__currentCFG.getName(), vertexID)
+                currentIteration = len(self._iterationBoundsCurrent[tupleKey]) + 1
+                self._iterationBoundsCurrent[tupleKey][currentIteration] = 1 
+            else:
+                # An inner loop has been discovered
+                # Increment the counter associated with the iteration number of the outer loop
+                tupleKey          = (self.__currentCFG.getName(), vertexID)
+                outermostHeaderID = self._innerHeaderToOutermostHeader[tupleKey]
+                tupleKey2          = (self.__currentCFG.getName(), outermostHeaderID)
+                currentIteration  = len(self._iterationBoundsCurrent[tupleKey2])
+                if currentIteration not in self._iterationBoundsCurrent[tupleKey]:
+                    self._iterationBoundsCurrent[tupleKey][currentIteration] = 0
+                self._iterationBoundsCurrent[tupleKey][currentIteration] += 1
+        # See if we are exiting an outermost loop
         if self.__predBB:
-            # Record bounds on specific edges
-            tupleKey2 = (self.__currentCFG.getName(), (self.__predBB.getVertexID(), self.__currentBB.getVertexID()))
-            if tupleKey2 in self._boundsCurrent:
-                self._boundsCurrent[tupleKey2] += 1
-            # Increment relative loop bounds
-            if self.__currentLNT.isLoopHeader(self.__predBB.getVertexID()):
-                headerID = self.__predBB.getVertexID()
-                # Ignore the entry vertex
-                if self.__currentCFG.getEntryID() != headerID:
-                    if headerID in [elem[0] for elem in self.__relativeBounds]:
-                        tos = self.__relativeBounds.pop()
-                        assert tos[0] == headerID
-                        bound = tos[1] + 1
-                        self.__relativeBounds.append((headerID, bound))
-                    else:
-                        self.__relativeBounds.append((headerID, 1))
-            # Compute relative loop bounds if a loop-exit edge is detected
-            headerID = self.__currentLNT.isLoopExitEdge(self.__predBB.getVertexID(), self.__currentBB.getVertexID())
-            if headerID:
-                assert self.__relativeBounds, "Relative bound stack is empty"
-                tos = self.__relativeBounds.pop()
-                assert tos[0] == headerID, "Top of relative bound stack and header ID for loop-exit edge do not match. Found %d and %d respectively" % (tos[0], headerID)
-                tupleKey = (self.__currentCFG.getName(), headerID)
-                self._relativeBoundToInnermostLoop[tupleKey] = max(self._relativeBoundToInnermostLoop[tupleKey], tos[1])               
-
-    def __computeMaximumBounds (self):
-        for tupleKey in self._bounds:
-            self._bounds[tupleKey] = max(self._boundsCurrent[tupleKey], self._bounds[tupleKey])
-            self._boundsCurrent[tupleKey] = 0
-        for tupleKey in self._freshInvocationsCurrent:
-            self._freshInvocations[tupleKey] = max(self._freshInvocationsCurrent[tupleKey], self._freshInvocations[tupleKey])
-            self._freshInvocationsCurrent[tupleKey] = 0
+            predID = self.__predBB.getVertexID()
+            succID = self.__currentBB.getVertexID()
+            if self.__currentLNT.isLoopExitEdge(predID, succID):
+                treev    = self.__currentLNT.getVertex(predID)
+                headerv  = self.__currentLNT.getVertex(treev.getParentID())
+                headerID = headerv.getHeaderID()
+                if headerv.getLevel() <= 1:
+                    # First analyse the bound for the outermost loop 
+                    tupleKey = (self.__currentCFG.getName(), headerID)
+                    maxIterations = len(self._iterationBoundsCurrent[tupleKey])
+                    if maxIterations > len(self._iterationBounds[tupleKey]):
+                        self._iterationBounds[tupleKey] = self._iterationBoundsCurrent[tupleKey]
+                    self._iterationBoundsCurrent[tupleKey] = {}
+                    # Now analyse all loops which are nested in the outermost loop
+                    for headerID2 in self.__currentLNT.getHeaderIDs():
+                        tupleKey2 = (self.__currentCFG.getName(), headerID2)
+                        # First make sure we have an inner loop and that the loop is nested in the outermost loop from which we are exiting
+                        if tupleKey2 in self._innerHeaderToOutermostHeader and headerID == self._innerHeaderToOutermostHeader[tupleKey2]:
+                            if not self.__currentLNT.isDoWhileLoop(headerID2):
+                                for iteration, bound in self._exitBoundsCurrent[tupleKey2].iteritems():
+                                    if iteration not in self._exitBounds[tupleKey2]:
+                                        self._exitBounds[tupleKey2][iteration] = bound
+                                    else:
+                                        self._exitBounds[tupleKey2][iteration] = max(bound, self._exitBounds[tupleKey2][iteration])
+                            for iteration, bound in self._iterationBoundsCurrent[tupleKey2].iteritems():
+                                if not self.__currentLNT.isDoWhileLoop(headerID2):
+                                    bound -= self._exitBoundsCurrent[tupleKey2][iteration]
+                                if iteration not in self._iterationBounds[tupleKey2]:
+                                    self._iterationBounds[tupleKey2][iteration] = bound
+                                else:
+                                    self._iterationBounds[tupleKey2][iteration] = max(bound, self._iterationBounds[tupleKey2][iteration])
+                            self._iterationBoundsCurrent[tupleKey2] = {}
+                            self._exitBoundsCurrent[tupleKey2] = {}
+                else:
+                    tupleKey          = (self.__currentCFG.getName(), headerID)
+                    outermostHeaderID = self._innerHeaderToOutermostHeader[tupleKey]
+                    tupleKey2         = (self.__currentCFG.getName(), outermostHeaderID)
+                    currentIteration  = len(self._iterationBoundsCurrent[tupleKey2])
+                    if currentIteration not in self._exitBoundsCurrent[tupleKey]:
+                        self._exitBoundsCurrent[tupleKey][currentIteration] = 0
+                    self._exitBoundsCurrent[tupleKey][currentIteration] += 1
     
     def __handleReturn (self):
         Debug.debugMessage("Returning because of basic block %d" % self.__currentBB.getVertexID(), 1)

@@ -31,15 +31,7 @@ class SuperBlockGraph (DirectedGraph):
                         dominatorg         = DominatorGraph(predomTree, postdomTree)
                         sccs               = StrongComponents(dominatorg)      
                         self.__headerToSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, enhancedCFG, postdomTree, sccs, headerID)     
-                        self.__headerToSuperBlockRoot[headerID] = self.__addEdges(lnt, enhancedCFG, predomTree, postdomTree, postDF, headerID, vToSuperv)   
-    
-            for superv in self:
-                if superv.getBasicBlockIDs():
-                    for vertexID in superv.getBasicBlockIDs():
-                        if not lnt.isLoopHeader(vertexID):
-                            superv.setRepresentativeID(vertexID)
-                        elif len(superv.getBasicBlockIDs()) == 1:
-                            superv.setRepresentativeID(vertexID)
+                        self.__headerToSuperBlockRoot[headerID] = self.__addEdges(lnt, enhancedCFG, predomTree, postdomTree, postDF, headerID, vToSuperv)
                         
     def __addSuperBlocks (self, lnt, forwardCFG, postdomTree, sccs, headerID):
         global nextVertexID 
@@ -60,13 +52,16 @@ class SuperBlockGraph (DirectedGraph):
                 superv   = sccIDToVertex[sccID]
                 vToSuperv[vertexID] = superv
                 if isinstance(v, CFGVertex):
-                    if not lnt.isLoopHeader(vertexID) or vertexID == headerID:
-                        superv.addBasicBlock(vertexID)
+                    if vertexID not in lnt.getLoopBody(headerID) or (lnt.isLoopHeader(vertexID) and headerID != vertexID):
+                        superv.outOfScope.add(vertexID)
+                    else:
+                        superv.basicBlocks.add(vertexID)
+                        superv.repID = vertexID
                 else:
                     predv = forwardCFG.getVertex(v.edge[0])
                     succv = forwardCFG.getVertex(v.edge[1])
                     if not predv.isDummy() and not succv.isDummy():
-                        superv.addEdge(v.edge)
+                        superv.edges.add(v.edge)
         return subgraph, vToSuperv
                 
     def __addEdges (self, lnt, forwardCFG, predomTree, postdomTree, postDF, headerID, vToSuperv):
@@ -91,7 +86,7 @@ class SuperBlockGraph (DirectedGraph):
                 if postdomTree.getImmediateDominator(ipreID) != vertexID:
                     destinationv = vToSuperv[vertexID]
                     if postDF.size(vertexID) > 1:
-                        destinationv.setUnstructuredMerge()
+                        destinationv.unstructuredMerge = True
                     for predID in v.getPredecessorIDs():
                         sourcev = vToSuperv[predID]
                         self.__addEdge(sourcev, destinationv, predID)

@@ -223,62 +223,12 @@ class CallGraphVertex (Vertex):
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.__unstructuredMerge = False
-        self.__repID             = None
-        self.__basicBlocks       = set([])
-        self.__edges             = set([])
-        self.__loopHeader        = None
-    
-    def setLoopHeader (self, headerID):
-        self.__loopHeader = headerID
-        
-    def getLoopHeader (self):
-        return self.__loopHeader
-    
-    def setUnstructuredMerge (self):
-        self.__unstructuredMerge = True
-        
-    def isUnstructuredMerge (self):
-        return self.__unstructuredMerge
-    
-    def addBasicBlock (self, vertexID):
-        self.__basicBlocks.add(vertexID)
-        
-    def addBasicBlocks (self, basicBlocks):
-        self.__basicBlocks.update(basicBlocks)
-        
-    def addEdge (self, edge):
-        self.__edges.add(edge)
-        
-    def addEdges (self, edges):
-        self.__edges.update(edges)
-        
-    def containsBasicBlock (self, vertexID):
-        return vertexID in self.__basicBlocks
-    
-    def numberOfBasicBlocks (self):
-        return len(self.__basicBlocks)
-    
-    def numberOfEdges(self):
-        return len(self.__edges)
-    
-    def getBasicBlockIDs (self):
-        return self.__basicBlocks
-    
-    def getEdges (self):
-        return self.__edges
-    
-    def setRepresentativeID (self, vertexID):
-        assert vertexID in self.__basicBlocks
-        self.__repID = vertexID
-        
-    def hasRepresentativeID (self):
-        return self.__repID
-    
-    def getRepresentativeID (self):
-        assert self.__basicBlocks, "Trying to return a representative ID for super block %d which has no basic blocks" % self._vertexID
-        assert self.__repID, "Representative ID not set"
-        return self.__repID
+        self.repID       = None
+        self.basicBlocks = set([])
+        self.outOfScope  = set([])
+        self.edges       = set([])
+        self.loopHeader  = None
+        self.unstructuredMerge = False
     
     def getBranchPartitions (self):
         partitions = {}
@@ -291,8 +241,10 @@ class SuperBlock (Vertex):
     
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID
-        string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
-        string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
+        string += "Rep ID       = %s\n" % self.repID
+        string += "Basic blocks = {%s}\n" % ', '.join(str(bbID) for bbID in self.basicBlocks)
+        string += "Inner blocks = {%s}\n" % ', '.join(str(bbID) for bbID in self.outOfScope)
+        string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.edges)
         string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
         string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string

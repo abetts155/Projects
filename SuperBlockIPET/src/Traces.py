@@ -101,12 +101,12 @@ class TraceInformation:
         for superg in self._program.getSuperBlockCFGs():
             functionName = superg.getName()
             for v in superg:
-                for bbID in v.getBasicBlockIDs():
+                for bbID in v.basicBlocks:
                     self._executionTimes[(functionName, bbID)] = 0
                     self._bounds[(functionName, bbID)] = 0
                     self._boundsCurrent[(functionName, bbID)] = 0  
-                if not v.getBasicBlockIDs():    
-                    for edge in v.getEdges():
+                if not v.basicBlocks:    
+                    for edge in v.edges:
                         self._bounds[(functionName, edge)] = 0
                         self._boundsCurrent[(functionName, edge)] = 0
         for lnt in self._program.getLNTs():

@@ -171,7 +171,8 @@ class Program():
         Visualisation.generateGraphviz(self.__callg, "callg%s" % suffix)
         Visualisation.generateGraphviz(self.getContextGraph(), "contextg%s" % suffix)
         for functionName, cfg in self.__CFGs.iteritems():
-            Visualisation.generateUdraw(cfg, "%s.cfg%s" % (functionName, suffix))
+            Visualisation.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
+            Visualisation.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
             Visualisation.generateGraphviz(cfg, "%s.cfg%s" % (functionName, suffix))
             Visualisation.generateGraphviz(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
             Visualisation.generateGraphviz(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))

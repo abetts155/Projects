@@ -73,6 +73,7 @@ if __name__ == "__main__":
     filename = os.path.basename(args.program)
     basepath = os.path.abspath(os.path.dirname(args.program))
     basename = os.path.splitext(filename)[0]
+    Visualisation.basepath = basepath
     Visualisation.basename = basename
     program  = ParseProgramFile.createProgram(args.program)
     Debug.verboseMessage("Analysing CFGs")

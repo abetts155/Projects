@@ -33,8 +33,6 @@ class WCETCalculation:
                 AETSolvingTime += arithmetict.solvingTime
                 AETConstructionTime += arithmetict.constructionTime
                 self.__contextDataTrees[contextv.getVertexID()] = treeWCET
-                Visualisation.generateGraphviz(arithmetict, "%s.%s" % (functionName, "aet"))
-                Visualisation.makeUdrawFile(arithmetict, "%s.%s" % (functionName, "aet"))
                 ilp     = CreateCFGILP(basepath, basename, data, self.__contextDataILPs, contextv, cfg, lnt)
                 ilpWCET = ilp.solve()
                 Debug.verboseMessage("ILP::  WCET(%s)=%d (SOLVE TIME=%.5f) (CONSTRUCTION TIME=%.5f) (TOTAL TIME=%.5f)" % (functionName, 
@@ -142,7 +140,7 @@ class ArithmeticExpressionTree (DirectedGraph):
     def __addVertex (self, subgraph, vertexID, v):
         subgraph.vertices[vertexID] = v
         self.vertices[vertexID] = v
-              
+    
     def __buildSubtree (self, headerID, supergRegion, rootv, acyclicRegion):
         Visualisation.generateGraphviz(supergRegion, "superg.%d" % headerID)
         subgraph = DirectedGraph()
@@ -221,62 +219,77 @@ class ArithmeticExpressionTree (DirectedGraph):
         return subgraph, self.__supervToTreeVertex[rootv.getVertexID()]
         
     def __evaluateSuperBlock (self, superv, data, contextWCETs, contextv):
-        wcet = 0
+        innerLoopWCETs = []
+        for bbID in superv.getBasicBlockIDs():
+            if self.__lnt.isLoopHeader(bbID) and superv.getLoopHeader() != bbID:
+                if not innerLoopWCETs:
+                    innerLoopWCETs.extend(self.__headerToWCET[bbID])
+                else:
+                    for idx, val in enumerate(self.__headerToWCET[bbID]):
+                        innerLoopWCETs[idx] += val 
+        scalarWCET = 0
         for bbID in superv.getBasicBlockIDs():
             if not self.__lnt.isLoopHeader(bbID) or superv.getLoopHeader() == bbID:
-                wcet += data.getExecutionTime(self.__functionName, bbID)
+                scalarWCET += data.getExecutionTime(self.__functionName, bbID)
                 if self.__cfg.isCallSite(bbID):
                     calleeContextID   = contextv.getSuccessorWithCallSite(bbID)
                     calleeContextWCET = contextWCETs[calleeContextID]
-                    wcet += calleeContextWCET
-            if self.__lnt.isLoopHeader(bbID) and superv.getLoopHeader() != bbID:
-                wcet += self.__headerToWCET[bbID]
-        return wcet
+                    scalarWCET += calleeContextWCET
+        if not innerLoopWCETs:
+            return [scalarWCET]
+        else:
+            for idx, val in enumerate(innerLoopWCETs):
+                innerLoopWCETs[idx] += scalarWCET
+            return innerLoopWCETs
     
     def __propagateBounds (self, headerv, data):
-        headerID = headerv.getHeaderID()
-        if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID():
-            # If not a do-while loop and not the dummy loop, peel off the iterations which came from outside the loop body
-            headerInvocations = data.getBound(self.__functionName, headerID)
-            freshInvocations  = data.getFreshInvocations(self.__functionName, headerID)
-            totalCount        = headerInvocations - freshInvocations
-        else:
-            totalCount = data.getBound(self.__functionName, headerID)
+        headerID     = headerv.getHeaderID()
         iterationAET = self.__iterationPathsAETs[headerID]
+        boundVector  = data.getIterationPathsProfile(self.__functionName, headerID)
+        if headerv.getVertexID() == self.__lnt.getRootID():
+            boundVector = {1: 1}
         for v in iterationAET:
             if not isinstance(v, SuperBlock):
-                v.setBound(totalCount)
+                v.boundVector = boundVector
         #  Now propagate bound downwards to acyclic region
         if not self.__lnt.isDoWhileLoop(headerID) and headerv.getVertexID() != self.__lnt.getRootID(): 
-            totalCount = data.getFreshInvocations(self.__functionName, headerID)
-            exitAET    = self.__exitPathsAETs[headerID]
+            exitAET     = self.__exitPathsAETs[headerID]
+            boundVector = data.getExitPathsProfile(self.__functionName, headerID)
             for v in exitAET:
                 if not isinstance(v, SuperBlock):
-                    v.setBound(totalCount)
+                    v.boundVector = boundVector
                     
     def __evaluateDFS (self, dfs, data, contextWCETs, contextv):
         for vertexID in dfs.getPostorder():
+            Visualisation.generateGraphviz(self, "%s.%s" % (self.__functionName, "aet"))
+            Visualisation.makeUdrawFile(self, "%s.%s" % (self.__functionName, "aet"))
             v = self.getVertex(vertexID)
             if isinstance(v, AdditionVertex):
-                time  = 0
+                succv  = self.getVertex(v.getSuccessorIDs()[0])
+                v.wcet = list(succv.wcet)
                 for succID in v.getSuccessorIDs():
-                    succv = self.getVertex(succID)
-                    if isinstance(succv, SuperBlock):
-                        time += self.__evaluateSuperBlock(succv, data, contextWCETs, contextv)
-                    else:
-                        time += succv.getWCET()
-                v.setWCET(time)
+                    succv2 = self.getVertex(succID)
+                    if succv2.getVertexID() != succv.getVertexID():
+                        for idx, time in enumerate(v.wcet):
+                            v.wcet[idx] += succv2.wcet[idx]
             elif isinstance(v, MultiplicationVertex):
                 # Get only child of multiplication vertex
                 assert v.numberOfSuccessors() == 1
                 addv = self.getVertex(v.getSuccessorIDs()[0])
-                v.setWCET(addv.getWCET() * v.getBound())
+                for bound in v.boundVector.values():
+                    v.wcet.append(addv.wcet[0] * bound)
             elif isinstance(v, MaximumVertex):
-                time = 0
+                # Get a random successor and assume that its WCET profile represents the worst case
+                succv  = self.getVertex(v.getSuccessorIDs()[0])
+                v.wcet = list(succv.wcet)
+                # Now do a maximum
                 for succID in v.getSuccessorIDs():
                     succv = self.getVertex(succID)
-                    time  = max(time, succv.getWCET())
-                v.setWCET(time)
+                    for idx, time in enumerate(v.wcet):
+                        v.wcet[idx] = max(time, succv.wcet[idx])
+            else:
+                v.wcet = self.__evaluateSuperBlock(v, data, contextWCETs, contextv)
+            print vertexID, v.wcet
     
     def evaluate (self, data, contextWCETs, contextv):
         start = timeit.default_timer()
@@ -291,16 +304,27 @@ class ArithmeticExpressionTree (DirectedGraph):
                     iterationAETRootID = self.__iterationPathsRootIDs[headerID]
                     dfs                = DepthFirstSearch(iterationAET, iterationAETRootID)
                     self.__evaluateDFS(dfs, data, contextWCETs, contextv)
-                    iterationAETWCET   = iterationAET.getVertex(iterationAETRootID).getWCET()
+                    iterationAETWCET   = iterationAET.getVertex(iterationAETRootID).wcet
                     if not self.__lnt.isDoWhileLoop(headerID) and lntv.getVertexID() != self.__lnt.getRootID():
                         exitAET       = self.__exitPathsAETs[headerID]
                         exitAETRootID = self.__exitPathsRootIDs[headerID]
                         dfs2          = DepthFirstSearch(exitAET, exitAETRootID)
                         self.__evaluateDFS(dfs2, data, contextWCETs, contextv)
-                        exitAETWCET   = exitAET.getVertex(exitAETRootID).getWCET()
-                        self.__headerToWCET[headerID] = iterationAETWCET + exitAETWCET
+                        exitAETWCET   = exitAET.getVertex(exitAETRootID).wcet
+                        assert len(exitAETWCET) == len(iterationAETWCET)
+                        self.__headerToWCET[headerID] = []
+                        for val1, val2 in zip(iterationAETWCET, exitAETWCET):
+                            self.__headerToWCET[headerID].append(val1 + val2)
                     else:
                         self.__headerToWCET[headerID] = iterationAETWCET
+                    if lntv.getLevel() <= 1:
+                        time = 0
+                        for val in iterationAET.getVertex(iterationAETRootID).wcet:
+                            time += val
+                        if not self.__lnt.isDoWhileLoop(headerID) and lntv.getVertexID() != self.__lnt.getRootID():
+                            for val in exitAET.getVertex(exitAETRootID).wcet:
+                                time += val
+                        self.__headerToWCET[headerID] = time
         self.solvingTime = (timeit.default_timer() - start)
         lntRootv = self.__lnt.getVertex(self.__lnt.getRootID())
         return self.__headerToWCET[lntRootv.getHeaderID()] 
@@ -999,55 +1023,18 @@ class CreateCFGILP (ILP):
                         constraint += LpSolve.getVertexVariable(headerID)
                         constraint += LpSolve.ltOrEqual
                         count = 1
+                        bound = len(data.getIterationPathsProfile(cfg.getName(), headerID)) + len(data.getExitPathsProfile(cfg.getName(), headerID))
                         for predID in forwardPredIDs:
-                            constraint += str(data.getRelativeBound(cfg.getName(), headerID))
+                            constraint += str(bound)
                             constraint += LpSolve.getEdgeVariable(predID, headerID)
                             if count < len(forwardPredIDs):
                                 constraint += LpSolve.plus
                             count += 1
                         constraint += LpSolve.semiColon
-                        constraint += getNewLine()
-                        self._constraints.append(constraint)
-                        if lnt.isDoWhileLoop(headerID):
-                            bound      = data.getBound(cfg.getName(), headerID)
-                            constraint = LpSolve.getVertexVariable(headerID)
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(bound)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine(2)
-                            self._constraints.append(constraint)
-                        else:                                
-                            # Bound on back-edge executions
-                            headerInvocations = data.getBound(cfg.getName(), headerID)
-                            freshInvocations  = data.getFreshInvocations(cfg.getName(), headerID)
-                            constraint = ""
-                            count = 1
-                            tails = lnt.getLoopTails(headerID)
-                            for tailID in tails:
-                                constraint += LpSolve.getEdgeVariable(tailID, headerID)
-                                if count < len(tails):
-                                    constraint += LpSolve.plus 
-                                count += 1
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(headerInvocations - freshInvocations)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine()
-                            self._constraints.append(constraint)
-                            # Bound on exit-edge executions
-                            constraint = ""
-                            count = 1
-                            exits = lnt.getLoopExits(headerID)
-                            for predID, succID in exits:
-                                constraint += LpSolve.getEdgeVariable(predID, succID)
-                                if count < len(exits):
-                                    constraint += LpSolve.plus 
-                            constraint += LpSolve.ltOrEqual
-                            constraint += str(freshInvocations)
-                            constraint += LpSolve.semiColon
-                            constraint += getNewLine(2)
-                            self._constraints.append(constraint)                            
+                        constraint += getNewLine(2)
+                        self._constraints.append(constraint)                          
                     else:
-                        bound      = data.getBound(cfg.getName(), headerID)
+                        bound      = 1
                         constraint = LpSolve.getVertexVariable(headerID)
                         constraint += LpSolve.equals
                         constraint += str(bound)
