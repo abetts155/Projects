@@ -1,6 +1,6 @@
 from DirectedGraphs import DirectedGraph
 from Vertices import CFGVertex, Vertex, HeaderVertex, SuperBlock
-from Edges import SuperBlockControlFlowEdge
+from Edges import BranchControlFlowEdge, MergeControlFlowEdge
 from Trees import Dominators, DominanceFrontiers, DepthFirstSearch
 from CFGs import EnhancedCFG
 from Utils import enum
@@ -35,6 +35,7 @@ class SuperBlockGraph (DirectedGraph):
                         
     def __addSuperBlocks (self, lnt, forwardCFG, postdomTree, sccs, headerID):
         global nextVertexID 
+        loopBody      = lnt.getLoopBody(headerID)
         subgraph      = SuperBlockGraph()
         sccIDToVertex = {}
         vToSuperv     = {}
@@ -52,19 +53,30 @@ class SuperBlockGraph (DirectedGraph):
                 superv   = sccIDToVertex[sccID]
                 vToSuperv[vertexID] = superv
                 if isinstance(v, CFGVertex):
-                    if vertexID not in lnt.getLoopBody(headerID) or (lnt.isLoopHeader(vertexID) and headerID != vertexID):
-                        superv.outOfScope.add(vertexID)
+                    if vertexID not in loopBody or (lnt.isLoopHeader(vertexID) and headerID != vertexID):
+                        superv.outOfScopeBlocks.add(vertexID)
                     else:
                         superv.basicBlocks.add(vertexID)
-                        superv.repID = vertexID
+                        superv.repBasicBlock = vertexID
                 else:
-                    predv = forwardCFG.getVertex(v.edge[0])
-                    succv = forwardCFG.getVertex(v.edge[1])
+                    predID = v.edge[0]
+                    succID = v.edge[1]
+                    predv  = forwardCFG.getVertex(predID)
+                    succv  = forwardCFG.getVertex(succID)
                     if not predv.isDummy() and not succv.isDummy():
-                        superv.edges.add(v.edge)
+                        if lnt.isLoopExitEdge(v.edge[0], v.edge[1]):                            
+                            if v.edge in lnt.getLoopExits(headerID):
+                                superv.edges.add(v.edge)
+                                superv.repEdge = v.edge
+                            else:
+                                superv.loopExitEdges.add(v.edge)
+                        elif predID in loopBody or succID in loopBody:
+                            superv.edges.add(v.edge)
+                            superv.repEdge = v.edge                            
         return subgraph, vToSuperv
                 
     def __addEdges (self, lnt, forwardCFG, predomTree, postdomTree, postDF, headerID, vToSuperv):
+        global nextEdgeID
         rootSuperv = vToSuperv[headerID]
         dfs        = DepthFirstSearch(forwardCFG, forwardCFG.getEntryID())
         branches   = set([])
@@ -79,7 +91,13 @@ class SuperBlockGraph (DirectedGraph):
                     if not postdomTree.isAncestor(succID, vertexID):
                         destinationv = vToSuperv[succID]
                         if not sourcev.hasSuccessor(destinationv.getVertexID()):
-                            self.__addEdge(sourcev, destinationv, vertexID)
+                            nextEdgeID += 1
+                            succe = BranchControlFlowEdge(destinationv.getVertexID(), vertexID)
+                            prede = BranchControlFlowEdge(sourcev.getVertexID(), vertexID)
+                            sourcev.addSuccessorEdge(succe)
+                            destinationv.addPredecessorEdge(prede)
+                            succe.setEdgeID(nextEdgeID)
+                            prede.setEdgeID(nextEdgeID)
             # Found a merge
             if v.numberOfPredecessors() > 1:
                 ipreID = predomTree.getImmediateDominator(vertexID)
@@ -89,18 +107,14 @@ class SuperBlockGraph (DirectedGraph):
                         destinationv.unstructuredMerge = True
                     for predID in v.getPredecessorIDs():
                         sourcev = vToSuperv[predID]
-                        self.__addEdge(sourcev, destinationv, predID)
+                        nextEdgeID += 1
+                        succe = MergeControlFlowEdge(destinationv.getVertexID())
+                        prede = MergeControlFlowEdge(sourcev.getVertexID())
+                        sourcev.addSuccessorEdge(succe)
+                        destinationv.addPredecessorEdge(prede)
+                        succe.setEdgeID(nextEdgeID)
+                        prede.setEdgeID(nextEdgeID)
         return rootSuperv
-    
-    def __addEdge (self, sourcev, destinationv, branchID, edgeType=SuperBlockControlFlowEdge):
-        global nextEdgeID
-        nextEdgeID += 1
-        succe = edgeType(destinationv.getVertexID(), branchID)
-        prede = edgeType(sourcev.getVertexID(), branchID)
-        sourcev.addSuccessorEdge(succe)
-        destinationv.addPredecessorEdge(prede)
-        succe.setEdgeID(nextEdgeID)
-        prede.setEdgeID(nextEdgeID)
         
     def getSubregion (self, headerID):
         assert headerID in self.__headerToSuperBlockSubgraph, "Unable to find super block region for header %d" % headerID
@@ -207,7 +221,5 @@ class StrongComponents ():
     
     def getVertexIDs (self, sccID):
         assert sccID in self.__SCCToVertices, "Unable to find set of vertices associated with SCC ID %d" % sccID
-        return self.__SCCToVertices[sccID]
-        
-                        
+        return self.__SCCToVertices[sccID]                        
                         

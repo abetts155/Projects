@@ -167,15 +167,10 @@ class Program():
             
     def generateVisualisationFiles (self, suffix=""):
         if suffix:
-            suffix = '.' + suffix 
-        Visualisation.generateGraphviz(self.__callg, "callg%s" % suffix)
-        Visualisation.generateGraphviz(self.getContextGraph(), "contextg%s" % suffix)
+            suffix = '.' + suffix
         for functionName, cfg in self.__CFGs.iteritems():
             Visualisation.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
             Visualisation.makeUdrawFile(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
-            Visualisation.generateGraphviz(cfg, "%s.cfg%s" % (functionName, suffix))
-            Visualisation.generateGraphviz(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
-            Visualisation.generateGraphviz(self.getSuperBlockCFG(functionName), "%s.superg%s" % (functionName, suffix))
             
     def addPathInformation (self, functionName, info):
         assert isinstance(info, PathData.WCETInformation)

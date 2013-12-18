@@ -487,6 +487,9 @@ class CreateSuperBlockCFGILP (ILP):
                     supergRegion = superg.getSubregion(headerID)
                     self.__createCapacityConstraints(data, lnt, treev)
                     self.__createFlowConstraints(lnt, headerID, supergRegion)
+                    for superv in supergRegion:
+                        for bbID in superv.basicBlocks:
+                            self._variables.add(LpSolve.getVertexVariable(bbID))
     
     def __createCapacityConstraints (self, data, lnt, treev):
         headerID = treev.getHeaderID()
@@ -516,23 +519,38 @@ class CreateSuperBlockCFGILP (ILP):
          
     def __createFlowConstraints (self, lnt, headerID, supergRegion):
         for superv in supergRegion:
-            if superv.basicBlocks:
-                for bbID in superv.basicBlocks:
-                    self._variables.add(LpSolve.getVertexVariable(bbID))            
-                comment = LpSolve.getComment("Intra-super block constraints on super block %d" % superv.getVertexID())
-                self._lines.append(comment)
+            if superv.basicBlocks:        
                 # Handle super blocks with more than one basic block
                 if len(superv.basicBlocks) > 1: 
-                    assert superv.repID
+                    comment = LpSolve.getComment("Basic block constraints within super block %d" % superv.getVertexID())
+                    self._lines.append(comment)
+                    assert superv.repBasicBlock
                     for bbID in superv.basicBlocks:
-                        if superv.repID != bbID:
-                            constraint = LpSolve.getVertexVariable(bbID)
+                        if superv.repBasicBlock != bbID:
+                            var = LpSolve.getVertexVariable(bbID)
+                            self._variables.add(var)
+                            constraint  = var
                             constraint += LpSolve.equals
-                            constraint += LpSolve.getVertexVariable(superv.repID)
+                            constraint += LpSolve.getVertexVariable(superv.repBasicBlock)
                             constraint += LpSolve.semiColon
                             constraint += getNewLine()
                             self._lines.append(constraint)
-                self._lines.append(getNewLine())
+                    self._lines.append(getNewLine())
+            if superv.loopExitEdges and not superv.loopExitEdges.issubset(lnt.getLoopExits(headerID)) and (superv.repBasicBlock or superv.repEdge):
+                comment = LpSolve.getComment("Loop-exit edges constraint within super block %d" % superv.getVertexID())
+                self._lines.append(comment)
+                for loopExitEdge in superv.loopExitEdges:
+                    edgeVariable = LpSolve.getEdgeVariable(loopExitEdge[0], loopExitEdge[1])
+                    constraint   = edgeVariable
+                    constraint  += LpSolve.equals
+                    if superv.basicBlocks:
+                        constraint += LpSolve.getVertexVariable(superv.repBasicBlock)
+                    else:
+                        assert superv.repEdge
+                        constraint += LpSolve.getEdgeVariable(superv.repEdge[0], superv.repEdge[1])
+                    constraint += LpSolve.semiColon
+                    constraint += getNewLine()
+                    self._lines.append(constraint)
                 
             # Handle super blocks with more than one successor
             if superv.numberOfSuccessors() > 1:
@@ -540,48 +558,22 @@ class CreateSuperBlockCFGILP (ILP):
             # Handle super blocks with more than one predecessor
             if superv.numberOfPredecessors() > 1:
                 self.__createMergeConstraints(lnt, headerID, supergRegion, superv)
-                
-    def __getLoopExitEdgesInSuperBlock (self, lnt, superv):
-        exitEdges = set([])
-        for edge in superv.edges:
-            if lnt.isLoopExitEdge(edge[0], edge[1]):
-                exitEdges.add(edge)
-        assert exitEdges, "No loop-exit edges found in super block %d" % superv.getVertexID()
-        return exitEdges
     
     def __createBranchConstraints (self, lnt, headerID, supergRegion, superv):
-        comment = LpSolve.getComment("Branch super block constraints for super block %d" % superv.getVertexID())
+        comment = LpSolve.getComment("Branch constraints for super block %d" % superv.getVertexID())
         self._lines.append(comment)
         for branchID, superedges in superv.getBranchPartitions().iteritems():
             comment = LpSolve.getComment("Basic block branch = %d" % branchID)
             self._lines.append(comment)
             # The LHS of the constraint
-            assert superv.repID
-            constraint = LpSolve.getVertexVariable(superv.repID)
+            assert superv.repBasicBlock
+            constraint = LpSolve.getVertexVariable(superv.repBasicBlock)
             constraint += LpSolve.equals
             # The RHS of the constraint
             num = 1
             for supere in superedges:
                 succSuperv = supergRegion.getVertex(supere.getVertexID())
-                if not succSuperv.basicBlocks:
-                    if succSuperv.outOfScope:
-                        exitEdges = self.__getLoopExitEdgesInSuperBlock(lnt, succSuperv)
-                        num = 1
-                        for edge in exitEdges:
-                            succVariable = LpSolve.getEdgeVariable(edge[0], edge[1])
-                            self._variables.add(succVariable)    
-                            constraint += succVariable
-                            if num < len(exitEdges):
-                                constraint += LpSolve.plus
-                            num += 1
-                    else:
-                        edge         = list(succSuperv.edges)[0]
-                        succVariable = LpSolve.getEdgeVariable(edge[0], edge[1])
-                        self._variables.add(succVariable)
-                        constraint += succVariable
-                else:    
-                    assert succSuperv.repID
-                    constraint += LpSolve.getVertexVariable(succSuperv.repID)
+                constraint += self.__getVariableForSuperBlock(succSuperv)
                 if num < len(superedges):
                     constraint += LpSolve.plus
                 num += 1
@@ -590,43 +582,38 @@ class CreateSuperBlockCFGILP (ILP):
             self._lines.append(constraint)
     
     def __createMergeConstraints (self, lnt, headerID, supergRegion, superv):
-        comment = LpSolve.getComment("Merge super block constraints for %d" % superv.getVertexID())
+        comment = LpSolve.getComment("Merge constraints for super block %d" % superv.getVertexID())
         self._lines.append(comment)
         # The LHS of the constraint
-        if not superv.basicBlocks:
-            constraint = ""
-            exitEdges = self.__getLoopExitEdgesInSuperBlock(lnt, superv)
-            num = 1
-            for edge in exitEdges:
-                succVariable = LpSolve.getEdgeVariable(edge[0], edge[1])
-                self._variables.add(succVariable)    
-                constraint += succVariable
-                if num < len(exitEdges):
-                    constraint += LpSolve.plus
-                num += 1
-        else:
-            assert superv.repID
-            constraint = LpSolve.getVertexVariable(superv.repID)
+        constraint = self.__getVariableForSuperBlock(superv)
         constraint += LpSolve.equals
         # The RHS of the constraint
         num = 1
         for supere in superv.getPredecessorEdges():
             predSuperv = supergRegion.getVertex(supere.getVertexID())
-            if not predSuperv.basicBlocks:
-                edge         = list(predSuperv.edges)[0]
-                predVariable = LpSolve.getEdgeVariable(edge[0], edge[1])
-                self._variables.add(predVariable)
-                constraint += predVariable
-            else:
-                assert predSuperv.repID
-                predVariable = predSuperv.repID
-                constraint += LpSolve.getVertexVariable(predVariable)
+            constraint += self.__getVariableForSuperBlock(predSuperv)
             if num < superv.numberOfPredecessors():
                 constraint += LpSolve.plus
             num += 1
         constraint += LpSolve.semiColon 
         constraint += getNewLine(2)
         self._lines.append(constraint)
+        
+    def __getVariableForSuperBlock (self, superv):
+        if superv.basicBlocks:
+            assert superv.repBasicBlock
+            return LpSolve.getVertexVariable(superv.repBasicBlock)
+        elif superv.edges:
+            assert superv.repEdge
+            var = LpSolve.getEdgeVariable(superv.repEdge[0], superv.repEdge[1])
+            self._variables.add(var)
+            return var
+        else:
+            print superv
+            assert False
+            var = LpSolve.getEdgeVariable(superv.loopExitEdge[0], superv.loopExitEdge[1])
+            self._variables.add(var)
+            return var
        
     def __createObjectiveFunction (self, data, contextWCETs, contextv, cfg):
         constraint = LpSolve.max_

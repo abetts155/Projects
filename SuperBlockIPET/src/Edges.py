@@ -35,13 +35,14 @@ class CallGraphEdge (Edge):
     def numberOfCallSites (self):
         return len(self.__callSites)
     
-class SuperBlockControlFlowEdge (Edge):
-    def __init__ (self, vertexID, bbID):
+class BranchControlFlowEdge (Edge):
+    def __init__ (self, vertexID, branchID):
         Edge.__init__(self, vertexID)
-        self.__bbID = bbID
-        
-    def getBasicBlockID (self):
-        return self.__bbID
+        self.branchID = branchID
+
+class MergeControlFlowEdge (Edge):
+    def __init__ (self, vertexID):
+        Edge.__init__(self, vertexID)
     
 class IPGEdge (Edge):
     def __init__ (self, vertexID, edgeID=None, dummyEdge=False):

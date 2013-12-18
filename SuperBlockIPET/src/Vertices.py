@@ -1,4 +1,4 @@
-from Edges import Edge, CallGraphEdge
+from Edges import Edge, CallGraphEdge, BranchControlFlowEdge
 
 dummyVertexID = -1
 
@@ -223,30 +223,31 @@ class CallGraphVertex (Vertex):
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.repID       = None
-        self.basicBlocks = set([])
-        self.outOfScope  = set([])
-        self.edges       = set([])
-        self.loopHeader  = None
-        self.unstructuredMerge = False
+        self.repBasicBlock    = None
+        self.repEdge          = None
+        self.basicBlocks      = set([])
+        self.edges            = set([])
+        self.outOfScopeBlocks = set([])
+        self.loopExitEdges    = set([])
     
     def getBranchPartitions (self):
         partitions = {}
         for succe in self._successors.values():
-            branchID = succe.getBasicBlockID()
-            if branchID not in partitions:
-                partitions[branchID] = []
-            partitions[branchID].append(succe)
+            if isinstance(succe, BranchControlFlowEdge):
+                if succe.branchID not in partitions:
+                    partitions[succe.branchID] = []
+                partitions[succe.branchID].append(succe)
         return partitions
     
     def __str__ (self):
-        string =  "Vertex ID    = %d\n" % self._vertexID
-        string += "Rep ID       = %s\n" % self.repID
-        string += "Basic blocks = {%s}\n" % ', '.join(str(bbID) for bbID in self.basicBlocks)
-        string += "Inner blocks = {%s}\n" % ', '.join(str(bbID) for bbID in self.outOfScope)
-        string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.edges)
-        string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
+        string =  "Vertex ID       = %d\n" % self._vertexID
+        string += "Rep basic block = %s\n" % self.repBasicBlock
+        string += "Basic blocks    = {%s}\n" % ', '.join(str(bbID) for bbID in self.basicBlocks)
+        string += "Loop blocks     = {%s}\n" % ', '.join(str(bbID) for bbID in self.outOfScopeBlocks)
+        string += "Edges           = {%s}\n" % ', '.join(str(edge) for edge in self.edges)
+        string += "Loop-exit edges = {%s}\n" % ', '.join(str(edge) for edge in self.loopExitEdges)
+        string += "pred            = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
+        string += "succ            = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string
 
 class ArithmeticOperatorVertex (Vertex):

@@ -1,113 +1,9 @@
 import os
-import pydot
 import Trees, CFGs, SuperBlocks, Programs, Vertices
 
 enabled  = False
 basepath = os.curdir
 basename = ""
-
-def generateGraphviz (g, fileNamePrefix):
-    global basepath, basename
-    if enabled:
-        graph = None
-        # CFG or Instrumented CFG
-        if isinstance(g, CFGs.CFG):
-            graph = handleCFG(g)
-        elif isinstance(g, SuperBlocks.SuperBlockGraph):
-            graph = handleSuperBlockCFG(g) 
-        elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
-            graph = generateCallGraph(g)
-        elif isinstance(g, Trees.LoopNests):
-            graph = generateLNT(g)
-        assert graph
-        filename = "%s.%s" % (basepath + os.sep + basename, fileNamePrefix + ".png")
-        graph.write_png(filename)
-    
-def handleCFG (cfg):
-    graph        = pydot.Dot(graph_type='digraph')
-    vertexToNode = {}
-    entryv = cfg.getVertex(cfg.getEntryID())
-    node = pydot.Node(str(entryv.getVertexID()))
-    graph.add_node(node)
-    vertexToNode[entryv] = node
-    for v in cfg:
-        if v.getVertexID() != entryv.getVertexID():
-            node = pydot.Node(str(v.getVertexID()))
-            graph.add_node(node)
-            vertexToNode[v] = node
-    for v in cfg:
-        for succID in v.getSuccessorIDs():
-            succv = cfg.getVertex(succID)
-            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
-            graph.add_edge(edge)
-    return graph
-
-def handleSuperBlockCFG (superg):
-    graph        = pydot.Dot(graph_type='digraph')
-    vertexToNode = {}
-    for v in superg:
-        node = handleSuperBlock(v)
-        graph.add_node(node)
-        vertexToNode[v] = node
-    for v in superg:
-        for branchID, succEdges in v.getBranchPartitions().iteritems():
-            for succe in succEdges:
-                succv = superg.getVertex(succe.getVertexID())
-                edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv], label=str(branchID))
-                graph.add_edge(edge)
-    return graph
-
-def handleSuperBlock (superv):
-    label = "super ID = %d\n" % (superv.getVertexID())
-    if superv.basicBlocks:
-        label += "{%s}" % ', '.join(str(vertexID) for vertexID in superv.basicBlocks)
-    if superv.outOfScope:
-        label += "\n" 
-        label += "other = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScope)
-    if superv.edges:
-        label += "\n" 
-        label += "{%s}" % ', '.join(str(edge) for edge in superv.edges)
-    node = pydot.Node(label)
-    return node
-
-def generateCallGraph (callg):
-    graph        = pydot.Dot(graph_type='digraph')
-    vertexToNode = {}
-    for v in callg:
-        label = "%s\nvertex id = %d" % (v.getName(), v.getVertexID())
-        node  = pydot.Node(label)
-        graph.add_node(node)
-        vertexToNode[v] = node
-    for v in callg:
-        for succID in v.getSuccessorIDs():
-            succv = callg.getVertex(succID)
-            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
-            graph.add_edge(edge)
-    return graph
-
-def generateLNT (lnt):
-    graph        = pydot.Dot(graph_type='graph')
-    vertexToNode = {}
-    for v in lnt:
-        if isinstance(v, Vertices.HeaderVertex):
-            label = "%d\nHeader=%d" % (v.getVertexID(), v.getHeaderID())
-            if lnt.isDoWhileLoop(v.getHeaderID()):
-                label += "\nDo-while loop"
-            else:
-                label += "\nFor loop"
-            node = pydot.Node(label, shape="box", fillcolor="red", style="filled")
-        elif lnt.isLoopExitSource(v.getVertexID()):  
-            node = pydot.Node(str(v.getVertexID()), shape="triangle", fillcolor="yellow", style="filled")
-        else:
-            node = pydot.Node(str(v.getVertexID()))
-        graph.add_node(node)
-        vertexToNode[v] = node
-    for v in lnt:
-        for succID in v.getSuccessorIDs():
-            succv = lnt.getVertex(succID)
-            edge  = pydot.Edge(vertexToNode[v], vertexToNode[succv])
-            graph.add_edge(edge)
-    return graph
 
 beginAttributes = "["
 beginGraph      = "[\n"
@@ -287,23 +183,29 @@ def writeSuperBlockVertex (superv, f):
     name = "super ID = %d%s" % (superv.getVertexID(), newLine)
     if superv.basicBlocks:
         name += "blocks = {%s}" % ', '.join(str(vertexID) for vertexID in superv.basicBlocks)
-    if superv.outOfScope:
+    if superv.outOfScopeBlocks:
         name += newLine
-        name += "other = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScope)
+        name += "blocks(loops) = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScopeBlocks)
     if superv.edges:
         name += newLine 
         name += "edges = {%s}" % ', '.join(str(edge) for edge in superv.edges)
+    if superv.loopExitEdges:
+        name += newLine 
+        name += "edges(loops) = {%s}" % ', '.join(str(edge) for edge in superv.loopExitEdges)
     f.write(setName(name))
     f.write(endAttibutes)
     
 def writeSuperBlockVertexLinks (superv, f):
-    colors     = ['#05EDFF', '#D44942', '#003F87', '#CD3700', '#EEC900']
-    colorIndex = -1
+    colors         = ['#05EDFF', '#D44942', '#003F87', '#CD3700', '#EEC900']
+    colorIndex     = 0
+    succEdgesAdded = set([])
     f.write(beginAttributes)
     for branchID, succEdges in superv.getBranchPartitions().iteritems():
-        colorIndex += 1
-        color      = colors[colorIndex]
+        if colorIndex == len(colors):
+            colorIndex = 0
+        color = colors[colorIndex]
         for succe in succEdges:
+            succEdgesAdded.add(succe)
             f.write(newEdge)
             f.write(beginAttributes)
             succe = superv.getSuccessorEdge(succe.getVertexID())
@@ -312,6 +214,20 @@ def writeSuperBlockVertexLinks (superv, f):
             f.write(endAttibutes)
             f.write(edgeLink(succe.getVertexID()))
             f.write(endEdge + ",\n")
+        colorIndex += 1
+    for succe in superv.getSuccessorEdges():
+        if succe not in succEdgesAdded:
+            if colorIndex == len(colors):
+                colorIndex = 0
+            color = colors[colorIndex]
+            f.write(newEdge)
+            f.write(beginAttributes)
+            succe = superv.getSuccessorEdge(succe.getVertexID())
+            f.write(setEdgeColor(color))
+            f.write(endAttibutes)
+            f.write(edgeLink(succe.getVertexID()))
+            f.write(endEdge + ",\n")
+            colorIndex += 1            
     f.write(endVertex + "\n")
 
 def writeTreeVertex (tree, vertexID, f):
