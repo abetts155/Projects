@@ -75,8 +75,7 @@ def make_file (g, graph_name):
                     if v.vertexID != g.get_entryID():
                         writeIPGVertex(g, v.vertexID, the_file)
             else:
-                for v in g:
-                    writeVertex(g, v.vertexID, the_file)
+                assert False, "Unhandled graph type"
             the_file.write(end_graph) 
             
 def writeVertex (g, vertexID, the_file):

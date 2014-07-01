@@ -221,8 +221,9 @@ class LoopIPG(directed_graphs.FlowGraph):
                                     self.__iterationEdgeDestinations.add(vertexID)
                                 else:
                                     self.__vertexToReachable[vertexID].add(keyID)
-                # Loop tail detected. Any Ipoint that can reach here is an iteration edge source
                 if vertexID in self.__lnt.getLoopTails(self.__headerID):
+                    # Loop tail detected.
+                    # Any Ipoint that can reach a loop tail is an iteration edge source
                     if self.__ipg.hasVertex(vertexID):
                         self.__iterationEdgeSources.add(vertexID)
                     else:
