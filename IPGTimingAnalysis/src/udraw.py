@@ -3,7 +3,6 @@ import cfgs
 import ipgs
 import trees
 import vertices
-import ipg_calculations
 import os
 
 begin_graph = "[\n"
@@ -70,7 +69,7 @@ def make_file (g, graph_name):
             elif isinstance(g, trees.LoopNests):
                 for v in g:
                         writeTreeVertex(g, v.vertexID, the_file)
-            elif isinstance(g, ipgs.IPG) or isinstance(g, ipg_calculations.MiniIPG):
+            elif isinstance(g, ipgs.IPG) or isinstance(g, ipgs.LoopIPG):
                 writeIPGVertex(g, g.getEntryID(), the_file)
                 for v in g:
                     if v.vertexID != g.getEntryID():

@@ -10,7 +10,8 @@ def analyse():
     program = parse_program_file.parse_file()
     program.create_lnts()
     program.create_ipgs()
-    program.create_mini_ipgs()
+    program.create_loop_by_loop_ipgs()
+    program.do_wcet_calculation()
         
 def the_command_line():
     def clean():

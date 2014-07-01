@@ -5,6 +5,7 @@ import os
 import subprocess
 import shlex
 import decimal
+import abc
 
 class LpSolve:
     comma        = ","
@@ -34,18 +35,22 @@ class LpSolve:
     def getNewLine (num=1):
         return "\n" * num  
     
-class ILP ():
-    def __init__ (self):
-        self._wcet = -1
-        self._variableToExecutionCount = {}
+class ILP():
+    def __init__(self, filename, variable_prefix):
+        self.filename                    = filename
+        self.variable_prefix             = variable_prefix
+        self.wcet                        = -1
+        self.variable_execution_counts = {}
         
-    def _solve(self, filename, variablePrefix):
+    def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
-        command = "lp_solve %s" % filename 
-        proc = subprocess.Popen(command, shell=True, executable="/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        returnCode = proc.wait()
-        if returnCode != 0:
-            debug.exitMessage("Running '%s' failed" % command)
+        cmd  = "lp_solve %s" % self.filename 
+        proc = subprocess.Popen(cmd, 
+                                shell=True, 
+                                stdout=subprocess.PIPE, 
+                                stderr=subprocess.PIPE)
+        if proc.wait() != 0:
+            debug.exitMessage("Running '%s' failed" % cmd)
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes     = shlex.split(line)
@@ -54,43 +59,40 @@ class ILP ():
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
                 prefix = lexemes[0][:2]
-                if prefix == variablePrefix:
+                if prefix == self.variable_prefix:
                     variable = int(lexemes[0][2:])
                     count    = int(lexemes[1]) 
-                    self._variableToExecutionCount[variable] = count
+                    self.variable_execution_counts[variable] = count
+                    
+    @abc.abstractmethod
+    def print_execution_counts(self):
+        pass
         
 class CreateIPGILP (ILP):
     def __init__ (self, data, ipg, lnt, miniIPGs):
-        ILP.__init__(self)
         filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, ipg.name, "ipg", LpSolve.fileSuffix)
+        ILP.__init__(self, filename, LpSolve.edgePrefix)
         with open(filename, 'w') as self.__outfile:
             self.__createObjectiveFunction(data, ipg)
             self.__createStructuralConstraints(ipg)
             self.__createRelativeCapacityConstraints(data, lnt, miniIPGs)
             self.__createIntegerConstraints(ipg)
-        self._solve(filename, LpSolve.edgePrefix)
-        debug.debug_message("WCET = %d" % self._wcet, __name__, 1)
-        self.__printExecutionCounts(ipg)
         
-    def __printExecutionCounts (self, ipg):
-        for edgeID, count in self._variableToExecutionCount.iteritems():
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getEdgeVariable(edgeID), count), 
-                                    __name__, 
-                                    10)
-        self.__basicBlockToExecutionCount = {}
+    def print_execution_counts (self, ipg):
+        for edgeID, count in self.variable_execution_counts.iteritems():
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getEdgeVariable(edgeID), count), __name__, 10)
+        basic_block_execution_counts = {}
         for v in ipg:
             for succID in v.getSuccessorIDs():                
                 succe  = v.getSuccessorEdge(succID)
                 edgeID = succe.getEdgeID() 
-                if self._variableToExecutionCount[edgeID]:
+                if self.variable_execution_counts[edgeID]:
                     for bbID in succe.edge_label:
-                        if bbID not in self.__basicBlockToExecutionCount:
-                            self.__basicBlockToExecutionCount[bbID] = 0
-                        self.__basicBlockToExecutionCount[bbID] += self._variableToExecutionCount[edgeID]
-        for bbID, count in self.__basicBlockToExecutionCount.iteritems():
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 
-                                    __name__, 
-                                    10)
+                        if bbID not in basic_block_execution_counts:
+                            self.basic_block_execution_counts[bbID] = 0
+                        self.basic_block_execution_counts[bbID] += self.variable_execution_counts[edgeID]
+        for vertexID, count in self.basic_block_execution_counts.iteritems():
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(vertexID), count), __name__, 10)
 
     def __createObjectiveFunction (self, data, ipg):
         self.__outfile.write(LpSolve.max_)
@@ -99,7 +101,7 @@ class CreateIPGILP (ILP):
             for succID in v.getSuccessorIDs():                
                 succe          = v.getSuccessorEdge(succID)
                 edgeID         = succe.getEdgeID()
-                transitionWCET = data.getTransitionWCET(v.vertexID, succID)
+                transitionWCET = data.get_ipg_edge_wcet(v.vertexID, succID)
                 self.__outfile.write("%d %s" % (transitionWCET, LpSolve.getEdgeVariable(edgeID)))
                 if counter > 1:
                     self.__outfile.write(LpSolve.plus)
@@ -182,7 +184,7 @@ class CreateIPGILP (ILP):
             # Get the loop bound w.r.t. the ancestor loop
             ancestorHeaderID = ancestorv.headerID
             self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
-            bound = data.getLoopBound(headerID, ancestorHeaderID)
+            bound = data.get_loop_bound(headerID, ancestorHeaderID)
             # Write out the relative edges
             outerMiniIPG        = miniIPGs.getMiniIPG(ancestorHeaderID)
             outerIpoints        = set([])
@@ -235,30 +237,26 @@ class CreateIPGILP (ILP):
                 
 class CreateICFGILP (ILP):
     def __init__ (self, data, icfg, lnt):
-        ILP.__init__(self)
         filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, icfg.name, "icfg", LpSolve.fileSuffix)
+        ILP.__init__(self, filename, LpSolve.vertexPrefix)
+        
         self.__vertexIDToExecutionCount = {}
         with open(filename, 'w') as self.__outfile:
             self.__createObjectiveFunction(data, icfg)
             self.__createStructuralConstraints(icfg)
             self.__createRelativeCapacityConstraints(data, lnt, icfg)
             self.__createIntegerConstraints(icfg)
-        self._solve(filename, LpSolve.vertexPrefix)
-        debug.debug_message("WCET = %d" % self._wcet, __name__, 1)
-        self.__printExecutionCounts(icfg)
 
-    def __printExecutionCounts (self, icfg):
-        for bbID, count in self._variableToExecutionCount.iteritems():
-            if not icfg.isIpoint(bbID):
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 
-                                    __name__, 
-                                    10)
+    def print_execution_counts (self, icfg):
+        for vertexID, count in self.variable_execution_counts.iteritems():
+            if not icfg.isIpoint(vertexID):
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(vertexID), count), __name__, 10)
 
     def __createObjectiveFunction (self, data, icfg):
         self.__outfile.write(LpSolve.max_)        
         counter = icfg.numOfVertices()
         for v in icfg:        
-            vertexWCET = data.getBasicBlockWCET(v.vertexID)
+            vertexWCET = data.get_basic_block_wcet(v.vertexID)
             self.__outfile.write("%d %s" % (vertexWCET, LpSolve.getVertexVariable(v.vertexID)))
             if counter > 1:
                 self.__outfile.write(LpSolve.plus)
@@ -327,7 +325,7 @@ class CreateICFGILP (ILP):
         for ancestorv in lnt.getAllProperAncestors(v.vertexID):
             # Get the loop bound w.r.t. the ancestor loop
             ancestorHeaderID = ancestorv.headerID
-            bound = data.getLoopBound(headerID, ancestorHeaderID)
+            bound = data.get_loop_bound(headerID, ancestorHeaderID)
             self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
             self.__outfile.write(LpSolve.getComment("Bound = %d" % bound))
             self.__outfile.write(LpSolve.getVertexVariable(headerID))

@@ -86,7 +86,7 @@ class IPG (directed_graphs.FlowGraph):
         for predID in entryv.getPredecessorIDs():
             self._exitID = predID
             
-class MiniIPGs():    
+class LoopByLoopIPGs():    
     def __init__ (self, icfg, lnt, ipg):
         self.name = icfg.name
         self.__headerToMiniIPG         = {}
@@ -107,7 +107,7 @@ class MiniIPGs():
                                         __name__, 
                                         1)
                     udraw.make_file(forwardICFG, "%s.Header%d.%s" % (icfg.name, headerID, "icfg"))
-                    miniIPG = MiniIPG(headerID, self.__headerToMiniIPG, forwardICFG, lnt, ipg)
+                    miniIPG = LoopIPG(headerID, self.__headerToMiniIPG, forwardICFG, lnt, ipg)
                     self.__headerToMiniIPG[headerID] = miniIPG
             
     def isPathReconstructible (self, headerID):
@@ -118,7 +118,7 @@ class MiniIPGs():
         assert headerID in self.__headerToMiniIPG, "Unable to find the mini IPG of the loop with header %d" % (headerID)
         return self.__headerToMiniIPG[headerID]
 
-class MiniIPG(directed_graphs.FlowGraph):    
+class LoopIPG(directed_graphs.FlowGraph):    
     def __init__ (self, headerID, headerToMiniIPG, icfg, lnt, ipg):
         directed_graphs.FlowGraph.__init__(self)
         self.__headerID                  = headerID
@@ -134,12 +134,12 @@ class MiniIPG(directed_graphs.FlowGraph):
         self.__iterationEdgeSources      = set()
         self.__iterationEdgeIDs          = set()
         self.__entryEdgeSources          = set()
-        self.__addIpoints()
-        self.__addAcyclicEdges()
-        self.__addIterationEdges()
-        self.__outputEntryAndExitEdges()
+        self.add_ipoints()
+        self.add_acyclic_edges()
+        self.add_iteration_edges()
+        self.output_entry_and_exit_edges()
             
-    def __addIpoints (self):    
+    def add_ipoints (self):    
         for v in self.__icfg:
             self.__vertexToReachable[v.vertexID] = set([])  
             if v.vertexID == self.__icfg.getEntryID() and not self.__ipg.hasVertex(v.vertexID):
@@ -178,7 +178,7 @@ class MiniIPG(directed_graphs.FlowGraph):
                                 self.the_vertices[keyID] = ipointv
                                 self.__innerLoopIpoints[keyID] = innerheaderID
     
-    def __outputEntryAndExitEdges (self):   
+    def output_entry_and_exit_edges (self):   
         headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
         for succID in headerv.getSuccessorIDs():
             succv = self.__lnt.getVertex(succID)
@@ -191,7 +191,7 @@ class MiniIPG(directed_graphs.FlowGraph):
                                     __name__,
                                     1)
                 
-    def __addAcyclicEdges (self):
+    def add_acyclic_edges (self):
         # Compute a topological sort on the ICFG
         dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
         # If the header of the loop is an Ipoint, that is the only destination of an iteration edge
@@ -267,7 +267,7 @@ class MiniIPG(directed_graphs.FlowGraph):
                     if self.__headerID in self.__vertexToReachable[predID]:
                         self.__vertexToReachable[v.vertexID].add(self.__headerID)
                             
-    def __addIterationEdges (self):
+    def add_iteration_edges (self):
         debug.debug_message("Iteration edge SOURCEs      = %s" % self.__iterationEdgeSources, __name__, 1)
         debug.debug_message("Iteration edge DESTINATIONS = %s" % self.__iterationEdgeDestinations, __name__, 1)
         for predID in self.__iterationEdgeSources:
