@@ -1,5 +1,6 @@
 import shlex
 import config
+import programs
 import cfgs
 import vertices
 import debug
@@ -56,7 +57,7 @@ def setEntryAndExit (icfg):
     icfg.addEdge(exitID, entryID)
     
 def parse_file():
-    program = cfgs.Program()
+    program = programs.Program()
     icfg    = None
     bb      = None
     with open(config.Arguments.program_file) as f:
@@ -68,7 +69,6 @@ def parse_file():
                 icfg          = cfgs.ICFG()
                 function_name = lexemes[-1]
                 icfg.name     = function_name
-                program.addICFG(icfg)
                 debug.debug_message("Found new ICFG '%s'" % function_name, __name__, 1)
             elif line.startswith('bb:'):
                 assert icfg, "Found basic block but current ICFG is null"
@@ -109,4 +109,5 @@ def parse_file():
         icfg.addIpointEdges()
         setEntryAndExit(icfg)
         icfg.setEdgeIDs()
+        program.addICFG(icfg)
     return program     

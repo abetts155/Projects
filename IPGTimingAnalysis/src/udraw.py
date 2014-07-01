@@ -148,8 +148,8 @@ def writeIPGVertex (ipg, vertexID, the_file):
     v = ipg.getVertex(vertexID)
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(v.getRealID())))
-    if v.isGhost():
+    the_file.write(set_name(str(v.realID)))
+    if v.isGhost:
         the_file.write(set_shape(SHAPE.CIRCLE))
         the_file.write(set_color(COLOR.RED))
         the_file.write(set_tool_tip("GHOST"))
@@ -165,10 +165,10 @@ def writeIPGVertex (ipg, vertexID, the_file):
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         the_file.write(set_name(str(succe.getEdgeID())))
-        toolTip = ', '.join(str(v) for v in succe.getEdgeLabel())
-        if succe.isIterationEdge():
+        toolTip = ', '.join(str(v) for v in succe.edge_label)
+        if succe.iteration_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 2))
-        elif succe.isDummyEdge():
+        elif succe.dummy_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.DASHED, 2))
             toolTip += "DUMMY EDGE"
         the_file.write(set_tool_tip(toolTip))

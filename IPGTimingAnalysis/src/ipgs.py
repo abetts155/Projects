@@ -3,6 +3,7 @@ import trees
 import vertices
 import edges
 import debug
+import udraw
 
 edge_ID = 1
 
@@ -84,5 +85,249 @@ class IPG (directed_graphs.FlowGraph):
         assert entryv.numberOfPredecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self._entryID
         for predID in entryv.getPredecessorIDs():
             self._exitID = predID
+            
+class MiniIPGs():    
+    def __init__ (self, icfg, lnt, ipg):
+        self.name = icfg.name
+        self.__headerToMiniIPG         = {}
+        self.__headerIterationEdgeIDs  = {}
+        self.__headerRelativeEdgeIDs   = {}
+        self.__headerToReconstructible = {}
+        for level, the_vertices in lnt.levelIterator(True):
+            for v in the_vertices:
+                if isinstance(v, vertices.HeaderVertex):
+                    headerID = v.headerID
+                    debug.debug_message("Analysing header %d" % headerID, 
+                                        __name__, 
+                                        1)
+                    forwardICFG = lnt.induceSubgraph(v, self.__headerToReconstructible)
+                    forwardICFG.setEdgeIDs()
+                    self.__headerToReconstructible[headerID] = forwardICFG.isPathReconstructible()
+                    debug.debug_message("Region in %d is %spath reconstructible" % (headerID, "" if self.__headerToReconstructible[headerID] else "NOT "), 
+                                        __name__, 
+                                        1)
+                    udraw.make_file(forwardICFG, "%s.Header%d.%s" % (icfg.name, headerID, "icfg"))
+                    miniIPG = MiniIPG(headerID, self.__headerToMiniIPG, forwardICFG, lnt, ipg)
+                    self.__headerToMiniIPG[headerID] = miniIPG
+            
+    def isPathReconstructible (self, headerID):
+        assert headerID in self.__headerToReconstructible, "Unable to find whether loop with header %d is path reconstructible" % (headerID)
+        return self.__headerToReconstructible[headerID]
+    
+    def getMiniIPG (self, headerID):
+        assert headerID in self.__headerToMiniIPG, "Unable to find the mini IPG of the loop with header %d" % (headerID)
+        return self.__headerToMiniIPG[headerID]
+
+class MiniIPG(directed_graphs.FlowGraph):    
+    def __init__ (self, headerID, headerToMiniIPG, icfg, lnt, ipg):
+        directed_graphs.FlowGraph.__init__(self)
+        self.__headerID                  = headerID
+        self.__headerToMiniIPG           = headerToMiniIPG
+        self.__icfg                      = icfg
+        self.__lnt                       = lnt
+        self.__ipg                       = ipg
+        self.__innerLoopIpoints          = {}
+        self.__vertexToReachable         = {}
+        self.__innerLoopEntryEdgeIDs     = {}
+        self.__innerLoopExitEdgeIDs      = {}
+        self.__iterationEdgeDestinations = set()
+        self.__iterationEdgeSources      = set()
+        self.__iterationEdgeIDs          = set()
+        self.__entryEdgeSources          = set()
+        self.__addIpoints()
+        self.__addAcyclicEdges()
+        self.__addIterationEdges()
+        self.__outputEntryAndExitEdges()
+            
+    def __addIpoints (self):    
+        for v in self.__icfg:
+            self.__vertexToReachable[v.vertexID] = set([])  
+            if v.vertexID == self.__icfg.getEntryID() and not self.__ipg.hasVertex(v.vertexID):
+                self.__vertexToReachable[v.vertexID].add(v.vertexID)          
+            # Ipoint actions
+            if self.__ipg.hasVertex(v.vertexID):
+                ipointv = vertices.Ipoint(v.vertexID, v.ipointID)
+                self.the_vertices[v.vertexID] = ipointv
+                
+        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
+        for succID in headerv.getSuccessorIDs():
+            succv = self.__lnt.getVertex(succID)
+            if isinstance(succv, vertices.HeaderVertex):
+                innerheaderID                               = succv.headerID
+                self.__innerLoopEntryEdgeIDs[innerheaderID] = set()
+                self.__innerLoopExitEdgeIDs[innerheaderID]  = set()
+                innerMiniIPG                                = self.__headerToMiniIPG[innerheaderID]
+                for vertexID in innerMiniIPG.getIterationEdgeDestinations():
+                    if not self.hasVertex(vertexID):
+                        v       = self.__ipg.getVertex(vertexID)
+                        ipointv = vertices.Ipoint(vertexID, v.ipointID)
+                        self.the_vertices[vertexID] = ipointv
+                        self.__innerLoopIpoints[vertexID] = innerheaderID
+                for exitID in self.__lnt.getLoopExits(innerheaderID):
+                    if self.__ipg.hasVertex(exitID):
+                        if not self.hasVertex(exitID):
+                            v       = self.__ipg.getVertex(exitID)
+                            ipointv = vertices.Ipoint(exitID, v.ipointID)
+                            self.the_vertices[exitID] = ipointv
+                            self.__innerLoopIpoints[exitID] = innerheaderID
+                    else:
+                        for keyID in innerMiniIPG.getReachableSet(exitID):
+                            if not self.hasVertex(keyID) and self.__ipg.hasVertex(keyID):
+                                v       = self.__ipg.getVertex(keyID)
+                                ipointv = vertices.Ipoint(keyID, v.ipointID)
+                                self.the_vertices[keyID] = ipointv
+                                self.__innerLoopIpoints[keyID] = innerheaderID
+    
+    def __outputEntryAndExitEdges (self):   
+        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
+        for succID in headerv.getSuccessorIDs():
+            succv = self.__lnt.getVertex(succID)
+            if isinstance(succv, vertices.HeaderVertex):
+                innerheaderID = succv.headerID 
+                debug.debug_message("Loop-entry edges of %d = %s" % (innerheaderID, self.__innerLoopEntryEdgeIDs[innerheaderID]), 
+                                    __name__,
+                                    1)
+                debug.debug_message("Loop-exit edges of %d = %s" % (innerheaderID, self.__innerLoopExitEdgeIDs[innerheaderID]), 
+                                    __name__,
+                                    1)
+                
+    def __addAcyclicEdges (self):
+        # Compute a topological sort on the ICFG
+        dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
+        # If the header of the loop is an Ipoint, that is the only destination of an iteration edge
+        if self.__ipg.hasVertex(self.__icfg.getEntryID()):
+            self.__iterationEdgeDestinations.add(self.__icfg.getEntryID())
+        # Perform data-flow analysis
+        changed = True
+        while changed:
+            changed = False
+            for vertexID in reversed(dfs.getPostorder()):
+                debug.debug_message("At vertex %d" % vertexID, __name__, 1)
+                v = self.__icfg.getVertex(vertexID)                
+                if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.getEntryID():
+                    self.__addLoopEntryEdges(v)
+                    self.__addIpointsToAbstractVertex(v)
+                else:
+                    for predID in v.getPredecessorIDs():
+                        if self.__ipg.hasVertex(predID):
+                            if self.__ipg.hasVertex(vertexID):
+                                self.__addEdge(predID, vertexID)
+                            else:
+                                self.__vertexToReachable[vertexID].add(predID)
+                        else:
+                            for keyID in self.__vertexToReachable[predID]:
+                                if self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
+                                    self.__addEdge(keyID, vertexID)
+                                elif not self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
+                                    self.__iterationEdgeDestinations.add(vertexID)
+                                else:
+                                    self.__vertexToReachable[vertexID].add(keyID)
+                # Loop tail detected. Any Ipoint that can reach here is an iteration edge source
+                if vertexID in self.__lnt.getLoopTails(self.__headerID):
+                    if self.__ipg.hasVertex(vertexID):
+                        self.__iterationEdgeSources.add(vertexID)
+                    else:
+                        for keyID in self.__vertexToReachable[vertexID]:
+                            if self.__ipg.hasVertex(keyID):
+                                self.__iterationEdgeSources.add(keyID)
+                            
+    def __addLoopEntryEdges (self, v):
+        debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
+        innerMiniIPG = self.__headerToMiniIPG[v.vertexID]        
+        for predID in v.getPredecessorIDs():
+            if self.__ipg.hasVertex(predID):
+                innerMiniIPG.addEntryEdgeSource(predID)
+                for succID in innerMiniIPG.getIterationEdgeDestinations():
+                    self.__addEdge(predID, succID)
+            else:
+                for keyID in self.__vertexToReachable[predID]:
+                    if self.__ipg.hasVertex(keyID):
+                        innerMiniIPG.addEntryEdgeSource(keyID)
+                        for succID in innerMiniIPG.getIterationEdgeDestinations():
+                            self.__addEdge(keyID, succID)
+                    else:
+                        # The key is a header vertex. This means that all
+                        # the destinations of iteration edges of the inner loop are
+                        # also destinations of iterations edges of the outer loop 
+                        for succID in innerMiniIPG.getIterationEdgeDestinations(): 
+                            self.__iterationEdgeDestinations.add(succID)
+        
+    def __addIpointsToAbstractVertex (self, v):
+        innerMiniIPG = self.__headerToMiniIPG[v.vertexID]       
+        for exitID in self.__lnt.getLoopExits(v.vertexID):
+            if self.__ipg.hasVertex(exitID):
+                self.__vertexToReachable[v.vertexID].add(exitID)
+            else:
+                for keyID in innerMiniIPG.getReachableSet(exitID):
+                    if self.__ipg.hasVertex(keyID):
+                        self.__vertexToReachable[v.vertexID].add(keyID)
+        if not self.__icfg.isIpoint(v.vertexID):
+            for predID in v.getPredecessorIDs():
+                if not self.__ipg.hasVertex(predID):
+                    if self.__headerID in self.__vertexToReachable[predID]:
+                        self.__vertexToReachable[v.vertexID].add(self.__headerID)
+                            
+    def __addIterationEdges (self):
+        debug.debug_message("Iteration edge SOURCEs      = %s" % self.__iterationEdgeSources, __name__, 1)
+        debug.debug_message("Iteration edge DESTINATIONS = %s" % self.__iterationEdgeDestinations, __name__, 1)
+        for predID in self.__iterationEdgeSources:
+            for succID in self.__iterationEdgeDestinations:
+                self.__addEdge(predID, succID)
+                originalpredv = self.__ipg.getVertex(predID)
+                originaledge  = originalpredv.getSuccessorEdge(succID)
+                edgeID        = originaledge.getEdgeID()
+                self.__iterationEdgeIDs.add(edgeID)
+        debug.debug_message("Iteration edges for %d is %s" % (self.__headerID, self.__iterationEdgeIDs), __name__, 1)
+                            
+    def __addEdge (self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        if not predv.hasSuccessor(succID):
+            debug.debug_message("Adding edge (%d, %d)" % (predID, succID), __name__, 1)
+            assert not succv.hasPredecessor(predID), "Vertex %d has predecessor %d although vertex %d does not have successor %d" % (succID, predID, predID, succID)
+            originalpredv = self.__ipg.getVertex(predID)
+            originaledge  = originalpredv.getSuccessorEdge(succID)
+            succe = edges.IPGEdge(succID, originaledge.getEdgeID())
+            prede = edges.IPGEdge(predID, originaledge.getEdgeID())
+            predv.addSuccessorEdge(succe)
+            succv.addPredecessorEdge(prede)
+            if predID in self.__innerLoopIpoints:
+                innerheaderID = self.__innerLoopIpoints[predID]
+                debug.debug_message("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
+                self.__innerLoopExitEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
+            elif succID in self.__innerLoopIpoints:
+                innerheaderID = self.__innerLoopIpoints[succID]
+                debug.debug_message("(%d, %d) is a loop-entry edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
+                self.__innerLoopEntryEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
+            
+    def getReachableSet (self, vertexID):
+        assert vertexID in self.__vertexToReachable, "Unable to find %d in the ICFG" % vertexID
+        return self.__vertexToReachable[vertexID]
+    
+    def addEntryEdgeSource (self, vertexID):
+        self.__entryEdgeSources.add(vertexID)
+        
+    def getEntryEdgeSources (self):
+        return self.__entryEdgeSources
+    
+    def getIterationEdgeSources (self):
+        return self.__iterationEdgeSources
+    
+    def getIterationEdgeDestinations (self):
+        return self.__iterationEdgeDestinations
+    
+    def getIterationEdgeIDs (self):
+        return self.__iterationEdgeIDs
+    
+    def isIterationEdgeID (self, edgeID):
+        return edgeID in self.__iterationEdgeIDs
+    
+    def getInnerLoopEntryEdgeIDs (self, innerheaderID):
+        assert innerheaderID in self.__innerLoopEntryEdgeIDs, "Unable to find loop-entry edges for header %d" % innerheaderID
+        return self.__innerLoopEntryEdgeIDs[innerheaderID]
+
+    def getInnerLoopExitEdgeIDs (self, innerheaderID):
+        assert innerheaderID in self.__innerLoopExitEdgeIDs, "Unable to find loop-exit edges for header %d" % innerheaderID
+        return self.__innerLoopExitEdgeIDs[innerheaderID]
 
     

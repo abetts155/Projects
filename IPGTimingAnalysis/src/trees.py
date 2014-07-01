@@ -354,6 +354,7 @@ class LoopNests (Tree):
     def __init__(self, directedg, rootID):
         assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
+        self.name = directedg.name
         self.__directedg = directedg
         self.__parent = {}
         self.__loopBodies = {}

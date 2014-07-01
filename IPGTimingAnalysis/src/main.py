@@ -5,22 +5,12 @@ import argparse
 import config
 import debug
 import parse_program_file
-import trees
-import ipgs
-import ipg_calculations
-import database
-import udraw
 
 def analyse():
     program = parse_program_file.parse_file()
-    for icfg in program.getICFGs():
-        lnt      = trees.LoopNests(icfg, icfg.getEntryID())
-        udraw.make_file(lnt, "lnt.%s" % icfg.name)
-        ipg      = ipgs.IPG(icfg)
-        miniIPGs = ipg_calculations.MiniIPGs(icfg, lnt, ipg)
-        data     = database.CreateWCETData(icfg, lnt, ipg)
-        ipg_calculations.CreateICFGILP(data, icfg, lnt)
-        ipg_calculations.CreateIPGILP(data, ipg, lnt, miniIPGs)
+    program.create_lnts()
+    program.create_ipgs()
+    program.create_mini_ipgs()
         
 def the_command_line():
     def clean():

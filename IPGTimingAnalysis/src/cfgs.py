@@ -116,9 +116,6 @@ class CFG (directed_graphs.FlowGraph):
         return string
     
 class ICFG (CFG):
-    def __init__ (self):
-        CFG.__init__(self)
-        
     def getIpoints (self):
         for v in self:
             if isinstance(v, vertices.Ipoint):
@@ -205,35 +202,5 @@ class ICFG (CFG):
                         debug.debug_message("Visiting %d, which has already been visited. ICFG is NOT path reconstructible" % succID, __name__, 1)
                         reconstructible = False
         return reconstructible
-    
-class Program():
-    def __init__(self):
-        self.__cfgs = []
-        self.__icfgs = []
-        self.__ipgs = []
-        self.__lnts = []
-        
-    def addCFG (self, cfg):
-        self.__cfgs.append(cfg)
-       
-    def addICFG (self, icfg):
-        self.__icfgs.append(icfg)
-        
-    def addIPG (self, ipg):
-        self.__ipgs.append(ipg)
-        
-    def addLNT (self, lnt):
-        self.__lnts.append(lnt)
-     
-    def getCFGs (self):
-        return self.__cfgs.__iter__()   
-
-    def getICFGs (self):
-        return self.__icfgs.__iter__() 
-
-    def getIPGs (self):
-        return self.__ipgs.__iter__() 
-    
-    def getLNTs (self):
-        return self.__lnts.__iter__() 
-    
+            
+      

@@ -3,7 +3,7 @@ import vertices
 import random
 
 class CreateWCETData:    
-    def __init__ (self, icfg, lnt, ipg, useBasicBlockExecutionTimes=True):
+    def __init__ (self, icfg, lnt, ipg, useBasicBlockExecutionTimes=True):        
         self.__headerToBound  = {}
         self.__bbToWCET       = {}
         self.__transitionWCET = {}
@@ -53,14 +53,13 @@ class CreateWCETData:
             for v in the_vertices:
                 if isinstance(v, vertices.HeaderVertex):
                     if level > 0:
-                        bound                          = 0
-                        headerID                       = v.headerID
-                        self.__headerToBound[headerID] = {}
+                        bound = 0
+                        self.__headerToBound[v.headerID] = {}
                         for ancestorv in lnt.getAllProperAncestors(v.vertexID):
                             ancestorHeaderID = ancestorv.headerID
                             bound            += random.randint(3, 10)
-                            self.__headerToBound[headerID][ancestorHeaderID] = bound
-                            debug.debug_message("Bound(%d w.r.t %d) = %d" % (headerID, ancestorHeaderID, bound), 
+                            self.__headerToBound[v.headerID][ancestorHeaderID] = bound
+                            debug.debug_message("Bound(%d w.r.t %d) = %d" % (v.headerID, ancestorHeaderID, bound), 
                                                 __name__, 
                                                 1)
     
