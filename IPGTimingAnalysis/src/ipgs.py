@@ -15,7 +15,7 @@ class IPG (directed_graphs.FlowGraph):
         self.__ipointIDToVertex  = {}
         self.__vertexToReachable = {}
         self.__initialise()
-        self.__addEdges()
+        self.add_edges()
         self.__setEntryAndExit()
         
     def getIpointVertex (self, ipointID):
@@ -30,15 +30,15 @@ class IPG (directed_graphs.FlowGraph):
                 self.the_vertices[v.vertexID] = ipointv
                 self.__ipointIDToVertex[v.ipointID] = ipointv 
                 
-    def __addEdges (self):
+    def add_edges (self):
         changed = True
-        dfs     = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
+        dfs     = trees.DepthFirstSearch(self.__icfg, self.__icfg.get_entryID())
         # Do data-flow analysis
         while changed:
             changed = False
             for vertexID in reversed(dfs.getPostorder()):
                 v = self.__icfg.getVertex(vertexID)
-                for predID in v.getPredecessorIDs():
+                for predID in v.predecessors.keys():
                     if self.__icfg.isIpoint(predID):
                         if predID not in self.__vertexToReachable[vertexID]:
                             changed = True
@@ -63,27 +63,26 @@ class IPG (directed_graphs.FlowGraph):
         for vertexID, ipointToVertexSet in self.__vertexToReachable.iteritems():
             if self.__icfg.isIpoint(vertexID):
                 for predID, vertex_set in ipointToVertexSet.iteritems():
-                    self.__addEdge(predID, vertexID, vertex_set)
+                    self.add_edge(predID, vertexID, vertex_set)
     
-    def __addEdge (self, predID, succID, vertex_set):
+    def add_edge (self, predID, succID, vertex_set):
         global edge_ID
         debug.debug_message("Adding IPG Edge %s => %s" % (predID, succID), __name__, 10)
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        predv.addIpointSuccessor (succv.ipointID, succID)
         prede = edges.IPGEdge(predID, edge_ID)
         succe = edges.IPGEdge(succID, edge_ID)
         prede.edge_label.update(vertex_set)
         succe.edge_label.update(vertex_set)
-        predv.addSuccessorEdge(succe)
-        succv.addPredecessorEdge(prede) 
+        predv.add_successor_edge(succe)
+        succv.add_predecessor_edge(prede) 
         edge_ID += 1
                     
     def __setEntryAndExit (self):
-        entryv = self.the_vertices[self.__icfg.getEntryID()]
+        entryv = self.the_vertices[self.__icfg.get_entryID()]
         self._entryID = entryv.vertexID
-        assert entryv.numberOfPredecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self._entryID
-        for predID in entryv.getPredecessorIDs():
+        assert entryv.number_of_predecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self._entryID
+        for predID in entryv.predecessors.keys():
             self._exitID = predID
             
 class LoopByLoopIPGs():    
@@ -142,15 +141,15 @@ class LoopIPG(directed_graphs.FlowGraph):
     def add_ipoints (self):    
         for v in self.__icfg:
             self.__vertexToReachable[v.vertexID] = set([])  
-            if v.vertexID == self.__icfg.getEntryID() and not self.__ipg.hasVertex(v.vertexID):
+            if v.vertexID == self.__icfg.get_entryID() and not self.__ipg.hasVertex(v.vertexID):
                 self.__vertexToReachable[v.vertexID].add(v.vertexID)          
             # Ipoint actions
             if self.__ipg.hasVertex(v.vertexID):
                 ipointv = vertices.Ipoint(v.vertexID, v.ipointID)
                 self.the_vertices[v.vertexID] = ipointv
                 
-        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
-        for succID in headerv.getSuccessorIDs():
+        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).get_parentID())
+        for succID in headerv.successors.keys():
             succv = self.__lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
                 innerheaderID                               = succv.headerID
@@ -179,8 +178,8 @@ class LoopIPG(directed_graphs.FlowGraph):
                                 self.__innerLoopIpoints[keyID] = innerheaderID
     
     def output_entry_and_exit_edges (self):   
-        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
-        for succID in headerv.getSuccessorIDs():
+        headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).get_parentID())
+        for succID in headerv.successors.keys():
             succv = self.__lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
                 innerheaderID = succv.headerID 
@@ -193,10 +192,10 @@ class LoopIPG(directed_graphs.FlowGraph):
                 
     def add_acyclic_edges (self):
         # Compute a topological sort on the ICFG
-        dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
+        dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.get_entryID())
         # If the header of the loop is an Ipoint, that is the only destination of an iteration edge
-        if self.__ipg.hasVertex(self.__icfg.getEntryID()):
-            self.__iterationEdgeDestinations.add(self.__icfg.getEntryID())
+        if self.__ipg.hasVertex(self.__icfg.get_entryID()):
+            self.__iterationEdgeDestinations.add(self.__icfg.get_entryID())
         # Perform data-flow analysis
         changed = True
         while changed:
@@ -204,20 +203,20 @@ class LoopIPG(directed_graphs.FlowGraph):
             for vertexID in reversed(dfs.getPostorder()):
                 debug.debug_message("At vertex %d" % vertexID, __name__, 1)
                 v = self.__icfg.getVertex(vertexID)                
-                if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.getEntryID():
-                    self.__addLoopEntryEdges(v)
-                    self.__addIpointsToAbstractVertex(v)
+                if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.get_entryID():
+                    self.add_loop_entry_edges(v)
+                    self.add_ipoints_to_abstract_vertex(v)
                 else:
-                    for predID in v.getPredecessorIDs():
+                    for predID in v.predecessors.keys():
                         if self.__ipg.hasVertex(predID):
                             if self.__ipg.hasVertex(vertexID):
-                                self.__addEdge(predID, vertexID)
+                                self.add_edge(predID, vertexID)
                             else:
                                 self.__vertexToReachable[vertexID].add(predID)
                         else:
                             for keyID in self.__vertexToReachable[predID]:
                                 if self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
-                                    self.__addEdge(keyID, vertexID)
+                                    self.add_edge(keyID, vertexID)
                                 elif not self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
                                     self.__iterationEdgeDestinations.add(vertexID)
                                 else:
@@ -231,20 +230,20 @@ class LoopIPG(directed_graphs.FlowGraph):
                             if self.__ipg.hasVertex(keyID):
                                 self.__iterationEdgeSources.add(keyID)
                             
-    def __addLoopEntryEdges (self, v):
+    def add_loop_entry_edges (self, v):
         debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
         innerMiniIPG = self.__headerToMiniIPG[v.vertexID]        
-        for predID in v.getPredecessorIDs():
+        for predID in v.predecessors.keys():
             if self.__ipg.hasVertex(predID):
                 innerMiniIPG.addEntryEdgeSource(predID)
                 for succID in innerMiniIPG.getIterationEdgeDestinations():
-                    self.__addEdge(predID, succID)
+                    self.add_edge(predID, succID)
             else:
                 for keyID in self.__vertexToReachable[predID]:
                     if self.__ipg.hasVertex(keyID):
                         innerMiniIPG.addEntryEdgeSource(keyID)
                         for succID in innerMiniIPG.getIterationEdgeDestinations():
-                            self.__addEdge(keyID, succID)
+                            self.add_edge(keyID, succID)
                     else:
                         # The key is a header vertex. This means that all
                         # the destinations of iteration edges of the inner loop are
@@ -252,7 +251,7 @@ class LoopIPG(directed_graphs.FlowGraph):
                         for succID in innerMiniIPG.getIterationEdgeDestinations(): 
                             self.__iterationEdgeDestinations.add(succID)
         
-    def __addIpointsToAbstractVertex (self, v):
+    def add_ipoints_to_abstract_vertex (self, v):
         innerMiniIPG = self.__headerToMiniIPG[v.vertexID]       
         for exitID in self.__lnt.getLoopExits(v.vertexID):
             if self.__ipg.hasVertex(exitID):
@@ -262,7 +261,7 @@ class LoopIPG(directed_graphs.FlowGraph):
                     if self.__ipg.hasVertex(keyID):
                         self.__vertexToReachable[v.vertexID].add(keyID)
         if not self.__icfg.isIpoint(v.vertexID):
-            for predID in v.getPredecessorIDs():
+            for predID in v.predecessors.keys():
                 if not self.__ipg.hasVertex(predID):
                     if self.__headerID in self.__vertexToReachable[predID]:
                         self.__vertexToReachable[v.vertexID].add(self.__headerID)
@@ -272,33 +271,33 @@ class LoopIPG(directed_graphs.FlowGraph):
         debug.debug_message("Iteration edge DESTINATIONS = %s" % self.__iterationEdgeDestinations, __name__, 1)
         for predID in self.__iterationEdgeSources:
             for succID in self.__iterationEdgeDestinations:
-                self.__addEdge(predID, succID)
+                self.add_edge(predID, succID)
                 originalpredv = self.__ipg.getVertex(predID)
-                originaledge  = originalpredv.getSuccessorEdge(succID)
-                edgeID        = originaledge.getEdgeID()
+                originaledge  = originalpredv.get_successor_edge(succID)
+                edgeID        = originaledge.get_edgeID()
                 self.__iterationEdgeIDs.add(edgeID)
         debug.debug_message("Iteration edges for %d is %s" % (self.__headerID, self.__iterationEdgeIDs), __name__, 1)
                             
-    def __addEdge (self, predID, succID):
+    def add_edge (self, predID, succID):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        if not predv.hasSuccessor(succID):
+        if not predv.has_successor(succID):
             debug.debug_message("Adding edge (%d, %d)" % (predID, succID), __name__, 1)
-            assert not succv.hasPredecessor(predID), "Vertex %d has predecessor %d although vertex %d does not have successor %d" % (succID, predID, predID, succID)
+            assert not succv.has_predecessor(predID), "Vertex %d has predecessor %d although vertex %d does not have successor %d" % (succID, predID, predID, succID)
             originalpredv = self.__ipg.getVertex(predID)
-            originaledge  = originalpredv.getSuccessorEdge(succID)
-            succe = edges.IPGEdge(succID, originaledge.getEdgeID())
-            prede = edges.IPGEdge(predID, originaledge.getEdgeID())
-            predv.addSuccessorEdge(succe)
-            succv.addPredecessorEdge(prede)
+            originaledge  = originalpredv.get_successor_edge(succID)
+            succe = edges.IPGEdge(succID, originaledge.get_edgeID())
+            prede = edges.IPGEdge(predID, originaledge.get_edgeID())
+            predv.add_successor_edge(succe)
+            succv.add_predecessor_edge(prede)
             if predID in self.__innerLoopIpoints:
                 innerheaderID = self.__innerLoopIpoints[predID]
                 debug.debug_message("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
-                self.__innerLoopExitEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
+                self.__innerLoopExitEdgeIDs[innerheaderID].add(originaledge.get_edgeID())
             elif succID in self.__innerLoopIpoints:
                 innerheaderID = self.__innerLoopIpoints[succID]
                 debug.debug_message("(%d, %d) is a loop-entry edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
-                self.__innerLoopEntryEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
+                self.__innerLoopEntryEdgeIDs[innerheaderID].add(originaledge.get_edgeID())
             
     def getReachableSet (self, vertexID):
         assert vertexID in self.__vertexToReachable, "Unable to find %d in the ICFG" % vertexID

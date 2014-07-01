@@ -8,38 +8,39 @@ import decimal
 import abc
 
 class LpSolve:
-    comma        = ","
-    edgePrefix   = "e_"
-    equals       = " = "
-    fileSuffix   = "ilp"
-    int_         = "int"
-    ltOrEqual    = " <= "
-    max_         = "max: "
-    plus         = " + "
-    semiColon    = ";"
-    vertexPrefix = "v_"
+    comma         = ","
+    edge_prefix   = "e_"
+    equals        = " = "
+    int_          = "int"
+    lte           = " <= "
+    max_          = "max: "
+    plus          = " + "
+    semi_colon    = ";"
+    vertex_prefix = "v_"
     
     @staticmethod
-    def getEdgeVariable (edgeID):
-        return "%s%d" % (LpSolve.edgePrefix, edgeID)
+    def get_edge_variable (edgeID):
+        return "%s%d" % (LpSolve.edge_prefix, edgeID)
     
     @staticmethod
-    def getVertexVariable (vertexID):
-        return "%s%d" % (LpSolve.vertexPrefix, vertexID)
+    def get_vertex_variable (vertexID):
+        return "%s%d" % (LpSolve.vertex_prefix, vertexID)
     
     @staticmethod
-    def getComment (comment):
+    def get_comment (comment):
         return "// " + comment + "\n"
     
     @staticmethod
-    def getNewLine (num=1):
+    def get_new_line (num=1):
         return "\n" * num  
     
 class ILP():
+    __metaclass__ = abc.ABCMeta
+    
     def __init__(self, filename, variable_prefix):
-        self.filename                    = filename
-        self.variable_prefix             = variable_prefix
-        self.wcet                        = -1
+        self.filename                  = filename
+        self.variable_prefix           = variable_prefix
+        self.wcet                      = -1
         self.variable_execution_counts = {}
         
     def solve(self):
@@ -53,9 +54,9 @@ class ILP():
             debug.exitMessage("Running '%s' failed" % cmd)
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
-                lexemes     = shlex.split(line)
-                self._wcet = long(decimal.Decimal(lexemes[-1])) 
-            elif line.startswith(LpSolve.edgePrefix) or line.startswith(LpSolve.vertexPrefix):
+                lexemes   = shlex.split(line)
+                self.wcet = long(decimal.Decimal(lexemes[-1])) 
+            elif line.startswith(LpSolve.edge_prefix) or line.startswith(LpSolve.vertex_prefix):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
                 prefix = lexemes[0][:2]
@@ -67,307 +68,322 @@ class ILP():
     @abc.abstractmethod
     def print_execution_counts(self):
         pass
+    
+    @abc.abstractmethod
+    def create_objective_function(self):
+        pass
+    
+    @abc.abstractmethod
+    def create_structural_constraints(self):
+        pass
+    
+    @abc.abstractmethod
+    def create_loop_bound_constraints(self):
+        pass
+    
+    @abc.abstractmethod
+    def create_integer_constraints(self):
+        pass
         
 class CreateIPGILP (ILP):
     def __init__ (self, data, ipg, lnt, miniIPGs):
-        filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, ipg.name, "ipg", LpSolve.fileSuffix)
-        ILP.__init__(self, filename, LpSolve.edgePrefix)
-        with open(filename, 'w') as self.__outfile:
-            self.__createObjectiveFunction(data, ipg)
-            self.__createStructuralConstraints(ipg)
-            self.__createRelativeCapacityConstraints(data, lnt, miniIPGs)
-            self.__createIntegerConstraints(ipg)
+        filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, ipg.name, "ipg")
+        ILP.__init__(self, filename, LpSolve.edge_prefix)
+        with open(filename, 'w') as self.the_file:
+            self.create_objective_function(data, ipg)
+            self.create_structural_constraints(ipg)
+            self.create_loop_bound_constraints(data, lnt, miniIPGs)
+            self.create_integer_constraints(ipg)
         
     def print_execution_counts (self, ipg):
         for edgeID, count in self.variable_execution_counts.iteritems():
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getEdgeVariable(edgeID), count), __name__, 10)
+            debug.verbose_message("Execution count of variable %s = %d" % (LpSolve.get_edge_variable(edgeID), count), __name__)
         basic_block_execution_counts = {}
         for v in ipg:
-            for succID in v.getSuccessorIDs():                
-                succe  = v.getSuccessorEdge(succID)
-                edgeID = succe.getEdgeID() 
+            for succID in v.successors.keys():                
+                succe  = v.get_successor_edge(succID)
+                edgeID = succe.get_edgeID() 
                 if self.variable_execution_counts[edgeID]:
                     for bbID in succe.edge_label:
                         if bbID not in basic_block_execution_counts:
-                            self.basic_block_execution_counts[bbID] = 0
-                        self.basic_block_execution_counts[bbID] += self.variable_execution_counts[edgeID]
-        for vertexID, count in self.basic_block_execution_counts.iteritems():
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(vertexID), count), __name__, 10)
+                            basic_block_execution_counts[bbID] = 0
+                        basic_block_execution_counts[bbID] += self.variable_execution_counts[edgeID]
+        for vertexID, count in basic_block_execution_counts.iteritems():
+            debug.verbose_message("Execution count of variable %s = %d" % (LpSolve.get_vertex_variable(vertexID), count), __name__)
 
-    def __createObjectiveFunction (self, data, ipg):
-        self.__outfile.write(LpSolve.max_)
-        counter = ipg.numOfEdges()
+    def create_objective_function (self, data, ipg):
+        self.the_file.write(LpSolve.max_)
+        counter = ipg.number_of_edges()
         for v in ipg:
-            for succID in v.getSuccessorIDs():                
-                succe          = v.getSuccessorEdge(succID)
-                edgeID         = succe.getEdgeID()
+            for succID in v.successors.keys():                
+                succe          = v.get_successor_edge(succID)
+                edgeID         = succe.get_edgeID()
                 transitionWCET = data.get_ipg_edge_wcet(v.vertexID, succID)
-                self.__outfile.write("%d %s" % (transitionWCET, LpSolve.getEdgeVariable(edgeID)))
+                self.the_file.write("%d %s" % (transitionWCET, LpSolve.get_edge_variable(edgeID)))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-        self.__outfile.write(LpSolve.semiColon)
-        self.__outfile.write(LpSolve.getNewLine(2))
+        self.the_file.write(LpSolve.semi_colon)
+        self.the_file.write(LpSolve.get_new_line(2))
 
-    def __createStructuralConstraints (self, ipg):
+    def create_structural_constraints (self, ipg):
         for v in ipg:
-            self.__outfile.write(LpSolve.getComment("Vertex %d" % v.vertexID))
+            self.the_file.write(LpSolve.get_comment("Vertex %d" % v.vertexID))
             # Analyse the predecessors
-            self.__outfile.write(LpSolve.getVertexVariable(v.vertexID))
-            self.__outfile.write(LpSolve.equals)
-            counter = v.numberOfPredecessors()
-            for predID in v.getPredecessorIDs():                    
-                prede  = v.getPredecessorEdge(predID)
-                edgeID = prede.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            self.the_file.write(LpSolve.get_vertex_variable(v.vertexID))
+            self.the_file.write(LpSolve.equals)
+            counter = v.number_of_predecessors()
+            for predID in v.predecessors.keys():                    
+                prede  = v.get_predecessor_edge(predID)
+                edgeID = prede.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.semiColon)
-            self.__outfile.write(LpSolve.getNewLine())  
+            self.the_file.write(LpSolve.semi_colon)
+            self.the_file.write(LpSolve.get_new_line())  
             # Flow in, flow out w.r.t to predecessors and successors
-            counter = v.numberOfPredecessors()
-            for predID in v.getPredecessorIDs():                    
-                prede  = v.getPredecessorEdge(predID)
-                edgeID = prede.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            counter = v.number_of_predecessors()
+            for predID in v.predecessors.keys():                    
+                prede  = v.get_predecessor_edge(predID)
+                edgeID = prede.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.equals)   
+            self.the_file.write(LpSolve.equals)   
             # Analyse the successors
-            counter = v.numberOfSuccessors()
-            for succID in v.getSuccessorIDs():
-                succe  = v.getSuccessorEdge(succID)
-                edgeID = succe.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            counter = v.number_of_successors()
+            for succID in v.successors.keys():
+                succe  = v.get_successor_edge(succID)
+                edgeID = succe.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.semiColon)
-            self.__outfile.write(LpSolve.getNewLine(2))
+            self.the_file.write(LpSolve.semi_colon)
+            self.the_file.write(LpSolve.get_new_line(2))
             
-    def __createRelativeCapacityConstraints (self, data, lnt, miniIPGs):
+    def create_loop_bound_constraints (self, data, lnt, miniIPGs):
         for level, the_vertices in lnt.levelIterator(True):
             for v in the_vertices:
                 if isinstance(v, vertices.HeaderVertex):
                     # Get iteration edges for this header
                     if level > 0:
-                        self.__createInnerLoopRelativeCapacityConstraint(data, lnt, miniIPGs, v)
+                        self.create_constraints_for_loop(data, lnt, miniIPGs, v)
                     else:
                         headerID = v.headerID
-                        self.__outfile.write(LpSolve.getComment("Relative capacity constraint for entry vertex %d" % (headerID)))
+                        self.the_file.write(LpSolve.get_comment("Relative capacity constraint for entry vertex %d" % (headerID)))
                         iterationEdgeIDs = miniIPGs.getMiniIPG(headerID).getIterationEdgeIDs()
                         assert len(iterationEdgeIDs) == 1, "There should be exactly one iteration edge for the entry vertex %d. There are %d." % (headerID, len(iterationEdgeIDs))
                         edgeID = iter(iterationEdgeIDs).next()
-                        self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
-                        self.__outfile.write(LpSolve.equals)
-                        self.__outfile.write("1")
-                        self.__outfile.write(LpSolve.semiColon)
-                        self.__outfile.write(LpSolve.getNewLine(2))
+                        self.the_file.write(LpSolve.get_edge_variable(edgeID))
+                        self.the_file.write(LpSolve.equals)
+                        self.the_file.write("1")
+                        self.the_file.write(LpSolve.semi_colon)
+                        self.the_file.write(LpSolve.get_new_line(2))
                         
-    def __createInnerLoopRelativeCapacityConstraint (self, data, lnt, miniIPGs, v):
+    def create_constraints_for_loop (self, data, lnt, miniIPGs, v):
         debug.debug_message("Analysing header %d" % v.headerID, __name__, 1)
         headerID       = v.headerID
         miniIPG        = miniIPGs.getMiniIPG(headerID)
         entryIpoints   = set([])
         ieDestinations = miniIPG.getIterationEdgeDestinations()
         decrementBound = {}
-        for succID in v.getSuccessorIDs():
+        for succID in v.successors.keys():
             if succID in ieDestinations:
                 entryIpoints.add(succID)
-                if self.__inLoopExit(succID, miniIPG, lnt, headerID):
+                if self.in_loop_exit(succID, miniIPG, lnt, headerID):
                     decrementBound[succID] = False
                 else:
                     decrementBound[succID] = True
         for ancestorv in lnt.getAllProperAncestors(v.vertexID):
             # Get the loop bound w.r.t. the ancestor loop
             ancestorHeaderID = ancestorv.headerID
-            self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
+            self.the_file.write(LpSolve.get_comment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
             bound = data.get_loop_bound(headerID, ancestorHeaderID)
             # Write out the relative edges
             outerMiniIPG        = miniIPGs.getMiniIPG(ancestorHeaderID)
             outerIpoints        = set([])
             ieOuterDestinations = outerMiniIPG.getIterationEdgeDestinations()
-            for succID in ancestorv.getSuccessorIDs():
+            for succID in ancestorv.successors.keys():
                 if succID in ieOuterDestinations:
                     outerIpoints.add(succID)
             if len(outerIpoints) == 0:
                 debug.debug_message("Loop with header %d does not have Ipoints at its nesting level which are at entry Ipoints" % (ancestorHeaderID), __name__, 1)
                 ieOuterSources = outerMiniIPG.getIterationEdgeSources()
-                for succID in ancestorv.getSuccessorIDs():
+                for succID in ancestorv.successors.keys():
                     if succID in ieOuterSources:
                         outerIpoints.add(succID)
             # Write out the entry Ipoints
             for entryID in entryIpoints:
-                self.__outfile.write(LpSolve.getVertexVariable(entryID))
-                self.__outfile.write(LpSolve.ltOrEqual)
+                self.the_file.write(LpSolve.get_vertex_variable(entryID))
+                self.the_file.write(LpSolve.lte)
                 counter = len(outerIpoints)
                 for vertexID in outerIpoints:
                     if decrementBound[entryID] and not lnt.isDoWhileLoop(headerID):
-                        self.__outfile.write("%d %s" % (bound - 1, LpSolve.getVertexVariable(vertexID)))
+                        self.the_file.write("%d %s" % (bound - 1, LpSolve.get_vertex_variable(vertexID)))
                     else:
-                        self.__outfile.write("%d %s" % (bound, LpSolve.getVertexVariable(vertexID)))
+                        self.the_file.write("%d %s" % (bound, LpSolve.get_vertex_variable(vertexID)))
                     if counter > 1:
-                        self.__outfile.write(LpSolve.plus)
+                        self.the_file.write(LpSolve.plus)
                     counter -= 1
-                self.__outfile.write(LpSolve.semiColon)
-                self.__outfile.write(LpSolve.getNewLine())
-            self.__outfile.write(LpSolve.getNewLine())
+                self.the_file.write(LpSolve.semi_colon)
+                self.the_file.write(LpSolve.get_new_line())
+            self.the_file.write(LpSolve.get_new_line())
     
-    def __inLoopExit (self, ipointID, miniIPG, lnt, headerID):
+    def in_loop_exit(self, ipointID, miniIPG, lnt, headerID):
         for exitID in lnt.getLoopExits(headerID):
             if ipointID in miniIPG.getReachableSet(exitID):
                 return True
         return False
             
-    def __createIntegerConstraints (self, ipg):
-        self.__outfile.write(LpSolve.int_)
-        counter = ipg.numOfEdges()
+    def create_integer_constraints (self, ipg):
+        self.the_file.write(LpSolve.int_)
+        counter = ipg.number_of_edges()
         for v in ipg:
-            for succID in v.getSuccessorIDs():                
-                succe  = v.getSuccessorEdge(succID)
-                edgeID = succe.getEdgeID()
-                self.__outfile.write(" %s" % LpSolve.getEdgeVariable(edgeID))
+            for succID in v.successors.keys():                
+                succe  = v.get_successor_edge(succID)
+                edgeID = succe.get_edgeID()
+                self.the_file.write(" %s" % LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.comma)
+                    self.the_file.write(LpSolve.comma)
                 counter -= 1
-        self.__outfile.write(LpSolve.semiColon)
-        self.__outfile.write(LpSolve.getNewLine())
+        self.the_file.write(LpSolve.semi_colon)
+        self.the_file.write(LpSolve.get_new_line())
                 
 class CreateICFGILP (ILP):
     def __init__ (self, data, icfg, lnt):
-        filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, icfg.name, "icfg", LpSolve.fileSuffix)
-        ILP.__init__(self, filename, LpSolve.vertexPrefix)
-        
+        filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, icfg.name, "icfg")
+        ILP.__init__(self, filename, LpSolve.vertex_prefix)
         self.__vertexIDToExecutionCount = {}
-        with open(filename, 'w') as self.__outfile:
-            self.__createObjectiveFunction(data, icfg)
-            self.__createStructuralConstraints(icfg)
-            self.__createRelativeCapacityConstraints(data, lnt, icfg)
-            self.__createIntegerConstraints(icfg)
+        with open(filename, 'w') as self.the_file:
+            self.create_objective_function(data, icfg)
+            self.create_structural_constraints(icfg)
+            self.create_loop_bound_constraints(data, lnt, icfg)
+            self.create_integer_constraints(icfg)
 
     def print_execution_counts (self, icfg):
         for vertexID, count in self.variable_execution_counts.iteritems():
             if not icfg.isIpoint(vertexID):
-                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(vertexID), count), __name__, 10)
+                debug.verbose_message("Execution count of variable %s = %d" % (LpSolve.get_vertex_variable(vertexID), count), __name__)
 
-    def __createObjectiveFunction (self, data, icfg):
-        self.__outfile.write(LpSolve.max_)        
-        counter = icfg.numOfVertices()
+    def create_objective_function (self, data, icfg):
+        self.the_file.write(LpSolve.max_)        
+        counter = icfg.number_of_vertices()
         for v in icfg:        
             vertexWCET = data.get_basic_block_wcet(v.vertexID)
-            self.__outfile.write("%d %s" % (vertexWCET, LpSolve.getVertexVariable(v.vertexID)))
+            self.the_file.write("%d %s" % (vertexWCET, LpSolve.get_vertex_variable(v.vertexID)))
             if counter > 1:
-                self.__outfile.write(LpSolve.plus)
+                self.the_file.write(LpSolve.plus)
             counter -= 1
-        self.__outfile.write(LpSolve.semiColon)
-        self.__outfile.write(LpSolve.getNewLine(2))
+        self.the_file.write(LpSolve.semi_colon)
+        self.the_file.write(LpSolve.get_new_line(2))
             
-    def __createStructuralConstraints (self, icfg):
+    def create_structural_constraints (self, icfg):
         for v in icfg:
-            self.__outfile.write(LpSolve.getComment("Vertex %d" % v.vertexID))
+            self.the_file.write(LpSolve.get_comment("Vertex %d" % v.vertexID))
             # Flow into vertex w.r.t. predecessors
-            self.__outfile.write(LpSolve.getVertexVariable(v.vertexID))
-            self.__outfile.write(LpSolve.equals)
-            counter = v.numberOfPredecessors()
-            for predID in v.getPredecessorIDs():                    
-                prede  = v.getPredecessorEdge(predID)
-                edgeID = prede.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            self.the_file.write(LpSolve.get_vertex_variable(v.vertexID))
+            self.the_file.write(LpSolve.equals)
+            counter = v.number_of_predecessors()
+            for predID in v.predecessors.keys():                    
+                prede  = v.get_predecessor_edge(predID)
+                edgeID = prede.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.semiColon)
-            self.__outfile.write(LpSolve.getNewLine())     
+            self.the_file.write(LpSolve.semi_colon)
+            self.the_file.write(LpSolve.get_new_line())     
             # Flow in, flow out w.r.t to predecessors and successors
-            counter = v.numberOfPredecessors()
-            for predID in v.getPredecessorIDs():                    
-                prede  = v.getPredecessorEdge(predID)
-                edgeID = prede.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            counter = v.number_of_predecessors()
+            for predID in v.predecessors.keys():                    
+                prede  = v.get_predecessor_edge(predID)
+                edgeID = prede.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.equals)
-            counter = v.numberOfSuccessors()
-            for succID in v.getSuccessorIDs():
-                succe  = v.getSuccessorEdge(succID)
-                edgeID = succe.getEdgeID()
-                self.__outfile.write(LpSolve.getEdgeVariable(edgeID))
+            self.the_file.write(LpSolve.equals)
+            counter = v.number_of_successors()
+            for succID in v.successors.keys():
+                succe  = v.get_successor_edge(succID)
+                edgeID = succe.get_edgeID()
+                self.the_file.write(LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            self.__outfile.write(LpSolve.semiColon)
-            self.__outfile.write(LpSolve.getNewLine(2))       
+            self.the_file.write(LpSolve.semi_colon)
+            self.the_file.write(LpSolve.get_new_line(2))       
             
-    def __createRelativeCapacityConstraints (self, data, lnt, icfg):
+    def create_loop_bound_constraints(self, data, lnt, icfg):
         for level, the_vertices in lnt.levelIterator(True):
             for v in the_vertices:
                 if isinstance(v, vertices.HeaderVertex):
                     # Get iteration edges for this header
                     if level > 0:
-                        self.__createInnerLoopRelativeCapacityConstraint(data, icfg, lnt, v)
+                        self.create_constraints_for_loop(data, icfg, lnt, v)
                     else:
                         headerID = v.headerID
-                        self.__outfile.write(LpSolve.getComment("Relative capacity constraint for entry vertex %d" % (headerID)))
-                        self.__outfile.write(LpSolve.getVertexVariable(icfg.getEntryID()))
-                        self.__outfile.write(LpSolve.equals)
-                        self.__outfile.write("1")
-                        self.__outfile.write(LpSolve.semiColon)
-                        self.__outfile.write(LpSolve.getNewLine(2))
+                        self.the_file.write(LpSolve.get_comment("Relative capacity constraint for entry vertex %d" % (headerID)))
+                        self.the_file.write(LpSolve.get_vertex_variable(icfg.get_entryID()))
+                        self.the_file.write(LpSolve.equals)
+                        self.the_file.write("1")
+                        self.the_file.write(LpSolve.semi_colon)
+                        self.the_file.write(LpSolve.get_new_line(2))
                         
-    def __createInnerLoopRelativeCapacityConstraint (self, data, icfg, lnt, v):
+    def create_constraints_for_loop(self, data, icfg, lnt, v):
         debug.debug_message("Analysing header %d" % v.headerID, __name__, 1)
         headerID         = v.headerID
-        parentv          = lnt.getVertex(v.getParentID())
+        parentv          = lnt.getVertex(v.get_parentID())
         relativeHeaderID = headerID
         for ancestorv in lnt.getAllProperAncestors(v.vertexID):
             # Get the loop bound w.r.t. the ancestor loop
             ancestorHeaderID = ancestorv.headerID
             bound = data.get_loop_bound(headerID, ancestorHeaderID)
-            self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
-            self.__outfile.write(LpSolve.getComment("Bound = %d" % bound))
-            self.__outfile.write(LpSolve.getVertexVariable(headerID))
-            self.__outfile.write(LpSolve.ltOrEqual)
+            self.the_file.write(LpSolve.get_comment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
+            self.the_file.write(LpSolve.get_comment("Bound = %d" % bound))
+            self.the_file.write(LpSolve.get_vertex_variable(headerID))
+            self.the_file.write(LpSolve.lte)
             # Write out the relative edges
-            relativeEdgeIDs = self.__getLoopEntryEdges(icfg, lnt, relativeHeaderID)
+            relativeEdgeIDs = self.get_loop_entry_edges(icfg, lnt, relativeHeaderID)
             counter         = len(relativeEdgeIDs)
             for edgeID in relativeEdgeIDs:
-                self.__outfile.write("%d %s" % (bound, LpSolve.getEdgeVariable(edgeID)))
+                self.the_file.write("%d %s" % (bound, LpSolve.get_edge_variable(edgeID)))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.plus)
+                    self.the_file.write(LpSolve.plus)
                 counter -= 1
-            parentv          = lnt.getVertex(v.getParentID())
+            parentv          = lnt.getVertex(v.get_parentID())
             relativeHeaderID = parentv.headerID
-            self.__outfile.write(LpSolve.semiColon)
-            self.__outfile.write(LpSolve.getNewLine(2))
+            self.the_file.write(LpSolve.semi_colon)
+            self.the_file.write(LpSolve.get_new_line(2))
             
-    def __getLoopEntryEdges (self, icfg, lnt, headerID):
+    def get_loop_entry_edges(self, icfg, lnt, headerID):
         edgeIDs = []
         v       = icfg.getVertex(headerID)
-        for predID in v.getPredecessorIDs():
+        for predID in v.predecessors.keys():
             if not lnt.isLoopBackEdge(predID, headerID):
-                prede = v.getPredecessorEdge(predID)
-                edgeIDs.append(prede.getEdgeID())
+                prede = v.get_predecessor_edge(predID)
+                edgeIDs.append(prede.get_edgeID())
         assert edgeIDs, "Unable to find loop-entry edges into loop with header %d" % headerID
         return edgeIDs
     
-    def __createIntegerConstraints (self, icfg):
-        self.__outfile.write(LpSolve.int_)
-        counter = icfg.numOfVertices() + icfg.numOfEdges()
+    def create_integer_constraints(self, icfg):
+        self.the_file.write(LpSolve.int_)
+        counter = icfg.number_of_vertices() + icfg.number_of_edges()
         for v in icfg:
-            self.__outfile.write(" %s" % LpSolve.getVertexVariable(v.vertexID))
+            self.the_file.write(" %s" % LpSolve.get_vertex_variable(v.vertexID))
             if counter > 1:
-                self.__outfile.write(LpSolve.comma)
+                self.the_file.write(LpSolve.comma)
             counter -= 1
-            for succID in v.getSuccessorIDs():
-                succe  = v.getSuccessorEdge(succID)
-                edgeID = succe.getEdgeID()
-                self.__outfile.write(" %s" % LpSolve.getEdgeVariable(edgeID))
+            for succID in v.successors.keys():
+                succe  = v.get_successor_edge(succID)
+                edgeID = succe.get_edgeID()
+                self.the_file.write(" %s" % LpSolve.get_edge_variable(edgeID))
                 if counter > 1:
-                    self.__outfile.write(LpSolve.comma)
+                    self.the_file.write(LpSolve.comma)
                 counter -= 1
-        self.__outfile.write(LpSolve.semiColon)
-        self.__outfile.write(LpSolve.getNewLine())
+        self.the_file.write(LpSolve.semi_colon)
+        self.the_file.write(LpSolve.get_new_line())
     

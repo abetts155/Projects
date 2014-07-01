@@ -62,17 +62,17 @@ def make_file (g, graph_name):
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
             if isinstance(g, cfgs.CFG):
-                writeCFGVertex(g, g.getEntryID(), the_file)
+                writeCFGVertex(g, g.get_entryID(), the_file)
                 for v in g:
-                    if v.vertexID != g.getEntryID():
+                    if v.vertexID != g.get_entryID():
                         writeCFGVertex(g, v.vertexID, the_file)
             elif isinstance(g, trees.LoopNests):
                 for v in g:
                         writeTreeVertex(g, v.vertexID, the_file)
             elif isinstance(g, ipgs.IPG) or isinstance(g, ipgs.LoopIPG):
-                writeIPGVertex(g, g.getEntryID(), the_file)
+                writeIPGVertex(g, g.get_entryID(), the_file)
                 for v in g:
-                    if v.vertexID != g.getEntryID():
+                    if v.vertexID != g.get_entryID():
                         writeIPGVertex(g, v.vertexID, the_file)
             else:
                 for v in g:
@@ -87,7 +87,7 @@ def writeVertex (g, vertexID, the_file):
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
-    for succID in v.getSuccessorIDs():
+    for succID in v.successors.keys():
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         the_file.write(set_name(str(succID)))
@@ -107,11 +107,11 @@ def writeCFGVertex (cfg, vertexID, the_file):
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
-    for succID in v.getSuccessorIDs():
+    for succID in v.successors.keys():
         the_file.write(new_edge)
         the_file.write(begin_attrs)
-        succe = v.getSuccessorEdge(succID)
-        the_file.write(set_name(str(succe.getEdgeID())))
+        succe = v.get_successor_edge(succID)
+        the_file.write(set_name(str(succe.get_edgeID())))
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
@@ -134,7 +134,7 @@ def writeTreeVertex (tree, vertexID, the_file):
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
-    for succID in v.getSuccessorIDs():
+    for succID in v.successors.keys():
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         the_file.write(set_name(str(succID)))
@@ -159,11 +159,11 @@ def writeIPGVertex (ipg, vertexID, the_file):
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
-    for succID in v.getSuccessorIDs():
-        succe = v.getSuccessorEdge(succID)
+    for succID in v.successors.keys():
+        succe = v.get_successor_edge(succID)
         the_file.write(new_edge)
         the_file.write(begin_attrs)
-        the_file.write(set_name(str(succe.getEdgeID())))
+        the_file.write(set_name(str(succe.get_edgeID())))
         toolTip = ', '.join(str(v) for v in succe.edge_label)
         if succe.iteration_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 2))

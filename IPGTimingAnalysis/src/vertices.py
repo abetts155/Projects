@@ -2,97 +2,59 @@ import edges
 
 dummyID = -1
 
-class UndirectedVertex ():
-    def __init__ (self, vertexID):
-        self.vertexID = vertexID
-        self.edges = []
-    
-    def get_vertexID (self):
-        return self.vertexID
-    
-    def add_edge (self, vertexID, edgeID=None):
-        self._edges.append(vertexID)
-    
-    def degree (self):
-        return len(self.edges)
-    
-    def __str__ (self):
-        string = "Vertex ID = " + str(self.vertexID) + "\n"
-        string += "pred = {"
-        count = 1
-        for vertexID in sorted(self.edges):
-            string += str(vertexID)
-            if count < len(self.edges):
-                string += ","
-                count = count + 1
-        string += "}\n"
-        return string
-
 class Vertex ():
     def __init__ (self, vertexID):
         self.vertexID = vertexID
         self.predecessors = {}
         self.successors = {}
     
-    def addPredecessor (self, predID, edgeID=None):
+    def add_predecessor(self, predID, edgeID=None):
         assert predID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, predID)
         e = edges.Edge(predID, edgeID)
         self.predecessors[predID] = e
         
-    def addPredecessorEdge (self, prede):
+    def add_predecessor_edge(self, prede):
         assert prede.vertexID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, prede.vertexID)
         self.predecessors[prede.vertexID] = prede
             
-    def removePredecessor (self, predID):
+    def remove_predecessor(self, predID):
         assert predID in self.predecessors, "Cannot remove %d as it is not in predecessor of %d" % (predID, self.vertexID)
         del self.predecessors[predID]
     
-    def getPredecessorIDs (self):
-        return self.predecessors.keys()
-    
-    def getPredecessorEdges (self):
-        return self.predecessors.values()
-    
-    def numberOfPredecessors (self):
+    def number_of_predecessors(self):
         return len(self.predecessors)
     
-    def hasPredecessor (self, predID):
+    def has_predecessor(self, predID):
         return predID in self.predecessors.keys()
     
-    def getPredecessorEdge (self, predID):
+    def get_predecessor_edge(self, predID):
         assert predID in self.predecessors, "Vertex %d is not a predecessor of %d" % (predID, self.vertexID)
         return self.predecessors[predID]
     
-    def addSuccessor (self, succID,edgeID=None):
+    def add_successor(self, succID,edgeID=None):
         assert succID not in self.successors, "Vertex %d already has successor %d" % (self.vertexID, succID)
         e = edges.Edge(succID, edgeID)
         self.successors[succID] = e
         
-    def addSuccessorEdge (self, succe):
+    def add_successor_edge(self, succe):
         assert succe.vertexID not in self.successors, "Vertex %d already has successor %d" % (self.vertexID, succe.vertexID)
         self.successors[succe.vertexID] = succe
         
-    def removeSuccessor (self, succID):
+    def remove_successor(self, succID):
         assert succID in self.successors, "Cannot remove %d as it is not in successors of %d" % (succID, self.vertexID)
         del self.successors[succID]
-        
-    def getSuccessorIDs (self):
-        return self.successors.keys()
     
-    def getSuccessorEdges (self):
-        return self.successors.values()
-    
-    def numberOfSuccessors (self):
+    def number_of_successors(self):
         return len(self.successors)
     
-    def hasSuccessor (self, succID):
+    def has_successor(self, succID):
         return succID in self.successors.keys()
     
-    def getSuccessorEdge (self, succID):
+    def get_successor_edge(self, succID):
         assert succID in self.successors, "Vertex %d is not a successor of %d" % (succID, self.vertexID)
         return self.successors[succID]
     
-    def predecessorStr (self):
+    def predecessor_string(self):
         string = "pred = {"
         count = 1
         for predID in sorted(self.predecessors.keys()):
@@ -103,7 +65,7 @@ class Vertex ():
         string += "}\n"
         return string
     
-    def successorStr (self):        
+    def successor_string(self):        
         string = "succ = {"
         count = 1
         for succID in sorted(self.successors.keys()):
@@ -114,13 +76,13 @@ class Vertex ():
         string += "}\n"
         return string
     
-class TreeVertex (Vertex):
+class TreeVertex(Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.parentID = dummyID
         self.level    = -1
         
-    def getParentID (self):
+    def get_parentID(self):
         assert self.parentID != dummyID, "Parent ID of %d has not been set" % self._parentID
         return self.parentID     
     
@@ -130,75 +92,52 @@ class TreeVertex (Vertex):
         else:
             return "parent(%d) = %d\n" % (self.vertexID, self.parentID)
     
-class HeaderVertex (TreeVertex):
+class HeaderVertex(TreeVertex):
     def __init__ (self, vertexID, headerID):
         TreeVertex.__init__(self, vertexID)
         self.headerID = headerID
     
-    def __str__ (self):
-        return TreeVertex.__str__(self)[:-1] + " (" + "*" * 3 + " HEADER " + "*" * 3 + ")\n" 
+class Ipoint(Vertex):
+    START_POSITION = 'start'
+    END_POSITION   = 'end'
     
-class Ipoint (Vertex):
     def __init__ (self, vertexID, ipointID, realID=None):
         Vertex.__init__(self, vertexID)
         self.ipointID = ipointID
-        self.isGhost = False
+        self.isGhost  = False
         if realID:
             self.realID = realID
         else:
             self.realID = vertexID
-        self.__succIpointIDToVertexID = {}
-    
-    def addIpointSuccessor (self, succIpointID, succID):
-        self.__succIpointIDToVertexID[succIpointID] = succID
-    
-    def getIpointSuccessor (self, succIpointID):
-        assert succIpointID in self.__succIpointIDToVertexID, \
-        "Unable to find successor of %s with Ipoint ID 0x%04X" % (self.vertexID, succIpointID)
-        return self.__succIpointIDToVertexID[succIpointID]
     
     def __str__ (self):
         string = "Vertex ID = " + str(self.vertexID) + "\n"
         string += "\tIpoint ID = " + str(self.ipointID) + "\n"
-        string += "\t" + Vertex.predecessorStr(self)
-        string += "\t" + Vertex.successorStr(self)    
+        string += "\t" + Vertex.predecessor_string(self)
+        string += "\t" + Vertex.successor_string(self)    
         return string
     
-class Enum(set):
-    def __getattr__(self, name):
-        if name in self:
-            return name
-        raise AttributeError
-    
 class BasicBlock (Vertex):
-    IpointPosition = Enum(['start', 'end'])
-    
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self.__dummy = False
-        self.__ipointPosition = None
+        self.dummy           = False
+        self.ipoint_position = None
     
-    def setIpoint (self, position):
-        assert position == BasicBlock.IpointPosition.start or position == BasicBlock.IpointPosition.end, "Unable to ascertain position of Ipoint from '%s'" % position
-        self.__ipointPosition = position
+    def set_ipoint(self, position):
+        assert position == Ipoint.START_POSITION or position == Ipoint.END_POSITION, "Unable to ascertain position of ipoint from '%s'" % position
+        self.ipoint_position = position
         
-    def hasIpoint (self):
-        return self.__ipointPosition
+    def has_ipoint(self):
+        return self.ipoint_position
     
-    def ipointPosition (self):
-        assert self.__ipointPosition, "You are requesting an Ipoint position from %d but that does not have an Ipoint set" % self.vertexID
-        return self.__ipointPosition
-       
-    def setDummy (self):
-        self.__dummy = True
+    def get_ipoint_position(self):
+        assert self.ipoint_position, "You are requesting an ipoint position from %d but that does not have an Ipoint set" % self.vertexID
+        return self.ipoint_position
         
-    def isDummy (self):
-        return self.__dummy
-        
-    def __str__ (self):
+    def __str__(self):
         string = "Vertex ID = " + str(self.vertexID) + "\n"
-        string += "\t" + Vertex.predecessorStr(self)
-        string += "\t" + Vertex.successorStr(self)
+        string += "\t" + Vertex.predecessor_string(self)
+        string += "\t" + Vertex.successor_string(self)
         string += "\t" + 40 * "=" + "\n"      
         return string
     

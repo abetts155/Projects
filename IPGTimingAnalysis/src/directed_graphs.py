@@ -19,21 +19,21 @@ class DirectedGraph ():
     def addEdge (self, predID, succID):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        predv.addSuccessor(succID)
-        succv.addPredecessor(predID)
+        predv.add_successor(succID)
+        succv.add_predecessor(predID)
     
     def removeEdge (self, predID, succID):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        predv.removeSuccessor(succID)
-        succv.removePredecessor(predID)
+        predv.remove_successor(succID)
+        succv.remove_predecessor(predID)
         
-    def addPredecessorEdges (self):
+    def add_predecessor_edges (self):
         for v in self:
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 succv = self.getVertex(succID)
-                if not succv.hasPredecessor(v.vertexID):
-                    succv.addPredecessor(v.vertexID)
+                if not succv.has_predecessor(v.vertexID):
+                    succv.add_predecessor(v.vertexID)
     
     def getNextVertexID (self):
         nextID = 1
@@ -41,13 +41,13 @@ class DirectedGraph ():
             nextID = nextID + 1 
         return nextID
     
-    def numOfVertices (self):
+    def number_of_vertices(self):
         return len(self.the_vertices)
     
-    def numOfEdges(self):
+    def number_of_edges(self):
         total = 0
         for v in self.the_vertices.values():
-            total += v.numberOfSuccessors()
+            total += v.number_of_successors()
         return total
     
     def __iter__ (self):
@@ -59,19 +59,19 @@ class FlowGraph (DirectedGraph):
         self._entryID = vertices.dummyID
         self._exitID = vertices.dummyID
         
-    def getEntryID (self):
+    def get_entryID (self):
         assert self._entryID != vertices.dummyID, "Entry to flow graph not found"
         return self._entryID
     
-    def getExitID (self):
+    def get_exitID (self):
         assert self._exitID != vertices.dummyID, "Exit to flow graph not found"
         return self._exitID
     
     def __str__ (self):
-        string = "*" * 40 + "\n" + \
+        the_string = "*" * 40 + "\n" + \
         "Entry ID = %s\n" % str(self._entryID) + \
         "Exit ID  = %s\n" % str(self._exitID) + "\n"
         for v in self.the_vertices.values():
-            string += v.__str__()
-        string += "*" * 40 + "\n"
-        return string
+            the_string += v.__str__()
+        the_string += "*" * 40 + "\n"
+        return the_string

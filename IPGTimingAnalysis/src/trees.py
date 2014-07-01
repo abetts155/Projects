@@ -3,17 +3,17 @@ import cfgs
 import vertices
 import debug
 
-class Tree (directed_graphs.DirectedGraph):
+class Tree(directed_graphs.DirectedGraph):
     def __init__ (self):
         directed_graphs.DirectedGraph.__init__(self)
         self.rootID = vertices.dummyID
         
-    def setRootID (self, rootID):
+    def set_rootID (self, rootID):
         assert rootID > vertices.dummyID, "Invalid root ID %d. It must be a positive integer" % rootID
         assert rootID in self.the_vertices, "Cannot find vertex %d"
         self.rootID = rootID
         
-    def getRootID (self):
+    def get_rootID (self):
         assert self.rootID != vertices.dummyID, "Root ID has not yet been set"
         return self.rootID
         
@@ -28,12 +28,12 @@ class Tree (directed_graphs.DirectedGraph):
         succv.parentID = predID
         
     def isInternalVertex (self, vertexID):
-        return self.getVertex(vertexID).numberOfSuccessors() > 0
+        return self.getVertex(vertexID).number_of_successors() > 0
     
     def getAllProperAncestors (self, vertexID):
         ancestors = []
         while vertexID != self.rootID:
-            parentID = self.getVertex(vertexID).getParentID()
+            parentID = self.getVertex(vertexID).get_parentID()
             ancestors.append(self.getVertex(parentID))
             vertexID = parentID
         return ancestors
@@ -45,10 +45,10 @@ class Tree (directed_graphs.DirectedGraph):
             return False
         else:
             vertexID = right
-            parentID = self.getVertex(vertexID).getParentID()
+            parentID = self.getVertex(vertexID).get_parentID()
             while parentID != self.rootID and parentID != left:
                 vertexID = parentID
-                parentID = self.getVertex(vertexID).getParentID()
+                parentID = self.getVertex(vertexID).get_parentID()
             if parentID == left:
                 return True
             else:
@@ -64,12 +64,12 @@ class Tree (directed_graphs.DirectedGraph):
         maxHeight = 0
         height = {}
         stack  = []
-        rootv = self.getVertex(self.getRootID())
+        rootv = self.getVertex(self.get_rootID())
         stack.append(rootv)
         height[rootv] = 0
         while stack:
             v = stack.pop()
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 succv = self.getVertex(succID)
                 stack.append(succv)
                 height[succv] = height[v] + 1
@@ -78,19 +78,19 @@ class Tree (directed_graphs.DirectedGraph):
         return maxHeight
         
     def levelIterator (self, up=True):
-        rootv = self.getVertex(self.getRootID())
+        rootv = self.getVertex(self.get_rootID())
         rootv.level = 0
         queue = [rootv]
         levelToVertices = {}
         while queue:
             v = queue.pop()
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 queue.insert(0, self.getVertex(succID))
             
-            if v.vertexID == self.getRootID():
+            if v.vertexID == self.get_rootID():
                 levelToVertices[0] = [rootv]
             else:
-                newLevel = self.getVertex(v.getParentID()).level + 1
+                newLevel = self.getVertex(v.get_parentID()).level + 1
                 v.level = newLevel
                 if newLevel not in levelToVertices.keys():
                     levelToVertices[newLevel] = []
@@ -104,15 +104,15 @@ class Tree (directed_graphs.DirectedGraph):
                 yield level, levelToVertices[level]
                 
     def __str__ (self):
-        str = ""
+        the_string = ""
         for level, the_vertices in self.levelIterator(False):
-            str += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
+            the_string += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
             for v in the_vertices:
                 if level == 0:
-                    str += "%d (root)\n" % (v.vertexID)
+                    the_string += "%d (root)\n" % (v.vertexID)
                 else:
-                    str += "%d (parent = %d)\n" % (v.vertexID, v.getParentID())
-        return str
+                    the_string += "%d (parent = %d)\n" % (v.vertexID, v.get_parentID())
+        return the_string
         
 class DepthFirstSearch (Tree):
     def __init__(self, directedg, rootID):
@@ -126,7 +126,7 @@ class DepthFirstSearch (Tree):
         self.__vertexID2PostID = {}
         self.__backedges = []
         self.initialise (directedg)
-        self.setRootID(rootID)
+        self.set_rootID(rootID)
         self.doSearch (directedg, rootID)
         
     def initialise (self, directedg):
@@ -142,7 +142,7 @@ class DepthFirstSearch (Tree):
         self.__preorderID += 1
         
         v = directedg.getVertex(vertexID)
-        for succID in v.getSuccessorIDs ():
+        for succID in v.successors.keys ():
             if self.__vertexID2PreID[succID] == 0:
                 self.addEdge(vertexID, succID)
                 self.doSearch(directedg, succID)
@@ -180,108 +180,6 @@ class DepthFirstSearch (Tree):
     def isDFSBackedge (self, sourceID, destinationID):
         return [sourceID, destinationID] in self.__backedges
     
-class CompressedDominatorTree (Tree):
-    def __init__(self, domTree, lca, vertexID, neighbourIDs):
-        debug.debug_message("Building compressed dominator tree for %d using %s" % (vertexID, neighbourIDs), __name__, 20)
-        Tree.__init__(self)
-        self.__build(lca, neighbourIDs)
-        self.rootID = domTree.getImmediateDominator(vertexID)
-        
-    def __build(self, lca, edges):
-        querySet = set(edges)      
-        while len(querySet) > 1:
-            vToLCA  = {}
-            for e1 in querySet:
-                for e2 in querySet:
-                    if e1 != e2:
-                        lcaID = lca.getLCA(e1, e2)
-                        # Update for e1
-                        if e1 in vToLCA:
-                            oldlcaID = vToLCA[e1]
-                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e1:
-                                vToLCA[e1] = lcaID
-                        else:
-                            vToLCA[e1] = lcaID
-                        # Update for e2
-                        if e2 in vToLCA:
-                            oldlcaID = vToLCA[e2]
-                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e2:
-                                vToLCA[e2] = lcaID
-                        else:
-                            vToLCA[e2] = lcaID
-            # Add edge links                
-            for vertexID, parentID in vToLCA.items():
-                if not self.hasVertex(vertexID):
-                    self.addVertex(vertexID)                
-                if not self.hasVertex(parentID):
-                    self.addVertex(parentID)
-                if parentID != vertexID:
-                    debug.debug_message("Adding edge (%d, %d)" % (parentID, vertexID), __name__, 20)
-                    self.addEdge(parentID, vertexID)
-            # Any vertex without a predecessor goes into the query set
-            newQuerySet = []
-            for v in self:
-                if v.numberOfPredecessors() == 0:
-                    newQuerySet.append(v.vertexID)
-            querySet = set(newQuerySet)
-    
-class LeastCommonAncestor ():
-    def __init__(self, tree):
-        self.__tree = tree
-        self.__euler = {}
-        self.__level = {}
-        self.__vertexToLevel = {}
-        self.__representative = {}
-        self.__eulerIndex = 0
-        self.__dummyLevel = 0
-        self.__vertexToLevel[self.__tree.getRootID()] = 0
-        self.__doDFS(self.__tree.getRootID())
-        self.__dummyLevel += 1
-        self.__computeRepresentativeIndices()
-        
-    def __doDFS (self, vertexID):
-        v = self.__tree.getVertex(vertexID)
-        self.__euler[self.__eulerIndex] = vertexID
-        self.__eulerIndex += 1
-        for succID in v.getSuccessorIDs():
-            self.__vertexToLevel[succID] = self.__vertexToLevel[vertexID] + 1
-            if self.__vertexToLevel[succID] > self.__dummyLevel:
-                self.__dummyLevel = self.__vertexToLevel[succID]
-            self.__doDFS(succID)
-            self.__euler[self.__eulerIndex] = vertexID
-            self.__eulerIndex += 1
-    
-    def __computeRepresentativeIndices (self):
-        for index, vertexID in self.__euler.items():
-            self.__representative[vertexID] = index
-            self.__level[index] = self.__vertexToLevel[vertexID]
-            
-    def getLevel (self, vertexID):
-        assert vertexID in self.__vertexToLevel, "Cannot find vertex %d" % vertexID
-        return self.__vertexToLevel[vertexID]
-            
-    def getLCA (self, left, right):    
-        debug.debug_message("Computing lca(%d, %d)" % (left, right), __name__, 20) 
-        repID1      = self.__representative[left]
-        repID2      = self.__representative[right]
-        lowestLevel = self.__dummyLevel
-        startIndex  = None
-        endIndex    = None
-        levelIndex  = 2 * self.__tree.numOfVertices()
-        
-        if repID1 < repID2:
-            startIndex = repID1
-            endIndex   = repID2
-        else:
-            startIndex = repID2
-            endIndex   = repID1
-        for i in range (startIndex, endIndex+1):
-            if self.__level[i] < lowestLevel:
-                lowestLevel = self.__level[i]
-                levelIndex  = i
-        debug.debug_message("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), __name__, 15)
-        return self.__euler[levelIndex]
-    
 class Dominators (Tree):
     def __init__(self, directedg, rootID):
         assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
@@ -294,7 +192,7 @@ class Dominators (Tree):
         
     def getImmediateDominator (self, vertexID):
         assert vertexID != self.rootID, "Vertex %d does not have an immediate dominator as it is the root" % vertexID
-        return self.getVertex(vertexID).getParentID()
+        return self.getVertex(vertexID).get_parentID()
     
     def _initialise (self, rootID):
         for v in self.__directedg:
@@ -304,7 +202,7 @@ class Dominators (Tree):
                 self.__immediateDom[vertexID] = vertexID
             else:
                 self.__immediateDom[vertexID] = vertices.dummyID
-        self.setRootID(rootID)
+        self.set_rootID(rootID)
     
     def _solveDFF (self):
         dfs = DepthFirstSearch(self.__directedg, self.rootID)
@@ -319,11 +217,11 @@ class Dominators (Tree):
                     processedPredID = vertices.dummyID
                     newIdomID       = vertices.dummyID
                     
-                    for predID in v.getPredecessorIDs():
+                    for predID in v.predecessors.keys():
                         if self.__immediateDom[predID] != vertices.dummyID:
                             processedPredID = predID
                             newIdomID       = processedPredID
-                    for predID in v.getPredecessorIDs():
+                    for predID in v.predecessors.keys():
                         if predID != processedPredID:
                             if self.__immediateDom[predID] != vertices.dummyID:
                                 newIdomID = self._intersect(dfs, predID, newIdomID)
@@ -367,7 +265,7 @@ class LoopNests (Tree):
         self._findExits ()
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
-        self.setRootID(self.__headerVertices[rootID])
+        self.set_rootID(self.__headerVertices[rootID])
         
     def _initialise (self):
         for v in self.__directedg:
@@ -379,7 +277,7 @@ class LoopNests (Tree):
         for vertexID in reversed(self.__dfs.getPreorder()):
             v = self.__directedg.getVertex(vertexID)
             worklist = []
-            for predID in v.getPredecessorIDs():
+            for predID in v.predecessors.keys():
                 if self.__dfs.isDFSBackedge(predID, vertexID):
                     if predID == vertexID:
                         debug.debug_message("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), __name__, 3)
@@ -418,7 +316,7 @@ class LoopNests (Tree):
             loopBody.append(listID)
             
             v = self.__directedg.getVertex(listID)
-            for predID in v.getPredecessorIDs():
+            for predID in v.predecessors.keys():
                 if not self.__dfs.isDFSBackedge(predID, listID):
                     repID = self.__parent[predID]
                     if repID not in worklist and repID not in loopBody and repID != headerID:
@@ -442,7 +340,7 @@ class LoopNests (Tree):
             self.__loopExits[headerID] = []
             for vertexID in self.__loopBodies[headerID]:
                 v = self.__directedg.getVertex(vertexID)
-                for succID in v.getSuccessorIDs():
+                for succID in v.successors.keys():
                     if succID not in self.__loopBodies[headerID]:
                         if headerID != vertexID and self.isLoopHeader(vertexID):
                             if succID not in self.__loopBodies[vertexID]:
@@ -544,9 +442,9 @@ class LoopNests (Tree):
                 # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])                        
                 originalv = self.__directedg.getVertex(vertexID)
-                for predID in originalv.getPredecessorIDs():
+                for predID in originalv.predecessors.keys():
                     treePredv    = self.getVertex(predID)
-                    headerPredv  = self.getVertex(treePredv.getParentID())
+                    headerPredv  = self.getVertex(treePredv.get_parentID())
                     predHeaderID = headerPredv.headerID
                     if not self.__dfs.isDFSBackedge(predID, vertexID):
                         if predHeaderID == headerv.headerID:
@@ -562,7 +460,7 @@ class LoopNests (Tree):
         # Add exit vertex to induced subgraph
         noSuccs = []
         for v in flowg:
-            if v.numberOfSuccessors() == 0:
+            if v.number_of_successors() == 0:
                 noSuccs.append(v.vertexID)
         if len(noSuccs) != 1:
             exitID = flowg.getNextVertexID()

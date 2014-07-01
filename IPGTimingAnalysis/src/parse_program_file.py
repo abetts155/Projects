@@ -1,31 +1,31 @@
-import shlex
 import config
 import programs
 import cfgs
 import vertices
 import debug
+import shlex
         
-def setEntryAndExit (icfg):
-    withoutPred = []
-    withoutSucc = []
+def set_entry_and_exit(icfg):
+    without_predecessors = []
+    without_successors   = []
     for bb in icfg:
-        if bb.numberOfSuccessors() == 0:
-            withoutSucc.append(bb.vertexID)
-        elif bb.numberOfSuccessors() == 1:
-            if bb.hasSuccessor(bb.vertexID):
-                withoutSucc.append(bb.vertexID)
-        if bb.numberOfPredecessors() == 0:
-            withoutPred.append(bb.vertexID)
-        elif bb.numberOfPredecessors() == 1:
-            if bb.hasPredecessor(bb.vertexID):
-                withoutPred.append(bb.vertexID)
+        if bb.number_of_successors() == 0:
+            without_successors.append(bb.vertexID)
+        elif bb.number_of_successors() == 1:
+            if bb.has_successor(bb.vertexID):
+                without_successors.append(bb.vertexID)
+        if bb.number_of_predecessors() == 0:
+            without_predecessors.append(bb.vertexID)
+        elif bb.number_of_predecessors() == 1:
+            if bb.has_predecessor(bb.vertexID):
+                without_predecessors.append(bb.vertexID)
     
     entryID = None
-    if len(withoutPred) == 0:
+    if len(without_predecessors) == 0:
         debug.exit_message("CFG '%s' does not an entry point" % icfg.getName())
-    elif len(withoutPred) > 1:
+    elif len(without_predecessors) > 1:
         debugStr = ""
-        for bbID in withoutPred:
+        for bbID in without_predecessors:
             bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
         debug.exit_message("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
@@ -34,14 +34,14 @@ def setEntryAndExit (icfg):
         ipoint  = vertices.Ipoint(entryID, entryID)
         icfg.addIpoint(ipoint)
         icfg.setEntryID(entryID)
-        icfg.addEdge(entryID, withoutPred[0])
+        icfg.addEdge(entryID, without_predecessors[0])
     
     exitID = None
-    if len(withoutSucc) == 0:
+    if len(without_successors) == 0:
         debug.exit_message("CFG '%s' does not an exit point" % icfg.getName())
-    elif len(withoutSucc) > 1:
+    elif len(without_successors) > 1:
         debugStr = ""
-        for bbID in withoutSucc:
+        for bbID in without_successors:
             bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
         debug.exit_message("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
@@ -50,8 +50,7 @@ def setEntryAndExit (icfg):
         ipoint = vertices.Ipoint(exitID, exitID)
         icfg.addIpoint(ipoint)
         icfg.setExitID(exitID)
-        icfg.addEdge(withoutSucc[0], exitID)
-        
+        icfg.addEdge(without_successors[0], exitID)
     assert entryID, "Unable to set entry ID"
     assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
@@ -80,9 +79,9 @@ def parse_file():
                 icfg.addVertex(bb)
             elif line.startswith('ipoint'):
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
-                index = line.index(':')
-                position = line[index+1:].replace(' ', '').strip()
-                bb.setIpoint(position)
+                index    = line.index(':')
+                position = line[index+1:].replace(' ', '').strip().lower()
+                bb.set_ipoint(position)
             elif line.startswith('succ:'):
                 assert bb, "Found edge but current basic block is null"
                 index = line.index(':')
@@ -102,12 +101,12 @@ def parse_file():
                         elif index % 3 == 2:
                             succID = lexemes[index]
                             assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
-                            bb.addSuccessor(int(succID))
+                            bb.add_successor(int(succID))
                         index += 1                        
         assert icfg, "Attempting to analyse CFG but current CFG is null"
-        icfg.addPredecessorEdges()
+        icfg.add_predecessor_edges()
         icfg.addIpointEdges()
-        setEntryAndExit(icfg)
+        set_entry_and_exit(icfg)
         icfg.setEdgeIDs()
         program.addICFG(icfg)
     return program     

@@ -1,29 +1,6 @@
 import directed_graphs
 import vertices
 import debug
-
-# Class to mode instructions inside basic blocks
-class Instruction ():    
-    def __init__ (self, address, instrString):
-        self.address     = address
-        self.instrString = instrString
-        
-    def getAddress (self):
-        return self.address
-    
-    def getString (self):
-        return self.instrString
-    
-    def containsLabel (self, label):
-        import shlex
-        lexemes = shlex.split(self.instrString)
-        if lexemes[0].startswith('l0x'):
-            assert lexemes[0].endswith(':'), "Instruction '%s' does not contain a valid label" % self
-            return label == lexemes[0][:-1]
-        return False
-     
-    def __str__(self):
-        return self.address + " : " + self.instrString
         
 class CFG (directed_graphs.FlowGraph):    
     def __init__ (self):
@@ -42,16 +19,14 @@ class CFG (directed_graphs.FlowGraph):
                 assert isinstance(v, vertices.vertices.Ipoint)
                 copyv = vertices.vertices.Ipoint(v.vertexID, v.getIpointID())
             reverseg.addVertex(copyv)
-    
         # Add edges
         for v in self:
             predID = v.vertexID
             predv  = reverseg.getVertex(predID)
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 succv = reverseg.getVertex(succID)
                 predv.addPredecessor(succID)
                 succv.addSuccessor(predID)
-                
         # Set the entry and exit IDs
         reverseg.setEntryID(self.getExitID())
         reverseg.setExitID(self.getEntryID())
@@ -67,7 +42,7 @@ class CFG (directed_graphs.FlowGraph):
     def setEntryID (self, entryID=None):
         if entryID is None:
             for bb in self.the_vertices.values():
-                if bb.numberOfPredecessors() == 0:
+                if bb.number_of_predecessors() == 0:
                     bbID = bb.vertexID
                     assert self._entryID == vertices.dummyID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
                     self._entryID = bbID
@@ -99,11 +74,11 @@ class CFG (directed_graphs.FlowGraph):
     def setEdgeIDs (self):
         edgeID = 1
         for v in self:
-            for succID in v.getSuccessorIDs():
-                succe = v.getSuccessorEdge(succID)
+            for succID in v.successors.keys():
+                succe = v.get_successor_edge(succID)
                 succe.set_edgeID(edgeID)
                 succv = self.getVertex(succID)
-                prede = succv.getPredecessorEdge(v.vertexID)
+                prede = succv.get_predecessor_edge(v.vertexID)
                 prede.set_edgeID(edgeID)
                 edgeID += 1
         
@@ -147,27 +122,27 @@ class ICFG (CFG):
         bbToPosition = {}
         for v in self:
             if isinstance(v, vertices.BasicBlock):
-                if v.hasIpoint():
+                if v.has_ipoint():
                     vertexID = self.getNextVertexID()
                     ipoint   = vertices.Ipoint(vertexID, vertexID)
                     self.the_vertices[ipoint.vertexID] = ipoint
                     bbToIpoint[v] = ipoint
-                    bbToPosition[v] = v.ipointPosition()
+                    bbToPosition[v] = v.get_ipoint_position()
                     debug.debug_message("Adding Ipoint %d for basic block %d" % (vertexID, v.vertexID), __name__, 10)
         for bb, ipoint in bbToIpoint.items():
-            if bbToPosition[bb] == vertices.BasicBlock.IpointPosition.start:
-                for predID in bb.getPredecessorIDs():
+            if bbToPosition[bb] == vertices.Ipoint.START_POSITION:
+                for predID in bb.predecessors.keys():
                     self.addEdge(predID, ipoint.vertexID)
                     self.removeEdge(predID, bb.vertexID)
                 self.addEdge(ipoint.vertexID, bb.vertexID)
             else:
-                for succID in bb.getSuccessorIDs():
+                for succID in bb.successors.keys():
                     self.addEdge(ipoint.vertexID, succID)
                     self.removeEdge(bb.vertexID, succID)
                 self.addEdge(bb.vertexID, ipoint.vertexID)
                 
     def isPathReconstructible (self):
-        # First create a subgraph without Ipoints
+        # First create a subgraph without ipoints
         subgraph = ICFG()
         for v in self:
             if not self.isIpoint(v.vertexID):
@@ -176,14 +151,14 @@ class ICFG (CFG):
         for v in self:
             if not self.isIpoint(v.vertexID):
                 v = self.getVertex(v.vertexID)
-                for succID in v.getSuccessorIDs():
+                for succID in v.successors.keys():
                     if not self.isIpoint(succID):
                         subgraph.addEdge(v.vertexID, succID)
         # Now do a depth-first search to try and find DFS back edges
         reconstructible = True
         the_vertices = []
         for v in subgraph:
-            if v.numberOfPredecessors() == 0:
+            if v.number_of_predecessors() == 0:
                 the_vertices.append(v.vertexID)            
         for vertexID in the_vertices:
             visited  = {}
@@ -195,7 +170,7 @@ class ICFG (CFG):
                 poppedID          = stack.pop()
                 visited[poppedID] = True
                 poppedv           = subgraph.getVertex(poppedID)
-                for succID in poppedv.getSuccessorIDs():
+                for succID in poppedv.successors.keys():
                     if not visited[succID]:
                         stack.append(succID)
                     else:

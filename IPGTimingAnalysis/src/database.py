@@ -22,17 +22,17 @@ class CreateWCETData:
                 
     def assign_wcets_to_ipg_egdes_using_basic_block_wcets(self, ipg, icfg):
         for v in ipg:
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 key  = (v.vertexID, succID)
                 wcet = 0
-                for bbID in v.getSuccessorEdge(succID).edge_label:
+                for bbID in v.get_successor_edge(succID).edge_label:
                     wcet += self.basic_block_WCETs[bbID]
                 self.ipg_edge_WCETs[key] = wcet
                 debug.debug_message("WCET(%s) = %d" % (key, self.ipg_edge_WCETs[key]), __name__, 1)
                     
     def assign_wcets_to_ipg_egdes_using_random_values(self, ipg):
         for v in ipg:
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 succ_edge = v.getSuccessorEdge(succID)
                 if not succ_edge.isDummyEdge():
                     key                      = (v.vertexID, succID)
