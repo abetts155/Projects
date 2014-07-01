@@ -1,26 +1,20 @@
-dummyVertexID = -1
+import vertices
 
 class DirectedGraph ():        
     def __init__ (self):
-        self.vertices = {}
-        self.__name = None
-    
-    def setName (self, name):
-        self.__name = name
-        
-    def getName (self):
-        return self.__name
+        self.the_vertices = {}
+        self.name = None
     
     def getVertex (self, vertexID):
-        assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
-        return self.vertices[vertexID]
+        assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
+        return self.the_vertices[vertexID]
     
     def removeVertex (self, vertexID):
-        assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
-        del self.vertices[vertexID]
+        assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
+        del self.the_vertices[vertexID]
     
     def hasVertex (self, vertexID):
-        return vertexID in self.vertices
+        return vertexID in self.the_vertices
     
     def addEdge (self, predID, succID):
         predv = self.getVertex(predID)
@@ -36,49 +30,48 @@ class DirectedGraph ():
         
     def addPredecessorEdges (self):
         for v in self:
-            vertexID = v.getVertexID()
             for succID in v.getSuccessorIDs():
                 succv = self.getVertex(succID)
-                if not succv.hasPredecessor(vertexID):
-                    succv.addPredecessor(vertexID)
+                if not succv.hasPredecessor(v.vertexID):
+                    succv.addPredecessor(v.vertexID)
     
     def getNextVertexID (self):
         nextID = 1
-        while nextID in self.vertices.keys():
+        while nextID in self.the_vertices.keys():
             nextID = nextID + 1 
         return nextID
     
     def numOfVertices (self):
-        return len(self.vertices)
+        return len(self.the_vertices)
     
     def numOfEdges(self):
         total = 0
-        for v in self.vertices.values():
+        for v in self.the_vertices.values():
             total += v.numberOfSuccessors()
         return total
     
     def __iter__ (self):
-        return self.vertices.values().__iter__()
+        return self.the_vertices.values().__iter__()
 
 class FlowGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._entryID = dummyVertexID
-        self._exitID = dummyVertexID
+        self._entryID = vertices.dummyID
+        self._exitID = vertices.dummyID
         
     def getEntryID (self):
-        assert self._entryID != dummyVertexID, "Entry to flow graph not found"
+        assert self._entryID != vertices.dummyID, "Entry to flow graph not found"
         return self._entryID
     
     def getExitID (self):
-        assert self._exitID != dummyVertexID, "Exit to flow graph not found"
+        assert self._exitID != vertices.dummyID, "Exit to flow graph not found"
         return self._exitID
     
     def __str__ (self):
         string = "*" * 40 + "\n" + \
         "Entry ID = %s\n" % str(self._entryID) + \
         "Exit ID  = %s\n" % str(self._exitID) + "\n"
-        for v in self.vertices.values():
+        for v in self.the_vertices.values():
             string += v.__str__()
         string += "*" * 40 + "\n"
         return string

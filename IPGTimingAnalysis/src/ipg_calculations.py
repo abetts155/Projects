@@ -1,22 +1,35 @@
-import Trees, Vertices, UDrawGraph, Debug, DirectedGraphs
+import trees
+import directed_graphs
+import udraw
+import vertices
+import edges
+import debug
+import config
 import os
+import subprocess
+import shlex
+import decimal
 
-class BuildMiniIPGs ():    
-    def __init__ (self, basename, icfg, lnt, ipg):
+class MiniIPGs ():    
+    def __init__ (self, icfg, lnt, ipg):
         self.__headerToMiniIPG         = {}
         self.__headerIterationEdgeIDs  = {}
         self.__headerRelativeEdgeIDs   = {}
         self.__headerToReconstructible = {}
-        for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, Vertices.HeaderVertex):
-                    headerID = v.getHeaderID()
-                    Debug.debugMessage("Analysing header %d" % headerID, 1)
+        for level, the_vertices in lnt.levelIterator(True):
+            for v in the_vertices:
+                if isinstance(v, vertices.HeaderVertex):
+                    headerID = v.headerID
+                    debug.debug_message("Analysing header %d" % headerID, 
+                                        __name__, 
+                                        1)
                     forwardICFG = lnt.induceSubgraph(v, self.__headerToReconstructible)
                     forwardICFG.setEdgeIDs()
                     self.__headerToReconstructible[headerID] = forwardICFG.isPathReconstructible()
-                    Debug.debugMessage("Region in %d is %spath reconstructible" % (headerID, "" if self.__headerToReconstructible[headerID] else "NOT "), 1)
-                    UDrawGraph.makeUdrawFile (forwardICFG, "%s.%s.Header%d.%s" % (basename, icfg.getName(), headerID, "icfg"))
+                    debug.debug_message("Region in %d is %spath reconstructible" % (headerID, "" if self.__headerToReconstructible[headerID] else "NOT "), 
+                                        __name__, 
+                                        1)
+                    udraw.make_file(forwardICFG, "%s.Header%d.%s" % (icfg.name, headerID, "icfg"))
                     miniIPG = MiniIPG(headerID, self.__headerToMiniIPG, forwardICFG, lnt, ipg)
                     self.__headerToMiniIPG[headerID] = miniIPG
             
@@ -28,9 +41,9 @@ class BuildMiniIPGs ():
         assert headerID in self.__headerToMiniIPG, "Unable to find the mini IPG of the loop with header %d" % (headerID)
         return self.__headerToMiniIPG[headerID]
     
-class MiniIPG (DirectedGraphs.FlowGraph):    
+class MiniIPG (directed_graphs.FlowGraph):    
     def __init__ (self, headerID, headerToMiniIPG, icfg, lnt, ipg):
-        DirectedGraphs.FlowGraph.__init__(self)
+        directed_graphs.FlowGraph.__init__(self)
         self.__headerID                  = headerID
         self.__headerToMiniIPG           = headerToMiniIPG
         self.__icfg                      = icfg
@@ -51,56 +64,59 @@ class MiniIPG (DirectedGraphs.FlowGraph):
             
     def __addIpoints (self):    
         for v in self.__icfg:
-            vertexID = v.getVertexID()
-            self.__vertexToReachable[vertexID] = set([])  
-            if vertexID == self.__icfg.getEntryID() and not self.__ipg.hasVertex(vertexID):
-                self.__vertexToReachable[vertexID].add(vertexID)          
+            self.__vertexToReachable[v.vertexID] = set([])  
+            if v.vertexID == self.__icfg.getEntryID() and not self.__ipg.hasVertex(v.vertexID):
+                self.__vertexToReachable[v.vertexID].add(v.vertexID)          
             # Ipoint actions
-            if self.__ipg.hasVertex(vertexID):
-                ipointv = Vertices.Ipoint(vertexID, v.getIpointID())
-                self.vertices[vertexID] = ipointv
+            if self.__ipg.hasVertex(v.vertexID):
+                ipointv = vertices.Ipoint(v.vertexID, v.ipointID)
+                self.the_vertices[v.vertexID] = ipointv
                 
         headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
         for succID in headerv.getSuccessorIDs():
             succv = self.__lnt.getVertex(succID)
-            if isinstance(succv, Trees.HeaderVertex):
-                innerheaderID                               = succv.getHeaderID()
+            if isinstance(succv, vertices.HeaderVertex):
+                innerheaderID                               = succv.headerID
                 self.__innerLoopEntryEdgeIDs[innerheaderID] = set([])
                 self.__innerLoopExitEdgeIDs[innerheaderID]  = set([])
                 innerMiniIPG                                = self.__headerToMiniIPG[innerheaderID]
                 for vertexID in innerMiniIPG.getIterationEdgeDestinations():
                     if not self.hasVertex(vertexID):
                         v       = self.__ipg.getVertex(vertexID)
-                        ipointv = Vertices.Ipoint(vertexID, v.getIpointID())
-                        self.vertices[vertexID] = ipointv
+                        ipointv = vertices.Ipoint(vertexID, v.ipointID)
+                        self.the_vertices[vertexID] = ipointv
                         self.__innerLoopIpoints[vertexID] = innerheaderID
                 for exitID in self.__lnt.getLoopExits(innerheaderID):
                     if self.__ipg.hasVertex(exitID):
                         if not self.hasVertex(exitID):
                             v       = self.__ipg.getVertex(exitID)
-                            ipointv = Vertices.Ipoint(exitID, v.getIpointID())
-                            self.vertices[exitID] = ipointv
+                            ipointv = vertices.Ipoint(exitID, v.ipointID)
+                            self.the_vertices[exitID] = ipointv
                             self.__innerLoopIpoints[exitID] = innerheaderID
                     else:
                         for keyID in innerMiniIPG.getReachableSet(exitID):
                             if not self.hasVertex(keyID) and self.__ipg.hasVertex(keyID):
                                 v       = self.__ipg.getVertex(keyID)
-                                ipointv = Vertices.Ipoint(keyID, v.getIpointID())
-                                self.vertices[keyID] = ipointv
+                                ipointv = vertices.Ipoint(keyID, v.ipointID)
+                                self.the_vertices[keyID] = ipointv
                                 self.__innerLoopIpoints[keyID] = innerheaderID
     
     def __outputEntryAndExitEdges (self):   
         headerv = self.__lnt.getInternalHeaderVertex(self.__lnt.getVertex(self.__headerID).getParentID())
         for succID in headerv.getSuccessorIDs():
             succv = self.__lnt.getVertex(succID)
-            if isinstance(succv, Trees.HeaderVertex):
-                innerheaderID = succv.getHeaderID() 
-                Debug.debugMessage("Loop-entry edges of %d = %s" % (innerheaderID, self.__innerLoopEntryEdgeIDs[innerheaderID]), 1)
-                Debug.debugMessage("Loop-exit edges of %d = %s" % (innerheaderID, self.__innerLoopExitEdgeIDs[innerheaderID]), 1)
+            if isinstance(succv, vertices.HeaderVertex):
+                innerheaderID = succv.headerID 
+                debug.debug_message("Loop-entry edges of %d = %s" % (innerheaderID, self.__innerLoopEntryEdgeIDs[innerheaderID]), 
+                                    __name__,
+                                    1)
+                debug.debug_message("Loop-exit edges of %d = %s" % (innerheaderID, self.__innerLoopExitEdgeIDs[innerheaderID]), 
+                                    __name__,
+                                    1)
                 
     def __addAcyclicEdges (self):
         # Compute a topological sort on the ICFG
-        dfs = Trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
+        dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
         # If the header of the loop is an Ipoint, that is the only destination of an iteration edge
         if self.__ipg.hasVertex(self.__icfg.getEntryID()):
             self.__iterationEdgeDestinations.add(self.__icfg.getEntryID())
@@ -109,7 +125,7 @@ class MiniIPG (DirectedGraphs.FlowGraph):
         while changed:
             changed = False
             for vertexID in reversed(dfs.getPostorder()):
-                Debug.debugMessage("At vertex %d" % vertexID, 1)
+                debug.debug_message("At vertex %d" % vertexID, __name__, 1)
                 v = self.__icfg.getVertex(vertexID)                
                 if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.getEntryID():
                     self.__addLoopEntryEdges(v)
@@ -139,9 +155,8 @@ class MiniIPG (DirectedGraphs.FlowGraph):
                                 self.__iterationEdgeSources.add(keyID)
                             
     def __addLoopEntryEdges (self, v):
-        innerheaderID = v.getVertexID()
-        Debug.debugMessage("Inner header %d detected" % innerheaderID, 1)
-        innerMiniIPG = self.__headerToMiniIPG[innerheaderID]        
+        debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
+        innerMiniIPG = self.__headerToMiniIPG[v.vertexID]        
         for predID in v.getPredecessorIDs():
             if self.__ipg.hasVertex(predID):
                 innerMiniIPG.addEntryEdgeSource(predID)
@@ -161,24 +176,23 @@ class MiniIPG (DirectedGraphs.FlowGraph):
                             self.__iterationEdgeDestinations.add(succID)
         
     def __addIpointsToAbstractVertex (self, v):
-        innerheaderID = v.getVertexID()
-        innerMiniIPG  = self.__headerToMiniIPG[innerheaderID]       
-        for exitID in self.__lnt.getLoopExits(innerheaderID):
+        innerMiniIPG = self.__headerToMiniIPG[v.vertexID]       
+        for exitID in self.__lnt.getLoopExits(v.vertexID):
             if self.__ipg.hasVertex(exitID):
-                self.__vertexToReachable[innerheaderID].add(exitID)
+                self.__vertexToReachable[v.vertexID].add(exitID)
             else:
                 for keyID in innerMiniIPG.getReachableSet(exitID):
                     if self.__ipg.hasVertex(keyID):
-                        self.__vertexToReachable[innerheaderID].add(keyID)
-        if not self.__icfg.isIpoint(innerheaderID):
+                        self.__vertexToReachable[v.vertexID].add(keyID)
+        if not self.__icfg.isIpoint(v.vertexID):
             for predID in v.getPredecessorIDs():
                 if not self.__ipg.hasVertex(predID):
                     if self.__headerID in self.__vertexToReachable[predID]:
-                        self.__vertexToReachable[innerheaderID].add(self.__headerID)
+                        self.__vertexToReachable[v.vertexID].add(self.__headerID)
                             
     def __addIterationEdges (self):
-        Debug.debugMessage("Iteration edge SOURCEs      = %s" % self.__iterationEdgeSources, 1)
-        Debug.debugMessage("Iteration edge DESTINATIONS = %s" % self.__iterationEdgeDestinations, 1)
+        debug.debug_message("Iteration edge SOURCEs      = %s" % self.__iterationEdgeSources, __name__, 1)
+        debug.debug_message("Iteration edge DESTINATIONS = %s" % self.__iterationEdgeDestinations, __name__, 1)
         for predID in self.__iterationEdgeSources:
             for succID in self.__iterationEdgeDestinations:
                 self.__addEdge(predID, succID)
@@ -186,28 +200,27 @@ class MiniIPG (DirectedGraphs.FlowGraph):
                 originaledge  = originalpredv.getSuccessorEdge(succID)
                 edgeID        = originaledge.getEdgeID()
                 self.__iterationEdgeIDs.add(edgeID)
-        Debug.debugMessage("Iteration edges for %d is %s" % (self.__headerID, self.__iterationEdgeIDs), 1)
+        debug.debug_message("Iteration edges for %d is %s" % (self.__headerID, self.__iterationEdgeIDs), __name__, 1)
                             
     def __addEdge (self, predID, succID):
-        from Edges import IPGEdge
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
         if not predv.hasSuccessor(succID):
-            Debug.debugMessage("Adding edge (%d, %d)" % (predID, succID), 1)
+            debug.debug_message("Adding edge (%d, %d)" % (predID, succID), __name__, 1)
             assert not succv.hasPredecessor(predID), "Vertex %d has predecessor %d although vertex %d does not have successor %d" % (succID, predID, predID, succID)
             originalpredv = self.__ipg.getVertex(predID)
             originaledge  = originalpredv.getSuccessorEdge(succID)
-            succe = IPGEdge(succID, originaledge.getEdgeID())
-            prede = IPGEdge(predID, originaledge.getEdgeID())
+            succe = edges.IPGEdge(succID, originaledge.getEdgeID())
+            prede = edges.IPGEdge(predID, originaledge.getEdgeID())
             predv.addSuccessorEdge(succe)
             succv.addPredecessorEdge(prede)
             if predID in self.__innerLoopIpoints:
                 innerheaderID = self.__innerLoopIpoints[predID]
-                Debug.debugMessage("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, innerheaderID), 1)
+                debug.debug_message("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
                 self.__innerLoopExitEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
             elif succID in self.__innerLoopIpoints:
                 innerheaderID = self.__innerLoopIpoints[succID]
-                Debug.debugMessage("(%d, %d) is a loop-entry edge for loop with header %d" % (predID, succID, innerheaderID), 1)
+                debug.debug_message("(%d, %d) is a loop-entry edge for loop with header %d" % (predID, succID, innerheaderID), __name__, 1)
                 self.__innerLoopEntryEdgeIDs[innerheaderID].add(originaledge.getEdgeID())
             
     def getReachableSet (self, vertexID):
@@ -274,14 +287,12 @@ class ILP ():
         self._variableToExecutionCount = {}
         
     def _solve(self, filename, variablePrefix):
-        from subprocess import Popen, PIPE
-        import shlex, decimal
-        Debug.debugMessage("Solving ILP", 10)
+        debug.debug_message("Solving ILP", __name__, 10)
         command = "lp_solve %s" % filename 
-        proc = Popen(command, shell=True, executable="/bin/bash", stdout=PIPE, stderr=PIPE)
+        proc = subprocess.Popen(command, shell=True, executable="/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         returnCode = proc.wait()
         if returnCode != 0:
-            Debug.exitMessage("Running '%s' failed" % command)
+            debug.exitMessage("Running '%s' failed" % command)
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
                 lexemes     = shlex.split(line)
@@ -296,33 +307,37 @@ class ILP ():
                     self._variableToExecutionCount[variable] = count
         
 class CreateIPGILP (ILP):
-    def __init__ (self, basepath, basename, data, ipg, lnt, miniIPGs):
+    def __init__ (self, data, ipg, lnt, miniIPGs):
         ILP.__init__(self)
-        filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, ipg.getName(), "ipg", LpSolve.fileSuffix)
+        filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, ipg.name, "ipg", LpSolve.fileSuffix)
         with open(filename, 'w') as self.__outfile:
             self.__createObjectiveFunction(data, ipg)
             self.__createStructuralConstraints(ipg)
             self.__createRelativeCapacityConstraints(data, lnt, miniIPGs)
             self.__createIntegerConstraints(ipg)
         self._solve(filename, LpSolve.edgePrefix)
-        Debug.debugMessage("WCET = %d" % self._wcet, 1)
+        debug.debug_message("WCET = %d" % self._wcet, __name__, 1)
         self.__printExecutionCounts(ipg)
         
     def __printExecutionCounts (self, ipg):
         for edgeID, count in self._variableToExecutionCount.iteritems():
-                Debug.debugMessage("Execution count of variable %s = %d" % (LpSolve.getEdgeVariable(edgeID), count), 10)
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getEdgeVariable(edgeID), count), 
+                                    __name__, 
+                                    10)
         self.__basicBlockToExecutionCount = {}
         for v in ipg:
             for succID in v.getSuccessorIDs():                
                 succe  = v.getSuccessorEdge(succID)
                 edgeID = succe.getEdgeID() 
                 if self._variableToExecutionCount[edgeID]:
-                    for bbID in succe.getEdgeLabel():
+                    for bbID in succe.edge_label:
                         if bbID not in self.__basicBlockToExecutionCount:
                             self.__basicBlockToExecutionCount[bbID] = 0
                         self.__basicBlockToExecutionCount[bbID] += self._variableToExecutionCount[edgeID]
         for bbID, count in self.__basicBlockToExecutionCount.iteritems():
-                Debug.debugMessage("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 10)
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 
+                                    __name__, 
+                                    10)
 
     def __createObjectiveFunction (self, data, ipg):
         self.__outfile.write(LpSolve.max_)
@@ -331,7 +346,7 @@ class CreateIPGILP (ILP):
             for succID in v.getSuccessorIDs():                
                 succe          = v.getSuccessorEdge(succID)
                 edgeID         = succe.getEdgeID()
-                transitionWCET = data.getTransitionWCET(v.getVertexID(), succID)
+                transitionWCET = data.getTransitionWCET(v.vertexID, succID)
                 self.__outfile.write("%d %s" % (transitionWCET, LpSolve.getEdgeVariable(edgeID)))
                 if counter > 1:
                     self.__outfile.write(LpSolve.plus)
@@ -341,10 +356,9 @@ class CreateIPGILP (ILP):
 
     def __createStructuralConstraints (self, ipg):
         for v in ipg:
-            vertexID = v.getVertexID()
-            self.__outfile.write(LpSolve.getComment("Vertex %d" % vertexID))
+            self.__outfile.write(LpSolve.getComment("Vertex %d" % v.vertexID))
             # Analyse the predecessors
-            self.__outfile.write(LpSolve.getVertexVariable(vertexID))
+            self.__outfile.write(LpSolve.getVertexVariable(v.vertexID))
             self.__outfile.write(LpSolve.equals)
             counter = v.numberOfPredecessors()
             for predID in v.getPredecessorIDs():                    
@@ -379,14 +393,14 @@ class CreateIPGILP (ILP):
             self.__outfile.write(LpSolve.getNewLine(2))
             
     def __createRelativeCapacityConstraints (self, data, lnt, miniIPGs):
-        for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, Vertices.HeaderVertex):
+        for level, the_vertices in lnt.levelIterator(True):
+            for v in the_vertices:
+                if isinstance(v, vertices.HeaderVertex):
                     # Get iteration edges for this header
                     if level > 0:
                         self.__createInnerLoopRelativeCapacityConstraint(data, lnt, miniIPGs, v)
                     else:
-                        headerID = v.getHeaderID()
+                        headerID = v.headerID
                         self.__outfile.write(LpSolve.getComment("Relative capacity constraint for entry vertex %d" % (headerID)))
                         iterationEdgeIDs = miniIPGs.getMiniIPG(headerID).getIterationEdgeIDs()
                         assert len(iterationEdgeIDs) == 1, "There should be exactly one iteration edge for the entry vertex %d. There are %d." % (headerID, len(iterationEdgeIDs))
@@ -398,8 +412,8 @@ class CreateIPGILP (ILP):
                         self.__outfile.write(LpSolve.getNewLine(2))
                         
     def __createInnerLoopRelativeCapacityConstraint (self, data, lnt, miniIPGs, v):
-        Debug.debugMessage("Analysing header %d" % v.getHeaderID(), 1)
-        headerID       = v.getHeaderID()
+        debug.debug_message("Analysing header %d" % v.headerID, __name__, 1)
+        headerID       = v.headerID
         miniIPG        = miniIPGs.getMiniIPG(headerID)
         entryIpoints   = set([])
         ieDestinations = miniIPG.getIterationEdgeDestinations()
@@ -411,9 +425,9 @@ class CreateIPGILP (ILP):
                     decrementBound[succID] = False
                 else:
                     decrementBound[succID] = True
-        for ancestorv in lnt.getAllProperAncestors(v.getVertexID()):
+        for ancestorv in lnt.getAllProperAncestors(v.vertexID):
             # Get the loop bound w.r.t. the ancestor loop
-            ancestorHeaderID = ancestorv.getHeaderID()
+            ancestorHeaderID = ancestorv.headerID
             self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
             bound = data.getLoopBound(headerID, ancestorHeaderID)
             # Write out the relative edges
@@ -424,7 +438,7 @@ class CreateIPGILP (ILP):
                 if succID in ieOuterDestinations:
                     outerIpoints.add(succID)
             if len(outerIpoints) == 0:
-                Debug.debugMessage("Loop with header %d does not have Ipoints at its nesting level which are at entry Ipoints" % (ancestorHeaderID), 1)
+                debug.debug_message("Loop with header %d does not have Ipoints at its nesting level which are at entry Ipoints" % (ancestorHeaderID), __name__, 1)
                 ieOuterSources = outerMiniIPG.getIterationEdgeSources()
                 for succID in ancestorv.getSuccessorIDs():
                     if succID in ieOuterSources:
@@ -467,9 +481,9 @@ class CreateIPGILP (ILP):
         self.__outfile.write(LpSolve.getNewLine())
                 
 class CreateICFGILP (ILP):
-    def __init__ (self, basepath, basename, data, icfg, lnt):
+    def __init__ (self, data, icfg, lnt):
         ILP.__init__(self)
-        filename = "%s.%s.%s.%s" % (basepath + os.sep + basename, icfg.getName(), "icfg", LpSolve.fileSuffix)
+        filename = "%s.%s.%s.%s" % (config.Arguments.basepath + os.sep + config.Arguments.basename, icfg.name, "icfg", LpSolve.fileSuffix)
         self.__vertexIDToExecutionCount = {}
         with open(filename, 'w') as self.__outfile:
             self.__createObjectiveFunction(data, icfg)
@@ -477,21 +491,22 @@ class CreateICFGILP (ILP):
             self.__createRelativeCapacityConstraints(data, lnt, icfg)
             self.__createIntegerConstraints(icfg)
         self._solve(filename, LpSolve.vertexPrefix)
-        Debug.debugMessage("WCET = %d" % self._wcet, 1)             
+        debug.debug_message("WCET = %d" % self._wcet, __name__, 1)
         self.__printExecutionCounts(icfg)
 
     def __printExecutionCounts (self, icfg):
         for bbID, count in self._variableToExecutionCount.iteritems():
             if not icfg.isIpoint(bbID):
-                Debug.debugMessage("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 10)
+                debug.debug_message("Execution count of variable %s = %d" % (LpSolve.getVertexVariable(bbID), count), 
+                                    __name__, 
+                                    10)
 
     def __createObjectiveFunction (self, data, icfg):
         self.__outfile.write(LpSolve.max_)        
         counter = icfg.numOfVertices()
-        for v in icfg:
-            vertexID   = v.getVertexID()        
-            vertexWCET = data.getBasicBlockWCET(vertexID)
-            self.__outfile.write("%d %s" % (vertexWCET, LpSolve.getVertexVariable(vertexID)))
+        for v in icfg:        
+            vertexWCET = data.getBasicBlockWCET(v.vertexID)
+            self.__outfile.write("%d %s" % (vertexWCET, LpSolve.getVertexVariable(v.vertexID)))
             if counter > 1:
                 self.__outfile.write(LpSolve.plus)
             counter -= 1
@@ -500,10 +515,9 @@ class CreateICFGILP (ILP):
             
     def __createStructuralConstraints (self, icfg):
         for v in icfg:
-            vertexID = v.getVertexID()
-            self.__outfile.write(LpSolve.getComment("Vertex %d" % vertexID))
+            self.__outfile.write(LpSolve.getComment("Vertex %d" % v.vertexID))
             # Flow into vertex w.r.t. predecessors
-            self.__outfile.write(LpSolve.getVertexVariable(vertexID))
+            self.__outfile.write(LpSolve.getVertexVariable(v.vertexID))
             self.__outfile.write(LpSolve.equals)
             counter = v.numberOfPredecessors()
             for predID in v.getPredecessorIDs():                    
@@ -537,14 +551,14 @@ class CreateICFGILP (ILP):
             self.__outfile.write(LpSolve.getNewLine(2))       
             
     def __createRelativeCapacityConstraints (self, data, lnt, icfg):
-        for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, Vertices.HeaderVertex):
+        for level, the_vertices in lnt.levelIterator(True):
+            for v in the_vertices:
+                if isinstance(v, vertices.HeaderVertex):
                     # Get iteration edges for this header
                     if level > 0:
                         self.__createInnerLoopRelativeCapacityConstraint(data, icfg, lnt, v)
                     else:
-                        headerID = v.getHeaderID()
+                        headerID = v.headerID
                         self.__outfile.write(LpSolve.getComment("Relative capacity constraint for entry vertex %d" % (headerID)))
                         self.__outfile.write(LpSolve.getVertexVariable(icfg.getEntryID()))
                         self.__outfile.write(LpSolve.equals)
@@ -553,13 +567,13 @@ class CreateICFGILP (ILP):
                         self.__outfile.write(LpSolve.getNewLine(2))
                         
     def __createInnerLoopRelativeCapacityConstraint (self, data, icfg, lnt, v):
-        Debug.debugMessage("Analysing header %d" % v.getHeaderID(), 1)
-        headerID         = v.getHeaderID()
+        debug.debug_message("Analysing header %d" % v.headerID, __name__, 1)
+        headerID         = v.headerID
         parentv          = lnt.getVertex(v.getParentID())
         relativeHeaderID = headerID
-        for ancestorv in lnt.getAllProperAncestors(v.getVertexID()):
+        for ancestorv in lnt.getAllProperAncestors(v.vertexID):
             # Get the loop bound w.r.t. the ancestor loop
-            ancestorHeaderID = ancestorv.getHeaderID()
+            ancestorHeaderID = ancestorv.headerID
             bound = data.getLoopBound(headerID, ancestorHeaderID)
             self.__outfile.write(LpSolve.getComment("Relative capacity constraint for header %d w.r.t to header %d" % (headerID, ancestorHeaderID)))
             self.__outfile.write(LpSolve.getComment("Bound = %d" % bound))
@@ -574,7 +588,7 @@ class CreateICFGILP (ILP):
                     self.__outfile.write(LpSolve.plus)
                 counter -= 1
             parentv          = lnt.getVertex(v.getParentID())
-            relativeHeaderID = parentv.getHeaderID()
+            relativeHeaderID = parentv.headerID
             self.__outfile.write(LpSolve.semiColon)
             self.__outfile.write(LpSolve.getNewLine(2))
             
@@ -592,8 +606,7 @@ class CreateICFGILP (ILP):
         self.__outfile.write(LpSolve.int_)
         counter = icfg.numOfVertices() + icfg.numOfEdges()
         for v in icfg:
-            vertexID = v.getVertexID()
-            self.__outfile.write(" %s" % LpSolve.getVertexVariable(vertexID))
+            self.__outfile.write(" %s" % LpSolve.getVertexVariable(v.vertexID))
             if counter > 1:
                 self.__outfile.write(LpSolve.comma)
             counter -= 1

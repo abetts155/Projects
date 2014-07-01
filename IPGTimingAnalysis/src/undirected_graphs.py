@@ -1,4 +1,4 @@
-from Vertices import UndirectedVertex
+import vertices
 
 class UndirectedGraph ():        
     def __init__ (self):
@@ -6,7 +6,7 @@ class UndirectedGraph ():
         
     def addVertex (self, vertexID):
         assert vertexID not in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
-        v = UndirectedVertex(vertexID)
+        v = vertices.UndirectedVertex(vertexID)
         self.vertices[vertexID] = v
         
     def getVertex (self, vertexID):

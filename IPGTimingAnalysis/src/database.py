@@ -1,4 +1,5 @@
-import Debug, Vertices
+import debug
+import vertices
 import random
 
 class CreateWCETData:    
@@ -14,24 +15,27 @@ class CreateWCETData:
         self.__assignLoopBounds(lnt)
                             
     def __assignWCETsToBasicBlocks (self, icfg):
-        Debug.debugMessage("Assigning WCETs to basic blocks", 1)
+        debug.debug_message("Assigning WCETs to basic blocks", __name__, 1)
         for v in icfg:
-            vertexID = v.getVertexID()
-            if not icfg.isIpoint(vertexID):
-                self.__bbToWCET[vertexID] = random.randint(1, 10)
-                Debug.debugMessage("WCET(%d) = %d" % (vertexID, self.__bbToWCET[vertexID]), 1)
+            if not icfg.isIpoint(v.vertexID):
+                self.__bbToWCET[v.vertexID] = random.randint(1, 10)
+                debug.debug_message("WCET(%d) = %d" % (v.vertexID, self.__bbToWCET[v.vertexID]), 
+                                    __name__,
+                                    1)
                 
     def __assignWCETsToIPGTransitions (self, ipg, icfg=None):
-        Debug.debugMessage("Assigning WCETs to IPG transitions", 1)
+        debug.debug_message("Assigning WCETs to IPG transitions", __name__, 1)
         if icfg:
             for v in ipg:
                 for succID in v.getSuccessorIDs():
                     transitionWCET = 0
                     succe          = v.getSuccessorEdge(succID)
-                    for bbID in succe.getEdgeLabel():
+                    for bbID in succe.edge_label:
                         transitionWCET += self.__bbToWCET[bbID]
-                    self.__transitionWCET[(v.getVertexID(), succID)] = transitionWCET
-                    Debug.debugMessage("WCET(%d, %d) = %d \t[Basic blocks = %s]" % (v.getVertexID(), succID, transitionWCET, succe.getEdgeLabel()), 1)
+                    self.__transitionWCET[(v.vertexID, succID)] = transitionWCET
+                    debug.debug_message("WCET(%d, %d) = %d \t[Basic blocks = %s]" % (v.vertexID, succID, transitionWCET, succe.edge_label), 
+                                        __name__,
+                                        1)
         else:
             for v in ipg:
                 for succID in v.getSuccessorIDs():
@@ -39,35 +43,39 @@ class CreateWCETData:
                     if not succe.isDummyEdge():
                         transitionWCET = random.randint(1, 10)
                         self.__transitionWCET[(v.getVertexID(), succID)] = transitionWCET
-                        Debug.debugMessage("WCET(%d, %d) = %d" % (v.getVertexID(), succID, transitionWCET), 1)
+                        debug.debug_message("WCET(%d, %d) = %d" % (v.getVertexID(), succID, transitionWCET), 
+                                            __name__,
+                                            1)
     
     def __assignLoopBounds (self, lnt):
-        Debug.debugMessage("Assigning bounds to loop", 1)
-        for level, vertices in lnt.levelIterator(True):
-            for v in vertices:
-                if isinstance(v, Vertices.HeaderVertex):
+        debug.debug_message("Assigning bounds to loop", 1)
+        for level, the_vertices in lnt.levelIterator(True):
+            for v in the_vertices:
+                if isinstance(v, vertices.HeaderVertex):
                     if level > 0:
                         bound                          = 0
-                        headerID                       = v.getHeaderID()
+                        headerID                       = v.headerID
                         self.__headerToBound[headerID] = {}
-                        for ancestorv in lnt.getAllProperAncestors(v.getVertexID()):
-                            ancestorHeaderID = ancestorv.getHeaderID()
+                        for ancestorv in lnt.getAllProperAncestors(v.vertexID):
+                            ancestorHeaderID = ancestorv.headerID
                             bound            += random.randint(3, 10)
                             self.__headerToBound[headerID][ancestorHeaderID] = bound
-                            Debug.debugMessage("Bound(%d w.r.t %d) = %d" % (headerID, ancestorHeaderID, bound), 1)
+                            debug.debug_message("Bound(%d w.r.t %d) = %d" % (headerID, ancestorHeaderID, bound), 
+                                                __name__, 
+                                                1)
     
     def getBasicBlockWCET (self, vertexID):
         if vertexID in self.__bbToWCET:
             return self.__bbToWCET[vertexID]
         else:
-            Debug.warningMessage("Returning WCET of 0 for vertex %d" % vertexID)
+            debug.warning_message("Returning WCET of 0 for vertex %d" % vertexID)
             return 0
     
     def getTransitionWCET (self, predID, succID):
         if (predID, succID) in self.__transitionWCET:
             return self.__transitionWCET[(predID, succID)]
         else:
-            Debug.warningMessage("Returning WCET of 0 for edge (%d, %d)" % (predID, succID))
+            debug.warning_message("Returning WCET of 0 for edge (%d, %d)" % (predID, succID))
             return 0
         
     def getLoopBound (self, headerID, ancestorID):

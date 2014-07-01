@@ -1,21 +1,21 @@
-from DirectedGraphs import FlowGraph
-from Trees import DepthFirstSearch
-from Vertices import Ipoint
-from Edges import IPGEdge
-import Debug
+import directed_graphs
+import trees
+import vertices
+import edges
+import debug
 
-edgeID = 1
+edge_ID = 1
 
-class IPG (FlowGraph):
+class IPG (directed_graphs.FlowGraph):
     def __init__(self, icfg):
-        FlowGraph.__init__(self)
+        directed_graphs.FlowGraph.__init__(self)
+        self.name                = icfg.name
         self.__icfg              = icfg
         self.__ipointIDToVertex  = {}
         self.__vertexToReachable = {}
         self.__initialise()
         self.__addEdges()
         self.__setEntryAndExit()
-        self.setName(icfg.getName())
         
     def getIpointVertex (self, ipointID):
         assert ipointID in self.__ipointIDToVertex, "Unable to find Ipoint with trace ID 0x%04X" % ipointID
@@ -23,16 +23,15 @@ class IPG (FlowGraph):
     
     def __initialise (self):
         for v in self.__icfg:
-            vertexID = v.getVertexID()
-            self.__vertexToReachable[vertexID] = {}
-            if self.__icfg.isIpoint(vertexID):
-                ipointv = Ipoint(vertexID, v.getIpointID())
-                self.vertices[vertexID] = ipointv
-                self.__ipointIDToVertex[v.getIpointID()] = ipointv 
+            self.__vertexToReachable[v.vertexID] = {}
+            if self.__icfg.isIpoint(v.vertexID):
+                ipointv = vertices.Ipoint(v.vertexID, v.ipointID)
+                self.the_vertices[v.vertexID] = ipointv
+                self.__ipointIDToVertex[v.ipointID] = ipointv 
                 
     def __addEdges (self):
         changed = True
-        dfs     = DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
+        dfs     = trees.DepthFirstSearch(self.__icfg, self.__icfg.getEntryID())
         # Do data-flow analysis
         while changed:
             changed = False
@@ -62,26 +61,26 @@ class IPG (FlowGraph):
         # Now add the edges 
         for vertexID, ipointToVertexSet in self.__vertexToReachable.iteritems():
             if self.__icfg.isIpoint(vertexID):
-                for predID, vertices in ipointToVertexSet.iteritems():
-                    self.__addEdge(predID, vertexID, vertices)
+                for predID, vertex_set in ipointToVertexSet.iteritems():
+                    self.__addEdge(predID, vertexID, vertex_set)
     
-    def __addEdge (self, predID, succID, vertices):
-        global edgeID
-        Debug.debugMessage("Adding IPG Edge %s => %s" % (predID, succID), 10)
+    def __addEdge (self, predID, succID, vertex_set):
+        global edge_ID
+        debug.debug_message("Adding IPG Edge %s => %s" % (predID, succID), __name__, 10)
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        predv.addIpointSuccessor (succv.getIpointID(), succID)
-        prede = IPGEdge(predID, edgeID)
-        succe = IPGEdge(succID, edgeID)
-        prede.addToEdgeLabel(vertices)
-        succe.addToEdgeLabel(vertices)
+        predv.addIpointSuccessor (succv.ipointID, succID)
+        prede = edges.IPGEdge(predID, edge_ID)
+        succe = edges.IPGEdge(succID, edge_ID)
+        prede.edge_label.update(vertex_set)
+        succe.edge_label.update(vertex_set)
         predv.addSuccessorEdge(succe)
         succv.addPredecessorEdge(prede) 
-        edgeID += 1
+        edge_ID += 1
                     
     def __setEntryAndExit (self):
-        entryv = self.vertices[self.__icfg.getEntryID()]
-        self._entryID = entryv.getVertexID()
+        entryv = self.the_vertices[self.__icfg.getEntryID()]
+        self._entryID = entryv.vertexID
         assert entryv.numberOfPredecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self._entryID
         for predID in entryv.getPredecessorIDs():
             self._exitID = predID

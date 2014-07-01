@@ -1,49 +1,52 @@
 import shlex
-import CFGs, Debug, Vertices
+import config
+import cfgs
+import vertices
+import debug
         
 def setEntryAndExit (icfg):
     withoutPred = []
     withoutSucc = []
     for bb in icfg:
         if bb.numberOfSuccessors() == 0:
-            withoutSucc.append(bb.getVertexID())
+            withoutSucc.append(bb.vertexID)
         elif bb.numberOfSuccessors() == 1:
-            if bb.hasSuccessor(bb.getVertexID()):
-                withoutSucc.append(bb.getVertexID())
+            if bb.hasSuccessor(bb.vertexID):
+                withoutSucc.append(bb.vertexID)
         if bb.numberOfPredecessors() == 0:
-            withoutPred.append(bb.getVertexID())
+            withoutPred.append(bb.vertexID)
         elif bb.numberOfPredecessors() == 1:
-            if bb.hasPredecessor(bb.getVertexID()):
-                withoutPred.append(bb.getVertexID())
+            if bb.hasPredecessor(bb.vertexID):
+                withoutPred.append(bb.vertexID)
     
     entryID = None
     if len(withoutPred) == 0:
-        Debug.exitMessage("CFG '%s' does not an entry point" % icfg.getName())
+        debug.exit_message("CFG '%s' does not an entry point" % icfg.getName())
     elif len(withoutPred) > 1:
         debugStr = ""
         for bbID in withoutPred:
             bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
+        debug.exit_message("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
     else:
         entryID = icfg.getNextVertexID()
-        ipoint  = Vertices.Ipoint(entryID, entryID)
+        ipoint  = vertices.Ipoint(entryID, entryID)
         icfg.addIpoint(ipoint)
         icfg.setEntryID(entryID)
         icfg.addEdge(entryID, withoutPred[0])
     
     exitID = None
     if len(withoutSucc) == 0:
-        Debug.exitMessage("CFG '%s' does not an exit point" % icfg.getName())
+        debug.exit_message("CFG '%s' does not an exit point" % icfg.getName())
     elif len(withoutSucc) > 1:
         debugStr = ""
         for bbID in withoutSucc:
             bb       = icfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
+        debug.exit_message("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
     else:
         exitID = icfg.getNextVertexID()
-        ipoint = Vertices.Ipoint(exitID, exitID)
+        ipoint = vertices.Ipoint(exitID, exitID)
         icfg.addIpoint(ipoint)
         icfg.setExitID(exitID)
         icfg.addEdge(withoutSucc[0], exitID)
@@ -52,28 +55,28 @@ def setEntryAndExit (icfg):
     assert exitID, "Unable to set exit ID"
     icfg.addEdge(exitID, entryID)
     
-def createProgram (outfile):
-    program = CFGs.Program()
+def parse_file():
+    program = cfgs.Program()
     icfg    = None
     bb      = None
-    with open(outfile, 'r') as f:
+    with open(config.Arguments.program_file) as f:
         for line in f:
             line = line.lower()
             if line.startswith('cfg:'):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                icfg         = CFGs.ICFG()
-                functionName = lexemes[-1]
-                icfg.setName(functionName)
+                icfg          = cfgs.ICFG()
+                function_name = lexemes[-1]
+                icfg.name     = function_name
                 program.addICFG(icfg)
-                Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
+                debug.debug_message("Found new ICFG '%s'" % function_name, __name__, 1)
             elif line.startswith('bb:'):
-                assert icfg, "Found basic block but current CFG is null"
+                assert icfg, "Found basic block but current ICFG is null"
                 lexemes = shlex.split(line) 
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
                 vertexID = lexemes[-1]
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
-                bb = CFGs.BasicBlock(int(vertexID))
+                bb = vertices.BasicBlock(int(vertexID))
                 icfg.addVertex(bb)
             elif line.startswith('ipoint'):
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
@@ -81,7 +84,6 @@ def createProgram (outfile):
                 position = line[index+1:].replace(' ', '').strip()
                 bb.setIpoint(position)
             elif line.startswith('succ:'):
-                import string
                 assert bb, "Found edge but current basic block is null"
                 index = line.index(':')
                 line = line[index+1:]
@@ -95,8 +97,8 @@ def createProgram (outfile):
                     index = 0
                     for lex in lexemes:
                         if index % 3 == 0:
-                            functionName = lexemes[index]
-                            assert functionName == icfg.getName(), "Call edge found which is currently not handled"
+                            function_name = lexemes[index]
+                            assert function_name == icfg.name, "Call edge found which is currently not handled"
                         elif index % 3 == 2:
                             succID = lexemes[index]
                             assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
