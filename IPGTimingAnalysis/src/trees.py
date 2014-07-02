@@ -180,74 +180,6 @@ class DepthFirstSearch (Tree):
     def isDFSBackedge (self, sourceID, destinationID):
         return [sourceID, destinationID] in self.__backedges
     
-class Dominators (Tree):
-    def __init__(self, directedg, rootID):
-        assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
-        Tree.__init__(self)
-        self.__directedg = directedg
-        self.__immediateDom = {}
-        self._initialise (rootID)
-        self._solveDFF ()
-        self._addEdges ()
-        
-    def getImmediateDominator (self, vertexID):
-        assert vertexID != self.rootID, "Vertex %d does not have an immediate dominator as it is the root" % vertexID
-        return self.getVertex(vertexID).get_parentID()
-    
-    def _initialise (self, rootID):
-        for v in self.__directedg:
-            vertexID = v.vertexID            
-            self.the_vertices[vertexID] = vertices.TreeVertex(vertexID)
-            if vertexID == rootID:
-                self.__immediateDom[vertexID] = vertexID
-            else:
-                self.__immediateDom[vertexID] = vertices.dummyID
-        self.set_rootID(rootID)
-    
-    def _solveDFF (self):
-        dfs = DepthFirstSearch(self.__directedg, self.rootID)
-        changed = True
-        while changed:
-            changed = False
-            postID = self.__directedg.numOfVertices()
-            while postID >= 1:
-                vertexID = dfs.getPostorderVertexID(postID)
-                if vertexID != self.rootID:
-                    v               = self.__directedg.getVertex(vertexID)
-                    processedPredID = vertices.dummyID
-                    newIdomID       = vertices.dummyID
-                    
-                    for predID in v.predecessors.keys():
-                        if self.__immediateDom[predID] != vertices.dummyID:
-                            processedPredID = predID
-                            newIdomID       = processedPredID
-                    for predID in v.predecessors.keys():
-                        if predID != processedPredID:
-                            if self.__immediateDom[predID] != vertices.dummyID:
-                                newIdomID = self._intersect(dfs, predID, newIdomID)
-                    
-                    if newIdomID != vertices.dummyID:
-                        if self.__immediateDom[vertexID] != newIdomID:
-                            changed = True
-                            self.__immediateDom[vertexID] = newIdomID
-                postID -= 1
-    
-    def _intersect (self, dfs, left, right):
-        uID = left
-        vID = right
-        while (dfs.getPostID(uID) != dfs.getPostID(vID)):
-            while (dfs.getPostID(uID) < dfs.getPostID(vID)):
-                uID = self.__immediateDom[uID]
-            while (dfs.getPostID(vID) < dfs.getPostID(uID)):
-                vID = self.__immediateDom[vID]
-        return uID
-    
-    def _addEdges (self):
-        for v in self.__directedg:
-            if v.vertexID != self.rootID:
-                assert self.__immediateDom[v.vertexID] != vertices.dummyID, "Immediate dominator of %d not set" % v.vertexID
-                self.addEdge(self.__immediateDom[v.vertexID], v.vertexID)
-    
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
         assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
@@ -260,19 +192,19 @@ class LoopNests (Tree):
         self.__headerVertices = {}
         self.__loopExits = {}
         self.__selfLoopHeaders = []
-        self._initialise ()
-        self._findLoops (rootID)
-        self._findExits ()
+        self.initialise()
+        self.find_loops(rootID)
+        self.find_loop_exits()
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
         self.set_rootID(self.__headerVertices[rootID])
         
-    def _initialise (self):
+    def initialise(self):
         for v in self.__directedg:
             self.__parent[v.vertexID] = v.vertexID
             self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
             
-    def _findLoops (self, rootID):
+    def find_loops(self, rootID):
         self.__dfs = DepthFirstSearch (self.__directedg, rootID)
         for vertexID in reversed(self.__dfs.getPreorder()):
             v = self.__directedg.getVertex(vertexID)
@@ -281,15 +213,15 @@ class LoopNests (Tree):
                 if self.__dfs.isDFSBackedge(predID, vertexID):
                     if predID == vertexID:
                         debug.debug_message("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), __name__, 3)
-                        self._addSelfLoop (vertexID)
+                        self.add_self_loop(vertexID)
                     else:
                         debug.debug_message("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), __name__, 3)
                         worklist.append(self.__parent[predID])
             
             if worklist:
-                self._findLoop (worklist, vertexID)
+                self.build_loop_body(worklist, vertexID)
                 
-    def _addSelfLoop (self, headerID):
+    def add_self_loop(self, headerID):
         newVertexID = self.getNextVertexID()
         headerv = vertices.HeaderVertex(newVertexID, headerID)
         self.the_vertices[newVertexID] = headerv
@@ -299,7 +231,7 @@ class LoopNests (Tree):
         self.__selfLoopHeaders.append(headerID)
         self.addEdge(newVertexID, headerID)
             
-    def _findLoop (self, worklist, headerID):
+    def build_loop_body(self, worklist, headerID):
         if headerID not in self.__headerVertices.keys():
             newVertexID = self.getNextVertexID()
             headerv     = vertices.HeaderVertex(newVertexID, headerID)
@@ -308,7 +240,6 @@ class LoopNests (Tree):
             self.__loopTails[headerID] = [t for t in worklist]
         else:
             self.__loopTails[headerID].extend([t for t in worklist])
-            
         loopBody = []
         while worklist:
             listID = worklist[-1]
@@ -320,8 +251,7 @@ class LoopNests (Tree):
                 if not self.__dfs.isDFSBackedge(predID, listID):
                     repID = self.__parent[predID]
                     if repID not in worklist and repID not in loopBody and repID != headerID:
-                        worklist.append(repID)
-        
+                        worklist.append(repID)        
         if loopBody:
             parentID = self.__headerVertices[headerID]
             for vertexID in loopBody:
@@ -335,7 +265,7 @@ class LoopNests (Tree):
             self.__loopBodies[headerID] = [headerID]
             self.__loopBodies[headerID].extend([v for v in loopBody])
             
-    def _findExits (self):
+    def find_loop_exits(self):
         for headerID in self.__headerVertices.keys():
             self.__loopExits[headerID] = []
             for vertexID in self.__loopBodies[headerID]:
@@ -422,7 +352,7 @@ class LoopNests (Tree):
     def isNested (self, left, right):
         return self.isProperAncestor(right, left)
     
-    def induceSubgraph (self, headerv, headerToReconstructible):
+    def induce_subgraph (self, headerv):
         assert isinstance(headerv, vertices.HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT"
         flowg    = cfgs.ICFG()
         edges    = {}
@@ -430,18 +360,16 @@ class LoopNests (Tree):
         worklist.extend(self.getLoopTails(headerv.headerID))
         while worklist:
             vertexID = worklist.pop()
-            if not flowg.hasVertex(vertexID):
-                # Add the correct vertex type to the induced graph
-                if isinstance(self.__directedg.getVertex(vertexID), vertices.Ipoint) \
-                or (self.isLoopHeader(vertexID) and vertexID != headerv.headerID and headerToReconstructible[vertexID] and self.isDoWhileLoop(vertexID)):
-                    ipoint = vertices.Ipoint(vertexID, vertexID)
-                    flowg.addIpoint(ipoint)
-                else:
-                    bb = vertices.BasicBlock(vertexID)
-                    flowg.addVertex(bb)
-                # Now discover which edges are incident to this vertex
-                edges[vertexID] = set([])                        
+            if not flowg.hasVertex(vertexID): 
                 originalv = self.__directedg.getVertex(vertexID)
+                # Add the correct vertex type to the induced graph
+                if originalv.is_ipoint or (self.isLoopHeader(vertexID) and vertexID != headerv.headerID and self.isDoWhileLoop(vertexID)):
+                    newv = vertices.CFGVertex(vertexID, True)
+                else:
+                    newv = vertices.CFGVertex(vertexID, False)
+                flowg.addVertex(newv)
+                # Now discover which edges are incident to this vertex
+                edges[vertexID] = set([])                       
                 for predID in originalv.predecessors.keys():
                     treePredv    = self.getVertex(predID)
                     headerPredv  = self.getVertex(treePredv.get_parentID())
@@ -464,7 +392,7 @@ class LoopNests (Tree):
                 noSuccs.append(v.vertexID)
         if len(noSuccs) != 1:
             exitID = flowg.getNextVertexID()
-            bb = cfgs.BasicBlock(exitID)
+            bb = cfgs.CFGVertex(exitID, False)
             flowg.addVertex(bb)
             flowg.setExitID(exitID)
             flowg.getVertex(exitID).setDummy()

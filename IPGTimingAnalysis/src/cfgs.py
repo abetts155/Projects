@@ -44,93 +44,80 @@ class CFG (directed_graphs.FlowGraph):
             for bb in self.the_vertices.values():
                 if bb.number_of_predecessors() == 0:
                     bbID = bb.vertexID
-                    assert self._entryID == vertices.dummyID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bbID)
-                    self._entryID = bbID
-            assert self._entryID != vertices.dummyID, "Unable to find a vertex without predecessors to set as the entry"
+                    assert self.entryID == vertices.dummyID, "The entry ID has already been set to %s. Found another entry candidate %s" % (self.entryID, bbID)
+                    self.entryID = bbID
+            assert self.entryID != vertices.dummyID, "Unable to find a vertex without predecessors to set as the entry"
         else:
             assert entryID in self.the_vertices, "Cannot find vertex " + str(entryID) + " in vertices"
             assert entryID > vertices.dummyID, "Entry ID " + str(entryID) + " is not positive"
-            self._entryID = entryID
+            self.entryID = entryID
         
     def setExitID (self, exitID=None):
         if exitID is None:
             for bb in self.the_vertices.values():
                 if bb.numberOfSuccessors() == 0:
-                    assert self._exitID == vertices.dummyID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self._entryID, bb.vertexID)
-                    self._exitID = bb.vertexID
-            assert self._exitID != vertices.dummyID, "Unable to find a vertex without successors to set as the entry"
+                    assert self.exitID == vertices.dummyID, "The exit ID has already been set to %s. Found another entry candidate %s" % (self.entryID, bb.vertexID)
+                    self.exitID = bb.vertexID
+            assert self.exitID != vertices.dummyID, "Unable to find a vertex without successors to set as the entry"
         else:
             assert exitID in self.the_vertices, "Cannot find vertex " + str(exitID) + " in vertices"
             assert exitID > vertices.dummyID, "Exit ID " + str(exitID) + " is not positive"
-            self._exitID = exitID
+            self.exitID = exitID
             
     def addExitEntryEdge (self):
-        assert self._exitID != vertices.dummyID, "Exit ID not set"
-        entryv = self.getVertex(self._entryID)
-        exitv = self.getVertex(self._exitID)
-        entryv.addPredecessor(self._exitID)
-        exitv.addSuccessor(self._entryID)
-        
-    def setEdgeIDs (self):
-        edgeID = 1
-        for v in self:
-            for succID in v.successors.keys():
-                succe = v.get_successor_edge(succID)
-                succe.set_edgeID(edgeID)
-                succv = self.getVertex(succID)
-                prede = succv.get_predecessor_edge(v.vertexID)
-                prede.set_edgeID(edgeID)
-                edgeID += 1
+        assert self.exitID != vertices.dummyID, "Exit ID not set"
+        entryv = self.getVertex(self.entryID)
+        exitv = self.getVertex(self.exitID)
+        entryv.addPredecessor(self.exitID)
+        exitv.addSuccessor(self.entryID)
         
     def __str__ (self):
         string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
-        "Entry ID = %s\n" % str(self._entryID) + \
-        "Exit ID  = %s\n" % str(self._exitID) + "\n"
+        "Entry ID = %s\n" % str(self.entryID) + \
+        "Exit ID  = %s\n" % str(self.exitID) + "\n"
         for bb in self.the_vertices.values():
             string += bb.__str__()
         return string
     
-class ICFG (CFG):
-    def getIpoints (self):
-        for v in self:
-            if isinstance(v, vertices.Ipoint):
-                yield v
-        
-    def numberOfIpoints (self):
-        count = 0
-        for v in self:
-            if isinstance(v, vertices.Ipoint):
-                count+=1
-        return count
+class EnhancedCFG (CFG):
+    def __init__ (self, cfg):
+        directed_graphs.FlowGraph.__init__(self)
+        self.name = cfg.name
+        self.CFG_edge_to_vertex = {}
+        for v in cfg:
+            newv = vertices.CFGVertex(v.vertexID, v.is_ipoint)
+            self.the_vertices[v.vertexID] = newv
+            if v.vertexID == cfg.get_entryID():
+                self.entryID = v.vertexID
+            if v.vertexID == cfg.get_exitID():
+                self.exitID = v.vertexID
+        assert self.entryID != vertices.dummyID
+        assert self.exitID != vertices.dummyID
+        newVertexID = 0
+        for v in cfg:
+            for succID in v.successors.keys():
+                newVertexID -= 1
+                newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
+                self.CFG_edge_to_vertex[(v.vertexID, succID)] = newv
+                self.the_vertices[newVertexID] = newv
+                self.addEdge(v.vertexID, newVertexID)
+                self.addEdge(newVertexID, succID)
     
-    def addBasicBlock (self, bb):
-        assert bb.vertexID not in self.the_vertices, "Adding basic block %d which is already in graph" % bb.vertexID
-        self.the_vertices[bb.vertexID] = bb
-
-    def addIpoint (self, ipoint):
-        assert ipoint.vertexID not in self.the_vertices, "Adding vertices.Ipoint %d which is already in graph" % ipoint.vertexID
-        self.the_vertices[ipoint.vertexID] = ipoint
-        
-    def isIpoint (self, vertexID):
-        return isinstance(self.getVertex(vertexID), vertices.Ipoint)
+class ICFG(CFG):
+    def __init__(self):
+        CFG.__init__(self)
+        self.ipoint_positions = {}
     
-    def isBasicBlock (self, vertexID):
-        return isinstance(self.getVertex(vertexID), vertices.BasicBlock)
-    
-    def addIpointEdges (self):
-        bbToIpoint = {}
-        bbToPosition = {}
+    def add_edges_between_ipoints(self):
+        bb_to_ipoint = {}
         for v in self:
-            if isinstance(v, vertices.BasicBlock):
-                if v.has_ipoint():
-                    vertexID = self.getNextVertexID()
-                    ipoint   = vertices.Ipoint(vertexID, vertexID)
-                    self.the_vertices[ipoint.vertexID] = ipoint
-                    bbToIpoint[v] = ipoint
-                    bbToPosition[v] = v.get_ipoint_position()
-                    debug.debug_message("Adding Ipoint %d for basic block %d" % (vertexID, v.vertexID), __name__, 10)
-        for bb, ipoint in bbToIpoint.items():
-            if bbToPosition[bb] == vertices.Ipoint.START_POSITION:
+            if v.vertexID in self.ipoint_positions:
+                new_vertexID = self.getNextVertexID()
+                newv         = vertices.CFGVertex(new_vertexID, True)
+                self.the_vertices[new_vertexID] = newv
+                bb_to_ipoint[v]                 = newv
+        for bb, ipoint in bb_to_ipoint.items():
+            if self.ipoint_positions[bb.vertexID] == vertices.ipoint_at_start:
                 for predID in bb.predecessors.keys():
                     self.addEdge(predID, ipoint.vertexID)
                     self.removeEdge(predID, bb.vertexID)
@@ -140,42 +127,3 @@ class ICFG (CFG):
                     self.addEdge(ipoint.vertexID, succID)
                     self.removeEdge(bb.vertexID, succID)
                 self.addEdge(bb.vertexID, ipoint.vertexID)
-                
-    def isPathReconstructible (self):
-        # First create a subgraph without ipoints
-        subgraph = ICFG()
-        for v in self:
-            if not self.isIpoint(v.vertexID):
-                bb = vertices.BasicBlock(v.vertexID)
-                subgraph.the_vertices[v.vertexID] = bb
-        for v in self:
-            if not self.isIpoint(v.vertexID):
-                v = self.getVertex(v.vertexID)
-                for succID in v.successors.keys():
-                    if not self.isIpoint(succID):
-                        subgraph.addEdge(v.vertexID, succID)
-        # Now do a depth-first search to try and find DFS back edges
-        reconstructible = True
-        the_vertices = []
-        for v in subgraph:
-            if v.number_of_predecessors() == 0:
-                the_vertices.append(v.vertexID)            
-        for vertexID in the_vertices:
-            visited  = {}
-            for v in subgraph:
-                visited[v.vertexID] = False
-            stack = []
-            stack.append(vertexID)
-            while stack:
-                poppedID          = stack.pop()
-                visited[poppedID] = True
-                poppedv           = subgraph.getVertex(poppedID)
-                for succID in poppedv.successors.keys():
-                    if not visited[succID]:
-                        stack.append(succID)
-                    else:
-                        debug.debug_message("Visiting %d, which has already been visited. ICFG is NOT path reconstructible" % succID, __name__, 1)
-                        reconstructible = False
-        return reconstructible
-            
-      

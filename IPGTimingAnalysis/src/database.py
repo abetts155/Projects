@@ -16,7 +16,7 @@ class CreateWCETData:
                             
     def assign_wcets_to_basic_blocks (self, icfg):
         for v in icfg:
-            if not icfg.isIpoint(v.vertexID):
+            if isinstance(v, vertices.CFGVertex) and not v.is_ipoint:
                 self.basic_block_WCETs[v.vertexID] = random.randint(1, 20)
                 debug.debug_message("WCET(%d) = %d" % (v.vertexID, self.basic_block_WCETs[v.vertexID]), __name__, 1)
                 
@@ -25,8 +25,9 @@ class CreateWCETData:
             for succID in v.successors.keys():
                 key  = (v.vertexID, succID)
                 wcet = 0
-                for bbID in v.get_successor_edge(succID).edge_label:
-                    wcet += self.basic_block_WCETs[bbID]
+                for program_point in v.get_successor_edge(succID).edge_label:
+                    if isinstance(program_point, vertices.CFGVertex):
+                        wcet += self.basic_block_WCETs[program_point.vertexID]
                 self.ipg_edge_WCETs[key] = wcet
                 debug.debug_message("WCET(%s) = %d" % (key, self.ipg_edge_WCETs[key]), __name__, 1)
                     
@@ -44,19 +45,14 @@ class CreateWCETData:
             for v in the_vertices:
                 if isinstance(v, vertices.HeaderVertex):
                     if level > 0:
-                        bound = 0
-                        self.header_bounds[v.headerID] = {}
-                        for ancestorv in lnt.getAllProperAncestors(v.vertexID):
-                            ancestorHeaderID = ancestorv.headerID
-                            bound            += random.randint(3, 10)
-                            self.header_bounds[v.headerID][ancestorHeaderID] = bound
-                            debug.debug_message("Bound(%d w.r.t %d) = %d" % (v.headerID, ancestorHeaderID, bound), __name__, 1)
+                        self.header_bounds[v.headerID] = random.randint(3, 10)
+                    else:
+                        self.header_bounds[v.headerID] = 1
     
     def get_basic_block_wcet(self, vertexID):
         if vertexID in self.basic_block_WCETs:
             return self.basic_block_WCETs[vertexID]
         else:
-            debug.warning_message("Returning WCET of 0 for basic block %d" % vertexID)
             return 0
     
     def get_ipg_edge_wcet(self, predID, succID):
@@ -64,11 +60,9 @@ class CreateWCETData:
         if key in self.ipg_edge_WCETs:
             return self.ipg_edge_WCETs[key]
         else:
-            debug.warning_message("Returning WCET of 0 for IPG edge %s" % key)
             return 0
         
-    def get_loop_bound(self, headerID, ancestorID):
+    def get_loop_bound(self, headerID):
         assert headerID in self.header_bounds, "Unable to find bound for header %d" % headerID
-        assert ancestorID in self.header_bounds[headerID], "Unable to find bound for header %d w.r.t. header %d" % (headerID, ancestorID)
-        return self.header_bounds[headerID][ancestorID]
+        return self.header_bounds[headerID]
     

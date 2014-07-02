@@ -99,10 +99,14 @@ def writeCFGVertex (cfg, vertexID, the_file):
     v = cfg.getVertex(vertexID)
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
-    if isinstance(v, vertices.Ipoint):
-        the_file.write(set_shape(SHAPE.CIRCLE))
-        the_file.write(set_color(COLOR.YELLOW))
+    if isinstance(v, vertices.CFGVertex):
+        the_file.write(set_name(str(vertexID)))
+        if v.is_ipoint:
+            the_file.write(set_shape(SHAPE.CIRCLE))
+            the_file.write(set_color(COLOR.YELLOW))
+    else:
+        name = str(v.edge) + "\\n" + str(vertexID)
+        the_file.write(set_name(name))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -146,15 +150,9 @@ def writeIPGVertex (ipg, vertexID, the_file):
     v = ipg.getVertex(vertexID)
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(v.realID)))
-    if v.isGhost:
-        the_file.write(set_shape(SHAPE.CIRCLE))
-        the_file.write(set_color(COLOR.RED))
-        the_file.write(set_tool_tip("GHOST"))
-    else:
-        the_file.write(set_shape(SHAPE.CIRCLE))
-        the_file.write(set_color(COLOR.YELLOW))
-        the_file.write(set_tool_tip("Ipoint ID = 0x%04X" % v.ipointID))
+    the_file.write(set_name(str(v.vertexID)))
+    the_file.write(set_shape(SHAPE.CIRCLE))
+    the_file.write(set_color(COLOR.YELLOW))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)

@@ -56,21 +56,32 @@ class DirectedGraph ():
 class FlowGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._entryID = vertices.dummyID
-        self._exitID = vertices.dummyID
+        self.entryID = vertices.dummyID
+        self.exitID = vertices.dummyID
+            
+    def set_edgeIDs (self):
+        edgeID = 1
+        for v in self:
+            for succID in v.successors.keys():
+                succe = v.get_successor_edge(succID)
+                succe.set_edgeID(edgeID)
+                succv = self.getVertex(succID)
+                prede = succv.get_predecessor_edge(v.vertexID)
+                prede.set_edgeID(edgeID)
+                edgeID += 1
         
     def get_entryID (self):
-        assert self._entryID != vertices.dummyID, "Entry to flow graph not found"
-        return self._entryID
+        assert self.entryID != vertices.dummyID, "Entry to flow graph not found"
+        return self.entryID
     
     def get_exitID (self):
-        assert self._exitID != vertices.dummyID, "Exit to flow graph not found"
-        return self._exitID
+        assert self.exitID != vertices.dummyID, "Exit to flow graph not found"
+        return self.exitID
     
     def __str__ (self):
         the_string = "*" * 40 + "\n" + \
-        "Entry ID = %s\n" % str(self._entryID) + \
-        "Exit ID  = %s\n" % str(self._exitID) + "\n"
+        "Entry ID = %s\n" % str(self.entryID) + \
+        "Exit ID  = %s\n" % str(self.exitID) + "\n"
         for v in self.the_vertices.values():
             the_string += v.__str__()
         the_string += "*" * 40 + "\n"

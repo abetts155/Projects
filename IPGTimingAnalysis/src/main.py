@@ -8,9 +8,9 @@ import parse_program_file
 
 def analyse():
     program = parse_program_file.parse_file()
-    program.create_lnts()
-    program.create_ipgs()
-    program.create_loop_by_loop_ipgs()
+    program.create_LNTs()
+    program.create_IPGs()
+    program.create_loop_by_loop_IPG_information()
     program.do_wcet_calculation()
         
 def the_command_line():

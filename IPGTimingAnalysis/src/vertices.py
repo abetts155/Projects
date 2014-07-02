@@ -1,6 +1,8 @@
 import edges
 
-dummyID = -1
+dummyID         = -1
+ipoint_at_start = 'start'
+ipoint_at_end   = 'end'
 
 class Vertex ():
     def __init__ (self, vertexID):
@@ -97,47 +99,14 @@ class HeaderVertex(TreeVertex):
         TreeVertex.__init__(self, vertexID)
         self.headerID = headerID
     
-class Ipoint(Vertex):
-    START_POSITION = 'start'
-    END_POSITION   = 'end'
-    
-    def __init__ (self, vertexID, ipointID, realID=None):
+class CFGVertex (Vertex):
+    def __init__ (self, vertexID, is_ipoint):
         Vertex.__init__(self, vertexID)
-        self.ipointID = ipointID
-        self.isGhost  = False
-        if realID:
-            self.realID = realID
-        else:
-            self.realID = vertexID
+        self.is_ipoint = is_ipoint
+        self.dummy     = False
     
-    def __str__ (self):
-        string = "Vertex ID = " + str(self.vertexID) + "\n"
-        string += "\tIpoint ID = " + str(self.ipointID) + "\n"
-        string += "\t" + Vertex.predecessor_string(self)
-        string += "\t" + Vertex.successor_string(self)    
-        return string
-    
-class BasicBlock (Vertex):
-    def __init__ (self, vertexID):
+class CFGEdge (Vertex):
+    def __init__ (self, vertexID, predID, succID):
         Vertex.__init__(self, vertexID)
-        self.dummy           = False
-        self.ipoint_position = None
-    
-    def set_ipoint(self, position):
-        assert position == Ipoint.START_POSITION or position == Ipoint.END_POSITION, "Unable to ascertain position of ipoint from '%s'" % position
-        self.ipoint_position = position
-        
-    def has_ipoint(self):
-        return self.ipoint_position
-    
-    def get_ipoint_position(self):
-        assert self.ipoint_position, "You are requesting an ipoint position from %d but that does not have an Ipoint set" % self.vertexID
-        return self.ipoint_position
-        
-    def __str__(self):
-        string = "Vertex ID = " + str(self.vertexID) + "\n"
-        string += "\t" + Vertex.predecessor_string(self)
-        string += "\t" + Vertex.successor_string(self)
-        string += "\t" + 40 * "=" + "\n"      
-        return string
-    
+        self.edge = (predID, succID)
+        self.is_ipoint = False

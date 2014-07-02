@@ -24,15 +24,15 @@ def set_entry_and_exit(icfg):
     if len(without_predecessors) == 0:
         debug.exit_message("CFG '%s' does not an entry point" % icfg.getName())
     elif len(without_predecessors) > 1:
-        debugStr = ""
+        debug_info = ""
         for bbID in without_predecessors:
-            bb       = icfg.getVertex(bbID)
-            debugStr += bb.__str__()
-        debug.exit_message("CFG '%s' has too many entry points: %s" % (icfg.getName(), debugStr))
+            bb = icfg.getVertex(bbID)
+            debug_info += bb.__str__()
+        debug.exit_message("CFG '%s' has too many entry points: %s" % (icfg.getName(), debug_info))
     else:
         entryID = icfg.getNextVertexID()
-        ipoint  = vertices.Ipoint(entryID, entryID)
-        icfg.addIpoint(ipoint)
+        entryv  = vertices.CFGVertex(entryID, True)
+        icfg.addVertex(entryv)
         icfg.setEntryID(entryID)
         icfg.addEdge(entryID, without_predecessors[0])
     
@@ -40,15 +40,15 @@ def set_entry_and_exit(icfg):
     if len(without_successors) == 0:
         debug.exit_message("CFG '%s' does not an exit point" % icfg.getName())
     elif len(without_successors) > 1:
-        debugStr = ""
+        debug_info = ""
         for bbID in without_successors:
-            bb       = icfg.getVertex(bbID)
-            debugStr += bb.__str__()
-        debug.exit_message("CFG '%s' has too many exit points: %s" % (icfg.getName(), debugStr))
+            bb = icfg.getVertex(bbID)
+            debug_info += bb.__str__()
+        debug.exit_message("CFG '%s' has too many exit points: %s" % (icfg.getName(), debug_info))
     else:
         exitID = icfg.getNextVertexID()
-        ipoint = vertices.Ipoint(exitID, exitID)
-        icfg.addIpoint(ipoint)
+        exitv  = vertices.CFGVertex(exitID, True)
+        icfg.addVertex(exitv)
         icfg.setExitID(exitID)
         icfg.addEdge(without_successors[0], exitID)
     assert entryID, "Unable to set entry ID"
@@ -75,13 +75,13 @@ def parse_file():
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
                 vertexID = lexemes[-1]
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
-                bb = vertices.BasicBlock(int(vertexID))
+                bb = vertices.CFGVertex(int(vertexID), False)
                 icfg.addVertex(bb)
             elif line.startswith('ipoint'):
                 assert bb, "Trying to add an Ipoint to a basic block but current basic block is null"
                 index    = line.index(':')
                 position = line[index+1:].replace(' ', '').strip().lower()
-                bb.set_ipoint(position)
+                icfg.ipoint_positions[bb.vertexID] = position
             elif line.startswith('succ:'):
                 assert bb, "Found edge but current basic block is null"
                 index = line.index(':')
@@ -105,8 +105,8 @@ def parse_file():
                         index += 1                        
         assert icfg, "Attempting to analyse CFG but current CFG is null"
         icfg.add_predecessor_edges()
-        icfg.addIpointEdges()
+        icfg.add_edges_between_ipoints()
         set_entry_and_exit(icfg)
-        icfg.setEdgeIDs()
-        program.addICFG(icfg)
+        icfg.set_edgeIDs()
+        program.add_ICFG(icfg)
     return program     

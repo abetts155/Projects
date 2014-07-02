@@ -1,36 +1,41 @@
+from __future__ import print_function
+
 import trees
+import cfgs
 import ipgs
 import udraw
 import database
 import calculations
-import debug
     
 class Program():
     def __init__(self):
         self.icfgs             = {}
         self.ipgs              = {}
         self.lnts              = {}
-        self.loop_by_loop_ipgs = {}
+        self.loop_by_loop_info = {}
         
-    def addICFG(self, icfg):
+    def add_ICFG(self, icfg):
         assert icfg.name
         self.icfgs[icfg.name] = icfg
         udraw.make_file(icfg, "%s.icfg" % (icfg.name))
     
-    def create_ipgs(self):
+    def create_IPGs(self):
         for icfg in self.icfgs.values():
-            ipg = ipgs.IPG(icfg)
+            enhanced_icfg = cfgs.EnhancedCFG(icfg)
+            enhanced_icfg.set_edgeIDs()
+            udraw.make_file(enhanced_icfg, "%s.icfg" % (icfg.name))
+            ipg = ipgs.IPG(enhanced_icfg)
             assert ipg.name
             self.ipgs[ipg.name] = ipg
             udraw.make_file(ipg, "%s.ipg" % (ipg.name))
             
-    def create_loop_by_loop_ipgs(self):
+    def create_loop_by_loop_IPG_information(self):
         for icfg in self.icfgs.values():
             lnt = self.lnts[icfg.name]
             ipg = self.ipgs[icfg.name]
-            self.loop_by_loop_ipgs[icfg.name] = ipgs.LoopByLoopIPGs(icfg, lnt, ipg)
+            self.loop_by_loop_info[icfg.name] = ipgs.LoopByLoopIPGInformation(icfg, lnt, ipg)
     
-    def create_lnts(self):
+    def create_LNTs(self):
         for icfg in self.icfgs.values():
             lnt = trees.LoopNests(icfg, icfg.get_entryID())
             assert lnt.name
@@ -41,18 +46,18 @@ class Program():
         self.icfg_ilps = {}
         self.ipg_ilps  = {}
         for icfg in self.icfgs.values():
-            lnt          = self.lnts[icfg.name]
-            ipg          = self.ipgs[icfg.name]
-            ipg_per_loop = self.loop_by_loop_ipgs[icfg.name]
-            data         = database.CreateWCETData(icfg, lnt, ipg)
-            icfg_ilp     = calculations.CreateICFGILP(data, icfg, lnt)
-            ipg_ilp      = calculations.CreateIPGILP(data, ipg, lnt, ipg_per_loop)
+            lnt           = self.lnts[icfg.name]
+            ipg           = self.ipgs[icfg.name]
+            ipg_loop_info = self.loop_by_loop_info[icfg.name]
+            data          = database.CreateWCETData(icfg, lnt, ipg)
+            icfg_ilp      = calculations.CreateICFGILP(data, icfg, lnt)
             icfg_ilp.solve()
-            ipg_ilp.solve()
-            self.icfg_ilps[icfg.name] = icfg_ilp
-            self.ipg_ilps[icfg.name]  = ipg_ilp
-            debug.verbose_message("ICFG:: WCET(%s) = %d" % (icfg.name, icfg_ilp.wcet), __name__)
+            print("ICFG:: WCET(%s) = %d" % (icfg.name, icfg_ilp.wcet))
             icfg_ilp.print_execution_counts(icfg)
-            debug.verbose_message("IPG::  WCET(%s) = %d" % (icfg.name, ipg_ilp.wcet), __name__)
+            self.icfg_ilps[icfg.name] = icfg_ilp
+            ipg_ilp      = calculations.CreateIPGILP(data, ipg, lnt, ipg_loop_info)
+            ipg_ilp.solve()
+            print("IPG:: WCET(%s) = %d" % (icfg.name, ipg_ilp.wcet))
             ipg_ilp.print_execution_counts(ipg)
+            self.ipg_ilps[icfg.name] = ipg_ilp
             
