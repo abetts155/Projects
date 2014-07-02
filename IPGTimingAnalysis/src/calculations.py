@@ -9,6 +9,16 @@ import shlex
 import decimal
 import abc
 
+def compare_execution_counts(icfg_ilp_execution_counts, ipg_ilp_execution_counts):
+    for key, count in icfg_ilp_execution_counts.iteritems():
+        if key in ipg_ilp_execution_counts and ipg_ilp_execution_counts[key] == count:
+            print("Equality on %s: %d" % (key, count))
+    for key, count in icfg_ilp_execution_counts.iteritems():
+        if key in ipg_ilp_execution_counts and ipg_ilp_execution_counts[key] != count:
+            print("Inequality on %s: %d and %d" % (key, count, ipg_ilp_execution_counts[key]))
+        elif count > 0 and key not in ipg_ilp_execution_counts:
+            print("Inequality on %s: %d and %d" % (key, count, 0))
+
 class LpSolve:
     comma         = ","
     edge_prefix   = "e_"
@@ -74,11 +84,7 @@ class ILP():
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
                 self.variable_execution_counts[lexemes[0]] = int(lexemes[1]) 
-                    
-    @abc.abstractmethod
-    def print_execution_counts(self):
-        pass
-    
+
     @abc.abstractmethod
     def create_objective_function(self):
         pass
@@ -193,22 +199,24 @@ class CreateIPGILP (ILP):
                 counter -= 1
         self.int_constraint += LpSolve.semi_colon
         
-    def print_execution_counts (self, ipg):
-        for variable, count in self.variable_execution_counts.iteritems():
-            print("Execution count of %s = %d" % (variable, count))
-        basic_block_execution_counts = {}
+    def compute_execution_counts(self, icfg, ipg):
+        execution_counts = {}
         for v in ipg:
             for succID in v.successors.keys():                
                 succe    = v.get_successor_edge(succID)
                 variable = LpSolve.get_edge_variable(v.vertexID, succID)
                 if self.variable_execution_counts[variable]:
                     for program_point in succe.edge_label:
-                        if program_point.vertexID not in basic_block_execution_counts:
-                            basic_block_execution_counts[program_point.vertexID] = 0
-                        basic_block_execution_counts[program_point.vertexID] += self.variable_execution_counts[variable]
-        print("=====> Execution counts in CFG")
-        for vertexID, count in basic_block_execution_counts.iteritems():
-            print("Execution count of %s = %d" % (LpSolve.get_vertex_variable(vertexID), count))
+                        program_pointv = icfg.getVertex(program_point.vertexID)
+                        if isinstance(program_pointv, vertices.CFGVertex):
+                            key = LpSolve.get_vertex_variable(program_point.vertexID)
+                        else:
+                            predID, succID = program_pointv.edge
+                            key = LpSolve.get_edge_variable(predID, succID)
+                        if key not in execution_counts:
+                            execution_counts[key] = 0
+                        execution_counts[key] += self.variable_execution_counts[variable]
+        return execution_counts
                 
 class CreateICFGILP (ILP):
     def __init__ (self, data, icfg, lnt):
@@ -316,9 +324,5 @@ class CreateICFGILP (ILP):
                     self.int_constraint += LpSolve.comma
                 counter -= 1
         self.int_constraint += LpSolve.semi_colon
-        
-    def print_execution_counts (self, icfg):
-        for variable, count in self.variable_execution_counts.iteritems():
-            print("Execution count of %s = %d" % (variable, count))
 
     

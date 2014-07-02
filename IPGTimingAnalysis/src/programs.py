@@ -10,6 +10,7 @@ import calculations
 class Program():
     def __init__(self):
         self.icfgs             = {}
+        self.enhanced_icfgs    = {}
         self.ipgs              = {}
         self.lnts              = {}
         self.loop_by_loop_info = {}
@@ -23,6 +24,7 @@ class Program():
         for icfg in self.icfgs.values():
             enhanced_icfg = cfgs.EnhancedCFG(icfg)
             enhanced_icfg.set_edgeIDs()
+            self.enhanced_icfgs[icfg.name] = enhanced_icfg
             udraw.make_file(enhanced_icfg, "%s.icfg" % (icfg.name))
             ipg = ipgs.IPG(enhanced_icfg)
             assert ipg.name
@@ -53,11 +55,12 @@ class Program():
             icfg_ilp      = calculations.CreateICFGILP(data, icfg, lnt)
             icfg_ilp.solve()
             print("ICFG:: WCET(%s) = %d" % (icfg.name, icfg_ilp.wcet))
-            icfg_ilp.print_execution_counts(icfg)
             self.icfg_ilps[icfg.name] = icfg_ilp
             ipg_ilp      = calculations.CreateIPGILP(data, ipg, lnt, ipg_loop_info)
             ipg_ilp.solve()
             print("IPG:: WCET(%s) = %d" % (icfg.name, ipg_ilp.wcet))
-            ipg_ilp.print_execution_counts(ipg)
             self.ipg_ilps[icfg.name] = ipg_ilp
+            calculations.compare_execution_counts(icfg_ilp.variable_execution_counts,
+                                                  ipg_ilp.compute_execution_counts(self.enhanced_icfgs[icfg.name], ipg))
+            
             
