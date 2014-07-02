@@ -8,6 +8,7 @@ import subprocess
 import shlex
 import decimal
 import abc
+import sys
 
 def compare_execution_counts(icfg_ilp_execution_counts, ipg_ilp_execution_counts):
     for key, count in icfg_ilp_execution_counts.iteritems():
@@ -107,7 +108,7 @@ class CreateIPGILP (ILP):
         ILP.__init__(self, filename)
         self.create_objective_function(data, ipg)
         self.create_structural_constraints(ipg)
-        self.create_loop_bound_constraints(data, lnt, ipg_loop_info)
+        self.create_loop_bound_constraints(data, ipg, lnt, ipg_loop_info)
         self.create_integer_constraint(ipg)
 
     def create_objective_function (self, data, ipg):
@@ -141,12 +142,12 @@ class CreateIPGILP (ILP):
             new_constraint += LpSolve.semi_colon
             self.constraints.append(new_constraint)
             
-    def create_loop_bound_constraints (self, data, lnt, ipg_loop_info):
+    def create_loop_bound_constraints (self, data, ipg, lnt, ipg_loop_info):
         for level, the_vertices in lnt.levelIterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     if level > 0:
-                        self.create_constraints_for_loop(data, lnt, ipg_loop_info, treev)
+                        self.create_constraints_for_loop(data, ipg, lnt, ipg_loop_info, treev)
                     else:
                         iteration_edges = ipg_loop_info.iteration_edges[treev.headerID]
                         assert len(iteration_edges) == 1, \
@@ -159,9 +160,15 @@ class CreateIPGILP (ILP):
                         new_constraint += LpSolve.semi_colon
                         self.constraints.append(new_constraint)
                         
-    def create_constraints_for_loop (self, data, lnt, ipg_loop_info, headerv):
-        bound           = data.get_loop_bound(headerv.headerID)
+    def create_constraints_for_loop (self, data, ipg, lnt, ipg_loop_info, headerv):
         iteration_edges = ipg_loop_info.iteration_edges[headerv.headerID]
+        bound           = sys.maxint
+        for predID, succID in iteration_edges:
+            predv = ipg.getVertex(predID)
+            succe = predv.get_successor_edge(succID)
+            for icfgv in succe.edge_label:
+                bound = min(data.get_loop_bound(icfgv.vertexID), bound)
+
         new_constraint  = ""
         counter = len(iteration_edges)
         for predID, succID in iteration_edges:

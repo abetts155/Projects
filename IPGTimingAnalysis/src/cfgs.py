@@ -1,36 +1,10 @@
 import directed_graphs
 import vertices
-import debug
-        
+import copy
+
 class CFG (directed_graphs.FlowGraph):    
     def __init__ (self):
         directed_graphs.FlowGraph.__init__(self)
-        
-    def getReverseCFG (self):
-        reverseg = CFG() 
-        if isinstance(self, ICFG):
-            reverseg = ICFG()
-        # Add vertices
-        for v in self:
-            copyv = None
-            if isinstance(v, vertices.vertices.BasicBlock):
-                copyv = vertices.vertices.BasicBlock(v.vertexID)
-            else:
-                assert isinstance(v, vertices.vertices.Ipoint)
-                copyv = vertices.vertices.Ipoint(v.vertexID, v.getIpointID())
-            reverseg.addVertex(copyv)
-        # Add edges
-        for v in self:
-            predID = v.vertexID
-            predv  = reverseg.getVertex(predID)
-            for succID in v.successors.keys():
-                succv = reverseg.getVertex(succID)
-                predv.addPredecessor(succID)
-                succv.addSuccessor(predID)
-        # Set the entry and exit IDs
-        reverseg.setEntryID(self.getExitID())
-        reverseg.setExitID(self.getEntryID())
-        return reverseg
         
     def addVertex (self, bb):
         assert bb.vertexID not in self.the_vertices, "Adding basic block %d which is already in graph" % bb.vertexID
@@ -80,28 +54,48 @@ class CFG (directed_graphs.FlowGraph):
         return string
     
 class EnhancedCFG (CFG):
-    def __init__ (self, cfg):
+    def __init__ (self, cfg=None):
         directed_graphs.FlowGraph.__init__(self)
-        self.name = cfg.name
-        self.CFG_edge_to_vertex = {}
-        for v in cfg:
-            newv = vertices.CFGVertex(v.vertexID, v.is_ipoint)
-            self.the_vertices[v.vertexID] = newv
-            if v.vertexID == cfg.get_entryID():
-                self.entryID = v.vertexID
-            if v.vertexID == cfg.get_exitID():
-                self.exitID = v.vertexID
-        assert self.entryID != vertices.dummyID
-        assert self.exitID != vertices.dummyID
-        newVertexID = 0
-        for v in cfg:
+        if cfg:
+            self.name = cfg.name
+            for v in cfg:
+                newv = vertices.CFGVertex(v.vertexID, v.is_ipoint)
+                self.the_vertices[v.vertexID] = newv
+                if v.vertexID == cfg.get_entryID():
+                    self.entryID = v.vertexID
+                if v.vertexID == cfg.get_exitID():
+                    self.exitID = v.vertexID
+            assert self.entryID != vertices.dummyID
+            assert self.exitID != vertices.dummyID
+            newVertexID = 0
+            for v in cfg:
+                for succID in v.successors.keys():
+                    newVertexID -= 1
+                    newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
+                    self.the_vertices[newVertexID] = newv
+                    self.addEdge(v.vertexID, newVertexID)
+                    self.addEdge(newVertexID, succID)
+    
+    def get_reverse_graph(self):
+        reverseg = EnhancedCFG() 
+        # Add vertices
+        for v in self:
+            copyv = copy.copy(v)
+            copyv.successors   = {}
+            copyv.predecessors = {}
+            reverseg.the_vertices[copyv.vertexID] = copyv
+        # Add edges
+        for v in self:
+            predID = v.vertexID
+            predv  = reverseg.getVertex(predID)
             for succID in v.successors.keys():
-                newVertexID -= 1
-                newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
-                self.CFG_edge_to_vertex[(v.vertexID, succID)] = newv
-                self.the_vertices[newVertexID] = newv
-                self.addEdge(v.vertexID, newVertexID)
-                self.addEdge(newVertexID, succID)
+                succv = reverseg.getVertex(succID)
+                predv.add_predecessor(succID)
+                succv.add_successor(predID)
+        # Set the entry and exit IDs
+        reverseg.entryID = self.get_exitID()
+        reverseg.exitID  = self.get_entryID()
+        return reverseg
     
 class ICFG(CFG):
     def __init__(self):

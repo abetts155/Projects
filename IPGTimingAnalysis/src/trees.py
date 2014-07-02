@@ -202,7 +202,13 @@ class LoopNests (Tree):
     def initialise(self):
         for v in self.__directedg:
             self.__parent[v.vertexID] = v.vertexID
-            self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
+            treev = vertices.TreeVertex(v.vertexID)
+            self.the_vertices[v.vertexID] = treev
+            if isinstance(v, vertices.CFGEdge):
+                treev.edge = v.edge
+            if isinstance(v, vertices.CFGVertex):
+                if v.is_ipoint:
+                    treev.is_ipoint = v.is_ipoint
             
     def find_loops(self, rootID):
         self.__dfs = DepthFirstSearch (self.__directedg, rootID)
@@ -392,7 +398,7 @@ class LoopNests (Tree):
                 noSuccs.append(v.vertexID)
         if len(noSuccs) != 1:
             exitID = flowg.getNextVertexID()
-            bb = cfgs.CFGVertex(exitID, False)
+            bb = vertices.CFGVertex(exitID, False)
             flowg.addVertex(bb)
             flowg.setExitID(exitID)
             flowg.getVertex(exitID).setDummy()

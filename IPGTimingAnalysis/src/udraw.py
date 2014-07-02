@@ -124,7 +124,7 @@ def writeTreeVertex (tree, vertexID, the_file):
     v = tree.getVertex(vertexID)
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
+    name = str(vertexID)
     if isinstance(tree, trees.LoopNests):
         if isinstance(v, vertices.HeaderVertex):
             the_file.write(set_shape(SHAPE.TRIANGLE))
@@ -134,6 +134,13 @@ def writeTreeVertex (tree, vertexID, the_file):
             the_file.write(set_shape(SHAPE.ELLIPSE))
             the_file.write(set_color(COLOR.YELLOW))
             the_file.write(set_tool_tip("Loop Exit"))
+    if hasattr(v, "edge"):
+        name = str(v.edge)
+    if hasattr(v, "is_ipoint"):
+        if v.is_ipoint:
+            the_file.write(set_shape(SHAPE.CIRCLE))
+            the_file.write(set_color(COLOR.YELLOW))
+    the_file.write(set_name(name))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)

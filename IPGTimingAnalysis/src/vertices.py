@@ -64,7 +64,7 @@ class Vertex ():
             if count < len(self.predecessors):
                 string += ","
                 count = count + 1
-        string += "}\n"
+        string += "}"
         return string
     
     def successor_string(self):        
@@ -75,8 +75,11 @@ class Vertex ():
             if count < len(self.successors):
                 string += ","
                 count = count + 1
-        string += "}\n"
+        string += "}"
         return string
+    
+    def __str__(self):
+        return "%d: %s %s\n" % (self.vertexID, self.successor_string(), self.predecessor_string())
     
 class TreeVertex(Vertex):
     def __init__ (self, vertexID):

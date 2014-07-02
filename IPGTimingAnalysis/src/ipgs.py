@@ -80,43 +80,6 @@ class IPG (directed_graphs.FlowGraph):
         assert entryv.number_of_predecessors() == 1, "Entry vertex %s of IPG has multiple predecessors" % self._entryID
         for predID in entryv.predecessors.keys():
             self.exitID = predID
-            
-class LoopByLoopIPGInformation():    
-    def __init__ (self, icfg, lnt, ipg):
-        self.name      = icfg.name
-        self.loopICFGs = {}
-        self.loopIPGs  = {}
-        self.iteration_edges  = {}
-        self.loop_entry_edges = {}
-        self.loop_exit_edges  = {}
-        self.initialise(lnt)
-        self.construct_loop_IPGs(icfg, lnt, ipg)
-    
-    def initialise(self, lnt):
-        for treev in lnt:
-            if isinstance(treev, vertices.HeaderVertex):
-                self.iteration_edges[treev.headerID]  = set()
-                self.loop_entry_edges[treev.headerID] = set()
-                self.loop_exit_edges[treev.headerID]  = set()
-                
-    def construct_loop_IPGs(self, icfg, lnt, ipg):
-        for level, the_vertices in lnt.levelIterator(True):
-            for treev in the_vertices:
-                if isinstance(treev, vertices.HeaderVertex):
-                    debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                    loopICFG  = lnt.induce_subgraph(treev)
-                    self.loopICFGs[treev.headerID] = loopICFG
-                    loopICFG.set_edgeIDs()
-                    udraw.make_file(loopICFG, "%s.header_%d.%s" % (icfg.name, treev.headerID, "icfg"))
-                    self.loopIPGs[treev.headerID] = LoopIPG(self, treev.headerID, icfg, loopICFG, lnt, ipg)
-            
-    def get_loop_ICFG(self, headerID):
-        assert headerID in self.loopICFGs, "Unable to find the loop ICFG for header %d" % (headerID)
-        return self.loopICFGs[headerID]
-    
-    def get_loop_IPG(self, headerID):
-        assert headerID in self.loopIPGs, "Unable to find the loop IPG for header %d" % (headerID)
-        return self.loopIPGs[headerID]
 
 class LoopIPG(directed_graphs.FlowGraph):    
     def __init__ (self, loop_by_loop_info, headerID, global_icfg, icfg, lnt, ipg):
@@ -150,7 +113,7 @@ class LoopIPG(directed_graphs.FlowGraph):
         for succID in headerv.successors.keys():
             succv = self.__lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
-                loopIPG = self.loop_by_loop_info.loopIPGs[succv.headerID]
+                loopIPG = self.loop_by_loop_info.loop_IPGs[succv.headerID]
                 for vertexID in loopIPG.iteration_edge_destinations:
                     if not self.hasVertex(vertexID):
                         v       = self.__ipg.getVertex(vertexID)
@@ -215,7 +178,7 @@ class LoopIPG(directed_graphs.FlowGraph):
                             
     def add_loop_entry_edges (self, v):
         debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
-        loopIPG = self.loop_by_loop_info.loopIPGs[v.vertexID]        
+        loopIPG = self.loop_by_loop_info.loop_IPGs[v.vertexID]        
         for predID in v.predecessors.keys():
             predv = self.__global_icfg.getVertex(predID)
             if predv.is_ipoint:
@@ -237,7 +200,7 @@ class LoopIPG(directed_graphs.FlowGraph):
                             self.iteration_edge_destinations.add(succID)
         
     def add_ipoints_to_abstract_vertex (self, v):
-        loopIPG = self.loop_by_loop_info.loopIPGs[v.vertexID]               
+        loopIPG = self.loop_by_loop_info.loop_IPGs[v.vertexID]               
         for exitID in self.__lnt.getLoopExits(v.vertexID):
             exitv = self.__global_icfg.getVertex(exitID)
             if exitv.is_ipoint:

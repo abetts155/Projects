@@ -1,10 +1,11 @@
 import debug
+import cfgs
 import vertices
 import random
 
 class CreateWCETData:    
-    def __init__(self, icfg, lnt, ipg, use_basic_block_wcets=True):        
-        self.header_bounds     = {}
+    def __init__(self, icfg, lnt, ipg, loop_by_loop_info, use_basic_block_wcets=True):        
+        self.upper_bounds      = {}
         self.basic_block_WCETs = {}
         self.ipg_edge_WCETs    = {}
         if use_basic_block_wcets:
@@ -12,7 +13,7 @@ class CreateWCETData:
             self.assign_wcets_to_ipg_egdes_using_basic_block_wcets(ipg, icfg)
         else:
             self.assign_wcets_to_ipg_egdes_using_random_values(ipg)
-        self.assign_loop_bounds(lnt)
+        self.assign_loop_bounds(lnt, loop_by_loop_info)
                             
     def assign_wcets_to_basic_blocks (self, icfg):
         for v in icfg:
@@ -40,14 +41,43 @@ class CreateWCETData:
                     self.ipg_edge_WCETs[key] = random.randint(1, 10)
                     debug.debug_message("WCET(%s) = %d" % (key, self.ipg_edge_WCETs[key]), __name__, 1)
     
-    def assign_loop_bounds(self, lnt):
+    def assign_loop_bounds(self, lnt, loop_by_loop_info):
         for level, the_vertices in lnt.levelIterator(True):
-            for v in the_vertices:
-                if isinstance(v, vertices.HeaderVertex):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    enhanced_CFG = cfgs.EnhancedCFG(loop_by_loop_info.loop_ICFGs[treev.headerID])
+                    reachable    = self.compute_reachable_program_points_from_loop_exits(lnt, treev, enhanced_CFG)
                     if level > 0:
-                        self.header_bounds[v.headerID] = random.randint(3, 10)
+                        self.scatter_loop_bound(lnt, treev, random.randint(3, 10), reachable)
                     else:
-                        self.header_bounds[v.headerID] = 1
+                        self.scatter_loop_bound(lnt, treev, 1, reachable)
+                        
+    def compute_reachable_program_points_from_loop_exits(self, lnt, treev, enhanced_CFG):
+        reverse_CFG = enhanced_CFG.get_reverse_graph()
+        reachable = set()
+        if treev.vertexID == lnt.get_rootID():
+            for v in enhanced_CFG:
+                reachable.add(v.vertexID)
+        else:
+            for exitID in lnt.getLoopExits(treev.headerID):
+                stack = []
+                stack.append(exitID)
+                while stack:
+                    poppedID = stack.pop()
+                    reachable.add(poppedID)
+                    poppedv  = reverse_CFG.getVertex(poppedID)
+                    for succID in poppedv.successors.keys():
+                        stack.append(succID)
+        return reachable
+                        
+    def scatter_loop_bound(self, lnt, headerv, bound, reachable):
+        for succID in headerv.successors.keys():
+            succv = lnt.getVertex(succID)
+            if not isinstance(succv, vertices.HeaderVertex):
+                if succID not in reachable:
+                    self.upper_bounds[succID] = bound - 1
+                else:
+                    self.upper_bounds[succID] = bound
     
     def get_basic_block_wcet(self, vertexID):
         if vertexID in self.basic_block_WCETs:
@@ -62,7 +92,7 @@ class CreateWCETData:
         else:
             return 0
         
-    def get_loop_bound(self, headerID):
-        assert headerID in self.header_bounds, "Unable to find bound for header %d" % headerID
-        return self.header_bounds[headerID]
+    def get_loop_bound(self, vertexID):
+        assert vertexID in self.upper_bounds, "Unable to find bound for vertex %d" % vertexID
+        return self.upper_bounds[vertexID]
     
