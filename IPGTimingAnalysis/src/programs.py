@@ -45,6 +45,14 @@ class LoopByLoopInformation():
         assert headerID in self.loopIPGs, "Unable to find the loop IPG for header %d" % (headerID)
         return self.loopIPGs[headerID]
     
+    def filter_iteration_edges(self, edges):
+        iteration_edges = set()
+        for (predID, succID) in edges:
+            for iteration_edgeIDs in self.iteration_edges.values():
+                if (predID, succID) in iteration_edgeIDs:
+                    iteration_edges.add((predID, succID))
+        return iteration_edges
+    
 class Program():
     def __init__(self):
         self.icfgs             = {}
@@ -78,6 +86,7 @@ class Program():
             lnt = self.lnts[icfg.name]
             ipg = self.ipgs[icfg.name]
             self.loop_by_loop_info[icfg.name] = LoopByLoopInformation(icfg, lnt, ipg)
+            udraw.make_file(ipg, "%s.ipg" % (ipg.name))
     
     def create_LNTs(self):
         for icfg in self.icfgs.values():
@@ -103,7 +112,7 @@ class Program():
             self.ipg_ilps[icfg.name] = ipg_ilp
             print("IPG:: WCET(%s) = %d" % (icfg.name, ipg_ilp.wcet))
             # Do comparison
-            calculations.compare_execution_counts(icfg_ilp.variable_execution_counts,
-                                                  ipg_ilp.compute_execution_counts(self.enhanced_icfgs[icfg.name], self.ipgs[icfg.name]))
+            #calculations.compare_execution_counts(icfg_ilp.variable_execution_counts,
+            #                                      ipg_ilp.compute_execution_counts(self.enhanced_icfgs[icfg.name], self.ipgs[icfg.name]))
             
             

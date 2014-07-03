@@ -168,7 +168,7 @@ def writeIPGVertex (ipg, vertexID, the_file):
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         the_file.write(set_name(str(succe.get_edgeID())))
-        toolTip = ', '.join(str(v) for v in succe.edge_label)
+        toolTip = ', '.join(str(v.vertexID) for v in succe.edge_label)
         if succe.iteration_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 2))
         elif succe.dummy_edge:

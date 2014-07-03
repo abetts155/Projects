@@ -168,7 +168,6 @@ class CreateIPGILP (ILP):
             succe = predv.get_successor_edge(succID)
             for icfgv in succe.edge_label:
                 bound = min(data.get_loop_bound(icfgv.vertexID), bound)
-
         new_constraint  = ""
         counter = len(iteration_edges)
         for predID, succID in iteration_edges:
@@ -179,11 +178,11 @@ class CreateIPGILP (ILP):
         new_constraint += LpSolve.lte
         
         relative_edges = None
-        if ipg_loop_info.loop_entry_edges[headerv.headerID]:
+        if not ipg_loop_info.filter_iteration_edges(ipg_loop_info.loop_entry_edges[headerv.headerID]):
             relative_edges = ipg_loop_info.loop_entry_edges[headerv.headerID]
         else:
+            assert not ipg_loop_info.filter_iteration_edges(ipg_loop_info.loop_exit_edges[headerv.headerID])
             relative_edges = ipg_loop_info.loop_exit_edges[headerv.headerID]
-        assert relative_edges, "Unable to find loop-entry or loop-exit edges for header %d" % headerv.headerID
         
         counter = len(relative_edges)
         for predID, succID in relative_edges:

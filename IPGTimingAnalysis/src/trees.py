@@ -294,11 +294,6 @@ class LoopNests (Tree):
     def isLoopHeader (self, vertexID):
         return vertexID in self.__headerVertices.keys()
     
-    def getInternalHeaderVertex (self, vertexID):
-        v = self.getVertex(vertexID)
-        assert isinstance(v, vertices.HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
-        return v
-    
     def isSelfLoopHeader (self, vertexID):
         return vertexID in self.__selfLoopHeaders
         
@@ -329,11 +324,6 @@ class LoopNests (Tree):
     def getLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.__loopBodies[headerID]
-    
-    def getIpointsInLoopBody (self, headerID):
-        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return [vertexID for vertexID in self.__loopBodies[headerID] 
-                if isinstance(self.__directedg.getVertex(vertexID), vertices.Ipoint)]
     
     def isLoopBackEdge (self, sourceID, destinationID):
         if destinationID not in self.__headerVertices.keys():
