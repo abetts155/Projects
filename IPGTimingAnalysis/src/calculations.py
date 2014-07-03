@@ -178,10 +178,9 @@ class CreateIPGILP (ILP):
         new_constraint += LpSolve.lte
         
         relative_edges = None
-        if not ipg_loop_info.filter_iteration_edges(ipg_loop_info.loop_entry_edges[headerv.headerID]):
+        if ipg_loop_info.loop_entry_edges[headerv.headerID]:
             relative_edges = ipg_loop_info.loop_entry_edges[headerv.headerID]
         else:
-            assert not ipg_loop_info.filter_iteration_edges(ipg_loop_info.loop_exit_edges[headerv.headerID])
             relative_edges = ipg_loop_info.loop_exit_edges[headerv.headerID]
         
         counter = len(relative_edges)

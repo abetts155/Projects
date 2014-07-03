@@ -80,9 +80,9 @@ class IPG (directed_graphs.FlowGraph):
             self.exitID = predID
 
 class LoopIPG():    
-    def __init__ (self, loop_by_loop_info, headerID, global_icfg, icfg, lnt, ipg):
+    def __init__ (self, loop_by_loop_info, headerID, icfg, lnt, ipg):
+        self.edges_added                 = set()
         self.loop_by_loop_info           = loop_by_loop_info
-        self.__global_icfg               = global_icfg
         self.__icfg                      = icfg
         self.__lnt                       = lnt
         self.__ipg                       = ipg
@@ -98,7 +98,7 @@ class LoopIPG():
         for v in self.__icfg:
             # No ipoint or header can reach any vertex
             self.vertex_to_reachable[v.vertexID] = set()
-            if v.vertexID == self.__icfg.get_entryID() and not v.is_ipoint:
+            if v.vertexID == self.__icfg.get_entryID() and not self.__ipg.hasVertex(v.vertexID):
                 # The vertex is a header and it is not an ipoint.
                 # Add the vertex to its reachable set so we can work out
                 # which ipoints are reachable from the header
@@ -107,107 +107,112 @@ class LoopIPG():
         for succID in headerv.successors.keys():
             succv = self.__lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
-                loopIPG = self.loop_by_loop_info.loop_IPGs[succv.headerID]
-                for vertexID in loopIPG.iteration_edge_sources:
-                    self.inner_loop_ipoints[vertexID] = succv.headerID
-                for vertexID in loopIPG.iteration_edge_destinations:
-                    self.inner_loop_ipoints[vertexID] = succv.headerID
-                for exitID in self.__lnt.getLoopExits(succv.headerID):
-                    exitv = self.__global_icfg.getVertex(exitID)
-                    if exitv.is_ipoint:
-                        self.inner_loop_ipoints[exitID] = succv.headerID
-                    else:
-                        for keyID in self.vertex_to_reachable[exitID]:
-                            keyv = self.__global_icfg.getVertex(keyID)
-                            if keyv.is_ipoint:
-                                self.inner_loop_ipoints[keyID] = succv.headerID
+                self.compute_inner_loop_ipoints(succv)
+                        
+    def compute_inner_loop_ipoints(self, headerv):
+        stack = []
+        stack.append(headerv)
+        while stack:
+            poppedv = stack.pop()
+            for succID in poppedv.successors.keys():
+                succv = self.__lnt.getVertex(succID)
+                stack.append(succv)
+                if self.__ipg.hasVertex(succID):
+                    self.inner_loop_ipoints[succID] = headerv.headerID
                 
     def add_acyclic_edges (self, headerID):
         # Compute a topological sort on the ICFG
         dfs = trees.DepthFirstSearch(self.__icfg, self.__icfg.get_entryID())
-        entryv = self.__global_icfg.getVertex(self.__icfg.get_entryID())
-        if entryv.is_ipoint:
+        if  self.__ipg.hasVertex(self.__icfg.get_entryID()):
             # If the header of the loop is an ipoint then it is the only 
             # destination of an iteration edge
-            self.iteration_edge_destinations.add(entryv.vertexID)
+            self.iteration_edge_destinations.add(self.__icfg.get_entryID())
         # Perform data-flow analysis
         changed = True
         while changed:
             changed = False
             for vertexID in reversed(dfs.getPostorder()):
                 debug.debug_message("At vertex %d" % vertexID, __name__, 1)
-                v = self.__icfg.getVertex(vertexID)                
+                v = self.__icfg.getVertex(vertexID)
                 if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.get_entryID():
                     # Inner header detected
                     self.add_loop_entry_edges(v)
-                    self.add_ipoints_to_abstract_vertex(v, headerID)
+                    self.add_ipoints_to_abstract_vertex(v)
                 else:
                     for predID in v.predecessors.keys():
-                        predv = self.__global_icfg.getVertex(predID)
-                        if predv.is_ipoint:
-                            if v.is_ipoint:
+                        if self.__ipg.hasVertex(predID):
+                            if self.__ipg.hasVertex(vertexID):
                                 self.add_edge(predID, vertexID)
                             else:
                                 self.vertex_to_reachable[vertexID].add(predID)
                         else:
                             for keyID in self.vertex_to_reachable[predID]:
-                                keyv = self.__global_icfg.getVertex(keyID)
-                                if keyv.is_ipoint and v.is_ipoint:
+                                if self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
                                     self.add_edge(keyID, vertexID)
-                                elif not keyv.is_ipoint and v.is_ipoint:
+                                elif not self.__ipg.hasVertex(keyID) and self.__ipg.hasVertex(vertexID):
                                     self.iteration_edge_destinations.add(vertexID)
                                 else:
-                                    self.vertex_to_reachable[vertexID].add(keyID)
-                if vertexID in self.__lnt.getLoopTails(headerID):
-                    if v.is_ipoint:
-                        self.iteration_edge_sources.add(vertexID)
-                    else:
-                        for keyID in self.vertex_to_reachable[vertexID]:
-                            keyv = self.__global_icfg.getVertex(keyID)
-                            if keyv.is_ipoint:
-                                self.iteration_edge_sources.add(keyID)
+                                    self.vertex_to_reachable[vertexID].add(keyID)    
+            if vertexID in self.__lnt.getLoopTails(headerID):
+                if self.__ipg.hasVertex(vertexID):
+                    self.iteration_edge_sources.add(vertexID)
+                else:
+                    for keyID in self.vertex_to_reachable[vertexID]:
+                        if self.__ipg.hasVertex(keyID):
+                            self.iteration_edge_sources.add(keyID)
                             
     def add_loop_entry_edges (self, v):
         debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
-        loopIPG = self.loop_by_loop_info.loop_IPGs[v.vertexID]        
+        inner_loop_info = self.loop_by_loop_info.loop_IPGs[v.vertexID]        
         for predID in v.predecessors.keys():
-            predv = self.__global_icfg.getVertex(predID)
-            if predv.is_ipoint:
-                for succID in loopIPG.iteration_edge_destinations:
+            if self.__ipg.hasVertex(predID):
+                for succID in inner_loop_info.iteration_edge_destinations:
                     self.add_edge(predID, succID)
             else:
                 for keyID in self.vertex_to_reachable[predID]:
-                    keyv = self.__global_icfg.getVertex(keyID)
-                    if keyv.is_ipoint:
-                        for succID in loopIPG.iteration_edge_destinations:
+                    if self.__ipg.hasVertex(keyID):
+                        for succID in inner_loop_info.iteration_edge_destinations:
                             self.add_edge(keyID, succID)
                     else:
                         # The key is a header vertex. 
                         # This means that all the destinations of iteration edges of 
                         # the inner loop are also destinations of iterations edges of 
                         # the outer loop 
-                        for succID in loopIPG.iteration_edge_destinations: 
-                            self.iteration_edge_destinations.add(succID)
+                        self.iteration_edge_destinations.update(inner_loop_info.iteration_edge_destinations)
         
-    def add_ipoints_to_abstract_vertex (self, v, headerID):              
-        for exitID in self.__lnt.getLoopExits(v.vertexID):
-            exitv = self.__global_icfg.getVertex(exitID)
-            if exitv.is_ipoint:
-                self.vertex_to_reachable[v.vertexID].add(exitID)
+    def add_ipoints_to_abstract_vertex(self, v):
+        headerID        = v.vertexID
+        inner_loop_info = self.loop_by_loop_info.loop_IPGs[headerID]
+        ipoint_free_path_through_loop = False
+        for exitID in self.__lnt.getLoopExits(headerID):
+            # Add ipoints which can reach the loop exit
+            if self.__ipg.hasVertex(exitID):
+                self.vertex_to_reachable[headerID].add(exitID)
             else:
-                for keyID in self.vertex_to_reachable[exitID]:
-                    keyv = self.__global_icfg.getVertex(keyID)
-                    if keyv.is_ipoint:
-                        self.vertex_to_reachable[v.vertexID].add(keyID)
-        if not v.is_ipoint:
-            for predID in v.predecessors.keys():
-                predv = self.__global_icfg.getVertex(predID)
-                if predv.is_ipoint:
-                    self.vertex_to_reachable[v.vertexID].add(predID)
+                for keyID in inner_loop_info.vertex_to_reachable[exitID]:
+                    if self.__ipg.hasVertex(keyID):
+                        self.vertex_to_reachable[headerID].add(keyID)
+            if not self.__ipg.hasVertex(exitID) and headerID in inner_loop_info.vertex_to_reachable[exitID]:
+                ipoint_free_path_through_loop = True
+        
+        if not self.__ipg.hasVertex(headerID) and ipoint_free_path_through_loop:
+            # Since there is an ipoint-free path through the loop
+            # all ipoints which can reach the loop tails can leak in to the outer loop
+            for tailID in self.__lnt.getLoopTails(headerID):
+                if self.__ipg.hasVertex(tailID):
+                    self.vertex_to_reachable[headerID].add(tailID)
                 else:
-                    if headerID in self.vertex_to_reachable[predID]:
-                        self.vertex_to_reachable[v.vertexID].add(headerID)
-                            
+                    for keyID in inner_loop_info.vertex_to_reachable[tailID]:
+                        if self.__ipg.hasVertex(keyID):
+                            self.vertex_to_reachable[headerID].add(keyID)
+            # Similarly for all ipoints which can reach the predecessors
+            for predID in v.predecessors.keys():
+                if self.__ipg.hasVertex(predID):
+                    self.vertex_to_reachable[headerID].add(predID)
+                else:
+                    for keyID in self.vertex_to_reachable[predID]:
+                        self.vertex_to_reachable[headerID].add(keyID)
+                        
     def add_iteration_edges (self, headerID):
         for predID in self.iteration_edge_sources:
             for succID in self.iteration_edge_destinations:
@@ -218,11 +223,11 @@ class LoopIPG():
                 succe.iteration_edge = True
                 prede.iteration_edge = True
                 self.loop_by_loop_info.iteration_edges[headerID].add((predID, succID))
-                self.add_edge(predID, succID)
+                self.edges_added.add((predID, succID))
                 debug.debug_message("(%d, %d) is an iteration edge for loop with header %d" % (predID, succID, headerID), __name__, 1)
                             
     def add_edge(self, predID, succID):
-        debug.debug_message("Adding edge (%d, %d)" % (predID, succID), __name__, 1)
+        self.edges_added.add((predID, succID))
         if predID in self.inner_loop_ipoints:
             inner_headerID = self.inner_loop_ipoints[predID]
             debug.debug_message("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, inner_headerID), __name__, 1)

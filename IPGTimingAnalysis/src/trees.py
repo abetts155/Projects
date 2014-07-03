@@ -359,7 +359,7 @@ class LoopNests (Tree):
             if not flowg.hasVertex(vertexID): 
                 originalv = self.__directedg.getVertex(vertexID)
                 # Add the correct vertex type to the induced graph
-                if originalv.is_ipoint or (self.isLoopHeader(vertexID) and vertexID != headerv.headerID and self.isDoWhileLoop(vertexID)):
+                if originalv.is_ipoint:
                     newv = vertices.CFGVertex(vertexID, True)
                 else:
                     newv = vertices.CFGVertex(vertexID, False)

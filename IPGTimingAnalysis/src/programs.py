@@ -17,7 +17,8 @@ class LoopByLoopInformation():
         self.loop_entry_edges = {}
         self.loop_exit_edges  = {}
         self.initialise(lnt)
-        self.construct_loop_IPGs(icfg, lnt, ipg)
+        self.construct_loop_info(icfg, lnt, ipg)
+        self.check(ipg)
     
     def initialise(self, lnt):
         for treev in lnt:
@@ -26,7 +27,7 @@ class LoopByLoopInformation():
                 self.loop_entry_edges[treev.headerID] = set()
                 self.loop_exit_edges[treev.headerID]  = set()
                 
-    def construct_loop_IPGs(self, icfg, lnt, ipg):
+    def construct_loop_info(self, icfg, lnt, ipg):
         for level, the_vertices in lnt.levelIterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
@@ -35,8 +36,23 @@ class LoopByLoopInformation():
                     self.loop_ICFGs[treev.headerID] = loopICFG
                     loopICFG.set_edgeIDs()
                     udraw.make_file(loopICFG, "%s.header_%d.%s" % (icfg.name, treev.headerID, "icfg"))
-                    self.loop_IPGs[treev.headerID] = ipgs.LoopIPG(self, treev.headerID, icfg, loopICFG, lnt, ipg)
-            
+                    self.loop_IPGs[treev.headerID] = ipgs.LoopIPG(self, treev.headerID, loopICFG, lnt, ipg)
+    
+    def check(self, ipg):
+        edges_in_ipg = set()
+        for v in ipg:
+            for succID in v.successors.keys():
+                edges_in_ipg.add((v.vertexID, succID))
+        for ipg_loop_info in self.loop_IPGs.values():
+            for (predID, succID) in ipg_loop_info.edges_added:
+                if (predID, succID) not in edges_in_ipg:
+                    debug.warning_message("IPG edge (%d, %d) should NOT be in the IPG" % (predID, succID))
+                else:
+                    edges_in_ipg.remove((predID, succID))
+        if edges_in_ipg:
+            for (predID, succID) in edges_in_ipg:
+                debug.warning_message("IPG edgee (%d, %d) should be in the IPG" % (predID, succID))
+    
     def get_loop_ICFG(self, headerID):
         assert headerID in self.loopICFGs, "Unable to find the loop ICFG for header %d" % (headerID)
         return self.loopICFGs[headerID]
@@ -44,14 +60,6 @@ class LoopByLoopInformation():
     def get_loop_IPG(self, headerID):
         assert headerID in self.loopIPGs, "Unable to find the loop IPG for header %d" % (headerID)
         return self.loopIPGs[headerID]
-    
-    def filter_iteration_edges(self, edges):
-        iteration_edges = set()
-        for (predID, succID) in edges:
-            for iteration_edgeIDs in self.iteration_edges.values():
-                if (predID, succID) in iteration_edgeIDs:
-                    iteration_edges.add((predID, succID))
-        return iteration_edges
     
 class Program():
     def __init__(self):
