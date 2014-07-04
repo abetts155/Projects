@@ -5,13 +5,6 @@ import argparse
 import config
 import debug
 import parse_program_file
-
-def analyse():
-    program = parse_program_file.parse_file()
-    program.create_LNTs()
-    program.create_IPGs()
-    program.create_loop_by_loop_IPG_information()
-    program.do_wcet_calculation()
         
 def the_command_line():
     def clean():
@@ -62,4 +55,5 @@ def the_command_line():
                 
 if __name__ == "__main__":
     the_command_line()
-    analyse()
+    program = parse_program_file.parse_file()
+    program.do_analysis()

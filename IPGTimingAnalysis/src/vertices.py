@@ -1,6 +1,6 @@
 import edges
 
-dummyID         = -1
+dummyID         = 0
 ipoint_at_start = 'start'
 ipoint_at_end   = 'end'
 

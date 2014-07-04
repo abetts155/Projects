@@ -2,6 +2,7 @@ import directed_graphs
 import cfgs
 import vertices
 import debug
+import copy
 
 class Tree(directed_graphs.DirectedGraph):
     def __init__ (self):
@@ -27,17 +28,6 @@ class Tree(directed_graphs.DirectedGraph):
         succv = self.getVertex(succID)
         succv.parentID = predID
         
-    def isInternalVertex (self, vertexID):
-        return self.getVertex(vertexID).number_of_successors() > 0
-    
-    def getAllProperAncestors (self, vertexID):
-        ancestors = []
-        while vertexID != self.rootID:
-            parentID = self.getVertex(vertexID).get_parentID()
-            ancestors.append(self.getVertex(parentID))
-            vertexID = parentID
-        return ancestors
-    
     def isAncestor (self, left, right):
         if left == right:
             return True
@@ -59,23 +49,6 @@ class Tree(directed_graphs.DirectedGraph):
             return False
         else:
             return self.isAncestor(left, right)
-    
-    def getHeight (self):
-        maxHeight = 0
-        height = {}
-        stack  = []
-        rootv = self.getVertex(self.get_rootID())
-        stack.append(rootv)
-        height[rootv] = 0
-        while stack:
-            v = stack.pop()
-            for succID in v.successors.keys():
-                succv = self.getVertex(succID)
-                stack.append(succv)
-                height[succv] = height[v] + 1
-                if height[succv] > maxHeight:
-                    maxHeight = height[succv]
-        return maxHeight
         
     def levelIterator (self, up=True):
         rootv = self.getVertex(self.get_rootID())
@@ -294,21 +267,6 @@ class LoopNests (Tree):
     def isLoopHeader (self, vertexID):
         return vertexID in self.__headerVertices.keys()
     
-    def isSelfLoopHeader (self, vertexID):
-        return vertexID in self.__selfLoopHeaders
-        
-    def getHeaderIDs (self):
-        return self.__headerVertices.keys()
-    
-    def getNumberOfHeaders (self):
-        return len(self.__headerVertices.keys())
-    
-    def getNumberOfSelfLoopHeaders (self):
-        return len(self.__selfLoopHeaders)
-    
-    def getSelfLoopHeaderIDs (self):
-        return self.__selfLoopHeaders
-    
     def getLoopTails (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.__loopTails[headerID]
@@ -341,10 +299,6 @@ class LoopNests (Tree):
                 return True
         return False
     
-    def isDoWhileLoop (self, headerID):
-        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return set(self.__loopTails[headerID]) == set(self.__loopExits[headerID])
-    
     def isNested (self, left, right):
         return self.isProperAncestor(right, left)
     
@@ -358,11 +312,9 @@ class LoopNests (Tree):
             vertexID = worklist.pop()
             if not flowg.hasVertex(vertexID): 
                 originalv = self.__directedg.getVertex(vertexID)
-                # Add the correct vertex type to the induced graph
-                if originalv.is_ipoint:
-                    newv = vertices.CFGVertex(vertexID, True)
-                else:
-                    newv = vertices.CFGVertex(vertexID, False)
+                newv = copy.deepcopy(originalv)
+                newv.predecessors = {}
+                newv.successors = {}
                 flowg.addVertex(newv)
                 # Now discover which edges are incident to this vertex
                 edges[vertexID] = set([])                       
@@ -396,9 +348,9 @@ class LoopNests (Tree):
                 flowg.addEdge(predID, exitID)
         else:
             exitID = noSuccs[0]
-            flowg.setExitID(exitID)
+            flowg.set_exitID(exitID)
         # Add entry vertex to induced subgraph
-        flowg.setEntryID(headerv.headerID)
+        flowg.set_entryID(headerv.headerID)
         return flowg
     
     

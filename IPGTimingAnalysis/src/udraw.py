@@ -114,7 +114,6 @@ def writeCFGVertex (cfg, vertexID, the_file):
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         succe = v.get_successor_edge(succID)
-        the_file.write(set_name(str(succe.get_edgeID())))
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
@@ -171,9 +170,6 @@ def writeIPGVertex (ipg, vertexID, the_file):
         toolTip = ', '.join(str(v.vertexID) for v in succe.edge_label)
         if succe.iteration_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 2))
-        elif succe.dummy_edge:
-            the_file.write(set_edge_pattern(EDGESHAPE.DASHED, 2))
-            toolTip += "DUMMY EDGE"
         the_file.write(set_tool_tip(toolTip))
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))

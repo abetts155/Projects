@@ -1,9 +1,14 @@
 import vertices
+import copy
 
 class DirectedGraph ():        
     def __init__ (self):
         self.the_vertices = {}
-        self.name = None
+        self.name = None 
+    
+    def addVertex (self, v):
+        assert v.vertexID not in self.the_vertices, "Adding vertex %d which is already in graph" % v.vertexID
+        self.the_vertices[v.vertexID] = v
     
     def getVertex (self, vertexID):
         assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
@@ -58,6 +63,27 @@ class FlowGraph (DirectedGraph):
         DirectedGraph.__init__(self)
         self.entryID = vertices.dummyID
         self.exitID = vertices.dummyID
+    
+    def get_reverse_graph(self):
+        reverseg = FlowGraph() 
+        # Add vertices
+        for v in self:
+            copyv = copy.copy(v)
+            copyv.successors   = {}
+            copyv.predecessors = {}
+            reverseg.the_vertices[copyv.vertexID] = copyv
+        # Add edges
+        for v in self:
+            predID = v.vertexID
+            predv  = reverseg.getVertex(predID)
+            for succID in v.successors.keys():
+                succv = reverseg.getVertex(succID)
+                predv.add_predecessor(succID)
+                succv.add_successor(predID)
+        # Set the entry and exit IDs
+        reverseg.entryID = self.get_exitID()
+        reverseg.exitID  = self.get_entryID()
+        return reverseg
             
     def set_edgeIDs (self):
         edgeID = 1

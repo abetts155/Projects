@@ -21,9 +21,9 @@ class IPG (directed_graphs.FlowGraph):
                 self.the_vertices[v.vertexID] = newv
                 
     def add_edges (self, icfg):
-        vertex_to_reachable = {}
+        vertex_ipoint_pairs_paths = {}
         for v in icfg:
-            vertex_to_reachable[v.vertexID] = {}
+            vertex_ipoint_pairs_paths[v.vertexID] = {}
         # Do data-flow analysis
         dfs     = trees.DepthFirstSearch(icfg, icfg.get_entryID())
         changed = True
@@ -34,41 +34,40 @@ class IPG (directed_graphs.FlowGraph):
                 for predID in v.predecessors.keys():
                     predv = icfg.getVertex(predID)
                     if predv.is_ipoint:
-                        if predID not in vertex_to_reachable[vertexID]:
+                        if predID not in vertex_ipoint_pairs_paths[vertexID]:
                             changed = True
-                            vertex_to_reachable[vertexID][predID] = set()
+                            vertex_ipoint_pairs_paths[vertexID][predID] = []
                             if not v.is_ipoint:
-                                vertex_to_reachable[vertexID][predID].add(v)
+                                vertex_ipoint_pairs_paths[vertexID][predID].append(v)
                     else:
-                        for keyID in vertex_to_reachable[predID]:
-                            if keyID not in vertex_to_reachable[vertexID]:
+                        for keyID in vertex_ipoint_pairs_paths[predID]:
+                            if keyID not in vertex_ipoint_pairs_paths[vertexID]:
                                 changed = True
-                                vertex_to_reachable[vertexID][keyID] = set()
-                                vertex_to_reachable[vertexID][keyID].update(vertex_to_reachable[predID][keyID])
+                                vertex_ipoint_pairs_paths[vertexID][keyID] = vertex_ipoint_pairs_paths[predID][keyID][:]
                                 if not v.is_ipoint:
-                                    vertex_to_reachable[vertexID][keyID].add(v)
+                                    vertex_ipoint_pairs_paths[vertexID][keyID].append(v)
                             else:
-                                oldSize = len(vertex_to_reachable[vertexID][keyID])
-                                vertex_to_reachable[vertexID][keyID].update(vertex_to_reachable[predID][keyID])
-                                newSize = len(vertex_to_reachable[vertexID][keyID])
+                                oldSize = len(vertex_ipoint_pairs_paths[vertexID][keyID])
+                                #vertex_ipoint_pairs_paths[vertexID][keyID].update(vertex_ipoint_pairs_paths[predID][keyID])
+                                newSize = len(vertex_ipoint_pairs_paths[vertexID][keyID])
                                 if newSize != oldSize:
                                     changed = True
         # Now add the edges 
-        for vertexID, ipointToVertexSet in vertex_to_reachable.iteritems():
+        for vertexID, ipoint_to_path in vertex_ipoint_pairs_paths.iteritems():
             v = icfg.getVertex(vertexID)
             if v.is_ipoint:
-                for predID, vertex_set in ipointToVertexSet.iteritems():
-                    self.add_edge(predID, vertexID, vertex_set)
+                for predID, path in ipoint_to_path.iteritems():
+                    self.add_edge(predID, vertexID, path[:])
     
-    def add_edge (self, predID, succID, vertex_set):
+    def add_edge (self, predID, succID, path):
         global edge_ID
         edge_ID += 1
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
         prede = edges.IPGEdge(predID, edge_ID)
         succe = edges.IPGEdge(succID, edge_ID)
-        prede.edge_label.update(vertex_set)
-        succe.edge_label.update(vertex_set)
+        prede.edge_label = path
+        succe.edge_label = path
         predv.add_successor_edge(succe)
         succv.add_predecessor_edge(prede) 
                     
@@ -79,7 +78,7 @@ class IPG (directed_graphs.FlowGraph):
         for predID in entryv.predecessors.keys():
             self.exitID = predID
 
-class LoopIPG():    
+class IPGLoopInformation():    
     def __init__ (self, loop_by_loop_info, headerID, icfg, lnt, ipg):
         self.edges_added                 = set()
         self.loop_by_loop_info           = loop_by_loop_info
@@ -163,7 +162,7 @@ class LoopIPG():
                             
     def add_loop_entry_edges (self, v):
         debug.debug_message("Inner header %d detected" % v.vertexID, __name__, 1)
-        inner_loop_info = self.loop_by_loop_info.loop_IPGs[v.vertexID]        
+        inner_loop_info = self.loop_by_loop_info.ipgs_per_loop[v.vertexID]        
         for predID in v.predecessors.keys():
             if self.__ipg.hasVertex(predID):
                 for succID in inner_loop_info.iteration_edge_destinations:
@@ -182,7 +181,7 @@ class LoopIPG():
         
     def add_ipoints_to_abstract_vertex(self, v):
         headerID        = v.vertexID
-        inner_loop_info = self.loop_by_loop_info.loop_IPGs[headerID]
+        inner_loop_info = self.loop_by_loop_info.ipgs_per_loop[headerID]
         ipoint_free_path_through_loop = False
         for exitID in self.__lnt.getLoopExits(headerID):
             # Add ipoints which can reach the loop exit

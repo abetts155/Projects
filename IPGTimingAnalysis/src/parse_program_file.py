@@ -33,7 +33,7 @@ def set_entry_and_exit(icfg):
         entryID = icfg.getNextVertexID()
         entryv  = vertices.CFGVertex(entryID, True)
         icfg.addVertex(entryv)
-        icfg.setEntryID(entryID)
+        icfg.set_entryID(entryID)
         icfg.addEdge(entryID, without_predecessors[0])
     
     exitID = None
@@ -49,7 +49,7 @@ def set_entry_and_exit(icfg):
         exitID = icfg.getNextVertexID()
         exitv  = vertices.CFGVertex(exitID, True)
         icfg.addVertex(exitv)
-        icfg.setExitID(exitID)
+        icfg.set_exitID(exitID)
         icfg.addEdge(without_successors[0], exitID)
     assert entryID, "Unable to set entry ID"
     assert exitID, "Unable to set exit ID"
@@ -107,6 +107,5 @@ def parse_file():
         icfg.add_predecessor_edges()
         icfg.add_edges_between_ipoints()
         set_entry_and_exit(icfg)
-        icfg.set_edgeIDs()
         program.add_ICFG(icfg)
     return program     

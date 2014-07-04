@@ -9,16 +9,26 @@ import shlex
 import decimal
 import abc
 import sys
+import timeit
 
 def compare_execution_counts(icfg_ilp_execution_counts, ipg_ilp_execution_counts):
+    max_length = 0
+    for key in icfg_ilp_execution_counts.keys():
+        max_length = max(max_length, len(key))
+    for key in ipg_ilp_execution_counts.keys():
+        max_length = max(max_length, len(key))
+    
+    def get_spaces(key):
+        return ' ' * (max_length - len(key))
+    
     for key, count in icfg_ilp_execution_counts.iteritems():
         if key in ipg_ilp_execution_counts and ipg_ilp_execution_counts[key] == count:
-            print("Equality on %s: %d" % (key, count))
+            print("Equality on %s:%s %d" % (key, get_spaces(key), count))
     for key, count in icfg_ilp_execution_counts.iteritems():
         if key in ipg_ilp_execution_counts and ipg_ilp_execution_counts[key] != count:
-            print("Inequality on %s: %d and %d" % (key, count, ipg_ilp_execution_counts[key]))
+            print("Inequality on %s:%s %d and %d" % (key, get_spaces(key), count, ipg_ilp_execution_counts[key]))
         elif count > 0 and key not in ipg_ilp_execution_counts:
-            print("Inequality on %s: %d and %d" % (key, count, 0))
+            print("Inequality on %s:%s %d and %d" % (key, get_spaces(key), count, 0))
 
 class LpSolve:
     comma         = ","
@@ -70,12 +80,16 @@ class ILP():
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
         self.write_to_file()
-        cmd  = "lp_solve %s" % self.filename 
-        proc = subprocess.Popen(cmd, 
-                                shell=True, 
-                                stdout=subprocess.PIPE, 
-                                stderr=subprocess.PIPE)
-        if proc.wait() != 0:
+        cmd        = "lp_solve %s" % self.filename 
+        start      = timeit.default_timer()
+        proc       = subprocess.Popen(cmd, 
+                                      shell=True, 
+                                      stdout=subprocess.PIPE, 
+                                      stderr=subprocess.PIPE)
+        return_code = proc.wait()
+        end         = timeit.default_timer()
+        self.solve_time = end - start
+        if return_code != 0:
             debug.exit_message("Running '%s' failed" % cmd)
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
@@ -103,12 +117,12 @@ class ILP():
         pass
         
 class CreateIPGILP (ILP):
-    def __init__ (self, data, ipg, lnt, ipg_loop_info):
+    def __init__ (self, data, ipg, lnt, enhanced_lnt, ipg_loop_info):
         filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, ipg.name, "ipg")
         ILP.__init__(self, filename)
         self.create_objective_function(data, ipg)
         self.create_structural_constraints(ipg)
-        self.create_loop_bound_constraints(data, ipg, lnt, ipg_loop_info)
+        self.create_loop_bound_constraints(data, ipg, lnt, enhanced_lnt, ipg_loop_info)
         self.create_integer_constraint(ipg)
 
     def create_objective_function (self, data, ipg):
@@ -142,32 +156,39 @@ class CreateIPGILP (ILP):
             new_constraint += LpSolve.semi_colon
             self.constraints.append(new_constraint)
             
-    def create_loop_bound_constraints (self, data, ipg, lnt, ipg_loop_info):
-        for level, the_vertices in lnt.levelIterator(True):
+    def create_loop_bound_constraints (self, data, ipg, lnt, enhanced_lnt, ipg_loop_info):
+        for level, the_vertices in enhanced_lnt.levelIterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     if level > 0:
-                        self.create_constraints_for_loop(data, ipg, lnt, ipg_loop_info, treev)
+                        self.create_constraints_for_loop(data, ipg, lnt, enhanced_lnt, ipg_loop_info, treev)
                     else:
-                        iteration_edges = ipg_loop_info.iteration_edges[treev.headerID]
-                        assert len(iteration_edges) == 1, \
-                        "There should be exactly 1 iteration edge for the entry vertex %d but there are %d" % (treev.headerID, len(iteration_edges))
                         new_constraint = ""
-                        predID, succID = list(iteration_edges)[0]
+                        iteration_edges = ipg_loop_info.iteration_edges[treev.headerID]
+                        predID, succID  = list(iteration_edges)[0]
                         new_constraint += LpSolve.get_edge_variable(predID, succID)
                         new_constraint += LpSolve.equals
                         new_constraint += "%d" % data.get_loop_bound(treev.headerID)
                         new_constraint += LpSolve.semi_colon
                         self.constraints.append(new_constraint)
                         
-    def create_constraints_for_loop (self, data, ipg, lnt, ipg_loop_info, headerv):
+    def create_constraints_for_loop (self, data, ipg, lnt, enhanced_lnt, ipg_loop_info, headerv):
         iteration_edges = ipg_loop_info.iteration_edges[headerv.headerID]
         bound           = sys.maxint
         for predID, succID in iteration_edges:
             predv = ipg.getVertex(predID)
             succe = predv.get_successor_edge(succID)
+            decrement_bound = False
             for icfgv in succe.edge_label:
-                bound = min(data.get_loop_bound(icfgv.vertexID), bound)
+                parentv = enhanced_lnt.getVertex(enhanced_lnt.getVertex(icfgv.vertexID).get_parentID())
+                if parentv.headerID == headerv.headerID:
+                    program_point_bound = data.get_loop_bound(icfgv.vertexID)
+                    if decrement_bound:
+                        program_point_bound -= 1 
+                    bound = min(program_point_bound, bound)
+                    if isinstance(icfgv, vertices.CFGEdge) and lnt.isLoopBackEdge(icfgv.edge[0], icfgv.edge[1]):
+                        decrement_bound = True
+                        
         new_constraint  = ""
         counter = len(iteration_edges)
         for predID, succID in iteration_edges:

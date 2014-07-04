@@ -1,4 +1,4 @@
-dummyID = -1
+dummyID = 0
 
 class Edge:    
     def __init__(self, vertexID, edgeID=None):        
@@ -21,7 +21,7 @@ class Edge:
 class IPGEdge(Edge):
     def __init__(self, vertexID, edgeID=None, dummy_edge=False):
         Edge.__init__(self, vertexID, edgeID)
-        self.edge_label     = set()
+        self.edge_label     = []
         self.iteration_edge = False
         self.dummy_edge     = dummy_edge
     

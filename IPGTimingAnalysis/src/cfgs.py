@@ -1,19 +1,11 @@
 import directed_graphs
 import vertices
-import copy
 
 class CFG (directed_graphs.FlowGraph):    
     def __init__ (self):
         directed_graphs.FlowGraph.__init__(self)
         
-    def addVertex (self, bb):
-        assert bb.vertexID not in self.the_vertices, "Adding basic block %d which is already in graph" % bb.vertexID
-        self.the_vertices[bb.vertexID] = bb
-        
-    def getVertex (self, bbID):
-        return directed_graphs.DirectedGraph.getVertex(self, bbID)
-        
-    def setEntryID (self, entryID=None):
+    def set_entryID(self, entryID=None):
         if entryID is None:
             for bb in self.the_vertices.values():
                 if bb.number_of_predecessors() == 0:
@@ -23,10 +15,10 @@ class CFG (directed_graphs.FlowGraph):
             assert self.entryID != vertices.dummyID, "Unable to find a vertex without predecessors to set as the entry"
         else:
             assert entryID in self.the_vertices, "Cannot find vertex " + str(entryID) + " in vertices"
-            assert entryID > vertices.dummyID, "Entry ID " + str(entryID) + " is not positive"
+            assert entryID != vertices.dummyID, "Entry ID " + str(entryID) + " is not positive"
             self.entryID = entryID
         
-    def setExitID (self, exitID=None):
+    def set_exitID(self, exitID=None):
         if exitID is None:
             for bb in self.the_vertices.values():
                 if bb.numberOfSuccessors() == 0:
@@ -35,15 +27,8 @@ class CFG (directed_graphs.FlowGraph):
             assert self.exitID != vertices.dummyID, "Unable to find a vertex without successors to set as the entry"
         else:
             assert exitID in self.the_vertices, "Cannot find vertex " + str(exitID) + " in vertices"
-            assert exitID > vertices.dummyID, "Exit ID " + str(exitID) + " is not positive"
+            assert exitID != vertices.dummyID, "Exit ID " + str(exitID) + " is not positive"
             self.exitID = exitID
-            
-    def addExitEntryEdge (self):
-        assert self.exitID != vertices.dummyID, "Exit ID not set"
-        entryv = self.getVertex(self.entryID)
-        exitv = self.getVertex(self.exitID)
-        entryv.addPredecessor(self.exitID)
-        exitv.addSuccessor(self.entryID)
         
     def __str__ (self):
         string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
@@ -56,46 +41,24 @@ class CFG (directed_graphs.FlowGraph):
 class EnhancedCFG (CFG):
     def __init__ (self, cfg=None):
         directed_graphs.FlowGraph.__init__(self)
-        if cfg:
-            self.name = cfg.name
-            for v in cfg:
-                newv = vertices.CFGVertex(v.vertexID, v.is_ipoint)
-                self.the_vertices[v.vertexID] = newv
-                if v.vertexID == cfg.get_entryID():
-                    self.entryID = v.vertexID
-                if v.vertexID == cfg.get_exitID():
-                    self.exitID = v.vertexID
-            assert self.entryID != vertices.dummyID
-            assert self.exitID != vertices.dummyID
-            newVertexID = 0
-            for v in cfg:
-                for succID in v.successors.keys():
-                    newVertexID -= 1
-                    newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
-                    self.the_vertices[newVertexID] = newv
-                    self.addEdge(v.vertexID, newVertexID)
-                    self.addEdge(newVertexID, succID)
-    
-    def get_reverse_graph(self):
-        reverseg = EnhancedCFG() 
-        # Add vertices
-        for v in self:
-            copyv = copy.copy(v)
-            copyv.successors   = {}
-            copyv.predecessors = {}
-            reverseg.the_vertices[copyv.vertexID] = copyv
-        # Add edges
-        for v in self:
-            predID = v.vertexID
-            predv  = reverseg.getVertex(predID)
+        self.name = cfg.name
+        for v in cfg:
+            newv = vertices.CFGVertex(v.vertexID, v.is_ipoint)
+            self.the_vertices[v.vertexID] = newv
+            if v.vertexID == cfg.get_entryID():
+                self.entryID = v.vertexID
+            if v.vertexID == cfg.get_exitID():
+                self.exitID = v.vertexID
+        assert self.entryID != vertices.dummyID
+        assert self.exitID != vertices.dummyID
+        newVertexID = 0
+        for v in cfg:
             for succID in v.successors.keys():
-                succv = reverseg.getVertex(succID)
-                predv.add_predecessor(succID)
-                succv.add_successor(predID)
-        # Set the entry and exit IDs
-        reverseg.entryID = self.get_exitID()
-        reverseg.exitID  = self.get_entryID()
-        return reverseg
+                newVertexID -= 1
+                newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
+                self.the_vertices[newVertexID] = newv
+                self.addEdge(v.vertexID, newVertexID)
+                self.addEdge(newVertexID, succID)
     
 class ICFG(CFG):
     def __init__(self):
