@@ -26,6 +26,11 @@ class DirectedGraph ():
         succv = self.getVertex(succID)
         predv.add_successor(succID)
         succv.add_predecessor(predID)
+        
+    def hasEdge (self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        return succID in predv.successors.keys() and predID in succv.predecessors.keys()
     
     def removeEdge (self, predID, succID):
         predv = self.getVertex(predID)

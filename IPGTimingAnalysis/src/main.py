@@ -48,6 +48,12 @@ def the_command_line():
                       help="generate uDrawGraph files",
                       default=False)
     
+    parser.add_argument("-R",
+                        "--add-path-reconstructible-instrumentation",
+                        action="store_true",
+                        help="add path reconstructible instrumentation to each CFG",
+                        default=False)
+    
     parser.parse_args(namespace=config.Arguments)
     
     setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
@@ -56,4 +62,5 @@ def the_command_line():
 if __name__ == "__main__":
     the_command_line()
     program = parse_program_file.parse_file()
+    program.instrument()
     program.do_analysis()

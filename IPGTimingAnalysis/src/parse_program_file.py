@@ -4,56 +4,6 @@ import cfgs
 import vertices
 import debug
 import shlex
-        
-def set_entry_and_exit(icfg):
-    without_predecessors = []
-    without_successors   = []
-    for bb in icfg:
-        if bb.number_of_successors() == 0:
-            without_successors.append(bb.vertexID)
-        elif bb.number_of_successors() == 1:
-            if bb.has_successor(bb.vertexID):
-                without_successors.append(bb.vertexID)
-        if bb.number_of_predecessors() == 0:
-            without_predecessors.append(bb.vertexID)
-        elif bb.number_of_predecessors() == 1:
-            if bb.has_predecessor(bb.vertexID):
-                without_predecessors.append(bb.vertexID)
-    
-    entryID = None
-    if len(without_predecessors) == 0:
-        debug.exit_message("CFG '%s' does not an entry point" % icfg.getName())
-    elif len(without_predecessors) > 1:
-        debug_info = ""
-        for bbID in without_predecessors:
-            bb = icfg.getVertex(bbID)
-            debug_info += bb.__str__()
-        debug.exit_message("CFG '%s' has too many entry points: %s" % (icfg.getName(), debug_info))
-    else:
-        entryID = icfg.getNextVertexID()
-        entryv  = vertices.CFGVertex(entryID, True)
-        icfg.addVertex(entryv)
-        icfg.set_entryID(entryID)
-        icfg.addEdge(entryID, without_predecessors[0])
-    
-    exitID = None
-    if len(without_successors) == 0:
-        debug.exit_message("CFG '%s' does not an exit point" % icfg.getName())
-    elif len(without_successors) > 1:
-        debug_info = ""
-        for bbID in without_successors:
-            bb = icfg.getVertex(bbID)
-            debug_info += bb.__str__()
-        debug.exit_message("CFG '%s' has too many exit points: %s" % (icfg.getName(), debug_info))
-    else:
-        exitID = icfg.getNextVertexID()
-        exitv  = vertices.CFGVertex(exitID, True)
-        icfg.addVertex(exitv)
-        icfg.set_exitID(exitID)
-        icfg.addEdge(without_successors[0], exitID)
-    assert entryID, "Unable to set entry ID"
-    assert exitID, "Unable to set exit ID"
-    icfg.addEdge(exitID, entryID)
     
 def parse_file():
     program = programs.Program()
@@ -103,9 +53,8 @@ def parse_file():
                             assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
                             bb.add_successor(int(succID))
                         index += 1                        
-        assert icfg, "Attempting to analyse CFG but current CFG is null"
+        assert icfg, "Attempting to analyse ICFG but current ICFG is null"
         icfg.add_predecessor_edges()
-        icfg.add_edges_between_ipoints()
-        set_entry_and_exit(icfg)
+        icfg.set_entry_and_exit()
         program.add_ICFG(icfg)
     return program     

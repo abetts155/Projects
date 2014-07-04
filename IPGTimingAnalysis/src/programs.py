@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import config
 import trees
 import cfgs
 import ipgs
@@ -75,9 +76,12 @@ class Program():
     def add_ICFG(self, icfg):
         assert icfg.name
         self.icfgs[icfg.name] = icfg
-        self.enhanced_icfgs[icfg.name] = cfgs.EnhancedCFG(icfg)
         udraw.make_file(icfg, "%s.icfg" % (icfg.name))
-        udraw.make_file(self.enhanced_icfgs[icfg.name], "%s.enhanced_icfg" % (icfg.name))
+    
+    def create_enhanced_ICFGs(self):
+        for name, icfg in self.icfgs.iteritems():
+            self.enhanced_icfgs[name] = cfgs.EnhancedICFG(icfg)
+            udraw.make_file(self.enhanced_icfgs[icfg.name], "%s.enhanced_icfg" % (icfg.name))
     
     def create_LNTs(self):
         for name, icfg in self.icfgs.iteritems():
@@ -125,7 +129,16 @@ class Program():
             self.ipg_ilps[icfg.name] = ipg_ilp
             print("IPG::  WCET(%s) = %d (solve time = %f)" % (icfg.name, ipg_ilp.wcet, ipg_ilp.solve_time))
     
+    def instrument(self):
+        for icfg in self.icfgs.values():
+            if config.Arguments.add_path_reconstructible_instrumentation:
+                icfg.instrument_using_depth_first_spanning_tree()
+            else:
+                icfg.add_edges_between_ipoints()
+            udraw.make_file(icfg, "%s.icfg" % (icfg.name))
+    
     def do_analysis(self):
+        self.create_enhanced_ICFGs()
         self.create_LNTs()
         self.create_IPGs()
         self.create_loop_by_loop_information()

@@ -61,7 +61,7 @@ def make_file (g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            if isinstance(g, cfgs.CFG):
+            if isinstance(g, cfgs.ICFG) or isinstance(g, cfgs.EnhancedICFG):
                 writeCFGVertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
@@ -69,7 +69,7 @@ def make_file (g, graph_name):
             elif isinstance(g, trees.LoopNests):
                 for v in g:
                         writeTreeVertex(g, v.vertexID, the_file)
-            elif isinstance(g, ipgs.IPG) or isinstance(g, ipgs.LoopIPG):
+            elif isinstance(g, ipgs.IPG):
                 writeIPGVertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
@@ -167,7 +167,7 @@ def writeIPGVertex (ipg, vertexID, the_file):
         the_file.write(new_edge)
         the_file.write(begin_attrs)
         the_file.write(set_name(str(succe.get_edgeID())))
-        toolTip = ', '.join(str(v.vertexID) for v in succe.edge_label)
+        toolTip = ', '.join(str(v.vertexID) for v in succe.edge_label if v.vertexID > 0)
         if succe.iteration_edge:
             the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 2))
         the_file.write(set_tool_tip(toolTip))
