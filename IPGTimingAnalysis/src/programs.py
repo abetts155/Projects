@@ -12,36 +12,58 @@ import debug
 
 class LoopByLoopInformation():    
     def __init__ (self, enhanced_icfg, enhanced_lnt, ipg):
+        self.enhanced_lnt            = enhanced_lnt
         self.enhanced_icfgs_per_loop = {}
         self.ipgs_per_loop           = {}
         self.iteration_edges         = {}
         self.loop_entry_edges        = {}
         self.loop_exit_edges         = {}
-        self.initialise(enhanced_lnt)
-        self.construct_loop_info(enhanced_icfg, enhanced_lnt, ipg)
-        self.check(ipg)
+        self.loop_exit_regions       = {}
+        self.initialise()
+        self.construct_loop_info(enhanced_icfg, ipg)
+        self.check_IPG_edges(ipg)
     
-    def initialise(self, enhanced_lnt):
-        for treev in enhanced_lnt:
+    def initialise(self):
+        for treev in self.enhanced_lnt:
             if isinstance(treev, vertices.HeaderVertex):
                 self.iteration_edges[treev.headerID]  = set()
                 self.loop_entry_edges[treev.headerID] = set()
                 self.loop_exit_edges[treev.headerID]  = set()
                 
-    def construct_loop_info(self, enhanced_icfg, enhanced_lnt, ipg):
-        for treev in enhanced_lnt:
+    def construct_loop_info(self, enhanced_icfg, ipg):
+        for treev in self.enhanced_lnt:
             if isinstance(treev, vertices.HeaderVertex):
                 debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                enhanced_icfg_of_loop = enhanced_lnt.induce_subgraph(treev)
+                enhanced_icfg_of_loop = self.enhanced_lnt.induce_subgraph(treev)
                 self.enhanced_icfgs_per_loop[treev.headerID] = enhanced_icfg_of_loop
+                self.loop_exit_regions[treev.headerID] = self.compute_reachable_program_points_from_loop_exits(treev)
                 udraw.make_file(enhanced_icfg_of_loop, "%s.header_%d.%s" % (enhanced_icfg.name, treev.headerID, "icfg"))
                 self.ipgs_per_loop[treev.headerID] = ipgs.IPGLoopInformation(self, 
                                                                              treev.headerID, 
                                                                              enhanced_icfg_of_loop, 
-                                                                             enhanced_lnt, 
+                                                                             self.enhanced_lnt, 
                                                                              ipg)
 
-    def check(self, ipg):
+    def compute_reachable_program_points_from_loop_exits(self, treev):
+        enhanced_ICFG = self.enhanced_icfgs_per_loop[treev.headerID]
+        reverse_ICFG  = enhanced_ICFG.get_reverse_graph()
+        reachable     = set()
+        if treev.vertexID == self.enhanced_lnt.get_rootID():
+            for v in reverse_ICFG:
+                reachable.add(v.vertexID)
+        else:
+            for exitID in self.enhanced_lnt.getLoopExits(treev.headerID):
+                stack = []
+                stack.append(exitID)
+                while stack:
+                    poppedID = stack.pop()
+                    reachable.add(poppedID)
+                    poppedv  = reverse_ICFG.getVertex(poppedID)
+                    for succID in poppedv.successors.keys():
+                        stack.append(succID)
+        return reachable
+
+    def check_IPG_edges(self, ipg):
         edges_in_ipg = set()
         for v in ipg:
             for succID in v.successors.keys():
@@ -63,6 +85,9 @@ class LoopByLoopInformation():
     def get_loop_IPG(self, headerID):
         assert headerID in self.loopIPGs, "Unable to find the loop IPG for header %d" % (headerID)
         return self.loopIPGs[headerID]
+    
+    def is_in_loop_exit_region(self, headerID, vertexID):
+        return vertexID in self.loop_exit_regions[headerID]
     
 class Program():
     def __init__(self):

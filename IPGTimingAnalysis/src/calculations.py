@@ -172,7 +172,7 @@ class CreateIPGILP (ILP):
                         new_constraint += LpSolve.semi_colon
                         self.constraints.append(new_constraint)
                         
-    def create_constraints_for_loop (self, data, ipg, lnt, enhanced_lnt, ipg_loop_info, headerv):
+    def create_constraints_for_loop(self, data, ipg, lnt, enhanced_lnt, ipg_loop_info, headerv):
         iteration_edges = ipg_loop_info.iteration_edges[headerv.headerID]
         bound           = sys.maxint
         for predID, succID in iteration_edges:
@@ -204,9 +204,10 @@ class CreateIPGILP (ILP):
         else:
             relative_edges = ipg_loop_info.loop_exit_edges[headerv.headerID]
         
+        parentv = enhanced_lnt.getVertex(enhanced_lnt.getVertex(headerv.vertexID).get_parentID())
         counter = len(relative_edges)
         for predID, succID in relative_edges:
-            new_constraint += "%d %s" % (bound, LpSolve.get_edge_variable(predID, succID))
+            new_constraint += "%d %s" % (bound, LpSolve.get_edge_variable(predID, succID))           
             if counter > 1:
                 new_constraint += LpSolve.plus
             counter -= 1
@@ -321,7 +322,7 @@ class CreateICFGILP (ILP):
         for predID, succID in incoming_edges:
             new_constraint += "%d %s" % (bound, LpSolve.get_edge_variable(predID, succID))
             if counter > 1:
-                new_constraint += LpSolve.plus
+                new_constraint += LpSolve.plus 
             counter -= 1
         new_constraint += LpSolve.semi_colon
         self.constraints.append(new_constraint)
