@@ -13,6 +13,7 @@ import debug
 class LoopByLoopInformation():    
     def __init__ (self, enhanced_icfg, enhanced_lnt, lnt, ipg):
         self.enhanced_lnt            = enhanced_lnt
+        self.lnt                     = lnt
         self.enhanced_icfgs_per_loop = {}
         self.ipgs_per_loop           = {}
         self.loop_back_edges         = {}
@@ -50,6 +51,7 @@ class LoopByLoopInformation():
                 self.ipgs_per_loop[treev.headerID] = ipgs.IPGLoopInformation(self, 
                                                                              treev.headerID, 
                                                                              enhanced_icfg_of_loop, 
+                                                                             self.lnt,
                                                                              self.enhanced_lnt, 
                                                                              ipg)
 
@@ -61,9 +63,9 @@ class LoopByLoopInformation():
             for v in reverse_ICFG:
                 reachable.add(v.vertexID)
         else:
-            for exitID in self.enhanced_lnt.get_loop_exits_for_header(treev.headerID):
+            for (predID, succID) in self.enhanced_lnt.get_loop_exits_edges_for_header(treev.headerID):
                 stack = []
-                stack.append(exitID)
+                stack.append(predID)
                 while stack:
                     poppedID = stack.pop()
                     reachable.add(poppedID)

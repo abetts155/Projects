@@ -163,7 +163,7 @@ class LoopNests (Tree):
         self.__loopBodies = {}
         self.__loopTails = {}
         self.__headerVertices = {}
-        self.__loopExits = {}
+        self.__loop_exit_edges = {}
         self.__selfLoopHeaders = []
         self.initialise()
         self.find_loops(rootID)
@@ -246,17 +246,17 @@ class LoopNests (Tree):
             
     def find_loop_exits(self):
         for headerID in self.__headerVertices.keys():
-            self.__loopExits[headerID] = []
+            self.__loop_exit_edges[headerID] = set()
             for vertexID in self.__loopBodies[headerID]:
                 v = self.__directedg.getVertex(vertexID)
                 for succID in v.successors.keys():
                     if succID not in self.__loopBodies[headerID]:
                         if headerID != vertexID and self.isLoopHeader(vertexID):
                             if succID not in self.__loopBodies[vertexID]:
-                                self.__loopExits[headerID].append(vertexID)
+                                self.__loop_exit_edges[headerID].add((vertexID, succID))
                         else:
-                            self.__loopExits[headerID].append(vertexID)
-            debug.debug_message("Exits of %s = %s" % (headerID, self.__loopExits[headerID]), __name__, 4)
+                            self.__loop_exit_edges[headerID].add((vertexID, succID))
+            debug.debug_message("Exits of %s = %s" % (headerID, self.__loop_exit_edges[headerID]), __name__, 4)
             
     def __str__ (self):
         string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"
@@ -275,9 +275,29 @@ class LoopNests (Tree):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
         return len(self.__loopTails[headerID])
     
-    def get_loop_exits_for_header(self, headerID):
+    def get_loop_exits_edges_for_header(self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopExits[headerID]
+        return self.__loop_exit_edges[headerID]
+    
+    def is_loop_exit_source_for_header(self, headerID, vertexID):
+        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
+        return vertexID in [edge[0] for edge in self.__loop_exit_edges[headerID]]
+    
+    def is_loop_exit_source(self, vertexID):
+        for headerID in self.__headerVertices.keys():
+            if self.is_loop_exit_source_for_header(headerID, vertexID):
+                return True
+        return False
+    
+    def is_loop_exit_destination_for_header(self, headerID, vertexID):
+        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
+        return vertexID in [edge[1] for edge in self.__loop_exit_edges[headerID]]
+    
+    def is_loop_exit_destination(self, vertexID):
+        for headerID in self.__headerVertices.keys():
+            if self.is_loop_exit_destination_for_header(headerID, vertexID):
+                return True
+        return False
     
     def getLoopBody (self, headerID):
         assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -288,18 +308,8 @@ class LoopNests (Tree):
             return False
         else:
             return sourceID in self.__loopTails[destinationID]
-        
-    def isLoopExitOfLoop (self, vertexID, headerID):
-        assert headerID in self.__headerVertices.keys(), "Vertex %s is not a loop header" % headerID
-        return vertexID in self.__loopExits[headerID]
     
-    def isLoopExit (self, vertexID):
-        for headerID in self.__headerVertices:
-            if self.isLoopExitOfLoop(vertexID, headerID):
-                return True
-        return False
-    
-    def isNested (self, left, right):
+    def isNested(self, left, right):
         return self.isProperAncestor(right, left)
     
     def induce_subgraph (self, headerv):

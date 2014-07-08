@@ -79,11 +79,12 @@ class IPG (directed_graphs.FlowGraph):
             self.exitID = predID
 
 class IPGLoopInformation():    
-    def __init__ (self, loop_by_loop_info, headerID, icfg, lnt, ipg):
+    def __init__ (self, loop_by_loop_info, headerID, icfg, lnt, enhanced_lnt, ipg):
         self.edges_added                 = set()
         self.loop_by_loop_info           = loop_by_loop_info
         self.__icfg                      = icfg
         self.__lnt                       = lnt
+        self.__enhanced_lnt              = enhanced_lnt
         self.__ipg                       = ipg
         self.inner_loop_ipoints          = {}
         self.vertex_to_reachable         = {}
@@ -102,9 +103,9 @@ class IPGLoopInformation():
                 # Add the vertex to its reachable set so we can work out
                 # which ipoints are reachable from the header
                 self.vertex_to_reachable[v.vertexID].add(v.vertexID)
-        headerv = self.__lnt.getVertex(self.__lnt.getVertex(headerID).get_parentID())
+        headerv = self.__enhanced_lnt.getVertex(self.__enhanced_lnt.getVertex(headerID).get_parentID())
         for succID in headerv.successors.keys():
-            succv = self.__lnt.getVertex(succID)
+            succv = self.__enhanced_lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
                 self.compute_inner_loop_ipoints(succv)
                         
@@ -114,7 +115,7 @@ class IPGLoopInformation():
         while stack:
             poppedv = stack.pop()
             for succID in poppedv.successors.keys():
-                succv = self.__lnt.getVertex(succID)
+                succv = self.__enhanced_lnt.getVertex(succID)
                 stack.append(succv)
                 if self.__ipg.hasVertex(succID):
                     self.inner_loop_ipoints[succID] = headerv.headerID
@@ -133,7 +134,7 @@ class IPGLoopInformation():
             for vertexID in reversed(dfs.getPostorder()):
                 debug.debug_message("At vertex %d" % vertexID, __name__, 1)
                 v = self.__icfg.getVertex(vertexID)
-                if self.__lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.get_entryID():
+                if self.__enhanced_lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.get_entryID():
                     # Inner header detected
                     self.add_loop_entry_edges(v)
                     self.add_ipoints_to_abstract_vertex(v)
@@ -152,7 +153,7 @@ class IPGLoopInformation():
                                     self.iteration_edge_destinations.add(vertexID)
                                 else:
                                     self.vertex_to_reachable[vertexID].add(keyID)    
-            if vertexID in self.__lnt.getLoopTails(headerID):
+            if vertexID in self.__enhanced_lnt.getLoopTails(headerID):
                 if self.__ipg.hasVertex(vertexID):
                     self.iteration_edge_sources.add(vertexID)
                 else:
@@ -178,20 +179,30 @@ class IPGLoopInformation():
                         # the inner loop are also destinations of iterations edges of 
                         # the outer loop 
                         self.iteration_edge_destinations.update(inner_loop_info.iteration_edge_destinations)
-        
+    
+    def find_loop_exit_edge_vertex(self, v, exit_sourceID, exit_destinationID):
+        # Find the vertex representing the loop-exit edge
+        for succID in v.successors.keys():
+            succv = self.__icfg.getVertex(succID)
+            assert isinstance(succv, vertices.CFGEdge)
+            if succv.edge == (exit_sourceID, exit_destinationID):
+                return succv
+        assert False, "Unable to find vertex representing the loop-exit edge (%d, %d)" % (exit_sourceID, exit_destinationID)
+    
     def add_ipoints_to_abstract_vertex(self, v):
         headerID        = v.vertexID
         inner_loop_info = self.loop_by_loop_info.ipgs_per_loop[headerID]
         ipoint_free_path_through_loop = False
-        for exitID in self.__lnt.get_loop_exits_for_header(headerID):
+        for (exit_sourceID, exit_destinationID) in self.__lnt.get_loop_exits_edges_for_header(headerID):
+            loop_exit_edgev = self.find_loop_exit_edge_vertex(v, exit_sourceID, exit_destinationID)
             # Add ipoints which can reach the loop exit
-            if self.__ipg.hasVertex(exitID):
-                self.vertex_to_reachable[headerID].add(exitID)
+            if self.__ipg.hasVertex(exit_sourceID):
+                self.vertex_to_reachable[loop_exit_edgev.vertexID].add(exit_sourceID)
             else:
-                for keyID in inner_loop_info.vertex_to_reachable[exitID]:
+                for keyID in inner_loop_info.vertex_to_reachable[exit_sourceID]:
                     if self.__ipg.hasVertex(keyID):
-                        self.vertex_to_reachable[headerID].add(keyID)
-            if not self.__ipg.hasVertex(exitID) and headerID in inner_loop_info.vertex_to_reachable[exitID]:
+                        self.vertex_to_reachable[loop_exit_edgev.vertexID].add(keyID)
+            if not self.__ipg.hasVertex(exit_sourceID) and headerID in inner_loop_info.vertex_to_reachable[exit_sourceID]:
                 ipoint_free_path_through_loop = True
         
         if not self.__ipg.hasVertex(headerID) and ipoint_free_path_through_loop:

@@ -129,7 +129,7 @@ def writeTreeVertex (tree, vertexID, the_file):
             the_file.write(set_shape(SHAPE.TRIANGLE))
             the_file.write(set_color(COLOR.RED))
             the_file.write(set_tool_tip("Header ID = %s" % v.headerID))
-        elif tree.isLoopExit(vertexID):
+        elif tree.is_loop_exit_source(vertexID):
             the_file.write(set_shape(SHAPE.ELLIPSE))
             the_file.write(set_color(COLOR.YELLOW))
             the_file.write(set_tool_tip("Loop Exit"))
