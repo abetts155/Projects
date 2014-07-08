@@ -1,0 +1,60 @@
+CFG: F1
+bb: 1
+succ: (F1, 2) (F1,13)
+
+bb: 2
+succ: (F1, 3) (F1, 4)
+Ipoint: start
+
+bb: 3
+succ: (F1, 12)
+
+bb: 4
+succ: (F1, 5)
+
+bb: 5
+succ: (F1, 6) (F1,7)
+
+bb: 6
+succ: (F1, 8)
+Ipoint: start
+
+bb: 7
+succ: (F1, 8)
+Ipoint: start
+
+bb: 8 
+succ: (F1, 9)
+
+bb: 9
+succ: (F1, 10) (F1, 11)
+
+bb: 10
+succ: (F1, 18)
+Ipoint: start
+
+bb: 11
+succ: (F1, 18)
+Ipoint: start
+
+bb: 12
+succ: (F1, 18)
+
+bb: 13
+succ: (F1, 14)
+
+bb: 14
+succ: (F1, 15) 
+
+bb: 15
+succ: (F1, 16) (F1,17)
+
+bb: 16
+succ: (F1, 18)
+Ipoint: start
+
+bb: 17
+succ: (F1, 18)
+
+bb: 18
+succ:
