@@ -164,7 +164,7 @@ class CreateIPGILP (ILP):
                         self.create_constraints_for_loop(data, ipg, lnt, enhanced_lnt, ipg_loop_info, treev)
                     else:
                         new_constraint = ""
-                        iteration_edges = ipg_loop_info.iteration_edges[treev.headerID]
+                        iteration_edges = ipg_loop_info.loop_back_edges[treev.headerID]
                         predID, succID  = list(iteration_edges)[0]
                         new_constraint += LpSolve.get_edge_variable(predID, succID)
                         new_constraint += LpSolve.equals
@@ -173,21 +173,16 @@ class CreateIPGILP (ILP):
                         self.constraints.append(new_constraint)
                         
     def create_constraints_for_loop(self, data, ipg, lnt, enhanced_lnt, ipg_loop_info, headerv):
-        iteration_edges = ipg_loop_info.iteration_edges[headerv.headerID]
+        iteration_edges = ipg_loop_info.loop_back_edges[headerv.headerID]
         bound           = sys.maxint
         for predID, succID in iteration_edges:
             predv = ipg.getVertex(predID)
             succe = predv.get_successor_edge(succID)
-            decrement_bound = False
             for icfgv in succe.edge_label:
                 parentv = enhanced_lnt.getVertex(enhanced_lnt.getVertex(icfgv.vertexID).get_parentID())
                 if parentv.headerID == headerv.headerID:
                     program_point_bound = data.get_loop_bound(icfgv.vertexID)
-                    if decrement_bound:
-                        program_point_bound -= 1 
                     bound = min(program_point_bound, bound)
-                    if isinstance(icfgv, vertices.CFGEdge) and lnt.isLoopBackEdge(icfgv.edge[0], icfgv.edge[1]):
-                        decrement_bound = True
                         
         new_constraint  = ""
         counter = len(iteration_edges)
@@ -331,7 +326,7 @@ class CreateICFGILP (ILP):
         edgeIDs = []
         v       = icfg.getVertex(headerID)
         for predID in v.predecessors.keys():
-            if not lnt.isLoopBackEdge(predID, headerID):
+            if not lnt.is_loop_back_edge(predID, headerID):
                 edgeIDs.append((predID, headerID))
         assert edgeIDs, "Unable to find loop-entry edges into loop with header %d" % headerID
         return edgeIDs

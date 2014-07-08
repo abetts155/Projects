@@ -91,7 +91,7 @@ class IPGLoopInformation():
         self.iteration_edge_sources      = set()
         self.initialise(headerID)
         self.add_acyclic_edges(headerID)
-        self.add_iteration_edges(headerID)
+        self.add_loop_back_edges(headerID)
                 
     def initialise(self, headerID):
         for v in self.__icfg:
@@ -183,7 +183,7 @@ class IPGLoopInformation():
         headerID        = v.vertexID
         inner_loop_info = self.loop_by_loop_info.ipgs_per_loop[headerID]
         ipoint_free_path_through_loop = False
-        for exitID in self.__lnt.getLoopExits(headerID):
+        for exitID in self.__lnt.get_loop_exits_for_header(headerID):
             # Add ipoints which can reach the loop exit
             if self.__ipg.hasVertex(exitID):
                 self.vertex_to_reachable[headerID].add(exitID)
@@ -212,7 +212,7 @@ class IPGLoopInformation():
                     for keyID in self.vertex_to_reachable[predID]:
                         self.vertex_to_reachable[headerID].add(keyID)
                         
-    def add_iteration_edges (self, headerID):
+    def add_loop_back_edges (self, headerID):
         for predID in self.iteration_edge_sources:
             for succID in self.iteration_edge_destinations:
                 predv = self.__ipg.getVertex(predID)
@@ -221,9 +221,8 @@ class IPGLoopInformation():
                 prede = succv.get_predecessor_edge(predID)
                 succe.iteration_edge = True
                 prede.iteration_edge = True
-                self.loop_by_loop_info.iteration_edges[headerID].add((predID, succID))
                 self.edges_added.add((predID, succID))
-                debug.debug_message("(%d, %d) is an iteration edge for loop with header %d" % (predID, succID, headerID), __name__, 1)
+                debug.debug_message("(%d, %d) is a loop-back edge for loop with header %d" % (predID, succID, headerID), __name__, 1)
                             
     def add_edge(self, predID, succID):
         self.edges_added.add((predID, succID))
