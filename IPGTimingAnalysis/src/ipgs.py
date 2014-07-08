@@ -237,6 +237,7 @@ class IPGLoopInformation():
                             
     def add_edge(self, predID, succID):
         self.edges_added.add((predID, succID))
+        debug.debug_message("(%d, %d) is an IPG edge" % (predID, succID), __name__, 10)
         if predID in self.inner_loop_ipoints:
             inner_headerID = self.inner_loop_ipoints[predID]
             debug.debug_message("(%d, %d) is a loop-exit edge for loop with header %d" % (predID, succID, inner_headerID), __name__, 1)
