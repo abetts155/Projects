@@ -134,7 +134,7 @@ class IPGLoopInformation():
             for vertexID in reversed(dfs.getPostorder()):
                 debug.debug_message("At vertex %d" % vertexID, __name__, 1)
                 v = self.__icfg.getVertex(vertexID)
-                if self.__enhanced_lnt.isLoopHeader(vertexID) and vertexID != self.__icfg.get_entryID():
+                if self.__enhanced_lnt.is_loop_header(vertexID) and vertexID != self.__icfg.get_entryID():
                     # Inner header detected
                     self.add_loop_entry_edges(v)
                     self.add_ipoints_to_abstract_vertex(v)
@@ -153,7 +153,7 @@ class IPGLoopInformation():
                                     self.iteration_edge_destinations.add(vertexID)
                                 else:
                                     self.vertex_to_reachable[vertexID].add(keyID)    
-            if vertexID in self.__enhanced_lnt.getLoopTails(headerID):
+            if vertexID in self.__enhanced_lnt.get_loop_tails(headerID):
                 if self.__ipg.hasVertex(vertexID):
                     self.iteration_edge_sources.add(vertexID)
                 else:
@@ -208,7 +208,7 @@ class IPGLoopInformation():
         if not self.__ipg.hasVertex(headerID) and ipoint_free_path_through_loop:
             # Since there is an ipoint-free path through the loop
             # all ipoints which can reach the loop tails can leak in to the outer loop
-            for tailID in self.__lnt.getLoopTails(headerID):
+            for tailID in self.__lnt.get_loop_tails(headerID):
                 if self.__ipg.hasVertex(tailID):
                     self.vertex_to_reachable[headerID].add(tailID)
                 else:
