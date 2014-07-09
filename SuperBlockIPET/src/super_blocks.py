@@ -33,7 +33,7 @@ class SuperBlockGraph (DirectedGraph):
                         self.__headerToSuperBlockSubgraph[headerID], vToSuperv = self.__addSuperBlocks(lnt, enhancedCFG, postdomTree, sccs, headerID)     
                         self.__headerToSuperBlockRoot[headerID] = self.__addEdges(lnt, enhancedCFG, predomTree, postdomTree, postDF, headerID, vToSuperv)
                         
-    def __addSuperBlocks (self, lnt, forwardCFG, postdomTree, sccs, headerID):
+    def __add_super_blocks (self, lnt, forwardCFG, postdomTree, sccs, headerID):
         global nextVertexID 
         loopBody      = lnt.getLoopBody(headerID)
         subgraph      = SuperBlockGraph()
