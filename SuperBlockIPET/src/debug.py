@@ -1,16 +1,19 @@
-verbose = False
-debug   = 0
+from __future__ import print_function
 
-def debugMessage (string, debugLevel=1):
-    if debug > 0 and debugLevel <= debug:
-        print(string)
+import config
+import sys
 
-def verboseMessage (string):
-    print(string)
+def verbose_message(string, module):
+    if config.Arguments.verbose:
+        print("[%s] %s" % (module, string), file=sys.stderr)
         
-def warningMessage(string):
-    print("*** WARNING: %s ***" % string)
+def debug_message (string, module, debug_level=1):
+    if config.Arguments.debug > 0 and debug_level <= config.Arguments.debug:
+        print("[%s] %s" % (module, string), file=sys.stderr)
+        
+def warning_message(string):
+    print("%s WARNING %s: %s" % ('*' * 10, string, '*' * 10), file=sys.stderr)
 
-def exitMessage(string):
-    print(string)
-    exit(1)
+def exit_message(string):
+    print(string, file=sys.stderr)
+    sys.exit(0)

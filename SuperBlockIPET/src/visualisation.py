@@ -1,9 +1,9 @@
 import os
-import Trees, CFGs, SuperBlocks, Programs, Vertices
-
-enabled  = False
-basepath = os.curdir
-basename = ""
+import config
+import cfgs
+import trees
+import vertices
+import edges
 
 beginAttributes = "["
 beginGraph      = "[\n"
@@ -67,14 +67,14 @@ def setEdgePattern (shape, width):
 def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
-def makeUdrawFile (g, fileNamePrefix):
+def make_file(g, graph_name):
     global basepath, basename
-    if enabled:
-        filename = "%s.%s" % (basepath + os.sep + basename, fileNamePrefix + fileNameSuffix)
+    if config.Arguments.udraw:
+        filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
-            if isinstance(g, CFGs.CFG):
+            if isinstance(g, cfgs.CFG):
                 colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
                 colorsIterator = iter(colors) 
                 colorMapping   = {}
@@ -83,7 +83,7 @@ def makeUdrawFile (g, fileNamePrefix):
                     vertexID = v.getVertexID()
                     if vertexID != g.getEntryID():
                         writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.SuperBlockGraph):
+            elif isinstance(g, super_blocks.SuperBlockGraph):
                 for v in g:
                     vertexID = v.getVertexID()
                     superv   = g.getVertex(vertexID)
@@ -126,7 +126,7 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     tooltip = ""
-    if isinstance(v, Vertices.CFGEdge):
+    if isinstance(v, vertices.CFGEdge):
         f.write(setName(str(v.edge)))
     else:
         name = "%d (original=%d)" % (vertexID, v.getOriginalVertexID())
@@ -235,8 +235,8 @@ def writeTreeVertex (tree, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
-    if isinstance(tree, Trees.LoopNests):
-        if isinstance(v, Vertices.HeaderVertex):
+    if isinstance(tree, trees.LoopNests):
+        if isinstance(v, vertices.HeaderVertex):
             f.write(setShape(SHAPE.TRIANGLE))
             f.write(setColor(COLOR.RED))
             f.write(setToolTip("Header ID = %s" % v.getHeaderID()))

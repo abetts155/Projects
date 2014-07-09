@@ -4,7 +4,7 @@ import vertices
 import debug
 
 class EnhancedICFG (directed_graphs.FlowGraph):
-    def __init__ (self, cfg=None):
+    def __init__ (self, cfg):
         directed_graphs.FlowGraph.__init__(self)
         self.name = cfg.name
         for v in cfg:

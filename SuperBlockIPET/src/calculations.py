@@ -1,7 +1,7 @@
-from Vertices import HeaderVertex
-from Trees import DepthFirstSearch
-import Debug
-import os, timeit
+import trees
+import debug
+import os
+import timeit
 
 class WCETCalculation:
     def __init__ (self, program, data, basepath, basename, repeatability):
@@ -14,11 +14,11 @@ class WCETCalculation:
             self.__contextData_CFG   = {}
             self.__contextData_SBCFG = {}
             contextg = program.getContextGraph()
-            dfs      = DepthFirstSearch(contextg, contextg.getRootID())
+            dfs      = trees.DepthFirstSearch(contextg, contextg.getRootID())
             for vertexID in dfs.getPostorder():
                 contextv     = contextg.getVertex(vertexID)
                 functionName = contextv.getName()
-                Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
+                debug.verbose_message("Doing WCET calculation on %s" % functionName, __name__)
                 cfg         = program.getCFG(functionName)
                 lnt         = program.getLNT(functionName)
                 # The calculation based on the CFG

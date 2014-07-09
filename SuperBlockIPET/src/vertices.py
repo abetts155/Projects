@@ -1,119 +1,90 @@
-from Edges import Edge, CallGraphEdge, BranchControlFlowEdge
+import edges
 
-dummyVertexID = -1
+dummyID = 0
 
 class Vertex ():
     def __init__ (self, vertexID):
-        self._vertexID = vertexID
-        self._predecessors = {}
-        self._successors = {}
-        self._dummy = False
-        
-    def setVertexID (self, vertexID):
-        self._vertexID = vertexID
+        self.vertexID = vertexID
+        self.predecessors = {}
+        self.successors   = {}
+        self.dummy        = False
     
-    def getVertexID (self):
-        return self._vertexID
-    
-    def addPredecessor (self, predID, edgeID=None):
-        e = Edge(predID, edgeID)
-        self._predecessors[predID] = e
+    def add_predecessor(self, predID, edgeID=None):
+        assert predID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, predID)
+        e = edges.Edge(predID, edgeID)
+        self.predecessors[predID] = e
         
-    def addPredecessorEdge (self, prede):
-        predID = prede.getVertexID()
-        self._predecessors[predID] = prede
+    def add_predecessor_edge(self, prede):
+        assert prede.vertexID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, prede.vertexID)
+        self.predecessors[prede.vertexID] = prede
             
-    def removeAllPredecessors (self):
-        self._predecessors = {}
+    def remove_predecessor(self, predID):
+        assert predID in self.predecessors, "Cannot remove %d as it is not in predecessor of %d" % (predID, self.vertexID)
+        del self.predecessors[predID]
     
-    def removePredecessor (self, predID):
-        if predID in self._predecessors:
-            del self._predecessors[predID]
+    def number_of_predecessors(self):
+        return len(self.predecessors)
     
-    def getPredecessorIDs (self):
-        return self._predecessors.keys()
+    def has_predecessor(self, predID):
+        return predID in self.predecessors.keys()
     
-    def getPredecessorEdges (self):
-        return self._predecessors.values()
+    def get_predecessor_edge(self, predID):
+        assert predID in self.predecessors, "Vertex %d is not a predecessor of %d" % (predID, self.vertexID)
+        return self.predecessors[predID]
     
-    def numberOfPredecessors (self):
-        return len(self._predecessors)
-    
-    def hasPredecessor (self, predID):
-        return predID in self._predecessors.keys()
-    
-    def getPredecessorEdge (self, predID):
-        assert predID in self._predecessors, "Vertex %d is not a predecessor of %d" % (predID, self._vertexID)
-        return self._predecessors[predID]
-    
-    def addSuccessor (self, succID,edgeID=None):
-        e = Edge(succID, edgeID)
-        self._successors[succID] = e
+    def add_successor(self, succID,edgeID=None):
+        assert succID not in self.successors, "Vertex %d already has successor %d" % (self.vertexID, succID)
+        e = edges.Edge(succID, edgeID)
+        self.successors[succID] = e
         
-    def addSuccessorEdge (self, succe):
-        succID = succe.getVertexID()
-        self._successors[succID] = succe
-    
-    def removeAllSuccessors (self):
-        self._successors = {}
+    def add_successor_edge(self, succe):
+        assert succe.vertexID not in self.successors, "Vertex %d already has successor %d" % (self.vertexID, succe.vertexID)
+        self.successors[succe.vertexID] = succe
         
-    def removeSuccessor (self, succID):
-        if succID in self._successors:
-            del self._successors[succID]
-        
-    def getSuccessorIDs (self):
-        return self._successors.keys()
+    def remove_successor(self, succID):
+        assert succID in self.successors, "Cannot remove %d as it is not in successors of %d" % (succID, self.vertexID)
+        del self.successors[succID]
     
-    def getSuccessorEdges (self):
-        return self._successors.values()
+    def number_of_successors(self):
+        return len(self.successors)
     
-    def numberOfSuccessors (self):
-        return len(self._successors)
+    def has_successor(self, succID):
+        return succID in self.successors.keys()
     
-    def hasSuccessor (self, succID):
-        return succID in self._successors.keys()
+    def get_successor_edge(self, succID):
+        assert succID in self.successors, "Vertex %d is not a successor of %d" % (succID, self.vertexID)
+        return self.successors[succID]
     
-    def getSuccessorEdge (self, succID):
-        assert succID in self._successors, "Vertex %d is not a successor of %d" % (succID, self._vertexID)
-        return self._successors[succID]
-           
-    def setDummy (self):
-        self._dummy = True
-        
-    def isDummy (self):
-        return self._dummy
-    
-    def __str__ (self):
-        string = "Vertex ID = " + str(self._vertexID) + "\n"
-        string += "pred     = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ     = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
+    def predecessor_string(self):
+        string = "pred = {"
+        count = 1
+        for predID in sorted(self.predecessors.keys()):
+            string += str(predID)
+            if count < len(self.predecessors):
+                string += ","
+                count = count + 1
+        string += "}"
         return string
+    
+    def successor_string(self):        
+        string = "succ = {"
+        count = 1
+        for succID in sorted(self.successors.keys()):
+            string += str(succID)
+            if count < len(self.successors):
+                string += ","
+                count = count + 1
+        string += "}"
+        return string
+    
+    def __str__(self):
+        return "%d: %s %s\n" % (self.vertexID, self.successor_string(), self.predecessor_string())
     
 class TreeVertex (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
-        self._parentID = dummyVertexID
-        self._level    = -1
-        
-    def setParentID (self, parentID):
-        self._parentID = parentID
-        
-    def getParentID (self):
-        assert self._parentID != dummyVertexID, "Parent ID of %d has not been set" % self._parentID
-        return self._parentID
-    
-    def setLevel (self, level):
-        assert level >= 0, "The level of a vertex cannot be less than 0. You gave %d" % level
-        self._level = level
-    
-    def getLevel (self):
-        return self._level     
-    
-    def __str__ (self):
-        if self._parentID == dummyVertexID:
-            return "parent(%d) = <>\n" % self._vertexID
-        else:
-            return "parent(%d) = %d\n" % (self._vertexID, self._parentID)
+        self.parentID = dummyID
+        self.level    = -1
     
 class HeaderVertex (TreeVertex):
     def __init__ (self, vertexID, headerID):
@@ -187,14 +158,14 @@ class CallGraphVertex (Vertex):
     
     def addPredecessor (self, predID, callSiteID):
         if predID not in self._predecessors:
-            e = CallGraphEdge(predID)
+            e = edges.CallGraphEdge(predID)
             self._predecessors[predID] = e
         e = self._predecessors[predID]
         e.addCallSite(callSiteID)
     
     def addSuccessor (self, succID, callSiteID):
         if succID not in self._successors:
-            e = CallGraphEdge(succID)
+            e = edges.CallGraphEdge(succID)
             self._successors[succID] = e
         e = self._successors[succID]
         e.addCallSite(callSiteID)
@@ -221,7 +192,7 @@ class SuperBlock (Vertex):
     def getBranchPartitions (self):
         partitions = {}
         for succe in self._successors.values():
-            if isinstance(succe, BranchControlFlowEdge):
+            if isinstance(succe, edges.BranchControlFlowEdge):
                 if succe.branchID not in partitions:
                     partitions[succe.branchID] = []
                 partitions[succe.branchID].append(succe)

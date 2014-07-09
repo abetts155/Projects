@@ -1,100 +1,72 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python
 
-def commandLine ():
-    from argparse import ArgumentParser
-    
+import argparse
+import os
+import sys
+import threading
+import config
+import debug
+import parse_program_file
+
+def the_command_line (): 
+    def clean ():
+        for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
+            files.sort()
+            for filename in files:
+                if filename.endswith('.png') or filename.endswith('.udraw') or filename.endswith('.dis') or filename.endswith('.ilp'):
+                    full_path = os.path.join(paths, filename)
+                    debug.verbose_message("Removing '%s'" % full_path, __name__)
+                    os.remove(full_path)
+       
     # The command-line parser and its options
-    cmdline = ArgumentParser(description="Compute WCET using tree-based calculation derived from the super block CFG")
+    parser = argparse.ArgumentParser(description="Compute WCET using implicit path enumeration defined on the super block CFG")
     
-    cmdline.add_argument("program",
-                         help="a file containing program information (with '.txt' extension)")
+    parser.add_argument("program_file",
+                        help="a file containing program information (with '.txt' extension)")
     
-    cmdline.add_argument("--clean",
-                         action="store_true",
-                         help="clean out temporary files",
-                         default=False)
+    parser.add_argument("-c",
+                        "--clean",
+                        metavar="",
+                        type=clean,
+                        help="clean files from previous runs",
+                        default=False)
     
-    cmdline.add_argument("-d",
-                         "--debug",
-                         type=int,
-                         help="debug mode",
-                         default=0)
+    parser.add_argument("-d",
+                        "--debug",
+                        type=int,
+                        help="debug mode",
+                        default=0)
     
-    cmdline.add_argument("-V",
-                         "--visualise",
-                         action="store_true",
-                         help="generate dot and uDraw files to visualise graphs",
-                         default=False)
-
-    cmdline.add_argument("-t",
-                         "--traces",
-                         type=int,
-                         help="generate dummy traces for the given program",
-                         default=0,
-                         metavar="<INT>")
+    parser.add_argument("-u",
+                        "--udraw",
+                        action="store_true",
+                        help="generate uDraw files to visualise graphs",
+                        default=False)
     
-    cmdline.add_argument("-r",
-                         "--repeat",
-                         type=int,
-                         help="repeat the calculation this many times",
-                         default=1,
-                         metavar="<INT>")
+    parser.add_argument("-r",
+                        "--repeat",
+                        type=int,
+                        help="repeat the calculation this many times",
+                        default=1,
+                        metavar="<INT>")
     
-    cmdline.add_argument("-T",
-                         dest="tracefile",
-                         help="parse this trace file",
-                         metavar="<FILE>")
+    parser.add_argument("-v",
+                        "--verbose",
+                        action="store_true",
+                        help="be verbose",
+                        default=False)
     
-    cmdline.add_argument("-v",
-                         "--verbose",
-                         action="store_true",
-                         help="be verbose",
-                         default=False)
+    parser.parse_args(namespace=config.Arguments)
     
-    return cmdline.parse_args()
+    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
+    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
         
-if __name__ == "__main__":
-    import os, sys, threading
-    import ParseProgramFile, Debug, Trees, Traces, SuperBlocks, Utils, Calculations, Visualisation
-    
-    args = commandLine()
-    Debug.verbose         = args.verbose
-    Debug.debug           = args.debug
-    Visualisation.enabled = args.visualise
-    
+if __name__ == "__main__": 
     threading.stack_size(67108864) # 64MB stack
     sys.setrecursionlimit(2 ** 20)
-    
-    if args.clean:
-        Utils.clean()
-    assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
-    # Create the CFGs
-    Debug.verboseMessage("Reading in program file to do super block CFG analysis")
-    filename = os.path.basename(args.program)
-    basepath = os.path.abspath(os.path.dirname(args.program))
-    basename = os.path.splitext(filename)[0]
-    Visualisation.basepath = basepath
-    Visualisation.basename = basename
-    program  = ParseProgramFile.createProgram(args.program)
-    Debug.verboseMessage("Analysing CFGs")
-    for cfg in program.getCFGs():
-        functionName = cfg.getName()
-        lnt = Trees.LoopNests(cfg, cfg.getEntryID())
-        program.addLNT(lnt, functionName)
-        superg = SuperBlocks.SuperBlockGraph(cfg, lnt)
-        program.addSuperBlockCFG(superg, functionName)
-    program.generateVisualisationFiles()
-    if args.traces:
-        Debug.verboseMessage("Generating dummy traces")
-        Traces.GenerateTraces(basepath, basename, program, args.traces)
-    elif args.tracefile:
-        tracefile = os.path.abspath(args.tracefile)
-        assert os.path.exists(tracefile), "Trace file '%s' does not exist" % tracefile
-        tracefileLastModified = os.stat(tracefile)[8]
-        programfileLastModified = os.stat(args.program)[8]
-        assert programfileLastModified <= tracefileLastModified, "Program file modified AFTER trace file generation"
-        data = Traces.ParseTraces(basename, tracefile, program)
-        program.generateVisualisationFiles()
-        Calculations.WCETCalculation(program, data, basepath, basename, args.repeat)
+    the_command_line()
+    program = parse_program_file.parse_file()
+    program.create_LNTs()
+    program.create_super_block_CFGs()
     
     
