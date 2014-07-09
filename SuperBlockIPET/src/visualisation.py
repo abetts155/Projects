@@ -1,19 +1,18 @@
 import os
 import config
-import cfgs
+import directed_graphs
+import super_block_graphs
 import trees
 import vertices
-import edges
 
-beginAttributes = "["
-beginGraph      = "[\n"
-endAttibutes    = "],"
-endEdge         = ")"
-endGraph        = "]\n"
-endVertex       = "])),"
-fileNameSuffix  = ".udraw"
-newEdge         = "\ne(\"tEdge\","
-newLine         = "\\n"
+begin_attrs = "["
+end_attrs   = "],"
+begin_graph = "[\n"
+end_graph   = "]\n"
+end_vertex  = "])),"
+new_edge    = "\ne(\"tEdge\","
+end_edge    = ")"
+new_line    = "\\n"
 
 class COLOR:
     RED    = "red"
@@ -40,220 +39,139 @@ class DIRECTION:
     BOTH        = "both"
     NONE        = "none"
 
-def newVertex (vertexID):
+def new_vertex(vertexID):
     return "l(\"v" + str(vertexID) + "\",n(\"tVertex\","
 
-def edgeLink (vertexID):
+def edge_link(vertexID):
     return "r(\"v" + str(vertexID) + "\")"
 
-def setName (name):
+def set_name(name):
     return "a(\"OBJECT\", \"" + name + "\"),"
 
-def setColor (color):
+def set_color(color):
     return "a(\"COLOR\", \"" + color + "\"),"
 
-def setShape (shape):
+def set_shape(shape):
     return "a(\"_GO\", \"" + shape + "\"),"
 
-def setEdgeDirection (direction):
-    return "a(\"_DIR\", \"" + direction + "\"),"
-
-def setToolTip (tooltip):
+def set_tool_tip(tooltip):
     return "a(\"INFO\", \"" + tooltip + "\"),"
 
-def setEdgePattern (shape, width):
+def set_edge_pattern(shape, width):
     return "a(\"EDGEPATTERN\", \"single;" + shape + ";" + str(width) + ";1\"),"
 
-def setEdgeColor (color):
+def set_edge_color(color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
+
+def set_edge_direction(direction):
+    return "a(\"_DIR\", \"" + direction + "\"),"
 
 def make_file(g, graph_name):
     global basepath, basename
     if config.Arguments.udraw:
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
-        with open(filename, 'w') as f:
-            f.write(beginGraph)
+        with open(filename, 'w') as the_file:
+            the_file.write(begin_graph)
             # CFG or Instrumented CFG
-            if isinstance(g, cfgs.CFG):
-                colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
-                colorsIterator = iter(colors) 
-                colorMapping   = {}
-                writeCFGVertex(colorMapping, colorsIterator, g, g.getEntryID(), f)
+            if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
+                write_CFG_vertex(g, g.get_entryID(), the_file)
                 for v in g:
-                    vertexID = v.getVertexID()
-                    if vertexID != g.getEntryID():
-                        writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
-            elif isinstance(g, super_blocks.SuperBlockGraph):
-                for v in g:
-                    vertexID = v.getVertexID()
-                    superv   = g.getVertex(vertexID)
-                    writeSuperBlockVertex(superv, f)   
-                    writeSuperBlockVertexLinks(superv, f) 
-            elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
-                writeCallGraphVertex(g, g.getRootID(), f)
-                for v in g:
-                    vertexID = v.getVertexID()
-                    if vertexID != g.getRootID():
-                        writeCallGraphVertex(g, vertexID, f) 
+                    if v.vertexID != g.get_entryID():
+                        write_CFG_vertex(g, v.vertexID, the_file)   
+            elif isinstance(g, super_block_graphs.SuperBlockCFG):
+                for superv in g:
+                    write_super_block_vertex(superv, the_file)
             # Loop-Nesting Tree
-            elif isinstance(g, Trees.LoopNests):
+            elif isinstance(g, trees.LoopNests):
                 for v in g:
-                    writeTreeVertex(g, v.getVertexID(), f)
+                    writeTreeVertex(g, v.vertexID, the_file)
             else:
                 for v in g:
-                    writeVertex(g, v.getVertexID(), f)
-            f.write(endGraph) 
+                    writeVertex(g, v.vertexID, the_file)
+            the_file.write(end_graph) 
             
-def writeVertex (g, vertexID, f):
+def writeVertex(g, vertexID, the_file):
     v = g.getVertex(vertexID)        
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    f.write(setName(str(vertexID)))
-    f.write(endAttibutes)
+    the_file.write(new_vertex(vertexID))
+    the_file.write(begin_attrs)
+    the_file.write(set_name(str(vertexID)))
+    the_file.write(end_attrs)
     
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setName(str(succID)))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n") 
+    the_file.write(begin_attrs)
+    for succID in v.successors.keys():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name(str(succID)))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n") 
     
-def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
+def write_CFG_vertex(cfg, vertexID, the_file):
     v = cfg.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    tooltip = ""
-    if isinstance(v, vertices.CFGEdge):
-        f.write(setName(str(v.edge)))
+    the_file.write(new_vertex(vertexID))
+    the_file.write(begin_attrs)
+    if isinstance(v, vertices.CFGVertex):
+        the_file.write(set_name(str(vertexID)))
     else:
-        name = "%d (original=%d)" % (vertexID, v.getOriginalVertexID())
-        f.write(setName(name))
-        if v.getName():
-            if v.getName() not in colorMapping:
-                colorMapping[v.getName()] = colorsIterator.next()
-            f.write(setColor(colorMapping[v.getName()]))
-            if v.getName() != cfg.getName():
-                tooltip += "Callee basic block for %s%s" % (v.getName(), newLine)
-        if v.hasInstructions():
-            for instruction in v.getInstructions():
-                tooltip += instruction.__str__() + newLine
-            tooltip = tooltip.rstrip(newLine)
-    f.write(setToolTip(tooltip))
-    f.write(endAttibutes)
+        name = str(v.edge) + "\\n" + str(vertexID)
+        the_file.write(set_name(name))
+    the_file.write(end_attrs)
     
-    f.write(beginAttributes)
-    for succe in v.getSuccessorEdges():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        if succe.hasEdgeID():
-            f.write(setName("%d" % succe.getEdgeID()))
-        f.write(endAttibutes)
-        f.write(edgeLink(succe.getVertexID()))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
+    the_file.write(begin_attrs)
+    for succe in v.successors.values():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name("%d" % succe.edgeID))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succe.vertexID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")
     
-def writeCallGraphVertex (callg, vertexID, f):
-    v = callg.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    f.write(setName("%s (vertex id = %d)" % (v.getName(), vertexID)))
-    if vertexID == callg.getRootID():
-        f.write(setColor(COLOR.RED))
-        f.write(setToolTip("Root"))
-    f.write(endAttibutes)
+def write_super_block_vertex(superv, the_file):
+    the_file.write(new_vertex(superv.vertexID))
+    the_file.write(begin_attrs)
+    name = "super ID = %d%s" % (superv.vertexID, new_line)
+    for idx, program_point in enumerate(superv.program_points):
+        if isinstance(program_point, vertices.CFGVertex):
+            name += "%d" % (program_point.vertexID)
+        else:
+            name += "(%d, %d)" % (program_point.edge[0], program_point.edge[1])
+        if idx < len(superv.program_points) - 1:
+            name += new_line
+    the_file.write(set_name(name))
+    the_file.write(end_attrs)
     
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        calle   = v.getSuccessorEdge(succID)
-        tooltip = ', '.join(str(vertexID) for vertexID in calle.getCallSites())
-        f.write(setToolTip(tooltip))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")
-    
-def writeSuperBlockVertex (superv, f):
-    f.write(newVertex(superv.getVertexID()))
-    f.write(beginAttributes)
-    name = "super ID = %d%s" % (superv.getVertexID(), newLine)
-    if superv.basicBlocks:
-        name += "blocks = {%s}" % ', '.join(str(vertexID) for vertexID in superv.basicBlocks)
-    if superv.outOfScopeBlocks:
-        name += newLine
-        name += "blocks(loops) = {%s}" % ', '.join(str(vertexID) for vertexID in superv.outOfScopeBlocks)
-    if superv.edges:
-        name += newLine 
-        name += "edges = {%s}" % ', '.join(str(edge) for edge in superv.edges)
-    if superv.loopExitEdges:
-        name += newLine 
-        name += "edges(loops) = {%s}" % ', '.join(str(edge) for edge in superv.loopExitEdges)
-    f.write(setName(name))
-    f.write(endAttibutes)
-    
-def writeSuperBlockVertexLinks (superv, f):
-    colors         = ['#05EDFF', '#D44942', '#003F87', '#CD3700', '#EEC900']
-    colorIndex     = 0
-    succEdgesAdded = set([])
-    f.write(beginAttributes)
-    for branchID, succEdges in superv.getBranchPartitions().iteritems():
-        if colorIndex == len(colors):
-            colorIndex = 0
-        color = colors[colorIndex]
-        for succe in succEdges:
-            succEdgesAdded.add(succe)
-            f.write(newEdge)
-            f.write(beginAttributes)
-            succe = superv.getSuccessorEdge(succe.getVertexID())
-            f.write(setName(str(branchID)))
-            f.write(setEdgeColor(color))
-            f.write(endAttibutes)
-            f.write(edgeLink(succe.getVertexID()))
-            f.write(endEdge + ",\n")
-        colorIndex += 1
-    for succe in superv.getSuccessorEdges():
-        if succe not in succEdgesAdded:
-            if colorIndex == len(colors):
-                colorIndex = 0
-            color = colors[colorIndex]
-            f.write(newEdge)
-            f.write(beginAttributes)
-            succe = superv.getSuccessorEdge(succe.getVertexID())
-            f.write(setEdgeColor(color))
-            f.write(endAttibutes)
-            f.write(edgeLink(succe.getVertexID()))
-            f.write(endEdge + ",\n")
-            colorIndex += 1            
-    f.write(endVertex + "\n")
+    the_file.write(begin_attrs)
+    for succID in superv.successors.keys():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name(str(succID)))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")   
 
-def writeTreeVertex (tree, vertexID, f):
+def writeTreeVertex (tree, vertexID, the_file):
     v = tree.getVertex(vertexID)
-    f.write(newVertex(vertexID))
-    f.write(beginAttributes)
-    f.write(setName(str(vertexID)))
+    the_file.write(new_vertex(vertexID))
+    the_file.write(begin_attrs)
+    the_file.write(set_name(str(vertexID)))
     if isinstance(tree, trees.LoopNests):
         if isinstance(v, vertices.HeaderVertex):
-            f.write(setShape(SHAPE.TRIANGLE))
-            f.write(setColor(COLOR.RED))
-            f.write(setToolTip("Header ID = %s" % v.getHeaderID()))
-        elif tree.isLoopExit(vertexID):
-            f.write(setShape(SHAPE.ELLIPSE))
-            f.write(setColor(COLOR.YELLOW))
-            f.write(setToolTip("Loop Exit"))
-    f.write(endAttibutes)
+            the_file.write(set_shape(SHAPE.TRIANGLE))
+            the_file.write(set_color(COLOR.RED))
+            the_file.write(set_tool_tip("Header ID = %s" % v.headerID))
+    the_file.write(end_attrs)
     
-    f.write(beginAttributes)
-    for succID in v.getSuccessorIDs():
-        f.write(newEdge)
-        f.write(beginAttributes)
-        f.write(setName(str(succID)))
-        f.write(endAttibutes)
-        f.write(edgeLink(succID))
-        f.write(endEdge + ",\n")
-    f.write(endVertex + "\n")   
+    the_file.write(begin_attrs)
+    for succID in v.successors.keys():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name(str(succID)))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")   
     
     

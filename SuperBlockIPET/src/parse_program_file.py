@@ -25,7 +25,7 @@ def parse_file():
                 assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
                 vertexID = lexemes[-1]
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
-                bb = vertices.CFGVertex(int(vertexID), False)
+                bb = vertices.CFGVertex(int(vertexID))
                 cfg.addVertex(bb)
             elif line.startswith('succ:'):
                 assert bb, "Found edge but current basic block is null"

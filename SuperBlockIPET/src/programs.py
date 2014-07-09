@@ -1,5 +1,6 @@
 import directed_graphs
 import trees
+import super_block_graphs
 import visualisation
     
 class Program():
@@ -20,5 +21,5 @@ class Program():
             
     def create_super_block_CFGs(self):
         for name, cfg in self.cfgs.iteritems():
-            self.super_block_cfgs[name] = directed_graphs.SuperBlockGraph(cfg, self.lnts[name])
+            self.super_block_cfgs[name] = super_block_graphs.SuperBlockCFG(cfg, self.lnts[name])
             visualisation.make_file(self.super_block_cfgs[name], "%s.superg" % (name))

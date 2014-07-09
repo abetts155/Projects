@@ -102,13 +102,13 @@ class HeaderVertex(TreeVertex):
         TreeVertex.__init__(self, vertexID)
         self.headerID = headerID
     
-class CFGVertex (Vertex):
+class CFGVertex(Vertex):
     def __init__ (self, vertexID, is_ipoint):
         Vertex.__init__(self, vertexID)
         self.is_ipoint = is_ipoint
         self.dummy     = False
     
-class CFGEdge (Vertex):
+class CFGEdge(Vertex):
     def __init__ (self, vertexID, predID, succID):
         Vertex.__init__(self, vertexID)
         self.edge = (predID, succID)
