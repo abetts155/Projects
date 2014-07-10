@@ -68,5 +68,6 @@ if __name__ == "__main__":
     program = program_input_output.read_file(config.Arguments.program_file)
     program.create_LNTs()
     program.create_super_block_CFGs()
+    program.do_wcet_calculation()
     
     

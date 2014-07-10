@@ -63,6 +63,8 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     if basic_block_headerv == headerv:
                         subgraph.program_point_to_superv[program_point.vertexID] = superv
                         superv.program_points.append(program_point)
+        for superv in self:
+            superv.compute_representative()
                 
     def add_edges(self, lnt, enhanced_CFG, headerv):
         subgraph = self.per_loop_subgraphs[headerv.headerID]

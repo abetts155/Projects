@@ -104,4 +104,15 @@ class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.program_points = []
+        self.representative = None
+        
+    def compute_representative(self):
+        for program_point in self.program_points:
+            if isinstance(program_point, CFGVertex):
+                self.representative = program_point
+                break
+        if self.representative is None:
+            # Unable to find representative basic block.
+            # Just choose the first edge insteads
+            self.representative = self.program_points[0]
         
