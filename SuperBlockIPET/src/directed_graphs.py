@@ -74,10 +74,10 @@ class DirectedGraph:
             nextID = nextID + 1 
         return nextID
     
-    def numOfVertices(self):
+    def number_of_vertices(self):
         return len(self.the_vertices)
     
-    def numOfEdges(self):
+    def number_of_edges(self):
         total = 0
         for v in self.the_vertices.values():
             total += v.number_of_successors()
@@ -130,7 +130,9 @@ class EnhancedCFG(FlowGraph):
         FlowGraph.__init__(self)
         self.name = cfg.name
         for v in cfg:
-            newv = vertices.CFGVertex(v.vertexID)
+            newv = copy.deepcopy(v) 
+            newv.successors   = {}
+            newv.predecessors = {}
             self.the_vertices[v.vertexID] = newv
             if v.vertexID == cfg.get_entryID():
                 self.entryID = v.vertexID
@@ -143,9 +145,20 @@ class EnhancedCFG(FlowGraph):
             for succID in v.successors.keys():
                 newVertexID -= 1
                 newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
+                if self.getVertex(v.vertexID).dummy or self.getVertex(succID).dummy:
+                    newv.dummy = True
                 self.the_vertices[newVertexID] = newv
                 self.addEdge(v.vertexID, newVertexID)
                 self.addEdge(newVertexID, succID)
+                
+    def patch_back_edges_with_correct_header(self, loop_tails, headerID):
+        for v in self:
+            if isinstance(v, vertices.CFGEdge) and v.dummy:
+                pred_basic_block = self.getVertex(v.edge[0])
+                succ_basic_block = self.getVertex(v.edge[1])
+                if pred_basic_block.vertexID in loop_tails and succ_basic_block.dummy:
+                    v.edge  = (pred_basic_block.vertexID, headerID)
+                    v.dummy = False                    
         
 class CFG(FlowGraph):    
     def __init__ (self):
