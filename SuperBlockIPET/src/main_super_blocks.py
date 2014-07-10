@@ -6,7 +6,7 @@ import sys
 import threading
 import config
 import debug
-import parse_program_file
+import program_input_output
 
 def the_command_line (): 
     def clean ():
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     threading.stack_size(67108864) # 64MB stack
     sys.setrecursionlimit(2 ** 20)
     the_command_line()
-    program = parse_program_file.parse_file()
+    program = program_input_output.read_file(config.Arguments.program_file)
     program.create_LNTs()
     program.create_super_block_CFGs()
     
