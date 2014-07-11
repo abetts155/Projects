@@ -105,14 +105,16 @@ class SuperBlock (Vertex):
         Vertex.__init__(self, vertexID)
         self.program_points = []
         self.representative = None
+        self.successor_partitions = {}
         
     def compute_representative(self):
+        assert len(self.program_points) > 0, "Super block %d has no program points" % self.vertexID
         for program_point in self.program_points:
             if isinstance(program_point, CFGVertex):
                 self.representative = program_point
                 break
         if self.representative is None:
             # Unable to find representative basic block.
-            # Just choose the first edge insteads
+            # Just choose the first edge instead
             self.representative = self.program_points[0]
         

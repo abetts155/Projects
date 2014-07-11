@@ -19,18 +19,18 @@ class SESEComponent:
 class LoopComponent:
     def __init__ (self, sese):
         global currentCFG
-        self.headerID = sese.entryID
-        self.tailIDs  = set([])
-        self.exitIDs  = set([])
-        self.vertices = set([])
+        self.headerID     = sese.entryID
+        self.tailIDs      = set([])
+        self.exitIDs      = set([])
+        self.the_vertices = set([])
         stack = []
         stack.append(sese.entryID)
         while stack:
             vertexID = stack.pop()
-            self.vertices.add(vertexID)
+            self.the_vertices.add(vertexID)
             v = currentCFG.getVertex(vertexID)
-            for succID in v.getSuccessorIDs():
-                if succID not in self.vertices:
+            for succID in v.successors.keys():
+                if succID not in self.the_vertices:
                     stack.append(succID)
 
 def create_loop_component(sese):
@@ -38,7 +38,7 @@ def create_loop_component(sese):
     loopComponent = LoopComponent(sese)
     loopComponent.headerID = sese.entryID
     loopComponent.tailIDs.add(sese.exitID)
-    if bool(random.getrandbits(1)) and currentCFG.getVertex(sese.entryID).numberOfSuccessors() == 1:
+    if bool(random.getrandbits(1)) and currentCFG.getVertex(sese.entryID).number_of_successors() == 1:
         loopComponent.exitIDs.add(sese.entryID)
     else:
         loopComponent.exitIDs.add(sese.exitID) 
@@ -84,7 +84,7 @@ def connectRemainingVertices():
 def findMergeVerticesToRemove():
     global currentCFG
     disconnectedVertices = []
-    lnt = trees.LoopNests(currentCFG, currentCFG.getEntryID())
+    lnt = trees.LoopNests(currentCFG, currentCFG.get_entryID())
     for v in currentCFG:
         vertexID = v.getVertexID()
         if v.numberOfPredecessors() > 1 \
@@ -104,7 +104,7 @@ def findMergeVerticesToRemove():
             disconnectedVertices.append(v)
     candidateSources = []
     for v in currentCFG:
-        if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
+        if v.number_of_successors() == 1 and v.getVertexID() != currentCFG.getExitID():
             assert v not in disconnectedVertices
             candidateSources.append(v)
     for v in disconnectedVertices:
@@ -117,12 +117,12 @@ def findMergeVerticesToRemove():
                 currentCFG.addEdge(vertexID, succID)
             currentCFG.addEdge(otherID, vertexID)
         else:
-            currentCFG.addEdge(vertexID, currentCFG.getEntryID())
-            currentCFG.removeEdge(currentCFG.getExitID(), currentCFG.getEntryID())
+            currentCFG.addEdge(vertexID, currentCFG.get_entryID())
+            currentCFG.removeEdge(currentCFG.getExitID(), currentCFG.get_entryID())
             currentCFG.addEdge(currentCFG.getExitID(), vertexID)
             currentCFG.setEntryID(vertexID)
-    assert currentCFG.getVertex(currentCFG.getEntryID()).numberOfPredecessors() == 1, "entry = %s" % currentCFG.getVertex(currentCFG.getEntryID())
-    assert currentCFG.getVertex(currentCFG.getExitID()).numberOfSuccessors() == 1, "exit = %s" % currentCFG.getVertex(currentCFG.getExitID())
+    assert currentCFG.getVertex(currentCFG.get_entryID()).numberOfPredecessors() == 1, "entry = %s" % currentCFG.getVertex(currentCFG.get_entryID())
+    assert currentCFG.getVertex(currentCFG.getExitID()).number_of_successors() == 1, "exit = %s" % currentCFG.getVertex(currentCFG.getExitID())
 
 def connectDisconnectedComponents():
     global currentCFG
@@ -270,12 +270,12 @@ def decideWhichAcyclicComponents(verticesInLoop):
 def add_continues(loopComponent):
     global currentCFG
     extraTails = 1
-    for vertexID in loopComponent.vertices:
+    for vertexID in loopComponent.the_vertices:
         if vertexID not in loopComponent.exitIDs \
         and vertexID not in loopComponent.tailIDs \
         and vertexID != loopComponent.headerID:
             v = currentCFG.getVertex(vertexID)
-            if v.numberOfSuccessors() == 1 and bool(random.getrandbits(1)) and extraTails:
+            if v.number_of_successors() == 1 and bool(random.getrandbits(1)) and extraTails:
                 currentCFG.addEdge(vertexID, loopComponent.headerID)
                 loopComponent.tailIDs.add(vertexID)
                 extraTails -= 1
@@ -283,12 +283,12 @@ def add_continues(loopComponent):
 def add_breaks(loopComponent):
     global currentCFG
     extraBreaks = 1
-    for vertexID in loopComponent.vertices:
+    for vertexID in loopComponent.the_vertices:
         if vertexID not in loopComponent.exitIDs \
         and vertexID not in loopComponent.tailIDs \
         and vertexID != loopComponent.headerID:
             v = currentCFG.getVertex(vertexID)
-            if v.numberOfSuccessors() == 1 and bool(random.getrandbits(1)) and extraBreaks:
+            if v.number_of_successors() == 1 and bool(random.getrandbits(1)) and extraBreaks:
                 loopComponent.exitIDs.add(vertexID)
                 extraBreaks -= 1
 
@@ -298,37 +298,36 @@ def generateLNT():
     vertexToLevel = {}
     for i in xrange(1,config.Arguments.loops+2):
         lnt.addVertex(i)
-        lnt.setRootID(i)
+        lnt.rootID = i
         vertexToLevel[i] = 0
     # Add edges to the tree
     parentID = lnt.getRootID()
     for v in lnt:
-        vertexID = v.getVertexID()
-        if vertexID != lnt.getRootID():
+        if v.vertexID != lnt.getRootID():
             newLevel = vertexToLevel[parentID] + 1
             if newLevel <= config.Arguments.nesting_depth:
-                lnt.addEdge(parentID, vertexID)
-                vertexToLevel[vertexID] = newLevel
-                parentID = vertexID
+                lnt.addEdge(parentID, v.vertexID)
+                vertexToLevel[v.vertexID] = newLevel
+                parentID = v.vertexID
             else:
                 # The height of the LNT now exceeds the maximum depth
                 # Backtrack to an arbitrary proper ancestor
                 ancestorID = parentID
                 while True:
                     ancestorID = lnt.getVertex(ancestorID).getParentID()
-                    if bool(random.getrandbits(1)) or ancestorID == lnt.getRootID():
+                    if bool(random.getrandbits(1)) or ancestorID == lnt.rootID:
                         break
                 parentID = ancestorID
-                lnt.addEdge(parentID, vertexID)
-                vertexToLevel[vertexID] = vertexToLevel[parentID] + 1
-                parentID = vertexID
+                lnt.addEdge(parentID, v.vertexID)
+                vertexToLevel[v.vertexID] = vertexToLevel[parentID] + 1
+                parentID = v.vertexID
     return lnt
 
 def connect_nested_loops(lnt, treev, loopRegions):
     global currentCFG
     firstLoop  = None
     secondLoop = None
-    if treev.numberOfSuccessors() > 1:
+    if treev.number_of_successors() > 1:
         succIDs  = treev.getSuccessorIDs()
         while len(succIDs) > 1:
             v1       = lnt.getVertex(succIDs.pop())
@@ -350,9 +349,9 @@ def connect_nested_loops(lnt, treev, loopRegions):
     parentLoop   = loopRegions[treev]
     sourcev      = None
     destinationv = None 
-    for vertexID in parentLoop.vertices:
+    for vertexID in parentLoop.the_vertices:
         v = currentCFG.getVertex(vertexID) 
-        if v.numberOfSuccessors() == 1 and v.getSuccessorIDs()[0] != parentLoop.headerID:
+        if v.number_of_successors() == 1 and v.getSuccessorIDs()[0] != parentLoop.headerID:
             succID       = v.getSuccessorIDs()[0]
             sourcev      = v
             destinationv = currentCFG.getVertex(succID)
@@ -367,9 +366,9 @@ def connect_nested_loops(lnt, treev, loopRegions):
             if destinationID != succID:
                 currentCFG.addEdge(destinationID, succID)
         destinationv = currentCFG.getVertex(destinationID)
-    currentCFG.addEdge(sourcev.getVertexID(), firstLoop.headerID)
+    currentCFG.addEdge(sourcev.vertexID, firstLoop.headerID)
     for exitID in secondLoop.exitIDs:
-        currentCFG.addEdge(exitID, destinationv.getVertexID())
+        currentCFG.addEdge(exitID, destinationv.vertexID)
 
 def create_CFG():
     global currentCFG
@@ -382,8 +381,8 @@ def create_CFG():
         currentCFG.addVertex(vertices.CFGVertex(vertexID))
         freeVertices.append(vertexID)
     loopRegions = {}
-    for level, vertices in lnt.levelIterator(True):
-        for treev in vertices:
+    for level, the_vertices in lnt.levelIterator(True):
+        for treev in the_vertices:
             verticesInLoop = 0
             if level == 0:
                 verticesInLoop = len(freeVertices)
@@ -396,16 +395,16 @@ def create_CFG():
             sese = connectRemainingVertices()
             loopRegions[treev] = create_loop_component(sese)
             if level == 0:
-                currentCFG.setEntryID(sese.entryID)
-                currentCFG.setExitID(sese.exitID)
+                currentCFG.set_entryID(sese.entryID)
+                currentCFG.set_exitID(sese.exitID)
             else:
                 if config.Arguments.continues:
                     add_continues(loopRegions[treev])
                 if config.Arguments.breaks:
                     add_breaks(loopRegions[treev])
-    for level, vertices in lnt.levelIterator(True):
-        for treev in vertices:
-            if treev.numberOfSuccessors() > 0:
+    for level, the_vertices in lnt.levelIterator(True):
+        for treev in the_vertices:
+            if treev.number_of_successors() > 0:
                 connect_nested_loops(lnt, treev, loopRegions)
     if config.Arguments.unstructured:
         findMergeVerticesToRemove()
@@ -414,33 +413,33 @@ def isConnected():
     global currentCFG
     visited = set([])
     stack   = []
-    stack.append(currentCFG.getEntryID())
+    stack.append(currentCFG.get_entryID())
     while stack:
         vertexID = stack.pop()
         visited.add(vertexID)
-        for succID in currentCFG.getVertex(vertexID).getSuccessorIDs():
+        for succID in currentCFG.getVertex(vertexID).successors.keys():
             if succID not in visited:
                 stack.append(succID)
-    assert not currentCFG.getVertexIDs().difference(visited), "The CFG is not connected"
+    assert not set(currentCFG.the_vertices.keys()).difference(visited), "The CFG is not connected"
     return visited
 
 def set_call_graph_root(program, candidateCallSites):
     maxCallSites   = 0
     totalCallSites = 0
     rootName       = None
-    for subprogramName, vertices in candidateCallSites.iteritems():
-        if len(vertices) > maxCallSites:
-            maxCallSites = len(vertices)
+    for subprogramName, the_vertices in candidateCallSites.iteritems():
+        if len(the_vertices) > maxCallSites:
+            maxCallSites = len(the_vertices)
             rootName     = subprogramName
-        totalCallSites += len(vertices)
+        totalCallSites += len(the_vertices)
     assert rootName, "Unable to find root for call graph"
-    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).getVertexID())
+    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).vertexID)
     assert totalCallSites >= program.getCallGraph().numOfVertices()-1, "Unable to link the call graph because there are %d subprograms but only %d call sites" % (program.getCallGraph().numOfVertices()-1, totalCallSites)  
 
 def add_tree_edges_to_call_graph(program, candidateCallSites):
     disconnected = []
     for callv in program.getCallGraph():
-        if callv.numberOfPredecessors() == 0 and callv.getVertexID() != program.getCallGraph().getRootID():
+        if callv.numberOfPredecessors() == 0 and callv.vertexID != program.getCallGraph().getRootID():
             disconnected.append(callv)
     callerv = program.getCallGraph().getVertex(program.getCallGraph().getRootID())
     while disconnected:
@@ -502,14 +501,14 @@ def do_it():
         candidateCallSites[subprogramName] = []
         levelInCallgraph[subprogramName]   = 0
         create_CFG()
-        program.addCFG(currentCFG, subprogramName)
-        currentCFG.setName(subprogramName)
+        currentCFG.name = subprogramName
+        program.add_CFG(currentCFG)
         isConnected()
         for v in currentCFG:
-            if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
+            if v.number_of_successors() == 1 and v.vertexID != currentCFG.get_exitID():
                 candidateCallSites[subprogramName].append(v)
-    set_call_graph_root(program, candidateCallSites)
-    add_tree_edges_to_call_graph(program, candidateCallSites)
-    add_other_edges_to_call_graph(program, candidateCallSites)
-    cut_edges_from_call_graph(program)
+    #set_call_graph_root(program, candidateCallSites)
+    #add_tree_edges_to_call_graph(program, candidateCallSites)
+    #add_other_edges_to_call_graph(program, candidateCallSites)
+    #cut_edges_from_call_graph(program)
     return program

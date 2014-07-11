@@ -10,18 +10,14 @@ new_successors  = 'succ'
 
 def write_file(program, filename):
     with open(filename, 'w') as the_file:
-        for cfg in program.cfgs:
+        for cfg in program.cfgs.values():
             the_file.write("%s: %s\n" % (new_cfg, cfg.name))
             for v in cfg:
                 the_file.write("%s: %d\n" % (new_basic_block, v.vertexID))
                 the_file.write("%s: " % new_successors)
                 if cfg.get_exitID() != v.vertexID:
-                    i = 1
                     for succID in v.successors.keys():
-                        the_file.write("(%s %d)" % (cfg.name, succID))
-                        if i < v.number_of_successors():
-                            the_file.write(", ")
-                        i += 1
+                        the_file.write("(%s, %d)" % (cfg.name, succID))
                 the_file.write("\n" * 2)   
     
 def read_file(filename):

@@ -264,18 +264,18 @@ class CreateSuperBlockCFGILP(ILP):
                 new_constraint += LpSolve.semi_colon
                 self.constraints.append(new_constraint)
             if superv.number_of_successors() > 1:
-                new_constraint = ""
-                new_constraint += self.get_variable_for_program_point(superv.representative)
-                new_constraint += LpSolve.equals
-                counter = superv.number_of_successors()
-                for succID in superv.successors.keys():
-                    super_succv = super_block_cfg.getVertex(succID)
-                    new_constraint += self.get_variable_for_program_point(super_succv.representative)
-                    if counter > 1:
-                        new_constraint += LpSolve.plus
-                    counter -= 1
-                new_constraint += LpSolve.semi_colon
-                self.constraints.append(new_constraint)                      
+                for partitions in superv.successor_partitions.values():
+                    new_constraint = ""
+                    new_constraint += self.get_variable_for_program_point(superv.representative)
+                    new_constraint += LpSolve.equals
+                    counter = len(partitions)
+                    for super_succv in partitions:
+                        new_constraint += self.get_variable_for_program_point(super_succv.representative)
+                        if counter > 1:
+                            new_constraint += LpSolve.plus
+                        counter -= 1
+                    new_constraint += LpSolve.semi_colon
+                    self.constraints.append(new_constraint)                      
             
     def create_loop_bound_constraints(self, data, cfg, lnt, super_block_cfg):
         for level, the_vertices in lnt.levelIterator(True):

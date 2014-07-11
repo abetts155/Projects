@@ -44,10 +44,13 @@ def the_command_line():
     # The command-line parser and its options
     parser = argparse.ArgumentParser(description="Generate random program structure (call graph and CFGs)")
     
+    parser.add_argument("directory",
+                        help="write the program file to this directory")
+    
     parser.add_argument("-f",
                         "--filename",
-                        help="write to this file in the current directory",
-                        default=create_filename)
+                        help="write the program to this file name",
+                        default=create_filename())
     
     parser.add_argument("-d",
                         "--debug",
@@ -123,8 +126,7 @@ def the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
-    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
+    setattr(config.Arguments, "basepath", os.path.abspath(config.Arguments.directory))
         
 if __name__ == "__main__":
     the_command_line()

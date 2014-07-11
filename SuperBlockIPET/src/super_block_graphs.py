@@ -76,12 +76,17 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                 # and link the super blocks
                 basic_block_predID = first_program_point.edge[0]
                 pred_superv        = subgraph.program_point_to_superv[basic_block_predID] 
-                self.addEdge(pred_superv.vertexID, superv.vertexID)  
+                self.addEdge(pred_superv.vertexID, superv.vertexID)
+                assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
+                if basic_block_predID not in pred_superv.successor_partitions:
+                    pred_superv.successor_partitions[basic_block_predID] = set()
+                pred_superv.successor_partitions[basic_block_predID].add(superv)
             elif first_program_point.vertexID != headerv.headerID:
                 # The program point represents a CFG vertex.
                 # Find the CFG edges incident to the CFG vertex.
                 # Then find the super blocks containing those CFG edges
                 basic_block = enhanced_CFG.getVertex(first_program_point.vertexID)
+                assert enhanced_CFG.getVertex(first_program_point.vertexID).number_of_predecessors() > 1
                 for predID in basic_block.predecessors.keys():
                     predv = enhanced_CFG.getVertex(predID)
                     assert isinstance(predv, vertices.CFGEdge)

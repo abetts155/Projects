@@ -34,7 +34,7 @@ class Program():
             cfg_ilp = calculations.CreateCFGILP(data, cfg, self.lnts[cfg.name])
             cfg_ilp.solve()
             self.cfg_ilps[cfg.name] = cfg_ilp            
-            print("CFG:: WCET(%s) = %d (solve time = %f) (construction time = %f) (total time = %f)" % (cfg.name, 
+            print("CFG::             WCET(%s) = %d (solve time = %f) (construction time = %f) (total time = %f)" % (cfg.name, 
                                                                                                         cfg_ilp.wcet, 
                                                                                                         cfg_ilp.solve_time,
                                                                                                         cfg_ilp.construction_time,
