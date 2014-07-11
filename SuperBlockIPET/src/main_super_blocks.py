@@ -11,9 +11,8 @@ import program_input_output
 def the_command_line (): 
     def clean ():
         for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
-            files.sort()
             for filename in files:
-                if filename.endswith('.png') or filename.endswith('.udraw') or filename.endswith('.dis') or filename.endswith('.ilp'):
+                if filename.endswith(".udraw") or filename.endswith(".ilp") or filename.endswith(".output.txt"):
                     full_path = os.path.join(paths, filename)
                     debug.verbose_message("Removing '%s'" % full_path, __name__)
                     os.remove(full_path)
@@ -37,18 +36,27 @@ def the_command_line ():
                         help="debug mode",
                         default=0)
     
+    parser.add_argument("--repeat-calculation",
+                        type=int,
+                        help="repeat the calculation this many times",
+                        default=1,
+                        metavar="<INT>")
+    
+    parser.add_argument("--log-to-file",
+                        action="store_true",
+                        help="log output to file",
+                        default=False)
+    
+    parser.add_argument("--shuffle-constraints",
+                        action="store_true",
+                        help="before repeating the solve stage of the WCET calculation, shuffle the constraints",
+                        default=False)
+        
     parser.add_argument("-u",
                         "--udraw",
                         action="store_true",
                         help="generate uDraw files to visualise graphs",
                         default=False)
-    
-    parser.add_argument("-r",
-                        "--repeat",
-                        type=int,
-                        help="repeat the calculation this many times",
-                        default=1,
-                        metavar="<INT>")
     
     parser.add_argument("-v",
                         "--verbose",

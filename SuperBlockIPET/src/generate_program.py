@@ -86,43 +86,40 @@ def findMergeVerticesToRemove():
     disconnectedVertices = []
     lnt = trees.LoopNests(currentCFG, currentCFG.get_entryID())
     for v in currentCFG:
-        vertexID = v.getVertexID()
-        if v.numberOfPredecessors() > 1 \
+        if v.number_of_predecessors() > 1 \
         and bool(random.getrandbits(1)) \
-        and not (lnt.isLoopHeader(vertexID) or 
-             lnt.isLoopTail(vertexID) or 
-             lnt.isLoopExitSource(vertexID) or 
-             lnt.isLoopExitDestination(vertexID) or 
-             currentCFG.getExitID() == vertexID):
-            for predID in v.getPredecessorIDs():
-                for succID in v.getSuccessorIDs():
+        and not (lnt.is_loop_header(v.vertexID) or 
+             lnt.is_loop_tail(v.vertexID) or 
+             lnt.is_loop_exit_source(v.vertexID) or 
+             lnt.is_loop_exit_destination(v.vertexID) or 
+             currentCFG.get_exitID() == v.vertexID):
+            for predID in v.predecessors.keys():
+                for succID in v.successors.keys():
                     currentCFG.addEdge(predID, succID)
-            for predID in v.getPredecessorIDs():
-                currentCFG.removeEdge(predID, vertexID)
-            for succID in v.getSuccessorIDs():
-                currentCFG.removeEdge(vertexID, succID)
+            for predID in v.predecessors.keys():
+                currentCFG.removeEdge(predID, v.vertexID)
+            for succID in v.successors.keys():
+                currentCFG.removeEdge(v.vertexID, succID)
             disconnectedVertices.append(v)
     candidateSources = []
     for v in currentCFG:
-        if v.number_of_successors() == 1 and v.getVertexID() != currentCFG.getExitID():
+        if v.number_of_successors() == 1 and v.vertexID != currentCFG.get_exitID():
             assert v not in disconnectedVertices
             candidateSources.append(v)
     for v in disconnectedVertices:
-        vertexID = v.getVertexID()
         if candidateSources and bool(random.getrandbits(1)):
             index   = random.randint(0, len(candidateSources) - 1)
             otherv  = candidateSources[index]
-            otherID = otherv.getVertexID()
-            for succID in otherv.getSuccessorIDs():
-                currentCFG.addEdge(vertexID, succID)
-            currentCFG.addEdge(otherID, vertexID)
+            for succID in otherv.successors.keys():
+                currentCFG.addEdge(v.vertexID, succID)
+            currentCFG.addEdge(otherv.vertexID, v.vertexID)
         else:
-            currentCFG.addEdge(vertexID, currentCFG.get_entryID())
-            currentCFG.removeEdge(currentCFG.getExitID(), currentCFG.get_entryID())
-            currentCFG.addEdge(currentCFG.getExitID(), vertexID)
-            currentCFG.setEntryID(vertexID)
-    assert currentCFG.getVertex(currentCFG.get_entryID()).numberOfPredecessors() == 1, "entry = %s" % currentCFG.getVertex(currentCFG.get_entryID())
-    assert currentCFG.getVertex(currentCFG.getExitID()).number_of_successors() == 1, "exit = %s" % currentCFG.getVertex(currentCFG.getExitID())
+            currentCFG.addEdge(v.vertexID, currentCFG.get_entryID())
+            currentCFG.removeEdge(currentCFG.get_exitID(), currentCFG.get_entryID())
+            currentCFG.addEdge(currentCFG.get_exitID(), v.vertexID)
+            currentCFG.set_entryID(v.vertexID)
+    assert currentCFG.getVertex(currentCFG.get_entryID()).number_of_predecessors() == 1, "entry = %s" % currentCFG.getVertex(currentCFG.get_entryID())
+    assert currentCFG.getVertex(currentCFG.get_exitID()).number_of_successors() == 1, "exit = %s" % currentCFG.getVertex(currentCFG.get_exitID())
 
 def connectDisconnectedComponents():
     global currentCFG
@@ -167,9 +164,9 @@ def createSwitch():
     global freeVertices
     branchID = freeVertices.pop()
     mergeID  = freeVertices.pop()
-    numberOfSwitchArms = 2 + int(random.uniform(config.Arguments.fan_out - 2) + 1)
+    numberOfSwitchArms = 2 + int(random.uniform(0, config.Arguments.fan_out - 2) + 1)
     for i in xrange(1, numberOfSwitchArms+1):
-        switchArm = SESEComponent()
+        switchArm = createSESEComponent()
         currentCFG.addEdge(branchID, switchArm.entryID)
         currentCFG.addEdge(switchArm.exitID, mergeID)
     sese         = SESEComponent()
@@ -328,7 +325,7 @@ def connect_nested_loops(lnt, treev, loopRegions):
     firstLoop  = None
     secondLoop = None
     if treev.number_of_successors() > 1:
-        succIDs  = treev.getSuccessorIDs()
+        succIDs  = treev.successors.keys()
         while len(succIDs) > 1:
             v1       = lnt.getVertex(succIDs.pop())
             v2       = lnt.getVertex(succIDs[-1])
@@ -340,7 +337,7 @@ def connect_nested_loops(lnt, treev, loopRegions):
             for exitID in predLoop.exitIDs:
                 currentCFG.addEdge(exitID, succLoop.headerID)
     else:
-        succID     = treev.getSuccessorIDs()[0] 
+        succID     = treev.successors.keys()[0] 
         succv      = lnt.getVertex(succID)
         firstLoop  = loopRegions[succv]
         secondLoop = loopRegions[succv]
@@ -351,14 +348,14 @@ def connect_nested_loops(lnt, treev, loopRegions):
     destinationv = None 
     for vertexID in parentLoop.the_vertices:
         v = currentCFG.getVertex(vertexID) 
-        if v.number_of_successors() == 1 and v.getSuccessorIDs()[0] != parentLoop.headerID:
-            succID       = v.getSuccessorIDs()[0]
+        if v.number_of_successors() == 1 and v.successors.keys()[0] != parentLoop.headerID:
+            succID       = v.successors.keys()[0]
             sourcev      = v
             destinationv = currentCFG.getVertex(succID)
             break
     if not sourcev:
         sourcev = currentCFG.getVertex(parentLoop.headerID)
-        succIDs = sourcev.getSuccessorIDs()
+        succIDs = sourcev.successors.keys()
         for succID in succIDs:
             currentCFG.removeEdge(parentLoop.headerID, succID)
         destinationID = succIDs[0]
@@ -439,7 +436,7 @@ def set_call_graph_root(program, candidateCallSites):
 def add_tree_edges_to_call_graph(program, candidateCallSites):
     disconnected = []
     for callv in program.getCallGraph():
-        if callv.numberOfPredecessors() == 0 and callv.vertexID != program.getCallGraph().getRootID():
+        if callv.number_of_predecessors() == 0 and callv.vertexID != program.getCallGraph().getRootID():
             disconnected.append(callv)
     callerv = program.getCallGraph().getVertex(program.getCallGraph().getRootID())
     while disconnected:
@@ -483,11 +480,11 @@ def cut_edges_from_call_graph(program):
     callg      = program.getCallGraph()
     candidates = []
     for callv in callg:
-        if callv.numberOfPredecessors() > 1:
+        if callv.number_of_predecessors() > 1:
             candidates.append(callv) 
     for callv in candidates:  
         if bool(random.getrandbits(1)):
-            predIDs = callv.getPredecessorIDs()
+            predIDs = callv.predecessors.keys()
             index   = random.randint(0,len(predIDs)-1)
             predID  = predIDs[index]
             callg.removeEdge(predID, callv.getVertexID()) 

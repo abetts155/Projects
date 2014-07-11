@@ -7,6 +7,7 @@ import subprocess
 import shlex
 import decimal
 import abc
+import random
 
 class LpSolve:
     comma         = ","
@@ -54,9 +55,14 @@ class ILP():
             the_file.write(LpSolve.get_new_line())
             the_file.write(self.int_constraint)
             the_file.write(LpSolve.get_new_line())
+            
+    def shuffle(self):
+        random.shuffle(self.constraints)
       
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
+        if config.Arguments.shuffle_constraints:
+            self.shuffle()
         self.write_to_file()
         cmd        = "lp_solve %s" % self.filename 
         start      = timeit.default_timer()

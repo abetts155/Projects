@@ -285,6 +285,12 @@ class LoopNests (Tree):
     def is_loop_header(self, vertexID):
         return vertexID in self.abstract_vertices.keys()
     
+    def is_loop_tail(self, vertexID):
+        for headerID in self.abstract_vertices.keys():
+            if vertexID in self.get_loop_tails(headerID):
+                return True
+        return False
+    
     def get_loop_tails(self, headerID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return [edge[0] for edge in self.loop_back_edges[headerID]]

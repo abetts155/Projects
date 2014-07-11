@@ -7,20 +7,31 @@ import sys
 import config
 import generate_program
 import program_input_output
+import debug
 
 def the_command_line():
+    new_filename_prefix = "program"
+    
+    def clean():
+        for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
+            for filename in files:
+                if re.match(r'%s[0-9]+\.txt' % new_filename_prefix, filename):
+                    full_path = os.path.join(paths, filename)
+                    debug.verbose_message("Removing '%s'" % full_path, __name__)
+                    os.remove(full_path)
+    
     def create_filename():
         files   = [f for f in os.listdir(os.curdir) if os.path.isfile(os.path.join(os.curdir,f))]
         numbers = set()
-        for a_file in files:
-            if re.match(r'program[0-9]+\.txt', a_file):
-                filenumbers = re.findall(r'[0-9]+', a_file)
+        for filename in files:
+            if re.match(r'%s[0-9]+\.txt' % new_filename_prefix, filename):
+                filenumbers = re.findall(r'[0-9]+', filename)
                 assert len(filenumbers) == 1
                 filenumber = filenumbers[0]
                 numbers.add(int(filenumber))
         for i in xrange(1,sys.maxint):
             if i not in numbers:
-                return os.path.abspath('program%d.txt' % i)
+                return os.path.abspath('%s%d.txt' % (new_filename_prefix, i))
         assert False
         
     class SubprogramsAction(argparse.Action):
@@ -51,6 +62,13 @@ def the_command_line():
                         "--filename",
                         help="write the program to this file name",
                         default=create_filename())
+    
+    parser.add_argument("-c",
+                        "--clean",
+                        metavar="",
+                        type=clean,
+                        help="clean files from previous runs",
+                        default=False)
     
     parser.add_argument("-d",
                         "--debug",

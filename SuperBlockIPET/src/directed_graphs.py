@@ -36,8 +36,8 @@ class DirectedGraph:
     def removeEdge(self, predID, succID):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        predv.removeSuccessor(succID)
-        succv.removePredecessor(predID)
+        predv.remove_successor(succID)
+        succv.remove_predecessor(predID)
         
     def get_reverse_graph(self):
         reverseg = DirectedGraph() 

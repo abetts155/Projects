@@ -18,7 +18,7 @@ def write_file(program, filename):
                 if cfg.get_exitID() != v.vertexID:
                     for succID in v.successors.keys():
                         the_file.write("(%s, %d)" % (cfg.name, succID))
-                the_file.write("\n" * 2)   
+                the_file.write("\n" * 2)  
     
 def read_file(filename):
     program = programs.Program()
@@ -28,6 +28,10 @@ def read_file(filename):
         for line in the_file:
             line = line.lower()
             if line.startswith(new_cfg):
+                if cfg is not None:
+                    cfg.add_predecessor_edges()
+                    cfg.set_entry_and_exit()
+                    program.add_CFG(cfg)
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 cfg           = directed_graphs.CFG()
@@ -62,9 +66,8 @@ def read_file(filename):
                             succID = lexemes[index]
                             assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
                             bb.add_successor(int(succID))
-                        index += 1                        
-        assert cfg, "Attempting to analyse CFG but current CFG is null"
-        cfg.add_predecessor_edges()
-        cfg.set_entry_and_exit()
-        program.add_CFG(cfg)
+                        index += 1
+    cfg.add_predecessor_edges()
+    cfg.set_entry_and_exit()
+    program.add_CFG(cfg)
     return program     
