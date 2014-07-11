@@ -36,6 +36,11 @@ def the_command_line ():
                         help="debug mode",
                         default=0)
     
+    parser.add_argument("--fold-wcets-of-super-blocks",
+                        action="store_true",
+                        help="pre-compute WCETs of super blocks, in effect assuming basic block execution times are constant",
+                        default=False)
+    
     parser.add_argument("--repeat-calculation",
                         type=int,
                         help="repeat the calculation this many times",

@@ -77,6 +77,14 @@ def connectRemainingVertices():
                 masterSese.entryID = vertexID
             predID = vertexID
         masterSese.exitID = vertexID
+    while freeVertices:
+        vertexID = freeVertices.pop()
+        if bool(random.getrandbits(1)):
+            currentCFG.addEdge(vertexID, masterSese.entryID)
+            masterSese.entryID = vertexID
+        else:
+            currentCFG.addEdge(masterSese.exitID, vertexID)
+            masterSese.exitID = vertexID      
     assert masterSese.entryID, "SESE entry ID not set"
     assert masterSese.exitID, "SESE exit ID not set"
     return masterSese
@@ -164,8 +172,7 @@ def createSwitch():
     global freeVertices
     branchID = freeVertices.pop()
     mergeID  = freeVertices.pop()
-    numberOfSwitchArms = 2 + int(random.uniform(0, config.Arguments.fan_out - 2) + 1)
-    for i in xrange(1, numberOfSwitchArms+1):
+    for i in xrange(1, config.Arguments.fan_out+1):
         switchArm = createSESEComponent()
         currentCFG.addEdge(branchID, switchArm.entryID)
         currentCFG.addEdge(switchArm.exitID, mergeID)

@@ -80,7 +80,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                 assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
                 if basic_block_predID not in pred_superv.successor_partitions:
                     pred_superv.successor_partitions[basic_block_predID] = set()
-                pred_superv.successor_partitions[basic_block_predID].add(superv)
+                pred_superv.successor_partitions[basic_block_predID].add(superv.vertexID)
             elif first_program_point.vertexID != headerv.headerID:
                 # The program point represents a CFG vertex.
                 # Find the CFG edges incident to the CFG vertex.
@@ -91,8 +91,10 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     predv = enhanced_CFG.getVertex(predID)
                     assert isinstance(predv, vertices.CFGEdge)
                     pred_superv = subgraph.program_point_to_superv[predv.edge]
-                    self.addEdge(pred_superv.vertexID, superv.vertexID)                               
-        
+                    self.addEdge(pred_superv.vertexID, superv.vertexID)
+    
+    def find_super_block_for_header(self, headerID):
+        return self.per_loop_subgraphs[headerID].program_point_to_superv[headerID]
     
 class DominatorGraph (directed_graphs.DirectedGraph):
     def __init__ (self, predom_tree, postdom_tree):

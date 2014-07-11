@@ -43,13 +43,24 @@ class ILP():
         self.filename                  = filename
         self.wcet                      = -1
         self.variable_execution_counts = {}
-        self.constraints               = []
+        self.the_constraints           = []
+        self.the_variables             = set()
+        
+    def create_integer_constraint(self):
+        self.int_constraint = "%s " % LpSolve.int_
+        counter = len(self.the_variables)
+        for variable in self.the_variables:
+            self.int_constraint += variable
+            if counter > 1:
+                self.int_constraint += LpSolve.comma
+            counter -= 1
+        self.int_constraint += LpSolve.semi_colon
       
     def write_to_file(self):
         with open(self.filename, 'w') as the_file:
             the_file.write(self.obj_function)
             the_file.write(LpSolve.get_new_line(2))
-            for constraint in self.constraints:
+            for constraint in self.the_constraints:
                 the_file.write(constraint)
                 the_file.write(LpSolve.get_new_line())
             the_file.write(LpSolve.get_new_line())
@@ -57,7 +68,7 @@ class ILP():
             the_file.write(LpSolve.get_new_line())
             
     def shuffle(self):
-        random.shuffle(self.constraints)
+        random.shuffle(self.the_constraints)
       
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
@@ -95,10 +106,6 @@ class ILP():
     @abc.abstractmethod
     def create_loop_bound_constraints(self):
         pass
-    
-    @abc.abstractmethod
-    def create_integer_constraint(self):
-        pass
 
 class CreateCFGILP(ILP):
     def __init__ (self, data, cfg, lnt):
@@ -108,7 +115,7 @@ class CreateCFGILP(ILP):
         self.create_objective_function(data, cfg)
         self.create_structural_constraints(cfg)
         self.create_loop_bound_constraints(data, lnt, cfg)
-        self.create_integer_constraint(cfg)
+        self.create_integer_constraint()
         end = timeit.default_timer()
         self.construction_time = end - start
 
@@ -125,18 +132,20 @@ class CreateCFGILP(ILP):
             
     def create_structural_constraints (self, cfg):
         for v in cfg:
+            self.the_variables.add(LpSolve.get_vertex_variable(v.vertexID))
             # Flow in, flow out w.r.t to vertex and its predecessor edges
             new_constraint = ""
             new_constraint += LpSolve.get_vertex_variable(v.vertexID)
             new_constraint += LpSolve.equals
             counter = v.number_of_predecessors()
             for predID in v.predecessors.keys():    
+                self.the_variables.add(LpSolve.get_edge_variable(predID, v.vertexID))
                 new_constraint += LpSolve.get_edge_variable(predID, v.vertexID)
                 if counter > 1:
                     new_constraint += LpSolve.plus
                 counter -= 1    
             new_constraint += LpSolve.semi_colon
-            self.constraints.append(new_constraint)
+            self.the_constraints.append(new_constraint)
             # Flow in, flow out w.r.t to predecessor edges and successor edges
             new_constraint = ""
             counter = v.number_of_predecessors()
@@ -153,7 +162,7 @@ class CreateCFGILP(ILP):
                     new_constraint += LpSolve.plus
                 counter -= 1
             new_constraint += LpSolve.semi_colon
-            self.constraints.append(new_constraint)       
+            self.the_constraints.append(new_constraint)       
             
     def create_loop_bound_constraints(self, data, lnt, cfg):
         for level, the_vertices in lnt.levelIterator(True):
@@ -168,7 +177,7 @@ class CreateCFGILP(ILP):
                         new_constraint += LpSolve.equals
                         new_constraint += "%d" % data.get_loop_bound(cfg.get_entryID())
                         new_constraint += LpSolve.semi_colon
-                        self.constraints.append(new_constraint)
+                        self.the_constraints.append(new_constraint)
                         
     def create_constraints_for_loop(self, data, cfg, lnt, treev):
         bound          = data.get_loop_bound(treev.headerID)
@@ -183,7 +192,7 @@ class CreateCFGILP(ILP):
                 new_constraint += LpSolve.plus 
             counter -= 1
         new_constraint += LpSolve.semi_colon
-        self.constraints.append(new_constraint)
+        self.the_constraints.append(new_constraint)
             
     def get_loop_entry_edges(self, cfg, lnt, headerID):
         edgeIDs = []
@@ -193,41 +202,29 @@ class CreateCFGILP(ILP):
                 edgeIDs.append((predID, headerID))
         assert edgeIDs, "Unable to find loop-entry edges into loop with header %d" % headerID
         return edgeIDs
-    
-    def create_integer_constraint(self, cfg):
-        self.int_constraint = LpSolve.int_
-        counter = cfg.number_of_vertices() + cfg.number_of_edges()
-        for v in cfg:
-            self.int_constraint += " %s" % LpSolve.get_vertex_variable(v.vertexID)
-            if counter > 1:
-                self.int_constraint += LpSolve.comma
-            counter -= 1
-            for succID in v.successors.keys():
-                self.int_constraint += " %s" % LpSolve.get_edge_variable(v.vertexID, succID)
-                if counter > 1:
-                    self.int_constraint += LpSolve.comma
-                counter -= 1
-        self.int_constraint += LpSolve.semi_colon
         
 class CreateSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
         filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "super_block_cfg")
         ILP.__init__(self, filename)
-        self.used_program_points = set()
         start = timeit.default_timer()
         self.create_objective_function(data, cfg, super_block_cfg)
         self.create_intra_super_block_constraints(super_block_cfg)
         self.create_structural_constraints(super_block_cfg)
-        self.create_loop_bound_constraints(data, cfg, lnt, super_block_cfg)
+        self.create_loop_bound_constraints(data, lnt, super_block_cfg)
         self.create_integer_constraint()
         end = timeit.default_timer()
         self.construction_time = end - start
         
     def get_variable_for_program_point(self, program_point):
         if isinstance(program_point, vertices.CFGVertex):
-            return LpSolve.get_vertex_variable(program_point.vertexID)
+            variable = LpSolve.get_vertex_variable(program_point.vertexID) 
+            self.the_variables.add(variable)
+            return variable
         else:
-            return LpSolve.get_edge_variable(program_point.edge[0], program_point.edge[1])
+            variable = LpSolve.get_edge_variable(program_point.edge[0], program_point.edge[1])
+            self.the_variables.add(variable)
+            return variable 
                         
     def create_objective_function (self, data, cfg, super_block_cfg):
         self.obj_function = LpSolve.max_
@@ -235,9 +232,8 @@ class CreateSuperBlockCFGILP(ILP):
         for superv in super_block_cfg:
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
-                    self.used_program_points.add(program_point)
                     wcet = data.get_basic_block_wcet(program_point.vertexID)
-                    self.obj_function += "%d %s" % (wcet, LpSolve.get_vertex_variable(program_point.vertexID))
+                    self.obj_function += "%d %s" % (wcet, self.get_variable_for_program_point(program_point))
                     if counter > 1:
                         self.obj_function += LpSolve.plus
                     counter -= 1
@@ -248,11 +244,11 @@ class CreateSuperBlockCFGILP(ILP):
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex) and program_point != superv.representative:
                     new_constraint = ""
-                    new_constraint += LpSolve.get_vertex_variable(program_point.vertexID)
+                    new_constraint += self.get_variable_for_program_point(program_point)
                     new_constraint += LpSolve.equals
-                    new_constraint += LpSolve.get_vertex_variable(superv.representative.vertexID)
+                    new_constraint += self.get_variable_for_program_point(superv.representative)
                     new_constraint += LpSolve.semi_colon
-                    self.constraints.append(new_constraint)
+                    self.the_constraints.append(new_constraint)
             
     def create_structural_constraints (self, super_block_cfg):
         for superv in super_block_cfg:
@@ -268,22 +264,23 @@ class CreateSuperBlockCFGILP(ILP):
                         new_constraint += LpSolve.plus
                     counter -= 1
                 new_constraint += LpSolve.semi_colon
-                self.constraints.append(new_constraint)
+                self.the_constraints.append(new_constraint)
             if superv.number_of_successors() > 1:
-                for partitions in superv.successor_partitions.values():
+                for partition in superv.successor_partitions.values():
                     new_constraint = ""
                     new_constraint += self.get_variable_for_program_point(superv.representative)
                     new_constraint += LpSolve.equals
-                    counter = len(partitions)
-                    for super_succv in partitions:
+                    counter = len(partition)
+                    for succID in partition:
+                        super_succv = super_block_cfg.getVertex(succID)
                         new_constraint += self.get_variable_for_program_point(super_succv.representative)
                         if counter > 1:
                             new_constraint += LpSolve.plus
                         counter -= 1
                     new_constraint += LpSolve.semi_colon
-                    self.constraints.append(new_constraint)                      
+                    self.the_constraints.append(new_constraint)                      
             
-    def create_loop_bound_constraints(self, data, cfg, lnt, super_block_cfg):
+    def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
         for level, the_vertices in lnt.levelIterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
@@ -291,21 +288,79 @@ class CreateSuperBlockCFGILP(ILP):
                         pass
                     else:
                         new_constraint = ""
-                        new_constraint += LpSolve.get_vertex_variable(cfg.get_entryID())
+                        new_constraint += LpSolve.get_vertex_variable(treev.headerID)
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d" % data.get_loop_bound(cfg.get_entryID())
+                        new_constraint += "%d" % data.get_loop_bound(treev.headerID)
                         new_constraint += LpSolve.semi_colon
-                        self.constraints.append(new_constraint)
+                        self.the_constraints.append(new_constraint)
+        
+class CreateCompressedSuperBlockCFGILP(ILP):
+    def __init__ (self, data, cfg, lnt, super_block_cfg):
+        filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "super_block_cfg")
+        ILP.__init__(self, filename)
+        start = timeit.default_timer()
+        self.create_objective_function(data, super_block_cfg)
+        self.create_structural_constraints(super_block_cfg)
+        self.create_loop_bound_constraints(data, lnt, super_block_cfg)
+        self.create_integer_constraint()
+        end = timeit.default_timer()
+        self.construction_time = end - start
     
-    def create_integer_constraint(self):
-        self.int_constraint = LpSolve.int_
-        counter = len(self.used_program_points)
-        for program_point in self.used_program_points:
-            if isinstance(program_point, vertices.CFGVertex):
-                self.int_constraint += " %s" % LpSolve.get_vertex_variable(program_point.vertexID)
-            else:
-                self.int_constraint += " %s" % LpSolve.get_edge_variable(program_point.edge[0], program_point.edge[1])
+    def create_objective_function (self, data, super_block_cfg):
+        self.obj_function = LpSolve.max_
+        counter = super_block_cfg.number_of_vertices()
+        for superv in super_block_cfg:
+            wcet = 0
+            for program_point in superv.program_points:
+                if isinstance(program_point, vertices.CFGVertex):
+                    wcet += data.get_basic_block_wcet(program_point.vertexID)
+            self.the_variables.add(LpSolve.get_vertex_variable(superv.vertexID))
+            self.obj_function += "%d %s" % (wcet, LpSolve.get_vertex_variable(superv.vertexID))
             if counter > 1:
-                self.int_constraint += LpSolve.comma
+                self.obj_function += LpSolve.plus
             counter -= 1
-        self.int_constraint += LpSolve.semi_colon
+        self.obj_function += LpSolve.semi_colon
+            
+    def create_structural_constraints (self, super_block_cfg):
+        for superv in super_block_cfg:
+            if superv.number_of_predecessors() > 1:
+                new_constraint = ""
+                new_constraint += LpSolve.get_vertex_variable(superv.vertexID)
+                new_constraint += LpSolve.equals
+                counter = superv.number_of_predecessors()
+                for predID in superv.predecessors.keys():
+                    new_constraint += LpSolve.get_vertex_variable(predID)
+                    if counter > 1:
+                        new_constraint += LpSolve.plus
+                    counter -= 1
+                new_constraint += LpSolve.semi_colon
+                self.the_constraints.append(new_constraint)
+            if superv.number_of_successors() > 1:
+                for partition in superv.successor_partitions.values():
+                    new_constraint = ""
+                    new_constraint += LpSolve.get_vertex_variable(superv.vertexID)
+                    new_constraint += LpSolve.equals
+                    counter = len(partition)
+                    for succID in partition:
+                        new_constraint += LpSolve.get_vertex_variable(succID)
+                        if counter > 1:
+                            new_constraint += LpSolve.plus
+                        counter -= 1
+                    new_constraint += LpSolve.semi_colon
+                    self.the_constraints.append(new_constraint)                      
+            
+    def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
+        for level, the_vertices in lnt.levelIterator(True):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    superv = super_block_cfg.find_super_block_for_header(treev.headerID)
+                    if level > 0:
+                        pass
+                    else:
+                        new_constraint = ""
+                        new_constraint += LpSolve.get_vertex_variable(superv.vertexID)
+                        new_constraint += LpSolve.equals
+                        new_constraint += "%d" % data.get_loop_bound(treev.headerID)
+                        new_constraint += LpSolve.semi_colon
+                        self.the_constraints.append(new_constraint)
+                        

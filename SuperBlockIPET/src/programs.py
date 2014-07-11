@@ -6,6 +6,12 @@ import calculations
 import config
 import sys
 import os
+import numpy
+
+class CalculationInformation:
+    def __init__(self, ilp):
+        self.ilp         = ilp
+        self.solve_times = []
     
 class Program():
     def __init__(self):
@@ -29,13 +35,8 @@ class Program():
             udraw.make_file(self.super_block_cfgs[name], "%s.superg" % (name))
             
     def do_wcet_calculation(self):
-        self.cfg_ilps                           = {}
-        self.super_block_cfg_ilps               = {}
-        total_cfg_solve_time                    = 0.0
-        total_cfg_construction_time             = 0.0
-        total_super_block_cfg_solve_time        = 0.0
-        total_super_block_cfg_construction_time = 0.0
-        
+        self.cfg_calculations             = {}
+        self.super_block_cfg_calculations = {}
         if config.Arguments.log_to_file:
             filename   = "%s.output.txt" % (config.Arguments.basepath + os.sep + config.Arguments.basename)
             log_file   = open(filename, 'w')
@@ -43,35 +44,55 @@ class Program():
             sys.stdout = log_file
         try:
             for cfg in self.cfgs.values():
-                data                                     = database.CreateWCETData(cfg, self.lnts[cfg.name])
-                cfg_ilp                                  = calculations.CreateCFGILP(data, cfg, self.lnts[cfg.name])
-                self.cfg_ilps[cfg.name]                  = cfg_ilp
-                total_cfg_construction_time             += cfg_ilp.construction_time
-                super_block_cfg_ilp                      = calculations.CreateSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
-                self.super_block_cfg_ilps[cfg.name]      = super_block_cfg_ilp 
-                total_super_block_cfg_construction_time += super_block_cfg_ilp.construction_time  
+                data                            = database.CreateWCETData(cfg, self.lnts[cfg.name])
+                cfg_ilp                         = calculations.CreateCFGILP(data, cfg, self.lnts[cfg.name])
+                self.cfg_calculations[cfg.name] = CalculationInformation(cfg_ilp)
+                if config.Arguments.fold_wcets_of_super_blocks:
+                    super_block_cfg_ilp = calculations.CreateCompressedSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
+                else:
+                    super_block_cfg_ilp = calculations.CreateSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
+                self.super_block_cfg_calculations[cfg.name] = CalculationInformation(super_block_cfg_ilp) 
                     
                 for i in range(1, config.Arguments.repeat_calculation + 1):
                     print("===== Repetition %d =====" % i)
-                    cfg_ilp.solve()     
-                    total_cfg_solve_time += cfg_ilp.solve_time
+                    cfg_ilp.solve() 
+                    self.cfg_calculations[cfg.name].solve_times.append(cfg_ilp.solve_time)    
                     print("CFG::             WCET(%s) = %d" % (cfg.name, cfg_ilp.wcet))
                     
                     super_block_cfg_ilp.solve()
-                    total_super_block_cfg_solve_time += super_block_cfg_ilp.solve_time         
+                    self.super_block_cfg_calculations[cfg.name].solve_times.append(super_block_cfg_ilp.solve_time)    
                     print("Super block CFG:: WCET(%s) = %d" % (cfg.name, super_block_cfg_ilp.wcet))
                     
                     assert cfg_ilp.wcet == super_block_cfg_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_ilp.wcet)
                    
-                print("CFG::             %s (solve time = %f) (construction time = %f) (total time = %f)" % (cfg.name, 
-                                                                                                             total_cfg_solve_time/config.Arguments.repeat_calculation,
-                                                                                                             total_cfg_construction_time,
-                                                                                                             total_cfg_solve_time/config.Arguments.repeat_calculation + total_cfg_construction_time))
-                        
-                print("Super block CFG:: %s (solve time = %f) (construction time = %f) (total time = %f)" % (cfg.name, 
-                                                                                                             total_super_block_cfg_solve_time/config.Arguments.repeat_calculation,
-                                                                                                             total_super_block_cfg_construction_time,
-                                                                                                             total_super_block_cfg_solve_time/config.Arguments.repeat_calculation + total_super_block_cfg_construction_time))
+                print("""
+Function     = %s 
+variables    = %d
+constraints  = %d
+solve times  = %s
+average time = %f
+
+""" % \
+(cfg.name, 
+len(self.cfg_calculations[cfg.name].ilp.the_variables),
+len(self.cfg_calculations[cfg.name].ilp.the_constraints),
+sorted(self.cfg_calculations[cfg.name].solve_times), 
+numpy.average(self.cfg_calculations[cfg.name].solve_times)))
+
+                print("""
+Function     = %s 
+variables    = %d
+constraints  = %d 
+solve times  = %s
+average time = %f
+""" % \
+(cfg.name, 
+len(self.super_block_cfg_calculations[cfg.name].ilp.the_variables),
+len(self.super_block_cfg_calculations[cfg.name].ilp.the_constraints),
+sorted(self.super_block_cfg_calculations[cfg.name].solve_times), 
+numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
+
+                                    
         finally:
             if config.Arguments.log_to_file:
                 log_file.close()

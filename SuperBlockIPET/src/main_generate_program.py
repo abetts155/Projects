@@ -8,6 +8,7 @@ import config
 import generate_program
 import program_input_output
 import debug
+import random
 
 def the_command_line():
     new_filename_prefix = "program"
@@ -116,8 +117,8 @@ def the_command_line():
     parser.add_argument("--fan-out",
                         action=FanOutAction,
                         type=int,
-                        help="maximum fan out of a CFG vertex",
-                        default=2,
+                        help="select maximum fan out of a CFG vertex",
+                        default=random.randint(2,10),
                         metavar="<INT>")
     
     parser.add_argument("--basic-blocks",
