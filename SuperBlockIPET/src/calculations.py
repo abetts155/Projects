@@ -69,11 +69,12 @@ class ILP():
             
     def shuffle(self):
         random.shuffle(self.the_constraints)
+        
+    def clean(self):
+        os.remove(self.filename)
       
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
-        if config.Arguments.shuffle_constraints:
-            self.shuffle()
         self.write_to_file()
         cmd        = "lp_solve %s" % self.filename 
         start      = timeit.default_timer()

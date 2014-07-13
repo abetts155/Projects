@@ -34,11 +34,54 @@ class Program():
             self.super_block_cfgs[name] = super_block_graphs.SuperBlockCFG(cfg, self.lnts[name])
             udraw.make_file(self.super_block_cfgs[name], "%s.superg" % (name))
             
+    def print_results(self, cfg):                 
+        print("""
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(cfg.name, 
+len(self.cfg_calculations[cfg.name].ilp.the_variables),
+len(self.cfg_calculations[cfg.name].ilp.the_constraints),
+numpy.amin(self.cfg_calculations[cfg.name].solve_times),
+numpy.amax(self.cfg_calculations[cfg.name].solve_times), 
+numpy.average(self.cfg_calculations[cfg.name].solve_times)))
+
+        print("""
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(cfg.name, 
+len(self.super_block_cfg_calculations[cfg.name].ilp.the_variables),
+len(self.super_block_cfg_calculations[cfg.name].ilp.the_constraints),
+numpy.amin(self.super_block_cfg_calculations[cfg.name].solve_times),
+numpy.amax(self.super_block_cfg_calculations[cfg.name].solve_times), 
+numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
+
+    def repeat_calculation(self, cfg, cfg_ilp, super_block_cfg_ilp):
+        for i in range(1, config.Arguments.repeat_calculation + 1):
+            print("===== Repetition %d =====" % i)
+            if config.Arguments.shuffle_constraints:
+                cfg_ilp.shuffle()
+                super_block_cfg_ilp.shuffle()
+            cfg_ilp.solve() 
+            self.cfg_calculations[cfg.name].solve_times.append(cfg_ilp.solve_time)    
+            print("CFG::             WCET(%s) = %d" % (cfg.name, cfg_ilp.wcet))
+            super_block_cfg_ilp.solve()
+            self.super_block_cfg_calculations[cfg.name].solve_times.append(super_block_cfg_ilp.solve_time)    
+            print("Super block CFG:: WCET(%s) = %d" % (cfg.name, super_block_cfg_ilp.wcet))
+            assert cfg_ilp.wcet == super_block_cfg_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_ilp.wcet)      
+
     def do_wcet_calculation(self):
         self.cfg_calculations             = {}
         self.super_block_cfg_calculations = {}
         if config.Arguments.log_to_file:
-            filename   = "%s.output.txt" % (config.Arguments.basepath + os.sep + config.Arguments.basename)
+            filename   = os.path.abspath(config.Arguments.log_to_file)
             log_file   = open(filename, 'w')
             old_stdout = sys.stdout
             sys.stdout = log_file
@@ -53,47 +96,12 @@ class Program():
                     super_block_cfg_ilp = calculations.CreateSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
                 self.super_block_cfg_calculations[cfg.name] = CalculationInformation(super_block_cfg_ilp) 
                     
-                for i in range(1, config.Arguments.repeat_calculation + 1):
-                    print("===== Repetition %d =====" % i)
-                    cfg_ilp.solve() 
-                    self.cfg_calculations[cfg.name].solve_times.append(cfg_ilp.solve_time)    
-                    print("CFG::             WCET(%s) = %d" % (cfg.name, cfg_ilp.wcet))
-                    
-                    super_block_cfg_ilp.solve()
-                    self.super_block_cfg_calculations[cfg.name].solve_times.append(super_block_cfg_ilp.solve_time)    
-                    print("Super block CFG:: WCET(%s) = %d" % (cfg.name, super_block_cfg_ilp.wcet))
-                    
-                    assert cfg_ilp.wcet == super_block_cfg_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_ilp.wcet)
-                   
-                print("""
-Function     = %s 
-variables    = %d
-constraints  = %d
-solve times  = %s
-average time = %f
-
-""" % \
-(cfg.name, 
-len(self.cfg_calculations[cfg.name].ilp.the_variables),
-len(self.cfg_calculations[cfg.name].ilp.the_constraints),
-sorted(self.cfg_calculations[cfg.name].solve_times), 
-numpy.average(self.cfg_calculations[cfg.name].solve_times)))
-
-                print("""
-Function     = %s 
-variables    = %d
-constraints  = %d 
-solve times  = %s
-average time = %f
-""" % \
-(cfg.name, 
-len(self.super_block_cfg_calculations[cfg.name].ilp.the_variables),
-len(self.super_block_cfg_calculations[cfg.name].ilp.the_constraints),
-sorted(self.super_block_cfg_calculations[cfg.name].solve_times), 
-numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
-
-                                    
+                self.repeat_calculation(cfg, cfg_ilp, super_block_cfg_ilp)
+                cfg_ilp.clean()
+                super_block_cfg_ilp.clean()
+                self.print_results(cfg)               
         finally:
             if config.Arguments.log_to_file:
                 log_file.close()
                 sys.stdout = old_stdout
+                

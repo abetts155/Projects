@@ -12,7 +12,7 @@ def the_command_line ():
     def clean ():
         for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
             for filename in files:
-                if filename.endswith(".udraw") or filename.endswith(".ilp") or filename.endswith(".output.txt"):
+                if filename.endswith(".udraw") or filename.endswith(".ilp"):
                     full_path = os.path.join(paths, filename)
                     debug.verbose_message("Removing '%s'" % full_path, __name__)
                     os.remove(full_path)
@@ -48,9 +48,7 @@ def the_command_line ():
                         metavar="<INT>")
     
     parser.add_argument("--log-to-file",
-                        action="store_true",
-                        help="log output to file",
-                        default=False)
+                        help="log output to this file")
     
     parser.add_argument("--shuffle-constraints",
                         action="store_true",
