@@ -10,6 +10,5 @@ function ctrl_c()
 for i in {100..1000}
 do
   python ../src/main_generate_program.py . --basic-blocks $i --unstructured --subprograms 10 --filename program$i.txt
-  python ../src/main_super_blocks.py program$i.txt --repeat-calculation 10 --shuffle-constraints --fold-wcets-of-super-blocks --log-to-file program$i.folded.output.txt
   python ../src/main_super_blocks.py program$i.txt --repeat-calculation 10 --shuffle-constraints --log-to-file program$i.output.txt
 done

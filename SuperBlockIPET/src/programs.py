@@ -36,6 +36,7 @@ class Program():
             
     def print_results(self, cfg):                 
         print("""
+*** CFG data ***
 Function     = %s 
 variables    = %d
 constraints  = %d
@@ -50,6 +51,7 @@ numpy.amax(self.cfg_calculations[cfg.name].solve_times),
 numpy.average(self.cfg_calculations[cfg.name].solve_times)))
 
         print("""
+*** Super block CFG data ***
 Function     = %s 
 variables    = %d
 constraints  = %d
@@ -62,24 +64,45 @@ len(self.super_block_cfg_calculations[cfg.name].ilp.the_constraints),
 numpy.amin(self.super_block_cfg_calculations[cfg.name].solve_times),
 numpy.amax(self.super_block_cfg_calculations[cfg.name].solve_times), 
 numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
+        
+        print("""
+*** Super block CFG (folded) data ***
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(cfg.name, 
+len(self.super_block_cfg_folded_calculations[cfg.name].ilp.the_variables),
+len(self.super_block_cfg_folded_calculations[cfg.name].ilp.the_constraints),
+numpy.amin(self.super_block_cfg_folded_calculations[cfg.name].solve_times),
+numpy.amax(self.super_block_cfg_folded_calculations[cfg.name].solve_times), 
+numpy.average(self.super_block_cfg_folded_calculations[cfg.name].solve_times)))
 
-    def repeat_calculation(self, cfg, cfg_ilp, super_block_cfg_ilp):
+    def repeat_calculation(self, cfg, cfg_ilp, super_block_cfg_ilp, super_block_cfg_folded_ilp):
         for i in range(1, config.Arguments.repeat_calculation + 1):
             print("===== Repetition %d =====" % i)
             if config.Arguments.shuffle_constraints:
                 cfg_ilp.shuffle()
                 super_block_cfg_ilp.shuffle()
+                super_block_cfg_folded_ilp.shuffle()
             cfg_ilp.solve() 
             self.cfg_calculations[cfg.name].solve_times.append(cfg_ilp.solve_time)    
-            print("CFG::             WCET(%s) = %d" % (cfg.name, cfg_ilp.wcet))
+            print("CFG::                      WCET(%s) = %d" % (cfg.name, cfg_ilp.wcet))
             super_block_cfg_ilp.solve()
             self.super_block_cfg_calculations[cfg.name].solve_times.append(super_block_cfg_ilp.solve_time)    
-            print("Super block CFG:: WCET(%s) = %d" % (cfg.name, super_block_cfg_ilp.wcet))
-            assert cfg_ilp.wcet == super_block_cfg_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_ilp.wcet)      
+            print("Super block CFG::          WCET(%s) = %d" % (cfg.name, super_block_cfg_ilp.wcet))
+            assert cfg_ilp.wcet == super_block_cfg_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_ilp.wcet) 
+            super_block_cfg_folded_ilp.solve()
+            self.super_block_cfg_folded_calculations[cfg.name].solve_times.append(super_block_cfg_folded_ilp.solve_time)
+            print("Super block CFG (folded):: WCET(%s) = %d" % (cfg.name, super_block_cfg_folded_ilp.wcet))
+            assert cfg_ilp.wcet == super_block_cfg_folded_ilp.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_ilp.wcet, super_block_cfg_folded_ilp.wcet)
 
     def do_wcet_calculation(self):
-        self.cfg_calculations             = {}
-        self.super_block_cfg_calculations = {}
+        self.cfg_calculations                    = {}
+        self.super_block_cfg_calculations        = {}
+        self.super_block_cfg_folded_calculations = {}
         if config.Arguments.log_to_file:
             filename   = os.path.abspath(config.Arguments.log_to_file)
             log_file   = open(filename, 'w')
@@ -87,18 +110,17 @@ numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
             sys.stdout = log_file
         try:
             for cfg in self.cfgs.values():
-                data                            = database.CreateWCETData(cfg, self.lnts[cfg.name])
-                cfg_ilp                         = calculations.CreateCFGILP(data, cfg, self.lnts[cfg.name])
-                self.cfg_calculations[cfg.name] = CalculationInformation(cfg_ilp)
-                if config.Arguments.fold_wcets_of_super_blocks:
-                    super_block_cfg_ilp = calculations.CreateCompressedSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
-                else:
-                    super_block_cfg_ilp = calculations.CreateSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
-                self.super_block_cfg_calculations[cfg.name] = CalculationInformation(super_block_cfg_ilp) 
-                    
-                self.repeat_calculation(cfg, cfg_ilp, super_block_cfg_ilp)
+                data                                               = database.CreateWCETData(cfg, self.lnts[cfg.name])
+                cfg_ilp                                            = calculations.CreateCFGILP(data, cfg, self.lnts[cfg.name])
+                self.cfg_calculations[cfg.name]                    = CalculationInformation(cfg_ilp)
+                super_block_cfg_ilp                                = calculations.CreateSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
+                self.super_block_cfg_calculations[cfg.name]        = CalculationInformation(super_block_cfg_ilp) 
+                super_block_cfg_folded_ilp                         = calculations.CreateCompressedSuperBlockCFGILP(data, cfg, self.lnts[cfg.name], self.super_block_cfgs[cfg.name])
+                self.super_block_cfg_folded_calculations[cfg.name] = CalculationInformation(super_block_cfg_folded_ilp)   
+                self.repeat_calculation(cfg, cfg_ilp, super_block_cfg_ilp, super_block_cfg_folded_ilp)
                 cfg_ilp.clean()
                 super_block_cfg_ilp.clean()
+                super_block_cfg_folded_ilp.clean()
                 self.print_results(cfg)               
         finally:
             if config.Arguments.log_to_file:
