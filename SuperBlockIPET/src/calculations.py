@@ -53,7 +53,8 @@ class ConstraintSystem:
         self.the_variables             = set()
     
     def clean(self):
-        os.remove(self.filename)
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
     
     def shuffle(self):
         random.shuffle(self.the_constraints)
@@ -397,7 +398,8 @@ class CLP(ConstraintSystem):
         
     def clean(self):
         ConstraintSystem.clean(self)
-        os.remove(self.results_filename)
+        if os.path.exists(self.results_filename):
+            os.remove(self.results_filename)
         
     def write_to_file(self):
         with open(self.filename, 'w') as the_file:
