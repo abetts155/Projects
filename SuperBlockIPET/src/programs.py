@@ -107,15 +107,18 @@ numpy.average(self.super_block_cfg_folded_ilp_calculations[cfg.name].solve_times
         try:
             for cfg in self.cfgs.values():
                 lnt                                                    = self.lnts[cfg.name]
+                superg                                                 = self.super_block_cfgs[cfg.name]
                 data                                                   = database.CreateWCETData(cfg, lnt)
                 if config.Arguments.use_clp:
                     cfg_clp_calculation = calculations.CreateCFGCLP(data, cfg, lnt)
-                    cfg_clp_calculation.solve()
+                    cfg_clp_calculation.write_to_file()
+                    super_clp_calculation = calculations.CreateSuperBlockCFGCLP(data, cfg, lnt, superg)
+                    super_clp_calculation.write_to_file()
                 cfg_calculation                                        = calculations.CreateCFGILP(data, cfg, lnt)
                 self.cfg_ilp_calculations[cfg.name]                    = CalculationInformation(cfg_calculation)
-                super_block_cfg_calculation                            = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, self.super_block_cfgs[cfg.name])
-                self.super_block_cfg_ilp_calculations[cfg.name]        = CalculationInformation(super_block_cfg_calculation) 
-                super_block_cfg_folded_calculation                     = calculations.CreateCompressedSuperBlockCFGILP(data, cfg, lnt, self.super_block_cfgs[cfg.name])
+                super_block_cfg_calculation                            = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, superg)
+                self.super_block_cfg_ilp_calculations[cfg.name]        = CalculationInformation(super_block_cfg_calculation)
+                super_block_cfg_folded_calculation                     = calculations.CreateFoldedSuperBlockCFGILP(data, cfg, lnt, superg)
                 self.super_block_cfg_folded_ilp_calculations[cfg.name] = CalculationInformation(super_block_cfg_folded_calculation)   
                 self.repeat_calculation(cfg, cfg_calculation, super_block_cfg_calculation, super_block_cfg_folded_calculation)
                 cfg_calculation.clean()
