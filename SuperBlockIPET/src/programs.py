@@ -114,6 +114,8 @@ numpy.average(self.super_block_cfg_folded_ilp_calculations[cfg.name].solve_times
                     cfg_clp_calculation.write_to_file()
                     super_clp_calculation = calculations.CreateSuperBlockCFGCLP(data, cfg, lnt, superg)
                     super_clp_calculation.write_to_file()
+                    super_clp_folded_calculation = calculations.CreateFoldedSuperBlockCFGCLP(data, cfg, lnt, superg)
+                    super_clp_folded_calculation.write_to_file()
                 cfg_calculation                                        = calculations.CreateCFGILP(data, cfg, lnt)
                 self.cfg_ilp_calculations[cfg.name]                    = CalculationInformation(cfg_calculation)
                 super_block_cfg_calculation                            = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, superg)
