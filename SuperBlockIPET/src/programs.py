@@ -126,14 +126,14 @@ numpy.average(self.super_block_cfg_folded_calculations[cfg.name].solve_times)))
                     self.super_block_cfg_calculations[cfg.name]        = CalculationInformation(super_block_cfg_ilp_calculation)
                     super_block_cfg_ilp_folded_calculation             = calculations.CreateFoldedSuperBlockCFGILP(data, cfg, lnt, superg)
                     self.super_block_cfg_folded_calculations[cfg.name] = CalculationInformation(super_block_cfg_ilp_folded_calculation)   
-                #self.repeat_calculation(cfg, 
-                #                        self.cfg_calculations[cfg.name].constraint_system, 
-                #                        self.super_block_cfg_calculations[cfg.name].constraint_system,
-                #                        self.super_block_cfg_folded_calculations[cfg.name].constraint_system)
-                #self.cfg_calculations[cfg.name].constraint_system.clean()
-                #self.super_block_cfg_calculations[cfg.name].constraint_system.clean()
-                #self.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
-                #self.print_results(cfg)               
+                self.repeat_calculation(cfg, 
+                                        self.cfg_calculations[cfg.name].constraint_system, 
+                                        self.super_block_cfg_calculations[cfg.name].constraint_system,
+                                        self.super_block_cfg_folded_calculations[cfg.name].constraint_system)
+                self.cfg_calculations[cfg.name].constraint_system.clean()
+                self.super_block_cfg_calculations[cfg.name].constraint_system.clean()
+                self.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
+                self.print_results(cfg)               
         finally:
             if config.Arguments.log_to_file:
                 log_file.close()
