@@ -56,6 +56,11 @@ def the_command_line ():
                         help="generate uDraw files to visualise graphs",
                         default=False)
     
+    parser.add_argument("--use-clp",
+                        action="store_true",
+                        help="use constraint logic programming to solve WCET estimation constraint system",
+                        default=False)
+    
     parser.add_argument("-v",
                         "--verbose",
                         action="store_true",
