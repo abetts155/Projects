@@ -68,10 +68,10 @@ class DirectedGraph:
                 if not succv.has_predecessor(v.vertexID):
                     succv.add_predecessor(v.vertexID)
     
-    def getNextVertexID(self):
+    def get_next_vertexID(self):
         nextID = 1
         while nextID in self.the_vertices.keys():
-            nextID = nextID + 1 
+            nextID += 1 
         return nextID
     
     def number_of_vertices(self):
@@ -126,9 +126,10 @@ class FlowGraph(DirectedGraph):
                 edgeID += 1
         
 class EnhancedCFG(FlowGraph):
-    def __init__ (self, cfg):
+    def __init__ (self):
         FlowGraph.__init__(self)
-        self.name = cfg.name
+        
+    def create_from_CFG(self, cfg):
         for v in cfg:
             newv = copy.deepcopy(v) 
             newv.successors   = {}
@@ -140,16 +141,21 @@ class EnhancedCFG(FlowGraph):
                 self.exitID = v.vertexID
         assert self.entryID != vertices.dummyID
         assert self.exitID != vertices.dummyID
-        newVertexID = 0
         for v in cfg:
             for succID in v.successors.keys():
-                newVertexID -= 1
-                newv        = vertices.CFGEdge(newVertexID, v.vertexID, succID)
+                newID = self.get_next_edge_vertexID()
+                newv  = vertices.CFGEdge(newID, v.vertexID, succID)
                 if self.getVertex(v.vertexID).dummy or self.getVertex(succID).dummy:
                     newv.dummy = True
-                self.the_vertices[newVertexID] = newv
-                self.addEdge(v.vertexID, newVertexID)
-                self.addEdge(newVertexID, succID)
+                self.the_vertices[newID] = newv
+                self.addEdge(v.vertexID, newID)
+                self.addEdge(newID, succID)
+                
+    def get_next_edge_vertexID(self):
+        nextID = -1
+        while nextID in self.the_vertices.keys():
+            nextID -= 1 
+        return nextID
                 
     def patch_back_edges_with_correct_header(self, loop_tails, headerID):
         for v in self:
@@ -183,7 +189,7 @@ class CFG(FlowGraph):
                 debug_info += bb.__str__()
             debug.exit_message("CFG '%s' has too many entry points: %s" % (self.name, debug_info))
         else:
-            entryID = self.getNextVertexID()
+            entryID = self.get_next_vertexID()
             entryv  = vertices.CFGVertex(entryID)
             self.addVertex(entryv)
             self.set_entryID(entryID)
@@ -199,7 +205,7 @@ class CFG(FlowGraph):
                 debug_info += bb.__str__()
             debug.exit_message("CFG '%s' has too many exit points: %s" % (self.name, debug_info))
         else:
-            exitID = self.getNextVertexID()
+            exitID = self.get_next_vertexID()
             exitv  = vertices.CFGVertex(exitID)
             self.addVertex(exitv)
             self.set_exitID(exitID)

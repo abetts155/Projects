@@ -100,12 +100,16 @@ class CFGEdge(Vertex):
         Vertex.__init__(self, vertexID)
         self.edge = (predID, succID)
     
+    def __str__(self):
+        return "%s%s\n" % (Vertex.__str__(self), self.edge)
+    
 class SuperBlock (Vertex):
     def __init__ (self, vertexID):
         Vertex.__init__(self, vertexID)
         self.program_points = []
         self.representative = None
         self.successor_partitions = {}
+        self.contains_loop_header = False
         
     def compute_representative(self):
         assert len(self.program_points) > 0, "Super block %d has no program points" % self.vertexID

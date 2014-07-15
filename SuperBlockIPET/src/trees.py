@@ -207,9 +207,11 @@ class LoopNests (Tree):
         self.loop_bodies       = {}
         self.loop_back_edges   = {}
         self.loop_exit_edges   = {}
+        self.loop_entry_edges  = {}
         self.initialise()
         self.find_loops(rootID)
         self.find_loop_exits()
+        self.find_loop_entries()
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
         self.rootID = self.abstract_vertices[rootID]
@@ -234,13 +236,14 @@ class LoopNests (Tree):
             
     def find_loop_body(self, loop_tailID, headerID):
         if headerID not in self.abstract_vertices.keys():
-            newVertexID = self.getNextVertexID()
-            headerv     = vertices.HeaderVertex(newVertexID, headerID)
-            self.the_vertices[newVertexID] = headerv
-            self.abstract_vertices[headerID] = newVertexID
+            newID   = self.get_next_vertexID()
+            headerv = vertices.HeaderVertex(newID, headerID)
+            self.the_vertices[newID]         = headerv
+            self.abstract_vertices[headerID] = newID
             self.loop_bodies[headerID]       = set()
             self.loop_back_edges[headerID]   = set()
             self.loop_exit_edges[headerID]   = set()
+            self.loop_entry_edges[headerID]  = set()
         self.loop_back_edges[headerID].add((loop_tailID, headerID))
         work_list = []
         work_list.append(loop_tailID)
@@ -280,7 +283,13 @@ class LoopNests (Tree):
                                 self.loop_exit_edges[headerID].add((vertexID, succID))
                         else:
                             self.loop_exit_edges[headerID].add((vertexID, succID))
-            debug.debug_message("Exits of %s = %s" % (headerID, self.loop_exit_edges[headerID]), __name__, 10)
+                            
+    def find_loop_entries(self):
+        for headerID in self.abstract_vertices.keys():
+            v = self.__directedg.getVertex(headerID)
+            for predID in v.predecessors.keys():
+                if predID not in self.loop_bodies[headerID]:
+                    self.loop_entry_edges[headerID].add((predID, headerID))
             
     def is_loop_header(self, vertexID):
         return vertexID in self.abstract_vertices.keys()
@@ -295,9 +304,17 @@ class LoopNests (Tree):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return [edge[0] for edge in self.loop_back_edges[headerID]]
     
-    def get_loop_exits_edges(self, headerID):
+    def get_loop_exit_edges(self, headerID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.loop_exit_edges[headerID]
+    
+    def get_loop_exit_sources(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return [edge[0] for edge in self.loop_exit_edges[headerID]]
+    
+    def get_loop_exit_destinations(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return [edge[1] for edge in self.loop_exit_edges[headerID]]
     
     def is_loop_exit_source_for_header(self, headerID, vertexID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -319,6 +336,10 @@ class LoopNests (Tree):
                 return True
         return False
     
+    def get_loop_entry_edges(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.loop_entry_edges[headerID]
+    
     def is_loop_exit_edge(self, predID, succID):
         for headerID in self.abstract_vertices.keys():
             if (predID, succID) in self.loop_exit_edges[headerID]:
@@ -332,70 +353,91 @@ class LoopNests (Tree):
         return False
     
     def is_nested(self, left, right):
-        return self.isProperAncestor(right, left)
+        return self.isProperAncestor(right, left)             
     
-    def induce_subgraph(self, headerv):
-        assert isinstance(headerv, vertices.HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT"
-        edges    = set()
-        analysed = set()
-        worklist = []
-        worklist.extend(self.get_loop_tails(headerv.headerID))
+    def induced_loop_subgraph(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG                     = directed_graphs.EnhancedCFG()
+        worklist                         = []
+        analysed                         = set()
+        inner_loop_exit_edge_header      = {}
+        inner_loop_exit_edge_edge_vertex = {} 
+        # Start work list with loop tails
+        for predID in self.get_loop_tails(headerv.headerID):
+            predv = self.__directedg.getVertex(predID)
+            if predv not in worklist:
+                worklist.append(predv)
+        # Work backwards through flow graph until the header is reached, adding edges found along the way
         while worklist:                        
-            vertexID = worklist.pop()
-            analysed.add(vertexID)
-            v = self.__directedg.getVertex(vertexID)
-            for predID in v.predecessors.keys():
-                if not self.__dfs.isDFSBackedge(predID, vertexID):
-                    treePredv    = self.getVertex(predID)
-                    headerPredv  = self.getVertex(treePredv.parentID)
-                    predHeaderID = headerPredv.headerID
-                    if predHeaderID == headerv.headerID:
-                        if predID not in analysed:
-                            worklist.append(predID)
-                        edges.add((predID, vertexID))
-                    elif self.is_nested(headerPredv.vertexID, headerv.vertexID):
-                        if predHeaderID not in analysed:
-                            worklist.append(predHeaderID)
-                        for sourceID, destinationID in self.get_loop_exits_edges(predHeaderID):
-                            edges.add((sourceID, destinationID))
-                            if predHeaderID != sourceID:
-                                edges.add((predHeaderID, sourceID))
-            # Add loop-exit edges to outer loops originating at this vertex
-            for succID in v.successors.keys():
-                treeSuccv    = self.getVertex(succID)
-                headerSuccv  = self.getVertex(treeSuccv.parentID)
-                succHeaderID = headerSuccv.headerID
-                if succHeaderID != headerv.headerID and self.is_nested(headerv.vertexID, headerSuccv.vertexID):
-                    edges.add((vertexID, succID))
-                
-        flowg = directed_graphs.CFG()
-        for predID, succID in edges:
-            if not flowg.hasVertex(predID):
-                v = vertices.CFGVertex(predID)
-                flowg.addVertex(v)
-            if not flowg.hasVertex(succID):
-                v = vertices.CFGVertex(succID)
-                flowg.addVertex(v)
-            flowg.addEdge(predID, succID)
-        # Set the entry vertex in the induced subgraph
-        flowg.set_entryID(headerv.headerID)
-        # Set the exit vertex in the induced subgraph
-        loop_tails = self.get_loop_tails(headerv.headerID)
+            v = worklist.pop()
+            if v not in analysed:
+                analysed.add(v)
+                for predID in v.predecessors.keys():
+                    predv = self.__directedg.getVertex(predID)
+                    if not self.__dfs.isDFSBackedge(predID, v.vertexID):
+                        headerv_of_pred = self.getVertex(self.getVertex(predID).parentID)
+                        if headerv_of_pred.headerID == headerv.headerID:
+                            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+                            new_edgev     = vertices.CFGEdge(edge_vertexID, predID, v.vertexID)
+                            enhanced_CFG.addVertex(new_edgev)
+                            worklist.append(predv)
+                        elif self.is_nested(headerv_of_pred.vertexID, headerv.vertexID):
+                            worklist.append(self.__directedg.getVertex(headerv_of_pred.headerID))
+                            for sourceID, destinationID in self.loop_exit_edges[headerv_of_pred.headerID]:
+                                edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+                                new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+                                enhanced_CFG.addVertex(new_edgev)                                
+                                inner_loop_exit_edge_header[(sourceID, destinationID)] = headerv_of_pred.headerID
+                                inner_loop_exit_edge_edge_vertex[(sourceID, destinationID)] = new_edgev      
+        # Add edge vertices to model loop-back edges
+        for sourceID, destinationID in self.loop_back_edges[headerv.headerID]:
+            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+            new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+            enhanced_CFG.addVertex(new_edgev) 
+        # Add edge vertices to model loop-exit edges
+        for sourceID, destinationID in self.loop_exit_edges[headerv.headerID]:
+            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+            new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+            enhanced_CFG.addVertex(new_edgev) 
+        # Link inner headers to vertices which model their loop-exit edges
+        for edge, inner_headerID in inner_loop_exit_edge_header.iteritems():
+            if not enhanced_CFG.hasVertex(inner_headerID):
+                enhanced_CFG.addVertex(vertices.CFGVertex(inner_headerID))
+            new_edgev = inner_loop_exit_edge_edge_vertex[edge]
+            enhanced_CFG.addEdge(inner_headerID, new_edgev.vertexID)
+        # Link remaining edges
+        for v in enhanced_CFG:
+            if isinstance(v, vertices.CFGEdge):
+                sourceID      = v.edge[0]
+                destinationID = v.edge[1]
+                if not enhanced_CFG.hasVertex(sourceID) and self.getVertex(self.getVertex(sourceID).parentID).headerID == headerv.headerID:
+                    enhanced_CFG.addVertex(vertices.CFGVertex(sourceID))
+                if not enhanced_CFG.hasVertex(destinationID) and self.getVertex(self.getVertex(destinationID).parentID).headerID == headerv.headerID:
+                    enhanced_CFG.addVertex(vertices.CFGVertex(destinationID))
+                if self.getVertex(self.getVertex(sourceID).parentID).headerID == headerv.headerID:
+                    enhanced_CFG.addEdge(sourceID, v.vertexID)
+                if self.getVertex(self.getVertex(destinationID).parentID).headerID == headerv.headerID or self.is_loop_header(destinationID):
+                    if not self.is_loop_back_edge(sourceID, destinationID):
+                        enhanced_CFG.addEdge(v.vertexID, destinationID)
+        # Set entry vertex
+        enhanced_CFG.entryID = headerv.headerID
+        # Set exit vertex
+        exit_candidates = []
+        for v in enhanced_CFG:
+            if v.number_of_successors() == 0:
+                exit_candidates.append(v)      
         if headerv.vertexID == self.rootID:
-            assert len(loop_tails) == 1
-            flowg.set_exitID(loop_tails[0])
+            assert len(exit_candidates) == 1
+            enhanced_CFG.exitID = exit_candidates[0].vertexID
         else:
-            exitv       = vertices.CFGVertex(flowg.getNextVertexID())
-            exitv.dummy = True
-            flowg.addVertex(exitv)
-            flowg.set_exitID(exitv.vertexID)
-            for v in flowg:
-                if v.number_of_successors() == 0 and v.vertexID != flowg.exitID:
-                    flowg.addEdge(v.vertexID, exitv.vertexID)      
-            duplicatev       = vertices.CFGVertex(flowg.getNextVertexID())  
-            duplicatev.dummy = True
-            flowg.addVertex(duplicatev)
-            flowg.addEdge(duplicatev.vertexID, exitv.vertexID)      
-            for loop_tailID in loop_tails:
-                flowg.addEdge(loop_tailID, duplicatev.vertexID)  
-        return flowg
+            assert len(exit_candidates) > 0
+            if len(exit_candidates) == 1:
+                enhanced_CFG.exitID = exit_candidates[0].vertexID
+            else:
+                exitv       = vertices.CFGVertex(enhanced_CFG.get_next_vertexID())
+                exitv.dummy = True
+                enhanced_CFG.addVertex(exitv)
+                enhanced_CFG.exitID = exitv.vertexID
+                for v in exit_candidates:
+                    enhanced_CFG.addEdge(v.vertexID, exitv.vertexID)    
+        return enhanced_CFG

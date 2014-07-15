@@ -15,7 +15,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
     next_vertexID = 0
     next_edgeID   = 0
     
-    def __init__(self, cfg=None, lnt=None):
+    def __init__(self, cfg, lnt):
         directed_graphs.DirectedGraph.__init__(self)
         if cfg and lnt:
             self.name = cfg.name
@@ -25,10 +25,9 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                 for treev in the_vertices:
                     if isinstance(treev, vertices.HeaderVertex):
                         debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                        forward_CFG          = lnt.induce_subgraph(treev)
-                        enhanced_CFG         = directed_graphs.EnhancedCFG(forward_CFG)
+                        enhanced_CFG          = lnt.induced_loop_subgraph(treev)
                         enhanced_CFG.patch_back_edges_with_correct_header(lnt.get_loop_tails(treev.headerID), treev.headerID)
-                        udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_icfg" % (cfg.name, treev.headerID))
+                        udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
                         predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
                         enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
                         postdom_tree         = trees.Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
@@ -63,6 +62,8 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     if basic_block_headerv == headerv:
                         subgraph.program_point_to_superv[program_point.vertexID] = superv
                         superv.program_points.append(program_point)
+                        if program_point.vertexID == headerv.headerID:
+                            superv.contains_loop_header = True
         for superv in self:
             superv.compute_representative()
                 
@@ -92,6 +93,28 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     assert isinstance(predv, vertices.CFGEdge)
                     pred_superv = subgraph.program_point_to_superv[predv.edge]
                     self.addEdge(pred_superv.vertexID, superv.vertexID)
+            last_program_point = superv.program_points[-1]
+            if isinstance(last_program_point, vertices.CFGEdge) \
+            and lnt.is_loop_back_edge(last_program_point.edge[0], last_program_point.edge[1]):
+                # The program point represents a CFG loop-back edge.
+                # Find the super block which contains the destination of the CFG edge 
+                # and link the super blocks
+                basic_block_succID = last_program_point.edge[1]
+                succ_superv        = subgraph.program_point_to_superv[basic_block_succID] 
+                self.addEdge(superv.vertexID, succ_superv.vertexID)
+        # Add loop-entry and loop-exit edges in to and out of inner loops
+        for succID in headerv.successors.keys():
+            succv = lnt.getVertex(succID)
+            if isinstance(succv, vertices.HeaderVertex):
+                inner_subgraph = self.per_loop_subgraphs[succv.headerID]
+                for exit_edge in lnt.get_loop_exit_edges(succv.headerID):
+                    exit_edge_superv   = inner_subgraph.program_point_to_superv[exit_edge]
+                    destination_superv = subgraph.program_point_to_superv[exit_edge[1]]
+                    self.addEdge(exit_edge_superv.vertexID, destination_superv.vertexID) 
+                for entry_edge in lnt.get_loop_entry_edges(succv.headerID):
+                    entry_edge_superv  = subgraph.program_point_to_superv[entry_edge]
+                    destination_superv = inner_subgraph.program_point_to_superv[entry_edge[1]]
+                    self.addEdge(entry_edge_superv.vertexID, destination_superv.vertexID)
     
     def find_super_block_for_header(self, headerID):
         return self.per_loop_subgraphs[headerID].program_point_to_superv[headerID]

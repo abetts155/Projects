@@ -139,6 +139,8 @@ def write_super_block_vertex(superv, the_file):
             name += "(%d, %d)" % (program_point.edge[0], program_point.edge[1])
         if idx < len(superv.program_points) - 1:
             name += new_line
+    if superv.contains_loop_header:
+        the_file.write(set_color(COLOR.YELLOW))
     the_file.write(set_name(name))
     the_file.write(end_attrs)
     
