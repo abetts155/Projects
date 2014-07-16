@@ -9,26 +9,10 @@ import debug
 import program_input_output
 
 def the_command_line (): 
-    def clean ():
-        for paths, dirs, files in os.walk(os.path.abspath(os.curdir)):
-            for filename in files:
-                if filename.endswith(".udraw") or filename.endswith(".ilp"):
-                    full_path = os.path.join(paths, filename)
-                    debug.verbose_message("Removing '%s'" % full_path, __name__)
-                    os.remove(full_path)
-       
-    # The command-line parser and its options
     parser = argparse.ArgumentParser(description="Compute WCET using implicit path enumeration defined on the super block CFG")
     
     parser.add_argument("program_file",
                         help="a file containing program information (with '.txt' extension)")
-    
-    parser.add_argument("-c",
-                        "--clean",
-                        metavar="",
-                        type=clean,
-                        help="clean files from previous runs",
-                        default=False)
     
     parser.add_argument("-d",
                         "--debug",
@@ -36,14 +20,19 @@ def the_command_line ():
                         help="debug mode",
                         default=0)
     
+    parser.add_argument("--keep-temps",
+                        action="store_true",
+                        help="keep any files generated during the analysis",
+                        default=False)
+    
+    parser.add_argument("--log-to-file",
+                        help="log output to this file")
+    
     parser.add_argument("--repeat-calculation",
                         type=int,
                         help="repeat the calculation this many times",
                         default=1,
                         metavar="<INT>")
-    
-    parser.add_argument("--log-to-file",
-                        help="log output to this file")
     
     parser.add_argument("--shuffle-constraints",
                         action="store_true",
@@ -61,6 +50,11 @@ def the_command_line ():
                         help="use constraint logic programming to solve WCET estimation constraint system",
                         default=False)
     
+    parser.add_argument("--use-ilp",
+                        action="store_true",
+                        help="use integer linear programming to solve WCET estimation constraint system",
+                        default=False)
+    
     parser.add_argument("-v",
                         "--verbose",
                         action="store_true",
@@ -68,6 +62,9 @@ def the_command_line ():
                         default=False)
     
     parser.parse_args(namespace=config.Arguments)
+    
+    if not (config.Arguments.use_ilp or config.Arguments.use_clp):
+        debug.exit_message("You must calculate specify which solver technology to use with --use-ilp or --use-clp")
     
     setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
     setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
@@ -80,5 +77,6 @@ if __name__ == "__main__":
     program.create_LNTs()
     program.create_super_block_CFGs()
     program.do_wcet_calculation()
+    program.print_results()
     
     

@@ -8,16 +8,25 @@ import sys
 import os
 import numpy
 
-class CalculationInformation:
+class SolverInformation:
     def __init__(self, constraint_system):
         self.constraint_system  = constraint_system
         self.solve_times        = []
+        
+class CalculationInformation:
+    def __init__(self, name):
+        self.name                                = name
+        self.cfg_calculations                    = {}
+        self.super_block_cfg_calculations        = {}
+        self.super_block_cfg_folded_calculations = {}
     
 class Program():
     def __init__(self):
         self.cfgs             = {}
         self.lnts             = {}
         self.super_block_cfgs = {}
+        self.ilps             = CalculationInformation("ILP")
+        self.clps             = CalculationInformation("CLP")
         
     def add_CFG(self, cfg):
         assert cfg.name
@@ -33,72 +42,120 @@ class Program():
         for name, cfg in self.cfgs.iteritems():
             self.super_block_cfgs[name] = super_block_graphs.SuperBlockCFG(cfg, self.lnts[name])
             udraw.make_file(self.super_block_cfgs[name], "%s.superg" % (name))
-            
-    def print_results(self, cfg):                 
-        print("""
-*** CFG data ***
-Function     = %s 
-variables    = %d
-constraints  = %d
-min time     = %f
-max time     = %f
-average time = %f""" % \
-(cfg.name, 
-len(self.cfg_calculations[cfg.name].constraint_system.the_variables),
-len(self.cfg_calculations[cfg.name].constraint_system.the_constraints),
-numpy.amin(self.cfg_calculations[cfg.name].solve_times),
-numpy.amax(self.cfg_calculations[cfg.name].solve_times), 
-numpy.average(self.cfg_calculations[cfg.name].solve_times)))
-
-        print("""
-*** Super block CFG data ***
-Function     = %s 
-variables    = %d
-constraints  = %d
-min time     = %f
-max time     = %f
-average time = %f""" % \
-(cfg.name, 
-len(self.super_block_cfg_calculations[cfg.name].constraint_system.the_variables),
-len(self.super_block_cfg_calculations[cfg.name].constraint_system.the_constraints),
-numpy.amin(self.super_block_cfg_calculations[cfg.name].solve_times),
-numpy.amax(self.super_block_cfg_calculations[cfg.name].solve_times), 
-numpy.average(self.super_block_cfg_calculations[cfg.name].solve_times)))
-        
-        print("""
-*** Super block CFG (folded) data ***
-Function     = %s 
-variables    = %d
-constraints  = %d
-min time     = %f
-max time     = %f
-average time = %f""" % \
-(cfg.name, 
-len(self.super_block_cfg_folded_calculations[cfg.name].constraint_system.the_variables),
-len(self.super_block_cfg_folded_calculations[cfg.name].constraint_system.the_constraints),
-numpy.amin(self.super_block_cfg_folded_calculations[cfg.name].solve_times),
-numpy.amax(self.super_block_cfg_folded_calculations[cfg.name].solve_times), 
-numpy.average(self.super_block_cfg_folded_calculations[cfg.name].solve_times)))
 
     def repeat_calculation(self, cfg, cfg_calculation, super_block_cfg_calculation, super_block_cfg_folded_calculation):
+        cfg_times                    = []
+        super_block_cfg_times        = []
+        super_block_cfg_folded_times = []
         for i in range(1, config.Arguments.repeat_calculation + 1):
             print("===== Repetition %d =====" % i)
             cfg_calculation.solve() 
-            self.cfg_calculations[cfg.name].solve_times.append(cfg_calculation.solve_time)    
+            cfg_times.append(cfg_calculation.solve_time)  
             print("CFG::                      WCET(%s) = %d" % (cfg.name, cfg_calculation.wcet))
             super_block_cfg_calculation.solve()
-            self.super_block_cfg_calculations[cfg.name].solve_times.append(super_block_cfg_calculation.solve_time)    
+            super_block_cfg_times.append(super_block_cfg_calculation.solve_time)  
             print("Super block CFG::          WCET(%s) = %d" % (cfg.name, super_block_cfg_calculation.wcet))
-            assert cfg_calculation.wcet == super_block_cfg_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_calculation.wcet) 
             super_block_cfg_folded_calculation.solve()
-            self.super_block_cfg_folded_calculations[cfg.name].solve_times.append(super_block_cfg_folded_calculation.solve_time)
+            super_block_cfg_folded_times.append(super_block_cfg_folded_calculation.solve_time)
             print("Super block CFG (folded):: WCET(%s) = %d" % (cfg.name, super_block_cfg_folded_calculation.wcet))
+            assert cfg_calculation.wcet == super_block_cfg_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_calculation.wcet) 
             assert cfg_calculation.wcet == super_block_cfg_folded_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_folded_calculation.wcet)
-
+        return cfg_times, super_block_cfg_times, super_block_cfg_folded_times
+    
     def do_wcet_calculation(self):
-        self.cfg_calculations                    = {}
-        self.super_block_cfg_calculations        = {}
-        self.super_block_cfg_folded_calculations = {}
+        for cfg in self.cfgs.values():
+            lnt    = self.lnts[cfg.name]
+            superg = self.super_block_cfgs[cfg.name]
+            data   = database.CreateWCETData(cfg, lnt)
+            if config.Arguments.use_ilp:
+                cfg_ilp_calculation                                     = calculations.CreateCFGILP(data, cfg, lnt)
+                self.ilps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_ilp_calculation)
+                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, superg)
+                self.ilps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_ilp_calculation)
+                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(data, cfg, lnt, superg)
+                self.ilps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_ilp_folded_calculation)  
+                cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
+                                                                                                         self.ilps.cfg_calculations[cfg.name].constraint_system, 
+                                                                                                         self.ilps.super_block_cfg_calculations[cfg.name].constraint_system,
+                                                                                                         self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system) 
+                self.ilps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
+                self.ilps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
+                self.ilps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
+                if not config.Arguments.keep_temps:
+                    self.ilps.cfg_calculations[cfg.name].constraint_system.clean()
+                    self.ilps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
+                    self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
+            if config.Arguments.use_clp:
+                cfg_clp_calculation                                     = calculations.CreateCFGCLP(data, cfg, lnt)
+                self.clps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_clp_calculation)
+                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(data, cfg, lnt, superg)
+                self.clps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_clp_calculation)
+                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(data, cfg, lnt, superg)
+                self.clps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_clp_folded_calculation)
+                cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
+                                                                                                         self.clps.cfg_calculations[cfg.name].constraint_system, 
+                                                                                                         self.clps.super_block_cfg_calculations[cfg.name].constraint_system,
+                                                                                                         self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system)
+                
+                self.clps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
+                self.clps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
+                self.clps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
+                if not config.Arguments.keep_temps:
+                    self.clps.cfg_calculations[cfg.name].constraint_system.clean()
+                    self.clps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
+                    self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()               
+     
+                
+    def print_results_of_individual_cfg(self, cfg, calculation_information):                 
+        print("""
+***** %s: CFG *****
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(calculation_information.name,
+cfg.name, 
+len(calculation_information.cfg_calculations[cfg.name].constraint_system.the_variables),
+len(calculation_information.cfg_calculations[cfg.name].constraint_system.the_constraints),
+numpy.amin(calculation_information.cfg_calculations[cfg.name].solve_times),
+numpy.amax(calculation_information.cfg_calculations[cfg.name].solve_times), 
+numpy.average(calculation_information.cfg_calculations[cfg.name].solve_times)))
+
+        print("""
+***** %s: Super block CFG *****
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(calculation_information.name,
+cfg.name, 
+len(calculation_information.super_block_cfg_calculations[cfg.name].constraint_system.the_variables),
+len(calculation_information.super_block_cfg_calculations[cfg.name].constraint_system.the_constraints),
+numpy.amin(calculation_information.super_block_cfg_calculations[cfg.name].solve_times),
+numpy.amax(calculation_information.super_block_cfg_calculations[cfg.name].solve_times), 
+numpy.average(calculation_information.super_block_cfg_calculations[cfg.name].solve_times)))
+        
+        print("""
+***** %s: Super block CFG with folding *****
+Function     = %s 
+variables    = %d
+constraints  = %d
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(calculation_information.name,
+cfg.name, 
+len(calculation_information.super_block_cfg_folded_calculations[cfg.name].constraint_system.the_variables),
+len(calculation_information.super_block_cfg_folded_calculations[cfg.name].constraint_system.the_constraints),
+numpy.amin(calculation_information.super_block_cfg_folded_calculations[cfg.name].solve_times),
+numpy.amax(calculation_information.super_block_cfg_folded_calculations[cfg.name].solve_times), 
+numpy.average(calculation_information.super_block_cfg_folded_calculations[cfg.name].solve_times))) 
+       
+    def print_results(self):
         if config.Arguments.log_to_file:
             filename   = os.path.abspath(config.Arguments.log_to_file)
             log_file   = open(filename, 'w')
@@ -106,36 +163,13 @@ numpy.average(self.super_block_cfg_folded_calculations[cfg.name].solve_times)))
             sys.stdout = log_file
         try:
             for cfg in self.cfgs.values():
-                lnt    = self.lnts[cfg.name]
-                superg = self.super_block_cfgs[cfg.name]
-                data   = database.CreateWCETData(cfg, lnt)
+                if config.Arguments.use_ilp:
+                    self.print_results_of_individual_cfg(cfg, self.ilps)
                 if config.Arguments.use_clp:
-                    cfg_clp_calculation = calculations.CreateCFGCLP(data, cfg, lnt)
-                    cfg_clp_calculation.write_to_file()
-                    self.cfg_calculations[cfg.name] = CalculationInformation(cfg_clp_calculation)
-                    super_block_cfg_clp_calculation = calculations.CreateSuperBlockCFGCLP(data, cfg, lnt, superg)
-                    super_block_cfg_clp_calculation.write_to_file()
-                    self.super_block_cfg_calculations[cfg.name] = CalculationInformation(super_block_cfg_clp_calculation)
-                    super_block_cfg_clp_folded_calculation = calculations.CreateFoldedSuperBlockCFGCLP(data, cfg, lnt, superg)
-                    super_block_cfg_clp_folded_calculation.write_to_file()
-                    self.super_block_cfg_folded_calculations[cfg.name] = CalculationInformation(super_block_cfg_clp_folded_calculation)
-                else:
-                    cfg_ilp_calculation                                = calculations.CreateCFGILP(data, cfg, lnt)
-                    self.cfg_calculations[cfg.name]                    = CalculationInformation(cfg_ilp_calculation)
-                    super_block_cfg_ilp_calculation                    = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, superg)
-                    self.super_block_cfg_calculations[cfg.name]        = CalculationInformation(super_block_cfg_ilp_calculation)
-                    super_block_cfg_ilp_folded_calculation             = calculations.CreateFoldedSuperBlockCFGILP(data, cfg, lnt, superg)
-                    self.super_block_cfg_folded_calculations[cfg.name] = CalculationInformation(super_block_cfg_ilp_folded_calculation)   
-                self.repeat_calculation(cfg, 
-                                        self.cfg_calculations[cfg.name].constraint_system, 
-                                        self.super_block_cfg_calculations[cfg.name].constraint_system,
-                                        self.super_block_cfg_folded_calculations[cfg.name].constraint_system)
-                self.cfg_calculations[cfg.name].constraint_system.clean()
-                self.super_block_cfg_calculations[cfg.name].constraint_system.clean()
-                self.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
-                self.print_results(cfg)               
+                    self.print_results_of_individual_cfg(cfg, self.clps)
         finally:
             if config.Arguments.log_to_file:
                 log_file.close()
                 sys.stdout = old_stdout
+        
                 
