@@ -16,13 +16,13 @@ class CreateWCETData:
                 debug.debug_message("WCET(%d) = %d" % (v.vertexID, self.basic_block_WCETs[v.vertexID]), __name__, 1)
     
     def assign_loop_bounds(self, lnt):
-        for level, the_vertices in lnt.levelIterator(True):
+        for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
-                    if level > 0:
-                        self.upper_bounds[treev.headerID] = random.randint(3, 10)
-                    else:
+                    if treev.vertexID == lnt.rootID:
                         self.upper_bounds[treev.headerID] = 1
+                    else:
+                        self.upper_bounds[treev.headerID] = random.randint(3, 10)
 
     def get_basic_block_wcet(self, vertexID):
         if vertexID in self.basic_block_WCETs:

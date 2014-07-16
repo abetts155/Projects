@@ -52,7 +52,7 @@ class Tree(directed_graphs.DirectedGraph):
         else:
             return self.isAncestor(left, right)
         
-    def levelIterator(self, up=True):
+    def level_by_level_iterator(self, up=True):
         rootv = self.getVertex(self.getRootID())
         rootv.level = 0
         queue = [rootv]
@@ -70,10 +70,10 @@ class Tree(directed_graphs.DirectedGraph):
                 levelToVertices[v.level].append(v)
         if up:
             for level in reversed(sorted(levelToVertices.keys())):
-                yield level, levelToVertices[level]
+                yield levelToVertices[level]
         else:
             for level in sorted(levelToVertices.keys()):
-                yield level, levelToVertices[level]
+                yield levelToVertices[level]
         
 class DepthFirstSearch (Tree):
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY')

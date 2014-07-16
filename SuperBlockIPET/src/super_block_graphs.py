@@ -8,20 +8,16 @@ import udraw
 class SuperBlockSubgraph(directed_graphs.DirectedGraph):
     def __init__(self):
         directed_graphs.DirectedGraph.__init__(self)
-        self.sccID_to_superv         = {}
         self.program_point_to_superv = {}
 
-class SuperBlockCFG(directed_graphs.DirectedGraph):
-    next_vertexID = 0
-    next_edgeID   = 0
-    
+class SuperBlockCFG(directed_graphs.DirectedGraph):    
     def __init__(self, cfg, lnt):
         directed_graphs.DirectedGraph.__init__(self)
         if cfg and lnt:
             self.name = cfg.name
             self.per_loop_subgraphs     = {}
             self.per_loop_root_vertices = {}
-            for level, the_vertices in lnt.levelIterator(True):
+            for the_vertices in lnt.level_by_level_iterator(True):
                 for treev in the_vertices:
                     if isinstance(treev, vertices.HeaderVertex):
                         debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
@@ -39,18 +35,16 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
     def add_super_blocks(self, lnt, enhanced_CFG, sccs, headerv):
         subgraph                                  = SuperBlockSubgraph()
         self.per_loop_subgraphs[headerv.headerID] = subgraph
-        for sccID in xrange(1, sccs.numberOfSCCs()+1):
-            SuperBlockCFG.next_vertexID += 1
-            superv                                 = vertices.SuperBlock(SuperBlockCFG.next_vertexID)
+        for sccID in sccs.scc_vertices.keys():
+            superv                                 = vertices.SuperBlock(sccID)
             self.the_vertices[superv.vertexID]     = superv
             subgraph.the_vertices[superv.vertexID] = superv
-            subgraph.sccID_to_superv[sccID]        = superv
         dfs = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
         for vertexID in reversed(dfs.post_order):
             program_point = enhanced_CFG.getVertex(vertexID)
             if not program_point.dummy: 
-                sccID  = sccs.getSCCID(vertexID)
-                superv = subgraph.sccID_to_superv[sccID]
+                sccID  = sccs.vertex_SCC[vertexID]
+                superv = subgraph.getVertex(sccID)
                 if isinstance(program_point, vertices.CFGEdge):
                     predv_headerv = lnt.getVertex(lnt.getVertex(program_point.edge[0]).parentID)
                     succv_headerv = lnt.getVertex(lnt.getVertex(program_point.edge[1]).parentID)
@@ -62,8 +56,6 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     if basic_block_headerv == headerv:
                         subgraph.program_point_to_superv[program_point.vertexID] = superv
                         superv.program_points.append(program_point)
-                        if program_point.vertexID == headerv.headerID:
-                            superv.contains_loop_header = True
         for superv in self:
             superv.compute_representative()
                 
@@ -108,9 +100,23 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
             if isinstance(succv, vertices.HeaderVertex):
                 inner_subgraph = self.per_loop_subgraphs[succv.headerID]
                 for exit_edge in lnt.get_loop_exit_edges(succv.headerID):
-                    exit_edge_superv   = inner_subgraph.program_point_to_superv[exit_edge]
+                    # Find the super block containing the loop-exit edge in the 
+                    # subgraph created for the inner loop
+                    exit_edge_superv      = inner_subgraph.program_point_to_superv[exit_edge]
+                    assert exit_edge_superv.number_of_predecessors() == 1
+                    # It should have a unique predecessor.
+                    # We want to re-link that predecessor to the super block containing the loop-exit 
+                    # edge in the subgraph created for its outer loop
+                    exit_edge_pred_superv = self.getVertex(exit_edge_superv.predecessors.keys()[0])
                     destination_superv = subgraph.program_point_to_superv[exit_edge[1]]
-                    self.addEdge(exit_edge_superv.vertexID, destination_superv.vertexID) 
+                    self.addEdge(exit_edge_pred_superv.vertexID, destination_superv.vertexID) 
+                    # Fix the successor partition information
+                    basic_block_predID = exit_edge[0]
+                    exit_edge_pred_superv.successor_partitions[basic_block_predID].add(destination_superv.vertexID)
+                    exit_edge_pred_superv.successor_partitions[basic_block_predID].remove(exit_edge_superv.vertexID)
+                    # And now delete the super block containing the loop-exit edge in the 
+                    # subgraph created for the inner loop
+                    self.removeVertex(exit_edge_superv.vertexID)
                 for entry_edge in lnt.get_loop_entry_edges(succv.headerID):
                     entry_edge_superv  = subgraph.program_point_to_superv[entry_edge]
                     destination_superv = inner_subgraph.program_point_to_superv[entry_edge[1]]
@@ -131,11 +137,9 @@ class DominatorGraph (directed_graphs.DirectedGraph):
             self.the_vertices[v.vertexID] = vertices.Vertex(v.vertexID)        
 
     def add_edges(self, predom_tree, postdom_tree):
-        # Pre-dominator tree edges
         for v in predom_tree:
             if v.vertexID != predom_tree.getRootID():
                 self.addEdge(v.parentID, v.vertexID)
-        # Post-dominator tree edges
         for v in postdom_tree:
             if v.vertexID != postdom_tree.getRootID(): 
                 if not self.getVertex(v.vertexID).has_predecessor(v.parentID):
@@ -143,14 +147,14 @@ class DominatorGraph (directed_graphs.DirectedGraph):
 
 class StrongComponents:
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
+    SCCID  = 0
     
-    def __init__ (self, directedg):
+    def __init__(self, directedg):
         self.directedg     = directedg
         self.reverseg      = directedg.get_reverse_graph()
         self.vertex_colour = {}
-        self.vertex_scc    = {}
+        self.vertex_SCC    = {}
         self.scc_vertices  = {}
-        self.scc_number    = 0
         self.initialise()
         self.do_forward_visit()
         self.do_reverse_visit()
@@ -158,7 +162,6 @@ class StrongComponents:
     def initialise(self):
         for v in self.directedg:
             self.vertex_colour[v.vertexID] = StrongComponents.Colors.WHITE
-            self.vertex_scc[v.vertexID]    = 0
             
     def do_forward_visit(self):
         self.vertex_list = []
@@ -169,8 +172,8 @@ class StrongComponents:
     def do_reverse_visit(self):
         for vertexID in reversed(self.vertex_list):
             if self.vertex_colour[vertexID] == StrongComponents.Colors.BLACK:
-                self.scc_number += 1
-                self.scc_vertices[self.scc_number] = set([])
+                StrongComponents.SCCID += 1
+                self.scc_vertices[StrongComponents.SCCID] = set()
                 # The vertex v is from the forward directed graph.
                 # Need to get the vertex from the reverse graph instead
                 self.visit2(self.reverseg.getVertex(vertexID))
@@ -195,8 +198,8 @@ class StrongComponents:
         stack.append(v)
         while stack:
             poppedv = stack.pop()
-            self.vertex_scc[poppedv.vertexID] = self.scc_number
-            self.scc_vertices[self.scc_number].add(poppedv.vertexID)
+            self.vertex_SCC[poppedv.vertexID] = StrongComponents.SCCID
+            self.scc_vertices[StrongComponents.SCCID].add(poppedv.vertexID)
             if self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.BLACK:
                 self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.BLUE
                 stack.append(poppedv)
@@ -204,15 +207,5 @@ class StrongComponents:
                     if self.vertex_colour[succID] == StrongComponents.Colors.BLACK:
                         stack.append(self.reverseg.getVertex(succID))
             elif self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.BLUE:
-                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.RED
-                
-    def numberOfSCCs (self):
-        return self.scc_number
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.RED  
     
-    def getSCCID (self, vertexID):
-        assert vertexID in self.vertex_scc, "Unable to find SCC of vertex %d" % vertexID
-        return self.vertex_scc[vertexID]
-    
-    def getVertexIDs (self, sccID):
-        assert sccID in self.scc_vertices, "Unable to find set of vertices associated with SCC ID %d" % sccID
-        return self.scc_vertices[sccID]  

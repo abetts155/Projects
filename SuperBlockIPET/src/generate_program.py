@@ -385,10 +385,10 @@ def create_CFG():
         currentCFG.addVertex(vertices.CFGVertex(vertexID))
         freeVertices.append(vertexID)
     loopRegions = {}
-    for level, the_vertices in lnt.levelIterator(True):
+    for the_vertices in lnt.level_by_level_iterator(True):
         for treev in the_vertices:
             verticesInLoop = 0
-            if level == 0:
+            if treev.vertexID == lnt.rootID:
                 verticesInLoop = len(freeVertices)
             else:
                 maxLoopSize    = (config.Arguments.basic_blocks - 2)/config.Arguments.loops
@@ -398,7 +398,7 @@ def create_CFG():
             connectDisconnectedComponents()
             sese = connectRemainingVertices()
             loopRegions[treev] = create_loop_component(sese)
-            if level == 0:
+            if treev.vertexID == lnt.rootID:
                 currentCFG.set_entryID(sese.entryID)
                 currentCFG.set_exitID(sese.exitID)
             else:
@@ -406,7 +406,7 @@ def create_CFG():
                     add_continues(loopRegions[treev])
                 if config.Arguments.breaks:
                     add_breaks(loopRegions[treev])
-    for level, the_vertices in lnt.levelIterator(True):
+    for the_vertices in lnt.level_by_level_iterator(True):
         for treev in the_vertices:
             if treev.number_of_successors() > 0:
                 connect_nested_loops(lnt, treev, loopRegions)

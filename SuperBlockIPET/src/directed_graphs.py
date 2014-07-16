@@ -17,6 +17,11 @@ class DirectedGraph:
     
     def removeVertex(self, vertexID):
         assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
+        for v in self:
+            if v.has_successor(vertexID):
+                v.remove_successor(vertexID)
+            if v.has_predecessor(vertexID):
+                v.remove_predecessor(vertexID)
         del self.the_vertices[vertexID]
     
     def hasVertex(self, vertexID):
