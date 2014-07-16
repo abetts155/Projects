@@ -12,17 +12,12 @@ class Tree(directed_graphs.DirectedGraph):
         assert self.rootID != vertices.dummyID, "Root ID has not yet been set"
         return self.rootID
         
-    def addVertex (self, vertexID):
-        assert vertexID not in self.the_vertices, "Adding vertex %d which is already in tree" % vertexID
-        treev = vertices.TreeVertex(vertexID)
-        self.the_vertices[vertexID] = treev
-        
-    def addEdge (self, predID, succID):
+    def addEdge(self, predID, succID):
         directed_graphs.DirectedGraph.addEdge(self, predID, succID)
         succv = self.getVertex(succID)
         succv.parentID = predID
     
-    def getAllProperAncestors (self, vertexID):
+    def getAllProperAncestors(self, vertexID):
         ancestors = []
         while vertexID != self.rootID:
             parentID = self.getVertex(vertexID).parentID
@@ -30,7 +25,7 @@ class Tree(directed_graphs.DirectedGraph):
             vertexID = parentID
         return ancestors
     
-    def isAncestor (self, left, right):
+    def isAncestor(self, left, right):
         if left == right:
             return True
         elif right == self.rootID:
@@ -46,34 +41,34 @@ class Tree(directed_graphs.DirectedGraph):
             else:
                 return False
     
-    def isProperAncestor (self, left, right):
+    def isProperAncestor(self, left, right):
         if left == right:
             return False
         else:
             return self.isAncestor(left, right)
         
     def level_by_level_iterator(self, up=True):
-        rootv = self.getVertex(self.getRootID())
-        rootv.level = 0
-        queue = [rootv]
-        levelToVertices = {}
+        rootv        = self.getVertex(self.getRootID())
+        rootv.level  = 0
+        queue        = [rootv]
+        the_vertices = {}
         while queue:
             v = queue.pop()
             for succID in v.successors.keys():
                 queue.insert(0, self.getVertex(succID))
             if v.vertexID == self.getRootID():
-                levelToVertices[0] = [rootv]
+                the_vertices[0] = [rootv]
             else:
                 v.level = self.getVertex(v.parentID).level + 1
-                if v.level not in levelToVertices.keys():
-                    levelToVertices[v.level] = []
-                levelToVertices[v.level].append(v)
+                if v.level not in the_vertices.keys():
+                    the_vertices[v.level] = []
+                the_vertices[v.level].append(v)
         if up:
-            for level in reversed(sorted(levelToVertices.keys())):
-                yield levelToVertices[level]
+            for level in reversed(sorted(the_vertices.keys())):
+                yield the_vertices[level]
         else:
-            for level in sorted(levelToVertices.keys()):
-                yield levelToVertices[level]
+            for level in sorted(the_vertices.keys()):
+                yield the_vertices[level]
         
 class DepthFirstSearch (Tree):
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY')
@@ -441,3 +436,4 @@ class LoopNests (Tree):
                 for v in exit_candidates:
                     enhanced_CFG.addEdge(v.vertexID, exitv.vertexID)    
         return enhanced_CFG
+    
