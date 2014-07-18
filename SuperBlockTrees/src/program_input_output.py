@@ -69,6 +69,7 @@ def read_file(filename):
                 data.basic_block_WCETs[bb.vertexID] = int(values[0])
             elif line.startswith(upper_bound_lexeme):
                 bound_tuple = int_regex.findall(line)
+                data.upper_bounds_on_headers[bb.vertexID] = map(int, bound_tuple)
     cfg.add_predecessor_edges()
     cfg.set_entry_and_exit()
     program.add_CFG(cfg)
