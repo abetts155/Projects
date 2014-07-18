@@ -2,72 +2,74 @@ import programs
 import directed_graphs
 import vertices
 import debug
-import shlex
+import database
+import re
 
-new_cfg         = 'cfg'
-new_basic_block = 'bb'
-new_successors  = 'succ'
+cfg_lexeme         = "cfg"
+basic_block_lexeme = "bb"
+successors_lexeme  = "succ"
+wcet_lexeme        = "wcet"
+upper_bound_lexeme = "upper bound"
+
+name_regex       = re.compile("[\d\w]+")
+int_regex        = re.compile(r"\d+")
+edges_regex      = re.compile(r"\([\w\d\s,]+\)")
+edge_tuple_regex = re.compile(r"[\w\d]+")
 
 def write_file(program, filename):
     with open(filename, 'w') as the_file:
         for cfg in program.cfgs.values():
-            the_file.write("%s: %s\n" % (new_cfg, cfg.name))
+            the_file.write("%s: %s\n" % (cfg_lexeme, cfg.name))
             for v in cfg:
-                the_file.write("%s: %d\n" % (new_basic_block, v.vertexID))
-                the_file.write("%s: " % new_successors)
+                the_file.write("%s: %d\n" % (basic_block_lexeme, v.vertexID))
+                the_file.write("%s: " % successors_lexeme)
                 if cfg.get_exitID() != v.vertexID:
                     for succID in v.successors.keys():
                         the_file.write("(%s, %d)" % (cfg.name, succID))
                 the_file.write("\n" * 2)  
     
 def read_file(filename):
+    data    = database.Database()
     program = programs.Program()
     cfg     = None
     bb      = None
     with open(filename) as the_file:
         for line in the_file:
             line = line.lower()
-            if line.startswith(new_cfg):
+            if line.startswith(cfg_lexeme):
                 if cfg is not None:
                     cfg.add_predecessor_edges()
                     cfg.set_entry_and_exit()
                     program.add_CFG(cfg)
-                lexemes = shlex.split(line)
-                assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                cfg           = directed_graphs.CFG()
-                function_name = lexemes[-1]
-                cfg.name      = function_name
-                debug.debug_message("Found new CFG '%s'" % function_name, __name__, 1)
-            elif line.startswith(new_basic_block):
+                names = name_regex.findall(line)
+                assert len(names) == 2, "Too many names found '%s'" % ' '.join(names)
+                cfg      = directed_graphs.CFG()
+                cfg.name = names[1]
+                debug.debug_message("Found new CFG '%s'" % cfg.name, __name__, 1)
+            elif line.startswith(basic_block_lexeme):
                 assert cfg, "Found basic block but current CFG is null"
-                lexemes = shlex.split(line) 
-                assert len(lexemes) == 2, "Unable to parse basic block line %s" % line
-                vertexID = lexemes[-1]
-                assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
-                bb = vertices.CFGVertex(int(vertexID))
+                ids = int_regex.findall(line) 
+                assert len(ids) == 1, "Too many identifiers found '%s'" % ' '.join(ids)
+                assert ids[0].isdigit(), "Vertex identifier '%s' is not an integer" % ids[0]
+                bb = vertices.CFGVertex(int(ids[0]))
                 cfg.addVertex(bb)
-            elif line.startswith(new_successors):
+            elif line.startswith(successors_lexeme):
                 assert bb, "Found edge but current basic block is null"
-                index = line.index(':')
-                line = line[index+1:]
-                splitter = shlex.shlex(line)
-                splitter.whitespace += ')'
-                splitter.whitespace += '('
-                splitter.whitespace_split = False
-                lexemes = list(splitter)
-                assert len(lexemes) % 3 == 0, "Unable to parse edge information '%s'" % line
-                if len(lexemes) > 1:
-                    index = 0
-                    for lex in lexemes:
-                        if index % 3 == 0:
-                            function_name = lexemes[index]
-                            assert function_name == cfg.name, "Call edge found which is currently not handled"
-                        elif index % 3 == 2:
-                            succID = lexemes[index]
-                            assert succID.isdigit(), "Successor identifier '%s' is not an integer" % succID
-                            bb.add_successor(int(succID))
-                        index += 1
+                edges = edges_regex.findall(line)
+                for edge in edges:
+                    a_tuple = edge_tuple_regex.findall(edge)
+                    assert len(a_tuple) == 2, "Too many components in edge tuple: %s" % edge
+                    assert a_tuple[0] == cfg.name, "Call edge found which is currently not handled" 
+                    assert a_tuple[1].isdigit(), "Successor identifier '%s' is not an integer" % a_tuple[1]
+                    bb.add_successor(int(a_tuple[1]))
+            elif line.startswith(wcet_lexeme):
+                values = int_regex.findall(line) 
+                assert len(values) == 1, "Too many values found '%s'" % ' '.join(values)
+                assert values[0].isdigit(), "WCET value '%s' is not an integer" % values[0]
+                data.basic_block_WCETs[bb.vertexID] = int(values[0])
+            elif line.startswith(upper_bound_lexeme):
+                bound_tuple = int_regex.findall(line)
     cfg.add_predecessor_edges()
     cfg.set_entry_and_exit()
     program.add_CFG(cfg)
-    return program     
+    return data, program     

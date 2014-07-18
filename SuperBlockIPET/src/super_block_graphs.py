@@ -12,25 +12,24 @@ class SuperBlockSubgraph(directed_graphs.DirectedGraph):
 
 class SuperBlockCFG(directed_graphs.DirectedGraph):    
     def __init__(self, cfg, lnt):
-        directed_graphs.DirectedGraph.__init__(self)
-        if cfg and lnt:
-            self.name = cfg.name
-            self.per_loop_subgraphs     = {}
-            self.per_loop_root_vertices = {}
-            for the_vertices in lnt.level_by_level_iterator(True):
-                for treev in the_vertices:
-                    if isinstance(treev, vertices.HeaderVertex):
-                        debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                        enhanced_CFG          = lnt.induced_loop_subgraph(treev)
-                        enhanced_CFG.patch_back_edges_with_correct_header(lnt.get_loop_tails(treev.headerID), treev.headerID)
-                        udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
-                        predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
-                        enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
-                        postdom_tree         = trees.Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
-                        dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
-                        sccs                 = StrongComponents(dominator_graph)  
-                        self.add_super_blocks(lnt, enhanced_CFG, sccs, treev)     
-                        self.add_edges(lnt, enhanced_CFG, treev)
+        directed_graphs.DirectedGraph.__init__(self)    
+        self.name = cfg.name
+        self.per_loop_subgraphs     = {}
+        self.per_loop_root_vertices = {}
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
+                    enhanced_CFG          = lnt.induced_loop_subgraph(treev)
+                    enhanced_CFG.patch_back_edges_with_correct_header(lnt.get_loop_tails(treev.headerID), treev.headerID)
+                    udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
+                    predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
+                    enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
+                    postdom_tree         = trees.Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
+                    dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
+                    sccs                 = StrongComponents(dominator_graph)  
+                    self.add_super_blocks(lnt, enhanced_CFG, sccs, treev)     
+                    self.add_edges(lnt, enhanced_CFG, treev)
                         
     def add_super_blocks(self, lnt, enhanced_CFG, sccs, headerv):
         subgraph                                  = SuperBlockSubgraph()
