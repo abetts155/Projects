@@ -213,7 +213,7 @@ class CreateCFGILP(ILP):
         
 class CreateSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
-        filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "super_block_cfg")
+        filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "superg")
         ILP.__init__(self, filename)
         start = timeit.default_timer()
         self.create_objective_function(data, cfg, super_block_cfg)
@@ -311,7 +311,7 @@ class CreateSuperBlockCFGILP(ILP):
         
 class CreateFoldedSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
-        filename = "%s.%s.%s.folded.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "super_block_cfg")
+        filename = "%s.%s.%s.folded.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "superg")
         ILP.__init__(self, filename)
         start = timeit.default_timer()
         self.create_objective_function(data, super_block_cfg)
