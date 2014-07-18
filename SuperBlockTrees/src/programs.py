@@ -40,7 +40,7 @@ class Program():
             self.super_block_cfg_calculations[cfg.name] = set()
             for i in range(1, config.Arguments.repeat_calculation + 1):
                 print("===== Repetition %d =====" % i)
-                tree_based_calculation = calculations.TreeBasedCalculation(data, superg)
+                tree_based_calculation = calculations.TreeBasedCalculation(data, self.lnts[cfg.name], superg)
                 self.super_block_cfg_calculations[cfg.name].add(tree_based_calculation)
                 print("Super block CFG:: WCET(%s) = %d" % (cfg.name, tree_based_calculation.wcet))
                 
