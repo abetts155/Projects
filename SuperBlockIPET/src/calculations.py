@@ -32,6 +32,30 @@ def get_execution_count_variable_for_program_point(program_point):
 def get_new_line (num=1):
     return "\n" * num      
 
+def get_loop_entry_edges(cfg, lnt, headerID):
+    the_edges = []
+    v         = cfg.getVertex(headerID)
+    for predID in v.predecessors.keys():
+        if not lnt.is_loop_back_edge(predID, headerID):
+            the_edges.append((predID, headerID))
+    assert the_edges, "Unable to find loop-entry edges into loop with header %d" % headerID
+    return the_edges
+
+def get_loop_entry_super_blocks(lnt, super_block_cfg, headerID):
+    pred_super_blocks = set()
+    header_superv     = super_block_cfg.find_super_block_for_header(headerID)
+    for predID in header_superv.predecessors.keys():
+        contains_loop_back_edge = False
+        pred_superv             = super_block_cfg.getVertex(predID)
+        for program_point in pred_superv.program_points:
+            if isinstance(program_point, vertices.CFGEdge):
+                if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
+                    contains_loop_back_edge = True
+                    break
+        if not contains_loop_back_edge:
+            pred_super_blocks.add(pred_superv)
+    return pred_super_blocks
+
 class LpSolve:
     comma = ","
     equals = " = "
@@ -188,7 +212,7 @@ class CreateCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += LpSolve.lte
-                        incoming_edges = self.get_loop_entry_edges(cfg, lnt, treev.headerID)
+                        incoming_edges = get_loop_entry_edges(cfg, lnt, treev.headerID)
                         counter        = len(incoming_edges)
                         for predID, succID in incoming_edges:
                             new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID), 
@@ -198,15 +222,6 @@ class CreateCFGILP(ILP):
                             counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
-                               
-    def get_loop_entry_edges(self, cfg, lnt, headerID):
-        edgeIDs = []
-        v = cfg.getVertex(headerID)
-        for predID in v.predecessors.keys():
-            if not lnt.is_loop_back_edge(predID, headerID):
-                edgeIDs.append((predID, headerID))
-        assert edgeIDs, "Unable to find loop-entry edges into loop with header %d" % headerID
-        return edgeIDs
         
 class CreateSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
@@ -294,7 +309,7 @@ class CreateSuperBlockCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += LpSolve.equals
-                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        pred_super_blocks = get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
                         counter           = len(pred_super_blocks)
                         for pred_superv in pred_super_blocks:
                             new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID),
@@ -304,21 +319,6 @@ class CreateSuperBlockCFGILP(ILP):
                             counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
-                        
-    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
-        pred_super_blocks = set()
-        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
-        for predID in header_superv.predecessors.keys():
-            contains_loop_back_edge = False
-            pred_superv             = super_block_cfg.getVertex(predID)
-            for program_point in pred_superv.program_points:
-                if isinstance(program_point, vertices.CFGEdge):
-                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
-                        contains_loop_back_edge = True
-                        break
-            if not contains_loop_back_edge:
-                pred_super_blocks.add(pred_superv)
-        return pred_super_blocks
         
 class CreateFoldedSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
@@ -396,7 +396,7 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(superv.vertexID)
                         new_constraint += LpSolve.equals
-                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        pred_super_blocks = get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
                         counter           = len(pred_super_blocks)
                         for pred_superv in pred_super_blocks:
                             new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID),
@@ -406,21 +406,6 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                             counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
-                        
-    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
-        pred_super_blocks = set()
-        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
-        for predID in header_superv.predecessors.keys():
-            contains_loop_back_edge = False
-            pred_superv             = super_block_cfg.getVertex(predID)
-            for program_point in pred_superv.program_points:
-                if isinstance(program_point, vertices.CFGEdge):
-                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
-                        contains_loop_back_edge = True
-                        break
-            if not contains_loop_back_edge:
-                pred_super_blocks.add(pred_superv)
-        return pred_super_blocks
 
 class ECLIPSE:
     conjunct = "," + get_new_line()
@@ -687,7 +672,7 @@ class CreateCFGCLP(CLP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += ECLIPSE.lte
-                        incoming_edges = self.get_loop_entry_edges(cfg, lnt, treev.headerID)
+                        incoming_edges = get_loop_entry_edges(cfg, lnt, treev.headerID)
                         counter        = len(incoming_edges)
                         for predID, succID in incoming_edges:
                             new_constraint += "%d %s %s" % (data.get_upper_bound_on_header(treev.headerID),
@@ -719,15 +704,6 @@ class CreateCFGCLP(CLP):
                                            upper_bound,
                                            ECLIPSE.conjunct)
                 self.the_constraints.append(new_constraint)
-    
-    def get_loop_entry_edges(self, cfg, lnt, headerID):
-        edgeIDs = []
-        v = cfg.getVertex(headerID)
-        for predID in v.predecessors.keys():
-            if not lnt.is_loop_back_edge(predID, headerID):
-                edgeIDs.append((predID, headerID))
-        assert edgeIDs, "Unable to find loop-entry edges into loop with header %d" % headerID
-        return edgeIDs
                 
 class CreateSuperBlockCFGCLP(CLP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
@@ -847,7 +823,7 @@ class CreateSuperBlockCFGCLP(CLP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += ECLIPSE.equals
-                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        pred_super_blocks = get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
                         counter           = len(pred_super_blocks)
                         for pred_superv in pred_super_blocks:
                             new_constraint += "%d %s %s" % (data.get_upper_bound_on_header(treev.headerID),
@@ -880,21 +856,6 @@ class CreateSuperBlockCFGCLP(CLP):
                                                          upper_bound,
                                                          ECLIPSE.conjunct)
                     self.the_constraints.append(new_constraint)
-                        
-    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
-        pred_super_blocks = set()
-        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
-        for predID in header_superv.predecessors.keys():
-            contains_loop_back_edge = False
-            pred_superv             = super_block_cfg.getVertex(predID)
-            for program_point in pred_superv.program_points:
-                if isinstance(program_point, vertices.CFGEdge):
-                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
-                        contains_loop_back_edge = True
-                        break
-            if not contains_loop_back_edge:
-                pred_super_blocks.add(pred_superv)
-        return pred_super_blocks
                     
 class CreateFoldedSuperBlockCFGCLP(CLP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
@@ -997,7 +958,7 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(superv.vertexID)
                         new_constraint += ECLIPSE.equals
-                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        pred_super_blocks = get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
                         counter           = len(pred_super_blocks)
                         for pred_superv in pred_super_blocks:
                             new_constraint += "%d %s %s" % (data.get_upper_bound_on_header(treev.headerID),
@@ -1025,19 +986,4 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
                                                  upper_bound,
                                                  ECLIPSE.conjunct)
             self.the_constraints.append(new_constraint)
-            
-    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
-        pred_super_blocks = set()
-        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
-        for predID in header_superv.predecessors.keys():
-            contains_loop_back_edge = False
-            pred_superv             = super_block_cfg.getVertex(predID)
-            for program_point in pred_superv.program_points:
-                if isinstance(program_point, vertices.CFGEdge):
-                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
-                        contains_loop_back_edge = True
-                        break
-            if not contains_loop_back_edge:
-                pred_super_blocks.add(pred_superv)
-        return pred_super_blocks
         
