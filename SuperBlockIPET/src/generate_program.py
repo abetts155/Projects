@@ -301,7 +301,8 @@ def generateLNT():
     # Add vertices to the tree, including one extra for the dummy outer loop
     vertexToLevel = {}
     for i in xrange(1,config.Arguments.loops+2):
-        lnt.addVertex(i)
+        treev = vertices.TreeVertex(i)
+        lnt.addVertex(treev)
         lnt.rootID = i
         vertexToLevel[i] = 0
     # Add edges to the tree
@@ -381,7 +382,7 @@ def create_CFG():
     lnt        = generateLNT()
     currentCFG = directed_graphs.CFG()
     for i in xrange(1,config.Arguments.basic_blocks+1):
-        vertexID = currentCFG.getNextVertexID()
+        vertexID = currentCFG.get_next_vertexID()
         currentCFG.addVertex(vertices.CFGVertex(vertexID))
         freeVertices.append(vertexID)
     loopRegions = {}
