@@ -112,7 +112,7 @@ class Program():
                 
     def print_results_of_individual_cfg(self, cfg, calculation_information):                 
         print("""
-***** %s: CFG *****
+%s: CFG
 Function     = %s 
 variables    = %d
 constraints  = %d
@@ -128,7 +128,7 @@ numpy.amax(calculation_information.cfg_calculations[cfg.name].solve_times),
 numpy.average(calculation_information.cfg_calculations[cfg.name].solve_times)))
 
         print("""
-***** %s: Super block CFG *****
+%s: Super block CFG
 Function     = %s 
 variables    = %d
 constraints  = %d
@@ -144,7 +144,7 @@ numpy.amax(calculation_information.super_block_cfg_calculations[cfg.name].solve_
 numpy.average(calculation_information.super_block_cfg_calculations[cfg.name].solve_times)))
         
         print("""
-***** %s: Super block CFG with folding *****
+%s: Super block CFG with folding
 Function     = %s 
 variables    = %d
 constraints  = %d

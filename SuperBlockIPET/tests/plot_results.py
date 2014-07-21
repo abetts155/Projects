@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import argparse
 import re
+import sys
 import matplotlib.pyplot as plt
 
 int_regex   = re.compile(r"\d+")
@@ -166,49 +169,61 @@ self.super_block_cfg_folded_average_time)
 def parse_file(data_point):
     with open(data_point.filename) as the_file:
         number_of_cfgs = 0
+        parse_data     = False
         for line in the_file:
-            if re.match(r"Function", line):
-                number_of_cfgs += 1
-            if re.match(r"variables.*[0-9]+", line):
-                variables = int_regex.findall(line)[0]
-                if (number_of_cfgs % 3) == 1:
-                    data_point.cfg_variables += int(variables)
-                elif (number_of_cfgs % 3) == 2:
-                    data_point.super_block_cfg_variables += int(variables)
+            if line.startswith("ILP"):
+                if args.filter_ilp:
+                    parse_data = True
                 else:
-                    data_point.super_block_cfg_folded_variables += int(variables)
-            if re.match(r"constraints.*[0-9]+", line):
-                constraints = int_regex.findall(line)[0]
-                if (number_of_cfgs % 3) == 1:
-                    data_point.cfg_constraints += int(variables)
-                elif (number_of_cfgs % 3) == 2:
-                    data_point.super_block_cfg_constraints += int(variables)
+                    parse_data = False
+            if line.startswith("CLP"):
+                if args.filter_clp: 
+                    parse_data = True
                 else:
-                    data_point.super_block_cfg_folded_constraints += int(variables)
-            if re.match(r"min.*", line):
-                time = float_regex.findall(line)[0]
-                if (number_of_cfgs % 3) == 1:
-                    data_point.cfg_min_time += float(time)
-                elif (number_of_cfgs % 3) == 2:
-                    data_point.super_block_cfg_min_time += float(time)
-                else:
-                    data_point.super_block_cfg_folded_min_time += float(time)
-            if re.match(r"max.*", line):
-                time = float_regex.findall(line)[0]
-                if (number_of_cfgs % 3) == 1:
-                    data_point.cfg_max_time += float(time)
-                elif (number_of_cfgs % 3) == 2:
-                    data_point.super_block_cfg_max_time += float(time)
-                else:
-                    data_point.super_block_cfg_folded_max_time += float(time)
-            if re.match(r"average.*", line):
-                time = float_regex.findall(line)[0]
-                if (number_of_cfgs % 3) == 1:
-                    data_point.cfg_average_time += float(time)
-                elif (number_of_cfgs % 3) == 2:
-                    data_point.super_block_cfg_average_time += float(time)
-                else:
-                    data_point.super_block_cfg_folded_average_time += float(time)
+                    parse_data = False
+            if parse_data:
+                if re.match(r"Function", line):
+                    number_of_cfgs += 1
+                if re.match(r"variables.*[0-9]+", line):
+                    variables = int_regex.findall(line)[0]
+                    if (number_of_cfgs % 3) == 1:
+                        data_point.cfg_variables += int(variables)
+                    elif (number_of_cfgs % 3) == 2:
+                        data_point.super_block_cfg_variables += int(variables)
+                    else:
+                        data_point.super_block_cfg_folded_variables += int(variables)
+                if re.match(r"constraints.*[0-9]+", line):
+                    constraints = int_regex.findall(line)[0]
+                    if (number_of_cfgs % 3) == 1:
+                        data_point.cfg_constraints += int(constraints)
+                    elif (number_of_cfgs % 3) == 2:
+                        data_point.super_block_cfg_constraints += int(constraints)
+                    else:
+                        data_point.super_block_cfg_folded_constraints += int(constraints)
+                if re.match(r"min.*", line):
+                    time = float_regex.findall(line)[0]
+                    if (number_of_cfgs % 3) == 1:
+                        data_point.cfg_min_time += float(time)
+                    elif (number_of_cfgs % 3) == 2:
+                        data_point.super_block_cfg_min_time += float(time)
+                    else:
+                        data_point.super_block_cfg_folded_min_time += float(time)
+                if re.match(r"max.*", line):
+                    time = float_regex.findall(line)[0]
+                    if (number_of_cfgs % 3) == 1:
+                        data_point.cfg_max_time += float(time)
+                    elif (number_of_cfgs % 3) == 2:
+                        data_point.super_block_cfg_max_time += float(time)
+                    else:
+                        data_point.super_block_cfg_folded_max_time += float(time)
+                if re.match(r"average.*", line):
+                    time = float_regex.findall(line)[0]
+                    if (number_of_cfgs % 3) == 1:
+                        data_point.cfg_average_time += float(time)
+                    elif (number_of_cfgs % 3) == 2:
+                        data_point.super_block_cfg_average_time += float(time)
+                    else:
+                        data_point.super_block_cfg_folded_average_time += float(time)
         number_of_cfgs /= 3
         data_point.cfg_min_time /= number_of_cfgs
         data_point.cfg_max_time /= number_of_cfgs
@@ -228,13 +243,29 @@ def collect_data_points(files):
     return data_points
 
 def the_command_line():
-    parser = argparse.ArgumentParser(description="Plot the results of ILP runs")
+    parser = argparse.ArgumentParser(description="Plot the results of ILP and CLP runs")
     
     parser.add_argument("files",
                         nargs="+",
                         help="the result files")
+         
+    parser.add_argument("--filter-clp",
+                        action="store_true",
+                        help="filter results pertaining to CLP",
+                        default=False)
     
-    return parser.parse_args()
+    parser.add_argument("--filter-ilp",
+                        action="store_true",
+                        help="filter results pertaining to ILP",
+                        default=False)
+    
+    args = parser.parse_args()
+    
+    if not (args.filter_ilp or args.filter_clp):
+        print("You must specify which solver technology results should be filtered with --filter-ilp or --filter-clp")
+        sys.exit(1)
+
+    return args
 
 if __name__ == "__main__":
     args        = the_command_line()
