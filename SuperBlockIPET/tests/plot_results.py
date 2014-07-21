@@ -71,7 +71,7 @@ def make_min_time_graph(data_points):
               y_axis_super_block_cfg, 
               y_axis_super_block_cfg_folded,
               "Number of vertices in CFG", 
-              "Minimum execution time (in second) to solve ILP",
+              "Minimum execution time (in seconds) to solve ILP",
               "min_times.png")
 
 def make_max_time_graph(data_points):
@@ -89,7 +89,7 @@ def make_max_time_graph(data_points):
               y_axis_super_block_cfg, 
               y_axis_super_block_cfg_folded,
               "Number of vertices in CFG", 
-              "Maximum execution time (in second) to solve ILP",
+              "Maximum execution time (in seconds) to solve ILP",
               "max_times.png")
 
 def make_average_time_graph(data_points):
@@ -107,7 +107,7 @@ def make_average_time_graph(data_points):
               y_axis_super_block_cfg, 
               y_axis_super_block_cfg_folded,
               "Number of vertices in CFG", 
-              "Average execution time (in second) to solve ILP",
+              "Average execution time (in seconds) to solve ILP",
               "average_times.png")
 
 class DataPoint:
