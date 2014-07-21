@@ -37,7 +37,7 @@ class TreeBasedCalculation:
             self.superv_wcets[superv] = numpy.add(self.superv_wcets[superv], self.compute_max_of_branches(data, super_block_cfg, superv, headerv))
         self.superv_wcets[superv] = self.add_inner_loop_wcets(data, lnt, superv, headerv)
         if superv.number_of_predecessors() > 1:
-            # Propagate the WCET to predecessors which merge at this super block 
+            # Propagate the WCET to predecessors which merge at this super block
             self.propagate_wcets_to_predecessors(super_block_cfg, superv)
         
     def compute_execution_time_within_super_block(self, data, superv, headerv):

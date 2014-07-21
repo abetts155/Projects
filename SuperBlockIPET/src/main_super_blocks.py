@@ -73,10 +73,10 @@ if __name__ == "__main__":
     threading.stack_size(67108864) # 64MB stack
     sys.setrecursionlimit(2 ** 20)
     the_command_line()
-    program = program_input_output.read_file(config.Arguments.program_file)
+    data, program = program_input_output.read_file(config.Arguments.program_file)
     program.create_LNTs()
     program.create_super_block_CFGs()
-    program.do_wcet_calculation()
+    program.do_wcet_calculation(data)
     program.print_results()
     
     

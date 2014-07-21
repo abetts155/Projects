@@ -64,17 +64,19 @@ class Program():
             assert cfg_calculation.wcet == super_block_cfg_folded_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_folded_calculation.wcet)
         return cfg_times, super_block_cfg_times, super_block_cfg_folded_times
     
-    def do_wcet_calculation(self):
+    def do_wcet_calculation(self, data):
         for cfg in self.cfgs.values():
-            lnt    = self.lnts[cfg.name]
-            superg = self.super_block_cfgs[cfg.name]
-            data   = database.CreateWCETData(cfg, lnt)
+            lnt           = self.lnts[cfg.name]
+            superg        = self.super_block_cfgs[cfg.name]
+            function_data = data.function_data[cfg.name]
+            function_data.assign_wcets_to_basic_blocks(cfg)
+            function_data.assign_loop_bounds(lnt)
             if config.Arguments.use_ilp:
-                cfg_ilp_calculation                                     = calculations.CreateCFGILP(data, cfg, lnt)
+                cfg_ilp_calculation                                     = calculations.CreateCFGILP(function_data, cfg, lnt)
                 self.ilps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_ilp_calculation)
-                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(data, cfg, lnt, superg)
+                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(function_data, cfg, lnt, superg)
                 self.ilps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_ilp_calculation)
-                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(data, cfg, lnt, superg)
+                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(function_data, cfg, lnt, superg)
                 self.ilps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_ilp_folded_calculation)  
                 cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
                                                                                                          self.ilps.cfg_calculations[cfg.name].constraint_system, 
@@ -88,11 +90,11 @@ class Program():
                     self.ilps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
                     self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
             if config.Arguments.use_clp:
-                cfg_clp_calculation                                     = calculations.CreateCFGCLP(data, cfg, lnt)
+                cfg_clp_calculation                                     = calculations.CreateCFGCLP(function_data, cfg, lnt)
                 self.clps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_clp_calculation)
-                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(data, cfg, lnt, superg)
+                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(function_data, cfg, lnt, superg)
                 self.clps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_clp_calculation)
-                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(data, cfg, lnt, superg)
+                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(function_data, cfg, lnt, superg)
                 self.clps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_clp_folded_calculation)
                 cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
                                                                                                          self.clps.cfg_calculations[cfg.name].constraint_system, 

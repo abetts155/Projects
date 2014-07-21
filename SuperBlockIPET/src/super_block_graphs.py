@@ -62,64 +62,68 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
         subgraph = self.per_loop_subgraphs[headerv.headerID]
         for superv in subgraph:
             first_program_point = superv.program_points[0]
+            last_program_point  = superv.program_points[-1]
             if isinstance(first_program_point, vertices.CFGEdge):
                 # The program point represents a CFG edge.
                 # Find the super block which contains the source of the CFG edge 
                 # and link the super blocks
                 basic_block_predID = first_program_point.edge[0]
-                pred_superv        = subgraph.program_point_to_superv[basic_block_predID] 
-                self.addEdge(pred_superv.vertexID, superv.vertexID)
-                assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
-                if basic_block_predID not in pred_superv.successor_partitions:
-                    pred_superv.successor_partitions[basic_block_predID] = set()
-                pred_superv.successor_partitions[basic_block_predID].add(superv.vertexID)
-            elif first_program_point.vertexID != headerv.headerID:
+                if lnt.getVertex(lnt.getVertex(basic_block_predID).parentID) == headerv:
+                    pred_superv        = subgraph.program_point_to_superv[basic_block_predID] 
+                    self.addEdge(pred_superv.vertexID, superv.vertexID)
+                    assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
+                    if basic_block_predID not in pred_superv.successor_partitions:
+                        pred_superv.successor_partitions[basic_block_predID] = set()
+                    pred_superv.successor_partitions[basic_block_predID].add(superv.vertexID)
+            else:
                 # The program point represents a CFG vertex.
                 # Find the CFG edges incident to the CFG vertex.
                 # Then find the super blocks containing those CFG edges
                 basic_block = enhanced_CFG.getVertex(first_program_point.vertexID)
-                assert enhanced_CFG.getVertex(first_program_point.vertexID).number_of_predecessors() > 1
                 for predID in basic_block.predecessors.keys():
                     predv = enhanced_CFG.getVertex(predID)
                     assert isinstance(predv, vertices.CFGEdge)
                     pred_superv = subgraph.program_point_to_superv[predv.edge]
                     self.addEdge(pred_superv.vertexID, superv.vertexID)
-            last_program_point = superv.program_points[-1]
-            if isinstance(last_program_point, vertices.CFGEdge) \
-            and lnt.is_loop_back_edge(last_program_point.edge[0], last_program_point.edge[1]):
-                # The program point represents a CFG loop-back edge.
-                # Find the super block which contains the destination of the CFG edge 
-                # and link the super blocks
-                basic_block_succID = last_program_point.edge[1]
-                succ_superv        = subgraph.program_point_to_superv[basic_block_succID] 
-                self.addEdge(superv.vertexID, succ_superv.vertexID)
-        # Add loop-entry and loop-exit edges in to and out of inner loops
+            if isinstance(last_program_point, vertices.CFGEdge): 
+                if lnt.is_loop_back_edge(last_program_point.edge[0], last_program_point.edge[1]) and headerv.vertexID != lnt.rootID:
+                    # The program point represents a CFG loop-back edge. (We ignore the dummy loop-back edge)
+                    # Find the super block which contains the destination of the CFG edge 
+                    # and link the super blocks
+                    basic_block_succID = last_program_point.edge[1]
+                    succ_superv        = subgraph.program_point_to_superv[basic_block_succID] 
+                    self.addEdge(superv.vertexID, succ_superv.vertexID)
         for succID in headerv.successors.keys():
             succv = lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
                 inner_subgraph = self.per_loop_subgraphs[succv.headerID]
+                # Re-link super blocks created in inner loops which contain loop-exit edges to the current loop
                 for exit_edge in lnt.get_loop_exit_edges(succv.headerID):
                     # Find the super block containing the loop-exit edge in the 
                     # subgraph created for the inner loop
-                    exit_edge_superv      = inner_subgraph.program_point_to_superv[exit_edge]
+                    exit_edge_superv = inner_subgraph.program_point_to_superv[exit_edge]
                     assert exit_edge_superv.number_of_predecessors() == 1
                     # It should have a unique predecessor.
                     # We want to re-link that predecessor to the super block containing the loop-exit 
                     # edge in the subgraph created for its outer loop
                     exit_edge_pred_superv = self.getVertex(exit_edge_superv.predecessors.keys()[0])
-                    destination_superv = subgraph.program_point_to_superv[exit_edge[1]]
-                    self.addEdge(exit_edge_pred_superv.vertexID, destination_superv.vertexID) 
+                    succ_superv           = subgraph.program_point_to_superv[exit_edge]
+                    self.addEdge(exit_edge_pred_superv.vertexID, succ_superv.vertexID) 
                     # Fix the successor partition information
                     basic_block_predID = exit_edge[0]
-                    exit_edge_pred_superv.successor_partitions[basic_block_predID].add(destination_superv.vertexID)
+                    exit_edge_pred_superv.successor_partitions[basic_block_predID].add(succ_superv.vertexID)
                     exit_edge_pred_superv.successor_partitions[basic_block_predID].remove(exit_edge_superv.vertexID)
                     # And now delete the super block containing the loop-exit edge in the 
                     # subgraph created for the inner loop
                     self.removeVertex(exit_edge_superv.vertexID)
+                # Add loop-entry edges into the inner loop
                 for entry_edge in lnt.get_loop_entry_edges(succv.headerID):
-                    entry_edge_superv  = subgraph.program_point_to_superv[entry_edge]
-                    destination_superv = inner_subgraph.program_point_to_superv[entry_edge[1]]
-                    self.addEdge(entry_edge_superv.vertexID, destination_superv.vertexID)
+                    # The program point represents a CFG loop-entry edge.
+                    # Find the super block which contains the destination of the CFG edge 
+                    # and link the super blocks
+                    entry_edge_superv = subgraph.program_point_to_superv[entry_edge]
+                    succ_superv       = inner_subgraph.program_point_to_superv[entry_edge[1]]
+                    self.addEdge(entry_edge_superv.vertexID, succ_superv.vertexID)
     
     def find_super_block_for_header(self, headerID):
         return self.per_loop_subgraphs[headerID].program_point_to_superv[headerID]

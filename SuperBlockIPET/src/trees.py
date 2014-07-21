@@ -79,8 +79,8 @@ class DepthFirstSearch (Tree):
         self.rootID = rootID
         self.pre_order  = []
         self.post_order = []
-        self.__vertexID2PostID = {}
-        self.__vertexID2PreID = {}
+        self.vertex_post_order_numbering = {}
+        self.vertex_pre_order_numbering = {}
         self.back_edges = []
         self.initialise(directedg, rootID)
         self.do_search(directedg, rootID)
@@ -88,26 +88,26 @@ class DepthFirstSearch (Tree):
     def initialise(self, directedg, rootID):
         for v in directedg:
             self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
-            self.__vertexID2PreID[v.vertexID] = 0
-            self.__vertexID2PostID[v.vertexID] = 0
+            self.vertex_pre_order_numbering[v.vertexID] = 0
+            self.vertex_post_order_numbering[v.vertexID] = 0
         self.pre_orderID  = 1
         self.post_orderID = 1   
       
     def do_search(self, directedg, vertexID):
-        self.__vertexID2PreID[vertexID] = self.pre_orderID
+        self.vertex_pre_order_numbering[vertexID] = self.pre_orderID
         self.pre_order.append(vertexID)
         self.pre_orderID += 1
            
         v = directedg.getVertex(vertexID)
         for succID in v.successors.keys ():
-            if self.__vertexID2PreID[succID] == 0:
+            if self.vertex_pre_order_numbering[succID] == 0:
                 self.addEdge(vertexID, succID)
                 self.do_search(directedg, succID)
-            elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+            elif self.vertex_pre_order_numbering[vertexID] < self.vertex_pre_order_numbering[succID]:
                 pass
-            elif self.__vertexID2PostID[succID] == 0:
+            elif self.vertex_post_order_numbering[succID] == 0:
                 self.back_edges.append((vertexID, succID))
-        self.__vertexID2PostID[vertexID] = self.post_orderID
+        self.vertex_post_order_numbering[vertexID] = self.post_orderID
         self.post_order.append(vertexID)
         self.post_orderID += 1
     
@@ -120,12 +120,12 @@ class DepthFirstSearch (Tree):
         return self.post_order[postID-1]
     
     def getPreID (self, vertexID):
-        assert vertexID in self.__vertexID2PreID, "Unable to find pre-order numbering for vertex %d" % vertexID
-        return self.__vertexID2PreID[vertexID]
+        assert vertexID in self.vertex_pre_order_numbering, "Unable to find pre-order numbering for vertex %d" % vertexID
+        return self.vertex_pre_order_numbering[vertexID]
     
     def getPostID (self, vertexID):
-        assert vertexID in self.__vertexID2PostID, "Unable to find post-order numbering for vertex %d" % vertexID
-        return self.__vertexID2PostID[vertexID]
+        assert vertexID in self.vertex_post_order_numbering, "Unable to find post-order numbering for vertex %d" % vertexID
+        return self.vertex_post_order_numbering[vertexID]
     
     def isDFSBackedge(self, sourceID, destinationID):
         return (sourceID, destinationID) in self.back_edges
@@ -299,6 +299,10 @@ class LoopNests (Tree):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return [edge[0] for edge in self.loop_back_edges[headerID]]
     
+    def get_loop_back_edges(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.loop_back_edges[headerID]
+    
     def get_loop_exit_edges(self, headerID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.loop_exit_edges[headerID]
@@ -335,6 +339,12 @@ class LoopNests (Tree):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return self.loop_entry_edges[headerID]
     
+    def is_loop_entry_edge(self, predID, succID):
+        for headerID in self.abstract_vertices.keys():
+            if (predID, succID) in self.loop_entry_edges[headerID]:
+                return True
+        return False
+    
     def is_loop_exit_edge(self, predID, succID):
         for headerID in self.abstract_vertices.keys():
             if (predID, succID) in self.loop_exit_edges[headerID]:
@@ -346,6 +356,10 @@ class LoopNests (Tree):
             if (predID, succID) in self.loop_back_edges[headerID]:
                 return True
         return False
+    
+    def is_loop_back_edge_for_header(self, headerID, predID, succID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return (predID, succID) in self.loop_back_edges[headerID]
     
     def is_nested(self, left, right):
         return self.isProperAncestor(right, left)             

@@ -10,9 +10,9 @@ import abc
 import random
 import re
 
-edge_variable_prefix   = "E_"
+edge_variable_prefix = "E_"
 vertex_variable_prefix = "V_"
-wcet_variable_prefix   = "W_"
+wcet_variable_prefix = "W_"
     
 def get_edge_execution_count_variable(predID, succID):
     return "%s%d_%d" % (edge_variable_prefix, predID, succID)
@@ -33,25 +33,25 @@ def get_new_line (num=1):
     return "\n" * num      
 
 class LpSolve:
-    comma      = ","
-    equals     = " = "
-    int_       = "int"
-    lte        = " <= "
-    max_       = "max: "
-    plus       = " + "
+    comma = ","
+    equals = " = "
+    int_ = "int"
+    lte = " <= "
+    max_ = "max: "
+    plus = " + "
     semi_colon = ";"
     
 class ConstraintSystem:
     __metaclass__ = abc.ABCMeta
     
     def __init__(self, filename):
-        self.filename                  = filename
-        self.wcet                      = -1
-        self.solve_time                = 0.0
-        self.construction_time         = 0.0
+        self.filename = filename
+        self.wcet = -1
+        self.solve_time = 0.0
+        self.construction_time = 0.0
         self.variable_execution_counts = {}
-        self.the_constraints           = []
-        self.the_variables             = set()
+        self.the_constraints = []
+        self.the_variables = set()
     
     def clean(self):
         if os.path.exists(self.filename):
@@ -97,20 +97,20 @@ class ILP(ConstraintSystem):
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
         self.write_to_file()
-        cmd            = "lp_solve %s" % self.filename 
-        start          = timeit.default_timer()
-        proc           = subprocess.Popen(cmd, 
-                                          shell=True, 
-                                          stdout=subprocess.PIPE, 
+        cmd = "lp_solve %s" % self.filename 
+        start = timeit.default_timer()
+        proc = subprocess.Popen(cmd,
+                                          shell=True,
+                                          stdout=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
-        return_code     = proc.wait()
-        end             = timeit.default_timer()
+        return_code = proc.wait()
+        end = timeit.default_timer()
         self.solve_time = end - start
         if return_code != 0:
             debug.exit_message("Running '%s' failed" % cmd)
         for line in proc.stdout.readlines():
             if line.startswith("Value of objective function"):
-                lexemes   = shlex.split(line)
+                lexemes = shlex.split(line)
                 self.wcet = long(decimal.Decimal(lexemes[-1])) 
             elif line.startswith(edge_variable_prefix) or line.startswith(vertex_variable_prefix):
                 lexemes = shlex.split(line)
@@ -181,14 +181,14 @@ class CreateCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(cfg.get_entryID())
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d" % data.get_loop_bound(cfg.get_entryID())
+                        new_constraint += "%d" % data.get_upper_bound_on_header(cfg.get_entryID())
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
                     else:
                         self.create_constraints_for_loop(data, cfg, lnt, treev)
                         
     def create_constraints_for_loop(self, data, cfg, lnt, treev):
-        bound          = data.get_loop_bound(treev.headerID)
+        bound = data.get_upper_bound_on_header(treev.headerID)
         incoming_edges = self.get_loop_entry_edges(cfg, lnt, treev.headerID)
         new_constraint = ""
         new_constraint += get_vertex_execution_count_variable(treev.headerID)
@@ -204,7 +204,7 @@ class CreateCFGILP(ILP):
             
     def get_loop_entry_edges(self, cfg, lnt, headerID):
         edgeIDs = []
-        v       = cfg.getVertex(headerID)
+        v = cfg.getVertex(headerID)
         for predID in v.predecessors.keys():
             if not lnt.is_loop_back_edge(predID, headerID):
                 edgeIDs.append((predID, headerID))
@@ -231,7 +231,7 @@ class CreateSuperBlockCFGILP(ILP):
             self.the_variables.add(get_execution_count_variable_for_program_point(superv.representative))
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
-                    wcet     = data.get_basic_block_wcet(program_point.vertexID)
+                    wcet = data.get_basic_block_wcet(program_point.vertexID)
                     variable = get_vertex_execution_count_variable(program_point.vertexID)
                     self.obj_function += "%d %s" % (wcet, variable)
                     self.the_variables.add(variable)
@@ -253,11 +253,7 @@ class CreateSuperBlockCFGILP(ILP):
             
     def create_structural_constraints (self, lnt, super_block_cfg):
         for superv in super_block_cfg:
-            contains_loop_header = True
-            for program_point in superv.program_points:
-                if lnt.is_loop_header(program_point.vertexID):
-                    contains_loop_header = True
-            if superv.number_of_predecessors() > 1 and not contains_loop_header:
+            if superv.number_of_predecessors() > 1:
                 # Ensure the merge was created from forward control flow
                 new_constraint = ""
                 new_constraint += get_execution_count_variable_for_program_point(superv.representative)
@@ -294,20 +290,38 @@ class CreateSuperBlockCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d" % data.get_loop_bound(treev.headerID)
+                        new_constraint += "%d" % data.get_upper_bound_on_header(treev.headerID)
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
                     else:
-                        parentv             = lnt.getVertex(treev.parentID)
-                        outer_subgraph      = super_block_cfg.per_loop_subgraphs[parentv.headerID]
-                        outer_header_superv = outer_subgraph.program_point_to_superv[parentv.headerID]
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d %s" % (data.get_loop_bound(treev.headerID), 
-                                                     get_execution_count_variable_for_program_point(outer_header_superv.representative))
+                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        counter           = len(pred_super_blocks)
+                        for pred_superv in pred_super_blocks:
+                            new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID),
+                                                         get_execution_count_variable_for_program_point(pred_superv.representative))
+                            if counter > 1:
+                                new_constraint += LpSolve.plus
+                            counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
+                        
+    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
+        pred_super_blocks = set()
+        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
+        for predID in header_superv.predecessors.keys():
+            contains_loop_back_edge = False
+            pred_superv             = super_block_cfg.getVertex(predID)
+            for program_point in pred_superv.program_points:
+                if isinstance(program_point, vertices.CFGEdge):
+                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
+                        contains_loop_back_edge = True
+                        break
+            if not contains_loop_back_edge:
+                pred_super_blocks.add(pred_superv)
+        return pred_super_blocks
         
 class CreateFoldedSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
@@ -338,7 +352,7 @@ class CreateFoldedSuperBlockCFGILP(ILP):
             
     def create_structural_constraints (self, lnt, super_block_cfg):
         for superv in super_block_cfg:
-            contains_loop_header = True
+            contains_loop_header = False
             for program_point in superv.program_points:
                 if lnt.is_loop_header(program_point.vertexID):
                     contains_loop_header = True
@@ -378,50 +392,68 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(superv.vertexID)
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d" % data.get_loop_bound(treev.headerID)
+                        new_constraint += "%d" % data.get_upper_bound_on_header(treev.headerID)
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
                     else:
-                        parentv             = lnt.getVertex(treev.parentID)
-                        outer_subgraph      = super_block_cfg.per_loop_subgraphs[parentv.headerID]
-                        outer_header_superv = outer_subgraph.program_point_to_superv[parentv.headerID]
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(superv.vertexID)
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d %s" % (data.get_loop_bound(treev.headerID), 
-                                                     get_vertex_execution_count_variable(outer_header_superv.vertexID))
+                        pred_super_blocks = self.get_loop_entry_super_blocks(lnt, super_block_cfg, treev.headerID)
+                        counter           = len(pred_super_blocks)
+                        for pred_superv in pred_super_blocks:
+                            new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID),
+                                                         get_vertex_execution_count_variable(pred_superv.vertexID))
+                            if counter > 1:
+                                new_constraint += LpSolve.plus
+                            counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
+                        
+    def get_loop_entry_super_blocks(self, lnt, super_block_cfg, headerID):
+        pred_super_blocks = set()
+        header_superv     = super_block_cfg.find_super_block_for_header(headerID)
+        for predID in header_superv.predecessors.keys():
+            contains_loop_back_edge = False
+            pred_superv             = super_block_cfg.getVertex(predID)
+            for program_point in pred_superv.program_points:
+                if isinstance(program_point, vertices.CFGEdge):
+                    if lnt.is_loop_back_edge_for_header(headerID, program_point.edge[0], program_point.edge[1]):
+                        contains_loop_back_edge = True
+                        break
+            if not contains_loop_back_edge:
+                pred_super_blocks.add(pred_superv)
+        return pred_super_blocks
 
 class ECLIPSE:
-    conjunct         = "," + get_new_line()
+    conjunct = "," + get_new_line()
     clause_separator = ":-"
     domain_separator = " #:: "
-    equals           = " #= "
-    lib              = "lib"
-    lt               = " #< "
-    lte              = " #=< "
-    multiply         = "*"
-    plus             = " + "
-    terminator       = "."
+    equals = " #= "
+    lib = "lib"
+    lt = " #< "
+    lte = " #=< "
+    multiply = "*"
+    plus = " + "
+    terminator = "."
     
     @staticmethod
     def get_temp_list(suffix):
         return "VARS%d" % suffix
 
 class CLP(ConstraintSystem):
-    WCET                  = "WCET"
-    PWCET                 = "PWCET"
-    VERTEX_TIMES          = "VERTEX_TIMES"
-    VERTEX_COUNTS         = "VERTEX_COUNTS"
-    EDGE_COUNTS           = "EDGE_COUNTS"
+    WCET = "WCET"
+    PWCET = "PWCET"
+    VERTEX_TIMES = "VERTEX_TIMES"
+    VERTEX_COUNTS = "VERTEX_COUNTS"
+    EDGE_COUNTS = "EDGE_COUNTS"
     OUTPUT_PREDICATE_HEAD = "print_results"
     
     def __init__ (self, filename):
         ConstraintSystem.__init__(self, filename)
         self.results_filename = filename + ".res"
-        self.goal             = "solve(%s)" % CLP.WCET
-        self.variable_lists   = []
+        self.goal = "solve(%s)" % CLP.WCET
+        self.variable_lists = []
         
     def clean(self):
         ConstraintSystem.clean(self)
@@ -432,7 +464,7 @@ class CLP(ConstraintSystem):
         with open(self.filename, 'w') as the_file:
             self.add_required_packages(the_file)
             the_file.write(get_new_line())
-            the_file.write("%s%s" % (self.goal, 
+            the_file.write("%s%s" % (self.goal,
                                      ECLIPSE.clause_separator))
             the_file.write(get_new_line())
             the_file.write(self.obj_function)
@@ -450,104 +482,104 @@ class CLP(ConstraintSystem):
             
     def add_required_packages(self, the_file):
         for lib in ['ic', 'branch_and_bound', 'lists', 'util']:
-            the_file.write("%s%s(%s)%s%s" % (ECLIPSE.clause_separator, 
-                                             ECLIPSE.lib, 
-                                             lib, 
-                                             ECLIPSE.terminator, 
+            the_file.write("%s%s(%s)%s%s" % (ECLIPSE.clause_separator,
+                                             ECLIPSE.lib,
+                                             lib,
+                                             ECLIPSE.terminator,
                                              get_new_line()))
     
     def add_epilogue(self, the_file):
-        the_file.write("%s%s%d%s%s%s" % (CLP.PWCET, 
+        the_file.write("%s%s%d%s%s%s" % (CLP.PWCET,
                                          ECLIPSE.equals,
-                                         -1, 
-                                         ECLIPSE.multiply, 
-                                         CLP.WCET, 
+                                         - 1,
+                                         ECLIPSE.multiply,
+                                         CLP.WCET,
                                          ECLIPSE.conjunct))
-        the_file.write("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS, 
-                                               CLP.VERTEX_COUNTS, 
-                                               ECLIPSE.get_temp_list(0), 
+        the_file.write("append(%s,%s,%s)%s" % (CLP.EDGE_COUNTS,
+                                               CLP.VERTEX_COUNTS,
+                                               ECLIPSE.get_temp_list(0),
                                                ECLIPSE.conjunct))
-        the_file.write("append(%s,%s,%s)%s" % (CLP.VERTEX_TIMES, 
-                                               ECLIPSE.get_temp_list(0), 
-                                               ECLIPSE.get_temp_list(1), 
+        the_file.write("append(%s,%s,%s)%s" % (CLP.VERTEX_TIMES,
+                                               ECLIPSE.get_temp_list(0),
+                                               ECLIPSE.get_temp_list(1),
                                                ECLIPSE.conjunct))
-        the_file.write("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{}))%s" % (ECLIPSE.get_temp_list(1), 
-                                                                                                              CLP.PWCET, 
+        the_file.write("time(bb_min(search(%s,0,input_order,indomain_max,complete,[]),%s,bb_options{}))%s" % (ECLIPSE.get_temp_list(1),
+                                                                                                              CLP.PWCET,
                                                                                                               ECLIPSE.conjunct))
-        the_file.write("%s(%s, %s, %s)%s" % (CLP.OUTPUT_PREDICATE_HEAD, 
-                                             CLP.VERTEX_COUNTS, 
-                                             CLP.EDGE_COUNTS, 
-                                             CLP.WCET, 
+        the_file.write("%s(%s, %s, %s)%s" % (CLP.OUTPUT_PREDICATE_HEAD,
+                                             CLP.VERTEX_COUNTS,
+                                             CLP.EDGE_COUNTS,
+                                             CLP.WCET,
                                              ECLIPSE.terminator))               
     
     def add_output_predicates(self, the_file):
         file_handle = "F"        
-        the_file.write('%s(%s,%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD, 
-                                            CLP.VERTEX_COUNTS, 
-                                            CLP.EDGE_COUNTS, 
-                                            CLP.WCET, 
+        the_file.write('%s(%s,%s,%s) %s' % (CLP.OUTPUT_PREDICATE_HEAD,
+                                            CLP.VERTEX_COUNTS,
+                                            CLP.EDGE_COUNTS,
+                                            CLP.WCET,
                                             ECLIPSE.clause_separator))
         the_file.write(get_new_line())
-        the_file.write('open("%s",%s,%s)%s' % (self.results_filename, 
-                                               "write", 
-                                               file_handle, 
+        the_file.write('open("%s",%s,%s)%s' % (self.results_filename,
+                                               "write",
+                                               file_handle,
                                                ECLIPSE.conjunct))
-        the_file.write('print_list(%s,"%s: ",%s)%s' % (file_handle, 
-                                                       CLP.VERTEX_COUNTS, 
-                                                       CLP.VERTEX_COUNTS, 
+        the_file.write('print_list(%s,"%s: ",%s)%s' % (file_handle,
+                                                       CLP.VERTEX_COUNTS,
+                                                       CLP.VERTEX_COUNTS,
                                                        ECLIPSE.conjunct))
-        the_file.write('print_list(%s,"%s: ",%s)%s' % (file_handle, 
-                                                       CLP.EDGE_COUNTS, 
-                                                       CLP.EDGE_COUNTS, 
+        the_file.write('print_list(%s,"%s: ",%s)%s' % (file_handle,
+                                                       CLP.EDGE_COUNTS,
+                                                       CLP.EDGE_COUNTS,
                                                        ECLIPSE.conjunct))
-        the_file.write('write(%s, "%s: ")%s' % (file_handle, 
-                                                CLP.WCET, 
+        the_file.write('write(%s, "%s: ")%s' % (file_handle,
+                                                CLP.WCET,
                                                 ECLIPSE.conjunct))
-        the_file.write('write(%s,%s)%s' % (file_handle, 
-                                           CLP.WCET, 
+        the_file.write('write(%s,%s)%s' % (file_handle,
+                                           CLP.WCET,
                                            ECLIPSE.conjunct))
-        the_file.write('nl(%s)%s' % (file_handle, 
+        the_file.write('nl(%s)%s' % (file_handle,
                                      ECLIPSE.conjunct))
-        the_file.write('close(%s)%s' % (file_handle, 
+        the_file.write('close(%s)%s' % (file_handle,
                                         ECLIPSE.terminator))
         the_file.write(get_new_line(2))
         the_file.write('print_list(_,_,[])%s' % (ECLIPSE.terminator))
         the_file.write(get_new_line())
-        the_file.write('print_list(%s,Name,[H|T])%s' % (file_handle, 
+        the_file.write('print_list(%s,Name,[H|T])%s' % (file_handle,
                                                         ECLIPSE.clause_separator))
         the_file.write(get_new_line())
-        the_file.write('write(%s,Name)%s' % (file_handle, 
+        the_file.write('write(%s,Name)%s' % (file_handle,
                                              ECLIPSE.conjunct))
-        the_file.write('write(%s,H)%s' % (file_handle, 
+        the_file.write('write(%s,H)%s' % (file_handle,
                                           ECLIPSE.conjunct))
-        the_file.write('print_list1(%s,T)%s' % (file_handle, 
+        the_file.write('print_list1(%s,T)%s' % (file_handle,
                                                 ECLIPSE.conjunct))
-        the_file.write('nl(%s)%s' % (file_handle, 
+        the_file.write('nl(%s)%s' % (file_handle,
                                     ECLIPSE.terminator))
         the_file.write(get_new_line(2))        
         the_file.write('print_list1(_,[])%s' % (ECLIPSE.terminator))
         the_file.write(get_new_line())
-        the_file.write('print_list1(%s,[H|T])%s' % (file_handle, 
+        the_file.write('print_list1(%s,[H|T])%s' % (file_handle,
                                                     ECLIPSE.clause_separator))
         the_file.write(get_new_line())
-        the_file.write('write(%s,",")%s' % (file_handle, 
+        the_file.write('write(%s,",")%s' % (file_handle,
                                             ECLIPSE.conjunct))
-        the_file.write('write(%s,H)%s' % (file_handle, 
+        the_file.write('write(%s,H)%s' % (file_handle,
                                           ECLIPSE.conjunct))
-        the_file.write('print_list1(%s,T)%s' % (file_handle, 
+        the_file.write('print_list1(%s,T)%s' % (file_handle,
                                                 ECLIPSE.terminator))
         
     def solve(self):
         debug.debug_message("Solving CLP", __name__, 10)
         self.write_to_file()        
-        cmd             = 'jeclipse -b %s -e "%s."' % (self.filename, self.goal) 
-        start           = timeit.default_timer()
-        proc            = subprocess.Popen(cmd, 
-                                           shell=True, 
-                                           stdout=subprocess.PIPE, 
+        cmd = 'jeclipse -b %s -e "%s."' % (self.filename, self.goal) 
+        start = timeit.default_timer()
+        proc = subprocess.Popen(cmd,
+                                           shell=True,
+                                           stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE)
-        return_code     = proc.wait()
-        end             = timeit.default_timer()
+        return_code = proc.wait()
+        end = timeit.default_timer()
         self.solve_time = end - start
         if return_code != 0:
             debug.exit_message("Running '%s' failed" % cmd)
@@ -572,9 +604,9 @@ class CreateCFGCLP(CLP):
         self.construction_time = end - start
 
     def add_variables(self, cfg):
-        bb_execution_count_variables   = []
+        bb_execution_count_variables = []
         edge_execution_count_variables = []
-        bb_execution_time_variables    = []
+        bb_execution_time_variables = []
         for v in cfg:
             bb_execution_count_variables.append(get_vertex_execution_count_variable(v.vertexID))
             bb_execution_time_variables.append(get_vertex_WCET_variable(v.vertexID))
@@ -583,23 +615,23 @@ class CreateCFGCLP(CLP):
             for succID in v.successors.keys():
                 edge_execution_count_variables.append(get_edge_execution_count_variable(v.vertexID, succID))
                 self.the_variables.add(get_edge_execution_count_variable(v.vertexID, succID))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS, 
-                                                    ','.join(v for v in bb_execution_count_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS,
+                                                    ','.join(v for v in bb_execution_count_variables),
                                                     ECLIPSE.conjunct))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, 
-                                                    ','.join(v for v in edge_execution_count_variables),  
+        self.variable_lists.append("%s = [%s]%s" % (CLP.EDGE_COUNTS,
+                                                    ','.join(v for v in edge_execution_count_variables),
                                                     ECLIPSE.conjunct))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES, 
-                                                    ','.join(v for v in bb_execution_time_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES,
+                                                    ','.join(v for v in bb_execution_time_variables),
                                                     ECLIPSE.conjunct))
     
     def create_objective_function(self, cfg):
-        self.obj_function  = CLP.WCET
+        self.obj_function = CLP.WCET
         self.obj_function += ECLIPSE.equals
-        counter            = cfg.number_of_vertices()
+        counter = cfg.number_of_vertices()
         for v in cfg:
-            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(v.vertexID), 
-                                             ECLIPSE.multiply, 
+            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(v.vertexID),
+                                             ECLIPSE.multiply,
                                              get_vertex_WCET_variable(v.vertexID))
             if counter > 1:
                 self.obj_function += ECLIPSE.plus
@@ -608,16 +640,16 @@ class CreateCFGCLP(CLP):
         
     def create_execution_time_domains(self, data, cfg):
         for v in cfg:
-            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(v.vertexID), 
-                                                      ECLIPSE.equals, 
-                                                      data.get_basic_block_wcet(v.vertexID), 
+            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(v.vertexID),
+                                                      ECLIPSE.equals,
+                                                      data.get_basic_block_wcet(v.vertexID),
                                                       ECLIPSE.conjunct))
         
     def create_structural_constraints(self, cfg):
         for v in cfg:
-            new_constraint  = get_vertex_execution_count_variable(v.vertexID)
+            new_constraint = get_vertex_execution_count_variable(v.vertexID)
             new_constraint += ECLIPSE.equals
-            counter         = v.number_of_predecessors()
+            counter = v.number_of_predecessors()
             for predID in v.predecessors.keys():
                 new_constraint += get_edge_execution_count_variable(predID, v.vertexID)
                 if counter > 1:
@@ -626,7 +658,7 @@ class CreateCFGCLP(CLP):
             new_constraint += ECLIPSE.conjunct
             self.the_constraints.append(new_constraint)
             new_constraint = ""
-            counter        = v.number_of_successors()
+            counter = v.number_of_successors()
             for succID in v.successors.keys():
                 new_constraint += get_edge_execution_count_variable(v.vertexID, succID)
                 if counter > 1:
@@ -644,24 +676,24 @@ class CreateCFGCLP(CLP):
     
     def create_loop_bound_constraints(self, data, cfg, lnt):
         for v in cfg:            
-            headerv        = lnt.getVertex(lnt.getVertex(v.vertexID).parentID)
-            lower_bound    = 0
-            upper_bound    = data.get_loop_bound(headerv.headerID)
-            new_constraint = "%s%s[%d..%d]%s" % (get_vertex_execution_count_variable(v.vertexID), 
-                                              ECLIPSE.domain_separator, 
-                                              lower_bound, 
-                                              upper_bound, 
+            headerv = lnt.getVertex(lnt.getVertex(v.vertexID).parentID)
+            lower_bound = 0
+            upper_bound = data.get_upper_bound_on_header(headerv.headerID)
+            new_constraint = "%s%s[%d..%d]%s" % (get_vertex_execution_count_variable(v.vertexID),
+                                              ECLIPSE.domain_separator,
+                                              lower_bound,
+                                              upper_bound,
                                               ECLIPSE.conjunct)
             self.the_constraints.append(new_constraint) 
         for v in cfg:            
-            headerv     = lnt.getVertex(lnt.getVertex(v.vertexID).parentID)
+            headerv = lnt.getVertex(lnt.getVertex(v.vertexID).parentID)
             lower_bound = 0
-            upper_bound = data.get_loop_bound(headerv.headerID)
+            upper_bound = data.get_upper_bound_on_header(headerv.headerID)
             for succID in v.successors.keys(): 
-                new_constraint = "%s%s[%d..%d]%s" % (get_edge_execution_count_variable(v.vertexID, succID), 
-                                           ECLIPSE.domain_separator, 
-                                           lower_bound, 
-                                           upper_bound, 
+                new_constraint = "%s%s[%d..%d]%s" % (get_edge_execution_count_variable(v.vertexID, succID),
+                                           ECLIPSE.domain_separator,
+                                           lower_bound,
+                                           upper_bound,
                                            ECLIPSE.conjunct)
                 self.the_constraints.append(new_constraint)
                 
@@ -680,9 +712,9 @@ class CreateSuperBlockCFGCLP(CLP):
         self.construction_time = end - start
         
     def add_variables(self, super_block_cfg):
-        bb_execution_count_variables   = []
+        bb_execution_count_variables = []
         edge_execution_count_variables = []
-        bb_execution_time_variables    = []
+        bb_execution_time_variables = []
         for superv in super_block_cfg:
             if isinstance(superv.representative, vertices.CFGEdge):
                 edge_execution_count_variables.append(get_execution_count_variable_for_program_point(superv.representative))
@@ -693,23 +725,23 @@ class CreateSuperBlockCFGCLP(CLP):
                     bb_execution_time_variables.append(get_vertex_WCET_variable(program_point.vertexID))
                     self.the_variables.add(get_vertex_execution_count_variable(program_point.vertexID))
                     self.the_variables.add(get_vertex_WCET_variable(program_point.vertexID))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS, 
-                                                    ','.join(v for v in bb_execution_count_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS,
+                                                    ','.join(v for v in bb_execution_count_variables),
                                                     ECLIPSE.conjunct))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, 
-                                                    ','.join(v for v in edge_execution_count_variables),  
+        self.variable_lists.append("%s = [%s]%s" % (CLP.EDGE_COUNTS,
+                                                    ','.join(v for v in edge_execution_count_variables),
                                                     ECLIPSE.conjunct))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES, 
-                                                    ','.join(v for v in bb_execution_time_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES,
+                                                    ','.join(v for v in bb_execution_time_variables),
                                                     ECLIPSE.conjunct))
     
     def create_objective_function(self, cfg):
-        self.obj_function  = CLP.WCET
+        self.obj_function = CLP.WCET
         self.obj_function += ECLIPSE.equals
-        counter            = cfg.number_of_vertices()
+        counter = cfg.number_of_vertices()
         for v in cfg:
-            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(v.vertexID), 
-                                             ECLIPSE.multiply, 
+            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(v.vertexID),
+                                             ECLIPSE.multiply,
                                              get_vertex_WCET_variable(v.vertexID))
             if counter > 1:
                 self.obj_function += ECLIPSE.plus
@@ -718,9 +750,9 @@ class CreateSuperBlockCFGCLP(CLP):
         
     def create_execution_time_domains(self, data, cfg):
         for v in cfg:
-            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(v.vertexID), 
-                                                      ECLIPSE.equals, 
-                                                      data.get_basic_block_wcet(v.vertexID), 
+            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(v.vertexID),
+                                                      ECLIPSE.equals,
+                                                      data.get_basic_block_wcet(v.vertexID),
                                                       ECLIPSE.conjunct))
             
     def create_intra_super_block_constraints(self, super_block_cfg):
@@ -736,7 +768,7 @@ class CreateSuperBlockCFGCLP(CLP):
         
     def create_structural_constraints(self, lnt, super_block_cfg):
         for superv in super_block_cfg:
-            contains_loop_header = True
+            contains_loop_header = False
             for program_point in superv.program_points:
                 if lnt.is_loop_header(program_point.vertexID):
                     contains_loop_header = True
@@ -771,24 +803,24 @@ class CreateSuperBlockCFGCLP(CLP):
     def create_loop_bound_constraints(self, data, super_block_cfg, lnt):
         for superv in super_block_cfg:
             if isinstance(superv.representative, vertices.CFGEdge):
-                headerv     = lnt.getVertex(lnt.getVertex(superv.representative.edge[0]).parentID)
+                headerv = lnt.getVertex(lnt.getVertex(superv.representative.edge[0]).parentID)
                 lower_bound = 0
-                upper_bound = data.get_loop_bound(headerv.headerID)
-                new_constraint = "%s%s[%d..%d]%s" % (get_execution_count_variable_for_program_point(superv.representative), 
-                                                     ECLIPSE.domain_separator, 
-                                                     lower_bound, 
-                                                     upper_bound, 
+                upper_bound = data.get_upper_bound_on_header(headerv.headerID)
+                new_constraint = "%s%s[%d..%d]%s" % (get_execution_count_variable_for_program_point(superv.representative),
+                                                     ECLIPSE.domain_separator,
+                                                     lower_bound,
+                                                     upper_bound,
                                                      ECLIPSE.conjunct)
                 self.the_constraints.append(new_constraint)
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
-                    headerv        = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
-                    lower_bound    = 0
-                    upper_bound    = data.get_loop_bound(headerv.headerID)
-                    new_constraint = "%s%s[%d..%d]%s" % (get_execution_count_variable_for_program_point(program_point), 
-                                                         ECLIPSE.domain_separator, 
-                                                         lower_bound, 
-                                                         upper_bound, 
+                    headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
+                    lower_bound = 0
+                    upper_bound = data.get_upper_bound_on_header(headerv.headerID)
+                    new_constraint = "%s%s[%d..%d]%s" % (get_execution_count_variable_for_program_point(program_point),
+                                                         ECLIPSE.domain_separator,
+                                                         lower_bound,
+                                                         upper_bound,
                                                          ECLIPSE.conjunct)
                     self.the_constraints.append(new_constraint)
                     
@@ -807,31 +839,31 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
         
     def add_variables(self, super_block_cfg):
         superv_execution_count_variables = []
-        superv_execution_time_variables  = []
+        superv_execution_time_variables = []
         for superv in super_block_cfg:
             superv_execution_count_variables.append(get_vertex_execution_count_variable(superv.vertexID))
             superv_execution_time_variables.append(get_vertex_WCET_variable(superv.vertexID))
             self.the_variables.add(get_vertex_execution_count_variable(superv.vertexID))
             self.the_variables.add(get_vertex_WCET_variable(superv.vertexID))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS, 
-                                                    ','.join(v for v in superv_execution_count_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_COUNTS,
+                                                    ','.join(v for v in superv_execution_count_variables),
                                                     ECLIPSE.conjunct))
-        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES, 
-                                                    ','.join(v for v in superv_execution_time_variables), 
+        self.variable_lists.append("%s = [%s]%s" % (CLP.VERTEX_TIMES,
+                                                    ','.join(v for v in superv_execution_time_variables),
                                                     ECLIPSE.conjunct))
     
     def create_objective_function (self, data, super_block_cfg):
-        self.obj_function  = CLP.WCET
+        self.obj_function = CLP.WCET
         self.obj_function += ECLIPSE.equals
-        counter            = super_block_cfg.number_of_vertices()
+        counter = super_block_cfg.number_of_vertices()
         for superv in super_block_cfg:
             wcet = 0
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
                     wcet += data.get_basic_block_wcet(program_point.vertexID)
             self.the_variables.add(get_vertex_execution_count_variable(superv.vertexID))
-            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(superv.vertexID), 
-                                             ECLIPSE.multiply, 
+            self.obj_function += "%s%s%s" % (get_vertex_execution_count_variable(superv.vertexID),
+                                             ECLIPSE.multiply,
                                              get_vertex_WCET_variable(superv.vertexID))
             if counter > 1:
                 self.obj_function += ECLIPSE.plus
@@ -844,9 +876,9 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
                     wcet += data.get_basic_block_wcet(program_point.vertexID)
-            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(superv.vertexID), 
-                                                      ECLIPSE.equals, 
-                                                      wcet, 
+            self.the_constraints.append("%s%s%d%s" % (get_vertex_WCET_variable(superv.vertexID),
+                                                      ECLIPSE.equals,
+                                                      wcet,
                                                       ECLIPSE.conjunct))
             
     def create_structural_constraints (self, super_block_cfg):
@@ -883,15 +915,15 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
             upper_bound = 0
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGEdge):
-                    headerv     = lnt.getVertex(lnt.getVertex(program_point.edge[0]).parentID)
-                    upper_bound = max(upper_bound, data.get_loop_bound(headerv.headerID))
+                    headerv = lnt.getVertex(lnt.getVertex(program_point.edge[0]).parentID)
+                    upper_bound = max(upper_bound, data.get_upper_bound_on_header(headerv.headerID))
                 else:
-                    headerv     = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
-                    upper_bound = max(upper_bound, data.get_loop_bound(headerv.headerID))
-            new_constraint = "%s%s[%d..%d]%s" % (get_vertex_execution_count_variable(superv.vertexID), 
-                                                 ECLIPSE.domain_separator, 
-                                                 lower_bound, 
-                                                 upper_bound, 
+                    headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
+                    upper_bound = max(upper_bound, data.get_upper_bound_on_header(headerv.headerID))
+            new_constraint = "%s%s[%d..%d]%s" % (get_vertex_execution_count_variable(superv.vertexID),
+                                                 ECLIPSE.domain_separator,
+                                                 lower_bound,
+                                                 upper_bound,
                                                  ECLIPSE.conjunct)
             self.the_constraints.append(new_constraint)
         
