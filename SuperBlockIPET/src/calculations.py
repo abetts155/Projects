@@ -30,16 +30,7 @@ def get_execution_count_variable_for_program_point(program_point):
         return get_edge_execution_count_variable(program_point.edge[0], program_point.edge[1])
 
 def get_new_line (num=1):
-    return "\n" * num      
-
-def get_loop_entry_edges(cfg, lnt, headerID):
-    the_edges = []
-    v         = cfg.getVertex(headerID)
-    for predID in v.predecessors.keys():
-        if not lnt.is_loop_back_edge(predID, headerID):
-            the_edges.append((predID, headerID))
-    assert the_edges, "Unable to find loop-entry edges into loop with header %d" % headerID
-    return the_edges
+    return "\n" * num
 
 def get_loop_entry_super_blocks(lnt, super_block_cfg, headerID):
     pred_super_blocks = set()
@@ -57,12 +48,12 @@ def get_loop_entry_super_blocks(lnt, super_block_cfg, headerID):
     return pred_super_blocks
 
 class LpSolve:
-    comma = ","
-    equals = " = "
-    int_ = "int"
-    lte = " <= "
-    max_ = "max: "
-    plus = " + "
+    comma      = ","
+    equals     = " = "
+    int_       = "int"
+    lte        = " <= "
+    max_       = "max: "
+    plus       = " + "
     semi_colon = ";"
     
 class ConstraintSystem:
@@ -212,7 +203,7 @@ class CreateCFGILP(ILP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += LpSolve.lte
-                        incoming_edges = get_loop_entry_edges(cfg, lnt, treev.headerID)
+                        incoming_edges = lnt.get_loop_entry_edges(treev.headerID)
                         counter        = len(incoming_edges)
                         for predID, succID in incoming_edges:
                             new_constraint += "%d %s" % (data.get_upper_bound_on_header(treev.headerID), 
@@ -408,16 +399,16 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                         self.the_constraints.append(new_constraint)
 
 class ECLIPSE:
-    conjunct = "," + get_new_line()
+    conjunct         = "," + get_new_line()
     clause_separator = ":-"
     domain_separator = " #:: "
-    equals = " #= "
-    lib = "lib"
-    lt = " #< "
-    lte = " #=< "
-    multiply = "*"
-    plus = " + "
-    terminator = "."
+    equals           = " #= "
+    lib              = "lib"
+    lt               = " #< "
+    lte              = " #=< "
+    multiply         = "*"
+    plus             = " + "
+    terminator       = "."
     
     @staticmethod
     def get_temp_list(suffix):
@@ -672,7 +663,7 @@ class CreateCFGCLP(CLP):
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(treev.headerID)
                         new_constraint += ECLIPSE.lte
-                        incoming_edges = get_loop_entry_edges(cfg, lnt, treev.headerID)
+                        incoming_edges = lnt.get_loop_entry_edges(treev.headerID)
                         counter        = len(incoming_edges)
                         for predID, succID in incoming_edges:
                             new_constraint += "%d %s %s" % (data.get_upper_bound_on_header(treev.headerID),
