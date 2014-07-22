@@ -112,18 +112,19 @@ class ILP(ConstraintSystem):
     def solve(self):
         debug.debug_message("Solving ILP", __name__, 10)
         self.write_to_file()
-        cmd = "lp_solve %s" % self.filename 
-        start = timeit.default_timer()
-        proc = subprocess.Popen(cmd,
-                                          shell=True,
-                                          stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE)
-        return_code = proc.wait()
-        end = timeit.default_timer()
+        cmd             = "lp_solve %s" % self.filename 
+        start           = timeit.default_timer()
+        proc            = subprocess.Popen(cmd, 
+                                           shell=True,
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
+        stdout, stderr  = proc.communicate()
+        end             = timeit.default_timer()
         self.solve_time = end - start
-        if return_code != 0:
+        if proc.returncode != 0:
             debug.exit_message("Running '%s' failed" % cmd)
-        for line in proc.stdout.readlines():
+        for line in stdout.split(os.linesep):
+            line = line.strip()
             if line.startswith("Value of objective function"):
                 lexemes = shlex.split(line)
                 self.wcet = long(decimal.Decimal(lexemes[-1])) 
@@ -545,16 +546,16 @@ class CLP(ConstraintSystem):
     def solve(self):
         debug.debug_message("Solving CLP", __name__, 10)
         self.write_to_file()        
-        cmd = 'jeclipse -b %s -e "%s."' % (self.filename, self.goal) 
-        start = timeit.default_timer()
-        proc = subprocess.Popen(cmd,
+        cmd             = 'jeclipse -b %s -e "%s."' % (self.filename, self.goal) 
+        start           = timeit.default_timer()
+        proc            = subprocess.Popen(cmd,
                                            shell=True,
                                            stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE)
-        return_code = proc.wait()
-        end = timeit.default_timer()
+        stdout, stderr  = proc.communicate()
+        end             = timeit.default_timer()
         self.solve_time = end - start
-        if return_code != 0:
+        if proc.returncode != 0:
             debug.exit_message("Running '%s' failed" % cmd)
         with open(self.results_filename) as the_file:
             for line in the_file:
