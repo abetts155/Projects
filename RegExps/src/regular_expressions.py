@@ -3,6 +3,19 @@ from __future__ import print_function
 import trees
 import vertices
 import udraw
+import numpy
+
+class TransitiveClosure:
+    def __init__(self, cfg, reverse_cfg):
+        self.vertex_to_indexing_key = {}
+        self.indexing_key_to_vertex = {}
+        indexing_key = 0
+        for v in cfg:
+            self.vertex_to_indexing_key[v]            = indexing_key
+            self.indexing_key_to_vertex[indexing_key] = v
+            indexing_key += 1
+        self.forward_matrix = numpy.zeros((cfg.number_of_vertices(), cfg.number_of_vertices()))
+        self.reverse_matrix = numpy.zeros((cfg.number_of_vertices(), cfg.number_of_vertices()))
 
 class DominanceFrontiers:
     def __init__(self, cfg, dominator_tree):
@@ -102,6 +115,7 @@ class CFGPathExpression:
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     self.enhanced_CFG           = self.lnt.induced_loop_subgraph(treev)
+                    TransitiveClosure(self.enhanced_CFG)
                     udraw.make_file(self.enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
                     self.predom_tree            = trees.Dominators(self.enhanced_CFG, self.enhanced_CFG.get_entryID())
                     self.enhanced_CFG_reverse   = self.enhanced_CFG.get_reverse_graph()
