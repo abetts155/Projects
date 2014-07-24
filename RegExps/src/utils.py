@@ -6,9 +6,3 @@ def enum (*sequential, **named):
     enums['reverse_mapping'] = reverse
     enums['forward_mapping'] = forward
     return type('Enum', (), enums)
-
-def peekaheadIterator (iterable, window=1):
-    from itertools import tee, islice, izip_longest
-    items, nexts = tee(iterable, 2)
-    nexts = islice(nexts, window, None)
-    return izip_longest(items, nexts)
