@@ -203,7 +203,7 @@ class CompressedDominatorTree(Tree):
             for v1 in query_set:
                 for v2 in query_set:
                     if v1 != v2:
-                        lcaID = lca.getLCA(v1, v2)
+                        lcaID = lca.get_LCA(v1, v2)
                         if v1 in vertex_to_lca:
                             old_lcaID = vertex_to_lca[v1]
                             if lca.vertex_to_level[lcaID] > lca.vertex_to_level[old_lcaID] \
@@ -221,16 +221,16 @@ class CompressedDominatorTree(Tree):
             # Add edge links                
             for vertexID, parentID in vertex_to_lca.iteritems():
                 if not self.hasVertex(vertexID):
-                    self.addVertex(vertexID)                
+                    self.addVertex(vertices.TreeVertex(vertexID))                
                 if not self.hasVertex(parentID):
-                    self.addVertex(parentID)
+                    self.addVertex(vertices.TreeVertex(parentID))
                 if parentID != vertexID:
                     self.addEdge(parentID, vertexID)
             # Any vertex without a predecessor goes into the query set
             new_query_set = set()
             for v in self:
                 if v.number_of_predecessors() == 0:
-                    new_query_set.append(v.vertexID)
+                    new_query_set.add(v.vertexID)
             query_set = new_query_set
     
 class LeastCommonAncestor:
@@ -251,11 +251,11 @@ class LeastCommonAncestor:
         v = self.tree.getVertex(vertexID)
         self.euler[self.euler_index] = vertexID
         self.euler_index += 1
-        for succID in v.getSuccessorIDs():
+        for succID in v.successors.keys():
             self.vertex_to_level[succID] = self.vertex_to_level[vertexID] + 1
             if self.vertex_to_level[succID] > self.dummy_level:
                 self.dummy_level = self.vertex_to_level[succID]
-            self.__doDFS(succID)
+            self.do_DFS(succID)
             self.euler[self.euler_index] = vertexID
             self.euler_index += 1
     

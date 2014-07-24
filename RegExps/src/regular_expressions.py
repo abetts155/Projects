@@ -1,15 +1,18 @@
+from __future__ import print_function
+
 import trees
 import vertices
+import udraw
 
 class DominanceFrontiers:
     def __init__(self, cfg, dominator_tree):
         self.vertex_DF = {}
         for v in cfg:
             self.vertex_DF[v.vertexID] = set()
-        self.__compute(cfg, dominator_tree)
+        self.compute(cfg, dominator_tree)
         
     def compute(self, cfg, dominator_tree):
-        for v in self.cfg:
+        for v in cfg:
             if v.number_of_predecessors() > 1: 
                 immediate_dominatorID = dominator_tree.getVertex(v.vertexID).parentID
                 for predID in v.predecessors.keys():
@@ -22,11 +25,11 @@ class AcyclicReducibility:
     def __init__(self, cfg, reverse_cfg, predominator_tree, postdominator_tree):
         self.irreducible_branches = set()
         self.irreducible_merges   = set()
-        self.compute()
+        self.compute(cfg, reverse_cfg, predominator_tree, postdominator_tree)
     
-    def __compute(self, cfg, reverse_cfg, predominator_tree, postdominator_tree):
-        predominance_frontier_info  = DominanceFrontiers(self.cfg, predominator_tree)
-        postdominance_frontier_info = DominanceFrontiers(self.reverse_cfg, postdominator_tree)
+    def compute(self, cfg, reverse_cfg, predominator_tree, postdominator_tree):
+        predominance_frontier_info  = DominanceFrontiers(cfg, predominator_tree)
+        postdominance_frontier_info = DominanceFrontiers(reverse_cfg, postdominator_tree)
         for v in cfg:
             if v.number_of_successors() > 1:
                 if len(predominance_frontier_info.vertex_DF[v.vertexID]) > 1:
@@ -45,16 +48,16 @@ class RegExp:
     @staticmethod
     def lParen(space=True):
         if space:
-            return ' ('
+            return ' ['
         else:
-            return '('
+            return '['
     
     @staticmethod
     def rParen(space=True):
         if space:
-            return ') '
+            return '] '
         else:
-            return ')'
+            return ']'
     
     def __init__(self):
         self.elements = []
@@ -81,7 +84,15 @@ class RegExp:
                 self.elements.append(arg)
     
     def __str__ (self):
-        return ''.join(self.elements)
+        the_string = ""
+        for elem in self.elements:
+            if isinstance(elem, vertices.CFGEdge):
+                the_string += elem.edge.__repr__()
+            elif isinstance(elem, vertices.CFGVertex):
+                the_string += elem.vertexID.__repr__()
+            else:
+                the_string += elem
+        return the_string
             
 class CFGPathExpression:
     def __init__(self, cfg, lnt):
@@ -91,6 +102,7 @@ class CFGPathExpression:
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     self.enhanced_CFG           = self.lnt.induced_loop_subgraph(treev)
+                    udraw.make_file(self.enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
                     self.predom_tree            = trees.Dominators(self.enhanced_CFG, self.enhanced_CFG.get_entryID())
                     self.enhanced_CFG_reverse   = self.enhanced_CFG.get_reverse_graph()
                     self.postdom_tree           = trees.Dominators(self.enhanced_CFG_reverse, self.enhanced_CFG_reverse.get_entryID())
@@ -113,13 +125,13 @@ class CFGPathExpression:
         for vertexID in reversed(dfs.post_order):
             v = self.enhanced_CFG.getVertex(vertexID)
             if vertexID == self.enhanced_CFG.get_entryID():
-                self.vertex_to_regular_expression[vertexID].append(vertexID)
+                self.vertex_to_regular_expression[vertexID].append(v)
             else:
                 if v.number_of_predecessors() == 1:
                     self.handle_non_merge(v)
                 else:
                     self.handle_merge(v)
-            print "RegExp(%d) = %s" % (vertexID, self.vertex_to_regular_expression[vertexID])
+            print("RegExp(%d) = %s" % (vertexID, self.vertex_to_regular_expression[vertexID]))
             
     def handle_non_merge(self, v):
         for predID in v.predecessors.keys():
@@ -130,7 +142,7 @@ class CFGPathExpression:
             if self.lnt.is_loop_header(v.vertexID):
                 self.handle_loop_header(self.vertex_to_regular_expression[v.vertexID], v.vertexID)
             else:
-                self.vertex_to_regular_expression[v.vertexID].append(v.vertexID)
+                self.vertex_to_regular_expression[v.vertexID].append(v)
                 
     def handle_merge(self, mergev):
         vertex_temp_reg_exprs = {}
@@ -151,7 +163,7 @@ class CFGPathExpression:
                         new_expr.append(vertex_temp_reg_exprs[succID])
                         new_expr.append(RegExp.union)
                     
-                    if self.enhanced_CFG.getVertex(treev.vertexID).hasSuccessor(mergev.vertexID):
+                    if self.enhanced_CFG.getVertex(treev.vertexID).has_successor(mergev.vertexID):
                         new_expr.append(RegExp.lambda_)
                     else:
                         new_expr.pop()
@@ -161,7 +173,7 @@ class CFGPathExpression:
             self.vertex_to_regular_expression[mergev.vertexID].append(self.vertex_to_regular_expression[compressed_tree.rootID])
         self.vertex_to_regular_expression[mergev.vertexID].append(vertex_temp_reg_exprs[compressed_tree.rootID])
         if not mergev.dummy:
-            self.vertex_to_regular_expression[mergev.vertexID].append(mergev.vertexID) 
+            self.vertex_to_regular_expression[mergev.vertexID].append(mergev) 
         
     def handle_loop_header(self, current_path_expr, headerID):
         current_path_expr.append(RegExp.lParen(False))

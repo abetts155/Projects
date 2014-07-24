@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import argparse
 import config
 import program_input_output
@@ -27,9 +28,14 @@ def the_command_line ():
                     action="store_true",
                     help="be verbose",
                     default=False)
+    
+    parser.parse_args(namespace=config.Arguments)
+    
+    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
+    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
 
 if __name__ == "__main__": 
     the_command_line()
-    data, program = program_input_output.read_file(config.Arguments.program_file)
+    program = program_input_output.read_file(config.Arguments.program_file)
     program.create_LNTs()
     program.create_path_expressions()
