@@ -1,4 +1,5 @@
 import directed_graphs
+import flow_graphs
 import vertices
 import debug
 import utils
@@ -455,7 +456,7 @@ class LoopNests (Tree):
     
     def induced_loop_subgraph(self, headerv):
         assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
-        enhanced_CFG                     = directed_graphs.EnhancedCFG()
+        enhanced_CFG                     = flow_graphs.EnhancedCFG()
         worklist                         = []
         analysed                         = set()
         inner_loop_exit_edge_header      = {}

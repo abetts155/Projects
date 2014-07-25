@@ -1,5 +1,5 @@
 import programs
-import directed_graphs
+import flow_graphs
 import vertices
 import debug
 import re
@@ -39,7 +39,7 @@ def read_file(filename):
                     program.add_CFG(cfg)
                 names = name_regex.findall(line)
                 assert len(names) == 2, "Too many names found '%s'" % ' '.join(names)
-                cfg      = directed_graphs.CFG()
+                cfg      = flow_graphs.CFG()
                 cfg.name = names[1]
                 debug.debug_message("Found new CFG '%s'" % cfg.name, __name__, 1)
             elif line.startswith(basic_block_lexeme):

@@ -1,7 +1,7 @@
 import os
 import config
+import flow_graphs
 import directed_graphs
-import super_block_graphs
 import trees
 import vertices
 
@@ -72,16 +72,11 @@ def make_file(g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            # CFG or Instrumented CFG
-            if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
+            if isinstance(g, flow_graphs.CFG) or isinstance(g, flow_graphs.EnhancedCFG):
                 write_CFG_vertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
                         write_CFG_vertex(g, v.vertexID, the_file)   
-            elif isinstance(g, super_block_graphs.SuperBlockCFG):
-                for superv in g:
-                    write_super_block_vertex(superv, the_file)
-            # Loop-Nesting Tree
             elif isinstance(g, trees.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, the_file)
@@ -125,30 +120,6 @@ def write_CFG_vertex(cfg, vertexID, the_file):
         the_file.write(set_name("%d" % succe.edgeID))
         the_file.write(end_attrs)
         the_file.write(edge_link(succe.vertexID))
-        the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n")
-    
-def write_super_block_vertex(superv, the_file):
-    the_file.write(new_vertex(superv.vertexID))
-    the_file.write(begin_attrs)
-    name = "super ID = %d%s" % (superv.vertexID, new_line)
-    for idx, program_point in enumerate(superv.program_points):
-        if isinstance(program_point, vertices.CFGVertex):
-            name += "%d" % (program_point.vertexID)
-        else:
-            name += "(%d, %d)" % (program_point.edge[0], program_point.edge[1])
-        if idx < len(superv.program_points) - 1:
-            name += new_line
-    the_file.write(set_name(name))
-    the_file.write(end_attrs)
-    
-    the_file.write(begin_attrs)
-    for succID in superv.successors.keys():
-        the_file.write(new_edge)
-        the_file.write(begin_attrs)
-        the_file.write(set_name(str(succID)))
-        the_file.write(end_attrs)
-        the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
 

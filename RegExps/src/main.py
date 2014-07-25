@@ -4,6 +4,31 @@ import os
 import argparse
 import config
 import program_input_output
+import programs
+import regular_expressions
+import re
+import ast
+
+def parse_input_from_user(message):
+    the_input = raw_input("-> %s: " % message).lower()
+    the_input = re.sub(r'\s+', '', the_input)
+    if re.match(r'\d+', the_input):
+        return ast.literal_eval(the_input)
+    return the_input
+
+def do_analysis(program):
+    for cfg in program.cfgs.values():
+        cfg.create_per_loop_reachability_info()
+    
+    try:    
+        while True:
+            cfg_name    = parse_input_from_user("Enter CFG name")
+            start       = parse_input_from_user("Enter start program point")
+            end         = parse_input_from_user("Enter end program point")
+            induced_CFG = programs.create_induced_subgraph(program, cfg_name, start, end)
+            regular_expressions.PathExpression(induced_CFG)
+    except KeyboardInterrupt:
+        pass
 
 def the_command_line (): 
     parser = argparse.ArgumentParser(description="Compute path expressions from a CFG")
@@ -37,5 +62,4 @@ def the_command_line ():
 if __name__ == "__main__": 
     the_command_line()
     program = program_input_output.read_file(config.Arguments.program_file)
-    program.create_LNTs()
-    program.create_path_expressions()
+    do_analysis(program)
