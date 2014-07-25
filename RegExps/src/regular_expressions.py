@@ -39,6 +39,7 @@ class RegExp:
     r_parenthesis = ')'
     kleene_star   = '*'
     kleene_plus   = '+'
+    empty         = '0'
     
     def __init__(self):
         self.elements = []
@@ -78,14 +79,21 @@ class RegExp:
 class PathExpression:
     def __init__(self, induced_CFG):
         self.induced_CFG            = induced_CFG
-        self.predominator_tree      = trees.Dominators(induced_CFG, induced_CFG.get_entryID())
-        self.lca                    = trees.LeastCommonAncestor(self.predominator_tree)
-        self.acyclic_reducible_info = AcyclicReducibility(induced_CFG, self.predominator_tree)
-        self.reverse_induced_CFG    = induced_CFG.get_reverse_graph()
-        self.postdominator_tree     = trees.Dominators(self.reverse_induced_CFG, self.reverse_induced_CFG.get_entryID())
-        self.initialise()
-        self.compute()
-        print("%s" % self.vertex_to_regular_expression[induced_CFG.get_exitID()])
+        if induced_CFG.number_of_vertices() == 0:
+            print("P(%d, %d) = %s" % (induced_CFG.get_entryID(),
+                                      induced_CFG.get_exitID(), 
+                                      RegExp.empty))
+        else:
+            self.predominator_tree      = trees.Dominators(induced_CFG, induced_CFG.get_entryID())
+            self.lca                    = trees.LeastCommonAncestor(self.predominator_tree)
+            self.acyclic_reducible_info = AcyclicReducibility(induced_CFG, self.predominator_tree)
+            self.reverse_induced_CFG    = induced_CFG.get_reverse_graph()
+            self.postdominator_tree     = trees.Dominators(self.reverse_induced_CFG, self.reverse_induced_CFG.get_entryID())
+            self.initialise()
+            self.compute()
+            print("P(%d, %d) = %s" % (induced_CFG.get_entryID(),
+                                      induced_CFG.get_exitID(), 
+                                      self.vertex_to_regular_expression[induced_CFG.get_exitID()]))
                 
     def initialise(self):
         self.vertex_to_regular_expression = {}
