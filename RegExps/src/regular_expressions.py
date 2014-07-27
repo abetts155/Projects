@@ -78,12 +78,12 @@ class RegExp:
             
 class PathExpression:
     def __init__(self, induced_CFG):
-        self.induced_CFG            = induced_CFG
         if induced_CFG.number_of_vertices() == 0:
             print("P(%d, %d) = %s" % (induced_CFG.get_entryID(),
                                       induced_CFG.get_exitID(), 
                                       RegExp.empty))
         else:
+            self.induced_CFG            = induced_CFG
             self.predominator_tree      = trees.Dominators(induced_CFG, induced_CFG.get_entryID())
             self.lca                    = trees.LeastCommonAncestor(self.predominator_tree)
             self.acyclic_reducible_info = AcyclicReducibility(induced_CFG, self.predominator_tree)
@@ -148,5 +148,16 @@ class PathExpression:
         self.vertex_to_regular_expression[mergev.vertexID].append(vertex_temp_reg_exprs[compressed_tree.rootID])
         if not mergev.dummy:
             self.vertex_to_regular_expression[mergev.vertexID].append(mergev) 
+            
+def create_path_expression(cfg, entry_vertexID, exit_vertexID):
+    lnt     = cfg.get_LNT()
+    lca     = trees.LeastCommonAncestor(lnt)
+    headerv = lnt.getVertex(lca.get_LCA(entry_vertexID, exit_vertexID))
+    if headerv.vertexID == lnt.rootID:
+        pass
+    else:
+        induced_CFG = cfg.create_induced_subgraph(entry_vertexID, exit_vertexID)
+        PathExpression(induced_CFG)
+
 
     

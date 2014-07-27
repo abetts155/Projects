@@ -4,8 +4,8 @@ import os
 import argparse
 import config
 import program_input_output
-import programs
 import regular_expressions
+import debug
 import re
 import ast
 
@@ -22,11 +22,25 @@ def do_analysis(program):
     
     try:    
         while True:
-            cfg_name    = parse_input_from_user("Enter CFG name")
-            start       = parse_input_from_user("Enter start program point")
-            end         = parse_input_from_user("Enter end program point")
-            induced_CFG = programs.create_induced_subgraph(program, cfg_name, start, end)
-            regular_expressions.PathExpression(induced_CFG)
+            cfg = None
+            if len(program.cfgs) == 1:
+                cfg = program.cfgs.itervalues().next()
+            else:
+                cfg_name = parse_input_from_user("Enter CFG name")
+                if cfg_name not in program.cfgs:
+                    debug.warning_message("Program does not have CFG %s" % cfg_name)
+                else:
+                    cfg = program.cfgs[cfg_name]
+            if cfg is not None:
+                entryID = parse_input_from_user("Enter start program point")
+                if not cfg.hasVertex(entryID):
+                    debug.warning_message("CFG does not have vertex: %d" % entryID)
+                else:
+                    exitID = parse_input_from_user("Enter end program point")
+                    if not cfg.hasVertex(exitID):
+                        debug.warning_message("CFG does not have vertex: %d" % exitID)
+                    else:
+                        regular_expressions.create_path_expression(cfg, entryID, exitID)
     except KeyboardInterrupt:
         pass
 
