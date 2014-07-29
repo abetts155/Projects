@@ -11,7 +11,7 @@ class SESEComponent:
         self.entryID = None
         self.exitID  = None
 
-class CreateAcyclicGraph:
+class CreateLoopBody:
     def __init__(self, number_of_vertices, the_CFG):
         self.directedg = directed_graphs.DirectedGraph()
         self.create(number_of_vertices, the_CFG)
@@ -200,10 +200,17 @@ class LoopComponent:
         self.tailIDs   = set()
         self.exitIDs   = set()
         self.tailIDs.add(directedg.exitID)
-        if bool(random.getrandbits(1)) and directedg.getVertex(directedg.entryID).number_of_successors() == 1:
-            self.exitIDs.add(directedg.entryID)
-        else:
-            self.exitIDs.add(directedg.exitID) 
+        for v in self.directedg:
+            if v.number_of_successors() == 1:
+                if random.random() < 0.2: 
+                    self.exitIDs.add(v.vertexID)
+                elif random.random() < 0.1:
+                    self.tailIDs.add(v.vertexID)
+        if not self.exitIDs:
+            if bool(random.getrandbits(1)):
+                self.exitIDs.add(directedg.entryID)
+            else:
+                self.exitIDs.add(directedg.exitID)
         for tailID in self.tailIDs:
             directedg.addEdge(tailID, self.headerID)  
     
@@ -262,44 +269,16 @@ class CreateCFG:
                 number_of_vertices_remaining -= additional_vertices
         # Generate the acyclic region in each loop
         for treev in self.lnt:
-            loop_body = CreateAcyclicGraph(number_of_vertices_per_loop[treev], self.cfg)
+            loop_body = CreateLoopBody(number_of_vertices_per_loop[treev], self.cfg)
             self.loop_components[treev] = LoopComponent(loop_body.directedg)
             if treev.vertexID == self.lnt.rootID:
                 self.cfg.set_entryID(loop_body.directedg.entryID)
                 self.cfg.set_exitID(loop_body.directedg.exitID)
-            else:
-                if config.Arguments.continues:
-                    self.add_continues(self.loop_components[treev])
-                if config.Arguments.breaks:
-                    self.add_breaks(self.loop_components[treev])
         for treev in self.lnt:
             if treev.number_of_successors() > 0:
                 self.connect_nested_loops(treev)
         if config.Arguments.unstructured:
-            self.findMergeVerticesToRemove()   
-    
-    def add_continues(self, loopComponent):
-        extraTails = 1
-        for vertexID in loopComponent.the_vertices:
-            if vertexID not in loopComponent.exitIDs \
-            and vertexID not in loopComponent.tailIDs \
-            and vertexID != loopComponent.headerID:
-                v = currentCFG.getVertex(vertexID)
-                if v.number_of_successors() == 1 and bool(random.getrandbits(1)) and extraTails:
-                    currentCFG.addEdge(vertexID, loopComponent.headerID)
-                    loopComponent.tailIDs.add(vertexID)
-                    extraTails -= 1
-    
-    def add_breaks(self, loopComponent):
-        extraBreaks = 1
-        for vertexID in loopComponent.the_vertices:
-            if vertexID not in loopComponent.exitIDs \
-            and vertexID not in loopComponent.tailIDs \
-            and vertexID != loopComponent.headerID:
-                v = currentCFG.getVertex(vertexID)
-                if v.number_of_successors() == 1 and bool(random.getrandbits(1)) and extraBreaks:
-                    loopComponent.exitIDs.add(vertexID)
-                    extraBreaks -= 1
+            self.find_and_remove_merge_vertices()
     
     def connect_nested_loops(self, treev):
         firstLoop  = None
@@ -347,7 +326,7 @@ class CreateCFG:
         for exitID in secondLoop.exitIDs:
             self.cfg.addEdge(exitID, destinationv.vertexID)
     
-    def findMergeVerticesToRemove(self):
+    def find_and_remove_merge_vertices(self):
         disconnectedVertices = []
         lnt                  = trees.LoopNests(self.cfg, self.cfg.get_entryID())
         for v in self.cfg:
