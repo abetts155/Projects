@@ -32,7 +32,7 @@ def do_analysis(program):
                 else:
                     cfg = program.cfgs[cfg_name]
             if cfg is not None:
-                entryID = parse_input_from_user("Enter start program point")
+                entryID = parse_input_from_user("Enter start program point. Options = {%}" ','.join(str(v.vertexID) for v in cfg))
                 if not cfg.hasVertex(entryID):
                     debug.warning_message("CFG does not have vertex: %d" % entryID)
                 else:

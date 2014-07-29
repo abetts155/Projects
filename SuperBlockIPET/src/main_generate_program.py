@@ -145,6 +145,10 @@ def the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     
+    if config.Arguments.basic_blocks < config.Arguments.loops * 2:
+        debug.exit_message("The number of vertices in a CFG must be at least twice the number of loops")
+    
+    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.filename))[0])
     setattr(config.Arguments, "basepath", os.path.abspath(config.Arguments.directory))
         
 if __name__ == "__main__":
