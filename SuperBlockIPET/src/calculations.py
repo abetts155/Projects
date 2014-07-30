@@ -258,7 +258,6 @@ class CreateSuperBlockCFGILP(ILP):
     def create_structural_constraints (self, lnt, super_block_cfg):
         for superv in super_block_cfg:
             if superv.number_of_predecessors() > 1:
-                # Ensure the merge was created from forward control flow
                 new_constraint = ""
                 new_constraint += get_execution_count_variable_for_program_point(superv.representative)
                 new_constraint += LpSolve.equals
@@ -341,12 +340,7 @@ class CreateFoldedSuperBlockCFGILP(ILP):
             
     def create_structural_constraints (self, lnt, super_block_cfg):
         for superv in super_block_cfg:
-            contains_loop_header = False
-            for program_point in superv.program_points:
-                if lnt.is_loop_header(program_point.vertexID):
-                    contains_loop_header = True
-            if superv.number_of_predecessors() > 1 and not contains_loop_header:
-                # Ensure the merge was created from forward control flow
+            if superv.number_of_predecessors() > 1:
                 new_constraint = ""
                 new_constraint += get_vertex_execution_count_variable(superv.vertexID)
                 new_constraint += LpSolve.equals

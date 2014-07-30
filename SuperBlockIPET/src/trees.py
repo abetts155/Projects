@@ -137,7 +137,7 @@ class DepthFirstSearch (Tree):
     def isDFSBackedge(self, sourceID, destinationID):
         return (sourceID, destinationID) in self.back_edges
         
-class Dominators (Tree):
+class Dominators(Tree):
     def __init__(self, directedg, rootID):
         Tree.__init__(self)
         assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
@@ -406,11 +406,7 @@ class LoopNests (Tree):
                         elif self.is_nested(headerv_of_pred.vertexID, headerv.vertexID):
                             worklist.append(self.__directedg.getVertex(headerv_of_pred.headerID))
                             for sourceID, destinationID in self.loop_exit_edges[headerv_of_pred.headerID]:
-                                edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
-                                new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
-                                enhanced_CFG.addVertex(new_edgev)                                
-                                inner_loop_exit_edge_header[(sourceID, destinationID)] = headerv_of_pred.headerID
-                                inner_loop_exit_edge_edge_vertex[(sourceID, destinationID)] = new_edgev      
+                                inner_loop_exit_edge_header[(sourceID, destinationID)] = headerv_of_pred.headerID 
         # Add edge vertices to model loop-back edges
         for sourceID, destinationID in self.loop_back_edges[headerv.headerID]:
             edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
@@ -425,7 +421,9 @@ class LoopNests (Tree):
         for edge, inner_headerID in inner_loop_exit_edge_header.iteritems():
             if not enhanced_CFG.hasVertex(inner_headerID):
                 enhanced_CFG.addVertex(vertices.CFGVertex(inner_headerID))
-            new_edgev = inner_loop_exit_edge_edge_vertex[edge]
+            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+            new_edgev     = vertices.CFGEdge(edge_vertexID, edge[0], edge[1])
+            enhanced_CFG.addVertex(new_edgev)    
             enhanced_CFG.addEdge(inner_headerID, new_edgev.vertexID)
         # Link remaining edges
         for v in enhanced_CFG:
