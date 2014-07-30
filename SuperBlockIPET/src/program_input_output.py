@@ -25,7 +25,7 @@ def write_file(program, filename):
                 the_file.write("%s: " % successors_lexeme)
                 if cfg.get_exitID() != v.vertexID:
                     for succID in v.successors.keys():
-                        the_file.write("(%s, %d)" % (cfg.name, succID))
+                        the_file.write("(%s, %d) " % (cfg.name, succID))
                 the_file.write("\n" * 2)  
     
 def read_file(filename):

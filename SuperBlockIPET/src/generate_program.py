@@ -12,43 +12,50 @@ class SESEComponent:
         self.exitID  = None
 
 class CreateLoopBody:
-    def __init__(self, number_of_vertices, the_CFG):
-        self.directedg = directed_graphs.DirectedGraph()
-        self.create(number_of_vertices, the_CFG)
-        self.connected_SESEs()
+    def __init__(self, number_of_vertices, whole_program_CFG, nested_loop_graphs):
+        self.whole_program_CFG     = whole_program_CFG
+        self.directedg             = directed_graphs.DirectedGraph()
+        self.disconnected_vertices = []
+        self.singleton_vertices    = []
+        self.add_vertices(number_of_vertices)
+        self.create(number_of_vertices, nested_loop_graphs)
+        self.connect_SESEs()
         self.connect_singleton_vertices()
+        if nested_loop_graphs:
+            self.add_nested_loop_entry_and_exit_edges(nested_loop_graphs)
         assert self.directedg.entryID, "Directed graph entry ID not set"
         assert self.directedg.exitID, "Directed graph exit ID not set"
         
-    def create(self, number_of_vertices, the_CFG):
-        self.disconnected_vertices = []
-        self.singleton_vertices    = []
+    def add_vertices(self, number_of_vertices):
         for i in xrange(1,number_of_vertices+1):
-            vertexID = the_CFG.get_next_vertexID()
+            vertexID = self.whole_program_CFG.get_next_vertexID()
             v        = vertices.CFGVertex(vertexID)
-            the_CFG.addVertex(v)
+            self.whole_program_CFG.addVertex(v)
             self.directedg.addVertex(v)
             self.disconnected_vertices.append(vertexID)
-        number_of_singleton_vertices, numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches = self.determine_which_acyclic_regions(number_of_vertices)
+        
+    def create(self, number_of_vertices, nested_loop_graphs):
+        remaining_vertices           = number_of_vertices - len(nested_loop_graphs)
+        number_of_singleton_vertices = len(nested_loop_graphs)
+        number_of_if_then_else       = 0
+        number_of_if_then            = 0
+        number_of_short_circuit      = 0
+        number_of_switch             = 0
+        
+        if random.random() > 0.3:
+            remaining_vertices, number_of_if_then_else = self.determine_number_of_acyclic_region(4, remaining_vertices)
+        if random.random() > 0.3:
+            remaining_vertices, number_of_short_circuit = self.determine_number_of_acyclic_region(5, remaining_vertices)
+        if random.random() > 0.3:
+            remaining_vertices, number_of_if_then = self.determine_number_of_acyclic_region(3, remaining_vertices)
+        if random.random() > 0.3 and config.Arguments.fan_out > 2:
+            remaining_vertices, number_of_switch = self.determine_number_of_acyclic_region(2 + config.Arguments.fan_out, remaining_vertices)
+        
+        number_of_singleton_vertices += remaining_vertices
         for i in xrange(1, number_of_singleton_vertices):
             vertexID = self.disconnected_vertices.pop()
             self.singleton_vertices.append(vertexID)
-        self.add_acyclic_regions(numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches)
-        
-    def determine_which_acyclic_regions(self, number_of_vertices):
-        numberOfIfThenElses   = 0
-        numberOfIfThens       = 0
-        numberOfShortCircuits = 0
-        numberOfSwitches      = 0
-        if bool(random.getrandbits(1)):
-            number_of_vertices, numberOfIfThenElses = self.determine_number_of_acyclic_region(4, number_of_vertices)
-        if bool(random.getrandbits(1)):
-            number_of_vertices, numberOfIfThens = self.determine_number_of_acyclic_region(3, number_of_vertices)
-        if bool(random.getrandbits(1)):
-            number_of_vertices, numberOfShortCircuits = self.determine_number_of_acyclic_region(5, number_of_vertices)
-        if config.Arguments.fan_out > 2 and bool(random.getrandbits(1)):
-            number_of_vertices, numberOfSwitches = self.determine_number_of_acyclic_region(2 + config.Arguments.fan_out, number_of_vertices)
-        return number_of_vertices, numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches 
+        self.add_acyclic_regions(number_of_if_then_else, number_of_if_then, number_of_short_circuit, number_of_switch)
     
     def determine_number_of_acyclic_region(self, sizeOfComponent, number_of_vertices):
         numberOfComponents = 0
@@ -57,25 +64,25 @@ class CreateLoopBody:
             number_of_vertices -= sizeOfComponent * numberOfComponents
         return number_of_vertices, numberOfComponents
     
-    def add_acyclic_regions(self, numberOfIfThenElses, numberOfIfThens, numberOfShortCircuits, numberOfSwitches):
+    def add_acyclic_regions(self, number_of_if_then_else, number_of_if_then, number_of_short_circuit, number_of_switch):
         self.freeSESEs = []
-        while numberOfIfThenElses > 0 or numberOfIfThens > 0 or numberOfShortCircuits > 0 or numberOfSwitches > 0:
-            if numberOfIfThenElses > 0 and bool(random.getrandbits(1)):
+        while number_of_if_then_else > 0 or number_of_if_then > 0 or number_of_short_circuit > 0 or number_of_switch > 0:
+            if number_of_if_then_else > 0 and bool(random.getrandbits(1)):
                 sese = self.create_if_then_else()
                 self.freeSESEs.append(sese)
-                numberOfIfThenElses -= 1
-            if numberOfIfThens > 0 and bool(random.getrandbits(1)):
+                number_of_if_then_else -= 1
+            if number_of_if_then > 0 and bool(random.getrandbits(1)):
                 sese = self.create_if_then()
                 self.freeSESEs.append(sese)
-                numberOfIfThens -= 1
-            if numberOfShortCircuits > 0 and bool(random.getrandbits(1)):
+                number_of_if_then -= 1
+            if number_of_short_circuit > 0 and bool(random.getrandbits(1)):
                 sese = self.create_short_circuit()
                 self.freeSESEs.append(sese)
-                numberOfShortCircuits -= 1
-            if numberOfSwitches > 0 and bool(random.getrandbits(1)):
+                number_of_short_circuit -= 1
+            if number_of_switch > 0 and bool(random.getrandbits(1)):
                 sese = self.create_switch()
                 self.freeSESEs.append(sese)
-                numberOfSwitches -= 1
+                number_of_switch -= 1
     
     def create_switch(self):
         branchID = self.disconnected_vertices.pop()
@@ -147,7 +154,7 @@ class CreateLoopBody:
             SESE.exitID = nestedSESE.exitID
         return SESE
     
-    def connected_SESEs(self):
+    def connect_SESEs(self):
         while len(self.freeSESEs) > 1:
             sese1 = self.freeSESEs.pop()
             sese2 = self.freeSESEs.pop()
@@ -192,6 +199,29 @@ class CreateLoopBody:
             else:
                 self.directedg.addEdge(self.directedg.exitID, vertexID)
                 self.directedg.exitID = vertexID
+                
+    def add_nested_loop_entry_and_exit_edges(self, nested_loop_graphs):
+        candidate_sources = []
+        for v in self.directedg:
+            if v.number_of_successors() == 1 and v.vertexID != self.directedg.exitID:
+                candidate_sources.append(v.vertexID)
+        random.shuffle(candidate_sources)
+        assert len(candidate_sources) >= len(nested_loop_graphs), \
+        "Candidates = {%s}, nested loops = %d" % (','.join(str(vertexID) for vertexID in candidate_sources), len(nested_loop_graphs))
+        dfs = trees.DepthFirstSearch(self.directedg, self.directedg.entryID)
+        for nested_loop_graph in nested_loop_graphs:
+            # Connect to inner loop header
+            predID = candidate_sources.pop()
+            self.whole_program_CFG.addEdge(predID, nested_loop_graph.headerID)
+            # Connect inner loop exits to vertices whose post-order numbering is 
+            # less than the predecessor. 
+            # This ensures exit control flow is in a forward direction 
+            pred_post_order_idx    = dfs.post_order.index(predID)
+            candidate_destinations = dfs.post_order[:pred_post_order_idx]
+            for exitID in nested_loop_graph.exitIDs:
+                succ_post_order_idx = random.randint(0,len(candidate_destinations)-1)
+                succID              = candidate_destinations[succ_post_order_idx]
+                self.whole_program_CFG.addEdge(exitID, succID)
     
 class LoopComponent:
     def __init__ (self, directedg):
@@ -200,12 +230,15 @@ class LoopComponent:
         self.tailIDs   = set()
         self.exitIDs   = set()
         self.tailIDs.add(directedg.exitID)
-        for v in self.directedg:
-            if v.number_of_successors() == 1:
-                if random.random() < 0.2: 
-                    self.exitIDs.add(v.vertexID)
-                elif random.random() < 0.1:
-                    self.tailIDs.add(v.vertexID)
+        if config.Arguments.unstructured:
+            for v in self.directedg:
+                if v.number_of_successors() == 1:
+                    if random.random() < 0.2: 
+                        self.exitIDs.add(v.vertexID)
+                    elif random.random() < 0.1 and v.vertexID != self.headerID:
+                        self.tailIDs.add(v.vertexID)
+        if not self.tailIDs:
+            self.tailIDs.add(directedg.exitID)
         if not self.exitIDs:
             if bool(random.getrandbits(1)):
                 self.exitIDs.add(directedg.entryID)
@@ -215,253 +248,140 @@ class LoopComponent:
             directedg.addEdge(tailID, self.headerID)  
     
 class CreateCFG:
-    def __init__(self):
+    def __init__(self, name):
         self.loop_components = {}
-        self.generate_LNT()
-        self.create_CFG()
-        self.check_connected()
+        lnt_basic_structure  = self.generate_LNT()
+        self.cfg      = self.create_CFG(lnt_basic_structure)
+        self.cfg.name = name
+        self.lnt      = trees.LoopNests(self.cfg, self.cfg.get_entryID())
+        if config.Arguments.unstructured:
+            self.find_and_remove_merge_vertices(self.cfg, self.lnt)
+        self.check_connected(self.cfg)
     
     def generate_LNT(self):
-        self.lnt = trees.Tree()
+        lnt = trees.Tree()
         # Add vertices to the tree, including one extra for the dummy outer loop
-        vertexToLevel = {}
+        vertex_level = {}
         for i in xrange(1,config.Arguments.loops+2):
             treev = vertices.TreeVertex(i)
-            self.lnt.addVertex(treev)
-            self.lnt.rootID = i
-            vertexToLevel[i] = 0
+            lnt.addVertex(treev)
+            lnt.rootID = i
+            vertex_level[i] = 0
         # Add edges to the tree
-        parentID = self.lnt.rootID
-        for v in self.lnt:
-            if v.vertexID != self.lnt.rootID:
-                newLevel = vertexToLevel[parentID] + 1
+        parentID = lnt.rootID
+        for v in lnt:
+            if v.vertexID != lnt.rootID:
+                newLevel = vertex_level[parentID] + 1
                 if newLevel <= config.Arguments.nesting_depth:
-                    self.lnt.addEdge(parentID, v.vertexID)
-                    vertexToLevel[v.vertexID] = newLevel
+                    lnt.addEdge(parentID, v.vertexID)
+                    vertex_level[v.vertexID] = newLevel
                     parentID = v.vertexID
                 else:
                     # The height of the LNT now exceeds the maximum depth
                     # Backtrack to an arbitrary proper ancestor
                     ancestorID = parentID
                     while True:
-                        ancestorID = self.lnt.getVertex(ancestorID).parentID
-                        if bool(random.getrandbits(1)) or ancestorID == self.lnt.rootID:
+                        ancestorID = lnt.getVertex(ancestorID).parentID
+                        if bool(random.getrandbits(1)) or ancestorID == lnt.rootID:
                             break
                     parentID = ancestorID
-                    self.lnt.addEdge(parentID, v.vertexID)
-                    vertexToLevel[v.vertexID] = vertexToLevel[parentID] + 1
+                    lnt.addEdge(parentID, v.vertexID)
+                    vertex_level[v.vertexID] = vertex_level[parentID] + 1
                     parentID = v.vertexID
-        return self.lnt
+        return lnt
     
-    def create_CFG(self):
-        self.cfg = directed_graphs.CFG()
+    def create_CFG(self, lnt):
+        cfg = directed_graphs.CFG()
         number_of_vertices_per_loop = {}
         # Compute number of vertices in each loop
         number_of_vertices_remaining = config.Arguments.basic_blocks
-        for treev in self.lnt:
-            # Guarantee each loop has at least 2 vertices
-            number_of_vertices_per_loop[treev] = 2
-            number_of_vertices_remaining -= 2
+        for treev in lnt:
+            # Guarantee each loop has at least 2 vertices + vertices needed to 
+            # connect inner nested loops
+            min_vertices = 2 + treev.number_of_successors()
+            number_of_vertices_per_loop[treev] = min_vertices
+            number_of_vertices_remaining -= min_vertices
         while number_of_vertices_remaining > 0:
-            for treev in self.lnt:
+            for treev in lnt:
                 additional_vertices = random.randint(0, number_of_vertices_remaining)
                 number_of_vertices_per_loop[treev] += additional_vertices
                 number_of_vertices_remaining -= additional_vertices
         # Generate the acyclic region in each loop
-        for treev in self.lnt:
-            loop_body = CreateLoopBody(number_of_vertices_per_loop[treev], self.cfg)
-            self.loop_components[treev] = LoopComponent(loop_body.directedg)
-            if treev.vertexID == self.lnt.rootID:
-                self.cfg.set_entryID(loop_body.directedg.entryID)
-                self.cfg.set_exitID(loop_body.directedg.exitID)
-        for treev in self.lnt:
-            if treev.number_of_successors() > 0:
-                self.connect_nested_loops(treev)
-        if config.Arguments.unstructured:
-            self.find_and_remove_merge_vertices()
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
+                nested_loop_graphs = []
+                for succID in treev.successors.keys():
+                    succv = lnt.getVertex(succID)
+                    nested_loop_graphs.append(self.loop_components[succv])
+                loop_body = CreateLoopBody(number_of_vertices_per_loop[treev], cfg, nested_loop_graphs)
+                if treev.vertexID == lnt.rootID:
+                    cfg.set_entryID(loop_body.directedg.entryID)
+                    cfg.set_exitID(loop_body.directedg.exitID)
+                    cfg.addEdge(cfg.exitID, cfg.entryID)
+                else:
+                    self.loop_components[treev] = LoopComponent(loop_body.directedg)
+        return cfg
     
-    def connect_nested_loops(self, treev):
-        firstLoop  = None
-        secondLoop = None
-        if treev.number_of_successors() > 1:
-            succIDs  = treev.successors.keys()
-            while len(succIDs) > 1:
-                v1       = self.lnt.getVertex(succIDs.pop())
-                v2       = self.lnt.getVertex(succIDs[-1])
-                predLoop = self.loop_components[v1]
-                succLoop = self.loop_components[v2]
-                if not firstLoop:
-                    firstLoop = predLoop
-                secondLoop = succLoop
-                for exitID in predLoop.exitIDs:
-                    self.cfg.addEdge(exitID, succLoop.headerID)
-        else:
-            succID     = treev.successors.keys()[0] 
-            succv      = self.lnt.getVertex(succID)
-            firstLoop  = self.loop_components[succv]
-            secondLoop = self.loop_components[succv]
-        assert firstLoop, "The first loop component has not been set"
-        assert secondLoop, "The second loop component has not been set"
-        parentLoop   = self.loop_components[treev]
-        sourcev      = None
-        destinationv = None 
-        for v in parentLoop.directedg:
-            v = self.cfg.getVertex(v.vertexID) 
-            if v.number_of_successors() == 1 and v.successors.keys()[0] != parentLoop.headerID:
-                succID       = v.successors.keys()[0]
-                sourcev      = v
-                destinationv = self.cfg.getVertex(succID)
-                break
-        if not sourcev:
-            sourcev = self.cfg.getVertex(parentLoop.headerID)
-            succIDs = sourcev.successors.keys()
-            for succID in succIDs:
-                self.cfg.removeEdge(parentLoop.headerID, succID)
-            destinationID = succIDs[0]
-            for succID in succIDs:
-                if destinationID != succID:
-                    self.cfg.addEdge(destinationID, succID)
-            destinationv = self.cfg.getVertex(destinationID)
-        self.cfg.addEdge(sourcev.vertexID, firstLoop.headerID)
-        for exitID in secondLoop.exitIDs:
-            self.cfg.addEdge(exitID, destinationv.vertexID)
-    
-    def find_and_remove_merge_vertices(self):
-        disconnectedVertices = []
-        lnt                  = trees.LoopNests(self.cfg, self.cfg.get_entryID())
-        for v in self.cfg:
+    def find_and_remove_merge_vertices(self, cfg, lnt):
+        disconnected_vertices = []
+        # Remove merge vertices
+        for v in cfg:
             if v.number_of_predecessors() > 1 \
             and bool(random.getrandbits(1)) \
             and not (lnt.is_loop_header(v.vertexID) or 
-                 lnt.is_loop_tail(v.vertexID) or 
-                 lnt.is_loop_exit_source(v.vertexID) or 
-                 lnt.is_loop_exit_destination(v.vertexID) or 
-                 self.cfg.get_exitID() == v.vertexID):
+                     lnt.is_loop_tail(v.vertexID) or 
+                     lnt.is_loop_exit_source(v.vertexID) or 
+                     lnt.is_loop_exit_destination(v.vertexID) or 
+                     cfg.get_exitID() == v.vertexID):
                 for predID in v.predecessors.keys():
                     for succID in v.successors.keys():
-                        self.cfg.addEdge(predID, succID)
+                        if not cfg.hasEdge(predID, succID):
+                            cfg.addEdge(predID, succID)
                 for predID in v.predecessors.keys():
-                    self.cfg.removeEdge(predID, v.vertexID)
+                    cfg.removeEdge(predID, v.vertexID)
                 for succID in v.successors.keys():
-                    self.cfg.removeEdge(v.vertexID, succID)
-                disconnectedVertices.append(v)
-        candidateSources = []
-        for v in self.cfg:
-            if v.number_of_successors() == 1 and v.vertexID != self.cfg.get_exitID():
-                assert v not in disconnectedVertices
-                candidateSources.append(v)
-        for v in disconnectedVertices:
-            if candidateSources and bool(random.getrandbits(1)):
-                index   = random.randint(0, len(candidateSources) - 1)
-                otherv  = candidateSources[index]
-                for succID in otherv.successors.keys():
-                    self.cfg.addEdge(v.vertexID, succID)
-                self.cfg.addEdge(otherv.vertexID, v.vertexID)
+                    cfg.removeEdge(v.vertexID, succID)
+                disconnected_vertices.append(v)
+        # At this point there is a bunch of vertices disconnected from the CFG.
+        # Reconnect them to vertices which currently only have one successor or
+        # make the disconnected vertex the entry of the CFG
+        candidate_sources = []
+        for v in cfg:
+            if v.number_of_successors() == 1 and v.vertexID != cfg.exitID:
+                assert v not in disconnected_vertices
+                candidate_sources.append(v)
+        random.shuffle(candidate_sources)
+        for v in disconnected_vertices:
+            if candidate_sources and bool(random.getrandbits(1)):
+                source_idx = random.randint(0, len(candidate_sources)-1)
+                sourcev    = candidate_sources[source_idx]
+                for succID in sourcev.successors.keys():
+                    cfg.addEdge(v.vertexID, succID)
+                cfg.addEdge(sourcev.vertexID, v.vertexID)
             else:
-                self.cfg.addEdge(v.vertexID, self.cfg.get_entryID())
-                self.cfg.removeEdge(self.cfg.get_exitID(), self.cfg.get_entryID())
-                self.cfg.addEdge(self.cfg.get_exitID(), v.vertexID)
-                self.cfg.set_entryID(v.vertexID)
-        assert self.cfg.getVertex(self.cfg.get_entryID()).number_of_predecessors() == 1, "entry = %s" % self.cfg.getVertex(self.cfg.get_entryID())
-        assert self.cfg.getVertex(self.cfg.get_exitID()).number_of_successors() == 1, "exit = %s" % self.cfg.getVertex(self.cfg.get_exitID())
+                cfg.addEdge(v.vertexID, cfg.entryID)
+                cfg.removeEdge(cfg.exitID, cfg.entryID)
+                cfg.addEdge(cfg.exitID, v.vertexID)
+                cfg.set_entryID(v.vertexID)
+        assert cfg.getVertex(cfg.entryID).number_of_predecessors() == 1
+        assert cfg.getVertex(cfg.exitID).number_of_successors() == 1
     
-    def check_connected(self):
+    def check_connected(self, cfg):
         visited = set()
         stack   = []
-        stack.append(self.cfg.get_entryID())
+        stack.append(cfg.get_entryID())
         while stack:
             vertexID = stack.pop()
             visited.add(vertexID)
-            for succID in self.cfg.getVertex(vertexID).successors.keys():
+            for succID in cfg.getVertex(vertexID).successors.keys():
                 if succID not in visited:
                     stack.append(succID)
-        assert not set(self.cfg.the_vertices.keys()).difference(visited), "The CFG is not connected"
-
-def set_call_graph_root(program, candidateCallSites):
-    maxCallSites   = 0
-    totalCallSites = 0
-    rootName       = None
-    for subprogramName, the_vertices in candidateCallSites.iteritems():
-        if len(the_vertices) > maxCallSites:
-            maxCallSites = len(the_vertices)
-            rootName     = subprogramName
-        totalCallSites += len(the_vertices)
-    assert rootName, "Unable to find root for call graph"
-    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).vertexID)
-    assert totalCallSites >= program.getCallGraph().numOfVertices()-1, "Unable to link the call graph because there are %d subprograms but only %d call sites" % (program.getCallGraph().numOfVertices()-1, totalCallSites)  
-
-def add_tree_edges_to_call_graph(program, candidateCallSites):
-    disconnected = []
-    for callv in program.getCallGraph():
-        if callv.number_of_predecessors() == 0 and callv.vertexID != program.getCallGraph().getRootID():
-            disconnected.append(callv)
-    callerv = program.getCallGraph().getVertex(program.getCallGraph().getRootID())
-    while disconnected:
-        callerName = callerv.getName()
-        calleev    = disconnected.pop()
-        index      = random.randint(0,len(candidateCallSites[callerName])-1)
-        callSiteID = candidateCallSites[callerName][index].getVertexID()
-        del candidateCallSites[callerName][index]
-        program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
-        if not candidateCallSites[callv.getName()] or bool(random.getrandbits(1)):
-            for callv in program.getCallGraph():
-                if callv not in disconnected and candidateCallSites[callv.getName()]:
-                    callerv = callv
-                    
-def add_other_edges_to_call_graph(program, candidateCallSites):
-    callg = program.getCallGraph()
-    dfs   = trees.DepthFirstSearch(callg, callg.getRootID())
-    for vertexID in dfs.getPostorder():
-        calleev          = callg.getVertex(vertexID)
-        candidateCallers = []
-        for callv in callg:
-            if dfs.getPostID(callv.getVertexID()) > dfs.getPostID(vertexID) \
-            and candidateCallSites[callv.getName()] \
-            and not calleev.hasPredecessor(callv.getVertexID()):
-                candidateCallers.append(callv)
-        if candidateCallers:
-            numOfCallers = random.randint(1,len(candidateCallers))
-            for i in xrange(1,numOfCallers+1):
-                index   = random.randint(0,len(candidateCallers)-1)
-                callerv = candidateCallers[index]
-                del candidateCallers[index]
-                callerName     = callerv.getName()
-                numOfCallSites = random.randint(1,len(candidateCallSites[callerName]))
-                for j in xrange(1,numOfCallSites+1):
-                    index2     = random.randint(0,len(candidateCallSites[callerName])-1)
-                    callSiteID = candidateCallSites[callerName][index2].getVertexID()
-                    del candidateCallSites[callerName][index2]
-                    program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
-
-def cut_edges_from_call_graph(program):
-    callg      = program.getCallGraph()
-    candidates = []
-    for callv in callg:
-        if callv.number_of_predecessors() > 1:
-            candidates.append(callv) 
-    for callv in candidates:  
-        if bool(random.getrandbits(1)):
-            predIDs = callv.predecessors.keys()
-            index   = random.randint(0,len(predIDs)-1)
-            predID  = predIDs[index]
-            callg.removeEdge(predID, callv.getVertexID()) 
+        assert not set(cfg.the_vertices.keys()).difference(visited), "The CFG is not connected"
     
 def do_it():
-    candidateCallSites = {}
-    levelInCallgraph   = {}
-    program            = programs.Program()
-    for subprogramID in xrange(1, config.Arguments.subprograms+1):
-        subprogramName                     = "F%d" % subprogramID
-        candidateCallSites[subprogramName] = []
-        levelInCallgraph[subprogramName]   = 0
-        cfg                                = CreateCFG().cfg
-        cfg.name                           = subprogramName
-        program.add_CFG(cfg)
-        for v in cfg:
-            if v.number_of_successors() == 1 and v.vertexID != cfg.get_exitID():
-                candidateCallSites[subprogramName].append(v)
-    #set_call_graph_root(program, candidateCallSites)
-    #add_tree_edges_to_call_graph(program, candidateCallSites)
-    #add_other_edges_to_call_graph(program, candidateCallSites)
-    #cut_edges_from_call_graph(program)
+    program = programs.Program()
+    for functionID in xrange(1, config.Arguments.subprograms+1):
+        name = "f%d" % functionID
+        program.add_CFG(CreateCFG(name).cfg)
+    program.create_LNTs()
     return program

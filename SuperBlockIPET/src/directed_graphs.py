@@ -36,7 +36,7 @@ class DirectedGraph:
     def hasEdge(self, predID, succID):
         predv = self.getVertex(predID)
         succv = self.getVertex(succID)
-        return predv.has_successor(succID) or succv.hasPredecessor(predID)
+        return predv.has_successor(succID) or succv.has_predecessor(predID)
     
     def removeEdge(self, predID, succID):
         predv = self.getVertex(predID)
@@ -183,8 +183,7 @@ class CFG(FlowGraph):
                 without_successors.append(v.vertexID)
             if v.number_of_predecessors() == 0:
                 without_predecessors.append(v.vertexID)
-                
-        entryID = None
+
         if len(without_predecessors) == 0:
             debug.exit_message("CFG '%s' does not have an entry point" % self.name)
         elif len(without_predecessors) > 1:
@@ -194,13 +193,8 @@ class CFG(FlowGraph):
                 debug_info += bb.__str__()
             debug.exit_message("CFG '%s' has too many entry points: %s" % (self.name, debug_info))
         else:
-            entryID = self.get_next_vertexID()
-            entryv  = vertices.CFGVertex(entryID)
-            self.addVertex(entryv)
-            self.set_entryID(entryID)
-            self.addEdge(entryID, without_predecessors[0])
-        
-        exitID = None
+            self.entryID = without_predecessors[0]
+
         if len(without_successors) == 0:
             debug.exit_message("CFG '%s' does not have an exit point" % self.name)
         elif len(without_successors) > 1:
@@ -210,14 +204,10 @@ class CFG(FlowGraph):
                 debug_info += bb.__str__()
             debug.exit_message("CFG '%s' has too many exit points: %s" % (self.name, debug_info))
         else:
-            exitID = self.get_next_vertexID()
-            exitv  = vertices.CFGVertex(exitID)
-            self.addVertex(exitv)
-            self.set_exitID(exitID)
-            self.addEdge(without_successors[0], exitID)
-        assert entryID, "Unable to set entry ID"
-        assert exitID, "Unable to set exit ID"
-        self.addEdge(exitID, entryID)
+            self.exitID = without_successors[0]
+        assert self.entryID, "Unable to set entry ID"
+        assert self.exitID, "Unable to set exit ID"
+        self.addEdge(self.exitID, self.entryID)
         
     def set_entryID(self, entryID):
         assert entryID in self.the_vertices, "Cannot find vertex " + str(entryID) + " in vertices"

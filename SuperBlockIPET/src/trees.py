@@ -69,6 +69,13 @@ class Tree(directed_graphs.DirectedGraph):
         else:
             for level in sorted(the_vertices.keys()):
                 yield the_vertices[level]
+                
+    def check_is_tree(self):
+        without_predecessors = set()
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                without_predecessors.add(v)
+        assert len(without_predecessors) == 1                
         
 class DepthFirstSearch (Tree):
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY')
@@ -205,11 +212,13 @@ class LoopNests (Tree):
         self.loop_entry_edges  = {}
         self.initialise()
         self.find_loops(rootID)
+        self.add_edges()
         self.find_loop_exits()
         self.find_loop_entries()
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
         self.rootID = self.abstract_vertices[rootID]
+        self.check_is_tree()
         
     def initialise(self):
         for v in self.__directedg:
@@ -219,17 +228,16 @@ class LoopNests (Tree):
     def find_loops(self, rootID):
         predom_tree = Dominators(self.__directedg, rootID)
         for vertexID in reversed(self.__dfs.pre_order):
-            v           = self.__directedg.getVertex(vertexID)
-            loop_tailID = None
+            v = self.__directedg.getVertex(vertexID)
             for predID in v.predecessors.keys():
                 if self.__dfs.isDFSBackedge(predID, vertexID):
                     assert predom_tree.isAncestor(vertexID, predID), "Non-reducible loop found with DFS backedge %d => %d" % (predID, vertexID)
                     debug.debug_message("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), __name__, 15)
-                    loop_tailID = self.__parent[predID]
-            if loop_tailID is not None:
-                self.find_loop_body(loop_tailID, vertexID)
-            
-    def find_loop_body(self, loop_tailID, headerID):
+                    self.add_new_loop(vertexID)
+                    self.loop_back_edges[vertexID].add((predID, vertexID))
+                    self.find_loop_body(predID, vertexID)
+                    
+    def add_new_loop(self, headerID, ):
         if headerID not in self.abstract_vertices.keys():
             newID   = self.get_next_vertexID()
             headerv = vertices.HeaderVertex(newID, headerID)
@@ -239,9 +247,22 @@ class LoopNests (Tree):
             self.loop_back_edges[headerID]   = set()
             self.loop_exit_edges[headerID]   = set()
             self.loop_entry_edges[headerID]  = set()
-        self.loop_back_edges[headerID].add((loop_tailID, headerID))
+            
+    def add_edges(self):
+        for headerID, loop_body in self.loop_bodies.iteritems():
+            abstractID = self.abstract_vertices[headerID]
+            self.addEdge(abstractID, headerID)
+            for vertexID in loop_body:
+                if vertexID in self.abstract_vertices.keys():
+                    if vertexID != headerID:
+                        inner_abstractID = self.abstract_vertices[vertexID]
+                        self.addEdge(abstractID, inner_abstractID)
+                else:
+                    self.addEdge(abstractID, vertexID)        
+            
+    def find_loop_body(self, tailID, headerID):
         work_list = []
-        work_list.append(loop_tailID)
+        work_list.append(tailID)
         loop_body = set()
         while work_list:
             listID = work_list.pop()
@@ -254,18 +275,10 @@ class LoopNests (Tree):
                     and repID not in loop_body \
                     and repID != headerID:
                         work_list.append(repID)
-        if loop_body:
-            parentID = self.abstract_vertices[headerID]
-            self.addEdge(parentID, headerID)
-            for vertexID in loop_body:
-                self.__parent[vertexID] = headerID
-                if vertexID in self.abstract_vertices.keys():
-                    childID = self.abstract_vertices[vertexID]
-                    self.addEdge(parentID, childID)
-                else:
-                    self.addEdge(parentID, vertexID)
-            self.loop_bodies[headerID].add(headerID)
-            self.loop_bodies[headerID].update(loop_body)
+        for vertexID in loop_body:
+            self.__parent[vertexID] = headerID
+        self.loop_bodies[headerID].add(headerID)
+        self.loop_bodies[headerID].update(loop_body)             
             
     def find_loop_exits(self):
         for headerID in self.abstract_vertices.keys():
