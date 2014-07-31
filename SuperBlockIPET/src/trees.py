@@ -379,11 +379,10 @@ class LoopNests (Tree):
     
     def induced_loop_subgraph(self, headerv):
         assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
-        enhanced_CFG                     = directed_graphs.EnhancedCFG()
-        worklist                         = []
-        analysed                         = set()
-        inner_loop_exit_edge_header      = {}
-        inner_loop_exit_edge_edge_vertex = {} 
+        enhanced_CFG                = directed_graphs.EnhancedCFG()
+        worklist                    = []
+        analysed                    = set()
+        inner_loop_exit_edge_header = {}
         # Start work list with loop tails
         for predID in self.get_loop_tails(headerv.headerID):
             predv = self.__directedg.getVertex(predID)

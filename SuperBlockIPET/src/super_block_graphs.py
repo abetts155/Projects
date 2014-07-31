@@ -21,7 +21,6 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
                     enhanced_CFG          = lnt.induced_loop_subgraph(treev)
-                    enhanced_CFG.patch_back_edges_with_correct_header(lnt.get_loop_tails(treev.headerID), treev.headerID)
                     udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
                     predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
                     enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
@@ -97,32 +96,13 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
             succv = lnt.getVertex(succID)
             if isinstance(succv, vertices.HeaderVertex):
                 inner_subgraph = self.per_loop_subgraphs[succv.headerID]
-                # Re-link super blocks created in inner loops which contain loop-exit edges to the current loop
-                for exit_edge in lnt.get_loop_exit_edges(succv.headerID):
-                    # Find the super block containing the loop-exit edge in the 
-                    # subgraph created for the inner loop
-                    exit_edge_superv = inner_subgraph.program_point_to_superv[exit_edge]
-                    assert exit_edge_superv.number_of_predecessors() == 1
-                    # It should have a unique predecessor.
-                    # We want to re-link that predecessor to the super block containing the loop-exit 
-                    # edge in the subgraph created for its outer loop
-                    exit_edge_pred_superv = self.getVertex(exit_edge_superv.predecessors.keys()[0])
-                    succ_superv           = subgraph.program_point_to_superv[exit_edge]
-                    self.addEdge(exit_edge_pred_superv.vertexID, succ_superv.vertexID) 
-                    # Fix the successor partition information
-                    basic_block_predID = exit_edge[0]
-                    exit_edge_pred_superv.successor_partitions[basic_block_predID].add(succ_superv.vertexID)
-                    exit_edge_pred_superv.successor_partitions[basic_block_predID].remove(exit_edge_superv.vertexID)
-                    # And now delete the super block containing the loop-exit edge in the 
-                    # subgraph created for the inner loop
-                    self.removeVertex(exit_edge_superv.vertexID)
                 # Add loop-entry edges into the inner loop
                 for entry_edge in lnt.get_loop_entry_edges(succv.headerID):
                     # The program point represents a CFG loop-entry edge.
                     # Find the super block which contains the destination of the CFG edge 
                     # and link the super blocks
                     entry_edge_superv = subgraph.program_point_to_superv[entry_edge]
-                    succ_superv       = inner_subgraph.program_point_to_superv[entry_edge[1]]
+                    succ_superv       = inner_subgraph.program_point_to_superv[succv.headerID]
                     self.addEdge(entry_edge_superv.vertexID, succ_superv.vertexID)
     
     def find_super_block_for_header(self, headerID):

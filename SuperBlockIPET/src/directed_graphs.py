@@ -165,6 +165,7 @@ class EnhancedCFG(FlowGraph):
     def patch_back_edges_with_correct_header(self, loop_tails, headerID):
         for v in self:
             if isinstance(v, vertices.CFGEdge) and v.dummy:
+                print v.edge
                 pred_basic_block = self.getVertex(v.edge[0])
                 succ_basic_block = self.getVertex(v.edge[1])
                 if pred_basic_block.vertexID in loop_tails and succ_basic_block.dummy:
