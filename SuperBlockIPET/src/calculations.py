@@ -5,10 +5,10 @@ import os
 import timeit
 import subprocess
 import shlex
-import decimal
 import abc
 import random
 import re
+import decimal
 
 edge_variable_prefix   = "E_"
 vertex_variable_prefix = "V_"
@@ -114,12 +114,12 @@ class ILP(ConstraintSystem):
         for line in stdout.split(os.linesep):
             line = line.strip()
             if line.startswith("Value of objective function"):
-                lexemes = shlex.split(line)
-                self.wcet = long(decimal.Decimal(lexemes[-1])) 
+                lexemes   = shlex.split(line)
+                self.wcet = long(round(float(lexemes[-1]))) 
             elif line.startswith(edge_variable_prefix) or line.startswith(vertex_variable_prefix):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Incorrectly detected variable execution count line '%s'" % line
-                self.variable_execution_counts[lexemes[0]] = int(lexemes[1]) 
+                self.variable_execution_counts[lexemes[0]] = long(decimal.Decimal(lexemes[1])) 
 
 class CreateCFGILP(ILP):
     def __init__ (self, data, cfg, lnt):
