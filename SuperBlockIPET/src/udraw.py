@@ -137,10 +137,14 @@ def write_super_block_vertex(superv, the_file):
     for idx, program_point in enumerate(superv.program_points):
         if isinstance(program_point, vertices.CFGVertex):
             name += "%d" % (program_point.vertexID)
-        else:
+        elif isinstance(program_point, vertices.CFGEdge):
             name += "(%d, %d)" % (program_point.edge[0], program_point.edge[1])
+        else:
+            name += "%d"% (program_point.headerID)
         if idx < len(superv.program_points) - 1:
             name += new_line
+    if superv.exit_edge:
+        the_file.write(set_color(COLOR.YELLOW))
     the_file.write(set_name(name))
     the_file.write(end_attrs)
     

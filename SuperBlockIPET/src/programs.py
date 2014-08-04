@@ -3,6 +3,7 @@ from __future__ import print_function
 import trees
 import super_block_graphs
 import udraw
+import debug
 import database
 import calculations
 import config
@@ -42,6 +43,7 @@ class Program():
             
     def create_super_block_CFGs(self):
         for name, cfg in self.cfgs.iteritems():
+            debug.debug_message("Analysing CFG %s" % name, __name__, 5)
             self.super_block_cfgs[name] = super_block_graphs.SuperBlockCFG(cfg, self.lnts[name])
             udraw.make_file(self.super_block_cfgs[name], "%s.superg" % (name))
 
