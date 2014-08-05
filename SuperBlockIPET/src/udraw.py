@@ -151,15 +151,26 @@ def write_super_block_vertex(superv, the_file):
     the_file.write(set_name(name))
     the_file.write(end_attrs)
     
+    added = set()
     the_file.write(begin_attrs)
-    for succID in superv.successors.keys():
-        the_file.write(new_edge)
-        the_file.write(begin_attrs)
-        the_file.write(set_name(str(succID)))
-        the_file.write(end_attrs)
-        the_file.write(edge_link(succID))
-        the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n")   
+    for branchID, partition in superv.successor_partitions.iteritems():
+        for succID in partition:
+            the_file.write(new_edge)
+            the_file.write(begin_attrs)
+            the_file.write(set_name("%d" % branchID))
+            the_file.write(end_attrs)
+            the_file.write(edge_link(succID))
+            the_file.write(end_edge + ",\n")
+            added.add(succID)
+            
+    for succe in superv.successors.values():
+        if succe.vertexID not in added:
+            the_file.write(new_edge)
+            the_file.write(begin_attrs)
+            the_file.write(end_attrs)
+            the_file.write(edge_link(succe.vertexID))
+            the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")  
 
 def writeTreeVertex (tree, vertexID, the_file):
     v = tree.getVertex(vertexID)
