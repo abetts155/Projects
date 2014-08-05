@@ -4,7 +4,6 @@ import trees
 import super_block_graphs
 import udraw
 import debug
-import database
 import calculations
 import config
 import sys
