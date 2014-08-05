@@ -4,6 +4,7 @@ import vertices
 import debug
 import database
 import re
+import random
 
 cfg_lexeme         = "cfg"
 basic_block_lexeme = "bb"
@@ -25,7 +26,9 @@ def write_file(program, filename):
                 the_file.write("%s: " % successors_lexeme)
                 if cfg.get_exitID() != v.vertexID:
                     for succID in v.successors.keys():
-                        the_file.write("(%s, %d)" % (cfg.name, succID))
+                        the_file.write("(%s, %d) " % (cfg.name, succID))
+                the_file.write("\n")  
+                the_file.write("%s: %d" % (wcet_lexeme, random.randint(1,50)))
                 the_file.write("\n" * 2)  
     
 def read_file(filename):

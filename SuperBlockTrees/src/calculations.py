@@ -19,7 +19,8 @@ class TreeBasedCalculation:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Doing calculation for loop with header %d" % treev.headerID, __name__, 1)
                     subgraph    = super_block_cfg.per_loop_subgraphs[treev.headerID]
-                    dfs         = trees.DepthFirstSearch(subgraph, subgraph.rootID)
+                    rootv       = super_block_cfg.find_super_block_for_header(treev.headerID)
+                    dfs         = trees.DepthFirstSearch(subgraph, rootv.vertexID)
                     last_superv = None
                     for vertexID in dfs.post_order:
                         last_superv = super_block_cfg.getVertex(vertexID)

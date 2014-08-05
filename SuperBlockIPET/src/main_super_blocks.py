@@ -55,6 +55,11 @@ def the_command_line ():
                         help="use integer linear programming to solve WCET estimation constraint system",
                         default=False)
     
+    parser.add_argument("--use-tree-based",
+                        action="store_true",
+                        help="use tree-based calculation to compute a WCET estimate",
+                        default=False)
+    
     parser.add_argument("-v",
                         "--verbose",
                         action="store_true",
@@ -63,15 +68,15 @@ def the_command_line ():
     
     parser.parse_args(namespace=config.Arguments)
     
-    if not (config.Arguments.use_ilp or config.Arguments.use_clp):
-        debug.exit_message("You must calculate specify which solver technology to use with --use-ilp or --use-clp")
+    if not (config.Arguments.use_ilp or config.Arguments.use_clp or config.Arguments.use_tree_based):
+        debug.exit_message("You must calculate specify how to calculate a WCET estimate with --use-ilp or --use-clp or --use-tree-based")
     
     setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
     setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
         
 if __name__ == "__main__": 
     threading.stack_size(67108864) # 64MB stack
-    sys.setrecursionlimit(2 ** 20)
+    sys.setrecursionlimit(2**20)
     the_command_line()
     data, program = program_input_output.read_file(config.Arguments.program_file)
     program.create_LNTs()

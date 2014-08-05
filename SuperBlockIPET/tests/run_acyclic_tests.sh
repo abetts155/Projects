@@ -7,8 +7,9 @@ function ctrl_c()
   exit 0
 }
 
-for i in {10..100}
+for i in {100..300}
 do
-  python ../src/main_generate_program.py . --basic-blocks $i --unstructured --subprograms 10 --filename program$i.txt
-  python ../src/main_super_blocks.py program$i.txt --repeat-calculation 10 --shuffle-constraints --log-to-file program$i.output.txt --use-ilp
+  echo "===============================> $i"
+  python ../src/main_generate_program.py . --basic-blocks $i --unstructured --filename program$i.txt --subprograms 10
+  python ../src/main_super_blocks.py program$i.txt --shuffle-constraints --use-ilp --use-tree-based
 done

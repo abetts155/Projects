@@ -28,9 +28,9 @@ class FunctionData:
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     if treev.vertexID == lnt.rootID:
-                        self.upper_bounds_on_headers[treev.headerID] = 1
+                        self.upper_bounds_on_headers[treev.headerID] = [1]
                     else:
-                        self.upper_bounds_on_headers[treev.headerID] = random.randint(3, 10)
+                        self.upper_bounds_on_headers[treev.headerID] = [random.randint(3, 10)]
                         
 class Database:
     def __init__(self):

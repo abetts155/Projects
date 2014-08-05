@@ -15,7 +15,7 @@ class SolverInformation:
         self.constraint_system  = constraint_system
         self.solve_times        = []
         
-class CalculationInformation:
+class ConstraintBasedCalculationInformation:
     def __init__(self, name):
         self.name                                = name
         self.cfg_calculations                    = {}
@@ -24,11 +24,12 @@ class CalculationInformation:
     
 class Program():
     def __init__(self):
-        self.cfgs             = {}
-        self.lnts             = {}
-        self.super_block_cfgs = {}
-        self.ilps             = CalculationInformation("ILP")
-        self.clps             = CalculationInformation("CLP")
+        self.cfgs                    = {}
+        self.lnts                    = {}
+        self.super_block_cfgs        = {}
+        self.ilps                    = ConstraintBasedCalculationInformation("ILP")
+        self.clps                    = ConstraintBasedCalculationInformation("CLP")
+        self.tree_based_calculations = {}
         
     def add_CFG(self, cfg):
         assert cfg.name
@@ -61,55 +62,98 @@ class Program():
             super_block_cfg_folded_calculation.solve()
             super_block_cfg_folded_times.append(super_block_cfg_folded_calculation.solve_time)
             print("Super block CFG (folded):: WCET(%s) = %d" % (cfg.name, super_block_cfg_folded_calculation.wcet))
-            assert cfg_calculation.wcet == super_block_cfg_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_calculation.wcet) 
-            assert cfg_calculation.wcet == super_block_cfg_folded_calculation.wcet, "Disparity in WCETs: (%f, %f)" % (cfg_calculation.wcet, super_block_cfg_folded_calculation.wcet)
+            assert cfg_calculation.wcet == super_block_cfg_calculation.wcet, "Disparity in WCETs for %s: (%f, %f)" % (cfg.name, cfg_calculation.wcet, super_block_cfg_calculation.wcet) 
+            assert cfg_calculation.wcet == super_block_cfg_folded_calculation.wcet, "Disparity in WCETs for %s: (%f, %f)" % (cfg.name, cfg_calculation.wcet, super_block_cfg_folded_calculation.wcet)
         return cfg_times, super_block_cfg_times, super_block_cfg_folded_times
     
-    def do_wcet_calculation(self, data):
+    def do_CLP_calculation(self, data):
         for cfg in self.cfgs.values():
             lnt           = self.lnts[cfg.name]
             superg        = self.super_block_cfgs[cfg.name]
             function_data = data.function_data[cfg.name]
+            
+            cfg_clp_calculation                                     = calculations.CreateCFGCLP(function_data, cfg, lnt)
+            self.clps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_clp_calculation)
+            super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(function_data, cfg, lnt, superg)
+            self.clps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_clp_calculation)
+            super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(function_data, cfg, lnt, superg)
+            self.clps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_clp_folded_calculation)
+            cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
+                                                                                                     self.clps.cfg_calculations[cfg.name].constraint_system, 
+                                                                                                     self.clps.super_block_cfg_calculations[cfg.name].constraint_system,
+                                                                                                     self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system)
+            
+            self.clps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
+            self.clps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
+            self.clps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
+            if not config.Arguments.keep_temps:
+                self.clps.cfg_calculations[cfg.name].constraint_system.clean()
+                self.clps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
+                self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean() 
+    
+    def do_ILP_calculation(self, data):
+        for cfg in self.cfgs.values():
+            lnt           = self.lnts[cfg.name]
+            superg        = self.super_block_cfgs[cfg.name]
+            function_data = data.function_data[cfg.name]
+            
+            cfg_ilp_calculation                                     = calculations.CreateCFGILP(function_data, cfg, lnt)
+            self.ilps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_ilp_calculation)
+            super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(function_data, cfg, lnt, superg)
+            self.ilps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_ilp_calculation)
+            super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(function_data, cfg, lnt, superg)
+            self.ilps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_ilp_folded_calculation)  
+            cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
+                                                                                                     self.ilps.cfg_calculations[cfg.name].constraint_system, 
+                                                                                                     self.ilps.super_block_cfg_calculations[cfg.name].constraint_system,
+                                                                                                     self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system) 
+            self.ilps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
+            self.ilps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
+            self.ilps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
+            if not config.Arguments.keep_temps:
+                self.ilps.cfg_calculations[cfg.name].constraint_system.clean()
+                self.ilps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
+                self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
+    
+    def do_tree_based_calculation(self, data):
+        for cfg in self.cfgs.values(): 
+            self.tree_based_calculations[cfg.name] = []
+            lnt           = self.lnts[cfg.name]
+            superg        = self.super_block_cfgs[cfg.name]
+            function_data = data.function_data[cfg.name]
+            for i in range(1, config.Arguments.repeat_calculation + 1):
+                print("===== Repetition %d =====" % i)
+                tree_based_calculation = calculations.TreeBasedCalculation(function_data, lnt, superg)
+                print("Tree::                     WCET(%s) = %d" % (cfg.name, tree_based_calculation.wcet))
+                self.tree_based_calculations[cfg.name].append(tree_based_calculation)
+                if config.Arguments.use_ilp:
+                    cfg_calculation = self.ilps.cfg_calculations[cfg.name].constraint_system
+                    assert cfg_calculation.wcet == tree_based_calculation.wcet, "Disparity in WCETs for %s: (%f, %f)" % (cfg.name, cfg_calculation.wcet, tree_based_calculation.wcet) 
+    
+    def do_wcet_calculation(self, data):
+        for cfg in self.cfgs.values():
+            function_data = data.function_data[cfg.name]
             function_data.assign_wcets_to_basic_blocks(cfg)
-            function_data.assign_loop_bounds(lnt)
-            if config.Arguments.use_ilp:
-                cfg_ilp_calculation                                     = calculations.CreateCFGILP(function_data, cfg, lnt)
-                self.ilps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_ilp_calculation)
-                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(function_data, cfg, lnt, superg)
-                self.ilps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_ilp_calculation)
-                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(function_data, cfg, lnt, superg)
-                self.ilps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_ilp_folded_calculation)  
-                cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
-                                                                                                         self.ilps.cfg_calculations[cfg.name].constraint_system, 
-                                                                                                         self.ilps.super_block_cfg_calculations[cfg.name].constraint_system,
-                                                                                                         self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system) 
-                self.ilps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
-                self.ilps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
-                self.ilps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
-                if not config.Arguments.keep_temps:
-                    self.ilps.cfg_calculations[cfg.name].constraint_system.clean()
-                    self.ilps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
-                    self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
-            if config.Arguments.use_clp:
-                cfg_clp_calculation                                     = calculations.CreateCFGCLP(function_data, cfg, lnt)
-                self.clps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_clp_calculation)
-                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(function_data, cfg, lnt, superg)
-                self.clps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_clp_calculation)
-                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(function_data, cfg, lnt, superg)
-                self.clps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_clp_folded_calculation)
-                cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
-                                                                                                         self.clps.cfg_calculations[cfg.name].constraint_system, 
-                                                                                                         self.clps.super_block_cfg_calculations[cfg.name].constraint_system,
-                                                                                                         self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system)
-                
-                self.clps.cfg_calculations[cfg.name].solve_times.extend(cfg_times)
-                self.clps.super_block_cfg_calculations[cfg.name].solve_times.extend(super_block_cfg_times)
-                self.clps.super_block_cfg_folded_calculations[cfg.name].solve_times.extend(super_block_cfg_folded_times)
-                if not config.Arguments.keep_temps:
-                    self.clps.cfg_calculations[cfg.name].constraint_system.clean()
-                    self.clps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
-                    self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()               
-     
+            function_data.assign_loop_bounds(self.lnts[cfg.name])
+        if config.Arguments.use_ilp:
+            self.do_ILP_calculation(data)
+        if config.Arguments.use_clp:
+            self.do_CLP_calculation(data)
+        if config.Arguments.use_tree_based:
+            self.do_tree_based_calculation(data)
+    
+    def print_results_of_individual_tree_based_calculation(self, cfg, calculation_information):
+        solve_times = [calculation.solve_time for calculation in calculation_information[cfg.name]]
+        print("""
+Tree
+Function     = %s 
+min time     = %f
+max time     = %f
+average time = %f""" % \
+(cfg.name, 
+numpy.amin(solve_times),
+numpy.amax(solve_times), 
+numpy.average(solve_times)))
                 
     def print_results_of_individual_cfg(self, cfg, calculation_information):                 
         print("""
@@ -172,6 +216,8 @@ numpy.average(calculation_information.super_block_cfg_folded_calculations[cfg.na
                     self.print_results_of_individual_cfg(cfg, self.ilps)
                 if config.Arguments.use_clp:
                     self.print_results_of_individual_cfg(cfg, self.clps)
+                if config.Arguments.use_tree_based:
+                    self.print_results_of_individual_tree_based_calculation(cfg, self.tree_based_calculations)
         finally:
             if config.Arguments.log_to_file:
                 log_file.close()

@@ -28,8 +28,9 @@ class Database:
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     if treev.vertexID == lnt.rootID:
-                        self.upper_bounds_on_headers[treev.headerID] = 1
+                        self.upper_bounds_on_headers[treev.headerID] = [1]
                     else:
                         self.upper_bounds_on_headers[treev.headerID] = random.randint(3, 10)
+                    debug.debug_message("Loop bound(%d) = %s" % (treev.headerID, self.upper_bounds_on_headers[treev.headerID]), __name__, 1)
 
         
