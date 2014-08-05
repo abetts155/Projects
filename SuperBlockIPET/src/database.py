@@ -1,7 +1,6 @@
 import debug
 import vertices
 import random
-import numpy
 
 class FunctionData:
     def __init__(self):        
@@ -25,18 +24,7 @@ class FunctionData:
                 debug.debug_message("WCET(%d) = %d" % (v.vertexID, self.basic_block_WCETs[v.vertexID]), __name__, 1)
     
     def assign_loop_bounds(self, lnt):
-        for the_vertices in lnt.level_by_level_iterator(False):
-            for treev in the_vertices:
-                if isinstance(treev, vertices.HeaderVertex):
-                    if treev.vertexID == lnt.rootID:
-                        self.upper_bounds_on_headers[treev.headerID] = (1,)
-                    else:
-                        parentv               = lnt.getVertex(treev.parentID)
-                        upper_bound_on_parent = numpy.sum(list(self.upper_bounds_on_headers[parentv.headerID]))
-                        upper_bound = ()
-                        for i in xrange(1,upper_bound_on_parent+1):
-                            upper_bound += (random.randint(1, 20),)
-                        self.upper_bounds_on_headers[treev.headerID] = upper_bound
+        self.upper_bounds_on_headers = lnt.get_random_loop_bounds()
                         
 class Database:
     def __init__(self):

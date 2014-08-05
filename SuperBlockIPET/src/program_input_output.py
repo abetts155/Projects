@@ -5,7 +5,6 @@ import vertices
 import debug
 import database
 import re
-import random
 import numpy
 
 cfg_lexeme         = "cfg"
@@ -23,19 +22,7 @@ def write_file(program, filename):
     with open(filename, 'w') as the_file:
         for cfg in program.cfgs.values():
             lnt          = trees.LoopNests(cfg, cfg.get_entryID())
-            upper_bounds = {}
-            for the_vertices in lnt.level_by_level_iterator(False):
-                for treev in the_vertices:
-                    if isinstance(treev, vertices.HeaderVertex):
-                        if treev.vertexID == lnt.rootID:
-                            upper_bounds[treev.headerID] = (1,)
-                        else:
-                            parentv = lnt.getVertex(treev.parentID)
-                            upper_bound_on_parent = numpy.sum(list(upper_bounds[parentv.headerID]))
-                            upper_bound = ()
-                            for i in xrange(1,upper_bound_on_parent+1):
-                                upper_bound += (random.randint(1, 20),)
-                            upper_bounds[treev.headerID] = upper_bound
+            upper_bounds = lnt.get_random_loop_bounds()
             the_file.write("%s: %s\n" % (cfg_lexeme, cfg.name))
             for v in cfg:
                 the_file.write("%s: %d\n" % (basic_block_lexeme, v.vertexID))
@@ -44,7 +31,7 @@ def write_file(program, filename):
                     for succID in v.successors.keys():
                         the_file.write("(%s, %d) " % (cfg.name, succID))
                 the_file.write("\n")  
-                the_file.write("%s: %d" % (wcet_lexeme, random.randint(1,50)))
+                the_file.write("%s: %d" % (wcet_lexeme, numpy.random.randint(1,50)))
                 if v.vertexID in upper_bounds:                
                     the_file.write("\n")
                     the_file.write("%s: %s" % (upper_bound_lexeme, upper_bounds[v.vertexID]))

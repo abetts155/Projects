@@ -20,7 +20,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                    enhanced_CFG          = lnt.induced_loop_subgraph(treev)
+                    enhanced_CFG          = lnt.induce_loop_subgraph(treev)
                     udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
                     dfs                  = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
                     predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())

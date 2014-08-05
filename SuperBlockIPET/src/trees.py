@@ -1,6 +1,7 @@
 import directed_graphs
 import vertices
 import debug
+import numpy
 import utils
 
 class Tree(directed_graphs.DirectedGraph):
@@ -381,16 +382,59 @@ class LoopNests (Tree):
     def is_nested(self, left, right):
         return self.isProperAncestor(right, left)             
     
-    def induced_loop_subgraph(self, headerv):
+    def get_random_loop_bounds(self):
+        upper_bounds = {}
+        reverseg     = self.__directedg.get_reverse_graph() 
+        for the_vertices in self.level_by_level_iterator(False):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    if treev.level == 0:
+                        upper_bounds[treev.headerID] = (1,)
+                    elif treev.level == 1:
+                        upper_bounds[treev.headerID] = (numpy.random.randint(1, 20),)
+                    else:                            
+                        parentv = self.getVertex(treev.parentID)
+                        exit_path_vertices = self.get_vertices_on_exits_paths(parentv, reverseg)
+                        upper_bound = ()
+                        for number_of_iterations in upper_bounds[parentv.headerID]:
+                            for i in range(1, number_of_iterations+1):
+                                if i == number_of_iterations:
+                                    if treev.headerID in exit_path_vertices:
+                                        upper_bound += (numpy.random.randint(1, 20),)
+                                    else:
+                                        upper_bound += (0,)
+                                else:
+                                    upper_bound += (numpy.random.randint(1, 20),)
+                        upper_bounds[treev.headerID] = upper_bound
+        return upper_bounds
+    
+    def get_vertices_on_exits_paths(self, headerv, reverseg):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        analysed = set()
+        stack    = []
+        for vertexID in self.get_loop_exit_sources(headerv.headerID):
+            v = reverseg.getVertex(vertexID)
+            if v not in stack:
+                stack.append(v)
+        while stack:
+            v = stack.pop()
+            analysed.add(v.vertexID)
+            if v.vertexID != headerv.headerID:
+                for succID in v.successors.keys():
+                    if succID not in analysed:
+                        stack.append(reverseg.getVertex(succID))
+        return analysed
+                
+    def induce_loop_subgraph(self, headerv):
         assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
         enhanced_CFG = directed_graphs.EnhancedCFG()
         worklist     = []
         analysed     = set()
         # Start work list with loop tails
-        for predID in self.get_loop_tails(headerv.headerID):
-            predv = self.__directedg.getVertex(predID)
-            if predv not in worklist:
-                worklist.append(predv)
+        for vertexID in self.get_loop_tails(headerv.headerID):
+            v = self.__directedg.getVertex(vertexID)
+            if v not in worklist:
+                worklist.append(v)
         # Work backwards through flow graph until the header is reached, adding edges found along the way
         while worklist:                        
             v = worklist.pop()
