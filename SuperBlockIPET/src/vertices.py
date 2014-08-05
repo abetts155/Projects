@@ -1,4 +1,5 @@
 import edges
+import collections
 
 dummyID = 0
 
@@ -109,6 +110,7 @@ class SuperBlock (Vertex):
         self.headerID = headerID
         self.program_points = []
         self.representative = None
-        self.successor_partitions = {}
+        self.successor_partitions = collections.OrderedDict()
+        self.exit_edge_partitions = set()
         self.exit_edge = False
         
