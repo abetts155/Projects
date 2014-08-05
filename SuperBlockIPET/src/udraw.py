@@ -113,9 +113,12 @@ def write_CFG_vertex(cfg, vertexID, the_file):
     the_file.write(begin_attrs)
     if isinstance(v, vertices.CFGVertex):
         the_file.write(set_name(str(vertexID)))
-    else:
+    elif isinstance(v, vertices.CFGEdge):
         name = str(v.edge) + "\\n" + str(vertexID)
         the_file.write(set_name(name))
+    else:
+        the_file.write(set_name(str(vertexID)))
+        the_file.write(set_color(COLOR.RED))
     if v.dummy:
         the_file.write(set_color(COLOR.YELLOW))
     the_file.write(end_attrs)
