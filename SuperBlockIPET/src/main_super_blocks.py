@@ -28,6 +28,11 @@ def the_command_line ():
     parser.add_argument("--log-to-file",
                         help="log output to this file")
     
+    parser.add_argument("--randomise-WCET-data",
+                        action="store_true",
+                        help="randomise data used in WCET calculation, overriding any data supplied in the program file",
+                        default=False)
+    
     parser.add_argument("--repeat-calculation",
                         type=int,
                         help="repeat the calculation this many times",
@@ -36,7 +41,7 @@ def the_command_line ():
     
     parser.add_argument("--shuffle-constraints",
                         action="store_true",
-                        help="before repeating the solve stage of the WCET calculation, shuffle the constraints",
+                        help="before repeating the solve stage of a constraint-based WCET calculation, shuffle the constraints",
                         default=False)
         
     parser.add_argument("-u",

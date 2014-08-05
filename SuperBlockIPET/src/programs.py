@@ -131,10 +131,11 @@ class Program():
                     assert cfg_calculation.wcet == tree_based_calculation.wcet, "Disparity in WCETs for %s: (%f, %f)" % (cfg.name, cfg_calculation.wcet, tree_based_calculation.wcet) 
     
     def do_wcet_calculation(self, data):
-        for cfg in self.cfgs.values():
-            function_data = data.function_data[cfg.name]
-            function_data.assign_wcets_to_basic_blocks(cfg)
-            function_data.assign_loop_bounds(self.lnts[cfg.name])
+        if config.Arguments.randomise_WCET_data:
+            for cfg in self.cfgs.values():
+                function_data = data.function_data[cfg.name]
+                function_data.assign_wcets_to_basic_blocks(cfg)
+                function_data.assign_loop_bounds(self.lnts[cfg.name])
         if config.Arguments.use_ilp:
             self.do_ILP_calculation(data)
         if config.Arguments.use_clp:
