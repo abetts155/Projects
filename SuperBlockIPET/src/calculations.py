@@ -1031,12 +1031,13 @@ class TreeBasedCalculation:
     def compute_wcet_of_super_block(self, data, lnt, super_block_cfg, superv, treev):
         # Sum up the contribution of each basic block in the super block
         intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev)
+        debug.debug_message("superv = %d, intra-super-block wcet = %d" % (superv.vertexID, intra_superv_wcet), __name__, 10)
         if superv.number_of_successors() == 0:
             self.superv_wcets[superv][treev.headerID] = intra_superv_wcet
         else:
             # Add in the contribution caused by branching control flow
             if superv.number_of_successors() > 1:
-                self.compute_max_of_branches(data, super_block_cfg, superv, intra_superv_wcet)
+                self.compute_max_of_branches(data, super_block_cfg, superv, treev, intra_superv_wcet)
             # Add in the contribution caused by merging of control flow
             for succID in superv.merge_super_blocks:
                 succ_superv = super_block_cfg.getVertex(succID)
@@ -1046,8 +1047,7 @@ class TreeBasedCalculation:
                     else:
                         self.superv_wcets[superv][key] = numpy.add(self.superv_wcets[succ_superv][key], intra_superv_wcet) 
         for key in self.superv_wcets[superv]:
-            pass
-            #print "superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key])
+            debug.debug_message("superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key]), __name__, 1)
     
     def compute_execution_time_within_super_block(self, data, lnt, superv, treev):
         wcet = 0
@@ -1063,25 +1063,41 @@ class TreeBasedCalculation:
                 wcet = numpy.add(wcet, self.loop_wcets[program_point.headerID])
         return wcet
     
-    def compute_max_of_branches(self, data, super_block_cfg, superv, intra_superv_wcet):
-        wcets = collections.OrderedDict()
-        for the_partition in superv.successor_partitions.values():
-            partition_wcets = collections.OrderedDict()
-            for succID in the_partition:
-                succ_superv = super_block_cfg.getVertex(succID)
-                for key in self.superv_wcets[succ_superv]:
-                    if key not in partition_wcets:
-                        partition_wcets[key] = self.superv_wcets[succ_superv][key]
-                    else:
-                        partition_wcets[key] = numpy.maximum(partition_wcets[key], self.superv_wcets[succ_superv][key])
-                if succ_superv.exit_edge:                    
-                    the_edge = succ_superv.representative.edge
-                    partition_wcets[(the_edge[0], the_edge[1])] = 0
-            for key, wcet in partition_wcets.iteritems():
-                if key not in wcets:
-                    wcets[key] = wcet
+    def compute_max_of_branches(self, data, super_block_cfg, superv, treev, intra_superv_wcet):
+        wcets_at_superv = collections.OrderedDict()
+        partition_wcets = collections.OrderedDict()
+        last_branchID   = None
+        for branchID, the_partition in superv.successor_partitions.iteritems():
+            wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
+            partition_wcets[branchID] = wcets_within_partition
+            if last_branchID is not None:
+                for key in wcets_within_partition.keys():
+                    if key != treev.headerID:
+                        wcets_within_partition[key] +=  partition_wcets[last_branchID][treev.headerID] 
+            for key, wcet in wcets_within_partition.iteritems():
+                if key not in wcets_at_superv:
+                    wcets_at_superv[key] = wcet
                 else:
-                    wcets[key] = numpy.add(wcets[key], wcet)
-        for key, wcet in wcets.iteritems():
+                    wcets_at_superv[key] = numpy.add(wcets_at_superv[key], wcet)
+            last_branchID = branchID
+        for key, wcet in wcets_at_superv.iteritems():
             self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
-        
+            
+    def compute_wcet_within_partition(self, super_block_cfg, treev, wcets_at_superv, the_partition):        
+        wcets_within_partition = collections.OrderedDict()
+        for succID in the_partition:
+            succ_superv = super_block_cfg.getVertex(succID)
+            for key in self.superv_wcets[succ_superv]:
+                if key not in wcets_within_partition:
+                    # We have not yet encountered this key in the partition
+                    wcets_within_partition[key] = self.superv_wcets[succ_superv][key]
+                else:
+                    # Take the maximum value among the elements in the partition
+                    wcets_within_partition[key] = numpy.maximum(wcets_within_partition[key], self.superv_wcets[succ_superv][key])
+            if succ_superv.exit_edge:                    
+                the_edge = succ_superv.representative.edge
+                if treev.headerID in wcets_at_superv:
+                    wcets_within_partition[(the_edge[0], the_edge[1])] = wcets_at_superv[treev.headerID]
+                else:
+                    wcets_within_partition[(the_edge[0], the_edge[1])] = 0
+        return wcets_within_partition
