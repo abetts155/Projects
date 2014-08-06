@@ -1015,10 +1015,14 @@ class TreeBasedCalculation:
                     if treev.level > 0:
                         for key in self.superv_wcets[root_superv]:
                             if key == treev.headerID:
+                                upper_bound      = 0
                                 upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
-                                upper_bound      = numpy.sum(upper_bound_list) 
-                                if not lnt.is_do_while_loop(treev.headerID):
-                                    upper_bound -= 1   
+                                for value in upper_bound_list:
+                                    if value > 0:
+                                        if not lnt.is_do_while_loop(treev.headerID):
+                                            upper_bound += value - 1
+                                        else:
+                                            upper_bound += value
                                 self.loop_wcets[treev.headerID] = self.superv_wcets[root_superv][treev.headerID] * upper_bound
                             else:
                                 self.loop_wcets[key] = self.superv_wcets[root_superv][key]
@@ -1065,21 +1069,19 @@ class TreeBasedCalculation:
     
     def compute_max_of_branches(self, data, super_block_cfg, superv, treev, intra_superv_wcet):
         wcets_at_superv = collections.OrderedDict()
-        branch_wcets    = collections.OrderedDict()
-        last_branchID   = None
-        for branchID, the_partition in superv.successor_partitions.iteritems():
+        wcet_for_header = 0
+        for the_partition in superv.successor_partitions.values():
             wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
-            branch_wcets[branchID] = wcets_within_partition
-            if last_branchID is not None:
-                for key in wcets_within_partition.keys():
-                    if key != treev.headerID:
-                        wcets_within_partition[key] +=  branch_wcets[last_branchID][treev.headerID] 
+            for key in wcets_within_partition.keys():
+                if key != treev.headerID:
+                    wcets_within_partition[key] = numpy.add(wcet_for_header, wcets_within_partition[key])
             for key, wcet in wcets_within_partition.iteritems():
                 if key not in wcets_at_superv:
                     wcets_at_superv[key] = wcet
                 else:
                     wcets_at_superv[key] = numpy.add(wcets_at_superv[key], wcet)
-            last_branchID = branchID
+                if key == treev.headerID:
+                    wcet_for_header = numpy.add(wcet, wcet_for_header)
         for key, wcet in wcets_at_superv.iteritems():
             self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
             
