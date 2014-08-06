@@ -1005,50 +1005,48 @@ class TreeBasedCalculation:
                     debug.debug_message("Doing calculation for loop with header %d" % treev.headerID, __name__, 1)
                     subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
                     for superv in subgraph:
-                        self.superv_wcets[(superv, treev)] = None
+                        self.superv_wcets[superv] = {}
+                        self.superv_wcets[superv][treev] = 0
                     root_superv = super_block_cfg.find_super_block_for_header(treev.headerID)
                     dfs         = trees.DepthFirstSearch(subgraph, root_superv.vertexID)
                     for vertexID in dfs.post_order:
                         superv = super_block_cfg.getVertex(vertexID)
-                        self.superv_wcets[(superv, treev)] = self.compute_wcet_of_super_block(data, lnt, super_block_cfg, superv, treev)
+                        # Sum up the contribution of each basic block in the super block
+                        wcet = self.compute_execution_time_within_super_block(data, superv, treev)
+                        if superv.number_of_successors() > 1:
+                            # Add in the contribution caused by branching control flow
+                            self.compute_max_of_branches(data, super_block_cfg, superv, treev)
                         if superv.number_of_predecessors() > 1:
                             # Propagate the WCET to predecessors which merge at this super block
                             self.propagate_wcets_to_predecessors(super_block_cfg, superv, treev)
+                        else:
+                            for key in self.superv_wcets[superv]:
+                                self.superv_wcets[superv][key] += wcet
                     self.per_loop_wcets[treev.headerID] = self.superv_wcets[(root_superv, treev)]
         rootv = lnt.getVertex(lnt.rootID)
         return self.per_loop_wcets[rootv.headerID]
-                    
-    def compute_wcet_of_super_block(self, data, lnt, super_block_cfg, superv, headerv):
-        # Sum up the contribution of each basic block in the super block
-        wcet = self.compute_execution_time_within_super_block(data, superv, headerv)
-        wcet = numpy.multiply(wcet, data.get_upper_bound_on_header(headerv.headerID))
-        if superv.number_of_successors() > 1:
-            # Add in the contribution caused by branching control flow
-            wcet = numpy.add(wcet, self.compute_max_of_branches(data, super_block_cfg, superv, headerv))
-        return wcet
-        
+    
     def compute_execution_time_within_super_block(self, data, superv, headerv):
-        if self.superv_wcets[(superv, headerv)] is None:
-            wcet = numpy.array([0 * bound for bound in data.get_upper_bound_on_header(headerv.headerID)])
-        else:
-            wcet = self.superv_wcets[(superv, headerv)]
+        wcet = 0
         for program_point in superv.program_points:
             if isinstance(program_point, vertices.CFGVertex):
-                wcet = numpy.add(data.get_basic_block_wcet(program_point.vertexID), wcet)
-        return wcet   
+                wcet += data.get_basic_block_wcet(program_point.vertexID)
+        return wcet
     
     def compute_max_of_branches(self, data, super_block_cfg, superv, headerv):
-        wcet = [0 * bound for bound in data.get_upper_bound_on_header(headerv.headerID)]
-        for branchID, the_partition in superv.successor_partitions.iteritems():
-            max_wcet = [0 * bound for bound in data.get_upper_bound_on_header(headerv.headerID)]
+        wcet = 0
+        for the_partition in superv.successor_partitions.values():
+            max_wcet = 0
             for succID in the_partition:
                 succ_superv = super_block_cfg.getVertex(succID)
                 max_wcet    = numpy.maximum(self.superv_wcets[(succ_superv, headerv)], max_wcet)
+                if succ_superv.exit_edge:
+                    self.superv_wcets[(superv, succ_superv)] = 0
             wcet = numpy.add(max_wcet, wcet)
         return wcet
     
     def propagate_wcets_to_predecessors(self, super_block_cfg, superv, headerv):
         for predID in superv.predecessors.keys():
             pred_superv = super_block_cfg.getVertex(predID)
-            self.superv_wcets[(pred_superv, headerv)] = self.superv_wcets[(superv, headerv)]
+            self.superv_wcets[pred_superv][headerv] = self.superv_wcets[superv][headerv]
         
