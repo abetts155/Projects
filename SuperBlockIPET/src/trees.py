@@ -336,8 +336,8 @@ class LoopNests (Tree):
     def is_loop_exit_source(self, vertexID):
         for headerID in self.abstract_vertices.keys():
             if self.is_loop_exit_source_for_header(headerID, vertexID):
-                return True
-        return False
+                return headerID
+        return None
     
     def is_loop_exit_destination_for_header(self, headerID, vertexID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -346,8 +346,8 @@ class LoopNests (Tree):
     def is_loop_exit_destination(self, vertexID):
         for headerID in self.abstract_vertices.keys():
             if self.is_loop_exit_destination_for_header(headerID, vertexID):
-                return True
-        return False
+                return headerID
+        return None
     
     def get_loop_entry_edges(self, headerID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -356,8 +356,8 @@ class LoopNests (Tree):
     def is_loop_entry_edge(self, predID, succID):
         for headerID in self.abstract_vertices.keys():
             if (predID, succID) in self.loop_entry_edges[headerID]:
-                return True
-        return False
+                return headerID
+        return None
     
     def is_loop_exit_edge_for_header(self, headerID, predID, succID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
@@ -366,8 +366,8 @@ class LoopNests (Tree):
     def is_loop_exit_edge(self, predID, succID):
         for headerID in self.abstract_vertices.keys():
             if (predID, succID) in self.loop_exit_edges[headerID]:
-                return True
-        return False
+                return headerID
+        return None
     
     def is_loop_back_edge(self, predID, succID):
         for headerID in self.abstract_vertices.keys():
@@ -378,6 +378,12 @@ class LoopNests (Tree):
     def is_loop_back_edge_for_header(self, headerID, predID, succID):
         assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
         return (predID, succID) in self.loop_back_edges[headerID]
+    
+    def is_do_while_loop(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        exit_sources = set(self.get_loop_exit_sources(headerID))
+        tails        = set(self.get_loop_tails(headerID))
+        return exit_sources.issubset(tails)
     
     def is_nested(self, left, right):
         return self.isProperAncestor(right, left)             

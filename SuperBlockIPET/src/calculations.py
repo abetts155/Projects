@@ -11,6 +11,7 @@ import re
 import decimal
 import numpy
 import trees
+import collections
 
 edge_variable_prefix   = "E_"
 vertex_variable_prefix = "V_"
@@ -991,12 +992,12 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
             
 class TreeBasedCalculation:
     def __init__(self, data, lnt, super_block_cfg):
-        self.superv_wcets   = {}
-        self.per_loop_wcets = {}
-        start               = timeit.default_timer()
-        self.wcet           = self.do_computation(data, lnt, super_block_cfg)
-        end                 = timeit.default_timer()
-        self.solve_time     = end - start
+        self.superv_wcets = {}
+        self.loop_wcets   = {}
+        start             = timeit.default_timer()
+        self.wcet         = self.do_computation(data, lnt, super_block_cfg)
+        end               = timeit.default_timer()
+        self.solve_time   = end - start
         
     def do_computation(self, data, lnt, super_block_cfg):
         for the_vertices in lnt.level_by_level_iterator(True):
@@ -1006,47 +1007,81 @@ class TreeBasedCalculation:
                     subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
                     for superv in subgraph:
                         self.superv_wcets[superv] = {}
-                        self.superv_wcets[superv][treev] = 0
                     root_superv = super_block_cfg.find_super_block_for_header(treev.headerID)
                     dfs         = trees.DepthFirstSearch(subgraph, root_superv.vertexID)
                     for vertexID in dfs.post_order:
                         superv = super_block_cfg.getVertex(vertexID)
-                        # Sum up the contribution of each basic block in the super block
-                        wcet = self.compute_execution_time_within_super_block(data, superv, treev)
-                        if superv.number_of_successors() > 1:
-                            # Add in the contribution caused by branching control flow
-                            self.compute_max_of_branches(data, super_block_cfg, superv, treev)
-                        if superv.number_of_predecessors() > 1:
-                            # Propagate the WCET to predecessors which merge at this super block
-                            self.propagate_wcets_to_predecessors(super_block_cfg, superv, treev)
-                        else:
-                            for key in self.superv_wcets[superv]:
-                                self.superv_wcets[superv][key] += wcet
-                    self.per_loop_wcets[treev.headerID] = self.superv_wcets[(root_superv, treev)]
+                        self.compute_wcet_of_super_block(data, lnt, super_block_cfg, superv, treev)
+                    if treev.level > 0:
+                        for key in self.superv_wcets[root_superv]:
+                            if key == treev.headerID:
+                                upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
+                                upper_bound      = numpy.sum(upper_bound_list) 
+                                if not lnt.is_do_while_loop(treev.headerID):
+                                    upper_bound -= 1   
+                                self.loop_wcets[treev.headerID] = self.superv_wcets[root_superv][treev.headerID] * upper_bound
+                            else:
+                                self.loop_wcets[key] = self.superv_wcets[root_superv][key]
+                    else:
+                        self.loop_wcets[treev.headerID] = self.superv_wcets[root_superv][treev.headerID]
+                    debug.debug_message("WCET(header %d) = %s" % (treev.headerID, self.loop_wcets[treev.headerID]), __name__, 10)
         rootv = lnt.getVertex(lnt.rootID)
-        return self.per_loop_wcets[rootv.headerID]
+        return self.loop_wcets[rootv.headerID]
     
-    def compute_execution_time_within_super_block(self, data, superv, headerv):
+    def compute_wcet_of_super_block(self, data, lnt, super_block_cfg, superv, treev):
+        # Sum up the contribution of each basic block in the super block
+        intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev)
+        if superv.number_of_successors() == 0:
+            self.superv_wcets[superv][treev.headerID] = intra_superv_wcet
+        else:
+            # Add in the contribution caused by branching control flow
+            if superv.number_of_successors() > 1:
+                self.compute_max_of_branches(data, super_block_cfg, superv, intra_superv_wcet)
+            # Add in the contribution caused by merging of control flow
+            for succID in superv.merge_super_blocks:
+                succ_superv = super_block_cfg.getVertex(succID)
+                for key in self.superv_wcets[succ_superv]:
+                    if key in self.superv_wcets[superv]:
+                        self.superv_wcets[superv][key] = numpy.add(self.superv_wcets[succ_superv][key], self.superv_wcets[superv][key]) 
+                    else:
+                        self.superv_wcets[superv][key] = numpy.add(self.superv_wcets[succ_superv][key], intra_superv_wcet) 
+        for key in self.superv_wcets[superv]:
+            pass
+            #print "superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key])
+    
+    def compute_execution_time_within_super_block(self, data, lnt, superv, treev):
         wcet = 0
         for program_point in superv.program_points:
             if isinstance(program_point, vertices.CFGVertex):
-                wcet += data.get_basic_block_wcet(program_point.vertexID)
+                wcet = numpy.add(wcet, data.get_basic_block_wcet(program_point.vertexID))
+            elif isinstance(program_point, vertices.CFGEdge):
+                the_edge       = program_point.edge
+                inner_headerID = lnt.is_loop_exit_edge(the_edge[0], the_edge[1])
+                if inner_headerID and inner_headerID != treev.headerID and not lnt.is_do_while_loop(inner_headerID):
+                    wcet = numpy.add(wcet, self.loop_wcets[(the_edge[0], the_edge[1])])
+            else:
+                wcet = numpy.add(wcet, self.loop_wcets[program_point.headerID])
         return wcet
     
-    def compute_max_of_branches(self, data, super_block_cfg, superv, headerv):
-        wcet = 0
+    def compute_max_of_branches(self, data, super_block_cfg, superv, intra_superv_wcet):
+        wcets = collections.OrderedDict()
         for the_partition in superv.successor_partitions.values():
-            max_wcet = 0
+            partition_wcets = collections.OrderedDict()
             for succID in the_partition:
                 succ_superv = super_block_cfg.getVertex(succID)
-                max_wcet    = numpy.maximum(self.superv_wcets[(succ_superv, headerv)], max_wcet)
-                if succ_superv.exit_edge:
-                    self.superv_wcets[(superv, succ_superv)] = 0
-            wcet = numpy.add(max_wcet, wcet)
-        return wcet
-    
-    def propagate_wcets_to_predecessors(self, super_block_cfg, superv, headerv):
-        for predID in superv.predecessors.keys():
-            pred_superv = super_block_cfg.getVertex(predID)
-            self.superv_wcets[pred_superv][headerv] = self.superv_wcets[superv][headerv]
+                for key in self.superv_wcets[succ_superv]:
+                    if key not in partition_wcets:
+                        partition_wcets[key] = self.superv_wcets[succ_superv][key]
+                    else:
+                        partition_wcets[key] = numpy.maximum(partition_wcets[key], self.superv_wcets[succ_superv][key])
+                if succ_superv.exit_edge:                    
+                    the_edge = succ_superv.representative.edge
+                    partition_wcets[(the_edge[0], the_edge[1])] = 0
+            for key, wcet in partition_wcets.iteritems():
+                if key not in wcets:
+                    wcets[key] = wcet
+                else:
+                    wcets[key] = numpy.add(wcets[key], wcet)
+        for key, wcet in wcets.iteritems():
+            self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
         

@@ -25,6 +25,8 @@ class FunctionData:
     
     def assign_loop_bounds(self, lnt):
         self.upper_bounds_on_headers = lnt.get_random_loop_bounds()
+        for headerID, value in self.upper_bounds_on_headers.iteritems():
+            debug.debug_message("Bound(%d) = %s" % (headerID, value), __name__, 1)
                         
 class Database:
     def __init__(self):

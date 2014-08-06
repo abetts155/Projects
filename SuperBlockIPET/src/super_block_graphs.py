@@ -73,8 +73,8 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
             program_point = enhanced_CFG.getVertex(vertexID)
             if program_point in first_program_point_to_super_block:
                 superv = first_program_point_to_super_block[program_point]
-                if isinstance(program_point, vertices.CFGVertex):
-                    # The program point represents a CFG vertex.
+                if isinstance(program_point, vertices.CFGVertex) or isinstance(program_point, vertices.HeaderVertex):
+                    # The program point represents a CFG vertex or an abstract loop vertex.
                     # Find the CFG edges incident to the CFG vertex.
                     # Then find the super blocks containing those CFG edges
                     basic_block = enhanced_CFG.getVertex(program_point.vertexID)
@@ -82,8 +82,10 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                         predv = enhanced_CFG.getVertex(predID)
                         assert isinstance(predv, vertices.CFGEdge)
                         pred_superv = subgraph.program_point_to_superv[predv.edge]
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)      
-                elif isinstance(program_point, vertices.CFGEdge):
+                        self.addEdge(pred_superv.vertexID, superv.vertexID)  
+                        pred_superv.merge_super_blocks.add(superv.vertexID)    
+                else:
+                    assert isinstance(program_point, vertices.CFGEdge)
                     # The program point represents a CFG edge.
                     # Find the super block which contains the source of the CFG edge 
                     # and link the super blocks
@@ -95,8 +97,6 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                         if basic_block_predID not in pred_superv.successor_partitions:
                             pred_superv.successor_partitions[basic_block_predID] = set()
                         pred_superv.successor_partitions[basic_block_predID].add(superv.vertexID)
-                        if superv.exit_edge:
-                            pred_superv.exit_edge_partitions.add(basic_block_predID)
                     else:
                         inner_headerv = lnt.getVertex(lnt.getVertex(basic_block_predID).parentID)
                         pred_superv   = subgraph.program_point_to_superv[inner_headerv.vertexID] 
@@ -106,16 +106,6 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                         pred_superv.successor_partitions[inner_headerv.headerID].add(superv.vertexID)
                         if superv.exit_edge:
                             pred_superv.exit_edge_partitions.add(inner_headerv.headerID)
-                else:   
-                    # The program point represents an abstract loop vertex.
-                    # Find the super block which contain loop-entry edges into the inner loops 
-                    # and link the super blocks
-                    basic_block = enhanced_CFG.getVertex(program_point.vertexID)
-                    for predID in basic_block.predecessors.keys():
-                        predv = enhanced_CFG.getVertex(predID)
-                        assert isinstance(predv, vertices.CFGEdge)
-                        pred_superv = subgraph.program_point_to_superv[predv.edge]
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)
             
     def find_super_block_for_header(self, headerID):
         return self.per_loop_subgraphs[headerID].program_point_to_superv[headerID]

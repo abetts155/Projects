@@ -107,10 +107,10 @@ class CFGEdge(Vertex):
 class SuperBlock (Vertex):
     def __init__ (self, vertexID, headerID):
         Vertex.__init__(self, vertexID)
-        self.headerID = headerID
-        self.program_points = []
-        self.representative = None
+        self.headerID             = headerID
+        self.program_points       = []
+        self.representative       = None
         self.successor_partitions = collections.OrderedDict()
-        self.exit_edge_partitions = set()
-        self.exit_edge = False
+        self.merge_super_blocks   = set()
+        self.exit_edge            = False
         
