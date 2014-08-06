@@ -1065,15 +1065,15 @@ class TreeBasedCalculation:
     
     def compute_max_of_branches(self, data, super_block_cfg, superv, treev, intra_superv_wcet):
         wcets_at_superv = collections.OrderedDict()
-        partition_wcets = collections.OrderedDict()
+        branch_wcets    = collections.OrderedDict()
         last_branchID   = None
         for branchID, the_partition in superv.successor_partitions.iteritems():
             wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
-            partition_wcets[branchID] = wcets_within_partition
+            branch_wcets[branchID] = wcets_within_partition
             if last_branchID is not None:
                 for key in wcets_within_partition.keys():
                     if key != treev.headerID:
-                        wcets_within_partition[key] +=  partition_wcets[last_branchID][treev.headerID] 
+                        wcets_within_partition[key] +=  branch_wcets[last_branchID][treev.headerID] 
             for key, wcet in wcets_within_partition.iteritems():
                 if key not in wcets_at_superv:
                     wcets_at_superv[key] = wcet
@@ -1096,8 +1096,5 @@ class TreeBasedCalculation:
                     wcets_within_partition[key] = numpy.maximum(wcets_within_partition[key], self.superv_wcets[succ_superv][key])
             if succ_superv.exit_edge:                    
                 the_edge = succ_superv.representative.edge
-                if treev.headerID in wcets_at_superv:
-                    wcets_within_partition[(the_edge[0], the_edge[1])] = wcets_at_superv[treev.headerID]
-                else:
-                    wcets_within_partition[(the_edge[0], the_edge[1])] = 0
+                wcets_within_partition[(the_edge[0], the_edge[1])] = 0
         return wcets_within_partition
