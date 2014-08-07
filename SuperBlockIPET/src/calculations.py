@@ -267,26 +267,27 @@ class CreateSuperBlockCFGILP(ILP):
                 self.the_constraints.append(new_constraint)
             if superv.number_of_successors() > 1:
                 for partition in superv.successor_partitions.values():
-                    new_constraint = ""
-                    new_constraint += get_execution_count_variable_for_program_point(superv.representative)
-                    new_constraint += LpSolve.equals
-                    counter = len(partition)
-                    for succID in partition:
-                        super_succv = super_block_cfg.getVertex(succID)
-                        if super_succv.exit_edge:
-                            headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
-                            parent_headerv  = lnt.getVertex(headerv.parentID)
-                            parent_subgraph = super_block_cfg.per_loop_subgraphs[parent_headerv.headerID]
-                            super_succv     = parent_subgraph.program_point_to_superv[super_succv.representative.edge]
-                            if headerv.headerID not in self.header_to_exit_super_blocks:
-                                self.header_to_exit_super_blocks[headerv.headerID] = set()
-                            self.header_to_exit_super_blocks[headerv.headerID].add(super_succv)
-                        new_constraint += get_execution_count_variable_for_program_point(super_succv.representative)
-                        if counter > 1:
-                            new_constraint += LpSolve.plus
-                        counter -= 1
-                    new_constraint += LpSolve.semi_colon
-                    self.the_constraints.append(new_constraint)
+                    if len(partition) > 1:
+                        new_constraint = ""
+                        new_constraint += get_execution_count_variable_for_program_point(superv.representative)
+                        new_constraint += LpSolve.equals
+                        counter = len(partition)
+                        for succID in partition:
+                            super_succv = super_block_cfg.getVertex(succID)
+                            if super_succv.exit_edge:
+                                headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
+                                parent_headerv  = lnt.getVertex(headerv.parentID)
+                                parent_subgraph = super_block_cfg.per_loop_subgraphs[parent_headerv.headerID]
+                                super_succv     = parent_subgraph.program_point_to_superv[super_succv.representative.edge]
+                                if headerv.headerID not in self.header_to_exit_super_blocks:
+                                    self.header_to_exit_super_blocks[headerv.headerID] = set()
+                                self.header_to_exit_super_blocks[headerv.headerID].add(super_succv)
+                            new_constraint += get_execution_count_variable_for_program_point(super_succv.representative)
+                            if counter > 1:
+                                new_constraint += LpSolve.plus
+                            counter -= 1
+                        new_constraint += LpSolve.semi_colon
+                        self.the_constraints.append(new_constraint)
             
     def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
         for the_vertices in lnt.level_by_level_iterator(True):
@@ -361,27 +362,28 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                 self.the_constraints.append(new_constraint)
             if superv.number_of_successors() > 1:
                 for partition in superv.successor_partitions.values():
-                    new_constraint = ""
-                    new_constraint += get_vertex_execution_count_variable(superv.vertexID)
-                    new_constraint += LpSolve.equals
-                    counter = len(partition)
-                    for succID in partition:
-                        super_succv = super_block_cfg.getVertex(succID)
-                        if super_succv.exit_edge:
-                            headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
-                            parent_headerv  = lnt.getVertex(headerv.parentID)
-                            parent_subgraph = super_block_cfg.per_loop_subgraphs[parent_headerv.headerID]
-                            super_succv     = parent_subgraph.program_point_to_superv[super_succv.representative.edge]
-                            if headerv.headerID not in self.header_to_exit_super_blocks:
-                                self.header_to_exit_super_blocks[headerv.headerID] = set()
-                            self.header_to_exit_super_blocks[headerv.headerID].add(super_succv)
-                        new_constraint += get_vertex_execution_count_variable(super_succv.vertexID)
-                        if counter > 1:
-                            new_constraint += LpSolve.plus
-                        counter -= 1
-                    new_constraint += LpSolve.semi_colon
-                    self.the_constraints.append(new_constraint)                      
-            
+                    if len(partition) > 1:
+                        new_constraint = ""
+                        new_constraint += get_vertex_execution_count_variable(superv.vertexID)
+                        new_constraint += LpSolve.equals
+                        counter = len(partition)
+                        for succID in partition:
+                            super_succv = super_block_cfg.getVertex(succID)
+                            if super_succv.exit_edge:
+                                headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
+                                parent_headerv  = lnt.getVertex(headerv.parentID)
+                                parent_subgraph = super_block_cfg.per_loop_subgraphs[parent_headerv.headerID]
+                                super_succv     = parent_subgraph.program_point_to_superv[super_succv.representative.edge]
+                                if headerv.headerID not in self.header_to_exit_super_blocks:
+                                    self.header_to_exit_super_blocks[headerv.headerID] = set()
+                                self.header_to_exit_super_blocks[headerv.headerID].add(super_succv)
+                            new_constraint += get_vertex_execution_count_variable(super_succv.vertexID)
+                            if counter > 1:
+                                new_constraint += LpSolve.plus
+                            counter -= 1
+                        new_constraint += LpSolve.semi_colon
+                        self.the_constraints.append(new_constraint)                      
+                
     def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
@@ -1039,17 +1041,22 @@ class TreeBasedCalculation:
         if superv.number_of_successors() == 0:
             self.superv_wcets[superv][treev.headerID] = intra_superv_wcet
         else:
-            # Add in the contribution caused by branching control flow
-            if superv.number_of_successors() > 1:
-                self.compute_max_of_branches(data, super_block_cfg, superv, treev, intra_superv_wcet)
-            # Add in the contribution caused by merging of control flow
-            for succID in superv.merge_super_blocks:
-                succ_superv = super_block_cfg.getVertex(succID)
-                for key in self.superv_wcets[succ_superv]:
-                    if key in self.superv_wcets[superv]:
-                        self.superv_wcets[superv][key] = numpy.add(self.superv_wcets[succ_superv][key], self.superv_wcets[superv][key]) 
+            wcets_at_superv = collections.OrderedDict()
+            wcet_for_header = 0
+            for the_partition in superv.successor_partitions.values():
+                wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
+                for key in wcets_within_partition.keys():
+                    if key != treev.headerID:
+                        wcets_within_partition[key] = numpy.add(wcet_for_header, wcets_within_partition[key])
+                for key, wcet in wcets_within_partition.iteritems():
+                    if key not in wcets_at_superv:
+                        wcets_at_superv[key] = wcet
                     else:
-                        self.superv_wcets[superv][key] = numpy.add(self.superv_wcets[succ_superv][key], intra_superv_wcet) 
+                        wcets_at_superv[key] = numpy.add(wcets_at_superv[key], wcet)
+                    if key == treev.headerID:
+                        wcet_for_header = numpy.add(wcet, wcet_for_header)
+            for key, wcet in wcets_at_superv.iteritems():
+                self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
         for key in self.superv_wcets[superv]:
             debug.debug_message("superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key]), __name__, 1)
     
@@ -1066,26 +1073,8 @@ class TreeBasedCalculation:
             else:
                 wcet = numpy.add(wcet, self.loop_wcets[program_point.headerID])
         return wcet
-    
-    def compute_max_of_branches(self, data, super_block_cfg, superv, treev, intra_superv_wcet):
-        wcets_at_superv = collections.OrderedDict()
-        wcet_for_header = 0
-        for the_partition in superv.successor_partitions.values():
-            wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
-            for key in wcets_within_partition.keys():
-                if key != treev.headerID:
-                    wcets_within_partition[key] = numpy.add(wcet_for_header, wcets_within_partition[key])
-            for key, wcet in wcets_within_partition.iteritems():
-                if key not in wcets_at_superv:
-                    wcets_at_superv[key] = wcet
-                else:
-                    wcets_at_superv[key] = numpy.add(wcets_at_superv[key], wcet)
-                if key == treev.headerID:
-                    wcet_for_header = numpy.add(wcet, wcet_for_header)
-        for key, wcet in wcets_at_superv.iteritems():
-            self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
             
-    def compute_wcet_within_partition(self, super_block_cfg, treev, wcets_at_superv, the_partition):        
+    def compute_wcet_within_partition(self, super_block_cfg, treev, wcets_at_superv, the_partition):  
         wcets_within_partition = collections.OrderedDict()
         for succID in the_partition:
             succ_superv = super_block_cfg.getVertex(succID)

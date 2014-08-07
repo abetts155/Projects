@@ -82,8 +82,10 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                         predv = enhanced_CFG.getVertex(predID)
                         assert isinstance(predv, vertices.CFGEdge)
                         pred_superv = subgraph.program_point_to_superv[predv.edge]
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)  
-                        pred_superv.merge_super_blocks.add(superv.vertexID)    
+                        self.addEdge(pred_superv.vertexID, superv.vertexID)
+                        if program_point.vertexID not in pred_superv.successor_partitions:  
+                            pred_superv.successor_partitions[program_point.vertexID] = set()
+                        pred_superv.successor_partitions[program_point.vertexID].add(superv.vertexID)   
                 else:
                     assert isinstance(program_point, vertices.CFGEdge)
                     # The program point represents a CFG edge.

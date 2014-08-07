@@ -111,6 +111,5 @@ class SuperBlock (Vertex):
         self.program_points       = []
         self.representative       = None
         self.successor_partitions = collections.OrderedDict()
-        self.merge_super_blocks   = set()
         self.exit_edge            = False
         
