@@ -430,14 +430,12 @@ class LoopNests (Tree):
                     if succID not in analysed:
                         stack.append(reverseg.getVertex(succID))
         return analysed
-                
-    def induce_loop_subgraph(self, headerv):
-        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
-        enhanced_CFG = directed_graphs.EnhancedCFG()
-        worklist     = []
-        analysed     = set()
-        # Start work list with loop tails
-        for vertexID in self.get_loop_tails(headerv.headerID):
+    
+    def add_edge_vertices_to_enhanced_CFG(self, headerv, enhanced_CFG, frontier_vertices):
+        worklist = []
+        analysed = set()
+        # Start work list with vertices on the frontier of the analysis
+        for vertexID in frontier_vertices:
             v = self.__directedg.getVertex(vertexID)
             if v not in worklist:
                 worklist.append(v)
@@ -457,16 +455,22 @@ class LoopNests (Tree):
                             worklist.append(predv)
                         elif self.is_nested(pred_headerv.vertexID, headerv.vertexID):
                             worklist.append(self.__directedg.getVertex(pred_headerv.headerID)) 
+                            
+    def add_edge_vertices_for_loop_tails(self, headerv, enhanced_CFG):
         # Add edge vertices to model loop-back edges
         for sourceID, destinationID in self.loop_back_edges[headerv.headerID]:
             edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
             new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
             enhanced_CFG.addVertex(new_edgev) 
+            
+    def add_edge_vertices_for_loop_exits(self, headerv, enhanced_CFG):
         # Add edge vertices to model loop-exit edges out of this loop
         for sourceID, destinationID in self.loop_exit_edges[headerv.headerID]:
             edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
             new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
-            enhanced_CFG.addVertex(new_edgev) 
+            enhanced_CFG.addVertex(new_edgev)
+            
+    def add_edge_vertices_for_inner_loop_exits(self, headerv, enhanced_CFG):
         # Add edge vertices to model loop-exit edges out of inner loops
         inner_loop_exit_edges = {}
         for succID in headerv.successors.keys():
@@ -477,7 +481,10 @@ class LoopNests (Tree):
                     new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
                     enhanced_CFG.addVertex(new_edgev)
                     inner_loop_exit_edges[new_edgev] = succv.headerID
-        # Add vertices for basic blocks
+        return inner_loop_exit_edges
+    
+    def add_vertices_to_enhanced_CFG(self, headerv, enhanced_CFG):
+        # Add basic blocks and abstract loop vertices 
         for v in enhanced_CFG:
             assert isinstance(v, vertices.CFGEdge)
             sourceID            = v.edge[0]
@@ -493,6 +500,8 @@ class LoopNests (Tree):
             elif self.is_loop_header(destinationID):
                 if not enhanced_CFG.hasVertex(destination_headerv.vertexID):
                     enhanced_CFG.addVertex(vertices.HeaderVertex(destination_headerv.vertexID, destination_headerv.headerID))
+
+    def add_edges_to_enhanced_CFG(self, headerv, enhanced_CFG, inner_loop_exit_edges):
         # Link edges
         for v in enhanced_CFG:
             if isinstance(v, vertices.CFGEdge):
@@ -516,6 +525,8 @@ class LoopNests (Tree):
                     enhanced_CFG.addEdge(sourceID, v.vertexID)
                     if not self.is_loop_back_edge_for_header(headerv.headerID, sourceID, destinationID):
                         enhanced_CFG.addEdge(v.vertexID, destinationID)
+
+    def set_entry_and_exit_in_enhanced_CFG(self, headerv, enhanced_CFG):
         # Set entry vertex
         enhanced_CFG.entryID = headerv.headerID
         # Set exit vertex
@@ -536,6 +547,39 @@ class LoopNests (Tree):
                 enhanced_CFG.addVertex(exitv)
                 enhanced_CFG.exitID = exitv.vertexID
                 for v in exit_candidates:
-                    enhanced_CFG.addEdge(v.vertexID, exitv.vertexID)    
+                    enhanced_CFG.addEdge(v.vertexID, exitv.vertexID)
+
+    def induce_loop_exit_subgraph(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = directed_graphs.EnhancedCFG()
+        self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_exit_sources(headerv.headerID))
+        self.add_edge_vertices_for_loop_exits(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
+        return enhanced_CFG
+    
+    def induce_loop_subgraph_without_loop_exits(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = directed_graphs.EnhancedCFG()
+        self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_tails(headerv.headerID))
+        self.add_edge_vertices_for_loop_tails(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
+        return enhanced_CFG
+              
+    def induce_loop_subgraph(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = directed_graphs.EnhancedCFG()
+        self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_tails(headerv.headerID))
+        self.add_edge_vertices_for_loop_tails(headerv, enhanced_CFG)
+        self.add_edge_vertices_for_loop_exits(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
         return enhanced_CFG
     

@@ -9,34 +9,49 @@ class SuperBlockSubgraph(directed_graphs.DirectedGraph):
     def __init__(self):
         directed_graphs.DirectedGraph.__init__(self)
         self.program_point_to_superv = {}
+        self.rootv                   = None
 
 class SuperBlockCFG(directed_graphs.DirectedGraph):    
     def __init__(self, cfg, lnt):
         directed_graphs.DirectedGraph.__init__(self)    
         self.name = cfg.name
-        self.per_loop_subgraphs     = {}
-        self.per_loop_root_vertices = {}
+        self.per_loop_subgraphs           = {}
+        self.per_loop_exit_subgraphs      = {}
+        self.per_loop_iteration_subgraphs = {}
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                    enhanced_CFG          = lnt.induce_loop_subgraph(treev)
-                    udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
-                    dfs                  = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
-                    predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
-                    enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
-                    postdom_tree         = trees.Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
-                    dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
-                    sccs                 = StrongComponents(dominator_graph)  
-                    self.add_super_blocks(lnt, enhanced_CFG, dfs, sccs, treev)     
-                    self.add_edges(lnt, enhanced_CFG, dfs, treev)
+                    self.per_loop_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                             lnt, 
+                                                                                             lnt.induce_loop_subgraph(treev), 
+                                                                                             treev)
+                    self.per_loop_iteration_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                                       lnt, 
+                                                                                                       lnt.induce_loop_subgraph_without_loop_exits(treev), 
+                                                                                                       treev)
+                    if not lnt.is_do_while_loop(treev.headerID):
+                        self.per_loop_exit_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                                      lnt, 
+                                                                                                      lnt.induce_loop_exit_subgraph(treev), 
+                                                                                                      treev)
+    
+    def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
+        udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
+        dfs                  = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
+        predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
+        enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
+        postdom_tree         = trees.Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
+        dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
+        sccs                 = StrongComponents(dominator_graph)  
+        subgraph             = SuperBlockSubgraph()
+        self.add_super_blocks(lnt, enhanced_CFG, dfs, sccs, treev, subgraph)     
+        self.add_edges(lnt, enhanced_CFG, dfs, treev, subgraph)
+        return subgraph
                         
-    def add_super_blocks(self, lnt, enhanced_CFG, dfs, sccs, headerv):
-        subgraph                                  = SuperBlockSubgraph()
-        self.per_loop_subgraphs[headerv.headerID] = subgraph
+    def add_super_blocks(self, lnt, enhanced_CFG, dfs, sccs, headerv, subgraph):
         for sccID in sccs.scc_vertices.keys():
             superv                                 = vertices.SuperBlock(sccID, headerv.headerID)
-            self.the_vertices[superv.vertexID]     = superv
             subgraph.the_vertices[superv.vertexID] = superv
         for vertexID in reversed(dfs.post_order):
             program_point = enhanced_CFG.getVertex(vertexID)
@@ -57,15 +72,14 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     else:
                         superv.program_points.append(program_point_headerv)      
                         subgraph.program_point_to_superv[program_point_headerv.vertexID] = superv
-        for superv in self:
+        for superv in subgraph:
             if superv.representative is None:
                 # Representative basic block not yet set.
                 # Just choose the first program point instead
                 superv.representative = superv.program_points[0]
-        self.per_loop_root_vertices[headerv.headerID] = subgraph.program_point_to_superv[headerv.headerID] 
+        subgraph.rootv = subgraph.program_point_to_superv[headerv.headerID] 
                 
-    def add_edges(self, lnt, enhanced_CFG, dfs, headerv):
-        subgraph                           = self.per_loop_subgraphs[headerv.headerID]
+    def add_edges(self, lnt, enhanced_CFG, dfs, headerv, subgraph):
         first_program_point_to_super_block = {}
         for superv in subgraph:
             first_program_point_to_super_block[superv.program_points[0]] = superv
@@ -82,7 +96,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                         predv = enhanced_CFG.getVertex(predID)
                         assert isinstance(predv, vertices.CFGEdge)
                         pred_superv = subgraph.program_point_to_superv[predv.edge]
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
                         if program_point.vertexID not in pred_superv.successor_partitions:  
                             pred_superv.successor_partitions[program_point.vertexID] = set()
                         pred_superv.successor_partitions[program_point.vertexID].add(superv.vertexID)   
@@ -94,7 +108,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     basic_block_predID = program_point.edge[0]
                     if lnt.getVertex(lnt.getVertex(basic_block_predID).parentID) == headerv:
                         pred_superv = subgraph.program_point_to_superv[basic_block_predID] 
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
                         assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
                         if basic_block_predID not in pred_superv.successor_partitions:
                             pred_superv.successor_partitions[basic_block_predID] = set()
@@ -102,16 +116,13 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     else:
                         inner_headerv = lnt.getVertex(lnt.getVertex(basic_block_predID).parentID)
                         pred_superv   = subgraph.program_point_to_superv[inner_headerv.vertexID] 
-                        self.addEdge(pred_superv.vertexID, superv.vertexID)
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
                         if inner_headerv.headerID not in pred_superv.successor_partitions:
                             pred_superv.successor_partitions[inner_headerv.headerID] = set()
                         pred_superv.successor_partitions[inner_headerv.headerID].add(superv.vertexID)
                         if superv.exit_edge:
                             pred_superv.exit_edge_partitions.add(inner_headerv.headerID)
-            
-    def find_super_block_for_header(self, headerID):
-        return self.per_loop_subgraphs[headerID].program_point_to_superv[headerID]
-    
+
 class DominatorGraph (directed_graphs.DirectedGraph):
     def __init__ (self, predom_tree, postdom_tree):
         directed_graphs.DirectedGraph.__init__(self)

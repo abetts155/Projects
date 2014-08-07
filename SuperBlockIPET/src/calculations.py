@@ -183,13 +183,14 @@ class CreateCFGILP(ILP):
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
-                    upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
-                    upper_bound      = numpy.sum(upper_bound_list)    
-                    if treev.vertexID == lnt.rootID:
+                    upper_bound_list   = data.get_upper_bound_on_header(treev.headerID)
+                    global_upper_bound = numpy.sum(upper_bound_list)
+                    local_upper_bound  = numpy.max(upper_bound_list)  
+                    if treev.level == 0:
                         new_constraint = ""
                         new_constraint += get_vertex_execution_count_variable(cfg.get_entryID())
                         new_constraint += LpSolve.equals
-                        new_constraint += "%d" % upper_bound
+                        new_constraint += "%d" % global_upper_bound
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
                     else:
@@ -199,48 +200,59 @@ class CreateCFGILP(ILP):
                         incoming_edges = lnt.get_loop_entry_edges(treev.headerID)
                         counter        = len(incoming_edges)
                         for predID, succID in incoming_edges:
-                            new_constraint += "%d %s" % (upper_bound, 
+                            new_constraint += "%d %s" % (local_upper_bound, 
                                                          get_edge_execution_count_variable(predID, succID))
                             if counter > 1:
                                 new_constraint += LpSolve.plus 
                             counter -= 1
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
+                        if treev.level > 1:
+                            new_constraint = ""
+                            new_constraint += get_vertex_execution_count_variable(treev.headerID)
+                            new_constraint += LpSolve.lte
+                            new_constraint += "%d" % global_upper_bound
+                            new_constraint += LpSolve.semi_colon
+                            self.the_constraints.append(new_constraint)
         
 class CreateSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
         filename = "%s.%s.%s.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "superg")
         ILP.__init__(self, filename)
         self.header_to_exit_super_blocks = {}
+        self.supervs = set()
         start = timeit.default_timer()
-        self.create_objective_function(data, cfg, lnt, super_block_cfg)
-        self.create_intra_super_block_constraints(super_block_cfg)
-        self.create_structural_constraints(lnt, super_block_cfg)
-        self.create_loop_bound_constraints(data, lnt, super_block_cfg)
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
+                    self.create_intra_super_block_constraints(subgraph)
+                    self.create_structural_constraints(lnt, super_block_cfg, subgraph)
+                    self.create_loop_bound_constraints(data, treev)
+        self.create_objective_function(data, cfg)
         self.create_integer_constraint()
         end = timeit.default_timer()
         self.construction_time = end - start
                         
-    def create_objective_function (self, data, cfg, lnt, super_block_cfg):
+    def create_objective_function (self, data, cfg):
         self.obj_function = LpSolve.max_
         counter = cfg.number_of_vertices()
-        for superv in super_block_cfg:
+        for superv in self.supervs:
             self.the_variables.add(get_execution_count_variable_for_program_point(superv.representative))
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
-                    parent_headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
-                    if parent_headerv.headerID == superv.headerID:
-                        wcet = data.get_basic_block_wcet(program_point.vertexID)
-                        variable = get_vertex_execution_count_variable(program_point.vertexID)
-                        self.obj_function += "%d %s" % (wcet, variable)
-                        self.the_variables.add(variable)
-                        if counter > 1:
-                            self.obj_function += LpSolve.plus
-                        counter -= 1
+                    wcet     = data.get_basic_block_wcet(program_point.vertexID)
+                    variable = get_vertex_execution_count_variable(program_point.vertexID)
+                    self.obj_function += "%d %s" % (wcet, variable)
+                    self.the_variables.add(variable)
+                    if counter > 1:
+                        self.obj_function += LpSolve.plus
+                    counter -= 1
         self.obj_function += LpSolve.semi_colon
         
-    def create_intra_super_block_constraints(self, super_block_cfg):
-        for superv in super_block_cfg:
+    def create_intra_super_block_constraints(self, subgraph):
+        for superv in subgraph:
+            self.supervs.add(superv)
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex) and program_point != superv.representative:
                     new_constraint = ""
@@ -250,15 +262,15 @@ class CreateSuperBlockCFGILP(ILP):
                     new_constraint += LpSolve.semi_colon
                     self.the_constraints.append(new_constraint)
             
-    def create_structural_constraints (self, lnt, super_block_cfg):
-        for superv in super_block_cfg:
+    def create_structural_constraints(self, lnt, super_block_cfg, subgraph):
+        for superv in subgraph:
             if superv.number_of_predecessors() > 1:
                 new_constraint = ""
                 new_constraint += get_execution_count_variable_for_program_point(superv.representative)
                 new_constraint += LpSolve.equals
                 counter = superv.number_of_predecessors()
                 for predID in superv.predecessors.keys():
-                    super_predv = super_block_cfg.getVertex(predID)
+                    super_predv = subgraph.getVertex(predID)
                     new_constraint += get_execution_count_variable_for_program_point(super_predv.representative)
                     if counter > 1:
                         new_constraint += LpSolve.plus
@@ -273,7 +285,7 @@ class CreateSuperBlockCFGILP(ILP):
                         new_constraint += LpSolve.equals
                         counter = len(partition)
                         for succID in partition:
-                            super_succv = super_block_cfg.getVertex(succID)
+                            super_succv = subgraph.getVertex(succID)
                             if super_succv.exit_edge:
                                 headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
                                 parent_headerv  = lnt.getVertex(headerv.parentID)
@@ -289,56 +301,69 @@ class CreateSuperBlockCFGILP(ILP):
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)
             
-    def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
-        for the_vertices in lnt.level_by_level_iterator(True):
-            for treev in the_vertices:
-                if isinstance(treev, vertices.HeaderVertex):
-                    upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
-                    upper_bound      = numpy.sum(upper_bound_list)
-                    if treev.vertexID == lnt.rootID:
-                        new_constraint = ""
-                        new_constraint += get_vertex_execution_count_variable(treev.headerID)
-                        new_constraint += LpSolve.equals
-                        new_constraint += "%d" % upper_bound
-                        new_constraint += LpSolve.semi_colon
-                        self.the_constraints.append(new_constraint)
-                    else:
-                        new_constraint  = ""
-                        new_constraint += get_vertex_execution_count_variable(treev.headerID)
-                        new_constraint += LpSolve.lte
-                        counter         = len(self.header_to_exit_super_blocks[treev.headerID])
-                        for succ_superv in self.header_to_exit_super_blocks[treev.headerID]:
-                            new_constraint += "%d %s" % (upper_bound,
-                                                         get_execution_count_variable_for_program_point(succ_superv.representative))
-                            if counter > 1:
-                                new_constraint += LpSolve.plus
-                            counter -= 1
-                        new_constraint += LpSolve.semi_colon
-                        self.the_constraints.append(new_constraint)
+    def create_loop_bound_constraints(self, data, treev):
+        upper_bound_list   = data.get_upper_bound_on_header(treev.headerID)
+        global_upper_bound = numpy.sum(upper_bound_list)
+        local_upper_bound  = numpy.max(upper_bound_list)
+        if treev.level == 0:
+            new_constraint = ""
+            new_constraint += get_vertex_execution_count_variable(treev.headerID)
+            new_constraint += LpSolve.equals
+            new_constraint += "%d" % global_upper_bound
+            new_constraint += LpSolve.semi_colon
+            self.the_constraints.append(new_constraint)
+        else:
+            new_constraint  = ""
+            new_constraint += get_vertex_execution_count_variable(treev.headerID)
+            new_constraint += LpSolve.lte
+            counter         = len(self.header_to_exit_super_blocks[treev.headerID])
+            for succ_superv in self.header_to_exit_super_blocks[treev.headerID]:
+                new_constraint += "%d %s" % (local_upper_bound,
+                                             get_execution_count_variable_for_program_point(succ_superv.representative))
+                if counter > 1:
+                    new_constraint += LpSolve.plus
+                counter -= 1
+            new_constraint += LpSolve.semi_colon
+            self.the_constraints.append(new_constraint)
+            if treev.level > 1:
+                new_constraint  = ""
+                new_constraint += get_vertex_execution_count_variable(treev.headerID)
+                new_constraint += LpSolve.lte
+                new_constraint += "%d" % global_upper_bound
+                new_constraint += LpSolve.semi_colon
+                self.the_constraints.append(new_constraint)
         
 class CreateFoldedSuperBlockCFGILP(ILP):
     def __init__ (self, data, cfg, lnt, super_block_cfg):
         filename = "%s.%s.%s.folded.ilp" % (config.Arguments.basepath + os.sep + config.Arguments.basename, super_block_cfg.name, "superg")
         ILP.__init__(self, filename)
         self.header_to_exit_super_blocks = {}
+        self.superv_to_wcet = {}
         start = timeit.default_timer()
-        self.create_objective_function(data, lnt, super_block_cfg)
-        self.create_structural_constraints(lnt, super_block_cfg)
-        self.create_loop_bound_constraints(data, lnt, super_block_cfg)
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
+                    self.compute_wcet_of_super_blocks(data, subgraph)
+                    self.create_structural_constraints(lnt, super_block_cfg, subgraph)
+                    self.create_loop_bound_constraints(data, treev, subgraph)
+        self.create_objective_function()
         self.create_integer_constraint()
         end = timeit.default_timer()
         self.construction_time = end - start
     
-    def create_objective_function (self, data, lnt, super_block_cfg):
-        self.obj_function = LpSolve.max_
-        counter = super_block_cfg.number_of_vertices()
-        for superv in super_block_cfg:
+    def compute_wcet_of_super_blocks(self, data, subgraph):
+        for superv in subgraph:
             wcet = 0
             for program_point in superv.program_points:
                 if isinstance(program_point, vertices.CFGVertex):
-                    parent_headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
-                    if parent_headerv.headerID == superv.headerID:
-                        wcet += data.get_basic_block_wcet(program_point.vertexID)
+                    wcet += data.get_basic_block_wcet(program_point.vertexID)
+            self.superv_to_wcet[superv] = wcet
+    
+    def create_objective_function (self):
+        self.obj_function = LpSolve.max_
+        counter = len(self.superv_to_wcet)
+        for superv, wcet in self.superv_to_wcet.iteritems():
             self.the_variables.add(get_vertex_execution_count_variable(superv.vertexID))
             self.obj_function += "%d %s" % (wcet, get_vertex_execution_count_variable(superv.vertexID))
             if counter > 1:
@@ -346,8 +371,8 @@ class CreateFoldedSuperBlockCFGILP(ILP):
             counter -= 1
         self.obj_function += LpSolve.semi_colon
             
-    def create_structural_constraints (self, lnt, super_block_cfg):
-        for superv in super_block_cfg:
+    def create_structural_constraints (self, lnt, super_block_cfg, subgraph):
+        for superv in subgraph:
             if superv.number_of_predecessors() > 1:
                 new_constraint = ""
                 new_constraint += get_vertex_execution_count_variable(superv.vertexID)
@@ -368,7 +393,7 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                         new_constraint += LpSolve.equals
                         counter = len(partition)
                         for succID in partition:
-                            super_succv = super_block_cfg.getVertex(succID)
+                            super_succv = subgraph.getVertex(succID)
                             if super_succv.exit_edge:
                                 headerv         = lnt.getVertex(lnt.getVertex(super_succv.headerID).parentID)
                                 parent_headerv  = lnt.getVertex(headerv.parentID)
@@ -384,33 +409,38 @@ class CreateFoldedSuperBlockCFGILP(ILP):
                         new_constraint += LpSolve.semi_colon
                         self.the_constraints.append(new_constraint)                      
                 
-    def create_loop_bound_constraints(self, data, lnt, super_block_cfg):
-        for the_vertices in lnt.level_by_level_iterator(True):
-            for treev in the_vertices:
-                if isinstance(treev, vertices.HeaderVertex):
-                    upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
-                    upper_bound      = numpy.sum(upper_bound_list)    
-                    superv           = super_block_cfg.find_super_block_for_header(treev.headerID)
-                    if treev.vertexID == lnt.rootID:
-                        new_constraint = ""
-                        new_constraint += get_vertex_execution_count_variable(superv.vertexID)
-                        new_constraint += LpSolve.equals
-                        new_constraint += "%d" % upper_bound
-                        new_constraint += LpSolve.semi_colon
-                        self.the_constraints.append(new_constraint)
-                    else:
-                        new_constraint = ""
-                        new_constraint += get_vertex_execution_count_variable(superv.vertexID)
-                        new_constraint += LpSolve.lte
-                        counter         = len(self.header_to_exit_super_blocks[treev.headerID])
-                        for succ_superv in self.header_to_exit_super_blocks[treev.headerID]:
-                            new_constraint += "%d %s" % (upper_bound,
-                                                         get_vertex_execution_count_variable(succ_superv.vertexID))
-                            if counter > 1:
-                                new_constraint += LpSolve.plus
-                            counter -= 1
-                        new_constraint += LpSolve.semi_colon
-                        self.the_constraints.append(new_constraint)
+    def create_loop_bound_constraints(self, data, treev, subgraph):
+        upper_bound_list   = data.get_upper_bound_on_header(treev.headerID)
+        global_upper_bound = numpy.sum(upper_bound_list)
+        local_upper_bound  = numpy.max(upper_bound_list)
+        superv             = subgraph.rootv
+        if treev.level == 0:
+            new_constraint = ""
+            new_constraint += get_vertex_execution_count_variable(superv.vertexID)
+            new_constraint += LpSolve.equals
+            new_constraint += "%d" % global_upper_bound
+            new_constraint += LpSolve.semi_colon
+            self.the_constraints.append(new_constraint)
+        else:
+            new_constraint = ""
+            new_constraint += get_vertex_execution_count_variable(superv.vertexID)
+            new_constraint += LpSolve.lte
+            counter         = len(self.header_to_exit_super_blocks[treev.headerID])
+            for succ_superv in self.header_to_exit_super_blocks[treev.headerID]:
+                new_constraint += "%d %s" % (local_upper_bound,
+                                             get_vertex_execution_count_variable(succ_superv.vertexID))
+                if counter > 1:
+                    new_constraint += LpSolve.plus
+                counter -= 1
+            new_constraint += LpSolve.semi_colon
+            self.the_constraints.append(new_constraint)
+            if treev.level > 1:
+                new_constraint = ""
+                new_constraint += get_vertex_execution_count_variable(superv.vertexID)
+                new_constraint += LpSolve.lte
+                new_constraint += "%d" % global_upper_bound
+                new_constraint += LpSolve.semi_colon
+                self.the_constraints.append(new_constraint)
 
 class ECLIPSE:
     conjunct         = "," + get_new_line()
@@ -1006,45 +1036,65 @@ class TreeBasedCalculation:
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Doing calculation for loop with header %d" % treev.headerID, __name__, 1)
+                    upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
+                    if treev.level > 0:
+                        upper_bound = 0
+                        for value in upper_bound_list:
+                            if value > 0:
+                                if not lnt.is_do_while_loop(treev.headerID):
+                                    upper_bound += value - 1
+                                else:
+                                    upper_bound += value  
+                    else:
+                        upper_bound = numpy.sum(upper_bound_list)   
+                    debug.debug_message("Loop bound on %d = %d" % (treev.headerID, upper_bound), __name__, 1)                           
                     subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
                     for superv in subgraph:
-                        self.superv_wcets[superv] = {}
-                    root_superv = super_block_cfg.find_super_block_for_header(treev.headerID)
-                    dfs         = trees.DepthFirstSearch(subgraph, root_superv.vertexID)
+                        self.superv_wcets[superv] = {}                    
+                    dfs = trees.DepthFirstSearch(subgraph, subgraph.rootv.vertexID)
                     for vertexID in dfs.post_order:
-                        superv = super_block_cfg.getVertex(vertexID)
-                        self.compute_wcet_of_super_block(data, lnt, super_block_cfg, superv, treev)
+                        superv = subgraph.getVertex(vertexID)
+                        intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev, upper_bound)
+                        debug.debug_message("superv = %d, intra-super-block wcet = %d" % (superv.vertexID, intra_superv_wcet), __name__, 10)
+                        self.compute_execution_time_from_successors(data, lnt, subgraph, superv, treev, intra_superv_wcet)
                     if treev.level > 0:
-                        for key in self.superv_wcets[root_superv]:
-                            if key == treev.headerID:
-                                upper_bound      = 0
-                                upper_bound_list = data.get_upper_bound_on_header(treev.headerID)
-                                for value in upper_bound_list:
-                                    if value > 0:
-                                        if not lnt.is_do_while_loop(treev.headerID):
-                                            upper_bound += value - 1
-                                        else:
-                                            upper_bound += value
-                                self.loop_wcets[treev.headerID] = self.superv_wcets[root_superv][treev.headerID] * upper_bound
-                            else:
-                                self.loop_wcets[key] = self.superv_wcets[root_superv][key]
+                        for key in self.superv_wcets[subgraph.rootv]:
+                            self.loop_wcets[key] = self.superv_wcets[subgraph.rootv][key]
                     else:
-                        self.loop_wcets[treev.headerID] = self.superv_wcets[root_superv][treev.headerID]
+                        self.loop_wcets[treev.headerID] = self.superv_wcets[subgraph.rootv][treev.headerID]
                     debug.debug_message("WCET(header %d) = %s" % (treev.headerID, self.loop_wcets[treev.headerID]), __name__, 10)
         rootv = lnt.getVertex(lnt.rootID)
         return self.loop_wcets[rootv.headerID]
     
-    def compute_wcet_of_super_block(self, data, lnt, super_block_cfg, superv, treev):
-        # Sum up the contribution of each basic block in the super block
-        intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev)
-        debug.debug_message("superv = %d, intra-super-block wcet = %d" % (superv.vertexID, intra_superv_wcet), __name__, 10)
+    def compute_execution_time_within_super_block(self, data, lnt, superv, treev, upper_bound):
+        inner_loop_contribution = 0
+        this_loop_contribution  = 0
+        for program_point in superv.program_points:
+            if isinstance(program_point, vertices.CFGVertex):
+                this_loop_contribution = numpy.add(this_loop_contribution, data.get_basic_block_wcet(program_point.vertexID))
+            else:
+                if isinstance(program_point, vertices.CFGEdge):
+                    the_edge       = program_point.edge
+                    inner_headerID = lnt.is_loop_exit_edge(the_edge[0], the_edge[1])
+                    if inner_headerID and inner_headerID != treev.headerID and not lnt.is_do_while_loop(inner_headerID):
+                        inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[(the_edge[0], the_edge[1])])
+                if isinstance(program_point, vertices.HeaderVertex):
+                    inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[program_point.headerID])
+        loop_body_wcet = numpy.add(inner_loop_contribution, this_loop_contribution*upper_bound)
+        return loop_body_wcet
+    
+    def compute_execution_time_from_successors(self, data, lnt, subgraph, superv, treev, intra_superv_wcet):
         if superv.number_of_successors() == 0:
             self.superv_wcets[superv][treev.headerID] = intra_superv_wcet
         else:
             wcets_at_superv = collections.OrderedDict()
             wcet_for_header = 0
             for the_partition in superv.successor_partitions.values():
-                wcets_within_partition = self.compute_wcet_within_partition(super_block_cfg, treev, wcets_at_superv, the_partition)
+                wcets_within_partition = self.compute_wcet_within_partition(lnt, 
+                                                                            subgraph, 
+                                                                            treev, 
+                                                                            wcets_at_superv, 
+                                                                            the_partition)
                 for key in wcets_within_partition.keys():
                     if key != treev.headerID:
                         wcets_within_partition[key] = numpy.add(wcet_for_header, wcets_within_partition[key])
@@ -1059,25 +1109,11 @@ class TreeBasedCalculation:
                 self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
         for key in self.superv_wcets[superv]:
             debug.debug_message("superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key]), __name__, 1)
-    
-    def compute_execution_time_within_super_block(self, data, lnt, superv, treev):
-        wcet = 0
-        for program_point in superv.program_points:
-            if isinstance(program_point, vertices.CFGVertex):
-                wcet = numpy.add(wcet, data.get_basic_block_wcet(program_point.vertexID))
-            elif isinstance(program_point, vertices.CFGEdge):
-                the_edge       = program_point.edge
-                inner_headerID = lnt.is_loop_exit_edge(the_edge[0], the_edge[1])
-                if inner_headerID and inner_headerID != treev.headerID and not lnt.is_do_while_loop(inner_headerID):
-                    wcet = numpy.add(wcet, self.loop_wcets[(the_edge[0], the_edge[1])])
-            else:
-                wcet = numpy.add(wcet, self.loop_wcets[program_point.headerID])
-        return wcet
             
-    def compute_wcet_within_partition(self, super_block_cfg, treev, wcets_at_superv, the_partition):  
+    def compute_wcet_within_partition(self, lnt, subgraph, treev, wcets_at_superv, the_partition):  
         wcets_within_partition = collections.OrderedDict()
         for succID in the_partition:
-            succ_superv = super_block_cfg.getVertex(succID)
+            succ_superv = subgraph.getVertex(succID)
             for key in self.superv_wcets[succ_superv]:
                 if key not in wcets_within_partition:
                     # We have not yet encountered this key in the partition
@@ -1085,7 +1121,7 @@ class TreeBasedCalculation:
                 else:
                     # Take the maximum value among the elements in the partition
                     wcets_within_partition[key] = numpy.maximum(wcets_within_partition[key], self.superv_wcets[succ_superv][key])
-            if succ_superv.exit_edge:                    
+            if succ_superv.exit_edge and not lnt.is_do_while_loop(treev.headerID):                    
                 the_edge = succ_superv.representative.edge
                 wcets_within_partition[(the_edge[0], the_edge[1])] = 0
         return wcets_within_partition

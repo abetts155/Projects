@@ -31,7 +31,7 @@ def write_file(program, filename):
                     for succID in v.successors.keys():
                         the_file.write("(%s, %d) " % (cfg.name, succID))
                 the_file.write("\n")  
-                the_file.write("%s: %d" % (wcet_lexeme, numpy.random.randint(1,50)))
+                the_file.write("%s: %d" % (wcet_lexeme, numpy.random.randint(1,20)))
                 if v.vertexID in upper_bounds:                
                     the_file.write("\n")
                     the_file.write("%s: %s" % (upper_bound_lexeme, upper_bounds[v.vertexID]))
