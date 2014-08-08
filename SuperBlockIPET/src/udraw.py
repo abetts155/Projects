@@ -72,16 +72,21 @@ def make_file(g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            # CFG or Instrumented CFG
             if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
                 write_CFG_vertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
                         write_CFG_vertex(g, v.vertexID, the_file)   
             elif isinstance(g, super_block_graphs.SuperBlockCFG):
-                for superv in g:
-                    write_super_block_vertex(superv, the_file)
-            # Loop-Nesting Tree
+                for subgraph in g.whole_body_subgraphs.values():
+                    for superv in subgraph:
+                        write_super_block_vertex(superv, the_file)
+                for subgraph in g.tails_only_subgraphs.values():
+                    for superv in subgraph:
+                        write_super_block_vertex(superv, the_file)
+                for subgraph in g.exits_only_subgraphs.values():
+                    for superv in subgraph:
+                        write_super_block_vertex(superv, the_file)               
             elif isinstance(g, trees.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, the_file)

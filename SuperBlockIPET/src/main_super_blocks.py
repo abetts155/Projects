@@ -20,6 +20,10 @@ def the_command_line ():
                         help="debug mode",
                         default=0)
     
+    parser.add_argument("--function",
+                        help="do a WCET calculation for this function only",
+                        default=None)
+    
     parser.add_argument("--keep-temps",
                         action="store_true",
                         help="keep any files generated during the analysis",

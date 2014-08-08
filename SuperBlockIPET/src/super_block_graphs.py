@@ -4,6 +4,7 @@ import vertices
 import debug
 import utils
 import udraw
+import config
 
 class SuperBlockSubgraph(directed_graphs.DirectedGraph):
     def __init__(self):
@@ -15,32 +16,33 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
     def __init__(self, cfg, lnt):
         directed_graphs.DirectedGraph.__init__(self)    
         self.name = cfg.name
-        self.per_loop_subgraphs           = {}
-        self.per_loop_exit_subgraphs      = {}
-        self.per_loop_iteration_subgraphs = {}
+        self.whole_body_subgraphs = {}
+        self.tails_only_subgraphs = {}
+        self.exits_only_subgraphs = {}
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                    enhanced_CFG = lnt.induce_loop_subgraph(treev)
-                    udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
-                    self.per_loop_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
-                                                                                             lnt, 
-                                                                                             enhanced_CFG,
-                                                                                             treev)
-                    enhanced_CFG = lnt.induce_loop_subgraph_without_loop_exits(treev)
-                    udraw.make_file(enhanced_CFG, "%s.header_%d.iteration.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
-                    self.per_loop_iteration_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                    enhanced_CFG = lnt.induce_subgraph_with_tails_and_exits(treev)
+                    udraw.make_file(enhanced_CFG, "%s.header_%d.whole.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                    self.whole_body_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                               lnt, 
+                                                                                               enhanced_CFG,
+                                                                                               treev)
+                    if config.Arguments.use_tree_based:
+                        enhanced_CFG = lnt.induce_subgraph_with_tails_only(treev)
+                        udraw.make_file(enhanced_CFG, "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                        self.tails_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                                   lnt, 
+                                                                                                   enhanced_CFG,
+                                                                                                   treev)
+                        if not lnt.is_do_while_loop(treev.headerID):
+                            enhanced_CFG = lnt.induce_subgraph_with_exits_only(treev) 
+                            udraw.make_file(enhanced_CFG, "%s.header_%d.exits.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                            self.exits_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                        lnt, 
                                                                                                        enhanced_CFG,
                                                                                                        treev)
-                    if not lnt.is_do_while_loop(treev.headerID):
-                        enhanced_CFG = lnt.induce_loop_exit_subgraph(treev) 
-                        udraw.make_file(enhanced_CFG, "%s.header_%d.exits.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
-                        self.per_loop_exit_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
-                                                                                                      lnt, 
-                                                                                                      enhanced_CFG,
-                                                                                                      treev)
     
     def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
         dfs                  = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
@@ -67,7 +69,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                     subgraph.program_point_to_superv[program_point.edge] = superv
                     superv.program_points.append(program_point)
                     if lnt.is_loop_exit_edge_for_header(headerv.headerID, program_point.edge[0], program_point.edge[1]):
-                        superv.exit_edge = True
+                        superv.exit_edge = (program_point.edge[0], program_point.edge[1])
                 else:
                     program_point_headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
                     if program_point_headerv.headerID == headerv.headerID:
