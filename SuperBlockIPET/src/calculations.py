@@ -1048,7 +1048,7 @@ class TreeBasedCalculation:
                     else:
                         upper_bound = numpy.sum(upper_bound_list)   
                     debug.debug_message("Loop bound on %d = %d" % (treev.headerID, upper_bound), __name__, 1)                           
-                    subgraph = super_block_cfg.per_loop_subgraphs[treev.headerID]
+                    subgraph = super_block_cfg.per_loop_iteration_subgraphs[treev.headerID]
                     for superv in subgraph:
                         self.superv_wcets[superv] = {}                    
                     dfs = trees.DepthFirstSearch(subgraph, subgraph.rootv.vertexID)

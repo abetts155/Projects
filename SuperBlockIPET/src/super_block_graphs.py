@@ -22,22 +22,27 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
+                    enhanced_CFG = lnt.induce_loop_subgraph(treev)
+                    udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                     self.per_loop_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                              lnt, 
-                                                                                             lnt.induce_loop_subgraph(treev), 
+                                                                                             enhanced_CFG,
                                                                                              treev)
+                    enhanced_CFG = lnt.induce_loop_subgraph_without_loop_exits(treev)
+                    udraw.make_file(enhanced_CFG, "%s.header_%d.iteration.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                     self.per_loop_iteration_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                        lnt, 
-                                                                                                       lnt.induce_loop_subgraph_without_loop_exits(treev), 
+                                                                                                       enhanced_CFG,
                                                                                                        treev)
                     if not lnt.is_do_while_loop(treev.headerID):
+                        enhanced_CFG = lnt.induce_loop_exit_subgraph(treev) 
+                        udraw.make_file(enhanced_CFG, "%s.header_%d.exits.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                         self.per_loop_exit_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                       lnt, 
-                                                                                                      lnt.induce_loop_exit_subgraph(treev), 
+                                                                                                      enhanced_CFG,
                                                                                                       treev)
     
     def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
-        udraw.make_file(enhanced_CFG, "%s.header_%d.enhanced_CFG" % (cfg.name, treev.headerID))
         dfs                  = trees.DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
         predom_tree          = trees.Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
         enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
