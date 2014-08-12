@@ -15,33 +15,36 @@ class SuperBlockSubgraph(directed_graphs.DirectedGraph):
 class SuperBlockCFG(directed_graphs.DirectedGraph):    
     def __init__(self, cfg, lnt):
         directed_graphs.DirectedGraph.__init__(self)    
-        self.name = cfg.name
-        self.whole_body_subgraphs = {}
-        self.tails_only_subgraphs = {}
-        self.exits_only_subgraphs = {}
+        self.name                     = cfg.name
+        self.whole_body_subgraphs     = {}
+        self.whole_body_enhanced_CFGs = {}
+        self.tails_only_subgraphs     = {}
+        self.tails_only_enhanced_CFGs = {}
+        self.exits_only_subgraphs     = {}
+        self.exits_only_enhanced_CFGs = {}
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
-                    enhanced_CFG = lnt.induce_subgraph_with_tails_and_exits(treev)
-                    udraw.make_file(enhanced_CFG, "%s.header_%d.whole.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                    self.whole_body_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_tails_and_exits(treev)
+                    udraw.make_file(self.whole_body_enhanced_CFGs[treev.headerID], "%s.header_%d.whole.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                     self.whole_body_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                lnt, 
-                                                                                               enhanced_CFG,
+                                                                                               self.whole_body_enhanced_CFGs[treev.headerID],
                                                                                                treev)
                     if config.Arguments.use_tree_based:
-                        enhanced_CFG = lnt.induce_subgraph_with_tails_only(treev)
-                        udraw.make_file(enhanced_CFG, "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                        self.tails_only_subgraphs[treev.headerID] = lnt.induce_subgraph_with_tails_only(treev)
+                        udraw.make_file(self.tails_only_subgraphs[treev.headerID], "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                         self.tails_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                    lnt, 
-                                                                                                   enhanced_CFG,
+                                                                                                   self.tails_only_subgraphs[treev.headerID],
                                                                                                    treev)
                         if not lnt.is_do_while_loop(treev.headerID):
-                            enhanced_CFG = lnt.induce_subgraph_with_exits_only(treev) 
-                            udraw.make_file(enhanced_CFG, "%s.header_%d.exits.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                            self.exits_only_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_exits_only(treev) 
+                            udraw.make_file(self.exits_only_enhanced_CFGs[treev.headerID], "%s.header_%d.exits.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                             self.exits_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                        lnt, 
-                                                                                                       enhanced_CFG,
+                                                                                                       self.exits_only_enhanced_CFGs[treev.headerID],
                                                                                                        treev)
     
     def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
@@ -151,7 +154,7 @@ class DominatorGraph (directed_graphs.DirectedGraph):
                     self.addEdge(v.parentID, v.vertexID)
 
 class StrongComponents:
-    Colors = utils.enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
+    COLORS = utils.enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
     SCCID  = 0
     
     def __init__(self, directedg):
@@ -166,17 +169,17 @@ class StrongComponents:
         
     def initialise(self):
         for v in self.directedg:
-            self.vertex_colour[v.vertexID] = StrongComponents.Colors.WHITE
+            self.vertex_colour[v.vertexID] = StrongComponents.COLORS.WHITE
             
     def do_forward_visit(self):
         self.vertex_list = []
         for v in self.directedg:
-            if self.vertex_colour[v.vertexID] == StrongComponents.Colors.WHITE:
+            if self.vertex_colour[v.vertexID] == StrongComponents.COLORS.WHITE:
                 self.visit1(v)
 
     def do_reverse_visit(self):
         for vertexID in reversed(self.vertex_list):
-            if self.vertex_colour[vertexID] == StrongComponents.Colors.BLACK:
+            if self.vertex_colour[vertexID] == StrongComponents.COLORS.BLACK:
                 StrongComponents.SCCID += 1
                 self.scc_vertices[StrongComponents.SCCID] = set()
                 # The vertex v is from the forward directed graph.
@@ -188,14 +191,14 @@ class StrongComponents:
         stack.append(v)
         while stack:
             poppedv = stack.pop()
-            if self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.WHITE:
-                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.GRAY
+            if self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.WHITE:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.GRAY
                 stack.append(poppedv)
                 for succID in poppedv.successors.keys():
-                    if self.vertex_colour[succID] == StrongComponents.Colors.WHITE:
+                    if self.vertex_colour[succID] == StrongComponents.COLORS.WHITE:
                         stack.append(self.directedg.getVertex(succID))
-            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.GRAY:  
-                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.BLACK
+            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.GRAY:  
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.BLACK
                 self.vertex_list.append(poppedv.vertexID)
                 
     def visit2(self, v):
@@ -205,12 +208,12 @@ class StrongComponents:
             poppedv = stack.pop()
             self.vertex_SCC[poppedv.vertexID] = StrongComponents.SCCID
             self.scc_vertices[StrongComponents.SCCID].add(poppedv.vertexID)
-            if self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.BLACK:
-                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.BLUE
+            if self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.BLACK:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.BLUE
                 stack.append(poppedv)
                 for succID in poppedv.successors.keys():
-                    if self.vertex_colour[succID] == StrongComponents.Colors.BLACK:
+                    if self.vertex_colour[succID] == StrongComponents.COLORS.BLACK:
                         stack.append(self.reverseg.getVertex(succID))
-            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.Colors.BLUE:
-                self.vertex_colour[poppedv.vertexID] = StrongComponents.Colors.RED  
+            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.BLUE:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.RED  
     

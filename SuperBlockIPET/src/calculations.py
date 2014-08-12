@@ -1,5 +1,6 @@
 import vertices
 import config
+import utils
 import debug
 import os
 import timeit
@@ -1031,65 +1032,91 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
             self.the_constraints.append(new_constraint)
             
 class TreeBasedCalculation:
+    REGION = utils.enum('CONTINUATIONS', 'EXITS')
+    
     def __init__(self, data, lnt, super_block_cfg):
         self.loop_wcets = {}
         start           = timeit.default_timer()
         self.wcet       = self.do_computation(data, lnt, super_block_cfg)
         end             = timeit.default_timer()
         self.solve_time = end - start
-        
+    
     def do_computation(self, data, lnt, super_block_cfg):
         for the_vertices in lnt.level_by_level_iterator(True):
             for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
-                    debug.debug_message("Doing calculation for loop with header %d" % treev.headerID, __name__, 1)
+                    debug.debug_message("Doing calculation in continuation region of loop with header %d" % treev.headerID, __name__, 1)
                     upper_bound_for_continuations, upper_bound_for_exits = self.compute_upper_bounds(data, lnt, treev)
                     subgraph = super_block_cfg.tails_only_subgraphs[treev.headerID]
-                    self.do_calculation_on_subgraph(data, lnt, treev, subgraph, upper_bound_for_continuations)
-                    self.loop_wcets[treev.headerID] = self.superv_wcets[subgraph.rootv][treev.headerID]
-                    debug.debug_message("WCET(header %d) = %s" % (treev.headerID, self.loop_wcets[treev.headerID]), __name__, 10)
+                    self.do_calculation_on_subgraph(data, 
+                                                    lnt, 
+                                                    treev, 
+                                                    subgraph, 
+                                                    upper_bound_for_continuations, 
+                                                    TreeBasedCalculation.REGION.CONTINUATIONS)
+                    reduced_value = self.reduce_loop_wcet(treev, 
+                                                          subgraph, 
+                                                          treev.headerID, 
+                                                          upper_bound_for_continuations)
+                    debug.debug_message("WCET(header %d) = %s" % (treev.headerID, reduced_value), __name__, 10)
+                    
+                    self.loop_wcets[(treev.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value
+                    if treev.level > 0:
+                        parentv = lnt.getVertex(treev.parentID)
+                        if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(treev.vertexID):
+                            self.loop_wcets[(treev.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value[:-1]
+                            self.loop_wcets[(treev.headerID, TreeBasedCalculation.REGION.EXITS)]         = reduced_value[-1:]
                     
                     if not lnt.is_do_while_loop(treev.headerID):
+                        debug.debug_message("Doing calculation in exit region of loop with header %d" % treev.headerID, __name__, 1)
                         subgraph = super_block_cfg.exits_only_subgraphs[treev.headerID]
-                        self.do_calculation_on_subgraph(data, lnt, treev, subgraph, upper_bound_for_exits)
+                        self.do_calculation_on_subgraph(data, 
+                                                        lnt, 
+                                                        treev, 
+                                                        subgraph, 
+                                                        upper_bound_for_exits, 
+                                                        TreeBasedCalculation.REGION.EXITS)
                         for key in self.superv_wcets[subgraph.rootv]:
                             if key != treev.headerID:
-                                self.loop_wcets[key] = self.superv_wcets[subgraph.rootv][key]
-                                debug.debug_message("WCET(exit %s) = %s" % (key, self.loop_wcets[key]), __name__, 10)
+                                reduced_value = self.reduce_loop_wcet(treev, subgraph, key, upper_bound_for_exits)
+                                self.loop_wcets[(key, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value
+                                if treev.level > 0:
+                                    parentv = lnt.getVertex(treev.parentID)
+                                    if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(treev.vertexID):
+                                        self.loop_wcets[(key, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value[:-1]
+                                        self.loop_wcets[(key, TreeBasedCalculation.REGION.EXITS)]         = reduced_value[-1:]
         rootv = lnt.getVertex(lnt.rootID)
-        return self.loop_wcets[rootv.headerID]
+        return self.loop_wcets[(rootv.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)]
     
     def compute_upper_bounds(self, data, lnt, treev):
         upper_bound_list              = data.get_upper_bound_on_header(treev.headerID)
-        upper_bound_for_continuations = 0
-        upper_bound_for_exits         = 0
-        if treev.level > 0:
-            for value in upper_bound_list:
-                if value > 0:
-                    if not lnt.is_do_while_loop(treev.headerID):
-                        upper_bound_for_continuations += value - 1
-                        upper_bound_for_exits         += 1
-                    else:
-                        upper_bound_for_continuations += value  
-        else:
-            upper_bound_for_continuations = numpy.sum(upper_bound_list) 
-        debug.debug_message("Loop bound on %d: continuations = %d, exits = %d" % (treev.headerID, upper_bound_for_continuations, upper_bound_for_exits), __name__, 1)  
+        upper_bound_for_continuations = []
+        upper_bound_for_exits         = []  
+        for value in upper_bound_list:
+            if value > 0:
+                if not lnt.is_do_while_loop(treev.headerID):
+                    upper_bound_for_continuations.append(value-1)
+                    upper_bound_for_exits.append(1)
+                else:
+                    upper_bound_for_continuations.append(value)
+        debug.debug_message("Loop bound on %d: continuations = %s, exits = %s" % (treev.headerID, upper_bound_for_continuations, upper_bound_for_exits), __name__, 1)  
         return upper_bound_for_continuations, upper_bound_for_exits        
-    
-    def do_calculation_on_subgraph(self, data, lnt, treev, subgraph, upper_bound):
+
+    def do_calculation_on_subgraph(self, data, lnt, treev, subgraph, upper_bound_list, region):
         self.superv_wcets = {}
         for superv in subgraph:
             self.superv_wcets[superv] = {}                    
         dfs = trees.DepthFirstSearch(subgraph, subgraph.rootv.vertexID)
         for vertexID in dfs.post_order:
             superv = subgraph.getVertex(vertexID)
-            intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev, upper_bound)
+            intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, treev, upper_bound_list, region)
             self.compute_execution_time_from_successors(data, lnt, subgraph, superv, treev, intra_superv_wcet)
             if superv.exit_edge:                    
                 self.superv_wcets[superv][superv.exit_edge] = self.superv_wcets[superv][treev.headerID]
     
-    def compute_execution_time_within_super_block(self, data, lnt, superv, treev, upper_bound):
-        inner_loop_contribution = 0
+    def compute_execution_time_within_super_block(self, data, lnt, superv, treev, upper_bound_list, region):
+        upper_bound             = numpy.sum(upper_bound_list)
+        inner_loop_contribution = numpy.array(upper_bound * [0])
         this_loop_contribution  = 0
         for program_point in superv.program_points:
             if isinstance(program_point, vertices.CFGVertex):
@@ -1099,11 +1126,13 @@ class TreeBasedCalculation:
                     the_edge       = program_point.edge
                     inner_headerID = lnt.is_loop_exit_edge(the_edge[0], the_edge[1])
                     if inner_headerID and inner_headerID != treev.headerID and not lnt.is_do_while_loop(inner_headerID):
-                        inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[(the_edge[0], the_edge[1])])
+                        key = ((the_edge[0], the_edge[1]), region)
+                        inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[key])
                 if isinstance(program_point, vertices.HeaderVertex):
-                    inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[program_point.headerID])
-        loop_body_wcet = numpy.add(inner_loop_contribution, this_loop_contribution*upper_bound)
-        debug.debug_message("superv = %d, intra-super-block wcet = %d" % (superv.vertexID, loop_body_wcet), __name__, 10)
+                    key = (program_point.headerID, region)
+                    inner_loop_contribution = numpy.add(inner_loop_contribution, self.loop_wcets[key])
+        this_loop_contribution = numpy.array(upper_bound * [this_loop_contribution])
+        loop_body_wcet = numpy.add(inner_loop_contribution, this_loop_contribution)
         return loop_body_wcet
     
     def compute_execution_time_from_successors(self, data, lnt, subgraph, superv, treev, intra_superv_wcet):
@@ -1130,8 +1159,6 @@ class TreeBasedCalculation:
                         wcet_for_header = numpy.add(wcet, wcet_for_header)
             for key, wcet in wcets_at_superv.iteritems():
                 self.superv_wcets[superv][key] = numpy.add(wcet, intra_superv_wcet)
-        for key in self.superv_wcets[superv]:
-            debug.debug_message("superv = %d, key = %s, wcet = %d" % (superv.vertexID, key, self.superv_wcets[superv][key]), __name__, 1)
             
     def compute_wcet_within_partition(self, lnt, subgraph, treev, wcets_at_superv, the_partition):  
         wcets_within_partition = collections.OrderedDict()
@@ -1145,3 +1172,15 @@ class TreeBasedCalculation:
                     # Take the maximum value among the elements in the partition
                     wcets_within_partition[key] = numpy.maximum(wcets_within_partition[key], self.superv_wcets[succ_superv][key])
         return wcets_within_partition
+    
+    def reduce_loop_wcet(self, treev, subgraph, key, upper_bound_list):
+        if treev.level > 0:
+            the_reduction = []
+            first_index   = 0
+            for upper_bound in upper_bound_list:
+                second_index  = first_index + upper_bound
+                the_reduction.append(numpy.sum(self.superv_wcets[subgraph.rootv][key][first_index:second_index]))
+                second_index = first_index
+            return numpy.array(the_reduction)
+        else:
+            return numpy.sum(self.superv_wcets[subgraph.rootv][key])

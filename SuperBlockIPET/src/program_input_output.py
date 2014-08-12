@@ -12,6 +12,7 @@ basic_block_lexeme = "bb"
 successors_lexeme  = "succ"
 wcet_lexeme        = "wcet"
 upper_bound_lexeme = "upper bound"
+divider            = '-' * 50
 
 name_regex       = re.compile("[\d\w]+")
 int_regex        = re.compile(r"\d+")
@@ -21,6 +22,7 @@ edge_tuple_regex = re.compile(r"[\w\d]+")
 def write_file(program, filename):
     with open(filename, 'w') as the_file:
         for cfg in program.cfgs.values():
+            the_file.write("%s\n" % divider)
             lnt          = trees.LoopNests(cfg, cfg.get_entryID())
             upper_bounds = lnt.get_random_loop_bounds()
             the_file.write("%s: %s\n" % (cfg_lexeme, cfg.name))
