@@ -69,6 +69,11 @@ def the_command_line ():
                         help="use tree-based calculation to compute a WCET estimate",
                         default=False)
     
+    parser.add_argument("--use-enhanced-CFG",
+                        action="store_true",
+                        help="in tree-based calculation, use enhanced CFG instead of super block CFG",
+                        default=False)
+    
     parser.add_argument("-v",
                         "--verbose",
                         action="store_true",

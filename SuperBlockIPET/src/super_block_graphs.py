@@ -33,11 +33,11 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                                                                                                self.whole_body_enhanced_CFGs[treev.headerID],
                                                                                                treev)
                     if config.Arguments.use_tree_based:
-                        self.tails_only_subgraphs[treev.headerID] = lnt.induce_subgraph_with_tails_only(treev)
-                        udraw.make_file(self.tails_only_subgraphs[treev.headerID], "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                        self.tails_only_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_tails_only(treev)
+                        udraw.make_file(self.tails_only_enhanced_CFGs[treev.headerID], "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                         self.tails_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
                                                                                                    lnt, 
-                                                                                                   self.tails_only_subgraphs[treev.headerID],
+                                                                                                   self.tails_only_enhanced_CFGs[treev.headerID],
                                                                                                    treev)
                         if not lnt.is_do_while_loop(treev.headerID):
                             self.exits_only_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_exits_only(treev) 

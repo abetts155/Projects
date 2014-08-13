@@ -299,7 +299,11 @@ class LoopNests (Tree):
             for predID in v.predecessors.keys():
                 if predID not in self.loop_bodies[headerID]:
                     self.loop_entry_edges[headerID].add((predID, headerID))
-            
+    
+    def get_header_vertices(self):
+        for abstractID in self.abstract_vertices.values():
+            yield self.getVertex(abstractID)
+    
     def is_loop_header(self, vertexID):
         return vertexID in self.abstract_vertices.keys()
     
