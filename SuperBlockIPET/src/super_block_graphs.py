@@ -32,7 +32,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                                                                                                lnt, 
                                                                                                self.whole_body_enhanced_CFGs[treev.headerID],
                                                                                                treev)
-                    if config.Arguments.use_tree_based:
+                    if config.Arguments.region_based or config.Arguments.region_based_super_block_CFG:
                         self.tails_only_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_tails_only(treev)
                         udraw.make_file(self.tails_only_enhanced_CFGs[treev.headerID], "%s.header_%d.tails.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
                         self.tails_only_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 

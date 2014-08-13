@@ -1030,33 +1030,22 @@ class CreateFoldedSuperBlockCFGCLP(CLP):
                                                  upper_bound,
                                                  ECLIPSE.conjunct)
             self.the_constraints.append(new_constraint)
-            
-class TreeBasedCalculation:
-    REGION = utils.enum('CONTINUATIONS', 'EXITS')
-    
+
+REGION = utils.enum('CONTINUATIONS', 'EXITS')
+
+class RegionalCalculation:
     def __init__(self, data, lnt, super_block_cfg):
         self.loop_wcets                    = {}
         self.upper_bound_for_continuations = {}
         self.upper_bound_for_exits         = {}
         start           = timeit.default_timer()
+        self.calculate_continuation_and_exit_upper_bounds(data, lnt)
         self.wcet       = self.do_computation(data, lnt, super_block_cfg)
         end             = timeit.default_timer()
-        self.solve_time = end - start
-        
-    def do_computation(self, data, lnt, super_block_cfg):
-        # Compute the upper bounds when the loop continues iterating and when the loop exits 
-        self.calculate_continuation_and_exit_upper_bounds(data, lnt)
-        # Go through each loop bottom up and calculate the WCET inside continuation subgraph
-        # and, if needed, the WCET inside exit subgraph 
-        for the_vertices in lnt.level_by_level_iterator(True):
-            for headerv in [v for v in the_vertices if isinstance(v, vertices.HeaderVertex)]:
-                self.calculate_wcet_inside_continuation_subgraph(data, lnt, super_block_cfg, headerv)
-                if not lnt.is_do_while_loop(headerv.headerID):
-                    self.calculate_wcet_inside_exit_subgraph(data, lnt, super_block_cfg, headerv)
-        rootv = lnt.getVertex(lnt.rootID)
-        return self.loop_wcets[(rootv.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)]    
+        self.solve_time = end - start  
     
     def calculate_continuation_and_exit_upper_bounds(self, data, lnt):
+        # Compute the upper bounds when the loop continues iterating and when the loop exits
         for headerv in lnt.get_header_vertices():
             upper_bound_list              = data.get_upper_bound_on_header(headerv.headerID)
             upper_bound_for_continuations = []
@@ -1068,70 +1057,14 @@ class TreeBasedCalculation:
                         upper_bound_for_exits.append(1)
                     else:
                         upper_bound_for_continuations.append(value)
-            debug.debug_message("Loop bound on %d: continuations = %s, exits = %s" % (headerv.headerID, upper_bound_for_continuations, upper_bound_for_exits), __name__, 1)  
+            debug.debug_message("header %d: original = %s, continuations = %s, exits = %s" % (headerv.headerID, 
+                                                                                              upper_bound_list,
+                                                                                              upper_bound_for_continuations, 
+                                                                                              upper_bound_for_exits),
+                                __name__, 1)  
             self.upper_bound_for_continuations[headerv.headerID] = upper_bound_for_continuations
             self.upper_bound_for_exits[headerv.headerID]         = upper_bound_for_exits
-    
-    def calculate_wcet_inside_continuation_subgraph(self, data, lnt, super_block_cfg, headerv):
-        debug.debug_message("Doing calculation in continuation region of loop with header %d" % headerv.headerID, __name__, 1)
-        if config.Arguments.use_enhanced_CFG:
-            subgraph = super_block_cfg.tails_only_enhanced_CFGs[headerv.headerID]
-            self.do_calculation_on_enhanced_cfg_subgraph(data, 
-                                                         lnt, 
-                                                         headerv, 
-                                                         subgraph, 
-                                                         self.upper_bound_for_continuations[headerv.headerID], 
-                                                         TreeBasedCalculation.REGION.CONTINUATIONS)
-            reduced_value = self.reduce_loop_wcet(headerv, 
-                                                  subgraph.getVertex(subgraph.exitID),
-                                                  headerv.headerID, 
-                                                  self.upper_bound_for_continuations[headerv.headerID])
-        else:
-            subgraph = super_block_cfg.tails_only_subgraphs[headerv.headerID]
-            self.do_calculation_on_super_block_cfg_subgraph(data, 
-                                                            lnt, 
-                                                            headerv, 
-                                                            subgraph,
-                                                            self.upper_bound_for_continuations[headerv.headerID], 
-                                                            TreeBasedCalculation.REGION.CONTINUATIONS)
             
-            reduced_value = self.reduce_loop_wcet(headerv, 
-                                                  subgraph.rootv, 
-                                                  headerv.headerID, 
-                                                  self.upper_bound_for_continuations[headerv.headerID])
-        debug.debug_message("WCET(header %d) = %s" % (headerv.headerID, reduced_value), __name__, 10)
-        
-        self.loop_wcets[(headerv.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value
-        if headerv.level > 0:
-            parentv = lnt.getVertex(headerv.parentID)
-            if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
-                continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
-                self.loop_wcets[(headerv.headerID, TreeBasedCalculation.REGION.CONTINUATIONS)] = continuation_value
-                self.loop_wcets[(headerv.headerID, TreeBasedCalculation.REGION.EXITS)]         = exit_value
-                
-    def calculate_wcet_inside_exit_subgraph(self, data, lnt, super_block_cfg, headerv):
-        debug.debug_message("Doing calculation in exit region of loop with header %d" % headerv.headerID, __name__, 1)
-        subgraph = super_block_cfg.exits_only_subgraphs[headerv.headerID]
-        self.do_calculation_on_super_block_cfg_subgraph(data, 
-                                                        lnt, 
-                                                        headerv, 
-                                                        subgraph, 
-                                                        self.upper_bound_for_exits[headerv.headerID], 
-                                                        TreeBasedCalculation.REGION.EXITS)
-        for key in self.v_wcets[subgraph.rootv]:
-            if key != headerv.headerID:
-                reduced_value = self.reduce_loop_wcet(headerv, 
-                                                      subgraph.rootv, 
-                                                      key, 
-                                                      self.upper_bound_for_exits[headerv.headerID])
-                self.loop_wcets[(key, TreeBasedCalculation.REGION.CONTINUATIONS)] = reduced_value
-                if headerv.level > 0:
-                    parentv = lnt.getVertex(headerv.parentID)
-                    if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
-                        continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
-                        self.loop_wcets[(key, TreeBasedCalculation.REGION.CONTINUATIONS)] = continuation_value
-                        self.loop_wcets[(key, TreeBasedCalculation.REGION.EXITS)]         = exit_value
-                        
     def split_continuation_and_exit_values(self, parentv, reduced_value):
         continuation_value = []
         exit_value         = []
@@ -1145,38 +1078,194 @@ class TreeBasedCalculation:
             exit_value.extend(reduced_value[second_index:third_index])
             first_index  = third_index
         return continuation_value, exit_value
+
+class RegionalCalculationEnhancedCFG(RegionalCalculation):
+    def do_computation(self, data, lnt, super_block_cfg):
+        # Go through each loop bottom up and calculate the WCET inside continuation subgraph
+        # and, if needed, the WCET inside exit subgraph 
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for headerv in [v for v in the_vertices if isinstance(v, vertices.HeaderVertex)]:
+                self.calculate_wcet_inside_whole_subgraph(data, lnt, super_block_cfg, headerv)
+        rootv = lnt.getVertex(lnt.rootID)
+        return self.loop_wcets[(rootv.headerID, REGION.CONTINUATIONS)]  
     
-    def do_calculation_on_enhanced_cfg_subgraph(self, data, lnt, headerv, subgraph, upper_bound_list, region):
+    def calculate_wcet_inside_whole_subgraph(self, data, lnt, super_block_cfg, headerv):
+        debug.debug_message("Doing calculation in continuation region of loop with header %d" % headerv.headerID, __name__, 1)
+        subgraph = super_block_cfg.whole_body_enhanced_CFGs[headerv.headerID]
+        
+        self.do_calculation_on_subgraph(data, 
+                                        lnt, 
+                                        headerv, 
+                                        subgraph,
+                                        self.upper_bound_for_continuations[headerv.headerID], 
+                                        self.upper_bound_for_exits[headerv.headerID])
+        
+        reduced_value = self.reduce_loop_wcet(headerv, 
+                                              (subgraph.exitID, REGION.CONTINUATIONS),
+                                              self.upper_bound_for_continuations[headerv.headerID])
+        debug.debug_message("WCET(header %d) = %s" % (headerv.headerID, reduced_value), __name__, 10)
+        
+        if headerv.level > 0:
+            parentv = lnt.getVertex(headerv.parentID) 
+            if not lnt.is_do_while_loop(parentv.headerID) \
+            and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
+                continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
+                self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = continuation_value
+                self.loop_wcets[(headerv.headerID, REGION.EXITS)]         = exit_value
+            else:
+                self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = reduced_value
+                self.loop_wcets[(headerv.headerID, REGION.EXITS)]         = 0
+                
+            debug.debug_message("WCET(header %s, CONTINUATIONS) = %s" % (headerv.headerID, 
+                                                                         self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)]), 
+                                                                         __name__, 10)
+            debug.debug_message("WCET(header %s, EXITS) = %s" % (headerv.headerID, 
+                                                                 self.loop_wcets[(headerv.headerID, REGION.EXITS)]), 
+                                                                 __name__, 10)
+                
+            for exit_edge in lnt.get_loop_exit_edges(headerv.headerID):
+                exitv         = subgraph.getVertexForEdge(exit_edge[0], exit_edge[1])
+                reduced_value = self.reduce_loop_wcet(headerv, 
+                                                      (exitv.vertexID, REGION.EXITS),
+                                                      self.upper_bound_for_exits[headerv.headerID])
+                if not lnt.is_do_while_loop(parentv.headerID) \
+                and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
+                    continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
+                    self.loop_wcets[(exit_edge, REGION.CONTINUATIONS)] = continuation_value
+                    self.loop_wcets[(exit_edge, REGION.EXITS)]         = exit_value
+                else:
+                    self.loop_wcets[(exit_edge, REGION.CONTINUATIONS)] = reduced_value
+                    self.loop_wcets[(exit_edge, REGION.EXITS)]         = 0
+                
+                debug.debug_message("WCET(exit %s, CONTINUATIONS) = %s" % (exit_edge, 
+                                                                           self.loop_wcets[(exit_edge, REGION.CONTINUATIONS)]), 
+                                                                           __name__, 10)
+                debug.debug_message("WCET(exit %s, EXITS) = %s" % (exit_edge, 
+                                                                   self.loop_wcets[(exit_edge, REGION.EXITS)]), 
+                                                                   __name__, 10)
+        else:
+            self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = reduced_value
+    
+    def do_calculation_on_subgraph(self, data, lnt, headerv, subgraph, upper_bound_for_continuations, upper_bound_for_exits):
         self.v_wcets = {}                    
         dfs = trees.DepthFirstSearch(subgraph, subgraph.entryID)
         for vertexID in reversed(dfs.post_order):
-            v                                 = subgraph.getVertex(vertexID)
-            self.v_wcets[v]                   = {}
-            self.v_wcets[v][headerv.headerID] = 0
+            v = subgraph.getVertex(vertexID)
+            if isinstance(v, vertices.CFGVertex): 
+                if not v.dummy:
+                    self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = numpy.array([data.get_basic_block_wcet(v.vertexID)] * numpy.sum(upper_bound_for_continuations))
+                    self.v_wcets[(v.vertexID, REGION.EXITS)]         = numpy.array([data.get_basic_block_wcet(v.vertexID)] * numpy.sum(upper_bound_for_exits))
+                else:
+                    self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = 0
+                    self.v_wcets[(v.vertexID, REGION.EXITS)]         = 0
+            elif isinstance(v, vertices.HeaderVertex):
+                self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = self.loop_wcets[(v.headerID, REGION.CONTINUATIONS)]
+                self.v_wcets[(v.vertexID, REGION.EXITS)]         = self.loop_wcets[(v.headerID, REGION.EXITS)]
+            else:
+                inner_headerID = lnt.is_loop_exit_edge(v.edge[0], v.edge[1])
+                if inner_headerID and inner_headerID != headerv.headerID and not lnt.is_do_while_loop(inner_headerID):
+                    self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = self.loop_wcets[(v.edge, REGION.CONTINUATIONS)]
+                    self.v_wcets[(v.vertexID, REGION.EXITS)]         = self.loop_wcets[(v.edge, REGION.EXITS)]
+                else:
+                    self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = 0
+                    self.v_wcets[(v.vertexID, REGION.EXITS)]         = 0
             if v.number_of_predecessors() > 1:
+                maximum_of_continuations = 0
+                maximum_of_exits         = 0
                 for predID in v.predecessors.keys():
-                    predv = subgraph.getVertex(predID)
-                    self.v_wcets[v][headerv.headerID] = numpy.maximum(self.v_wcets[v][headerv.headerID], 
-                                                                      self.v_wcets[predv][headerv.headerID])
+                    maximum_of_continuations = numpy.maximum(maximum_of_continuations, self.v_wcets[(predID, REGION.CONTINUATIONS)])
+                    maximum_of_exits         = numpy.maximum(maximum_of_exits, self.v_wcets[(predID, REGION.EXITS)])
+                self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = numpy.add(maximum_of_continuations, self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)])
+                self.v_wcets[(v.vertexID, REGION.EXITS)]         = numpy.add(maximum_of_exits,         self.v_wcets[(v.vertexID, REGION.EXITS)])
             elif v.number_of_predecessors() == 1:
                 predID = v.predecessors.keys()[0]
-                predv  = subgraph.getVertex(predID)
-                self.v_wcets[v][headerv.headerID] = self.v_wcets[predv][headerv.headerID]
-            if isinstance(v, vertices.CFGVertex): 
-                self.v_wcets[v][headerv.headerID] = numpy.add(self.v_wcets[v][headerv.headerID], 
-                                                              data.get_basic_block_wcet(v.vertexID))
-            elif isinstance(v, vertices.HeaderVertex):
-                key = (v.headerID, region)
-                self.v_wcets[v][headerv.headerID] = numpy.add(self.v_wcets[v][headerv.headerID], 
-                                                              self.loop_wcets[key])
-            else:
-                the_edge       = v.edge
-                inner_headerID = lnt.is_loop_exit_edge(the_edge[0], the_edge[1])
-                if inner_headerID and inner_headerID != headerv.headerID and not lnt.is_do_while_loop(inner_headerID):
-                    key = ((the_edge[0], the_edge[1]), region)
-                    self.v_wcets[v][headerv.headerID] = numpy.add(self.v_wcets[v][headerv.headerID], self.loop_wcets[key])
+                self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)] = numpy.add(self.v_wcets[(predID, REGION.CONTINUATIONS)], 
+                                                                             self.v_wcets[(v.vertexID, REGION.CONTINUATIONS)])
+                self.v_wcets[(v.vertexID, REGION.EXITS)]         = numpy.add(self.v_wcets[(predID, REGION.EXITS)], 
+                                                                             self.v_wcets[(v.vertexID, REGION.EXITS)])
+             
+    def reduce_loop_wcet(self, headerv, key, upper_bound_list):
+        if headerv.level > 0:
+            the_reduction = []
+            first_index   = 0
+            for upper_bound in upper_bound_list:
+                second_index = first_index + upper_bound
+                the_reduction.append(numpy.sum(self.v_wcets[key][first_index:second_index]))
+                second_index = first_index
+            return numpy.array(the_reduction)
+        else:
+            return numpy.sum(self.v_wcets[key])
 
-    def do_calculation_on_super_block_cfg_subgraph(self, data, lnt, headerv, subgraph, upper_bound_list, region):
+class RegionalCalculationSuperBlockCFG(RegionalCalculation):
+    def do_computation(self, data, lnt, super_block_cfg):
+        # Go through each loop bottom up and calculate the WCET inside continuation subgraph
+        # and, if needed, the WCET inside exit subgraph 
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for headerv in [v for v in the_vertices if isinstance(v, vertices.HeaderVertex)]:
+                self.calculate_wcet_inside_continuation_subgraph(data, lnt, super_block_cfg, headerv)
+                if not lnt.is_do_while_loop(headerv.headerID):
+                    self.calculate_wcet_inside_exit_subgraph(data, lnt, super_block_cfg, headerv)
+        rootv = lnt.getVertex(lnt.rootID)
+        return self.loop_wcets[(rootv.headerID, REGION.CONTINUATIONS)]  
+    
+    def calculate_wcet_inside_continuation_subgraph(self, data, lnt, super_block_cfg, headerv):
+        debug.debug_message("Doing calculation in continuation region of loop with header %d" % headerv.headerID, __name__, 1)
+        subgraph = super_block_cfg.tails_only_subgraphs[headerv.headerID]
+        self.do_calculation_on_subgraph(data, 
+                                        lnt, 
+                                        headerv, 
+                                        subgraph,
+                                        self.upper_bound_for_continuations[headerv.headerID], 
+                                        REGION.CONTINUATIONS)
+        
+        reduced_value = self.reduce_loop_wcet(headerv, 
+                                              subgraph.rootv, 
+                                              headerv.headerID, 
+                                              self.upper_bound_for_continuations[headerv.headerID])
+        
+        if headerv.level > 0:
+            parentv = lnt.getVertex(headerv.parentID)
+            if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
+                continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
+                self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = continuation_value
+                self.loop_wcets[(headerv.headerID, REGION.EXITS)]         = exit_value
+            else:
+                self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = reduced_value
+                self.loop_wcets[(headerv.headerID, REGION.EXITS)]         = 0
+                
+            debug.debug_message("WCET(header %s, CONTINUATIONS) = %s" % (headerv.headerID, 
+                                                                         self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)]), 
+                                                                         __name__, 10)
+            debug.debug_message("WCET(header %s, EXITS) = %s" % (headerv.headerID, 
+                                                                 self.loop_wcets[(headerv.headerID, REGION.EXITS)]), 
+                                                                 __name__, 10)
+        else:
+            self.loop_wcets[(headerv.headerID, REGION.CONTINUATIONS)] = reduced_value
+                
+    def calculate_wcet_inside_exit_subgraph(self, data, lnt, super_block_cfg, headerv):
+        debug.debug_message("Doing calculation in exit region of loop with header %d" % headerv.headerID, __name__, 1)
+        subgraph = super_block_cfg.exits_only_subgraphs[headerv.headerID]
+        self.do_calculation_on_subgraph(data, 
+                                        lnt, 
+                                        headerv, 
+                                        subgraph, 
+                                        self.upper_bound_for_exits[headerv.headerID],
+                                        REGION.EXITS)
+        for key in self.v_wcets[subgraph.rootv]:
+            if key != headerv.headerID:
+                reduced_value = self.reduce_loop_wcet(headerv, 
+                                                      subgraph.rootv, 
+                                                      key, 
+                                                      self.upper_bound_for_exits[headerv.headerID])
+                self.loop_wcets[(key, REGION.CONTINUATIONS)] = reduced_value
+                if headerv.level > 0:
+                    parentv = lnt.getVertex(headerv.parentID)
+                    if not lnt.is_do_while_loop(parentv.headerID) and super_block_cfg.exits_only_enhanced_CFGs[parentv.headerID].hasVertex(headerv.vertexID):
+                        continuation_value, exit_value = self.split_continuation_and_exit_values(parentv, reduced_value)
+                        self.loop_wcets[(key, REGION.CONTINUATIONS)] = continuation_value
+                        self.loop_wcets[(key, REGION.EXITS)]         = exit_value
+    
+    def do_calculation_on_subgraph(self, data, lnt, headerv, subgraph, upper_bound_list, region):
         self.v_wcets = {}
         for superv in subgraph:
             self.v_wcets[superv] = {}                    
@@ -1246,7 +1335,7 @@ class TreeBasedCalculation:
                     # Take the maximum value among the elements in the partition
                     wcets_within_partition[key] = numpy.maximum(wcets_within_partition[key], self.v_wcets[succ_superv][key])
         return wcets_within_partition
-    
+
     def reduce_loop_wcet(self, headerv, v, key, upper_bound_list):
         if headerv.level > 0:
             the_reduction = []

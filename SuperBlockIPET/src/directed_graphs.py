@@ -133,13 +133,14 @@ class FlowGraph(DirectedGraph):
 class EnhancedCFG(FlowGraph):
     def __init__ (self):
         FlowGraph.__init__(self)
+        self.edge_to_vertex = {}
         
     def create_from_CFG(self, cfg):
         for v in cfg:
             newv = copy.deepcopy(v) 
             newv.successors   = {}
             newv.predecessors = {}
-            self.the_vertices[v.vertexID] = newv
+            self.addVertex(newv)
             if v.vertexID == cfg.get_entryID():
                 self.entryID = v.vertexID
             if v.vertexID == cfg.get_exitID():
@@ -150,6 +151,7 @@ class EnhancedCFG(FlowGraph):
             for succID in v.successors.keys():
                 newID = self.get_next_edge_vertexID()
                 newv  = vertices.CFGEdge(newID, v.vertexID, succID)
+                self.addVertex(newv)
                 if self.getVertex(v.vertexID).dummy or self.getVertex(succID).dummy:
                     newv.dummy = True
                 self.the_vertices[newID] = newv
@@ -160,17 +162,16 @@ class EnhancedCFG(FlowGraph):
         nextID = -1
         while nextID in self.the_vertices.keys():
             nextID -= 1 
-        return nextID
-                
-    def patch_back_edges_with_correct_header(self, loop_tails, headerID):
-        for v in self:
-            if isinstance(v, vertices.CFGEdge) and v.dummy:
-                print v.edge
-                pred_basic_block = self.getVertex(v.edge[0])
-                succ_basic_block = self.getVertex(v.edge[1])
-                if pred_basic_block.vertexID in loop_tails and succ_basic_block.dummy:
-                    v.edge  = (pred_basic_block.vertexID, headerID)
-                    v.dummy = False                    
+        return nextID   
+    
+    def addVertex(self, v):
+        FlowGraph.addVertex(self, v)
+        if isinstance(v, vertices.CFGEdge):
+            self.edge_to_vertex[v.edge] = v
+            
+    def getVertexForEdge(self, predID, succID):
+        assert (predID, succID) in self.edge_to_vertex
+        return self.edge_to_vertex[(predID, succID)]                
         
 class CFG(FlowGraph):    
     def __init__ (self):

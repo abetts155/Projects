@@ -17,5 +17,5 @@ for i in $(seq $lower $upper)
 do
   echo "============================> SIZE $i"
   python ../src/main_generate_program.py . --unstructured --basic-blocks $i --filename program$i.txt --loops $loops --nesting-depth $depth --subprograms $subprograms
-  python ../src/main_super_blocks.py program$i.txt --use-tree-based
+  python ../src/main_super_blocks.py program$i.txt --region-based
 done

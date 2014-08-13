@@ -9,6 +9,12 @@ import debug
 import program_input_output
 
 def the_command_line (): 
+    ilp                          = "--ilp"
+    clp                          = "--clp"
+    region_based                 = "--region-based"
+    region_based_super_block_CFG = "--region-based-super-block-CFG"
+    all_calculations             = [ilp, clp, region_based, region_based_super_block_CFG]
+    
     parser = argparse.ArgumentParser(description="Compute WCET using implicit path enumeration defined on the super block CFG")
     
     parser.add_argument("program_file",
@@ -54,24 +60,24 @@ def the_command_line ():
                         help="generate uDraw files to visualise graphs",
                         default=False)
     
-    parser.add_argument("--use-clp",
+    parser.add_argument(clp,
                         action="store_true",
                         help="use constraint logic programming to solve WCET estimation constraint system",
                         default=False)
     
-    parser.add_argument("--use-ilp",
+    parser.add_argument(ilp,
                         action="store_true",
                         help="use integer linear programming to solve WCET estimation constraint system",
                         default=False)
     
-    parser.add_argument("--use-tree-based",
+    parser.add_argument(region_based,
                         action="store_true",
-                        help="use tree-based calculation to compute a WCET estimate",
+                        help="use region-based calculation on CFG to compute a WCET estimate",
                         default=False)
     
-    parser.add_argument("--use-enhanced-CFG",
+    parser.add_argument(region_based_super_block_CFG,
                         action="store_true",
-                        help="in tree-based calculation, use enhanced CFG instead of super block CFG",
+                        help="use region-based calculation on super block CFG to compute a WCET estimate",
                         default=False)
     
     parser.add_argument("-v",
@@ -82,8 +88,12 @@ def the_command_line ():
     
     parser.parse_args(namespace=config.Arguments)
     
-    if not (config.Arguments.use_ilp or config.Arguments.use_clp or config.Arguments.use_tree_based):
-        debug.exit_message("You must calculate specify how to calculate a WCET estimate with --use-ilp or --use-clp or --use-tree-based")
+    if not (config.Arguments.ilp or 
+            config.Arguments.clp or
+            config.Arguments.region_based or
+            config.Arguments.region_based_super_block_CFG):
+        debug.exit_message("You must calculate specify how to calculate a WCET estimate with one or more of the following: %s" %
+                           ','.join(all_calculations))
     
     setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
     setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
