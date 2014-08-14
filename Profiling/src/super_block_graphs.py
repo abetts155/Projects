@@ -16,6 +16,7 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
         self.name              = cfg.name
         self.forward_subgraphs = {}
         self.reverse_subgraphs = {}
+        self.super_block_pairs = {}
         lnt                    = cfg.get_loop_nesting_tree()
         for headerv in lnt.get_header_vertices():
             debug.debug_message("Analysing header %d" % headerv.headerID, __name__, 1)
@@ -59,6 +60,14 @@ class SuperBlockCFG(directed_graphs.DirectedGraph):
                        enhanced_CFG_reverse.get_depth_first_search_tree(), 
                        headerv, 
                        reverse_subgraph)
+        
+        for superv in reverse_subgraph:
+            if isinstance(superv.representative, vertices.CFGEdge):
+                the_edge = superv.representative.edge
+                self.super_block_pairs[superv] = forward_subgraph.program_point_to_superv[(the_edge[1], the_edge[0])]
+            else:
+                self.super_block_pairs[superv] = forward_subgraph.program_point_to_superv[superv.representative.vertexID]
+        
         return forward_subgraph, reverse_subgraph
                         
     def add_super_blocks(self, lnt, enhanced_CFG, dfs, sccs, headerv, subgraph):

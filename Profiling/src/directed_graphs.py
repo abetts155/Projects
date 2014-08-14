@@ -356,9 +356,8 @@ class DepthFirstSearch (Tree):
         self.vertex_pre_order_numbering[vertexID] = self.pre_orderID
         self.pre_order.append(vertexID)
         self.pre_orderID += 1
-           
         v = directedg.getVertex(vertexID)
-        for succID in v.successors.keys ():
+        for succID in v.successors.keys():
             if self.vertex_pre_order_numbering[succID] == 0:
                 self.addEdge(vertexID, succID)
                 self.do_search(directedg, succID)
