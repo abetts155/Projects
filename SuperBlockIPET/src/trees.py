@@ -3,6 +3,7 @@ import vertices
 import debug
 import numpy
 import utils
+import config
 
 class Tree(directed_graphs.DirectedGraph):
     def __init__ (self):
@@ -400,7 +401,7 @@ class LoopNests (Tree):
                     if treev.level == 0:
                         upper_bounds[treev.headerID] = (1,)
                     elif treev.level == 1:
-                        upper_bounds[treev.headerID] = (numpy.random.randint(1, 20),)
+                        upper_bounds[treev.headerID] = (numpy.random.randint(1, config.Arguments.maximum_loop_bound),)
                     else:                            
                         parentv      = self.getVertex(treev.parentID)
                         enhanced_CFG = self.induce_subgraph_with_exits_only(parentv)
@@ -409,11 +410,11 @@ class LoopNests (Tree):
                             for i in range(1, number_of_iterations+1):
                                 if i == number_of_iterations:
                                     if enhanced_CFG.hasVertex(treev.vertexID):
-                                        upper_bound += (numpy.random.randint(1, 20),)
+                                        upper_bound += (numpy.random.randint(1, config.Arguments.maximum_loop_bound),)
                                     else:
                                         upper_bound += (0,)
                                 else:
-                                    upper_bound += (numpy.random.randint(1, 20),)
+                                    upper_bound += (numpy.random.randint(1, config.Arguments.maximum_loop_bound),)
                         upper_bounds[treev.headerID] = upper_bound
         return upper_bounds
     

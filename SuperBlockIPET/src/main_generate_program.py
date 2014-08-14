@@ -102,6 +102,12 @@ def the_command_line():
                         default=0,
                         metavar="<INT>")
     
+    parser.add_argument("--maximum-loop-bound",
+                        type=int,
+                        help="maximum allowed loop bound for a single iteration of the parent loop",
+                        default=10,
+                        metavar="<INT>")
+    
     parser.add_argument("--self-loops",
                         type=int,
                         help="maximum number of self-loops in a CFG",

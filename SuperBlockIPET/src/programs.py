@@ -139,9 +139,10 @@ class Program():
                     print("Region::                   WCET(%s) = %d" % (cfg.name, region_based_calculation.wcet))
                     if config.Arguments.ilp:
                         cfg_calculation = self.ilps.cfg_calculations[cfg.name].constraint_system
-                        assert cfg_calculation.wcet == region_based_calculation.wcet, "Disparity in WCETs for %s: (%f, %f)" % (cfg.name, 
-                                                                                                                               cfg_calculation.wcet, 
-                                                                                                                               region_based_calculation.wcet)
+                        if cfg_calculation.wcet != region_based_calculation.wcet:
+                            debug.warning_message("Disparity in WCETs for %s: (%f, %f)" % (cfg.name, 
+                                                                                           cfg_calculation.wcet, 
+                                                                                           region_based_calculation.wcet))
     def do_wcet_calculation(self, data):
         if config.Arguments.randomise_WCET_data:
             for cfg in self.cfgs.values():
