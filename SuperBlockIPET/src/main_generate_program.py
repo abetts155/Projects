@@ -102,12 +102,6 @@ def the_command_line():
                         default=0,
                         metavar="<INT>")
     
-    parser.add_argument("--maximum-loop-bound",
-                        type=int,
-                        help="maximum allowed loop bound for a single iteration of the parent loop",
-                        default=10,
-                        metavar="<INT>")
-    
     parser.add_argument("--self-loops",
                         type=int,
                         help="maximum number of self-loops in a CFG",
@@ -148,6 +142,34 @@ def the_command_line():
                         action="store_true",
                         help="add unstructured edges to the CFG",
                         default=False)
+    
+    # WCET options
+    wcet_group = parser.add_argument_group("WCET arguments")
+    
+    wcet_group.add_argument("--add-WCET-information",
+                            action="store_true",
+                            help="add WCET information (execution times and execution counts) when writing the program to file",
+                            default=False)
+    
+    wcet_group.add_argument("--maximum-loop-bound",
+                            type=int,
+                            help="maximum allowed loop bound for a single iteration of the parent loop",
+                            default=10,
+                            metavar="<INT>")
+    
+    wcet_group.add_argument("--maximum-execution-time",
+                            type=int,
+                            help="maximum allowed execution time for a basic block",
+                            default=10,
+                            metavar="<INT>")
+    
+    # Profiling options
+    profiling_group = parser.add_argument_group("Program profiling arguments")
+    
+    profiling_group.add_argument("--add-profile-information",
+                                 action="store_true",
+                                 help="add profile information (program points whose execution frequencies we want to count) when writing the program to file",
+                                 default=False)
     
     parser.parse_args(namespace=config.Arguments)
     

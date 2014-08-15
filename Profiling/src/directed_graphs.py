@@ -210,6 +210,7 @@ class EnhancedCFG(FlowGraph):
 class CFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
+        self.program_points_to_profile = set()
         
     def set_entry_and_exit(self):
         without_predecessors = []

@@ -24,7 +24,7 @@ class FunctionData:
                 debug.debug_message("WCET(%d) = %d" % (v.vertexID, self.basic_block_WCETs[v.vertexID]), __name__, 1)
     
     def assign_loop_bounds(self, lnt):
-        self.upper_bounds_on_headers = lnt.get_random_loop_bounds()
+        self.upper_bounds_on_headers = lnt.get_random_loop_bounds(random.randint(1,20))
         for headerID, value in self.upper_bounds_on_headers.iteritems():
             debug.debug_message("Bound(%d) = %s" % (headerID, value), __name__, 1)
                         

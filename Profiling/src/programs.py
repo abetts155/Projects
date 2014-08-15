@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import super_block_graphs
 import udraw
 import debug
@@ -27,6 +25,7 @@ class Program():
     
     def instrument(self):      
         for function_name in self.cfgs.keys():
-            instrumentation.Instrumenter(self.cfgs[function_name].get_loop_nesting_tree(),
+            instrumentation.Instrumenter(self.cfgs[function_name],
+                                         self.cfgs[function_name].get_loop_nesting_tree(),
                                          self.super_block_cfgs[function_name])
                 

@@ -71,11 +71,16 @@ def make_file(g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
+            if isinstance(g, directed_graphs.CFG):
                 write_CFG_vertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
-                        write_CFG_vertex(g, v.vertexID, the_file)   
+                        write_CFG_vertex(g, v.vertexID, the_file)
+            elif isinstance(g, directed_graphs.EnhancedCFG):
+                write_enhanced_CFG_vertex(g, g.get_entryID(), the_file)
+                for v in g:
+                    if v.vertexID != g.get_entryID():
+                        write_enhanced_CFG_vertex(g, v.vertexID, the_file)
             elif isinstance(g, super_block_graphs.SuperBlockCFG):
                 for subgraph in g.forward_subgraphs.values():
                     for superv in subgraph:
@@ -109,6 +114,27 @@ def writeVertex(g, vertexID, the_file):
     the_file.write(end_vertex + "\n") 
     
 def write_CFG_vertex(cfg, vertexID, the_file):
+    v = cfg.getVertex(vertexID)
+    the_file.write(new_vertex(vertexID))
+    the_file.write(begin_attrs)
+    the_file.write(set_name(str(vertexID)))
+    if v.vertexID in cfg.program_points_to_profile:
+        the_file.write(set_color(COLOR.RED))
+    the_file.write(end_attrs)
+    
+    the_file.write(begin_attrs)
+    for succe in v.successors.values():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name("%d" % succe.edgeID))
+        if (v.vertexID, succe.vertexID) in cfg.program_points_to_profile:
+            the_file.write(set_edge_color(COLOR.RED))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succe.vertexID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")
+    
+def write_enhanced_CFG_vertex(cfg, vertexID, the_file):
     v = cfg.getVertex(vertexID)
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)

@@ -5,13 +5,15 @@ import vertices
 import debug
 import database
 import re
-import numpy
+import random
+import config
 
 cfg_lexeme         = "cfg"
 basic_block_lexeme = "bb"
 successors_lexeme  = "succ"
 wcet_lexeme        = "wcet"
 upper_bound_lexeme = "upper bound"
+profile_lexeme     = "profile"
 divider            = '-' * 50
 
 name_regex       = re.compile("[\d\w]+")
@@ -22,9 +24,10 @@ edge_tuple_regex = re.compile(r"[\w\d]+")
 def write_file(program, filename):
     with open(filename, 'w') as the_file:
         for cfg in program.cfgs.values():
+            if config.Arguments.add_WCET_information:
+                lnt          = trees.LoopNests(cfg, cfg.get_entryID())
+                upper_bounds = lnt.get_random_loop_bounds(config.Arguments.maximum_loop_bound)
             the_file.write("%s\n" % divider)
-            lnt          = trees.LoopNests(cfg, cfg.get_entryID())
-            upper_bounds = lnt.get_random_loop_bounds()
             the_file.write("%s: %s\n" % (cfg_lexeme, cfg.name))
             for v in cfg:
                 the_file.write("%s: %d\n" % (basic_block_lexeme, v.vertexID))
@@ -32,12 +35,24 @@ def write_file(program, filename):
                 if cfg.get_exitID() != v.vertexID:
                     for succID in v.successors.keys():
                         the_file.write("(%s, %d) " % (cfg.name, succID))
-                the_file.write("\n")  
-                the_file.write("%s: %d" % (wcet_lexeme, numpy.random.randint(1,20)))
-                if v.vertexID in upper_bounds:                
-                    the_file.write("\n")
-                    the_file.write("%s: %s" % (upper_bound_lexeme, upper_bounds[v.vertexID]))
-                the_file.write("\n" * 2)  
+                the_file.write("\n")
+                if config.Arguments.add_WCET_information:
+                    the_file.write("%s: %d" % (wcet_lexeme, random.randint(1,config.Arguments.maximum_execution_time)))    
+                    if v.vertexID in upper_bounds:                
+                        the_file.write("\n")
+                        the_file.write("%s: %s" % (upper_bound_lexeme, upper_bounds[v.vertexID]))
+                    the_file.write("\n") 
+            if config.Arguments.add_profile_information:
+                the_file.write("%s: " % profile_lexeme)
+                for v in cfg:
+                    if bool(random.getrandbits(1)):
+                        the_file.write("(%d) " % v.vertexID)
+                    if cfg.get_exitID() != v.vertexID:
+                        for succID in v.successors.keys():
+                            if bool(random.getrandbits(1)):
+                                the_file.write("(%d, %d) " % (v.vertexID, succID))
+                the_file.write("\n")
+                     
     
 def read_file(filename):
     data    = database.Database()
