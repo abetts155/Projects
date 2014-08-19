@@ -1,4 +1,4 @@
-from Edges import Edge, CallGraphEdge, LoopBoundEdge, CapacityBoundEdge, PathInformationEdge, PathInformationEdgeType
+import Edges
 
 dummyVertexID = -1
 
@@ -9,10 +9,10 @@ class PathInformationVertex ():
         self._headerID = headerID
         self._counterForHeaderIDs = set([])
         self._successors = {}
-        self._successors[PathInformationEdgeType.CAPACITY_BOUNDS] = []
-        self._successors[PathInformationEdgeType.LOOP_BOUNDS]  = []
-        self._successors[PathInformationEdgeType.EXCLUSION] = set([])
-        self._successors[PathInformationEdgeType.INCLUSION] = set([])
+        self._successors[Edges.PathInformationEdgeType.CAPACITY_BOUNDS] = []
+        self._successors[Edges.PathInformationEdgeType.LOOP_BOUNDS]  = []
+        self._successors[Edges.PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[Edges.PathInformationEdgeType.INCLUSION] = set([])
         
     def getVertexID (self):
         return self._vertexID
@@ -34,14 +34,14 @@ class PathInformationVertex ():
         return len(self._counterForHeaderIDs) > 0
                
     def addSuccessorEdge (self, succID, edgeType):
-        if edgeType == PathInformationEdgeType.LOOP_BOUNDS:
-            succe = LoopBoundEdge(succID)
+        if edgeType == Edges.PathInformationEdgeType.LOOP_BOUNDS:
+            succe = Edges.LoopBoundEdge(succID)
             self._successors[edgeType].append(succe)
-        elif edgeType == PathInformationEdgeType.CAPACITY_BOUNDS:
-            succe = CapacityBoundEdge(succID)
+        elif edgeType == Edges.PathInformationEdgeType.CAPACITY_BOUNDS:
+            succe = Edges.CapacityBoundEdge(succID)
             self._successors[edgeType].append(succe)
         else:
-            succe = PathInformationEdge(succID, edgeType)
+            succe = Edges.PathInformationEdge(succID, edgeType)
             self._successors[edgeType].add(succe)
         
     def removeSuccessorEdge (self, succID, edgeType):
@@ -77,8 +77,8 @@ class PathInformationVertex ():
         return len(self._successors)
     
     def removeAllSuccessors (self):
-        self._successors[PathInformationEdgeType.EXCLUSION] = set([])
-        self._successors[PathInformationEdgeType.INCLUSION] = set([])
+        self._successors[Edges.PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[Edges.PathInformationEdgeType.INCLUSION] = set([])
     
     def __str__ (self):
         return str(self._programPoint)
@@ -96,7 +96,7 @@ class Vertex ():
         return self._vertexID
     
     def addPredecessor (self, predID, edgeID=None):
-        e = Edge(predID, edgeID)
+        e = Edges.Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
@@ -127,7 +127,7 @@ class Vertex ():
         return self._predecessors[predID]
     
     def addSuccessor (self, succID,edgeID=None):
-        e = Edge(succID, edgeID)
+        e = Edges.Edge(succID, edgeID)
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
@@ -282,14 +282,14 @@ class CallGraphVertex (Vertex):
     
     def addPredecessor (self, predID, callSiteID):
         if predID not in self._predecessors:
-            e = CallGraphEdge(predID)
+            e = Edges.CallGraphEdge(predID)
             self._predecessors[predID] = e
         e = self._predecessors[predID]
         e.addCallSite(callSiteID)
     
     def addSuccessor (self, succID, callSiteID):
         if succID not in self._successors:
-            e = CallGraphEdge(succID)
+            e = Edges.CallGraphEdge(succID)
             self._successors[succID] = e
         e = self._successors[succID]
         e.addCallSite(callSiteID)

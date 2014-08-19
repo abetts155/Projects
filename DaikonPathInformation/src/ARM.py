@@ -1,5 +1,13 @@
-import Debug, CFGs, Programs, Vertices, ParseProgramFile, Utils
-import re, shlex, os, sys
+import Debug
+import CFGs
+import Programs
+import Vertices
+import ParseProgramFile
+import Utils
+import re
+import shlex
+import os
+import sys
 
 debugLevel = 20
 

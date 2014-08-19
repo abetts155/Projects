@@ -1,4 +1,4 @@
-from Vertices import Vertex, dummyVertexID
+import Vertices
 
 class DirectedGraph ():        
     def __init__ (self):
@@ -70,7 +70,7 @@ class DirectedGraph ():
         # Add vertices
         for v in self:
             vertexID = v.getVertexID()
-            copyv    = Vertex(vertexID)
+            copyv    = Vertices.Vertex(vertexID)
             reverseg.vertices[vertexID] = copyv
         # Add edges
         for v in self:
@@ -91,11 +91,11 @@ class DirectedGraph ():
 class FlowGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._entryID = dummyVertexID
-        self._exitID = dummyVertexID
+        self._entryID = Vertices.dummyVertexID
+        self._exitID = Vertices.dummyVertexID
         
     def getEntryID (self):
-        assert self._entryID != dummyVertexID, "Entry to flow graph not found"
+        assert self._entryID != Vertices.dummyVertexID, "Entry to flow graph not found"
         return self._entryID
     
     def getExitID (self):

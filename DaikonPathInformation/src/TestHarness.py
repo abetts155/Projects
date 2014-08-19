@@ -1,3 +1,6 @@
+import random
+import string
+
 class TestVectorProperties:
     Type = ['int', 'double', 'char']
     
@@ -16,7 +19,6 @@ class RandomGeneration:
         self.__vectorProperties = vectorProperties
     
     def nextTestVector (self):
-        import random, string
         vector = []
         for i in xrange(1, self.__vectorProperties.length+1):
             if self.__vectorProperties.baseType == TestVectorProperties.Type[0]: 
