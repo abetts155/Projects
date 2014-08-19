@@ -70,7 +70,7 @@ def readInProgram (programFile):
                     Debug.exitMessage("Function name '%s' is disallowed. Every name must start with a non-digit character" % functionName)
                 cfg.setName(functionName)
                 program.addCFG(cfg, functionName)
-                Debug.debugMessage("Found new CFG '%s'" % functionName, 1)
+                Debug.debug_message("Found new CFG '%s'" % functionName, 1)
     # Now add the relevant edges to the CFGs and the call graph
     with open(programFile, 'r') as f: 
         bbIDs        = set([]) 
@@ -85,7 +85,7 @@ def readInProgram (programFile):
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
                 functionName = lexemes[-1]
                 cfg         = program.getCFG(functionName)
-                Debug.debugMessage("Retrieved CFG for '%s'" % functionName, 1)
+                Debug.debug_message("Retrieved CFG for '%s'" % functionName, 1)
             elif line.startswith(bbIndicator):
                 instructions = False
                 assert cfg, "Found basic block but current CFG is null"

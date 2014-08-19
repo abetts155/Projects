@@ -72,14 +72,14 @@ class CallGraph (DirectedGraph):
         
     def addVertex (self, functionName):
         assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
-        Debug.debugMessage("Adding call graph vertex of function '%s'" % functionName, 5)
+        Debug.debug_message("Adding call graph vertex of function '%s'" % functionName, 5)
         vertexID = self.getNextVertexID()
         callv    = CallGraphVertex(vertexID, functionName)
         self.vertices[vertexID] = callv 
         self.__functionNameToVertex[functionName] = callv
     
     def removeVertex (self, functionName):
-        Debug.debugMessage("Removing call graph vertex of function '%s'" % functionName, 5)
+        Debug.debug_message("Removing call graph vertex of function '%s'" % functionName, 5)
         callv    = self.getVertexWithName(functionName)
         vertexID = callv.getVertexID()
         for succID in callv.getSuccessorIDs():
@@ -130,7 +130,7 @@ class CallGraph (DirectedGraph):
         return self.__rootID
     
     def addEdge (self, predName, succName, callSiteID):
-        Debug.debugMessage("Adding call graph edge %s => %s" % (predName, succName), 5)
+        Debug.debug_message("Adding call graph edge %s => %s" % (predName, succName), 5)
         predv = self.getVertexWithName(predName)
         succv = self.getVertexWithName(succName)
         predv.addSuccessor(succv.getVertexID(), callSiteID)            
@@ -164,19 +164,19 @@ class Program():
             totalDependencies    += dependencies
             totalNever           += neverExecute
             totalAlways          += alwaysExecute
-            Debug.verboseMessage("In %s..." % functionName)
-            Debug.verboseMessage("...#CFG edges              = %d" % cfg.numOfEdges())
-            Debug.verboseMessage("...#monitored              = %d" % pathg.numOfVertices())
-            Debug.verboseMessage("...#mutual exclusion pairs = %d" % mutualExclusionPairs)
-            Debug.verboseMessage("...#mutual inclusion pairs = %d" % mutualInclusionPairs)
-            Debug.verboseMessage("...#execution dependencies = %d" % dependencies)
-            Debug.verboseMessage("...#never execute          = %d" % neverExecute)
-            Debug.verboseMessage("...#always execute         = %d" % alwaysExecute)
-        Debug.verboseMessage("...#TOTAL mutual exclusion pairs = %d" % totalMutualExclusion)
-        Debug.verboseMessage("...#TOTAL mutual inclusion pairs = %d" % totalMutualInclusion)
-        Debug.verboseMessage("...#TOTAL execution dependencies = %d" % totalDependencies)
-        Debug.verboseMessage("...#TOTAL never execute          = %d" % totalAlways)
-        Debug.verboseMessage("...#TOTAL always execute         = %d" % totalAlways)
+            Debug.verbose_message("In %s..." % functionName, __name__)
+            Debug.verbose_message("...#CFG edges              = %d" % cfg.numOfEdges(), __name__)
+            Debug.verbose_message("...#monitored              = %d" % pathg.numOfVertices(), __name__)
+            Debug.verbose_message("...#mutual exclusion pairs = %d" % mutualExclusionPairs, __name__)
+            Debug.verbose_message("...#mutual inclusion pairs = %d" % mutualInclusionPairs, __name__)
+            Debug.verbose_message("...#execution dependencies = %d" % dependencies, __name__)
+            Debug.verbose_message("...#never execute          = %d" % neverExecute, __name__)
+            Debug.verbose_message("...#always execute         = %d" % alwaysExecute, __name__)
+        Debug.verbose_message("...#TOTAL mutual exclusion pairs = %d" % totalMutualExclusion, __name__)
+        Debug.verbose_message("...#TOTAL mutual inclusion pairs = %d" % totalMutualInclusion, __name__)
+        Debug.verbose_message("...#TOTAL execution dependencies = %d" % totalDependencies, __name__)
+        Debug.verbose_message("...#TOTAL never execute          = %d" % totalAlways, __name__)
+        Debug.verbose_message("...#TOTAL always execute         = %d" % totalAlways, __name__)
             
     def generateAllUDrawFiles (self, suffix=""):
         if suffix:
@@ -270,7 +270,7 @@ class Program():
             UDrawGraph.makeUdrawFile(cfg, "%s.cfg" % cfg.getName())
     
     def inlineCalls (self):
-        Debug.verboseMessage("Inlining to create single CFG")
+        Debug.verbose_message("Inlining to create single CFG", __name__)
         rootv = self.__callg.getRootVertex()
         dfs   = DepthFirstSearch(self.__callg, rootv.getVertexID())
         for vertexID in dfs.getPostorder():
@@ -283,7 +283,7 @@ class Program():
                     calleeCFG  = self.getCFG(calleeName)
                     callerName = predv.getName()
                     callerCFG  = self.getCFG(callerName)
-                    Debug.debugMessage("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
+                    Debug.debug_message("Inlining '%s' into '%s' at call site %d" % (calleeName, callerName, callSiteID), 1)
                     self.__doInline(callerCFG, calleeCFG, callSiteID)
                     callerCFG.removeCallSite(callSiteID)
                 

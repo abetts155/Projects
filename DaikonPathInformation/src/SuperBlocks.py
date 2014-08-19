@@ -19,7 +19,7 @@ class PathInformationGraph (DirectedGraph):
             for treev in vertices:
                 if isinstance(treev, HeaderVertex):
                     headerID = treev.getHeaderID()
-                    Debug.debugMessage("Analysing header %d" % headerID, 1)
+                    Debug.debug_message("Analysing header %d" % headerID, 1)
                     forwardCFG, bodyVertices, bodyEdges = lnt.induceSubgraph(treev)
                     enhancedCFG           = EnhancedCFG(forwardCFG)
                     predomTree            = Dominators(enhancedCFG, enhancedCFG.getEntryID())
@@ -357,7 +357,7 @@ class StrongComponents ():
             vertexID = poppedv.getVertexID()
             self.__vertexToSCC[vertexID] = self.__sccCounter
             self.__SCCToVertices[self.__sccCounter].add(vertexID)
-            Debug.debugMessage("Vertex %d is in SCC %d" % (vertexID, self.__sccCounter), 15)
+            Debug.debug_message("Vertex %d is in SCC %d" % (vertexID, self.__sccCounter), 15)
             if self.__vertexToColour[vertexID] == Colors.BLACK:
                 self.__vertexToColour[vertexID] = Colors.BLUE
                 stack.append(poppedv)

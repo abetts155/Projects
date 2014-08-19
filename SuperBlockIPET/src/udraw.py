@@ -67,7 +67,6 @@ def set_edge_direction(direction):
     return "a(\"_DIR\", \"" + direction + "\"),"
 
 def make_file(g, graph_name):
-    global basepath, basename
     if config.Arguments.udraw:
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:

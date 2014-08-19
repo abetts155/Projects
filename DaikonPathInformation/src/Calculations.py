@@ -1,14 +1,16 @@
 from Vertices import HeaderVertex
 from Edges import PathInformationEdge, PathInformationEdgeType
 from Trees import DepthFirstSearch
+import config
 import Debug
-import os, timeit, sys
+import os
+import timeit
 
 def getNewLine (num=1):
     return "\n" * num 
 
 class WCETCalculation:
-    def __init__ (self, program, data, basepath, basename):
+    def __init__ (self, program, data):
         self.__VanillaContextIDToWCET = {}
         self.__ExtraContextIDToWCET = {}
         contextg = program.getContextGraph()
@@ -18,25 +20,25 @@ class WCETCalculation:
             functionName = contextv.getName()
             pathg        = program.getPathInfoGraph(functionName)
             if pathg.isExecutedFunction():
-                Debug.verboseMessage("Doing WCET calculation on %s" % functionName)
+                Debug.verbose_message("Doing WCET calculation on %s" % functionName, __name__)
                 lnt   = program.getLNT(functionName)
                 cfg   = program.getCFG(functionName)
-                ilp1  = CreateCFGILPVanilla(basepath, basename, data, self.__VanillaContextIDToWCET, contextv, cfg, lnt, pathg)
+                ilp1  = CreateCFGILPVanilla(data, self.__VanillaContextIDToWCET, contextv, cfg, lnt, pathg)
                 ilp1WCET, ilp1SolvingTime = ilp1.solve()
-                Debug.verboseMessage("ILP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp1WCET, ilp1SolvingTime))
+                Debug.verbose_message("ILP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp1WCET, ilp1SolvingTime), __name__)
                 self.__VanillaContextIDToWCET[contextv.getVertexID()] = ilp1WCET
                 if not pathg.executionDependencies() and not pathg.mutualInclusionPairs() and not pathg.mutualExclusionPairs():
-                    ilp2 = CreateCFGILPExtra(basepath, basename, data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
+                    ilp2 = CreateCFGILPExtra(data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
                     ilp2WCET, ilp2SolvingTime = ilp2.solve()
                     self.__ExtraContextIDToWCET[contextv.getVertexID()] = ilp2WCET
-                    Debug.verboseMessage("ILP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp2WCET, ilp2SolvingTime))
+                    Debug.verbose_message("ILP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp2WCET, ilp2SolvingTime), __name__)
                 else:
-                    clp2 = CreateCFGCLPExtra(basepath, basename, data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
+                    clp2 = CreateCFGCLPExtra(data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
                     clp2WCET, clp2SolvingTime = clp2.solve()
                     self.__ExtraContextIDToWCET[contextv.getVertexID()] = clp2WCET
-                    Debug.verboseMessage("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2WCET, clp2SolvingTime))
+                    Debug.verbose_message("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2WCET, clp2SolvingTime), __name__)
             else:
-                Debug.verboseMessage("%s did not execute" % functionName)
+                Debug.verbose_message("%s did not execute" % functionName, __name__)
                 self.__VanillaContextIDToWCET[contextv.getVertexID()] = 0
                 self.__ExtraContextIDToWCET[contextv.getVertexID()] = 0
             
@@ -76,7 +78,7 @@ class ECLIPSE:
     def getTempList (suffix):
         return "VARS%d" % suffix
     
-class CLP ():
+class CLP:
     WCET        = "WCET"
     PWCET       = "PWCET"
     BB_TIMES    = "BB_TIMES"
@@ -106,9 +108,9 @@ class CLP ():
         with open(self._filename, 'w') as clpFile:
             for line in self._lines:
                 clpFile.write(line)          
-        Debug.debugMessage("Solving CLP in %s" % self._filename, 10)
+        Debug.debug_message("Solving CLP in %s" % self._filename, 10)
         command    = 'jeclipse -b %s -e "%s."' % (self._filename, self.__goal) 
-        Debug.verboseMessage("Running command '%s'" % command)
+        Debug.verbose_message("Running command '%s'" % command, __name__)
         start = timeit.default_timer()
         proc       = Popen(command, shell=True, executable="/bin/bash")
         returnCode = proc.wait()
@@ -349,9 +351,13 @@ class CreateCFGCLP (CLP):
         self._lines.append(getNewLine(2))
 
 class CreateCFGCLPVanilla (CreateCFGCLP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+    def __init__ (self, data, contextWCETs, contextv, cfg, lnt, pathg):
         CreateCFGCLP.__init__(self)
-        self._filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._filename = "%s.%s.context%s.%s.%s.vanilla" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
+                                                            contextv.getName(), 
+                                                            contextv.getVertexID(), 
+                                                            "cfg", 
+                                                            ECLIPSE.fileSuffix)
         self._addVariables(cfg)
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
@@ -362,9 +368,13 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         self._addOutputPredicates()
 
 class CreateCFGCLPExtra (CreateCFGCLP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+    def __init__ (self, data, contextWCETs, contextv, cfg, lnt, pathg):
         CreateCFGCLP.__init__(self)
-        self._filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", ECLIPSE.fileSuffix)
+        self._filename = "%s.%s.context%s.%s.%s.extra" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
+                                                          contextv.getName(), 
+                                                          contextv.getVertexID(), 
+                                                          "cfg", 
+                                                          ECLIPSE.fileSuffix)
         self._addVariables(cfg)
         self._addObjectiveFunction(cfg)
         self._addExecutionTimeDomains(data, contextWCETs, contextv, cfg)
@@ -456,7 +466,7 @@ class ILP ():
         import shlex, decimal
         from subprocess import Popen, PIPE
         assert self._filename, "ILP filename has not been set"
-        Debug.debugMessage("Solving ILP for %s" % self._filename, 10)
+        Debug.debug_message("Solving ILP for %s" % self._filename, 10)
         command    = "lp_solve %s -S1 -time" % self._filename 
         start = timeit.default_timer()
         proc       = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, executable="/bin/bash")
@@ -612,9 +622,13 @@ class CreateCFGILP (ILP):
                 ilpFile.write(constraint)
 
 class CreateCFGILPVanilla (CreateCFGILP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+    def __init__ (self, data, contextWCETs, contextv, cfg, lnt, pathg):
         CreateCFGILP.__init__(self)
-        self._filename = "%s.%s.context%s.%s.%s.vanilla" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        self._filename = "%s.%s.context%s.%s.%s.vanilla" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
+                                                            contextv.getName(), 
+                                                            contextv.getVertexID(), 
+                                                            "cfg", 
+                                                            LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
         self._createExecutionCountConstraints(cfg, lnt, pathg)
         self._createIntegerConstraint()
@@ -622,9 +636,13 @@ class CreateCFGILPVanilla (CreateCFGILP):
         self._outputConstraints()
         
 class CreateCFGILPExtra (CreateCFGILP):
-    def __init__ (self, basepath, basename, data, contextWCETs, contextv, cfg, lnt, pathg):
+    def __init__ (self, data, contextWCETs, contextv, cfg, lnt, pathg):
         CreateCFGILP.__init__(self)
-        self._filename = "%s.%s.context%s.%s.%s.extra" % (basepath + os.sep + basename, contextv.getName(), contextv.getVertexID(), "cfg", LpSolve.fileSuffix)
+        self._filename = "%s.%s.context%s.%s.%s.extra" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
+                                                          contextv.getName(), 
+                                                          contextv.getVertexID(), 
+                                                          "cfg", 
+                                                          LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
         self._createExecutionCountConstraints(cfg, lnt, pathg)
         self._createLowerAndUpperBoundConstraints(cfg, pathg)

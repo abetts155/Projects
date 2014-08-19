@@ -1,9 +1,8 @@
 import Programs, CFGs, Trees, Vertices, SuperBlocks
+import config
 from Vertices import CFGEdge
 from Edges import PathInformationEdgeType
-
-enabled  = False
-basename = ""
+import os
 
 beginAttributes = "["
 beginGraph      = "[\n"
@@ -67,10 +66,9 @@ def setEdgePattern (shape, width):
 def setEdgeColor (color):
     return "a(\"EDGECOLOR\", \"" + color + "\"),"
 
-def makeUdrawFile (g, fileNamePrefix):
-    global basename
-    if enabled:
-        filename = "%s.%s" % (basename, fileNamePrefix + fileNameSuffix)
+def makeUdrawFile (g, graph_name):
+    if config.Arguments.udraw:
+        filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG

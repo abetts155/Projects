@@ -313,7 +313,7 @@ class DepthFirstSearch (Tree):
     
 class CompressedDominatorTree (Tree):
     def __init__(self, domTree, lca, vertexID, neighbourIDs):
-        Debug.debugMessage("Building compressed dominator tree for %d using %s" \
+        Debug.debug_message("Building compressed dominator tree for %d using %s" \
                            % (vertexID, neighbourIDs), 20)
         Tree.__init__(self)
         self.__build(lca, neighbourIDs)
@@ -348,7 +348,7 @@ class CompressedDominatorTree (Tree):
                 if not self.hasVertex(parentID):
                     self.addVertex(parentID)
                 if parentID != vertexID:
-                    Debug.debugMessage("Adding edge (%d, %d)" % (parentID, vertexID), 20)
+                    Debug.debug_message("Adding edge (%d, %d)" % (parentID, vertexID), 20)
                     self.addEdge(parentID, vertexID)
             # Any vertex without a predecessor goes into the query set
             newQuerySet = []
@@ -393,7 +393,7 @@ class LeastCommonAncestor ():
         return self.__vertexToLevel[vertexID]
             
     def getLCA (self, left, right):    
-        Debug.debugMessage("Computing lca(%d, %d)" % (left, right), 20) 
+        Debug.debug_message("Computing lca(%d, %d)" % (left, right), 20) 
         repID1      = self.__representative[left]
         repID2      = self.__representative[right]
         lowestLevel = self.__dummyLevel
@@ -411,7 +411,7 @@ class LeastCommonAncestor ():
             if self.__level[i] < lowestLevel:
                 lowestLevel = self.__level[i]
                 levelIndex  = i
-        Debug.debugMessage("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 15)
+        Debug.debug_message("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 15)
         return self.__euler[levelIndex]
     
 class Dominators (Tree):
@@ -561,10 +561,10 @@ class LoopNests (Tree):
                 if self.__dfs.isDFSBackedge(predID, vertexID):
                     assert self.__predomTree.isAncestor(vertexID, predID), "Non-reducible loop found with DFS backedge %d => %d" % (predID, vertexID)
                     if predID == vertexID:
-                        Debug.debugMessage("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 15)
+                        Debug.debug_message("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 15)
                         self._addSelfLoop (vertexID)
                     else:
-                        Debug.debugMessage("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), 15)
+                        Debug.debug_message("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), 15)
                         worklist.append(self.__parent[predID])
             
             if worklist:
@@ -630,7 +630,7 @@ class LoopNests (Tree):
                         else:
                             self.__loopExits[headerID][vertexID] = []
                             self.__loopExits[headerID][vertexID].append(succID)
-            Debug.debugMessage("Exits of %s = %s" % (headerID, self.__loopExits[headerID].keys()), 15)
+            Debug.debug_message("Exits of %s = %s" % (headerID, self.__loopExits[headerID].keys()), 15)
             
     def __str__ (self):
         string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"
