@@ -6,7 +6,7 @@ bb: 2
 succ: (F1, 3) (F1, 9)
 
 bb: 3
-succ: (F1, 15) (F1, 16)
+succ: (F1, 15) (F1, 16) (F1, 4)
 
 bb: 15
 succ: (F1, 17)
@@ -15,7 +15,7 @@ bb: 16
 succ: (F1, 17)
 
 bb: 17
-succ: (F1, 4)
+succ: (F1, 7)
 
 bb: 4
 succ: (F1, 5) (F1, 6)

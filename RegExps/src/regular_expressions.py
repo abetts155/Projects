@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import trees
+import directed_graphs
 import vertices
 
 class DominanceFrontiers:
@@ -84,11 +84,11 @@ class PathExpression:
                                       RegExp.empty))
         else:
             self.induced_CFG            = induced_CFG
-            self.predominator_tree      = trees.Dominators(induced_CFG, induced_CFG.get_entryID())
-            self.lca                    = trees.LeastCommonAncestor(self.predominator_tree)
+            self.predominator_tree      = directed_graphs.Dominators(induced_CFG, induced_CFG.get_entryID())
+            self.lca                    = directed_graphs.LeastCommonAncestor(self.predominator_tree)
             self.acyclic_reducible_info = AcyclicReducibility(induced_CFG, self.predominator_tree)
             self.reverse_induced_CFG    = induced_CFG.get_reverse_graph()
-            self.postdominator_tree     = trees.Dominators(self.reverse_induced_CFG, self.reverse_induced_CFG.get_entryID())
+            self.postdominator_tree     = directed_graphs.Dominators(self.reverse_induced_CFG, self.reverse_induced_CFG.get_entryID())
             self.initialise()
             self.compute()
             print("P(%d, %d) = %s" % (induced_CFG.get_entryID(),
@@ -101,7 +101,7 @@ class PathExpression:
             self.vertex_to_regular_expression[v.vertexID] = RegExp() 
         
     def compute(self):
-        dfs = trees.DepthFirstSearch(self.induced_CFG, self.induced_CFG .get_entryID())
+        dfs = directed_graphs.DepthFirstSearch(self.induced_CFG, self.induced_CFG .get_entryID())
         for vertexID in reversed(dfs.post_order):
             v = self.induced_CFG.getVertex(vertexID)
             if vertexID == self.induced_CFG .get_entryID():
@@ -122,10 +122,10 @@ class PathExpression:
                 
     def handle_merge(self, mergev):
         vertex_temp_reg_exprs = {}
-        compressed_tree       = trees.CompressedDominatorTree(self.predominator_tree, 
-                                                              self.lca, 
-                                                              mergev.vertexID, 
-                                                              mergev.predecessors.keys())
+        compressed_tree       = directed_graphs.CompressedDominatorTree(self.predominator_tree, 
+                                                                        self.lca, 
+                                                                        mergev.vertexID, 
+                                                                        mergev.predecessors.keys())
         for the_vertices in compressed_tree.level_by_level_iterator(True):
             for treev in the_vertices:
                 if treev.number_of_successors() == 0:
@@ -151,10 +151,11 @@ class PathExpression:
             
 def create_path_expression(cfg, entry_vertexID, exit_vertexID):
     lnt     = cfg.get_LNT()
-    lca     = trees.LeastCommonAncestor(lnt)
+    lca     = directed_graphs.LeastCommonAncestor(lnt)
     headerv = lnt.getVertex(lca.get_LCA(entry_vertexID, exit_vertexID))
     if headerv.vertexID == lnt.rootID:
-        pass
+        induced_CFG = cfg.create_induced_subgraph(entry_vertexID, exit_vertexID)
+        PathExpression(induced_CFG)
     else:
         induced_CFG = cfg.create_induced_subgraph(entry_vertexID, exit_vertexID)
         PathExpression(induced_CFG)

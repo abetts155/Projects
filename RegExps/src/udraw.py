@@ -1,8 +1,7 @@
 import os
 import config
-import flow_graphs
 import directed_graphs
-import trees
+import directed_graphs
 import vertices
 
 begin_attrs = "["
@@ -72,12 +71,12 @@ def make_file(g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            if isinstance(g, flow_graphs.CFG) or isinstance(g, flow_graphs.EnhancedCFG):
+            if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
                 write_CFG_vertex(g, g.get_entryID(), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
                         write_CFG_vertex(g, v.vertexID, the_file)   
-            elif isinstance(g, trees.LoopNests):
+            elif isinstance(g, directed_graphs.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, the_file)
             else:
@@ -128,7 +127,7 @@ def writeTreeVertex (tree, vertexID, the_file):
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
     the_file.write(set_name(str(vertexID)))
-    if isinstance(tree, trees.LoopNests):
+    if isinstance(tree, directed_graphs.LoopNests):
         if isinstance(v, vertices.HeaderVertex):
             the_file.write(set_shape(SHAPE.TRIANGLE))
             the_file.write(set_color(COLOR.RED))

@@ -19,7 +19,6 @@ def parse_input_from_user(message):
 def do_analysis(program):
     for cfg in program.cfgs.values():
         cfg.create_per_loop_reachability_info()
-    
     try:    
         while True:
             cfg = None
@@ -32,7 +31,7 @@ def do_analysis(program):
                 else:
                     cfg = program.cfgs[cfg_name]
             if cfg is not None:
-                entryID = parse_input_from_user("Enter start program point. Options = {%}" ','.join(str(v.vertexID) for v in cfg))
+                entryID = parse_input_from_user("Enter start program point. Options = {%s}" % ','.join(str(v.vertexID) for v in cfg))
                 if not cfg.hasVertex(entryID):
                     debug.warning_message("CFG does not have vertex: %d" % entryID)
                 else:
@@ -70,10 +69,11 @@ def the_command_line ():
     
     parser.parse_args(namespace=config.Arguments)
     
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
-    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
+    config.Arguments.basename = os.path.splitext(os.path.basename(config.Arguments.program_file))[0]
+    config.Arguments.basepath = os.path.abspath(os.path.dirname(config.Arguments.program_file))
 
 if __name__ == "__main__": 
     the_command_line()
     program = program_input_output.read_file(config.Arguments.program_file)
     do_analysis(program)
+    
