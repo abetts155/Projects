@@ -259,7 +259,7 @@ def generateLNT (loops, nestingDepth):
     # Add edges to the tree
     parentID = lnt.getRootID()
     for v in lnt:
-        vertexID = v.getVertexID()
+        vertexID = v.vertexID
         if vertexID != lnt.getRootID():
             newLevel = vertexToLevel[parentID] + 1
             if newLevel <= nestingDepth:
@@ -323,9 +323,9 @@ def connectNestedLoops (lnt, treev, loopRegions):
             if destinationID != succID:
                 currentCFG.addEdge(destinationID, succID)
         destinationv = currentCFG.getVertex(destinationID)
-    currentCFG.addEdge(sourcev.getVertexID(), firstLoop.headerID)
+    currentCFG.addEdge(sourcev.vertexID, firstLoop.headerID)
     for exitID in secondLoop.exitIDs:
-        currentCFG.addEdge(exitID, destinationv.getVertexID())
+        currentCFG.addEdge(exitID, destinationv.vertexID)
 
 def generateCFG (cfgVertices, 
                  loops, 
@@ -381,7 +381,7 @@ def isConnected ():
         for succID in currentCFG.getVertex(vertexID).getSuccessorIDs():
             if succID not in visited:
                 stack.append(succID)
-    assert not currentCFG.getVertexIDs().difference(visited), "The CFG is not connected"
+    assert not currentCFG.vertexIDs().difference(visited), "The CFG is not connected"
     return visited
 
 def setCallGraphRoot (program, candidateCallSites):
@@ -394,20 +394,20 @@ def setCallGraphRoot (program, candidateCallSites):
             rootName     = subprogramName
         totalCallSites += len(vertices)
     assert rootName, "Unable to find root for call graph"
-    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).getVertexID())
+    program.getCallGraph().setRootID(program.getCallGraph().getVertexWithName(rootName).vertexID)
     assert totalCallSites >= program.getCallGraph().numOfVertices()-1, "Unable to link the call graph because there are %d subprograms but only %d call sites" % (program.getCallGraph().numOfVertices()-1, totalCallSites)  
 
 def addTreeEdgesToCallGraph (program, candidateCallSites):
     disconnected = []
     for callv in program.getCallGraph():
-        if callv.numberOfPredecessors() == 0 and callv.getVertexID() != program.getCallGraph().getRootID():
+        if callv.numberOfPredecessors() == 0 and callv.vertexID != program.getCallGraph().getRootID():
             disconnected.append(callv)
     callerv = program.getCallGraph().getVertex(program.getCallGraph().getRootID())
     while disconnected:
         callerName = callerv.getName()
         calleev    = disconnected.pop()
         index      = random.randint(0,len(candidateCallSites[callerName])-1)
-        callSiteID = candidateCallSites[callerName][index].getVertexID()
+        callSiteID = candidateCallSites[callerName][index].vertexID
         del candidateCallSites[callerName][index]
         program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
         if not candidateCallSites[callv.getName()] or bool(random.getrandbits(1)):
@@ -422,9 +422,9 @@ def addOtherEdgesToCallGraph (program, candidateCallSites):
         calleev          = callg.getVertex(vertexID)
         candidateCallers = []
         for callv in callg:
-            if dfs.getPostID(callv.getVertexID()) > dfs.getPostID(vertexID) \
+            if dfs.getPostID(callv.vertexID) > dfs.getPostID(vertexID) \
             and candidateCallSites[callv.getName()] \
-            and not calleev.hasPredecessor(callv.getVertexID()):
+            and not calleev.hasPredecessor(callv.vertexID):
                 candidateCallers.append(callv)
         if candidateCallers:
             numOfCallers = random.randint(1,len(candidateCallers))
@@ -436,7 +436,7 @@ def addOtherEdgesToCallGraph (program, candidateCallSites):
                 numOfCallSites = random.randint(1,len(candidateCallSites[callerName]))
                 for j in xrange(1,numOfCallSites+1):
                     index2     = random.randint(0,len(candidateCallSites[callerName])-1)
-                    callSiteID = candidateCallSites[callerName][index2].getVertexID()
+                    callSiteID = candidateCallSites[callerName][index2].vertexID
                     del candidateCallSites[callerName][index2]
                     program.getCallGraph().addEdge(callerv.getName(), calleev.getName(),callSiteID)
 
@@ -451,7 +451,7 @@ def cutEdgesFromCallGraph (program):
             predIDs = callv.getPredecessorIDs()
             index   = random.randint(0,len(predIDs)-1)
             predID  = predIDs[index]
-            callg.removeEdge(predID, callv.getVertexID())    
+            callg.removeEdge(predID, callv.vertexID)    
     
 def generate (subprograms, 
               cfgVertices, 
@@ -475,7 +475,7 @@ def generate (subprograms,
         UDrawGraph.makeUdrawFile(currentCFG, subprogramName)
         isConnected()
         for v in currentCFG:
-            if v.numberOfSuccessors() == 1 and v.getVertexID() != currentCFG.getExitID():
+            if v.numberOfSuccessors() == 1 and v.vertexID != currentCFG.getExitID():
                 candidateCallSites[subprogramName].append(v)
     setCallGraphRoot(program, candidateCallSites)
     addTreeEdgesToCallGraph(program, candidateCallSites)

@@ -14,7 +14,7 @@ class PathInformationVertex ():
         self._successors[Edges.PathInformationEdgeType.EXCLUSION] = set([])
         self._successors[Edges.PathInformationEdgeType.INCLUSION] = set([])
         
-    def getVertexID (self):
+    def vertexID (self):
         return self._vertexID
         
     def getProgramPoint (self):
@@ -47,7 +47,7 @@ class PathInformationVertex ():
     def removeSuccessorEdge (self, succID, edgeType):
         theEdge = None
         for succe in self._successors[edgeType]:
-            if succe.getVertexID() == succID:
+            if succe.vertexID == succID:
                 theEdge = succe
                 break
         if theEdge:
@@ -55,7 +55,7 @@ class PathInformationVertex ():
         
     def hasSuccessorEdge (self, succID, edgeType):
         for succe in self._successors[edgeType]:
-            if succe.getVertexID() == succID:
+            if succe.vertexID == succID:
                 return True
         return False
     
@@ -64,7 +64,7 @@ class PathInformationVertex ():
     
     def getSuccessorEdge (self, succID, edgeType):
         for succe in self._successors[edgeType]:
-            if succe.getVertexID() == succID:
+            if succe.vertexID == succID:
                 return succe
         assert False
     
@@ -83,24 +83,18 @@ class PathInformationVertex ():
     def __str__ (self):
         return str(self._programPoint)
     
-class Vertex ():
+class Vertex:
     def __init__ (self, vertexID):
-        self._vertexID = vertexID
+        self.vertexID = vertexID
         self._predecessors = {}
         self._successors = {}
-        
-    def setVertexID (self, vertexID):
-        self._vertexID = vertexID
-    
-    def getVertexID (self):
-        return self._vertexID
     
     def addPredecessor (self, predID, edgeID=None):
         e = Edges.Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
-        predID = prede.getVertexID()
+        predID = prede.vertexID
         self._predecessors[predID] = prede
             
     def removeAllPredecessors (self):
@@ -131,7 +125,7 @@ class Vertex ():
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
-        succID = succe.getVertexID()
+        succID = succe.vertexID
         self._successors[succID] = succe
     
     def removeAllSuccessors (self):
@@ -297,7 +291,7 @@ class CallGraphVertex (Vertex):
     def getSuccessorWithCallSite (self, callSiteID):
         for succe in self.getSuccessorEdges():
             if callSiteID in succe.getCallSites():
-                return succe.getVertexID()
+                return succe.vertexID
         assert False, "Unable to find successor of context %d with call site %d" % (self._vertexID, callSiteID)
     
     def __str__ (self):

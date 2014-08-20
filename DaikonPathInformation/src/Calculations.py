@@ -30,21 +30,21 @@ class WCETCalculation:
                 ilp1  = CreateCFGILPVanilla(data, self.__VanillaContextIDToWCET, contextv, cfg, lnt, pathg)
                 ilp1WCET, ilp1SolvingTime = ilp1.solve()
                 Debug.verbose_message("ILP(vanilla):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp1WCET, ilp1SolvingTime), __name__)
-                self.__VanillaContextIDToWCET[contextv.getVertexID()] = ilp1WCET
+                self.__VanillaContextIDToWCET[contextv.vertexID] = ilp1WCET
                 if not pathg.executionDependencies() and not pathg.mutualInclusionPairs() and not pathg.mutualExclusionPairs():
                     ilp2 = CreateCFGILPExtra(data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
                     ilp2WCET, ilp2SolvingTime = ilp2.solve()
-                    self.__ExtraContextIDToWCET[contextv.getVertexID()] = ilp2WCET
+                    self.__ExtraContextIDToWCET[contextv.vertexID] = ilp2WCET
                     Debug.verbose_message("ILP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, ilp2WCET, ilp2SolvingTime), __name__)
                 else:
                     clp2 = CreateCFGCLPExtra(data, self.__ExtraContextIDToWCET, contextv, cfg, lnt, pathg)
                     clp2WCET, clp2SolvingTime = clp2.solve()
-                    self.__ExtraContextIDToWCET[contextv.getVertexID()] = clp2WCET
+                    self.__ExtraContextIDToWCET[contextv.vertexID] = clp2WCET
                     Debug.verbose_message("CLP(extra):: WCET(%s)=%s (SOLVE TIME=%.5f)" % (functionName, clp2WCET, clp2SolvingTime), __name__)
             else:
                 Debug.verbose_message("%s did not execute" % functionName, __name__)
-                self.__VanillaContextIDToWCET[contextv.getVertexID()] = 0
-                self.__ExtraContextIDToWCET[contextv.getVertexID()] = 0
+                self.__VanillaContextIDToWCET[contextv.vertexID] = 0
+                self.__ExtraContextIDToWCET[contextv.vertexID] = 0
             
 class ECLIPSE:
     fileExtensions  = ['.res', '.vanilla', '.extra']
@@ -173,10 +173,10 @@ class CreateCFGCLP (CLP):
         bbTimes    = []
         edgeCounts = []
         for v in cfg:
-            bbCounts.append(ECLIPSE.getVertexCountVariable(v.getVertexID()))
-            bbTimes.append(ECLIPSE.getVertexWCETVariable(v.getVertexID()))
+            bbCounts.append(ECLIPSE.getVertexCountVariable(v.vertexID))
+            bbTimes.append(ECLIPSE.getVertexWCETVariable(v.vertexID))
             for succID in v.getSuccessorIDs():
-                edgeCounts.append(ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID))
+                edgeCounts.append(ECLIPSE.getEdgeCountVariable(v.vertexID, succID))
         self._lines.append("%s = [%s]%s" % (CLP.BB_COUNTS, ','.join(var for var in bbCounts), ECLIPSE.conjunct))
         self._lines.append("%s = [%s]%s" % (CLP.BB_TIMES, ','.join(var for var in bbTimes), ECLIPSE.conjunct))
         self._lines.append("%s = [%s]%s" % (CLP.EDGE_COUNTS, ','.join(var for var in edgeCounts),  ECLIPSE.conjunct))
@@ -187,7 +187,7 @@ class CreateCFGCLP (CLP):
         rhs   = ""
         count = 1
         for v in cfg:
-            rhs += "%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.multiply, ECLIPSE.getVertexWCETVariable(v.getVertexID()))
+            rhs += "%s%s%s" % (ECLIPSE.getVertexCountVariable(v.vertexID), ECLIPSE.multiply, ECLIPSE.getVertexWCETVariable(v.vertexID))
             if count < cfg.numOfVertices():
                 rhs += ECLIPSE.plus
             count += 1
@@ -198,39 +198,39 @@ class CreateCFGCLP (CLP):
         self._lines.append(ECLIPSE.getComment("Timing constraints"))
         for v in cfg:
             wcet = data.getExecutionTime(cfg.getName(), v.getOriginalVertexID())
-            if cfg.isCallSite(v.getVertexID()):
-                    calleeContextID   = contextv.getSuccessorWithCallSite(v.getVertexID())
+            if cfg.isCallSite(v.vertexID):
+                    calleeContextID   = contextv.getSuccessorWithCallSite(v.vertexID)
                     calleeContextWCET = contextWCETs[calleeContextID]
                     wcet += calleeContextWCET
             self._lines.append("%s%s%d%s" % \
-                                   (ECLIPSE.getVertexWCETVariable(v.getVertexID()), ECLIPSE.equals, wcet, ECLIPSE.conjunct))
+                                   (ECLIPSE.getVertexWCETVariable(v.vertexID), ECLIPSE.equals, wcet, ECLIPSE.conjunct))
         self._lines.append(getNewLine())   
         
     def _addStructuralConstraints (self, cfg):
         self._lines.append(ECLIPSE.getComment("Structural constraints"))
         for v in cfg:
-            self._lines.append(ECLIPSE.getComment("Vertex %d" % v.getVertexID()))
+            self._lines.append(ECLIPSE.getComment("Vertex %d" % v.vertexID))
             # Flow out to successor edges
             rhs   = ""
             count = 1
             for predID in v.getPredecessorIDs():
-                rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
+                rhs += ECLIPSE.getEdgeCountVariable(predID, v.vertexID)
                 if count < v.numberOfPredecessors():
                     rhs += ECLIPSE.plus
                 count += 1
-            self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.getVertexID()), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
+            self._lines.append("%s%s%s%s" % (ECLIPSE.getVertexCountVariable(v.vertexID), ECLIPSE.equals, rhs, ECLIPSE.conjunct))
             # Flow in/out through predecessor/successor edges
             lhs   = ""
             count = 1
             for succID in v.getSuccessorIDs():
-                lhs += ECLIPSE.getEdgeCountVariable(v.getVertexID(), succID)
+                lhs += ECLIPSE.getEdgeCountVariable(v.vertexID, succID)
                 if count < v.numberOfSuccessors():
                     lhs += ECLIPSE.plus
                 count += 1
             rhs   = ""
             count = 1
             for predID in v.getPredecessorIDs():
-                rhs += ECLIPSE.getEdgeCountVariable(predID, v.getVertexID())
+                rhs += ECLIPSE.getEdgeCountVariable(predID, v.vertexID)
                 if count < v.numberOfPredecessors():
                     rhs += ECLIPSE.plus
                 count += 1
@@ -244,7 +244,7 @@ class CreateCFGCLP (CLP):
                 if isinstance(treev, Vertices.HeaderVertex):
                     headerID = treev.getHeaderID()
                     self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))    
-                    if treev.getVertexID() == lnt.getRootID():
+                    if treev.vertexID == lnt.getRootID():
                         self._lines.append("%s%s%d%s" % (ECLIPSE.getEdgeCountVariable(cfg.getExitID(), cfg.getEntryID()), ECLIPSE.equals, 1, ECLIPSE.conjunct))
                     else:
                         relativeBound = 0
@@ -267,8 +267,8 @@ class CreateCFGCLP (CLP):
                             count += 1
                         forwardPredIDs = []
                         for prede in v.getPredecessorEdges():
-                            if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
-                                forwardPredIDs.append((prede.getVertexID(), headerID))
+                            if not lnt.isLoopBackEdge(prede.vertexID, headerID):
+                                forwardPredIDs.append((prede.vertexID, headerID))
                         rhs   = ""
                         count = 1
                         for edge in forwardPredIDs:
@@ -298,7 +298,7 @@ class CreateCFGCLP (CLP):
         
         # First add domains for basic blocks
         for v in cfg:            
-            vertexID           = v.getVertexID()
+            vertexID           = v.vertexID
             treev              = lnt.getVertex(vertexID)
             headerv            = lnt.getVertex(treev.getParentID())
             headerID           = headerv.getHeaderID()
@@ -320,7 +320,7 @@ class CreateCFGCLP (CLP):
                                 
         # Now add domains for edges
         for v in cfg:            
-            vertexID     = v.getVertexID()
+            vertexID     = v.vertexID
             treev1       = lnt.getVertex(vertexID)
             headerv1     = lnt.getVertex(treev1.getParentID())    
             headerBound1 = self.__getUpperBound(lnt, vertexID, headerv1.getHeaderID(), headerToUpperCapacityBound)
@@ -357,7 +357,7 @@ class CreateCFGCLPVanilla (CreateCFGCLP):
         CreateCFGCLP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.vanilla" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
                                                             contextv.getName(), 
-                                                            contextv.getVertexID(), 
+                                                            contextv.vertexID, 
                                                             "cfg", 
                                                             ECLIPSE.fileSuffix)
         self._addVariables(cfg)
@@ -374,7 +374,7 @@ class CreateCFGCLPExtra (CreateCFGCLP):
         CreateCFGCLP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.extra" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
                                                           contextv.getName(), 
-                                                          contextv.getVertexID(), 
+                                                          contextv.vertexID, 
                                                           "cfg", 
                                                           ECLIPSE.fileSuffix)
         self._addVariables(cfg)
@@ -398,7 +398,7 @@ class CreateCFGCLPExtra (CreateCFGCLP):
                 else:
                     countVariable1 = ECLIPSE.getVertexCountVariable(programPoint)
                 for succe in pathv.getSuccessorEdges(Edges.PathInformationEdgeType.INCLUSION):
-                    succv            = pathg.getVertex(succe.getVertexID())
+                    succv            = pathg.getVertex(succe.vertexID)
                     succProgramPoint = succv.getProgramPoint()
                     if isinstance(succProgramPoint, tuple):
                         countVariable2 = ECLIPSE.getEdgeCountVariable(succProgramPoint[0], succProgramPoint[1])
@@ -407,7 +407,7 @@ class CreateCFGCLPExtra (CreateCFGCLP):
                     self._lines.append("%s%s0%s%s%s0%s" % \
                                        (countVariable1, ECLIPSE.gt, ECLIPSE.implies, countVariable2, ECLIPSE.gt, ECLIPSE.conjunct))
                 for succe in pathv.getSuccessorEdges(Edges.PathInformationEdgeType.EXCLUSION):
-                    succv            = pathg.getVertex(succe.getVertexID())
+                    succv            = pathg.getVertex(succe.vertexID)
                     succProgramPoint = succv.getProgramPoint()
                     if isinstance(succProgramPoint, tuple):
                         countVariable2 = ECLIPSE.getEdgeCountVariable(succProgramPoint[0], succProgramPoint[1])
@@ -491,7 +491,7 @@ class ILP ():
 class CreateCFGILP (ILP):                
     def _createStructuralConstraints (self, cfg):
         for v in cfg:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             comment  = LpSolve.getComment("Basic block = %d" % vertexID)
             self._constraints.append(comment)
             self._variables.add(LpSolve.getVertexVariable(vertexID))
@@ -499,7 +499,7 @@ class CreateCFGILP (ILP):
             constraint1 += LpSolve.equals
             num = 1
             for succe in v.getSuccessorEdges():
-                succID = succe.getVertexID() 
+                succID = succe.vertexID 
                 self._variables.add(LpSolve.getEdgeVariable(vertexID, succID))
                 constraint1 += LpSolve.getEdgeVariable(vertexID, succID)
                 if num < v.numberOfSuccessors():
@@ -512,7 +512,7 @@ class CreateCFGILP (ILP):
             constraint2 = ""
             num = 1
             for succe in v.getSuccessorEdges():
-                succID = succe.getVertexID() 
+                succID = succe.vertexID 
                 constraint2 += LpSolve.getEdgeVariable(vertexID, succID)
                 if num < v.numberOfSuccessors():
                     constraint2 += LpSolve.plus
@@ -520,7 +520,7 @@ class CreateCFGILP (ILP):
             constraint2 += LpSolve.equals
             num = 1
             for prede in v.getPredecessorEdges():
-                predID = prede.getVertexID() 
+                predID = prede.vertexID 
                 constraint2 += LpSolve.getEdgeVariable(predID, vertexID)
                 if num < v.numberOfPredecessors():
                     constraint2 += LpSolve.plus
@@ -534,7 +534,7 @@ class CreateCFGILP (ILP):
             for treev in vertices:
                 if isinstance(treev, Vertices.HeaderVertex):
                     headerID = treev.getHeaderID()
-                    if treev.getVertexID() == lnt.getRootID():
+                    if treev.vertexID == lnt.getRootID():
                         comment = LpSolve.getComment("Upper capacity constraint on header %d" % cfg.getEntryID())
                         self._constraints.append(comment)
                         constraint = LpSolve.getVertexVariable(cfg.getEntryID())
@@ -568,8 +568,8 @@ class CreateCFGILP (ILP):
                         # Pre-header edges
                         forwardPredIDs = []
                         for prede in v.getPredecessorEdges():
-                            if not lnt.isLoopBackEdge(prede.getVertexID(), headerID):
-                                forwardPredIDs.append((prede.getVertexID(), headerID))
+                            if not lnt.isLoopBackEdge(prede.vertexID, headerID):
+                                forwardPredIDs.append((prede.vertexID, headerID))
                         constraint += LpSolve.ltOrEqual    
                         count = 1
                         for edge in forwardPredIDs:
@@ -626,7 +626,7 @@ class CreateCFGILPVanilla (CreateCFGILP):
         CreateCFGILP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.vanilla" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
                                                             contextv.getName(), 
-                                                            contextv.getVertexID(), 
+                                                            contextv.vertexID, 
                                                             "cfg", 
                                                             LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)
@@ -640,7 +640,7 @@ class CreateCFGILPExtra (CreateCFGILP):
         CreateCFGILP.__init__(self)
         self._filename = "%s.%s.context%s.%s.%s.extra" % (config.Arguments.basepath + os.sep + config.Arguments.basename, 
                                                           contextv.getName(), 
-                                                          contextv.getVertexID(), 
+                                                          contextv.vertexID, 
                                                           "cfg", 
                                                           LpSolve.fileSuffix)
         self._createStructuralConstraints(cfg)

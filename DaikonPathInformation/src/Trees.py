@@ -1,29 +1,29 @@
-from DirectedGraphs import DirectedGraph
-from CFGs import CFG
-from Vertices import TreeVertex, HeaderVertex, dummyVertexID, CFGEdge, BasicBlock
+import DirectedGraphs
+import CFGs
+import Vertices
 import Debug
 
-class Tree (DirectedGraph):
+class Tree (DirectedGraphs.DirectedGraph):
     def __init__ (self):
-        DirectedGraph.__init__(self)
-        self._rootID = dummyVertexID
+        DirectedGraphs.DirectedGraph.__init__(self)
+        self._rootID = Vertices.dummyVertexID
         
     def setRootID (self, rootID):
-        assert rootID > dummyVertexID, "Invalid root ID %d. It must be a positive integer" % rootID
+        assert rootID > Vertices.dummyVertexID, "Invalid root ID %d. It must be a positive integer" % rootID
         assert rootID in self.vertices, "Cannot find vertex %d"
         self._rootID = rootID
         
     def getRootID (self):
-        assert self._rootID != dummyVertexID, "Root ID has not yet been set"
+        assert self._rootID != Vertices.dummyVertexID, "Root ID has not yet been set"
         return self._rootID
         
     def addVertex (self, vertexID):
         assert vertexID not in self.vertices, "Adding vertex %d which is already in tree" % vertexID
-        treev = TreeVertex(vertexID)
+        treev = Vertices.TreeVertex(vertexID)
         self.vertices[vertexID] = treev
         
     def addEdge (self, predID, succID):
-        DirectedGraph.addEdge(self, predID, succID)
+        DirectedGraphs.DirectedGraph.addEdge(self, predID, succID)
         succv = self.getVertex(succID)
         succv.setParentID(predID)
         
@@ -87,7 +87,7 @@ class Tree (DirectedGraph):
             for succID in v.getSuccessorIDs():
                 queue.insert(0, self.getVertex(succID))
             
-            if v.getVertexID() == self.getRootID():
+            if v.vertexID == self.getRootID():
                 levelToVertices[0] = [rootv]
             else:
                 newLevel = self.getVertex(v.getParentID()).getLevel() + 1
@@ -109,9 +109,9 @@ class Tree (DirectedGraph):
             string += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
             for v in vertices:
                 if level == 0:
-                    string += "%d (root)\n" % (v.getVertexID())
+                    string += "%d (root)\n" % (v.vertexID)
                 else:
-                    string += "%d (parent = %d)\n" % (v.getVertexID(), v.getParentID())
+                    string += "%d (parent = %d)\n" % (v.vertexID, v.getParentID())
         return string
     
 
@@ -152,8 +152,8 @@ class Betts (Tree):
             self._reduce(v)
                 
         for v in self.__directedg:
-            print "ipre(%d) = %d" % (v.getVertexID(), self.__ipre[v].getVertexID()) 
-            print "ipost(%d) = %d" % (v.getVertexID(), self.__ipost[v].getVertexID())  
+            print "ipre(%d) = %d" % (v.vertexID, self.__ipre[v].vertexID) 
+            print "ipost(%d) = %d" % (v.vertexID, self.__ipost[v].vertexID)  
             
     def _reduce (self, v):
         pred        = self.__directedg.getVertex(v.getPredecessorIDs()[0])
@@ -167,16 +167,16 @@ class Betts (Tree):
         while True:
             self.__ipre[nextv] = pred
             self.__ipost[nextv] = succ
-            if succ in self.__merges or succ.getVertexID() == self.__directedg.getExitID():
+            if succ in self.__merges or succ.vertexID == self.__directedg.getExitID():
                 break
             pred  = nextv
             nextv = succ
             succ  = self.__directedg.getVertex(nextv.getSuccessorIDs()[0])
             destination = succ
         print destination
-        self.__directedg.removeEdge(source.getVertexID(), v.getVertexID())
-        self.__directedg.removeEdge(nextv.getVertexID(), destination.getVertexID())
-        self.__directedg.addEdge(source.getVertexID(),destination.getVertexID())
+        self.__directedg.removeEdge(source.vertexID, v.vertexID)
+        self.__directedg.removeEdge(nextv.vertexID, destination.vertexID)
+        self.__directedg.addEdge(source.vertexID,destination.vertexID)
 
 class LengauerTarjan (Tree):
     def __init__(self, directedg, rootID):
@@ -195,7 +195,7 @@ class LengauerTarjan (Tree):
         
     def _initialise (self, dfs):
         for v in self.__directedg:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             if vertexID != dfs.getRootID():
                 self.__parent[vertexID] = dfs.getVertex(vertexID).getParentID()
             self.__semi[vertexID] = dfs.getPreID(vertexID)
@@ -264,8 +264,8 @@ class DepthFirstSearch (Tree):
         
     def initialise (self, directedg):
         for v in directedg:
-            vertexID = v.getVertexID()
-            self.vertices[vertexID] = TreeVertex(vertexID)
+            vertexID = v.vertexID
+            self.vertices[vertexID] = Vertices.TreeVertex(vertexID)
             self.__vertexID2PreID[vertexID] = 0
             self.__vertexID2PostID[vertexID] = 0
         
@@ -354,7 +354,7 @@ class CompressedDominatorTree (Tree):
             newQuerySet = []
             for v in self:
                 if v.numberOfPredecessors() == 0:
-                    newQuerySet.append(v.getVertexID())
+                    newQuerySet.append(v.vertexID)
             querySet = set(newQuerySet)
     
 class LeastCommonAncestor ():
@@ -430,12 +430,12 @@ class Dominators (Tree):
     
     def _initialise (self, rootID):
         for v in self.__directedg:
-            vertexID = v.getVertexID()            
-            self.vertices[vertexID] = TreeVertex(vertexID)
+            vertexID = v.vertexID            
+            self.vertices[vertexID] = Vertices.TreeVertex(vertexID)
             if vertexID == rootID:
                 self.__immediateDom[vertexID] = vertexID
             else:
-                self.__immediateDom[vertexID] = dummyVertexID
+                self.__immediateDom[vertexID] = Vertices.dummyVertexID
         self.setRootID(rootID)
     
     def _solveDFF (self):
@@ -448,19 +448,19 @@ class Dominators (Tree):
                 vertexID = dfs.getPostorderVertexID(postID)
                 if vertexID != self._rootID:
                     v               = self.__directedg.getVertex(vertexID)
-                    processedPredID = dummyVertexID
-                    newIdomID       = dummyVertexID
+                    processedPredID = Vertices.dummyVertexID
+                    newIdomID       = Vertices.dummyVertexID
                     
                     for predID in v.getPredecessorIDs():
-                        if self.__immediateDom[predID] != dummyVertexID:
+                        if self.__immediateDom[predID] != Vertices.dummyVertexID:
                             processedPredID = predID
                             newIdomID       = processedPredID
                     for predID in v.getPredecessorIDs():
                         if predID != processedPredID:
-                            if self.__immediateDom[predID] != dummyVertexID:
+                            if self.__immediateDom[predID] != Vertices.dummyVertexID:
                                 newIdomID = self._intersect(dfs, predID, newIdomID)
                     
-                    if newIdomID != dummyVertexID:
+                    if newIdomID != Vertices.dummyVertexID:
                         if self.__immediateDom[vertexID] != newIdomID:
                             changed = True
                             self.__immediateDom[vertexID] = newIdomID
@@ -478,9 +478,9 @@ class Dominators (Tree):
     
     def _addEdges (self):
         for v in self.__directedg:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             if vertexID != self._rootID:
-                assert self.__immediateDom[vertexID] != dummyVertexID, "Immediate dominator of %d not set" % vertexID
+                assert self.__immediateDom[vertexID] != Vertices.dummyVertexID, "Immediate dominator of %d not set" % vertexID
                 self.addEdge(self.__immediateDom[vertexID], vertexID)
                 
 class DominanceFrontiers:
@@ -492,7 +492,7 @@ class DominanceFrontiers:
         
     def output(self):
         for v in self.__cfg:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             print "DF(%d) = %s" % (vertexID, self.__vToDF[vertexID])
         
     def size (self, vertexID):
@@ -514,11 +514,11 @@ class DominanceFrontiers:
     def __initialise(self):
         self.__vToDF = {}
         for v in self.__cfg:
-            self.__vToDF[v.getVertexID()] = set([])
+            self.__vToDF[v.vertexID] = set([])
     
     def __compute(self):
         for v in self.__cfg:
-            vertexID = v.getVertexID()    
+            vertexID = v.vertexID    
             if v.numberOfPredecessors() > 1: 
                 idomID = self.__domTree.getImmediateDominator(vertexID)
                 for predID in v.getPredecessorIDs():
@@ -548,9 +548,9 @@ class LoopNests (Tree):
         
     def _initialise (self):
         for v in self.__directedg:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             self.__parent[vertexID] = vertexID
-            self.vertices[vertexID] = TreeVertex(vertexID)
+            self.vertices[vertexID] = Vertices.TreeVertex(vertexID)
             
     def _findLoops (self, rootID):
         self.__dfs = DepthFirstSearch (self.__directedg, rootID)
@@ -572,7 +572,7 @@ class LoopNests (Tree):
                 
     def _addSelfLoop (self, headerID):
         newVertexID = self.getNextVertexID()
-        headerv = HeaderVertex(newVertexID, headerID)
+        headerv = Vertices.HeaderVertex(newVertexID, headerID)
         self.vertices[newVertexID] = headerv
         self.__headerVertices[headerID] = newVertexID
         self.__loopTails[headerID] = [headerID]
@@ -583,7 +583,7 @@ class LoopNests (Tree):
     def _findLoop (self, worklist, headerID):
         if headerID not in self.__headerVertices.keys():
             newVertexID = self.getNextVertexID()
-            headerv     = HeaderVertex(newVertexID, headerID)
+            headerv     = Vertices.HeaderVertex(newVertexID, headerID)
             self.vertices[newVertexID] = headerv
             self.__headerVertices[headerID] = newVertexID
             self.__loopTails[headerID] = [t for t in worklist]
@@ -643,7 +643,7 @@ class LoopNests (Tree):
     
     def getInternalHeaderVertex (self, vertexID):
         v = self.getVertex(vertexID)
-        assert isinstance(v, HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
+        assert isinstance(v, Vertices.HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
         return v
     
     def isSelfLoopHeader (self, vertexID):
@@ -719,9 +719,9 @@ class LoopNests (Tree):
         return self.isProperAncestor(right, left)
     
     def induceSubgraph (self, headerv):
-        assert isinstance(headerv, HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
+        assert isinstance(headerv, Vertices.HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
         headerID     = headerv.getHeaderID()
-        inducedCFG   = CFG()
+        inducedCFG   = CFGs.CFG()
         vertices     = set([])
         edges        = set([])
         bodyVertices = set([])
@@ -744,7 +744,7 @@ class LoopNests (Tree):
                             bodyVertices.add(predID)
                             edges.add((predID, vertexID))
                             bodyEdges.add((predID, vertexID))
-                        elif self.isNested(headerPredv.getVertexID(), headerv.getVertexID()):
+                        elif self.isNested(headerPredv.vertexID, headerv.vertexID):
                             worklist.append(predHeaderID)     
                             vertices.add(predID)      
                             if predHeaderID != predID:         
@@ -754,7 +754,7 @@ class LoopNests (Tree):
         
         # Add vertices to induced subgraph
         for vertexID in vertices:
-            bb = BasicBlock(vertexID)
+            bb = Vertices.BasicBlock(vertexID)
             inducedCFG.addVertex(bb)
         # Add edges to induced subgraph
         for (predID, succID) in edges:
@@ -768,15 +768,15 @@ class LoopNests (Tree):
         if len(exits) > 1:
             # Add a dummy exit vertex to induced subgraph
             exitID = inducedCFG.getNextVertexID()
-            bb = BasicBlock(exitID)
+            bb = Vertices.BasicBlock(exitID)
             inducedCFG.addVertex(bb)
             bb.setDummy()
             for v in exits:
-                inducedCFG.addEdge(v.getVertexID(), exitID)
+                inducedCFG.addEdge(v.vertexID, exitID)
             # Set exit vertex of induced subgraph
             inducedCFG.setExitID(exitID)
         else:
-            inducedCFG.setExitID(exits[0].getVertexID())
+            inducedCFG.setExitID(exits[0].vertexID)
         # Set entry vertex of induced subgraph
         inducedCFG.setEntryID(headerv.getHeaderID())
         return inducedCFG, bodyVertices, bodyEdges

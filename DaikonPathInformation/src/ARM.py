@@ -253,41 +253,41 @@ def addEdges (functions):
         for instruction in functionToInstructions[functionName]:
             v = instructionToBasicBlock[instruction]
             if predID != Vertices.dummyVertexID:
-                cfg.addEdge(predID, v.getVertexID())
+                cfg.addEdge(predID, v.vertexID)
                 predID = Vertices.dummyVertexID
             if v.getLastInstruction() == instruction:
                 if instruction.getOp() == ARMInstructionSet.Call:
                     instructionFields = instruction.getInstructionFields()
                     calleeName        = getCalleeName(instructionFields)
-                    cfg.addCallSite(v.getVertexID(), calleeName)
-                    program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
-                    predID = v.getVertexID()
+                    cfg.addCallSite(v.vertexID, calleeName)
+                    program.getCallGraph().addEdge(functionName, calleeName, v.vertexID)
+                    predID = v.vertexID
                 elif instruction.getOp() in ARMInstructionSet.UnconditionalJumps:
                     instructionFields = instruction.getInstructionFields()
                     jumpAddress       = int(instructionFields[1], 16)
                     if jumpAddress >= functionToStartAddress[functionName] and jumpAddress <= functionToLastAddress[functionName]:
                         succv = cfg.getVertexWithAddress(jumpAddress)
-                        cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                        cfg.addEdge(v.vertexID, succv.vertexID)
                     else:
                         calleeName = startAddressToFunction[jumpAddress]
-                        cfg.addCallSite(v.getVertexID(), calleeName)
-                        program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
-                        predID = v.getVertexID()
+                        cfg.addCallSite(v.vertexID, calleeName)
+                        program.getCallGraph().addEdge(functionName, calleeName, v.vertexID)
+                        predID = v.vertexID
                 elif instruction.getOp() in ARMInstructionSet.Branches:
                     instructionFields = instruction.getInstructionFields()
                     branchAddress     = int(instructionFields[1], 16)
                     if branchAddress >= functionToStartAddress[functionName] and branchAddress <= functionToLastAddress[functionName]:
                         succv = cfg.getVertexWithAddress(branchAddress)
-                        cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                        cfg.addEdge(v.vertexID, succv.vertexID)
                     else:
                         calleeName = getCalleeName(instructionFields)
-                        cfg.addCallSite(v.getVertexID(), calleeName)
-                        program.getCallGraph().addEdge(functionName, calleeName, v.getVertexID())
-                    predID = v.getVertexID()
+                        cfg.addCallSite(v.vertexID, calleeName)
+                        program.getCallGraph().addEdge(functionName, calleeName, v.vertexID)
+                    predID = v.vertexID
                 elif v in functionToJumpTableBasicBlocks[functionName]:
                     pass
                 else:
-                    predID = v.getVertexID()
+                    predID = v.vertexID
                     
 def addJumpTableEdges (functions):
     for functionName in functions:
@@ -314,8 +314,8 @@ def addJumpTableEdges (functions):
                     address   = nextInstr.getAddress()
                     if not predv.hasAddress(address):
                         succv = cfg.getVertexWithAddress(address)
-                        if not predv.hasSuccessor(succv.getVertexID()) and succv not in hasJumpTablePredecessor:
-                            cfg.addEdge(predv.getVertexID(), succv.getVertexID())
+                        if not predv.hasSuccessor(succv.vertexID) and succv not in hasJumpTablePredecessor:
+                            cfg.addEdge(predv.vertexID, succv.vertexID)
                             hasJumpTablePredecessor.add(succv)
                             numberOfBranchArms -= 1
                         # We know how many arms to expect. As soon as the supply has been
@@ -337,7 +337,7 @@ def generateInternalFile (filename):
             functionName = cfg.getName()
             f.write("%s %s\n" % (ParseProgramFile.cfgIndicator, functionName))
             for v in cfg:
-                vertexID = v.getVertexID()
+                vertexID = v.vertexID
                 f.write("%s %d\n" %  (ParseProgramFile.bbIndicator, vertexID))
                 # Write out successors but only if this is not the exit vertex
                 if vertexID != cfg.getExitID():
@@ -418,7 +418,7 @@ def addAssemblyJumpTableEdges (cfg, v, directives, labelToBasicBlock):
         assert len(labels) == 1
         label = labels[0]
         succv = labelToBasicBlock[label]
-        cfg.addEdge(v.getVertexID(), succv.getVertexID())
+        cfg.addEdge(v.vertexID, succv.vertexID)
 
 def readARMAssembly (filename, rootFunction):
     global newVertexID, program
@@ -520,27 +520,27 @@ def readARMAssembly (filename, rootFunction):
                 assert len(fields) == 2
                 target = fields[1]
                 succv = labelToBasicBlock[target]
-                cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                cfg.addEdge(v.vertexID, succv.vertexID)
             elif op in ARMInstructionSet.Branches:
                 fields = lastInstr.getInstructionFields()
                 assert len(fields) == 2
                 target = fields[1]
                 if target in labelToBasicBlock:
                     succv = labelToBasicBlock[target]
-                    cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    cfg.addEdge(v.vertexID, succv.vertexID)
                 elif target in functionToInstructions:
-                    cfg.addCallSite(v.getVertexID(), target)
-                    program.getCallGraph().addEdge(cfg.getName(), target, v.getVertexID())
+                    cfg.addCallSite(v.vertexID, target)
+                    program.getCallGraph().addEdge(cfg.getName(), target, v.vertexID)
                 succv = findSuccessor(cfg, lastInstr.getAddress())
                 if succv:
-                    cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    cfg.addEdge(v.vertexID, succv.vertexID)
             elif isJumpTableBranch(lastInstr):
                 directives = findJumpTableDirectives(cfg.getName(), functionLabelToDirectives, lastInstr.getAddress())
                 addAssemblyJumpTableEdges(cfg, v, directives, labelToBasicBlock)
             else:
                 succv = findSuccessor(cfg, lastInstr.getAddress())
                 if succv:
-                    cfg.addEdge(v.getVertexID(), succv.getVertexID())
+                    cfg.addEdge(v.vertexID, succv.vertexID)
     for cfg in program.getCFGs():
         Debug.debugMessage("Setting entry and exit in '%s'" % cfg.getName(), debugLevel)
         cfg.setEntryID()

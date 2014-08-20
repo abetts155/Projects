@@ -1,72 +1,64 @@
 #!/usr/bin/env python
 
-def commandLine ():
-    from argparse import ArgumentParser
-    
-    # The command-line parser and its options
-    cmdline = ArgumentParser(description="Compute super block CFGs")
-    
-    cmdline.add_argument("program",
-                         help="a file containing program information (with '.txt' extension)")
-    
-    cmdline.add_argument("--clean",
-                         action="store_true",
-                         help="clean out temporary files",
-                         default=False)
-    
-    cmdline.add_argument("-d",
-                         "--debug",
-                         type=int,
-                         help="debug mode",
-                         default=0)
-    
-    cmdline.add_argument("-u",
-                         "--udraw",
-                         action="store_true",
-                         help="generate uDrawGraph files",
-                         default=False)
+from __future__ import print_function
 
-    cmdline.add_argument("-t",
-                         "--traces",
-                         type=int,
-                         help="generate dummy traces for the given program",
-                         default=0,
-                         metavar="<INT>")
+import ParseProgramFile
+import Debug
+import Trees
+import Traces
+import Calculations
+import config
+import argparse
+import os
+
+def the_command_line():
+    parser = argparse.ArgumentParser(description="Compute super block CFGs")
     
-    cmdline.add_argument("-T",
-                         dest="tracefile",
-                         help="parse this trace file",
-                         metavar="<FILE>")
+    parser.add_argument("program_file",
+                        help="a file containing program information (with '.txt' extension)")
     
-    cmdline.add_argument("-v",
-                         "--verbose",
-                         action="store_true",
-                         help="be verbose",
-                         default=False)
+    parser.add_argument("-d",
+                        "--debug",
+                        type=int,
+                        help="debug mode",
+                        default=0)
     
-    return cmdline.parse_args()
+    parser.add_argument("-u",
+                        "--udraw",
+                        action="store_true",
+                        help="generate uDrawGraph files",
+                        default=False)
+
+    parser.add_argument("-t",
+                        "--traces",
+                        type=int,
+                        help="generate dummy traces for the given program",
+                        default=0,
+                        metavar="<INT>")
+    
+    parser.add_argument("-T",
+                        dest="tracefile",
+                        help="parse this trace file",
+                        metavar="<FILE>")
+    
+    parser.add_argument("-v",
+                        "--verbose",
+                        action="store_true",
+                        help="be verbose",
+                        default=False)
+    
+    parser.parse_args(namespace=config.Arguments)
+    
+    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
+    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
+    
+    assert config.Arguments.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
         
 if __name__ == "__main__":
-    import os
-    import ParseProgramFile, Debug, Trees, Traces, UDrawGraph, Utils, Calculations
-    
-    args               = commandLine()
-    Debug.verbose      = args.verbose
-    Debug.debug        = args.debug
-    UDrawGraph.enabled = args.udraw
-    
-    if args.clean:
-        Utils.clean()  
-    
-    assert args.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
-    # Create the CFGs
-    filename = os.path.basename(args.program)
-    basepath = os.path.abspath(os.path.dirname(args.program))
-    basename = os.path.splitext(filename)[0]
-    UDrawGraph.basename = basename
-    program  = ParseProgramFile.createProgram(args.program)
+    the_command_line()
+    program  = ParseProgramFile.createProgram(config.Arguments.program)
     totalSuperBlockProgramPoints = 0
-    totalNaiveProgramPoints = 0
+    totalNaiveProgramPoints      = 0
     for cfg in program.getCFGs():
         functionName = cfg.getName()
         lnt = Trees.LoopNests(cfg, cfg.getEntryID())
@@ -74,19 +66,18 @@ if __name__ == "__main__":
         pathg = program.getPathInfoGraph(functionName)
         totalSuperBlockProgramPoints += len(pathg.getMonitoredProgramPoints())
         totalNaiveProgramPoints += min(cfg.numOfVertices(), cfg.numOfEdges())
-    print args.program, "[Super block program points = %d" % totalSuperBlockProgramPoints, \
-    "CFG program points = %d]" % totalNaiveProgramPoints
+    print(config.Arguments.program, "[Super block program points = %d" % totalSuperBlockProgramPoints, "CFG program points = %d]" % totalNaiveProgramPoints)
     program.generateAllUDrawFiles()
-    if args.traces:
-        Debug.verboseMessage("Generating dummy traces")
-        Traces.GenerateTraces(basepath, basename, program, args.traces)
-    elif args.tracefile:
-        args.tracefile = os.path.abspath(args.tracefile)
-        assert os.path.exists(args.tracefile), "Trace file '%s' does not exist" % args.tracefile
-        assert os.path.getmtime(args.program) <= os.path.getmtime(args.tracefile), "Program file modified AFTER trace file generation"
-        data = Traces.ParseTraces(basename, args.tracefile, program)
+    if config.Arguments.traces:
+        Debug.verbose_message("Generating dummy traces", __name__)
+        Traces.GenerateTraces(program, config.Arguments.traces)
+    elif config.Arguments.tracefile:
+        config.Arguments.tracefile = os.path.abspath(config.Arguments.tracefile)
+        assert os.path.exists(config.Arguments.tracefile), "Trace file '%s' does not exist" % config.Arguments.tracefile
+        assert os.path.getmtime(config.Arguments.program) <= os.path.getmtime(config.Arguments.tracefile), "Program file modified AFTER trace file generation"
+        data = Traces.ParseTraces(config.Arguments.tracefile, program)
         program.output()
         program.generateAllUDrawFiles()
-        Calculations.WCETCalculation(program, data, basepath, basename)
+        Calculations.WCETCalculation(program, data)
         
         

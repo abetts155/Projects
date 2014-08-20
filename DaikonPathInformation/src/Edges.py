@@ -4,24 +4,11 @@ class Edge ():
     dummyEdgeID = -1
     
     def __init__ (self, vertexID, edgeID=None):        
-        self._vertexID = vertexID
+        self.vertexID = vertexID
         if edgeID is None:
-            self.__edgeID = Edge.dummyEdgeID
+            self.edgeID = Edge.dummyEdgeID
         else:
-            self.__edgeID = edgeID
-            
-    def getVertexID (self):
-        return self._vertexID
-    
-    def setEdgeID (self, edgeID):
-        self.__edgeID = edgeID
-        
-    def hasEdgeID (self):
-        return self.__edgeID != Edge.dummyEdgeID
-        
-    def getEdgeID (self):
-        assert self.__edgeID != Edge.dummyEdgeID, "The edge ID has not been set"
-        return self.__edgeID
+            self.edgeID = edgeID
     
 class CallGraphEdge (Edge):
     def __init__ (self, vertexID):

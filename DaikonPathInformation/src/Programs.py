@@ -1,20 +1,21 @@
-from DirectedGraphs import DirectedGraph
-from CFGs import EnhancedCFG
-from Vertices import CallGraphVertex, dummyVertexID
-from Trees import LoopNests, DepthFirstSearch
-from SuperBlocks import PathInformationGraph
-from copy import deepcopy
-import Debug, UDrawGraph
+import CFGs
+import DirectedGraphs
+import Vertices
+import Trees
+import SuperBlocks
+import UDrawGraph
+import Debug
+import copy
 
-class ContextGraph (DirectedGraph):
+class ContextGraph (DirectedGraphs.DirectedGraph):
     nextVertexID = 1
     
     def __init__ (self, callg):
-        DirectedGraph.__init__(self)
+        DirectedGraphs.DirectedGraph.__init__(self)
         self.__rootID = None
         self.__subprogramToContexts = {}
         self.__subprogramToUnused   = {}
-        dfs = DepthFirstSearch(callg, callg.getRootID())
+        dfs = Trees.DepthFirstSearch(callg, callg.getRootID())
         self.__addVertices(callg, dfs)
         self.__addEdges(callg, dfs)
         self.__setRootID()
@@ -28,14 +29,14 @@ class ContextGraph (DirectedGraph):
                 self.__addVertex(functionID, callv.getName())
             else:
                 for prede in callv.getPredecessorEdges():
-                    predID = prede.getVertexID()
+                    predID = prede.vertexID
                     numOfVertices = prede.numberOfCallSites() * len(self.__subprogramToContexts[predID])
                     for i in range(1, numOfVertices+1):
                         self.__addVertex(functionID, callv.getName())
     
     def __addVertex (self, functionID, functionName):
         contextID = ContextGraph.nextVertexID
-        contextv  = CallGraphVertex(contextID, functionName)
+        contextv  = Vertices.CallGraphVertex(contextID, functionName)
         self.vertices[contextID] = contextv
         self.__subprogramToContexts[functionID].append(contextv)
         self.__subprogramToUnused[functionID].append(contextv)
@@ -46,11 +47,11 @@ class ContextGraph (DirectedGraph):
             callv = callg.getVertex(callerID)
             for callerv in self.__subprogramToContexts[callerID]:
                 for succe in callv.getSuccessorEdges():
-                    calleeID = succe.getVertexID()
+                    calleeID = succe.vertexID
                     for callSiteID in succe.getCallSites():
                         calleev = self.__subprogramToUnused[calleeID].pop()
-                        callerv.addSuccessor(calleev.getVertexID(), callSiteID)            
-                        calleev.addPredecessor(callerv.getVertexID(), callSiteID)
+                        callerv.addSuccessor(calleev.vertexID, callSiteID)            
+                        calleev.addPredecessor(callerv.vertexID, callSiteID)
     
     def __setRootID (self):
         noPreds = []
@@ -58,35 +59,35 @@ class ContextGraph (DirectedGraph):
             if v.numberOfPredecessors() == 0:
                 noPreds.append(v)
         assert len(noPreds) == 1
-        self.__rootID = noPreds[0].getVertexID()
+        self.__rootID = noPreds[0].vertexID
     
     def getRootID (self):
-        assert self.__rootID != dummyVertexID, "Root vertex of call graph has not been set"
+        assert self.__rootID != Vertices.dummyVertexID, "Root vertex of call graph has not been set"
         return self.__rootID
 
-class CallGraph (DirectedGraph):   
+class CallGraph (DirectedGraphs.DirectedGraph):   
     def __init__ (self):
-        DirectedGraph.__init__(self)
-        self.__rootID = dummyVertexID
+        DirectedGraphs.DirectedGraph.__init__(self)
+        self.__rootID = Vertices.dummyVertexID
         self.__functionNameToVertex = {}
         
     def addVertex (self, functionName):
         assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
         Debug.debug_message("Adding call graph vertex of function '%s'" % functionName, 5)
         vertexID = self.getNextVertexID()
-        callv    = CallGraphVertex(vertexID, functionName)
+        callv    = Vertices.CallGraphVertex(vertexID, functionName)
         self.vertices[vertexID] = callv 
         self.__functionNameToVertex[functionName] = callv
     
     def removeVertex (self, functionName):
         Debug.debug_message("Removing call graph vertex of function '%s'" % functionName, 5)
         callv    = self.getVertexWithName(functionName)
-        vertexID = callv.getVertexID()
+        vertexID = callv.vertexID
         for succID in callv.getSuccessorIDs():
             self.removeEdge(vertexID, succID)
         for predID in callv.getPredecessorIDs():
             self.removeEdge(predID, vertexID)
-        DirectedGraph.removeVertex(self, vertexID)
+        DirectedGraphs.DirectedGraph.removeVertex(self, vertexID)
         
     def hasVertexWithName (self, functionName):
         return functionName in self.__functionNameToVertex
@@ -96,22 +97,22 @@ class CallGraph (DirectedGraph):
         return self.__functionNameToVertex[functionName]
     
     def getRootVertex (self):
-        assert self.__rootID != dummyVertexID, "The root of the call graph has not been set"
+        assert self.__rootID != Vertices.dummyVertexID, "The root of the call graph has not been set"
         return self.getVertex(self.__rootID)
     
     def findAndSetRoot (self):
         withoutPred = []
         for v in self:
             if v.numberOfPredecessors() == 0:
-                withoutPred.append(v.getVertexID())
+                withoutPred.append(v.vertexID)
         if len(withoutPred) == 0:
-            Debug.exitMessage("Could not find program entry point as there are no functions without predecessors")
+            Debug.exit_message("Could not find program entry point as there are no functions without predecessors")
         elif len(withoutPred) > 1:
             debugStr = ""
             for vertexID in withoutPred:
                 callv    = self.getVertex(vertexID)
                 debugStr += callv.__str__()
-            Debug.exitMessage("Call graph has too many entry points: %s" % debugStr)
+            Debug.exit_message("Call graph has too many entry points: %s" % debugStr)
         else:
             self.__rootID = withoutPred[0]
         assert self.__rootID, "Unable to set root ID of call graph"
@@ -119,22 +120,22 @@ class CallGraph (DirectedGraph):
     def setRoot (self, functionName):
         rootv = self.getVertexWithName(functionName)
         if rootv.numberOfPredecessors() > 0:
-            Debug.warningMessage("Root function '%s' has incoming function calls" % functionName)
-        self.__rootID = rootv.getVertexID()
+            Debug.warning_message("Root function '%s' has incoming function calls" % functionName)
+        self.__rootID = rootv.vertexID
         
     def setRootID (self, rootID):
         self.__rootID = rootID
     
     def getRootID (self):
-        assert self.__rootID != dummyVertexID, "Root vertex of call graph has not been set"
+        assert self.__rootID != Vertices.dummyVertexID, "Root vertex of call graph has not been set"
         return self.__rootID
     
     def addEdge (self, predName, succName, callSiteID):
         Debug.debug_message("Adding call graph edge %s => %s" % (predName, succName), 5)
         predv = self.getVertexWithName(predName)
         succv = self.getVertexWithName(succName)
-        predv.addSuccessor(succv.getVertexID(), callSiteID)            
-        succv.addPredecessor(predv.getVertexID(), callSiteID)
+        predv.addSuccessor(succv.vertexID, callSiteID)            
+        succv.addPredecessor(predv.vertexID, callSiteID)
     
 class Program():
     def __init__(self):
@@ -216,14 +217,14 @@ class Program():
         if functionName not in self.__pathgs:
             cfg = self.getCFG(functionName)
             lnt = self.getLNT(functionName)
-            enhancedCFG = EnhancedCFG(cfg)
-            self.__pathgs[functionName] = PathInformationGraph(cfg, lnt, enhancedCFG)
+            enhancedCFG = CFGs.EnhancedCFG(cfg)
+            self.__pathgs[functionName] = SuperBlocks.PathInformationGraph(cfg, lnt, enhancedCFG)
         return self.__pathgs[functionName]
 
     def getLNT (self, functionName):
         if functionName not in self.__LNTs:
             cfg  = self.getCFG(functionName)
-            lnt  = LoopNests(cfg, cfg.getEntryID())
+            lnt  = Trees.LoopNests(cfg, cfg.getEntryID())
             self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
 
@@ -246,17 +247,17 @@ class Program():
         functions = set([])
         for functionName, cfg in self.__CFGs.iteritems():
             exitID = cfg.getExitID()
-            if cfg.isCallSite(exitID) or cfg.getExitID() == dummyVertexID:
+            if cfg.isCallSite(exitID) or cfg.getExitID() == Vertices.dummyVertexID:
                 functions.add(functionName)
         for functionName in functions:
             # This check is essential as the function may have been removed in the meantime
             if functionName in self.__CFGs:
                 cfg = self.__CFGs[functionName]
-                dfs = DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).getVertexID())
+                dfs = Trees.DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).vertexID)
                 for vertexID in dfs.getPostorder():
                     callv = self.__callg.getVertex(vertexID)
                     for calle in callv.getPredecessorEdges():
-                        predID = calle.getVertexID()
+                        predID = calle.vertexID
                         predv  = self.__callg.getVertex(predID)
                         for callSiteID in calle.getCallSites():
                             callerName = predv.getName()
@@ -272,11 +273,11 @@ class Program():
     def inlineCalls (self):
         Debug.verbose_message("Inlining to create single CFG", __name__)
         rootv = self.__callg.getRootVertex()
-        dfs   = DepthFirstSearch(self.__callg, rootv.getVertexID())
+        dfs   = Trees.DepthFirstSearch(self.__callg, rootv.vertexID)
         for vertexID in dfs.getPostorder():
             succv = self.__callg.getVertex(vertexID)
             for calle in succv.getPredecessorEdges():
-                predID = calle.getVertexID()
+                predID = calle.vertexID
                 predv  = self.__callg.getVertex(predID)
                 for callSiteID in calle.getCallSites():
                     calleeName = succv.getName()
@@ -310,15 +311,15 @@ class Program():
         oldIDToNewID = {}
         for v in calleeCFG:
             newID  = callerCFG.getNextVertexID()
-            oldIDToNewID[v.getVertexID()] = newID
-            clonev = deepcopy(v)
+            oldIDToNewID[v.vertexID] = newID
+            clonev = copy.deepcopy(v)
             clonev.setVertexID(newID)
             clonev.setOriginalVertexID(v.getOriginalVertexID())
             clonev.removeAllPredecessors()
             clonev.removeAllSuccessors()
             callerCFG.addVertex(clonev)
         for v in calleeCFG:
-            predID = v.getVertexID()
+            predID = v.vertexID
             for succID in v.getSuccessorIDs():
                 if predID != calleeCFG.getExitID() and succID != calleeCFG.getEntryID():
                     newPredID = oldIDToNewID[predID]
@@ -327,7 +328,7 @@ class Program():
         return oldIDToNewID[calleeCFG.getEntryID()], oldIDToNewID[calleeCFG.getExitID()]
     
     def __linkDuplicate (self, callerCFG, callSitev, returnv, newEntryID, newExitID):    
-        callerCFG.addEdge(callSitev.getVertexID(), newEntryID)
-        callerCFG.addEdge(newExitID, returnv.getVertexID())
-        callerCFG.removeEdge(callSitev.getVertexID(), returnv.getVertexID())
+        callerCFG.addEdge(callSitev.vertexID, newEntryID)
+        callerCFG.addEdge(newExitID, returnv.vertexID)
+        callerCFG.removeEdge(callSitev.vertexID, returnv.vertexID)
         

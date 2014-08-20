@@ -1,5 +1,9 @@
-import CFGs, Debug, Programs, Vertices
+import CFGs
+import Debug
+import Programs
+import Vertices
 import shlex
+import re
 
 cfgIndicator          = 'cfg:'
 bbIndicator           = 'bb:'
@@ -12,38 +16,38 @@ def setEntryAndExit (cfg):
     withoutSucc = []
     for bb in cfg:
         if bb.numberOfSuccessors() == 0:
-            withoutSucc.append(bb.getVertexID())
+            withoutSucc.append(bb.vertexID)
         elif bb.numberOfSuccessors() == 1:
-            if bb.hasSuccessor(bb.getVertexID()):
-                withoutSucc.append(bb.getVertexID())
+            if bb.hasSuccessor(bb.vertexID):
+                withoutSucc.append(bb.vertexID)
         if bb.numberOfPredecessors() == 0:
-            withoutPred.append(bb.getVertexID())
+            withoutPred.append(bb.vertexID)
         elif bb.numberOfPredecessors() == 1:
-            if bb.hasPredecessor(bb.getVertexID()):
-                withoutPred.append(bb.getVertexID())
+            if bb.hasPredecessor(bb.vertexID):
+                withoutPred.append(bb.vertexID)
     
     entryID = None
     if len(withoutPred) == 0:
-        Debug.exitMessage("CFG '%s' does not an entry point" % cfg.getName())
+        Debug.exit_message("CFG '%s' does not an entry point" % cfg.getName())
     elif len(withoutPred) > 1:
         debugStr = ""
         for bbID in withoutPred:
             bb       = cfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many entry points: %s" % (cfg.getName(), debugStr))
+        Debug.exit_message("CFG '%s' has too many entry points: %s" % (cfg.getName(), debugStr))
     else:
         entryID = withoutPred[0]
         cfg.setEntryID(entryID)
     
     exitID = None
     if len(withoutSucc) == 0:
-        Debug.warningMessage("CFG '%s' does not an exit point" % cfg.getName())
+        Debug.warning_message("CFG '%s' does not an exit point" % cfg.getName())
     elif len(withoutSucc) > 1:
         debugStr = ""
         for bbID in withoutSucc:
             bb       = cfg.getVertex(bbID)
             debugStr += bb.__str__()
-        Debug.exitMessage("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
+        Debug.exit_message("CFG '%s' has too many exit points: %s" % (cfg.getName(), debugStr))
     else:
         exitID = withoutSucc[0]
         cfg.setExitID(exitID)
@@ -52,7 +56,6 @@ def setEntryAndExit (cfg):
         cfg.addEdge(exitID, entryID)
     
 def readInProgram (programFile):
-    import re
     program = Programs.Program()
     # First parse the file for functions to partially build call graph
     with open(programFile, 'r') as f:
@@ -67,7 +70,7 @@ def readInProgram (programFile):
                 # Otherwise function calls will be ambiguous with successor IDs inside a function
                 match = re.match(r'\D+', functionName)
                 if not match: 
-                    Debug.exitMessage("Function name '%s' is disallowed. Every name must start with a non-digit character" % functionName)
+                    Debug.exit_message("Function name '%s' is disallowed. Every name must start with a non-digit character" % functionName)
                 cfg.setName(functionName)
                 program.addCFG(cfg, functionName)
                 Debug.debug_message("Found new CFG '%s'" % functionName, 1)
@@ -95,7 +98,7 @@ def readInProgram (programFile):
                 assert vertexID.isdigit(), "Vertex identifier '%s' is not an integer" % vertexID
                 vertexID = int(vertexID)
                 if vertexID in bbIDs:
-                    Debug.exitMessage("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, cfg.getName()))
+                    Debug.exit_message("Basic block IDs must be unique across ALL functions. Found duplicate ID %d in '%s'" % (vertexID, cfg.getName()))
                 else:
                     bbIDs.add(vertexID)
                 bb = Vertices.BasicBlock(vertexID, functionName)
@@ -122,8 +125,8 @@ def readInProgram (programFile):
                             bb.addSuccessor(succID)
                         else:
                             calleeName = lex
-                            program.getCallGraph().addEdge(cfg.getName(), calleeName, bb.getVertexID())
-                            cfg.addCallSite(bb.getVertexID(), calleeName)                                    
+                            program.getCallGraph().addEdge(cfg.getName(), calleeName, bb.vertexID)
+                            cfg.addCallSite(bb.vertexID, calleeName)                                    
             elif line.startswith(instructionsIndicator):
                 instructions = True
             # Ignore lines consisting of whitespace only

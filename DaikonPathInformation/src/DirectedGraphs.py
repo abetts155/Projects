@@ -11,7 +11,7 @@ class DirectedGraph ():
     def getName (self):
         return self._name
     
-    def getVertexIDs (self):
+    def vertexIDs (self):
         return set(self.vertices.keys())
     
     def getVertex (self, vertexID):
@@ -44,7 +44,7 @@ class DirectedGraph ():
         
     def addPredecessorEdges (self):
         for v in self:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             for succID in v.getSuccessorIDs():
                 succv = self.getVertex(succID)
                 if not succv.hasPredecessor(vertexID):
@@ -69,12 +69,12 @@ class DirectedGraph ():
         reverseg = DirectedGraph() 
         # Add vertices
         for v in self:
-            vertexID = v.getVertexID()
+            vertexID = v.vertexID
             copyv    = Vertices.Vertex(vertexID)
             reverseg.vertices[vertexID] = copyv
         # Add edges
         for v in self:
-            predID = v.getVertexID()
+            predID = v.vertexID
             for succID in v.getSuccessorIDs():
                 reverseg.addEdge(succID, predID)
         return reverseg
