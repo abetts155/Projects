@@ -1,11 +1,10 @@
 import programs
-import cfgs
-import trees
 import edges
 import vertices
 import super_blocks
 import config
 import os
+from src import directed_graphs
 
 beginAttributes = "["
 beginGraph      = "[\n"
@@ -75,7 +74,7 @@ def makeUdrawFile (g, graph_name):
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
-            if isinstance(g, cfgs.CFG):
+            if isinstance(g, directed_graphs.CFG):
                 colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
                 colorsIterator = iter(colors) 
                 colorMapping   = {}
@@ -95,10 +94,10 @@ def makeUdrawFile (g, graph_name):
                     vertexID = v.vertexID
                     if vertexID != g.getRootID():
                         writeCallGraphVertex(g, vertexID, f) 
-            elif isinstance(g, cfgs.EnhancedCFG):
+            elif isinstance(g, directed_graphs.EnhancedCFG):
                 for v in g:
                     writeEnhancedCFGVertex(g, v.vertexID, f)
-            elif isinstance(g, trees.LoopNests):
+            elif isinstance(g, directed_graphs.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, f)
             else:
@@ -270,7 +269,7 @@ def writeTreeVertex (tree, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
-    if isinstance(tree, trees.LoopNests):
+    if isinstance(tree, directed_graphs.LoopNests):
         if isinstance(v, vertices.HeaderVertex):
             f.write(setShape(SHAPE.TRIANGLE))
             f.write(setColor(COLOR.RED))

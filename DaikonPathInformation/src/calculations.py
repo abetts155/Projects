@@ -1,6 +1,5 @@
 import vertices
 import edges
-import trees
 import config
 import debug
 import os
@@ -18,7 +17,7 @@ class WCETCalculation:
         self.__VanillaContextIDToWCET = {}
         self.__ExtraContextIDToWCET = {}
         contextg = program.getContextGraph()
-        dfs      = trees.DepthFirstSearch(contextg, contextg.getRootID())
+        dfs      = directed_graphs.DepthFirstSearch(contextg, contextg.getRootID())
         for vertexID in dfs.getPostorder():
             contextv     = contextg.getVertex(vertexID)
             functionName = contextv.getName()

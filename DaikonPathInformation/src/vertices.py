@@ -223,7 +223,24 @@ class CFGEdge (CFGVertex):
         string += "succ     = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string 
 
-class BasicBlock (CFGVertex):    
+class BasicBlock (CFGVertex):
+    class Instruction:    
+        def __init__ (self, address, instruction):
+            self.__address     = address
+            self.__instruction = instruction
+            
+        def getAddress (self):
+            return self.__address
+        
+        def getInstructionFields (self):
+            return self.__instruction
+        
+        def getOp (self):
+            return self.__instruction[0]
+         
+        def __str__(self):
+            return "%s : %s" % (hex(self.__address), ' '.join(self.__instruction))
+        
     def __init__ (self, vertexID, name=None):
         CFGVertex.__init__(self, vertexID, name)
         self.__instructions = []

@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import parse_program_file
 import debug
-import trees
 import traces
 import calculations
 import config
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     totalNaiveProgramPoints      = 0
     for cfg in program.getcfgs():
         functionName = cfg.getName()
-        lnt = trees.LoopNests(cfg, cfg.getEntryID())
+        lnt = directed_graphs.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
         pathg = program.getPathInfoGraph(functionName)
         totalSuperBlockProgramPoints += len(pathg.getMonitoredProgramPoints())

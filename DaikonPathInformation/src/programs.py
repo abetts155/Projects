@@ -1,7 +1,5 @@
-import cfgs
 import directed_graphs
 import vertices
-import trees
 import super_blocks
 import udraw
 import debug
@@ -15,7 +13,7 @@ class ContextGraph (directed_graphs.DirectedGraph):
         self.__rootID = None
         self.__subprogramToContexts = {}
         self.__subprogramToUnused   = {}
-        dfs = trees.DepthFirstSearch(callg, callg.getRootID())
+        dfs = directed_graphs.DepthFirstSearch(callg, callg.getRootID())
         self.__addvertices(callg, dfs)
         self.__addedges(callg, dfs)
         self.__setRootID()
@@ -217,14 +215,14 @@ class Program():
         if functionName not in self.__pathgs:
             cfg = self.getCFG(functionName)
             lnt = self.getLNT(functionName)
-            enhancedCFG = cfgs.EnhancedCFG(cfg)
+            enhancedCFG = directed_graphs.EnhancedCFG(cfg)
             self.__pathgs[functionName] = super_blocks.PathInformationGraph(cfg, lnt, enhancedCFG)
         return self.__pathgs[functionName]
 
     def getLNT (self, functionName):
         if functionName not in self.__LNTs:
             cfg  = self.getCFG(functionName)
-            lnt  = trees.LoopNests(cfg, cfg.getEntryID())
+            lnt  = directed_graphs.LoopNests(cfg, cfg.getEntryID())
             self.__LNTs[functionName] = lnt
         return self.__LNTs[functionName]
 
@@ -253,7 +251,7 @@ class Program():
             # This check is essential as the function may have been removed in the meantime
             if functionName in self.__cfgs:
                 cfg = self.__cfgs[functionName]
-                dfs = trees.DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).vertexID)
+                dfs = directed_graphs.DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).vertexID)
                 for vertexID in dfs.getPostorder():
                     callv = self.__callg.getVertex(vertexID)
                     for calle in callv.getPredecessoredges():
@@ -273,7 +271,7 @@ class Program():
     def inlineCalls (self):
         debug.verbose_message("Inlining to create single CFG", __name__)
         rootv = self.__callg.getRootVertex()
-        dfs   = trees.DepthFirstSearch(self.__callg, rootv.vertexID)
+        dfs   = directed_graphs.DepthFirstSearch(self.__callg, rootv.vertexID)
         for vertexID in dfs.getPostorder():
             succv = self.__callg.getVertex(vertexID)
             for calle in succv.getPredecessoredges():

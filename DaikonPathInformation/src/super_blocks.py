@@ -1,6 +1,4 @@
 import directed_graphs
-import cfgs
-import trees
 import vertices
 import edges
 import debug
@@ -21,10 +19,10 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
                     headerID = treev.getHeaderID()
                     debug.debug_message("Analysing header %d" % headerID, 1)
                     forwardCFG, bodyvertices, bodyedges = lnt.induceSubgraph(treev)
-                    enhancedCFG           = cfgs.EnhancedCFG(forwardCFG)
-                    predomTree            = trees.Dominators(enhancedCFG, enhancedCFG.getEntryID())
+                    enhancedCFG           = directed_graphs.EnhancedCFG(forwardCFG)
+                    predomTree            = directed_graphs.Dominators(enhancedCFG, enhancedCFG.getEntryID())
                     reverseEnhancedCFG    = enhancedCFG.getReverseGraph()
-                    postdomTree           = trees.Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
+                    postdomTree           = directed_graphs.Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
                     dominatorg            = DominatorGraph(predomTree, postdomTree)
                     self.__monitoredLoopProgramPoints[headerID] = self.__pinpointMonitoredCFGedges(headerID, dominatorg, lnt, cfg, enhancedCFG, bodyvertices, bodyedges)
                     self.__pinpointRelativeLoopBoundProgramPoints(treev, dominatorg, lnt, enhancedCFG, reverseEnhancedCFG)
@@ -235,7 +233,7 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
         for v in enhancedCFG:
             reachability[v] = set([])
         # Do data-flow analysis
-        dfs     = trees.DepthFirstSearch(enhancedCFG, enhancedCFG.getEntryID())
+        dfs     = directed_graphs.DepthFirstSearch(enhancedCFG, enhancedCFG.getEntryID())
         changed = True
         while changed:
             changed = False

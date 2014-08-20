@@ -1,4 +1,4 @@
-import cfgs
+import directed_graphs
 import debug
 import programs
 import vertices
@@ -64,7 +64,7 @@ def readInProgram (programFile):
             if line.startswith(cfgIndicator):
                 lexemes = shlex.split(line)
                 assert len(lexemes) == 2, "Unable to parse CFG line %s" % line
-                cfg         = cfgs.CFG()
+                cfg         = directed_graphs.CFG()
                 functionName = lexemes[-1]
                 # Make sure that the first characters of the function name are non-digits
                 # Otherwise function calls will be ambiguous with successor IDs inside a function
@@ -141,7 +141,7 @@ def readInProgram (programFile):
                     else:
                         fields.append(lex[1:-1])
                 assert address is not None, "No address found in instruction %s" % line
-                instruction = cfgs.Instruction(address, fields)
+                instruction = vertices.BasicBlock.Instruction(address, fields)
                 bb.addInstruction(instruction)
     return program
     
