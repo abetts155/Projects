@@ -1,3 +1,4 @@
+import directed_graphs
 import vertices
 import edges
 import config
