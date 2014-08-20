@@ -1,4 +1,4 @@
-import Vertices
+import vertices
 
 class DirectedGraph ():        
     def __init__ (self):
@@ -42,7 +42,7 @@ class DirectedGraph ():
         predv.removeSuccessor(succID)
         succv.removePredecessor(predID)
         
-    def addPredecessorEdges (self):
+    def addPredecessoredges (self):
         for v in self:
             vertexID = v.vertexID
             for succID in v.getSuccessorIDs():
@@ -56,10 +56,10 @@ class DirectedGraph ():
             nextID = nextID + 1 
         return nextID
     
-    def numOfVertices (self):
+    def numOfvertices (self):
         return len(self.vertices)
     
-    def numOfEdges(self):
+    def numOfedges(self):
         total = 0
         for v in self.vertices.values():
             total += v.numberOfSuccessors()
@@ -70,7 +70,7 @@ class DirectedGraph ():
         # Add vertices
         for v in self:
             vertexID = v.vertexID
-            copyv    = Vertices.Vertex(vertexID)
+            copyv    = vertices.Vertex(vertexID)
             reverseg.vertices[vertexID] = copyv
         # Add edges
         for v in self:
@@ -91,11 +91,11 @@ class DirectedGraph ():
 class FlowGraph (DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._entryID = Vertices.dummyVertexID
-        self._exitID = Vertices.dummyVertexID
+        self._entryID = vertices.dummyVertexID
+        self._exitID = vertices.dummyVertexID
         
     def getEntryID (self):
-        assert self._entryID != Vertices.dummyVertexID, "Entry to flow graph not found"
+        assert self._entryID != vertices.dummyVertexID, "Entry to flow graph not found"
         return self._entryID
     
     def getExitID (self):

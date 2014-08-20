@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import config
-import Debug
-import Timing
-import Utils
-import Calculations
-import Traces
-import TestHarness
-import ARM
-import ParseProgramFile
+import debug
+import timing
+import utils
+import calculations
+import traces
+import test_harness
+import arm
+import parse_program_file
 import argparse
 import subprocess
 import sys
@@ -34,7 +34,7 @@ def doCompression (gem5Trace):
 
 def fitnessFunction (chromosome):
     try:
-        if fitnessFunction.vectorProperties.baseType == TestHarness.TestVectorProperties.Type[2]:
+        if fitnessFunction.vectorProperties.baseType == test_harness.TestVectorProperties.Type[2]:
             # Sometimes this conversion fails and I don't see why?
             # Just catch it and move on
             chromosome.genomeList = [chr(val) for val in chromosome.genomeList]
@@ -45,12 +45,12 @@ def fitnessFunction (chromosome):
     traceFile  = "%s.%s.%d" % (os.path.basename(binary), "trace", fitnessFunction.run)
     cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % \
      (armSimulator, traceFile, gem5ConfigFile, binary, ' '.join(map(str, chromosome.genomeList)))
-    Debug.debug_message("Running '%s' on gem5" % cmd, 1)
+    debug.debug_message("Running '%s' on gem5" % cmd, 1)
     proc       = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)    
     returncode = proc.wait()
     if returncode:
         sys.exit("Running '%s' failed" % cmd)
-    gem5Trace = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + traceFile
+    gem5Trace = os.path.abspath(os.getcwd()) + os.sep + utils.m5Directory + os.sep + traceFile
     assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
     firstLines = os.popen("head -1 %s" % gem5Trace).readlines()
     lastLines  = os.popen("tail -1 %s" % gem5Trace).readlines()
@@ -63,8 +63,8 @@ def fitnessFunction (chromosome):
     time1 = time1[:-1]
     time2 = time2[:-1]
     score = int(time2) - int(time1)
-    Debug.debug_message("Score = %d" % score, 1)
-    fitnessFunction.gem5Traces.append(doCompression(gem5Trace))
+    debug.debug_message("Score = %d" % score, 1)
+    fitnessFunction.gem5traces.append(doCompression(gem5Trace))
     return score
 
 def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties, populationSize=20, generations=20):
@@ -91,17 +91,17 @@ def runGAGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties,
     ga.setMutationRate(0.01)
     ga.setElitism(True)
     # Set up the fitness function static variables
-    fitnessFunction.gem5Traces       = []
+    fitnessFunction.gem5traces       = []
     fitnessFunction.vectorProperties = vectorProperties
     fitnessFunction.run              = getNextTraceFileNumber(binary)
     # Run the GA
     ga.evolve (freq_stats=1)    
-    return fitnessFunction.gem5Traces
+    return fitnessFunction.gem5traces
 
 def getNextTraceFileNumber(binary):
     # Carry on from previous executions (if they exist)
     nextrun = 0
-    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory
+    gem5TraceDirectory = os.path.abspath(os.getcwd()) + os.sep + utils.m5Directory
     if os.path.exists(gem5TraceDirectory):
         for filename in os.listdir(gem5TraceDirectory):
             match = re.match(r'%s' % os.path.basename(binary), filename)
@@ -116,21 +116,21 @@ def runGem5 (gem5base, armSimulator, gem5ConfigFile, binary, vectorProperties):
     # Get the next run number
     run = getNextTraceFileNumber(binary) + 1
     # Now run the program n times
-    randomTVs  = TestHarness.RandomGeneration(vectorProperties)
-    gem5Traces = []
+    randomTVs  = test_harness.RandomGeneration(vectorProperties)
+    gem5traces = []
     for i in xrange(run, config.Arguments.tests + run):
         nextTV     = randomTVs.nextTestVector()
         traceFile  = "%s.%s.%d.gz" % (os.path.basename(binary), "trace", i)
         cmd        = '%s --debug-flags=Fetch --trace-file=%s %s --cpu-type=timing -c %s -o "%s"' % (armSimulator, traceFile, gem5ConfigFile, binary, nextTV)
-        Debug.debug_message("Running '%s' on gem5" % cmd, 1)
+        debug.debug_message("Running '%s' on gem5" % cmd, 1)
         proc       = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)    
         returncode = proc.wait()
         if returncode:
             sys.exit("Running '%s' failed" % cmd)
-        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + Utils.m5Directory + os.sep + traceFile
+        gem5Trace = os.path.abspath(os.getcwd()) + os.sep + utils.m5Directory + os.sep + traceFile
         assert os.path.exists(gem5Trace), "Expected to find gem5 trace in '%s' but it is not there" % gem5Trace
-        gem5Traces.append(gem5Trace)
-    return gem5Traces
+        gem5traces.append(gem5Trace)
+    return gem5traces
     
 def getTestSpecification (testSpecFile):
     basetype = None
@@ -165,10 +165,10 @@ def getTestSpecification (testSpecFile):
                         sys.exit("The upper bound on the range of elements in the test vector must be an integer. It is '%s'." % rhs) 
                 else:
                     sys.exit("Do not understand the line '%s' in the test specification file" % line)   
-    return TestHarness.TestVectorProperties(length, basetype, lower, upper)
+    return test_harness.TestVectorProperties(length, basetype, lower, upper)
         
 def disassembleProgram(binary):
-    Debug.verbose_message("Disassembling program", __name__)
+    debug.verbose_message("Disassembling program", __name__)
     filename = binary + ".dis"
     with open(filename, 'w') as disassembly:
         cmd        = "%s %s -d" % (armObjdump, binary)
@@ -179,18 +179,18 @@ def disassembleProgram(binary):
     return filename
 
 def generateAssembly(program):
-    Debug.verbose_message("Generating assembly", __name__)
+    debug.verbose_message("Generating assembly", __name__)
     cmd = "%s -S %s" % (armGCC, program)
-    Debug.debug_message("Compiling with command '%s'" % cmd, 1)
+    debug.debug_message("Compiling with command '%s'" % cmd, 1)
     proc       = subprocess.Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()
     if returncode:
         sys.exit("Compiling '%s' with '%s' failed" % (program, cmd))
     assembly = program[:-2] + '.s'
-    return ARM.readARMAssembly(assembly, config.Arguments.root)  
+    return arm.readarmAssembly(assembly, config.Arguments.root)  
         
 def compileProgram(program):
-    Debug.verbose_message("Compiling program", __name__)
+    debug.verbose_message("Compiling program", __name__)
     optimisation = ""
     extraFlags   = ""
     if config.Arguments.flags:
@@ -200,7 +200,7 @@ def compileProgram(program):
                 optimisation = flag
     binary     = program[:-2] + optimisation
     cmd        = "%s -fno-stack-protector -static %s %s -o %s" % (armGCC, extraFlags, program, binary)
-    Debug.debug_message("Compiling with command '%s'" % cmd, 1)
+    debug.debug_message("Compiling with command '%s'" % cmd, 1)
     proc       = subprocess.Popen(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr)    
     returncode = proc.wait()
     if returncode:
@@ -222,14 +222,14 @@ def checkProgramFiles():
         if fileExt:
             if fileExt == cExt:
                 if not distutils.spawn.find_executable(armGCC):
-                    sys.exit("Unable to find ARM GCC cross compiler '%s' on your path" % armGCC)
+                    sys.exit("Unable to find arm GCC cross compiler '%s' on your path" % armGCC)
                 if not distutils.spawn.find_executable(armObjdump):
-                    sys.exit("Unable to find ARM GCC object dump facility '%s' on your path" % armObjdump)
+                    sys.exit("Unable to find arm GCC object dump facility '%s' on your path" % armObjdump)
                 if not config.Arguments.root:
                     sys.exit("To compile and analyse a C file, you must supply a root function via -r.")
                 binary      = compileProgram(config.Arguments.program_file)
                 disassembly = disassembleProgram(binary)
-                return binary, ARM.readARMDisassembly(disassembly, config.Arguments.root), testSpecFile
+                return binary, arm.readarmDisassembly(disassembly, config.Arguments.root), testSpecFile
             else:
                 sys.exit("Unable to compile '%s' because its extension is not '%s'" % (config.Arguments.program_file, cExt))
         else:
@@ -237,7 +237,7 @@ def checkProgramFiles():
                 sys.exit("The argument '%s' does not have execute permissions" % config.Arguments.program_file)
             programFile = config.Arguments.program_file + '.txt'
             assert os.path.exists(programFile), "Expected to find file with program information in '%s' but it is not there" % programFile
-            return config.Arguments.program_file, ParseProgramFile.createProgram(programFile), testSpecFile
+            return config.Arguments.program_file, parse_program_file.createProgram(programFile), testSpecFile
         
 def checkGem5Settings():
     # Need a gem5 environment variable 
@@ -246,10 +246,10 @@ def checkGem5Settings():
         path = os.environ[gem5Home]
         if not os.path.exists(os.path.abspath(path)):
             sys.exit("Your gem5 base directory '%s' does not exist" % path)
-        armSimulator = path + os.sep + 'build' + os.sep + 'ARM' + os.sep + 'gem5.opt'
+        armSimulator = path + os.sep + 'build' + os.sep + 'arm' + os.sep + 'gem5.opt'
         if not os.path.exists(armSimulator):
-            sys.exit("""Unable to find '%s' in your gem5 distribution, which is the optimised ARM configuration of gem5. 
-Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'""" \
+            sys.exit("""Unable to find '%s' in your gem5 distribution, which is the optimised arm configuration of gem5. 
+Ensure that you have built this version using 'scons arm/build/gem5.opt' in '%s'""" \
                      % (armSimulator, path))
         gem5ConfigFile  = path + os.sep + 'configs' + os.sep + 'example' + os.sep + 'se.py'
         if not os.path.exists(gem5ConfigFile):
@@ -258,31 +258,31 @@ Ensure that you have built this version using 'scons ARM/build/gem5.opt' in '%s'
     except KeyError:
         sys.exit ("You need to set environment variable '%s' to simulate the program using gem5" % gem5Home)
 
-def doAnalysis (gem5Traces, program):   
-    time1 = Timing.log("TRACE PARSING RUN #1 (NO INLINING)")
-    data = Traces.Gem5Parser(program, gem5Traces)
-    Debug.verbose_message("HWMT = %d" % data.getLongestTime(), __name__)   
-    Calculations.WCETCalculation(program, data)
+def doAnalysis (gem5traces, program):   
+    time1 = timing.log("TRACE PARSING RUN #1 (NO INLINING)")
+    data = traces.Gem5Parser(program, gem5traces)
+    debug.verbose_message("HWMT = %d" % data.getLongestTime(), __name__)   
+    calculations.WCETCalculation(program, data)
     program.output()
     program.generateAllUDrawFiles()
 
-    if program.getCallGraph().numOfVertices() > 1 and config.Arguments.inline:
+    if program.getCallGraph().numOfvertices() > 1 and config.Arguments.inline:
         program.inlineCalls()
-        time2 = Timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
-        data = Traces.Gem5Parser(program, gem5Traces)
-        Debug.verbose_message("HWMT = %d" % data.getLongestTime(), __name__)
-        Calculations.WCETCalculation(program, data)
+        time2 = timing.log("TRACE PARSING RUN #2 (INLINED PROGRAM)")
+        data = traces.Gem5Parser(program, gem5traces)
+        debug.verbose_message("HWMT = %d" % data.getLongestTime(), __name__)
+        calculations.WCETCalculation(program, data)
         program.output()
         program.generateAllUDrawFiles("inlined")
     
 def checkTraceFiles():
     files = []
-    for arg in config.Arguments.gem5Traces:
+    for arg in config.Arguments.gem5traces:
         arg = os.path.abspath(arg)
         if not re.match(r'.*%s\.trace\.[0-9]+' % config.Arguments.basename, arg):
-            Debug.exitMessage("The file '%s' is not a valid gem5 trace for '%s'" % (arg, config.Arguments.basename)) 
+            debug.exitMessage("The file '%s' is not a valid gem5 trace for '%s'" % (arg, config.Arguments.basename)) 
         if not os.path.isfile(arg):
-            Debug.exitMessage("The argument '%s' is not a valid file" % arg) 
+            debug.exitMessage("The argument '%s' is not a valid file" % arg) 
         files.append(arg)
     return files  
 
@@ -299,7 +299,7 @@ def the_command_line():
     parser.add_argument("program_file",
                         help="either a program to compile (with '.c.' extension) or a pre-compiled binary")
     
-    parser.add_argument("gem5Traces", 
+    parser.add_argument("gem5traces", 
                         nargs='*',
                         help="previous gem5 runs")
     
@@ -375,31 +375,31 @@ def the_command_line():
 
 if __name__ == "__main__":   
     the_command_line()
-    Debug.verbose_message("%s Analysing program '%s' %s" % ('*' * 10, config.Arguments.program_file, '*' * 10), __name__)
-    Debug.verbose_message("Checking program configuration...", __name__)
-    time1 = Timing.log("COMPILING BEGIN")
+    debug.verbose_message("%s Analysing program '%s' %s" % ('*' * 10, config.Arguments.program_file, '*' * 10), __name__)
+    debug.verbose_message("Checking program configuration...", __name__)
+    time1 = timing.log("COMPILING BEGIN")
     binary, program, testSpecFile = checkProgramFiles()
-    time2 = Timing.log("COMPILING END")
-    Debug.verbose_message("...all good", __name__)
+    time2 = timing.log("COMPILING END")
+    debug.verbose_message("...all good", __name__)
     if config.Arguments.compile:
-        Debug.exitMessage("DONE")
-    if config.Arguments.gem5Traces:
-        gem5Traces = checkTraceFiles()
+        debug.exitMessage("DONE")
+    if config.Arguments.gem5traces:
+        gem5traces = checkTraceFiles()
     else:
-        Debug.verbose_message("Checking gem5 configuration...", __name__)
+        debug.verbose_message("Checking gem5 configuration...", __name__)
         gem5base, armSimulator, gem5ConfigFile = checkGem5Settings()
-        Debug.verbose_message("...all good", __name__)
-        Debug.verbose_message("Checking test specification...", __name__)
+        debug.verbose_message("...all good", __name__)
+        debug.verbose_message("Checking test specification...", __name__)
         testSpecification = getTestSpecification(testSpecFile)
-        Debug.verbose_message("...all good", __name__)
+        debug.verbose_message("...all good", __name__)
         if config.Arguments.ga:
-            Debug.verbose_message("Using GA to generate test vectors", __name__)
-            gem5Traces = []
-            time3 = Timing.log("GA RUN #1")
-            gem5Traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification))
+            debug.verbose_message("Using GA to generate test vectors", __name__)
+            gem5traces = []
+            time3 = timing.log("GA RUN #1")
+            gem5traces.extend(runGAGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification))
         else:
-            Debug.verbose_message("Running program on gem5 with %d tests" % config.Arguments.tests, __name__)
-            gem5Traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
-    doAnalysis(gem5Traces, program)
+            debug.verbose_message("Running program on gem5 with %d tests" % config.Arguments.tests, __name__)
+            gem5traces = runGem5(gem5base, armSimulator, gem5ConfigFile, binary, testSpecification)
+    doAnalysis(gem5traces, program)
     
     

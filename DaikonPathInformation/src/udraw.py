@@ -1,9 +1,9 @@
-import Programs
-import CFGs
-import Trees
-import Edges
-import Vertices
-import SuperBlocks
+import programs
+import cfgs
+import trees
+import edges
+import vertices
+import super_blocks
 import config
 import os
 
@@ -75,7 +75,7 @@ def makeUdrawFile (g, graph_name):
         with open(filename, 'w') as f:
             f.write(beginGraph)
             # CFG or Instrumented CFG
-            if isinstance(g, CFGs.CFG):
+            if isinstance(g, cfgs.CFG):
                 colors = ['#FFFFFF', '#FFAEB9', '#98FB98', '#CD919E', '#FFF8DC', '#FF83FA', '#00FA9A', '#9370DB', '#BCD2EE', '#E3A869','#FF4040','#DCDCDC','#A8A8A8']
                 colorsIterator = iter(colors) 
                 colorMapping   = {}
@@ -84,21 +84,21 @@ def makeUdrawFile (g, graph_name):
                     vertexID = v.vertexID
                     if vertexID != g.getEntryID():
                         writeCFGVertex(colorMapping, colorsIterator, g, vertexID, f)   
-            elif isinstance(g, SuperBlocks.PathInformationGraph):
-                bidirectionalEdges = set([])
+            elif isinstance(g, super_blocks.PathInformationGraph):
+                bidirectionaledges = set([])
                 for v in g:
                     vertexID = v.vertexID
-                    writePathInfoVertex(g, vertexID, bidirectionalEdges, f)    
-            elif isinstance(g, Programs.CallGraph) or isinstance(g, Programs.ContextGraph):
+                    writePathInfoVertex(g, vertexID, bidirectionaledges, f)    
+            elif isinstance(g, programs.CallGraph) or isinstance(g, programs.ContextGraph):
                 writeCallGraphVertex(g, g.getRootID(), f)
                 for v in g:
                     vertexID = v.vertexID
                     if vertexID != g.getRootID():
                         writeCallGraphVertex(g, vertexID, f) 
-            elif isinstance(g, CFGs.EnhancedCFG):
+            elif isinstance(g, cfgs.EnhancedCFG):
                 for v in g:
                     writeEnhancedCFGVertex(g, v.vertexID, f)
-            elif isinstance(g, Trees.LoopNests):
+            elif isinstance(g, trees.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, f)
             else:
@@ -127,7 +127,7 @@ def writeEnhancedCFGVertex (g, vertexID, f):
     v = g.getVertex(vertexID)        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
-    if isinstance(v, Vertices.CFGEdge):
+    if isinstance(v, vertices.CFGEdge):
         name = str(v.getEdge())
         name += "%sID = %s" % (newLine, vertexID)
     else:
@@ -136,7 +136,7 @@ def writeEnhancedCFGVertex (g, vertexID, f):
     f.write(endAttibutes)
     
     f.write(beginAttributes)
-    for succe in v.getSuccessorEdges():
+    for succe in v.getSuccessoredges():
         f.write(newEdge)
         f.write(beginAttributes)
         if succe.hasEdgeID():
@@ -146,7 +146,7 @@ def writeEnhancedCFGVertex (g, vertexID, f):
         f.write(endEdge + ",\n")
     f.write(endVertex + "\n")
     
-def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
+def writePathInfoVertex (g, vertexID, bidirectionaledges, f):
     v = g.getVertex(vertexID)        
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
@@ -155,13 +155,13 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
     f.write(endAttibutes)
     
     f.write(beginAttributes)
-    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.INCLUSION):
+    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.INCLUSION):
         succID = succe.vertexID
         succv  = g.getVertex(succID)
-        if succv.hasSuccessorEdge(vertexID, Edges.PathInformationEdgeType.INCLUSION):
-            if (vertexID, succID, Edges.PathInformationEdgeType.INCLUSION) not in bidirectionalEdges \
-            and (succID, vertexID, Edges.PathInformationEdgeType.INCLUSION) not in bidirectionalEdges:
-                bidirectionalEdges.add((vertexID, succID, Edges.PathInformationEdgeType.INCLUSION))
+        if succv.hasSuccessorEdge(vertexID, edges.PathInformationEdgeType.INCLUSION):
+            if (vertexID, succID, edges.PathInformationEdgeType.INCLUSION) not in bidirectionaledges \
+            and (succID, vertexID, edges.PathInformationEdgeType.INCLUSION) not in bidirectionaledges:
+                bidirectionaledges.add((vertexID, succID, edges.PathInformationEdgeType.INCLUSION))
                 f.write(newEdge)
                 f.write(beginAttributes)
                 f.write(setEdgeDirection(DIRECTION.BOTH))
@@ -176,11 +176,11 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
             f.write(endAttibutes)
             f.write(edgeLink(succID))
             f.write(endEdge + ",\n")
-    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.EXCLUSION):
+    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.EXCLUSION):
         succID = succe.vertexID
-        if (vertexID, succID, Edges.PathInformationEdgeType.EXCLUSION) not in bidirectionalEdges \
-        and (succID, vertexID, Edges.PathInformationEdgeType.EXCLUSION) not in bidirectionalEdges:
-            bidirectionalEdges.add((vertexID, succID, Edges.PathInformationEdgeType.EXCLUSION))
+        if (vertexID, succID, edges.PathInformationEdgeType.EXCLUSION) not in bidirectionaledges \
+        and (succID, vertexID, edges.PathInformationEdgeType.EXCLUSION) not in bidirectionaledges:
+            bidirectionaledges.add((vertexID, succID, edges.PathInformationEdgeType.EXCLUSION))
             f.write(newEdge)
             f.write(beginAttributes)
             f.write(setEdgeDirection(DIRECTION.BOTH))
@@ -188,7 +188,7 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
             f.write(endAttibutes)
             f.write(edgeLink(succID))
             f.write(endEdge + ",\n")
-    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.LOOP_BOUNDS):    
+    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.LOOP_BOUNDS):    
         succID = succe.vertexID
         f.write(newEdge)
         f.write(beginAttributes)
@@ -198,7 +198,7 @@ def writePathInfoVertex (g, vertexID, bidirectionalEdges, f):
         f.write(endAttibutes)
         f.write(edgeLink(succID))
         f.write(endEdge + ",\n")
-    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS):  
+    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS):  
         succID = succe.vertexID  
         f.write(newEdge)
         f.write(beginAttributes)
@@ -214,7 +214,7 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     tooltip = ""
-    if isinstance(v, Vertices.CFGEdge):
+    if isinstance(v, vertices.CFGEdge):
         f.write(setName(str(v.edge)))
     else:
         name = "%d (original=%d)" % (vertexID, v.getOriginalVertexID())
@@ -233,7 +233,7 @@ def writeCFGVertex (colorMapping, colorsIterator, cfg, vertexID, f):
     f.write(endAttibutes)
     
     f.write(beginAttributes)
-    for succe in v.getSuccessorEdges():
+    for succe in v.getSuccessoredges():
         f.write(newEdge)
         f.write(beginAttributes)
         if succe.hasEdgeID():
@@ -270,8 +270,8 @@ def writeTreeVertex (tree, vertexID, f):
     f.write(newVertex(vertexID))
     f.write(beginAttributes)
     f.write(setName(str(vertexID)))
-    if isinstance(tree, Trees.LoopNests):
-        if isinstance(v, Vertices.HeaderVertex):
+    if isinstance(tree, trees.LoopNests):
+        if isinstance(v, vertices.HeaderVertex):
             f.write(setShape(SHAPE.TRIANGLE))
             f.write(setColor(COLOR.RED))
             f.write(setToolTip("Header ID = %s" % v.getHeaderID()))

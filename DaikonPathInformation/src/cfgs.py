@@ -1,6 +1,6 @@
-import DirectedGraphs
-import Vertices
-import Debug
+import directed_graphs
+import vertices
+import debug
 import copy
 
 class Instruction ():    
@@ -20,27 +20,27 @@ class Instruction ():
     def __str__(self):
         return "%s : %s" % (hex(self.__address), ' '.join(self.__instruction))
 
-class EnhancedCFG (DirectedGraphs.FlowGraph):
+class EnhancedCFG (directed_graphs.FlowGraph):
     def __init__ (self, cfg=None):
-        DirectedGraphs.FlowGraph.__init__(self)
+        directed_graphs.FlowGraph.__init__(self)
         self.__edgeToVertex = {}
         if cfg:
             self._name = cfg.getName()
             for v in cfg:
                 newVertexID = v.vertexID
-                newv        = Vertices.Vertex(newVertexID)
+                newv        = vertices.Vertex(newVertexID)
                 self.vertices[newVertexID] = newv
                 if newVertexID == cfg.getEntryID():
                     self._entryID = newVertexID
                 if newVertexID == cfg.getExitID():
                     self._exitID = newVertexID
-            assert self._entryID != Vertices.dummyVertexID
-            assert self._exitID != Vertices.dummyVertexID
+            assert self._entryID != vertices.dummyVertexID
+            assert self._exitID != vertices.dummyVertexID
             for v in cfg:
                 vertexID = v.vertexID
                 for succID in v.getSuccessorIDs():
                     newVertexID = self.getNextVertexID()
-                    newv        = Vertices.CFGEdge(newVertexID, vertexID, succID)
+                    newv        = vertices.CFGEdge(newVertexID, vertexID, succID)
                     self.__edgeToVertex[(vertexID, succID)] = newv
                     self.vertices[newVertexID] = newv
                     self.addEdge(vertexID, newVertexID)
@@ -79,9 +79,9 @@ class EnhancedCFG (DirectedGraphs.FlowGraph):
             string += v.__str__() + "\n"
         return string
         
-class CFG (DirectedGraphs.FlowGraph):    
+class CFG (directed_graphs.FlowGraph):    
     def __init__ (self):
-        DirectedGraphs.FlowGraph.__init__(self)
+        directed_graphs.FlowGraph.__init__(self)
         self.__addressToVertex = {}
         self.__callSites = {}
         
@@ -131,7 +131,7 @@ class CFG (DirectedGraphs.FlowGraph):
         self.vertices[bbID] = bb
         
     def getVertex (self, bbID):
-        return DirectedGraphs.DirectedGraph.getVertex(self, bbID)
+        return directed_graphs.DirectedGraph.getVertex(self, bbID)
     
     def getVertexWithAddress (self, address):
         if address in self.__addressToVertex:
@@ -151,14 +151,14 @@ class CFG (DirectedGraphs.FlowGraph):
                     candidates.append(bb)
             for bb in candidates:
                 bbID  = bb.vertexID
-                if self._entryID != Vertices.dummyVertexID:
-                    Debug.warning_message("The entry ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID))
+                if self._entryID != vertices.dummyVertexID:
+                    debug.warning_message("The entry ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID))
                     currentEntryv = self.getVertex(self._entryID)
                     entryAddress  = currentEntryv.getFirstInstruction().getAddress()
                     firstAddress  = bb.getFirstInstruction().getAddress()
                     if firstAddress < entryAddress:
                         self._entryID = bbID
-                        Debug.warning_message("Resetting entry vertex to %d" % bbID)
+                        debug.warning_message("Resetting entry vertex to %d" % bbID)
                         toRemove.append(currentEntryv)
                     else:
                         toRemove.append(bb)
@@ -173,10 +173,10 @@ class CFG (DirectedGraphs.FlowGraph):
                     succv = self.getVertex(succID)
                     succv.removePredecessor(bbID)
                 self.removeVertex(bbID)
-            assert self._entryID != Vertices.dummyVertexID, "Unable to find a vertex without predecessors to set as the exit in '%s'" % self._name
+            assert self._entryID != vertices.dummyVertexID, "Unable to find a vertex without predecessors to set as the exit in '%s'" % self._name
         else:
             assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
-            assert entryID > Vertices.dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
+            assert entryID > vertices.dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
             self._entryID = entryID
         
     def setExitID (self, exitID=None):
@@ -184,17 +184,17 @@ class CFG (DirectedGraphs.FlowGraph):
             for bb in self.vertices.values():
                 if bb.numberOfSuccessors() == 0:
                     bbID = bb.vertexID
-                    assert self._exitID == Vertices.dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID)
+                    assert self._exitID == vertices.dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID)
                     self._exitID = bbID
-            if self._exitID == Vertices.dummyVertexID:
-                Debug.warning_message("Unable to find a vertex without successors to set as the exit in '%s'" % self._name)
+            if self._exitID == vertices.dummyVertexID:
+                debug.warning_message("Unable to find a vertex without successors to set as the exit in '%s'" % self._name)
         else:
             assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
-            assert exitID > Vertices.dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
+            assert exitID > vertices.dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
             self._exitID = exitID
             
     def addExitEntryEdge (self):
-        if self._exitID != Vertices.dummyVertexID:
+        if self._exitID != vertices.dummyVertexID:
             entryv = self.getVertex(self._entryID)
             exitv = self.getVertex(self._exitID)
             entryv.addPredecessor(self._exitID)

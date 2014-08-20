@@ -288,18 +288,18 @@ class Graph:
       return ret         
       
 
-def G1DListGetEdgesComposite(mom, dad):
+def G1DListGetedgesComposite(mom, dad):
    """ Get the edges and the merge between the edges of two G1DList individuals
 
    :param mom: the mom G1DList individual
    :param dad: the dad G1DList individual
    :rtype: a tuple (mom edges, dad edges, merge)
    """
-   mom_edges = G1DListGetEdges(mom)
-   dad_edges = G1DListGetEdges(dad)
-   return (mom_edges, dad_edges, G1DListMergeEdges(mom_edges, dad_edges))
+   mom_edges = G1DListGetedges(mom)
+   dad_edges = G1DListGetedges(dad)
+   return (mom_edges, dad_edges, G1DListMergeedges(mom_edges, dad_edges))
 
-def G1DListGetEdges(individual):
+def G1DListGetedges(individual):
    """ Get the edges of a G1DList individual 
 
    :param individual: the G1DList individual
@@ -317,7 +317,7 @@ def G1DListGetEdges(individual):
       else: edg[b].append(a)
    return edg
  
-def G1DListMergeEdges(eda, edb):
+def G1DListMergeedges(eda, edb):
    """ Get the merge between the two individual edges
 
    :param eda: the edges of the first G1DList genome

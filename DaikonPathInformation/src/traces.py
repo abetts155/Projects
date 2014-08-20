@@ -1,7 +1,7 @@
-import Edges
-import Vertices
-import Debug
-import ARM
+import edges
+import vertices
+import debug
+import arm
 import config
 import random
 import os
@@ -10,16 +10,16 @@ import shlex
 newTrace = "=>"
 endTrace = "<="
 
-class GenerateTraces:
+class Generatetraces:
     maxNumberOfCalls  = 20
     maxLoopIterations = 10
     
-    def __init__ (self, program, numberOfTraces=1):
+    def __init__ (self, program, numberOftraces=1):
         self.__program = program
         filename       = config.Arguments.basepath + os.sep + config.Arguments.basename + ".traces"
         with open(filename, 'w') as self.__outfile:
-            for trace in xrange(1, numberOfTraces+1):
-                Debug.debug_message("Generating trace #%d" % trace, 1)
+            for trace in xrange(1, numberOftraces+1):
+                debug.debug_message("Generating trace #%d" % trace, 1)
                 self.__outfile.write("%s\n" % newTrace)
                 self.__generateTrace() 
                 self.__outfile.write("\n%s\n" % endTrace)
@@ -45,7 +45,7 @@ class GenerateTraces:
                     break
                 else:
                     # End of function call
-                    Debug.debug_message("Returning from %s" % self.__currentCallv.getName(), 5)
+                    debug.debug_message("Returning from %s" % self.__currentCallv.getName(), 5)
                     self.__currentCallv, self.__currentCFG, self.__currentLNT, self.__currentv = self.__callStack.pop()
                     self.__vertexID  = self.__currentv.vertexID
                     # Go past the call site
@@ -55,7 +55,7 @@ class GenerateTraces:
                 if tupleIndex not in self.__functionToTailCount:
                     self.__functionToTailCount[tupleIndex] = 1
                     self.__chooseSuccessorInICFG()
-                elif self.__functionToTailCount[tupleIndex] < GenerateTraces.maxLoopIterations:
+                elif self.__functionToTailCount[tupleIndex] < Generatetraces.maxLoopIterations:
                     self.__functionToTailCount[tupleIndex] += 1
                     self.__chooseSuccessorInICFG()
                 else:
@@ -66,7 +66,7 @@ class GenerateTraces:
                 succID              = self.__currentCallv.getSuccessorWithCallSite(self.__vertexID)
                 self.__currentCallv = callg.getVertex(succID)
                 calleeName          = self.__currentCallv.getName()
-                Debug.debug_message("Calling %s" % self.__currentCallv.getName(), 5)
+                debug.debug_message("Calling %s" % self.__currentCallv.getName(), 5)
                 self.__currentCFG  = self.__program.getICFG(calleeName)
                 self.__currentLNT   = self.__program.getLNT(calleeName)
                 self.__currentv     = self.__currentCFG.getVertex(self.__currentCFG.getEntryID())
@@ -97,7 +97,7 @@ class TraceInformation:
     def _initialiseOptionalPathInformation (self):
         self._executionCountsThisRun = {}
         self._relativeExecutionCountsThisRun = {}
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             pathg        = self._program.getPathInfoGraph(functionName)
             lnt          = self._program.getLNT(functionName)
@@ -112,67 +112,67 @@ class TraceInformation:
     def _initialiseRequiredPathInformation (self):
         self._longestTime = 0
         self._executionTimes = {}
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             for v in cfg:
                 self._executionTimes[(functionName, v.getOriginalVertexID())] = 0
             
     def _endOfFunction (self, cfg, lnt, pathg):
         functionName = cfg.getName()
-        Debug.debug_message("Falsifying conjectures in %s" % functionName, 10)
+        debug.debug_message("Falsifying conjectures in %s" % functionName, 10)
         # Mutual inclusion and mutual exclusion
         for v in pathg:
             vertexID       = v.vertexID
             executionCount = self._executionCountsThisRun[pathg][vertexID]
             # Capacity execution counts 
-            for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS):
+            for succe in v.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS):
                 if executionCount < succe.lower:
-                    Debug.debug_message("Falsifying conjecture that %s executes at least %d times. Found %d instead"  % (v.__str__(), succe.lower, executionCount), 1)
+                    debug.debug_message("Falsifying conjecture that %s executes at least %d times. Found %d instead"  % (v.__str__(), succe.lower, executionCount), 1)
                     succe.lower = executionCount
                 if executionCount > succe.upper:
-                    Debug.debug_message("Falsifying conjecture that %s executes at most %d times. Found %d instead"  % (v.__str__(), succe.upper, executionCount), 1)
+                    debug.debug_message("Falsifying conjecture that %s executes at most %d times. Found %d instead"  % (v.__str__(), succe.upper, executionCount), 1)
                     succe.upper = executionCount
             # If this vertex has been triggered in this run
             if executionCount > 0:
                 # Falsify execution implication conjectures
                 mutualExclusionCandiates = set([])
                 falsified = set([])
-                for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.INCLUSION):
+                for succe in v.getSuccessoredges(edges.PathInformationEdgeType.INCLUSION):
                     succID = succe.vertexID
                     if self._executionCountsThisRun[pathg][succID] == 0:
                         succv = pathg.getVertex(succID)
-                        Debug.debug_message("When %s executes, %s does not always execute (EXECUTION DEPENDENCE FALSIFIED)" % (v.__str__(), succv.__str__()), 1)
+                        debug.debug_message("When %s executes, %s does not always execute (EXECUTION DEPENDENCE FALSIFIED)" % (v.__str__(), succv.__str__()), 1)
                         falsified.add(succID)
-                        if not succv.hasSuccessorEdge(vertexID, Edges.PathInformationEdgeType.INCLUSION):
+                        if not succv.hasSuccessorEdge(vertexID, edges.PathInformationEdgeType.INCLUSION):
                             mutualExclusionCandiates.add(succID)
                 for succID in falsified:
-                    v.removeSuccessorEdge(succID, Edges.PathInformationEdgeType.INCLUSION)
+                    v.removeSuccessorEdge(succID, edges.PathInformationEdgeType.INCLUSION)
                 # Falsify mutual-exclusion conjectures
                 falsified = set([])
-                for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.EXCLUSION):
+                for succe in v.getSuccessoredges(edges.PathInformationEdgeType.EXCLUSION):
                     succID = succe.vertexID
                     if self._executionCountsThisRun[pathg][succID] > 0:
                         succv = pathg.getVertex(succID)
-                        Debug.debug_message("When %s executes, %s may execute (EXCLUSIVITY FALSIFIED)" % (v.__str__(), succv.__str__()), 1)
+                        debug.debug_message("When %s executes, %s may execute (EXCLUSIVITY FALSIFIED)" % (v.__str__(), succv.__str__()), 1)
                         falsified.add(succID)
                 for succID in falsified:
-                    v.removeSuccessorEdge(succID, Edges.PathInformationEdgeType.EXCLUSION) 
+                    v.removeSuccessorEdge(succID, edges.PathInformationEdgeType.EXCLUSION) 
                     succv = pathg.getVertex(succID)
-                    succv.removeSuccessorEdge(vertexID, Edges.PathInformationEdgeType.EXCLUSION)
+                    succv.removeSuccessorEdge(vertexID, edges.PathInformationEdgeType.EXCLUSION)
                 # Add mutual-exclusion conjectures
                 for succID in mutualExclusionCandiates:
                     succv = pathg.getVertex(succID)
-                    v.addSuccessorEdge(succID, Edges.PathInformationEdgeType.EXCLUSION)
-                    succv.addSuccessorEdge(vertexID, Edges.PathInformationEdgeType.EXCLUSION)
-                    Debug.debug_message("New conjecture: %s and %s are MUTUALLY EXCLUSIVE" % (v.__str__(), succv.__str__()), 1)
+                    v.addSuccessorEdge(succID, edges.PathInformationEdgeType.EXCLUSION)
+                    succv.addSuccessorEdge(vertexID, edges.PathInformationEdgeType.EXCLUSION)
+                    debug.debug_message("New conjecture: %s and %s are MUTUALLY EXCLUSIVE" % (v.__str__(), succv.__str__()), 1)
         
         for headerID in lnt.getHeaderIDs():
             programPoint   = list(pathg.getLoopMonitoredProgramPoints(headerID))[0]
             pathv          = pathg.getProgramPointVertex(programPoint)
-            succe          = pathv.getSuccessorEdges(Edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
+            succe          = pathv.getSuccessoredges(edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
             executionCount = self._executionCountsThisRun[pathg][headerID]
             if executionCount > succe.upper:
-                Debug.debug_message("Falsifying conjecture that %d executes at most %d times. Found %d instead"  % (headerID, succe.upper, executionCount), 1)
+                debug.debug_message("Falsifying conjecture that %d executes at most %d times. Found %d instead"  % (headerID, succe.upper, executionCount), 1)
                 succe.upper = executionCount
             self._executionCountsThisRun[pathg][headerID] = 0
         
@@ -181,10 +181,10 @@ class TraceInformation:
             self._executionCountsThisRun[pathg][vertexID] = 0
     
     def _end (self):
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             pathg        = self._program.getPathInfoGraph(functionName)            
-            Debug.verbose_message(
+            debug.verbose_message(
 """%s
 FUNCTION '%s'
 %s""" \
@@ -192,27 +192,27 @@ FUNCTION '%s'
             for vertexID1, vertexID2 in pathg.mutualInclusionPairs():
                 v1 = pathg.getVertex(vertexID1)
                 v2 = pathg.getVertex(vertexID2)
-                succe1 = v1.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
-                succe2 = v2.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+                succe1 = v1.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+                succe2 = v2.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
                 if succe1.lower > 0 and succe2.lower > 0:
-                    Debug.verbose_message("  IGNORING MUTUAL INCLUSION: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
-                    v1.removeSuccessorEdge(vertexID2, Edges.PathInformationEdgeType.INCLUSION)
-                    v2.removeSuccessorEdge(vertexID1, Edges.PathInformationEdgeType.INCLUSION)
+                    debug.verbose_message("  IGNORING MUTUAL INCLUSION: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
+                    v1.removeSuccessorEdge(vertexID2, edges.PathInformationEdgeType.INCLUSION)
+                    v2.removeSuccessorEdge(vertexID1, edges.PathInformationEdgeType.INCLUSION)
             
             for v in pathg:
                 vertexID = v.vertexID
-                succe = v.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
+                succe = v.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS)[0]
                 if succe.lower == 0 and succe.upper == 0:
-                    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.INCLUSION):
+                    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.INCLUSION):
                         succID = succe.vertexID
                         succv  = pathg.getVertex(succID)
-                        succv.removeSuccessorEdge(vertexID, Edges.PathInformationEdgeType.INCLUSION)
-                        Debug.verbose_message("  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: %s and %s" % (v.__str__(), succv.__str__()), __name__)
-                    for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.EXCLUSION):
+                        succv.removeSuccessorEdge(vertexID, edges.PathInformationEdgeType.INCLUSION)
+                        debug.verbose_message("  IGNORING MUTUAL INCLUSION BECAUSE OF DEAD CODE: %s and %s" % (v.__str__(), succv.__str__()), __name__)
+                    for succe in v.getSuccessoredges(edges.PathInformationEdgeType.EXCLUSION):
                         succID = succe.vertexID
                         succv  = pathg.getVertex(succID)
-                        succv.removeSuccessorEdge(vertexID, Edges.PathInformationEdgeType.EXCLUSION)
-                        Debug.verbose_message("  IGNORING MUTUAL EXCLUSION BECAUSE OF DEAD CODE: %s and %s" % (v.__str__(), succv.__str__()), __name__)
+                        succv.removeSuccessorEdge(vertexID, edges.PathInformationEdgeType.EXCLUSION)
+                        debug.verbose_message("  IGNORING MUTUAL EXCLUSION BECAUSE OF DEAD CODE: %s and %s" % (v.__str__(), succv.__str__()), __name__)
                     v.removeAllSuccessors()
     
     def _normaliseData (self):
@@ -223,14 +223,14 @@ FUNCTION '%s'
     def __computeInnerRelativeBounds (self, pathg, lnt, pathv, headerv):
         for succID in headerv.getSuccessorIDs():
             succv = lnt.getVertex(succID)
-            if isinstance(succv, Vertices.HeaderVertex):
+            if isinstance(succv, vertices.HeaderVertex):
                 innerHeaderID     = succv.getHeaderID()
                 innerProgramPoint = list(pathg.getLoopMonitoredProgramPoints(innerHeaderID))[0]
                 innerPathv        = pathg.getProgramPointVertex(innerProgramPoint)
-                succe             = innerPathv.getSuccessorEdges(Edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
+                succe             = innerPathv.getSuccessoredges(edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
                 executionCount    = self._relativeExecutionCountsThisRun[pathg][innerHeaderID]
                 if executionCount > succe.relative:
-                    Debug.debug_message("Falsifying conjecture that %d executes at most %d times relative to its innermost enclosing loop. Found %d instead"  % (innerHeaderID, succe.relative, executionCount), 1)
+                    debug.debug_message("Falsifying conjecture that %d executes at most %d times relative to its innermost enclosing loop. Found %d instead"  % (innerHeaderID, succe.relative, executionCount), 1)
                     succe.relative = executionCount
                 self._relativeExecutionCountsThisRun[pathg][innerHeaderID] = 0
     
@@ -263,26 +263,26 @@ FUNCTION '%s'
         return self._longestTime      
             
     def _outputConjectures (self): 
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             pathg        = self._program.getPathInfoGraph(functionName)
-            Debug.verbose_message(
+            debug.verbose_message(
 """%s
 FUNCTION '%s'
 %s""" \
 % ('*' * 100, functionName, '*' * 100), __name__)
             
             for v in pathg:
-                for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS):
+                for succe in v.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS):
                     if succe.lower == 0 and succe.upper == 0:
-                        Debug.verbose_message("  NEVER EXECUTES: %s" % (v.__str__(),), __name__)
+                        debug.verbose_message("  NEVER EXECUTES: %s" % (v.__str__(),), __name__)
                     elif succe.lower > 0:
-                        Debug.verbose_message("  ALWAYS EXECUTES: %s, at least %d time(s), at most %d time(s)" % (v.__str__(), succe.lower, succe.upper), __name__)
+                        debug.verbose_message("  ALWAYS EXECUTES: %s, at least %d time(s), at most %d time(s)" % (v.__str__(), succe.lower, succe.upper), __name__)
                     else:
-                        Debug.verbose_message("  MAY EXECUTE: %s, at most %d time(s)" % (v.__str__(), succe.upper), __name__)
+                        debug.verbose_message("  MAY EXECUTE: %s, at most %d time(s)" % (v.__str__(), succe.upper), __name__)
                     
             
-            Debug.verbose_message(
+            debug.verbose_message(
 """%s
 DEPENDENT EXECUTION CONJECTURES
 %s""" \
@@ -290,18 +290,18 @@ DEPENDENT EXECUTION CONJECTURES
             for vertexID1, vertexID2 in pathg.mutualInclusionPairs():
                 v1 = pathg.getVertex(vertexID1)
                 v2 = pathg.getVertex(vertexID2)
-                Debug.verbose_message("  MUTUALLY INCLUSIVE: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
+                debug.verbose_message("  MUTUALLY INCLUSIVE: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
             for vertexID1, vertexID2 in pathg.mutualExclusionPairs():
                 v1 = pathg.getVertex(vertexID1)
                 v2 = pathg.getVertex(vertexID2)
-                Debug.verbose_message("  MUTUALLY EXCLUSIVE: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
+                debug.verbose_message("  MUTUALLY EXCLUSIVE: %s and %s" % (v1.__str__(), v2.__str__()), __name__)
             for vertexID1, vertexID2 in pathg.executionDependencies():
                 v1 = pathg.getVertex(vertexID1)
                 v2 = pathg.getVertex(vertexID2)
-                Debug.verbose_message("  ONE-WAY DEPENDENCY: %s on %s" % (v1.__str__(), v2.__str__()), __name__)
+                debug.verbose_message("  ONE-WAY DEPENDENCY: %s on %s" % (v1.__str__(), v2.__str__()), __name__)
                 
     def _outputCBMCConjectures (self): 
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             pathg        = self._program.getPathInfoGraph(functionName)
             lnt          = self._program.getLNT(functionName)
@@ -314,25 +314,25 @@ FUNCTION '%s'
             print "#ifdef CBMC"
             
             for lntv in lnt:
-                if isinstance(lntv, Vertices.HeaderVertex):
+                if isinstance(lntv, vertices.HeaderVertex):
                     headerID = lntv.getHeaderID()
                     if headerID != cfg.getEntryID():
                         loopBody = lnt.getLoopBody(headerID)
                         v        = cfg.getVertex(headerID)
-                        forwardEdges = []
+                        forwardedges = []
                         for succID in v.getSuccessorIDs():
                             if succID in loopBody:
-                                forwardEdges.append((headerID, succID))
+                                forwardedges.append((headerID, succID))
                         count = 1
                         lhs   = ""
-                        for edge in forwardEdges:
+                        for edge in forwardedges:
                             lhs += "__count_%d_%d " % (edge[0], edge[1])
-                            if count < len(forwardEdges):
+                            if count < len(forwardedges):
                                 lhs += " + "
                         relativeBound = 0
                         for programPoint in pathg.getLoopMonitoredProgramPoints(headerID):
                                 pathv = pathg.getProgramPointVertex(programPoint)
-                                succe = pathv.getSuccessorEdges(Edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
+                                succe = pathv.getSuccessoredges(edges.PathInformationEdgeType.LOOP_BOUNDS)[0]
                                 relativeBound = max(relativeBound, succe.relative)
                         print("assert(%s <= %d); // Loop counter property" % (lhs, relativeBound))
             
@@ -342,7 +342,7 @@ FUNCTION '%s'
                     programPointStr = "__count_%d_%d" % (programPoint[0], programPoint[1])
                 else:
                     programPointStr = "__count_%d" % programPoint
-                for succe in v.getSuccessorEdges(Edges.PathInformationEdgeType.CAPACITY_BOUNDS):
+                for succe in v.getSuccessoredges(edges.PathInformationEdgeType.CAPACITY_BOUNDS):
                     if succe.lower == 0 and succe.upper == 0:
                         print("assert(%s == 0); // Dead code" % (programPointStr))
                     elif succe.lower > 0:
@@ -397,7 +397,7 @@ FUNCTION '%s'
                 print("assert(%s > 0 ==> %s > 0); // Execution dependence" % (programPoint1Str, programPoint2Str))
             print "#endif"
             
-class ParseTraces (TraceInformation):
+class Parsetraces (TraceInformation):
     def __init__ (self, basename, tracefile, program):
         TraceInformation.__init__(self, program)
         self.__initialise()
@@ -407,7 +407,7 @@ class ParseTraces (TraceInformation):
         self.__assignRandomWCETs()
         
     def __assignRandomWCETs (self):
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             functionName = cfg.getName()
             for v in cfg:
                 self._executionTimes[(functionName, v.getOriginalVertexID())] = random.randint(1,100)
@@ -425,7 +425,7 @@ class ParseTraces (TraceInformation):
         rootv                  = self.__contextg.getVertex(self.__contextg.getRootID())
         self.__rootCFG         = self._program.getCFG(rootv.getName())
         self.__entryToCFG      = {}        
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             self.__entryToCFG[cfg.getEntryID()] = cfg
     
     def __reset (self):
@@ -442,7 +442,7 @@ class ParseTraces (TraceInformation):
             for line in f:
                 if line.startswith(newTrace):
                     runID += 1
-                    Debug.debug_message("=====> Run %d" % runID, 1)
+                    debug.debug_message("=====> Run %d" % runID, 1)
                     self._allruns.add(runID)
                     self.__reset()
                 elif line.startswith(endTrace):
@@ -478,7 +478,7 @@ class ParseTraces (TraceInformation):
                         self._analyseCFGVertex(self.__currentPathg, self.__currentLNT, self.__currentBB.vertexID)
                             
     def __handleReturn (self):
-        Debug.debug_message("Returning because of basic block %d" % self.__currentBB.vertexID, 1)
+        debug.debug_message("Returning because of basic block %d" % self.__currentBB.vertexID, 1)
         self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentPathg)
         if self.__stack:
             (self.__currentContextv, self.__currentCFG, self.__currentLNT, self.__predBB, self.__currentBB, self.__currentPathg) = self.__stack.pop()
@@ -496,7 +496,7 @@ class ParseTraces (TraceInformation):
         
 class Gem5Parser (TraceInformation):
     def __init__ (self, program, traceFiles):
-        Debug.verbose_message("Parsing gem5 traces", __name__)
+        debug.verbose_message("Parsing gem5 traces", __name__)
         TraceInformation.__init__(self, program)
         self.__initialise()
         self.__parse(traceFiles)
@@ -521,12 +521,12 @@ class Gem5Parser (TraceInformation):
         self.__firstAddr       = self.__rootCFG.getFirstInstruction().getAddress()
         lastbb                 = self.__rootCFG.getVertex(self.__rootCFG.getExitID())
         for instruction in reversed(lastbb.getInstructions()):
-            if instruction.getOp() not in ARM.ARMInstructionSet.Nops:
+            if instruction.getOp() not in arm.armInstructionSet.Nops:
                 self.__lastAddr = instruction.getAddress()
                 break
         assert self.__lastAddr, "Unable to find last address"
-        Debug.debug_message("Start address of root function '%s' is %s" % (rootv.getName(), hex(self.__firstAddr)), 1)    
-        Debug.debug_message("End address of root function '%s' is %s" % (rootv.getName(), hex(self.__lastAddr)), 1)
+        debug.debug_message("Start address of root function '%s' is %s" % (rootv.getName(), hex(self.__firstAddr)), 1)    
+        debug.debug_message("End address of root function '%s' is %s" % (rootv.getName(), hex(self.__lastAddr)), 1)
         
     def __parse (self, traceFiles):
         import gzip
@@ -536,7 +536,7 @@ class Gem5Parser (TraceInformation):
             with gzip.open(filename, 'r') as f:
                 runID += 1
                 self._allruns.add(runID)
-                Debug.debug_message("Analysing gem5 trace file '%s'" % filename, 1)
+                debug.debug_message("Analysing gem5 trace file '%s'" % filename, 1)
                 for line in f:
                     lexemes  = shlex.split(line)
                     PCLexeme = lexemes[-1]
@@ -567,10 +567,10 @@ class Gem5Parser (TraceInformation):
                             # Falsify conjectures
                             self._endOfFunction(self.__currentCFG, self.__currentLNT, self.__currentPathg)
                     except ValueError:
-                        Debug.exit_message("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
+                        debug.exit_message("Cannot cast %s into an integer: it is not a hexadecimal string" % PCLexeme)
 
     def __getCFGWithAddress (self, address):
-        for cfg in self._program.getCFGs():
+        for cfg in self._program.getcfgs():
             firstAddress = cfg.getFirstInstruction().getAddress()
             if firstAddress == address:
                 return cfg
@@ -606,7 +606,7 @@ class Gem5Parser (TraceInformation):
                         break
                 # Since we have switched basic blocks in the current CFG, analyse the super blocks
                 self._analyseCFGEdge(self.__currentPathg, self.__currentLNT, self.__predBB.vertexID, self.__currentBB.vertexID)     
-            Debug.debug_message("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.vertexID), 10)   
+            debug.debug_message("Now in CFG '%s' at basic block %d" % (self.__currentCFG.getName(), self.__currentBB.vertexID), 10)   
             self._analyseCFGVertex(self.__currentPathg, self.__currentLNT, self.__currentBB.vertexID)     
             
     def __handleReturn (self):

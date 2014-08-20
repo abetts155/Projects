@@ -2,17 +2,17 @@
 
 from __future__ import print_function
 
-import ParseProgramFile
-import Debug
-import Trees
-import Traces
-import Calculations
+import parse_program_file
+import debug
+import trees
+import traces
+import calculations
 import config
 import argparse
 import os
 
 def the_command_line():
-    parser = argparse.ArgumentParser(description="Compute super block CFGs")
+    parser = argparse.ArgumentParser(description="Compute super block cfgs")
     
     parser.add_argument("program_file",
                         help="a file containing program information (with '.txt' extension)")
@@ -56,28 +56,28 @@ def the_command_line():
         
 if __name__ == "__main__":
     the_command_line()
-    program  = ParseProgramFile.createProgram(config.Arguments.program)
+    program  = parse_program_file.createProgram(config.Arguments.program)
     totalSuperBlockProgramPoints = 0
     totalNaiveProgramPoints      = 0
-    for cfg in program.getCFGs():
+    for cfg in program.getcfgs():
         functionName = cfg.getName()
-        lnt = Trees.LoopNests(cfg, cfg.getEntryID())
+        lnt = trees.LoopNests(cfg, cfg.getEntryID())
         program.addLNT(lnt, functionName)
         pathg = program.getPathInfoGraph(functionName)
         totalSuperBlockProgramPoints += len(pathg.getMonitoredProgramPoints())
-        totalNaiveProgramPoints += min(cfg.numOfVertices(), cfg.numOfEdges())
+        totalNaiveProgramPoints += min(cfg.numOfvertices(), cfg.numOfedges())
     print(config.Arguments.program, "[Super block program points = %d" % totalSuperBlockProgramPoints, "CFG program points = %d]" % totalNaiveProgramPoints)
     program.generateAllUDrawFiles()
     if config.Arguments.traces:
-        Debug.verbose_message("Generating dummy traces", __name__)
-        Traces.GenerateTraces(program, config.Arguments.traces)
+        debug.verbose_message("Generating dummy traces", __name__)
+        traces.Generatetraces(program, config.Arguments.traces)
     elif config.Arguments.tracefile:
         config.Arguments.tracefile = os.path.abspath(config.Arguments.tracefile)
         assert os.path.exists(config.Arguments.tracefile), "Trace file '%s' does not exist" % config.Arguments.tracefile
         assert os.path.getmtime(config.Arguments.program) <= os.path.getmtime(config.Arguments.tracefile), "Program file modified AFTER trace file generation"
-        data = Traces.ParseTraces(config.Arguments.tracefile, program)
+        data = traces.Parsetraces(config.Arguments.tracefile, program)
         program.output()
         program.generateAllUDrawFiles()
-        Calculations.WCETCalculation(program, data)
+        calculations.WCETCalculation(program, data)
         
         

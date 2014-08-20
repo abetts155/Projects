@@ -1,4 +1,4 @@
-import Edges
+import edges
 
 dummyVertexID = -1
 
@@ -9,10 +9,10 @@ class PathInformationVertex ():
         self._headerID = headerID
         self._counterForHeaderIDs = set([])
         self._successors = {}
-        self._successors[Edges.PathInformationEdgeType.CAPACITY_BOUNDS] = []
-        self._successors[Edges.PathInformationEdgeType.LOOP_BOUNDS]  = []
-        self._successors[Edges.PathInformationEdgeType.EXCLUSION] = set([])
-        self._successors[Edges.PathInformationEdgeType.INCLUSION] = set([])
+        self._successors[edges.PathInformationEdgeType.CAPACITY_BOUNDS] = []
+        self._successors[edges.PathInformationEdgeType.LOOP_BOUNDS]  = []
+        self._successors[edges.PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[edges.PathInformationEdgeType.INCLUSION] = set([])
         
     def vertexID (self):
         return self._vertexID
@@ -34,14 +34,14 @@ class PathInformationVertex ():
         return len(self._counterForHeaderIDs) > 0
                
     def addSuccessorEdge (self, succID, edgeType):
-        if edgeType == Edges.PathInformationEdgeType.LOOP_BOUNDS:
-            succe = Edges.LoopBoundEdge(succID)
+        if edgeType == edges.PathInformationEdgeType.LOOP_BOUNDS:
+            succe = edges.LoopBoundEdge(succID)
             self._successors[edgeType].append(succe)
-        elif edgeType == Edges.PathInformationEdgeType.CAPACITY_BOUNDS:
-            succe = Edges.CapacityBoundEdge(succID)
+        elif edgeType == edges.PathInformationEdgeType.CAPACITY_BOUNDS:
+            succe = edges.CapacityBoundEdge(succID)
             self._successors[edgeType].append(succe)
         else:
-            succe = Edges.PathInformationEdge(succID, edgeType)
+            succe = edges.PathInformationEdge(succID, edgeType)
             self._successors[edgeType].add(succe)
         
     def removeSuccessorEdge (self, succID, edgeType):
@@ -59,7 +59,7 @@ class PathInformationVertex ():
                 return True
         return False
     
-    def hasSuccessorEdges (self, edgeType):
+    def hasSuccessoredges (self, edgeType):
         return len(self._successors[edgeType]) > 0
     
     def getSuccessorEdge (self, succID, edgeType):
@@ -68,7 +68,7 @@ class PathInformationVertex ():
                 return succe
         assert False
     
-    def getSuccessorEdges (self, edgeType):
+    def getSuccessoredges (self, edgeType):
         return self._successors[edgeType]
     
     def numberOfSuccessors (self, edgeType=None):
@@ -77,8 +77,8 @@ class PathInformationVertex ():
         return len(self._successors)
     
     def removeAllSuccessors (self):
-        self._successors[Edges.PathInformationEdgeType.EXCLUSION] = set([])
-        self._successors[Edges.PathInformationEdgeType.INCLUSION] = set([])
+        self._successors[edges.PathInformationEdgeType.EXCLUSION] = set([])
+        self._successors[edges.PathInformationEdgeType.INCLUSION] = set([])
     
     def __str__ (self):
         return str(self._programPoint)
@@ -90,7 +90,7 @@ class Vertex:
         self._successors = {}
     
     def addPredecessor (self, predID, edgeID=None):
-        e = Edges.Edge(predID, edgeID)
+        e = edges.Edge(predID, edgeID)
         self._predecessors[predID] = e
         
     def addPredecessorEdge (self, prede):
@@ -107,7 +107,7 @@ class Vertex:
     def getPredecessorIDs (self):
         return self._predecessors.keys()
     
-    def getPredecessorEdges (self):
+    def getPredecessoredges (self):
         return self._predecessors.values()
     
     def numberOfPredecessors (self):
@@ -121,7 +121,7 @@ class Vertex:
         return self._predecessors[predID]
     
     def addSuccessor (self, succID,edgeID=None):
-        e = Edges.Edge(succID, edgeID)
+        e = edges.Edge(succID, edgeID)
         self._successors[succID] = e
         
     def addSuccessorEdge (self, succe):
@@ -138,7 +138,7 @@ class Vertex:
     def getSuccessorIDs (self):
         return self._successors.keys()
     
-    def getSuccessorEdges (self):
+    def getSuccessoredges (self):
         return self._successors.values()
     
     def numberOfSuccessors (self):
@@ -276,20 +276,20 @@ class CallGraphVertex (Vertex):
     
     def addPredecessor (self, predID, callSiteID):
         if predID not in self._predecessors:
-            e = Edges.CallGraphEdge(predID)
+            e = edges.CallGraphEdge(predID)
             self._predecessors[predID] = e
         e = self._predecessors[predID]
         e.addCallSite(callSiteID)
     
     def addSuccessor (self, succID, callSiteID):
         if succID not in self._successors:
-            e = Edges.CallGraphEdge(succID)
+            e = edges.CallGraphEdge(succID)
             self._successors[succID] = e
         e = self._successors[succID]
         e.addCallSite(callSiteID)
         
     def getSuccessorWithCallSite (self, callSiteID):
-        for succe in self.getSuccessorEdges():
+        for succe in self.getSuccessoredges():
             if callSiteID in succe.getCallSites():
                 return succe.vertexID
         assert False, "Unable to find successor of context %d with call site %d" % (self._vertexID, callSiteID)
@@ -334,13 +334,13 @@ class SuperBlock (Vertex):
     def numberOfBasicBlocks (self):
         return len(self.__basicBlocks)
     
-    def numberOfEdges(self):
+    def numberOfedges(self):
         return len(self.__edges)
     
     def getBasicBlockIDs (self):
         return self.__basicBlocks
     
-    def getEdges (self):
+    def getedges (self):
         return self.__edges
     
     def setRepresentativeID (self, vertexID):
@@ -372,7 +372,7 @@ class SuperBlock (Vertex):
     def __str__ (self):
         string =  "Vertex ID    = %d\n" % self._vertexID
         string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
-        string += "Edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
+        string += "edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
         string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
         string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
         return string
