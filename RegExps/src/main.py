@@ -9,8 +9,10 @@ import debug
 import re
 import ast
 
+prompt_prefix = "->"
+
 def parse_input_from_user(message):
-    the_input = raw_input("-> %s: " % message).lower()
+    the_input = raw_input("%s %s: " % (prompt_prefix, message)).lower()
     the_input = re.sub(r'\s+', '', the_input)
     if re.match(r'\d+', the_input):
         return ast.literal_eval(the_input)
@@ -31,11 +33,12 @@ def do_analysis(program):
                 else:
                     cfg = program.cfgs[cfg_name]
             if cfg is not None:
-                entryID = parse_input_from_user("Enter start program point. Options = {%s}" % ','.join(str(v.vertexID) for v in cfg))
+                print("%s Vertices = {%s}" % (prompt_prefix, ','.join(str(v.vertexID) for v in cfg)))
+                entryID = parse_input_from_user("Enter start vertex")
                 if not cfg.hasVertex(entryID):
                     debug.warning_message("CFG does not have vertex: %d" % entryID)
                 else:
-                    exitID = parse_input_from_user("Enter end program point")
+                    exitID = parse_input_from_user("Enter end vertex")
                     if not cfg.hasVertex(exitID):
                         debug.warning_message("CFG does not have vertex: %d" % exitID)
                     else:

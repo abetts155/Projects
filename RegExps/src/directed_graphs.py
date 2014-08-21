@@ -113,8 +113,9 @@ class ReachabilityInformation:
             self.unified[v.vertexID] = set()
             self.forward[v.vertexID] = set()
             self.reverse[v.vertexID] = set()
-            self.forward[v.vertexID].add(v.vertexID)
-            self.reverse[v.vertexID].add(v.vertexID)
+            if not v.dummy:
+                self.forward[v.vertexID].add(v.vertexID)
+                self.reverse[v.vertexID].add(v.vertexID)
             
     def compute(self, forward_flow_graph, reverse_flow_graph):
         dfs = forward_flow_graph.get_depth_first_search_tree()
@@ -179,6 +180,7 @@ class FlowGraph(DirectedGraph):
 class EnhancedCFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
+        self.edge_to_vertex_representative = {}
         
     def create_from_CFG(self, cfg):
         for v in cfg:
@@ -201,7 +203,12 @@ class EnhancedCFG(FlowGraph):
                 self.the_vertices[newID] = newv
                 self.addEdge(v.vertexID, newID)
                 self.addEdge(newID, succID)
-                
+    
+    def addVertex(self, v):
+        if isinstance(v, vertices.CFGEdge):
+            self.edge_to_vertex_representative[v.edge] = v
+        DirectedGraph.addVertex(self, v)
+    
     def get_next_edge_vertexID(self):
         nextID = -1
         while nextID in self.the_vertices.keys():
@@ -233,46 +240,6 @@ class CFG(FlowGraph):
                     self.reverse_enhanced_CFGs[treev.headerID] = enhanced_CFG_reverse
                     self.reachability_info[treev.headerID]     = ReachabilityInformation(enhanced_CFG, 
                                                                                          enhanced_CFG_reverse)
-                    
-    def create_induced_subgraph(self, entry_vertexID, exit_vertexID):
-        lnt = self.get_LNT()
-        assert lnt.getVertex(entry_vertexID).parentID == lnt.getVertex(exit_vertexID).parentID
-        headerv           = lnt.getVertex(lnt.getVertex(entry_vertexID).parentID)
-        enhanced_CFG      = self.enhanced_CFGs[headerv.headerID]
-        reachability_info = self.reachability_info[headerv.headerID]
-        pair_subset       = set([entry_vertexID, exit_vertexID])
-        edges             = set()
-        visited           = set()
-        stack             = []
-        stack.append(exit_vertexID)
-        while stack:
-            vertexID = stack.pop()
-            visited.add(vertexID)
-            if vertexID != entry_vertexID:
-                v = enhanced_CFG.getVertex(vertexID)
-                for predID in v.predecessors.keys():
-                    if pair_subset.issubset(reachability_info.unified[predID]):
-                        edges.add((predID, vertexID))
-                        if not predID in visited:
-                            stack.append(predID)
-        induced_CFG = EnhancedCFG()
-        for an_edge in edges:
-            if not induced_CFG.hasVertex(an_edge[0]):
-                v = enhanced_CFG.getVertex(an_edge[0])
-                newv = copy.deepcopy(v)
-                newv.predecessors = {}
-                newv.successors   = {}
-                induced_CFG.addVertex(newv)
-            if not induced_CFG.hasVertex(an_edge[1]):
-                v = enhanced_CFG.getVertex(an_edge[1])
-                newv = copy.deepcopy(v)
-                newv.predecessors = {}
-                newv.successors   = {}
-                induced_CFG.addVertex(newv)
-            induced_CFG.addEdge(an_edge[0], an_edge[1])
-        induced_CFG.entryID = entry_vertexID
-        induced_CFG.exitID = exit_vertexID
-        return induced_CFG
                         
     def set_entry_and_exit(self):
         without_predecessors = []
@@ -322,6 +289,7 @@ class Tree(DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
         self.rootID = vertices.dummyID
+        self.lca    = None
         
     def addEdge(self, predID, succID):
         DirectedGraph.addEdge(self, predID, succID)
@@ -387,6 +355,11 @@ class Tree(DirectedGraph):
             if v.number_of_predecessors() == 0:
                 without_predecessors.add(v)
         assert len(without_predecessors) == 1  
+        
+    def get_LCA(self):
+        if self.lca is None:
+            self.lca = LeastCommonAncestor(self)
+        return self.lca
         
 class DepthFirstSearch (Tree):
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY')
@@ -518,7 +491,7 @@ class CompressedDominatorTree(Tree):
         while len(query_set) > 1:
             vertex_to_LCA = {}
             for a_pair in itertools.combinations(query_set, 2):
-                lcaID = lca.get_LCA(a_pair[0], a_pair[1])
+                lcaID = lca.query(a_pair[0], a_pair[1])
                 if a_pair[0] in vertex_to_LCA:
                     old_lcaID = vertex_to_LCA[a_pair[0]]
                     if lca.vertex_level[lcaID] > lca.vertex_level[old_lcaID] and old_lcaID != a_pair[0]:
@@ -580,7 +553,7 @@ class LeastCommonAncestor:
             self.representative[vertexID] = index
             self.level[index]             = self.vertex_level[vertexID]
             
-    def get_LCA(self, left, right):    
+    def query(self, left, right):    
         debug.debug_message("Computing lca(%d, %d)" % (left, right), 20) 
         lowest_level = self.dummy_level
         level_index  = 2 * self.tree.number_of_vertices()
