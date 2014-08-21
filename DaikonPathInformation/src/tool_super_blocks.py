@@ -2,7 +2,8 @@
 
 from __future__ import print_function
 
-import parse_program_file
+import program_input_output
+import directed_graphs
 import debug
 import traces
 import calculations
@@ -55,7 +56,7 @@ def the_command_line():
         
 if __name__ == "__main__":
     the_command_line()
-    program  = parse_program_file.createProgram(config.Arguments.program)
+    program  = program_input_output.read_file(config.Arguments.program)
     totalSuperBlockProgramPoints = 0
     totalNaiveProgramPoints      = 0
     for cfg in program.getcfgs():

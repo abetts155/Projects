@@ -2,9 +2,9 @@ import programs
 import edges
 import vertices
 import super_blocks
+import directed_graphs
 import config
 import os
-from src import directed_graphs
 
 beginAttributes = "["
 beginGraph      = "[\n"

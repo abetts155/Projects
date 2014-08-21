@@ -7,39 +7,38 @@ import utils
 class PathInformationGraph(directed_graphs.DirectedGraph):
     def __init__ (self, cfg, lnt, enhancedCFG):
         directed_graphs.DirectedGraph.__init__(self)
-        self._name                        = cfg.getName()
+        self.name                         = cfg.name
         self.__enhancedCFG                = enhancedCFG
         self.__monitoredLoopProgramPoints = {}
         self.__loopToSCCs                 = {}
         self.__effectiveLoopCounters      = {}
         self.__monitoredProgramPoints     = set([])
-        for level, vertices in lnt.levelIterator(True):
-            for treev in vertices:
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
-                    headerID = treev.getHeaderID()
-                    debug.debug_message("Analysing header %d" % headerID, 1)
+                    debug.debug_message("Analysing header %d" % treev.headerID, 1)
                     forwardCFG, bodyvertices, bodyedges = lnt.induceSubgraph(treev)
                     enhancedCFG           = directed_graphs.EnhancedCFG(forwardCFG)
-                    predomTree            = directed_graphs.Dominators(enhancedCFG, enhancedCFG.getEntryID())
+                    predomTree            = directed_graphs.Dominators(enhancedCFG, enhancedCFG.get_entryID())
                     reverseEnhancedCFG    = enhancedCFG.getReverseGraph()
-                    postdomTree           = directed_graphs.Dominators(reverseEnhancedCFG, reverseEnhancedCFG.getEntryID())
+                    postdomTree           = directed_graphs.Dominators(reverseEnhancedCFG, reverseEnhancedCFG.get_entryID())
                     dominatorg            = DominatorGraph(predomTree, postdomTree)
-                    self.__monitoredLoopProgramPoints[headerID] = self.__pinpointMonitoredCFGedges(headerID, dominatorg, lnt, cfg, enhancedCFG, bodyvertices, bodyedges)
+                    self.__monitoredLoopProgramPoints[treev.headerID] = self.__pinpointMonitoredCFGedges(treev.headerID, dominatorg, lnt, cfg, enhancedCFG, bodyvertices, bodyedges)
                     self.__pinpointRelativeLoopBoundProgramPoints(treev, dominatorg, lnt, enhancedCFG, reverseEnhancedCFG)
-                    self.__monitoredProgramPoints.update(self.__monitoredLoopProgramPoints[headerID])
-                    print "==========>", self._name, ": header", headerID
-                    for programPoint in sorted(self.__monitoredLoopProgramPoints[headerID].keys()):
+                    self.__monitoredProgramPoints.update(self.__monitoredLoopProgramPoints[treev.headerID])
+                    print "==========>", self._name, ": header", treev.headerID
+                    for programPoint in sorted(self.__monitoredLoopProgramPoints[treev.headerID].keys()):
                         if isinstance(programPoint, tuple):
                             print "int __count_%d_%d = 0;" % (programPoint[0], programPoint[1])
                         else:
                             print "int __count_%d = 0;" % programPoint
-                    if headerID != cfg.getEntryID():
-                        loopBody = lnt.getLoopBody(headerID)
-                        v        = cfg.getVertex(headerID)
+                    if treev.headerID != cfg.get_entryID():
+                        loopBody = lnt.getLoopBody(treev.headerID)
+                        v        = cfg.getVertex(treev.headerID)
                         for succID in v.getSuccessorIDs():
                             if succID in loopBody:
-                                print "int __count_%d_%d = 0; //Loop counter" % (headerID, succID)                                
-                    assert self.__monitoredLoopProgramPoints[headerID], "No program points identified for loop with header %d" % headerID
+                                print "int __count_%d_%d = 0; //Loop counter" % (treev.headerID, succID)                                
+                    assert self.__monitoredLoopProgramPoints[treev.headerID], "No program points identified for loop with header %d" % treev.headerID
         reachability = self.__computeReachability(self.__enhancedCFG, self.__monitoredProgramPoints)
         self.__programPointToVertex = {}
         self.__addvertices()
@@ -88,9 +87,9 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
                 assert programPoint
                 monitoredProgramPoints[programPoint] = set([])
                 self.__addHeaderIDs(lnt, enhancedCFG, monitoredProgramPoints, scc, programPoint)         
-        if headerID == cfg.getEntryID() and cfg.getExitID() not in monitoredProgramPoints:
+        if headerID == cfg.get_entryID() and cfg.get_exitID() not in monitoredProgramPoints:
             # Ensure that the exit vertex is always an analysed program point
-            exitID = cfg.getExitID()
+            exitID = cfg.get_exitID()
             monitoredProgramPoints[exitID] = set([])
         return monitoredProgramPoints
     
@@ -165,37 +164,37 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
         return count
     
     def mutualExclusionPairs (self):
-        edges = set([])
+        the_edges = set([])
         for v in self:
             vertexID = v.vertexID
             for succe in v.getSuccessoredges(edges.PathInformationEdgeType.EXCLUSION):
                 succID = succe.vertexID
-                if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
-                    edges.add((vertexID, succID))
-        return sorted(edges)
+                if (vertexID, succID) not in the_edges and (succID, vertexID) not in the_edges:
+                    the_edges.add((vertexID, succID))
+        return sorted(the_edges)
     
     def executionDependencies (self):
-        edges = set([])
+        the_edges = set([])
         for v in self:
             vertexID = v.vertexID
             for succe in v.getSuccessoredges(edges.PathInformationEdgeType.INCLUSION):
                 succID = succe.vertexID
                 succv  = self.getVertex(succID)
                 if not succv.hasSuccessorEdge(vertexID, edges.PathInformationEdgeType.INCLUSION):
-                    edges.add((vertexID, succID))
-        return sorted(edges)
+                    the_edges.add((vertexID, succID))
+        return sorted(the_edges)
     
     def mutualInclusionPairs (self):
-        edges = set([])
+        the_edges = set([])
         for v in self:
             vertexID = v.vertexID
             for succe in v.getSuccessoredges(edges.PathInformationEdgeType.INCLUSION):
                 succID = succe.vertexID
                 succv  = self.getVertex(succID)
                 if succv.hasSuccessorEdge(vertexID, edges.PathInformationEdgeType.INCLUSION):
-                    if (vertexID, succID) not in edges and (succID, vertexID) not in edges:
-                        edges.add((vertexID, succID))
-        return sorted(edges)
+                    if (vertexID, succID) not in the_edges and (succID, vertexID) not in the_edges:
+                        the_edges.add((vertexID, succID))
+        return sorted(the_edges)
     
     def isMonitoredVertex (self, vertexID):
         if vertexID in self.__programPointToVertex:
@@ -233,7 +232,7 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
         for v in enhancedCFG:
             reachability[v] = set([])
         # Do data-flow analysis
-        dfs     = directed_graphs.DepthFirstSearch(enhancedCFG, enhancedCFG.getEntryID())
+        dfs     = directed_graphs.DepthFirstSearch(enhancedCFG, enhancedCFG.get_entryID())
         changed = True
         while changed:
             changed = False
@@ -241,7 +240,7 @@ class PathInformationGraph(directed_graphs.DirectedGraph):
                 v       = enhancedCFG.getVertex(vertexID)
                 oldSize = len(reachability[v])
                 for predID in v.getPredecessorIDs():
-                    if predID != enhancedCFG.getExitID() and vertexID != enhancedCFG.getEntryID():
+                    if predID != enhancedCFG.get_exitID() and vertexID != enhancedCFG.get_entryID():
                         predv = enhancedCFG.getVertex(predID)
                         reachability[v].update(reachability[predv])
                         if isinstance(predv, vertices.Vertex): 
@@ -282,7 +281,7 @@ class DominatorGraph (directed_graphs.DirectedGraph):
     def __addvertices (self, predomTree, postdomTree):
         for v in predomTree:
             vertexID = v.vertexID
-            assert postdomTree.hasVertex(vertexID), "vertices.Vertex %d in pre-dominator tree but not in post-dominator tree" % vertexID
+            assert postdomTree.hasVertex(vertexID), "Vertex %d in pre-dominator tree but not in post-dominator tree" % vertexID
             clonev   = vertices.Vertex(vertexID)
             self.vertices[vertexID] = clonev        
 

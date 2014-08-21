@@ -239,8 +239,8 @@ class CreateCFGCLP (CLP):
         
     def _addRelativeCapacityConstraints (self, cfg, lnt, pathg):
         self._lines.append(ECLIPSE.getComment("Relative capacity constraints"))
-        for level, vertices in lnt.levelIterator(True):
-            for treev in vertices:
+        for level, the_vertices in lnt.levelIterator(True):
+            for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     headerID = treev.getHeaderID()
                     self._lines.append(ECLIPSE.getComment("Capacity constraints on header %d" % treev.getHeaderID()))    
@@ -530,8 +530,8 @@ class CreateCFGILP (ILP):
             self._constraints.append(constraint2)
     
     def _createExecutionCountConstraints (self, cfg, lnt, pathg):
-        for level, vertices in lnt.levelIterator(True):
-            for treev in vertices:
+        for level, the_vertices in lnt.levelIterator(True):
+            for treev in the_vertices:
                 if isinstance(treev, vertices.HeaderVertex):
                     headerID = treev.getHeaderID()
                     if treev.vertexID == lnt.getRootID():

@@ -1,140 +1,160 @@
 import vertices
 import debug
 import copy
+import itertools
+import utils
 
-class DirectedGraph ():        
+class DirectedGraph:        
     def __init__ (self):
-        self.vertices = {}
-        self._name = None
-    
-    def setName (self, name):
-        self._name = name
+        self.the_vertices = {}
+        self.name = None
         
-    def getName (self):
-        return self._name
+    def addVertex(self, v):
+        assert v.vertexID not in self.the_vertices, "Adding vertex %d which is already in graph" % v.vertexID
+        self.the_vertices[v.vertexID] = v
     
-    def vertexIDs (self):
-        return set(self.vertices.keys())
+    def getVertex(self, vertexID):
+        assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
+        return self.the_vertices[vertexID]
     
-    def getVertex (self, vertexID):
-        assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
-        return self.vertices[vertexID]
-    
-    def removeVertex (self, vertexID):
-        assert vertexID in self.vertices, "Vertex " + str(vertexID) + " is not in the graph"
-        del self.vertices[vertexID]
-    
-    def hasVertex (self, vertexID):
-        return vertexID in self.vertices
-    
-    def addEdge (self, predID, succID):
-        predv = self.getVertex(predID)
-        succv = self.getVertex(succID)
-        predv.addSuccessor(succID)
-        succv.addPredecessor(predID)
-        
-    def hasEdge (self, predID, succID):
-        predv = self.getVertex(predID)
-        succv = self.getVertex(succID)
-        return predv.hasSuccessor(succID) or succv.hasPredecessor(predID)
-    
-    def removeEdge (self, predID, succID):
-        predv = self.getVertex(predID)
-        succv = self.getVertex(succID)
-        predv.removeSuccessor(succID)
-        succv.removePredecessor(predID)
-        
-    def addPredecessoredges (self):
+    def removeVertex(self, vertexID):
+        assert vertexID in self.the_vertices, "Vertex " + str(vertexID) + " is not in the graph"
         for v in self:
-            vertexID = v.vertexID
-            for succID in v.getSuccessorIDs():
-                succv = self.getVertex(succID)
-                if not succv.hasPredecessor(vertexID):
-                    succv.addPredecessor(vertexID)
+            if v.has_successor(vertexID):
+                v.remove_successor(vertexID)
+            if v.has_predecessor(vertexID):
+                v.remove_predecessor(vertexID)
+        del self.the_vertices[vertexID]
     
-    def getNextVertexID (self):
-        nextID = 1
-        while nextID in self.vertices.keys():
-            nextID = nextID + 1 
-        return nextID
+    def hasVertex(self, vertexID):
+        return vertexID in self.the_vertices
     
-    def numOfvertices (self):
-        return len(self.vertices)
+    def addEdge(self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        predv.add_successor(succID)
+        succv.add_predecessor(predID)
+        
+    def hasEdge(self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        return predv.has_successor(succID) or succv.has_predecessor(predID)
     
-    def numOfedges(self):
-        total = 0
-        for v in self.vertices.values():
-            total += v.numberOfSuccessors()
-        return total
-    
-    def getReverseGraph (self):
+    def removeEdge(self, predID, succID):
+        predv = self.getVertex(predID)
+        succv = self.getVertex(succID)
+        predv.remove_successor(succID)
+        succv.remove_predecessor(predID)
+        
+    def get_reverse_graph(self):
         reverseg = DirectedGraph() 
-        # Add vertices
-        for v in self:
-            vertexID = v.vertexID
-            copyv    = vertices.Vertex(vertexID)
-            reverseg.vertices[vertexID] = copyv
-        # Add edges
-        for v in self:
-            predID = v.vertexID
-            for succID in v.getSuccessorIDs():
-                reverseg.addEdge(succID, predID)
+        self.add_vertices_to_reverse_graph(reverseg)
+        self.add_edges_to_reverse_graph(reverseg)
         return reverseg
     
+    def add_vertices_to_reverse_graph(self, reverseg):
+        for v in self:
+            copyv = copy.copy(v)
+            copyv.successors   = {}
+            copyv.predecessors = {}
+            reverseg.the_vertices[copyv.vertexID] = copyv
+            
+    def add_edges_to_reverse_graph(self, reverseg):
+        for v in self:
+            predID = v.vertexID
+            predv  = reverseg.getVertex(predID)
+            for succID in v.successors.keys():
+                succv = reverseg.getVertex(succID)
+                predv.add_predecessor(succID)
+                succv.add_successor(predID)
+        
+    def add_predecessor_edges(self):
+        for v in self:
+            for succID in v.successors.keys():
+                succv = self.getVertex(succID)
+                if not succv.has_predecessor(v.vertexID):
+                    succv.add_predecessor(v.vertexID)
+    
+    def get_next_vertexID(self):
+        nextID = 1
+        while nextID in self.the_vertices.keys():
+            nextID += 1 
+        return nextID
+    
+    def number_of_vertices(self):
+        return len(self.the_vertices)
+    
+    def number_of_edges(self):
+        total = 0
+        for v in self.the_vertices.values():
+            total += v.number_of_successors()
+        return total
+    
     def __iter__ (self):
-        return self.vertices.values().__iter__()
+        return self.the_vertices.values().__iter__()
     
     def __str__ (self):
         string = "*" * 40 + "\n"
-        for v in self.vertices.values():
+        for v in self.the_vertices.values():
             string += v.__str__()
         return string
 
-class FlowGraph (DirectedGraph):
+class FlowGraph(DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._entryID = vertices.dummyVertexID
-        self._exitID = vertices.dummyVertexID
+        self.entryID = vertices.dummyID
+        self.exitID  = vertices.dummyID
         
-    def getEntryID (self):
-        assert self._entryID != vertices.dummyVertexID, "Entry to flow graph not found"
-        return self._entryID
+    def get_entryID (self):
+        assert self.entryID != vertices.dummyID, "Entry to flow graph not found"
+        return self.entryID
     
-    def getExitID (self):
-        return self._exitID
-    
-    def __str__ (self):
-        string = "*" * 40 + "\n" + \
-        "Entry ID = %s\n" % str(self._entryID) + \
-        "Exit ID  = %s\n" % str(self._exitID) + "\n"
-        for v in self.vertices.values():
-            string += v.__str__()
-        string += "*" * 40 + "\n"
-        return string
+    def get_exitID (self):
+        assert self.exitID != vertices.dummyID, "Exit to flow graph not found"
+        return self.exitID
+        
+    def get_reverse_graph(self):
+        reverseg = FlowGraph() 
+        self.add_vertices_to_reverse_graph(reverseg)
+        self.add_edges_to_reverse_graph(reverseg)
+        reverseg.entryID = self.get_exitID()
+        reverseg.exitID  = self.get_entryID()
+        return reverseg
+            
+    def set_edgeIDs (self):
+        edgeID = 1
+        for v in self:
+            for succID in v.successors.keys():
+                succe = v.get_successor_edge(succID)
+                succe.edgeID = edgeID
+                succv = self.getVertex(succID)
+                prede = succv.get_predecessor_edge(v.vertexID)
+                prede.edgeID = edgeID
+                edgeID += 1
     
 class EnhancedCFG (FlowGraph):
     def __init__ (self, cfg=None):
         FlowGraph.__init__(self)
         self.__edgeToVertex = {}
         if cfg:
-            self._name = cfg.getName()
+            self.name = cfg.name
             for v in cfg:
                 newVertexID = v.vertexID
                 newv        = vertices.Vertex(newVertexID)
-                self.vertices[newVertexID] = newv
-                if newVertexID == cfg.getEntryID():
+                self.the_vertices[newVertexID] = newv
+                if newVertexID == cfg.get_entryID():
                     self._entryID = newVertexID
-                if newVertexID == cfg.getExitID():
+                if newVertexID == cfg.get_exitID():
                     self._exitID = newVertexID
-            assert self._entryID != vertices.dummyVertexID
-            assert self._exitID != vertices.dummyVertexID
+            assert self._entryID != vertices.dummyID
+            assert self._exitID != vertices.dummyID
             for v in cfg:
                 vertexID = v.vertexID
-                for succID in v.getSuccessorIDs():
-                    newVertexID = self.getNextVertexID()
+                for succID in v.successors.keys():
+                    newVertexID = self.get_next_vertexID()
                     newv        = vertices.CFGEdge(newVertexID, vertexID, succID)
                     self.__edgeToVertex[(vertexID, succID)] = newv
-                    self.vertices[newVertexID] = newv
+                    self.the_vertices[newVertexID] = newv
                     self.addEdge(vertexID, newVertexID)
                     self.addEdge(newVertexID, succID)
                     
@@ -154,177 +174,100 @@ class EnhancedCFG (FlowGraph):
         for v in self:
             predID = v.vertexID
             predv  = reverseg.getVertex(predID)
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 succv = reverseg.getVertex(succID)
-                predv.addPredecessor(succID)
-                succv.addSuccessor(predID)
+                predv.add_predecessor(succID)
+                succv.add_successor(predID)
         # Set the entry and exit IDs
-        reverseg._entryID = self.getExitID()
-        reverseg._exitID  = self.getEntryID()
+        reverseg._entryID = self.get_exitID()
+        reverseg._exitID  = self.get_entryID()
         return reverseg 
                 
     def __str__ (self):
         string = "*" * 20 + " Enhanced CFG Output " + "*" * 20 + "\n" + \
         "Entry ID = %s\n" % str(self._entryID) + \
         "Exit ID  = %s\n" % str(self._exitID) + "\n"
-        for v in self.vertices.values():
+        for v in self.the_vertices.values():
             string += v.__str__() + "\n"
         return string
-        
-class CFG (FlowGraph):    
+    
+class CFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
-        self.__addressToVertex = {}
-        self.__callSites = {}
+        self.address_to_vertex = {}
+        self.call_sites        = {}
         
-    def addCallSite (self, vertexID, calleeName):
-        assert vertexID in self.vertices, "Vertex %d does not belong to the CFG of '%s'" % (vertexID, self._name)
-        self.__callSites[vertexID] = calleeName
-    
-    def isCallSite (self, vertexID):
-        return vertexID in self.__callSites
-    
-    def dumpCallSites (self):
-        print self.__callSites
-    
-    def removeCallSite (self, vertexID):
-        assert vertexID in self.__callSites, "Vertex %d is not a call site of '%s'" % (vertexID, self._name)
-        del self.__callSites[vertexID]
-        
-    def getCalleeName (self, vertexID):
-        assert vertexID in self.__callSites, "Vertex %d is not a call site of '%s'" % (vertexID, self._name)
-        return self.__callSites[vertexID]
-    
-    def getReverseCFG (self):
-        reverseg = CFG()
-        # Add vertices
+    def set_entry_and_exit(self):
+        without_predecessors = []
+        without_successors   = []
         for v in self:
-            copyv = copy.copy(v)
-            copyv.removeAllSuccessors()
-            copyv.removeAllPredecessors()
-            reverseg.addVertex(copyv)
-        # Add edges
-        for v in self:
-            predID = v.vertexID
-            predv  = reverseg.getVertex(predID)
-            for succID in v.getSuccessorIDs():
-                succv = reverseg.getVertex(succID)
-                predv.addPredecessor(succID)
-                succv.addSuccessor(predID)
-        # Set the entry and exit IDs
-        reverseg.setEntryID(self.getExitID())
-        reverseg.setExitID(self.getEntryID())
-        return reverseg
+            if v.number_of_successors() == 0:
+                without_successors.append(v.vertexID)
+            if v.number_of_predecessors() == 0:
+                without_predecessors.append(v.vertexID)
+        if len(without_predecessors) == 0:
+            debug.exit_message("CFG '%s' does not have an entry point" % self.name)
+        elif len(without_predecessors) > 1:
+            debug_info = ""
+            for bbID in without_predecessors:
+                bb = self.getVertex(bbID)
+                debug_info += bb.__str__()
+            debug.exit_message("CFG '%s' has too many entry points: %s" % (self.name, debug_info))
+        else:
+            self.entryID = without_predecessors[0]
+        if len(without_successors) == 0:
+            debug.exit_message("CFG '%s' does not have an exit point" % self.name)
+        elif len(without_successors) > 1:
+            debug_info = ""
+            for bbID in without_successors:
+                bb = self.getVertex(bbID)
+                debug_info += bb.__str__()
+            debug.exit_message("CFG '%s' has too many exit points: %s" % (self.name, debug_info))
+        else:
+            self.exitID = without_successors[0]
+        assert self.entryID, "Unable to set entry ID"
+        assert self.exitID, "Unable to set exit ID"
+        self.addEdge(self.exitID, self.entryID)
         
-    def addVertex (self, bb):
-        bbID = bb.vertexID
-        assert bbID not in self.vertices, \
-        "Adding basic block %d which is already in graph" % bbID
-        self.vertices[bbID] = bb
+    def set_entryID(self, entryID):
+        assert entryID in self.the_vertices, "Cannot find vertex " + str(entryID) + " in vertices"
+        assert entryID != vertices.dummyID, "Entry ID " + str(entryID) + " is not positive"
+        self.entryID = entryID
         
-    def getVertex (self, bbID):
-        return DirectedGraph.getVertex(self, bbID)
+    def set_exitID(self, exitID):
+        assert exitID in self.the_vertices, "Cannot find vertex " + str(exitID) + " in vertices"
+        assert exitID != vertices.dummyID, "Exit ID " + str(exitID) + " is not positive"
+        self.exitID = exitID
+        
+    def add_call_site(self, vertexID, callee_name):
+        assert vertexID in self.the_vertices, "Vertex %d does not belong to the CFG of '%s'" % (vertexID, self.name)
+        self.call_sites[vertexID] = callee_name
     
-    def getVertexWithAddress (self, address):
-        if address in self.__addressToVertex:
-            return self.__addressToVertex[address]
+    def is_call_site(self, vertexID):
+        if vertexID in self.call_sites:
+            return self.call_sites[vertexID]
+        return None
+    
+    def removeCallSite(self, vertexID):
+        assert vertexID in self.call_sites, "Vertex %d is not a call site of '%s'" % (vertexID, self.name)
+        del self.call_sites[vertexID]        
+        
+    def getVertexWithAddress(self, address):
+        if address in self.address_to_vertex:
+            return self.address_to_vertex[address]
         for v in self:
-            if v.hasAddress(address):
-                self.__addressToVertex[address] = v
-                return v
+            for instruction in v.instructions:
+                if instruction.address == address:
+                    self.address_to_vertex[address] = v
+                    return v
         assert False, "Unable to find basic block with address %s" % hex(address) 
-        
-    def setEntryID (self, entryID=None):
-        if entryID is None:
-            candidates = []
-            toRemove   = []
-            for bb in self.vertices.values():
-                if bb.numberOfPredecessors() == 0:
-                    candidates.append(bb)
-            for bb in candidates:
-                bbID  = bb.vertexID
-                if self._entryID != vertices.dummyVertexID:
-                    debug.warning_message("The entry ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID))
-                    currentEntryv = self.getVertex(self._entryID)
-                    entryAddress  = currentEntryv.getFirstInstruction().getAddress()
-                    firstAddress  = bb.getFirstInstruction().getAddress()
-                    if firstAddress < entryAddress:
-                        self._entryID = bbID
-                        debug.warning_message("Resetting entry vertex to %d" % bbID)
-                        toRemove.append(currentEntryv)
-                    else:
-                        toRemove.append(bb)
-                else:
-                    self._entryID = bbID
-            for bb in toRemove:
-                bbID = bb.vertexID
-                for predID in bb.getPredecessorIDs():
-                    predv = self.getVertex(predID)
-                    predv.removeSuccessor(bbID)
-                for succID in bb.getSuccessorIDs():
-                    succv = self.getVertex(succID)
-                    succv.removePredecessor(bbID)
-                self.removeVertex(bbID)
-            assert self._entryID != vertices.dummyVertexID, "Unable to find a vertex without predecessors to set as the exit in '%s'" % self._name
-        else:
-            assert entryID in self.vertices, "Cannot find vertex " + str(entryID) + " in vertices"
-            assert entryID > vertices.dummyVertexID, "Entry ID " + str(entryID) + " is not positive"
-            self._entryID = entryID
-        
-    def setExitID (self, exitID=None):
-        if exitID is None:
-            for bb in self.vertices.values():
-                if bb.numberOfSuccessors() == 0:
-                    bbID = bb.vertexID
-                    assert self._exitID == vertices.dummyVertexID, "The exit ID has already been set to %d. Found another entry candidate %d" % (self._entryID, bbID)
-                    self._exitID = bbID
-            if self._exitID == vertices.dummyVertexID:
-                debug.warning_message("Unable to find a vertex without successors to set as the exit in '%s'" % self._name)
-        else:
-            assert exitID in self.vertices, "Cannot find vertex " + str(exitID) + " in vertices"
-            assert exitID > vertices.dummyVertexID, "Exit ID " + str(exitID) + " is not positive"
-            self._exitID = exitID
-            
-    def addExitEntryEdge (self):
-        if self._exitID != vertices.dummyVertexID:
-            entryv = self.getVertex(self._entryID)
-            exitv = self.getVertex(self._exitID)
-            entryv.addPredecessor(self._exitID)
-            exitv.addSuccessor(self._entryID)
-            
-    def getFirstInstruction (self):
-        v = self.getVertex(self._entryID)
-        return v.getFirstInstruction()
-    
-    def getLastInstruction (self):
-        v = self.getVertex(self._exitID)
-        return v.getLastInstruction()
-        
-    def setEdgeIDs (self):
-        edgeID = 1
-        for v in self:
-            for succID in v.getSuccessorIDs():
-                succe = v.getSuccessorEdge(succID)
-                succe.setEdgeID(edgeID)
-                succv = self.getVertex(succID)
-                prede = succv.getPredecessorEdge(v.vertexID)
-                prede.setEdgeID(edgeID)
-                edgeID += 1
-        
-    def __str__ (self):
-        string = "*" * 20 + " CFG Output " + "*" * 20 + "\n" + \
-        "Entry ID = %s\n" % str(self._entryID) + \
-        "Exit ID  = %s\n" % str(self._exitID) + "\n"
-        for bb in self.vertices.values():
-            string += bb.__str__() + "\n"
-        return string
     
 class ContextGraph (DirectedGraph):
     nextVertexID = 1
     
     def __init__ (self, callg):
         DirectedGraph.__init__(self)
-        self.__rootID = None
+        self.rootID = None
         self.__subprogramToContexts = {}
         self.__subprogramToUnused   = {}
         dfs = DepthFirstSearch(callg, callg.getRootID())
@@ -349,7 +292,7 @@ class ContextGraph (DirectedGraph):
     def __addVertex (self, functionID, functionName):
         contextID = ContextGraph.nextVertexID
         contextv  = vertices.CallGraphVertex(contextID, functionName)
-        self.vertices[contextID] = contextv
+        self.the_vertices[contextID] = contextv
         self.__subprogramToContexts[functionID].append(contextv)
         self.__subprogramToUnused[functionID].append(contextv)
         ContextGraph.nextVertexID += 1
@@ -362,868 +305,705 @@ class ContextGraph (DirectedGraph):
                     calleeID = succe.vertexID
                     for callSiteID in succe.getCallSites():
                         calleev = self.__subprogramToUnused[calleeID].pop()
-                        callerv.addSuccessor(calleev.vertexID, callSiteID)            
-                        calleev.addPredecessor(callerv.vertexID, callSiteID)
+                        callerv.add_successor(calleev.vertexID, callSiteID)            
+                        calleev.add_predecessor(callerv.vertexID, callSiteID)
     
     def __setRootID (self):
         noPreds = []
         for v in self:
-            if v.numberOfPredecessors() == 0:
+            if v.number_of_predecessors() == 0:
                 noPreds.append(v)
         assert len(noPreds) == 1
-        self.__rootID = noPreds[0].vertexID
+        self.rootID = noPreds[0].vertexID
     
     def getRootID (self):
-        assert self.__rootID != vertices.dummyVertexID, "Root vertex of call graph has not been set"
-        return self.__rootID
+        assert self.rootID != vertices.dummyID, "Root vertex of call graph has not been set"
+        return self.rootID
 
 class CallGraph (DirectedGraph):   
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self.__rootID = vertices.dummyVertexID
-        self.__functionNameToVertex = {}
+        self.rootID = vertices.dummyID
+        self.function_to_call_vertex = {}
         
     def addVertex (self, functionName):
-        assert functionName not in self.__functionNameToVertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
+        assert functionName not in self.function_to_call_vertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
         debug.debug_message("Adding call graph vertex of function '%s'" % functionName, 5)
-        vertexID = self.getNextVertexID()
+        vertexID = self.get_next_vertexID()
         callv    = vertices.CallGraphVertex(vertexID, functionName)
-        self.vertices[vertexID] = callv 
-        self.__functionNameToVertex[functionName] = callv
+        self.the_vertices[vertexID] = callv 
+        self.function_to_call_vertex[functionName] = callv
     
-    def removeVertex (self, functionName):
+    def removeVertex(self, functionName):
         debug.debug_message("Removing call graph vertex of function '%s'" % functionName, 5)
         callv    = self.getVertexWithName(functionName)
         vertexID = callv.vertexID
-        for succID in callv.getSuccessorIDs():
+        for succID in callv.successors.keys():
             self.removeEdge(vertexID, succID)
         for predID in callv.getPredecessorIDs():
             self.removeEdge(predID, vertexID)
         DirectedGraph.removeVertex(self, vertexID)
         
     def hasVertexWithName (self, functionName):
-        return functionName in self.__functionNameToVertex
+        return functionName in self.function_to_call_vertex
         
     def getVertexWithName (self, functionName):
-        assert functionName in self.__functionNameToVertex, "Unable to find call graph vertex for function '%s'" % functionName
-        return self.__functionNameToVertex[functionName]
+        assert functionName in self.function_to_call_vertex, "Unable to find call graph vertex for function '%s'" % functionName
+        return self.function_to_call_vertex[functionName]
     
-    def getRootVertex (self):
-        assert self.__rootID != vertices.dummyVertexID, "The root of the call graph has not been set"
-        return self.getVertex(self.__rootID)
-    
-    def findAndSetRoot (self):
-        withoutPred = []
+    def find_and_set_root(self):
+        no_predecessors = set()
         for v in self:
-            if v.numberOfPredecessors() == 0:
-                withoutPred.append(v.vertexID)
-        if len(withoutPred) == 0:
+            if v.number_of_predecessors() == 0:
+                no_predecessors.add(v.vertexID)
+        if len(no_predecessors) == 0:
             debug.exit_message("Could not find program entry point as there are no functions without predecessors")
-        elif len(withoutPred) > 1:
-            debugStr = ""
-            for vertexID in withoutPred:
-                callv    = self.getVertex(vertexID)
-                debugStr += callv.__str__()
-            debug.exit_message("Call graph has too many entry points: %s" % debugStr)
+        elif len(no_predecessors) > 1:
+            debug_string = ""
+            for vertexID in no_predecessors:
+                debug_string += "%s " % self.getVertex(vertexID).name 
+            debug.exit_message("Call graph has too many entry points: %s" % debug_string)
         else:
-            self.__rootID = withoutPred[0]
-        assert self.__rootID, "Unable to set root ID of call graph"
-        
-    def setRoot (self, functionName):
-        rootv = self.getVertexWithName(functionName)
-        if rootv.numberOfPredecessors() > 0:
-            debug.warning_message("Root function '%s' has incoming function calls" % functionName)
-        self.__rootID = rootv.vertexID
-        
-    def setRootID (self, rootID):
-        self.__rootID = rootID
-    
-    def getRootID (self):
-        assert self.__rootID != vertices.dummyVertexID, "Root vertex of call graph has not been set"
-        return self.__rootID
+            self.rootID = list(no_predecessors)[0]
+        assert self.rootID, "Unable to set root ID of call graph"
     
     def addEdge (self, predName, succName, callSiteID):
         debug.debug_message("Adding call graph edge %s => %s" % (predName, succName), 5)
         predv = self.getVertexWithName(predName)
         succv = self.getVertexWithName(succName)
-        predv.addSuccessor(succv.vertexID, callSiteID)            
-        succv.addPredecessor(predv.vertexID, callSiteID)
+        predv.add_successor(succv.vertexID, callSiteID)            
+        succv.add_predecessor(predv.vertexID, callSiteID)
 
-class Tree (DirectedGraph):
+class Tree(DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self._rootID = vertices.dummyVertexID
+        self.rootID = vertices.dummyID
+        self.lca    = None
         
-    def setRootID (self, rootID):
-        assert rootID > vertices.dummyVertexID, "Invalid root ID %d. It must be a positive integer" % rootID
-        assert rootID in self.vertices, "Cannot find vertex %d"
-        self._rootID = rootID
-        
-    def getRootID (self):
-        assert self._rootID != vertices.dummyVertexID, "Root ID has not yet been set"
-        return self._rootID
-        
-    def addVertex (self, vertexID):
-        assert vertexID not in self.vertices, "Adding vertex %d which is already in tree" % vertexID
-        treev = vertices.TreeVertex(vertexID)
-        self.vertices[vertexID] = treev
-        
-    def addEdge (self, predID, succID):
+    def addEdge(self, predID, succID):
         DirectedGraph.addEdge(self, predID, succID)
         succv = self.getVertex(succID)
-        succv.setParentID(predID)
-        
-    def isInternalVertex (self, vertexID):
-        return self.getVertex(vertexID).numberOfSuccessors() > 0
+        succv.parentID = predID
     
-    def getAllProperAncestors (self, vertexID):
+    def getAllProperAncestors(self, vertexID):
         ancestors = []
-        while vertexID != self._rootID:
-            parentID = self.getVertex(vertexID).getParentID()
+        while vertexID != self.rootID:
+            parentID = self.getVertex(vertexID).parentID
             ancestors.append(self.getVertex(parentID))
             vertexID = parentID
         return ancestors
     
-    def isAncestor (self, left, right):
+    def isAncestor(self, left, right):
         if left == right:
             return True
-        elif right == self._rootID:
+        elif right == self.rootID:
             return False
         else:
             vertexID = right
-            parentID = self.getVertex(vertexID).getParentID()
-            while parentID != self._rootID and parentID != left:
+            parentID = self.getVertex(vertexID).parentID
+            while parentID != self.rootID and parentID != left:
                 vertexID = parentID
-                parentID = self.getVertex(vertexID).getParentID()
+                parentID = self.getVertex(vertexID).parentID
             if parentID == left:
                 return True
             else:
                 return False
     
-    def isProperAncestor (self, left, right):
+    def isProperAncestor(self, left, right):
         if left == right:
             return False
         else:
             return self.isAncestor(left, right)
-    
-    def getHeight (self):
-        maxHeight = 0
-        height = {}
-        stack  = []
-        rootv = self.getVertex(self.getRootID())
-        stack.append(rootv)
-        height[rootv] = 0
-        while stack:
-            v = stack.pop()
-            for succID in v.getSuccessorIDs():
-                succv = self.getVertex(succID)
-                stack.append(succv)
-                height[succv] = height[v] + 1
-                if height[succv] > maxHeight:
-                    maxHeight = height[succv]
-        return maxHeight
         
-    def levelIterator (self, up=True):
-        rootv = self.getVertex(self.getRootID())
-        rootv.setLevel(0)
-        queue = [rootv]
-        levelTovertices = {}
+    def level_by_level_iterator(self, up=True):
+        rootv        = self.getVertex(self.rootID)
+        rootv.level  = 0
+        queue        = [rootv]
+        the_vertices = {}
         while queue:
             v = queue.pop()
-            for succID in v.getSuccessorIDs():
+            for succID in v.successors.keys():
                 queue.insert(0, self.getVertex(succID))
-            
-            if v.vertexID == self.getRootID():
-                levelTovertices[0] = [rootv]
+            if v.vertexID == self.rootID:
+                the_vertices[0] = [rootv]
             else:
-                newLevel = self.getVertex(v.getParentID()).getLevel() + 1
-                v.setLevel(newLevel)
-                if newLevel not in levelTovertices.keys():
-                    levelTovertices[newLevel] = []
-                levelTovertices[newLevel].append(v)
-        
+                v.level = self.getVertex(v.parentID).level + 1
+                if v.level not in the_vertices.keys():
+                    the_vertices[v.level] = []
+                the_vertices[v.level].append(v)
         if up:
-            for level in reversed(sorted(levelTovertices.keys())):
-                yield level, levelTovertices[level]
+            for level in reversed(sorted(the_vertices.keys())):
+                yield the_vertices[level]
         else:
-            for level in sorted(levelTovertices.keys()):
-                yield level, levelTovertices[level]
+            for level in sorted(the_vertices.keys()):
+                yield the_vertices[level]
                 
-    def __str__ (self):
-        string = ""
-        for level, vertices in self.levelIterator(False):
-            string += "%s LEVEL = %d %s\n" % ('*' * 5, level, '*' * 5)
-            for v in vertices:
-                if level == 0:
-                    string += "%d (root)\n" % (v.vertexID)
-                else:
-                    string += "%d (parent = %d)\n" % (v.vertexID, v.getParentID())
-        return string
-    
-
-class Betts (Tree):
-    def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
-        Tree.__init__(self)
-        self.__directedg = directedg
-        self.__rootID    = rootID
-        self.__singles   = []
-        self.__merges    = []
-        self.__branches  = []
-        self.__ipre      = {}
-        self.__ipost     = {}
-        dfs = DepthFirstSearch(self.__directedg, self.__rootID)
-        self._initialise(dfs)
-        self._compute(dfs)
-    
-    def _initialise (self, dfs):
-        for vertexID in reversed(dfs.getPostorder()):
-            treev = dfs.getVertex(vertexID)
-            v     = self.__directedg.getVertex(vertexID)
-            self.__ipre[v]  = v
-            self.__ipost[v] = v
-            if v.numberOfPredecessors() == 1 and v.numberOfSuccessors() == 1 and vertexID != dfs.getRootID():
-                if not self.__directedg.getVertex(treev.getParentID()) in self.__singles:
-                    self.__singles.append(v)
-            if v.numberOfSuccessors() > 1:
-                self.__branches.append(v)
-            if  v.numberOfPredecessors() > 1:
-                self.__merges.append(v)
-    
-    def _compute (self,dfs):
-        for v in self.__singles:
-            self._reduce(v)
-        print self.__directedg
-        for v in reversed(self.__branches):
-            self._reduce(v)
-                
-        for v in self.__directedg:
-            print "ipre(%d) = %d" % (v.vertexID, self.__ipre[v].vertexID) 
-            print "ipost(%d) = %d" % (v.vertexID, self.__ipost[v].vertexID)  
-            
-    def _reduce (self, v):
-        pred        = self.__directedg.getVertex(v.getPredecessorIDs()[0])
-        source      = pred
-        succ        = self.__directedg.getVertex(v.getSuccessorIDs()[0])
-        destination = succ
-        nextv       = v
-        print pred
-        print v
-        print succ
-        while True:
-            self.__ipre[nextv] = pred
-            self.__ipost[nextv] = succ
-            if succ in self.__merges or succ.vertexID == self.__directedg.getExitID():
-                break
-            pred  = nextv
-            nextv = succ
-            succ  = self.__directedg.getVertex(nextv.getSuccessorIDs()[0])
-            destination = succ
-        print destination
-        self.__directedg.removeEdge(source.vertexID, v.vertexID)
-        self.__directedg.removeEdge(nextv.vertexID, destination.vertexID)
-        self.__directedg.addEdge(source.vertexID,destination.vertexID)
-
-class LengauerTarjan (Tree):
-    def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
-        Tree.__init__(self)
-        self.__directedg = directedg
-        dfs = DepthFirstSearch(self.__directedg, rootID)
-        self.__parent = {}
-        self.__semi = {}
-        self.__idom = {}
-        self.__ancestor = {}
-        self.__best = {}
-        self.__bucket = {}
-        self._initialise (dfs)
-        self._compute (dfs)
+    def check_is_tree(self):
+        without_predecessors = set()
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                without_predecessors.add(v)
+        assert len(without_predecessors) == 1  
         
-    def _initialise (self, dfs):
-        for v in self.__directedg:
-            vertexID = v.vertexID
-            if vertexID != dfs.getRootID():
-                self.__parent[vertexID] = dfs.getVertex(vertexID).getParentID()
-            self.__semi[vertexID] = dfs.getPreID(vertexID)
-            self.__ancestor[vertexID] = None
-            self.__idom[vertexID] = None
-            self.__bucket[vertexID] = set([])
-    
-    def _compute (self, dfs):
-        for preID in xrange(self.__directedg.numOfvertices(), 1, -1):
-            vertexID = dfs.getPreorderVertexID(preID)
-            v        = self.__directedg.getVertex(vertexID)
-            parentID = self.__parent[vertexID]
-            for predID in v.getPredecessorIDs():
-                uID = self._eval(predID)
-                if self.__semi[uID] < self.__semi[vertexID]:
-                    self.__semi[vertexID] = self.__semi[uID]
-            print "semi(%d) = %d" % (vertexID,  self.__semi[vertexID]) 
-            # At this point semi only has DFS numbers
-            self.__bucket[dfs.getPreorderVertexID(self.__semi[vertexID])].add(vertexID)
-            self._link(parentID, vertexID)
-            for bID in self.__bucket[parentID]:
-                uID = self._eval(bID)
-                if self.__semi[uID] < dfs.getPreID(parentID): 
-                    self.__idom[bID] = uID
-                else:
-                    self.__idom[bID] = parentID
-            self.__bucket[parentID] = set([])
-    
-        for preID in xrange(2, self.__directedg.numOfvertices() + 1, 1):
-            vertexID = dfs.getPreorderVertexID(preID)
-            if self.__idom[vertexID] != dfs.getPreorderVertexID(self.__semi[vertexID]):
-                self.__idom[vertexID] = self.__idom[self.__idom[vertexID]]
-                    
-        for vertexID in dfs.getPreorder():
-            if vertexID != dfs.getRootID():
-                print "idom(%d) = %d" % (vertexID, self.__idom[vertexID])
-                
-    def _eval (self, vID):
-        aID = self.__ancestor[vID]
-        while aID and self.__ancestor[aID]:
-            if self.__semi[vID] > self.__semi[aID]:
-                vID = aID
-            aID = self.__ancestor[aID]
-        return vID
-    
-    def _link (self, vID, wID):
-        self.__ancestor[wID] = vID
+    def get_LCA(self):
+        if self.lca is None:
+            self.lca = LeastCommonAncestor(self)
+        return self.lca
         
 class DepthFirstSearch (Tree):
-    def __init__(self, directedg, rootID, succIDs=None):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
+    Colors = utils.enum('WHITE', 'BLACK', 'GRAY')
+
+    def __init__(self, directedg, rootID):
         Tree.__init__(self)
-        self.__preorder = []
-        self.__postorder = []
-        self.__preorderID = 1
-        self.__postorderID = 1
-        self.__vertexID2PreID = {}
-        self.__vertexID2PostID = {}
-        self.__backedges = []
-        self.initialise(directedg)
-        self.setRootID(rootID)
-        if succIDs:
-            self.doSearch(directedg, rootID, succIDs)
-        else:
-            self.doSearch(directedg, rootID, directedg.getVertex(rootID).getSuccessorIDs())
+        assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
+        self.rootID = rootID
+        self.pre_order  = []
+        self.post_order = []
+        self.vertex_post_order_numbering = {}
+        self.vertex_pre_order_numbering = {}
+        self.back_edges = []
+        self.initialise(directedg, rootID)
+        self.do_search(directedg, rootID)
         
-    def initialise (self, directedg):
+    def initialise(self, directedg, rootID):
         for v in directedg:
-            vertexID = v.vertexID
-            self.vertices[vertexID] = vertices.TreeVertex(vertexID)
-            self.__vertexID2PreID[vertexID] = 0
-            self.__vertexID2PostID[vertexID] = 0
-        
-    def doSearch (self, directedg, vertexID, succIDs):
-        self.__vertexID2PreID[vertexID] = self.__preorderID
-        self.__preorder.append(vertexID)
-        self.__preorderID += 1
-        
-        for succID in succIDs:
-            if self.__vertexID2PreID[succID] == 0:
+            self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
+            self.vertex_pre_order_numbering[v.vertexID] = 0
+            self.vertex_post_order_numbering[v.vertexID] = 0
+        self.pre_orderID  = 1
+        self.post_orderID = 1   
+      
+    def do_search(self, directedg, vertexID):
+        self.vertex_pre_order_numbering[vertexID] = self.pre_orderID
+        self.pre_order.append(vertexID)
+        self.pre_orderID += 1
+           
+        v = directedg.getVertex(vertexID)
+        for succID in v.successors.keys ():
+            if self.vertex_pre_order_numbering[succID] == 0:
                 self.addEdge(vertexID, succID)
-                self.doSearch(directedg, succID, directedg.getVertex(succID).getSuccessorIDs())
-            elif self.__vertexID2PreID[vertexID] < self.__vertexID2PreID[succID]:
+                self.do_search(directedg, succID)
+            elif self.vertex_pre_order_numbering[vertexID] < self.vertex_pre_order_numbering[succID]:
                 pass
-            elif self.__vertexID2PostID[succID] == 0:
-                self.__backedges.append([vertexID, succID])
-        self.__vertexID2PostID[vertexID] = self.__postorderID
-        self.__postorder.append(vertexID)
-        self.__postorderID += 1
-        
-    def getPreorder (self):
-        return self.__preorder
-    
-    def getPostorder (self):
-        return self.__postorder
+            elif self.vertex_post_order_numbering[succID] == 0:
+                self.back_edges.append((vertexID, succID))
+        self.vertex_post_order_numbering[vertexID] = self.post_orderID
+        self.post_order.append(vertexID)
+        self.post_orderID += 1
     
     def getPreorderVertexID (self, preID):
-        assert preID - 1 < len(self.__preorder), "Pre-order number %d too high" % preID
-        return self.__preorder[preID-1]
+        assert preID - 1 < len(self.pre_order), "Pre-order number %d too high" % preID
+        return self.pre_order[preID-1]
     
     def getPostorderVertexID (self, postID):
-        assert postID - 1 < len(self.__postorder), "Post-order number %d too high" % postID
-        return self.__postorder[postID-1]
+        assert postID - 1 < len(self.post_order), "Post-order number %d too high" % postID
+        return self.post_order[postID-1]
     
     def getPreID (self, vertexID):
-        assert vertexID in self.__vertexID2PreID, "Unable to find pre-order numbering for vertex %d" % vertexID
-        return self.__vertexID2PreID[vertexID]
+        assert vertexID in self.vertex_pre_order_numbering, "Unable to find pre-order numbering for vertex %d" % vertexID
+        return self.vertex_pre_order_numbering[vertexID]
     
     def getPostID (self, vertexID):
-        assert vertexID in self.__vertexID2PostID, "Unable to find post-order numbering for vertex %d" % vertexID
-        return self.__vertexID2PostID[vertexID]
+        assert vertexID in self.vertex_post_order_numbering, "Unable to find post-order numbering for vertex %d" % vertexID
+        return self.vertex_post_order_numbering[vertexID]
     
-    def isDFSBackedge (self, sourceID, destinationID):
-        return [sourceID, destinationID] in self.__backedges
-    
-class CompressedDominatorTree (Tree):
-    def __init__(self, domTree, lca, vertexID, neighbourIDs):
-        debug.debug_message("Building compressed dominator tree for %d using %s" \
-                           % (vertexID, neighbourIDs), 20)
-        Tree.__init__(self)
-        self.__build(lca, neighbourIDs)
-        self._rootID = domTree.getImmediateDominator(vertexID)
+    def isDFSBackedge(self, sourceID, destinationID):
+        return (sourceID, destinationID) in self.back_edges
         
-    def __build(self, lca, edges):
-        querySet = set(edges)      
-        while len(querySet) > 1:
-            vToLCA  = {}
-            for e1 in querySet:
-                for e2 in querySet:
-                    if e1 != e2:
-                        lcaID = lca.getLCA(e1, e2)
-                        # Update for e1
-                        if e1 in vToLCA:
-                            oldlcaID = vToLCA[e1]
-                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e1:
-                                vToLCA[e1] = lcaID
-                        else:
-                            vToLCA[e1] = lcaID
-                        # Update for e2
-                        if e2 in vToLCA:
-                            oldlcaID = vToLCA[e2]
-                            if lca.getLevel(lcaID) > lca.getLevel(oldlcaID) and oldlcaID != e2:
-                                vToLCA[e2] = lcaID
-                        else:
-                            vToLCA[e2] = lcaID
-            # Add edge links                
-            for vertexID, parentID in vToLCA.items():
-                if not self.hasVertex(vertexID):
-                    self.addVertex(vertexID)                
-                if not self.hasVertex(parentID):
-                    self.addVertex(parentID)
-                if parentID != vertexID:
-                    debug.debug_message("Adding edge (%d, %d)" % (parentID, vertexID), 20)
-                    self.addEdge(parentID, vertexID)
-            # Any vertex without a predecessor goes into the query set
-            newQuerySet = []
-            for v in self:
-                if v.numberOfPredecessors() == 0:
-                    newQuerySet.append(v.vertexID)
-            querySet = set(newQuerySet)
-    
-class LeastCommonAncestor ():
-    def __init__(self, tree):
-        self.__tree = tree
-        self.__euler = {}
-        self.__level = {}
-        self.__vertexToLevel = {}
-        self.__representative = {}
-        self.__eulerIndex = 0
-        self.__dummyLevel = 0
-        self.__vertexToLevel[self.__tree.getRootID()] = 0
-        self.__doDFS(self.__tree.getRootID())
-        self.__dummyLevel += 1
-        self.__computeRepresentativeIndices()
-        
-    def __doDFS (self, vertexID):
-        v = self.__tree.getVertex(vertexID)
-        self.__euler[self.__eulerIndex] = vertexID
-        self.__eulerIndex += 1
-        for succID in v.getSuccessorIDs():
-            self.__vertexToLevel[succID] = self.__vertexToLevel[vertexID] + 1
-            if self.__vertexToLevel[succID] > self.__dummyLevel:
-                self.__dummyLevel = self.__vertexToLevel[succID]
-            self.__doDFS(succID)
-            self.__euler[self.__eulerIndex] = vertexID
-            self.__eulerIndex += 1
-    
-    def __computeRepresentativeIndices (self):
-        for index, vertexID in self.__euler.items():
-            self.__representative[vertexID] = index
-            self.__level[index] = self.__vertexToLevel[vertexID]
-            
-    def getLevel (self, vertexID):
-        assert vertexID in self.__vertexToLevel, "Cannot find vertex %d" % vertexID
-        return self.__vertexToLevel[vertexID]
-            
-    def getLCA (self, left, right):    
-        debug.debug_message("Computing lca(%d, %d)" % (left, right), 20) 
-        repID1      = self.__representative[left]
-        repID2      = self.__representative[right]
-        lowestLevel = self.__dummyLevel
-        startIndex  = None
-        endIndex    = None
-        levelIndex  = 2 * self.__tree.numOfvertices()
-        
-        if repID1 < repID2:
-            startIndex = repID1
-            endIndex   = repID2
-        else:
-            startIndex = repID2
-            endIndex   = repID1
-        for i in range (startIndex, endIndex+1):
-            if self.__level[i] < lowestLevel:
-                lowestLevel = self.__level[i]
-                levelIndex  = i
-        debug.debug_message("lca(%d, %d) = %d" % (left, right, self.__euler[levelIndex]), 15)
-        return self.__euler[levelIndex]
-    
-class Dominators (Tree):
+class Dominators(Tree):
     def __init__(self, directedg, rootID):
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
         Tree.__init__(self)
-        self.__directedg = directedg
-        self.__immediateDom = {}
-        self._initialise (rootID)
-        self._solveDFF ()
-        self._addedges ()
-        
-    def getImmediateDominator (self, vertexID):
-        assert vertexID != self._rootID, "Vertex %d does not have an immediate dominator as it is the root" % vertexID
-        return self.getVertex(vertexID).getParentID()
+        assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
+        self.rootID = rootID
+        self.immediate_dominator = {}
+        self.initialise(rootID, directedg)
+        self.solve(directedg)
+        self.add_edges()
     
-    def _initialise (self, rootID):
-        for v in self.__directedg:
-            vertexID = v.vertexID            
-            self.vertices[vertexID] = vertices.TreeVertex(vertexID)
-            if vertexID == rootID:
-                self.__immediateDom[vertexID] = vertexID
+    def initialise(self, rootID, directedg):
+        for v in directedg:           
+            self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
+            if v.vertexID == rootID:
+                self.immediate_dominator[v.vertexID] = v.vertexID
             else:
-                self.__immediateDom[vertexID] = vertices.dummyVertexID
-        self.setRootID(rootID)
+                self.immediate_dominator[v.vertexID] = vertices.dummyID
     
-    def _solveDFF (self):
-        dfs = DepthFirstSearch(self.__directedg, self._rootID)
+    def solve(self, directedg):
+        dfs = DepthFirstSearch(directedg, self.rootID)
         changed = True
         while changed:
             changed = False
-            postID = self.__directedg.numOfvertices()
+            postID  = directedg.number_of_vertices()
             while postID >= 1:
                 vertexID = dfs.getPostorderVertexID(postID)
-                if vertexID != self._rootID:
-                    v               = self.__directedg.getVertex(vertexID)
-                    processedPredID = vertices.dummyVertexID
-                    newIdomID       = vertices.dummyVertexID
-                    
-                    for predID in v.getPredecessorIDs():
-                        if self.__immediateDom[predID] != vertices.dummyVertexID:
+                if vertexID != self.rootID:
+                    v               = directedg.getVertex(vertexID)
+                    processedPredID = vertices.dummyID
+                    newIdomID       = vertices.dummyID
+                    for predID in v.predecessors.keys():
+                        if self.immediate_dominator[predID] != vertices.dummyID:
                             processedPredID = predID
                             newIdomID       = processedPredID
-                    for predID in v.getPredecessorIDs():
+                    for predID in v.predecessors.keys():
                         if predID != processedPredID:
-                            if self.__immediateDom[predID] != vertices.dummyVertexID:
-                                newIdomID = self._intersect(dfs, predID, newIdomID)
-                    
-                    if newIdomID != vertices.dummyVertexID:
-                        if self.__immediateDom[vertexID] != newIdomID:
+                            if self.immediate_dominator[predID] != vertices.dummyID:
+                                newIdomID = self.intersect(dfs, predID, newIdomID)
+                    if newIdomID != vertices.dummyID:
+                        if self.immediate_dominator[vertexID] != newIdomID:
                             changed = True
-                            self.__immediateDom[vertexID] = newIdomID
+                            self.immediate_dominator[vertexID] = newIdomID
                 postID -= 1
     
-    def _intersect (self, dfs, left, right):
+    def intersect(self, dfs, left, right):
         uID = left
         vID = right
         while (dfs.getPostID(uID) != dfs.getPostID(vID)):
             while (dfs.getPostID(uID) < dfs.getPostID(vID)):
-                uID = self.__immediateDom[uID]
+                uID = self.immediate_dominator[uID]
             while (dfs.getPostID(vID) < dfs.getPostID(uID)):
-                vID = self.__immediateDom[vID]
+                vID = self.immediate_dominator[vID]
         return uID
     
-    def _addedges (self):
-        for v in self.__directedg:
-            vertexID = v.vertexID
-            if vertexID != self._rootID:
-                assert self.__immediateDom[vertexID] != vertices.dummyVertexID, "Immediate dominator of %d not set" % vertexID
-                self.addEdge(self.__immediateDom[vertexID], vertexID)
-                
-class DominanceFrontiers:
-    def __init__(self, cfg, domTree):
-        self.__cfg     = cfg
-        self.__domTree = domTree
-        self.__initialise()
-        self.__compute()
+    def add_edges(self):
+        for v in self:
+            if v.vertexID != self.rootID:
+                assert self.immediate_dominator[v.vertexID] != vertices.dummyID, "Immediate dominator of %d not set" % v.vertexID
+                self.addEdge(self.immediate_dominator[v.vertexID], v.vertexID)
+    
+class CompressedDominatorTree(Tree):
+    def __init__(self, dominator_tree, lca, vertexID, frontierIDs):
+        Tree.__init__(self)
+        self.build(lca, frontierIDs)
+        self.rootID = dominator_tree.getVertex(vertexID).parentID
         
-    def output(self):
-        for v in self.__cfg:
-            vertexID = v.vertexID
-            print "DF(%d) = %s" % (vertexID, self.__vToDF[vertexID])
+    def build(self, lca, query_set):
+        while len(query_set) > 1:
+            vertex_to_LCA = {}
+            for a_pair in itertools.combinations(query_set, 2):
+                lcaID = lca.query(a_pair[0], a_pair[1])
+                if a_pair[0] in vertex_to_LCA:
+                    old_lcaID = vertex_to_LCA[a_pair[0]]
+                    if lca.vertex_level[lcaID] > lca.vertex_level[old_lcaID] and old_lcaID != a_pair[0]:
+                        vertex_to_LCA[a_pair[0]] = lcaID
+                else:
+                    vertex_to_LCA[a_pair[0]] = lcaID
+                if a_pair[1] in vertex_to_LCA:
+                    old_lcaID = vertex_to_LCA[a_pair[1]]
+                    if lca.vertex_level[lcaID] > lca.vertex_level[old_lcaID] and old_lcaID != a_pair[1]:
+                        vertex_to_LCA[a_pair[1]] = lcaID
+                else:
+                    vertex_to_LCA[a_pair[1]] = lcaID
+            # Add edge links                
+            for vertexID, parentID in vertex_to_LCA.items():
+                if not self.hasVertex(vertexID):
+                    self.addVertex(vertices.TreeVertex(vertexID))                
+                if not self.hasVertex(parentID):
+                    self.addVertex(vertices.TreeVertex(parentID))
+                if parentID != vertexID:
+                    self.addEdge(parentID, vertexID)
+            # Any vertex without a predecessor goes into the query set
+            new_query_set = set()
+            for v in self:
+                if v.number_of_predecessors() == 0:
+                    new_query_set.add(v.vertexID)
+            query_set = new_query_set
+    
+class LeastCommonAncestor:
+    def __init__(self, tree):
+        self.tree           = tree
+        self.euler_tour     = {}
+        self.euler_index    = 0
+        self.level          = {}
+        self.vertex_level   = {}
+        self.representative = {}
+        self.compute()
         
-    def size (self, vertexID):
-        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
-        return len(self.__vToDF[vertexID])
+    def compute(self):
+        self.dummy_level = 0
+        self.vertex_level[self.tree.rootID] = 0
+        self.do_search(self.tree.rootID)
+        self.dummy_level += 1
+        self.compute_representatives()
+        
+    def do_search(self, vertexID):
+        v = self.tree.getVertex(vertexID)
+        self.euler_tour[self.euler_index] = vertexID
+        self.euler_index += 1
+        for succID in v.successors.keys():
+            self.vertex_level[succID] = self.vertex_level[vertexID] + 1
+            if self.vertex_level[succID] > self.dummy_level:
+                self.dummy_level = self.vertex_level[succID]
+            self.do_search(succID)
+            self.euler_tour[self.euler_index] = vertexID
+            self.euler_index += 1
     
-    def isEmpty (self, vertexID):
-        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
-        return len(self.__vToDF[vertexID]) == 0
-    
-    def set (self, vertexID):
-        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
-        return self.__vToDF[vertexID]
-    
-    def contains (self, vertexID, elementID):
-        assert vertexID in self.__vToDF, "Unable to find %d in dominance frontiers" % vertexID
-        return elementID in self.__vToDF[vertexID]
-    
-    def __initialise(self):
-        self.__vToDF = {}
-        for v in self.__cfg:
-            self.__vToDF[v.vertexID] = set([])
-    
-    def __compute(self):
-        for v in self.__cfg:
-            vertexID = v.vertexID    
-            if v.numberOfPredecessors() > 1: 
-                idomID = self.__domTree.getImmediateDominator(vertexID)
-                for predID in v.getPredecessorIDs():
-                    runnerID = predID
-                    while runnerID != idomID:
-                        self.__vToDF[runnerID].add(vertexID)
-                        runnerID = self.__domTree.getImmediateDominator(runnerID)
+    def compute_representatives(self):
+        for index, vertexID in self.euler_tour.iteritems():
+            self.representative[vertexID] = index
+            self.level[index]             = self.vertex_level[vertexID]
+            
+    def query(self, left, right):    
+        debug.debug_message("Computing lca(%d, %d)" % (left, right), 20) 
+        lowest_level = self.dummy_level
+        level_index  = 2 * self.tree.number_of_vertices()
+        if self.representative[left] < self.representative[right]:
+            startIndex = self.representative[left]
+            endIndex   = self.representative[right]
+        else:
+            startIndex = self.representative[right]
+            endIndex   = self.representative[left]
+        for i in range(startIndex, endIndex+1):
+            if self.level[i] < lowest_level:
+                lowest_level = self.level[i]
+                level_index  = i
+        debug.debug_message("lca(%d, %d) = %d" % (left, right, self.euler_tour[level_index]), 15)
+        return self.euler_tour[level_index]
     
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
         Tree.__init__(self)
-        assert rootID in directedg.vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
-        self.__predomTree = Dominators(directedg, rootID)
-        self.__directedg = directedg
-        self.__parent = {}
-        self.__loopBodies = {}
-        self.__loopTails = {}
-        self.__headervertices = {}
-        self.__loopExits = {}
-        self.__selfLoopHeaders = []
-        self._initialise ()
-        self._findLoops (rootID)
-        self._findExits ()
+        assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
+        self.name              = directedg.name
+        self.__directedg       = directedg
+        self.__dfs             = DepthFirstSearch (self.__directedg, rootID)
+        self.__parent          = {}
+        self.abstract_vertices = {}
+        self.loop_bodies       = {}
+        self.loop_back_edges   = {}
+        self.loop_exit_edges   = {}
+        self.loop_entry_edges  = {}
+        self.initialise()
+        self.find_loops(rootID)
+        self.add_edges()
+        self.find_loop_exits()
+        self.find_loop_entries()
         # Set the tree root ID to the header vertex representing the root of the 
         # directed graph
-        self.setRootID(self.__headervertices[rootID])
+        self.rootID = self.abstract_vertices[rootID]
+        self.check_is_tree()
         
-    def _initialise (self):
+    def initialise(self):
         for v in self.__directedg:
-            vertexID = v.vertexID
-            self.__parent[vertexID] = vertexID
-            self.vertices[vertexID] = vertices.TreeVertex(vertexID)
+            self.__parent[v.vertexID] = v.vertexID
+            self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
             
-    def _findLoops (self, rootID):
-        self.__dfs = DepthFirstSearch (self.__directedg, rootID)
-        for vertexID in reversed(self.__dfs.getPreorder()):
+    def find_loops(self, rootID):
+        predom_tree = Dominators(self.__directedg, rootID)
+        for vertexID in reversed(self.__dfs.pre_order):
             v = self.__directedg.getVertex(vertexID)
-            worklist = []
-            for predID in v.getPredecessorIDs():
+            for predID in v.predecessors.keys():
                 if self.__dfs.isDFSBackedge(predID, vertexID):
-                    assert self.__predomTree.isAncestor(vertexID, predID), "Non-reducible loop found with DFS backedge %d => %d" % (predID, vertexID)
-                    if predID == vertexID:
-                        debug.debug_message("%s => %s is a loop-back edge of trivial loop" % (predID, vertexID), 15)
-                        self._addSelfLoop (vertexID)
-                    else:
-                        debug.debug_message("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), 15)
-                        worklist.append(self.__parent[predID])
+                    assert predom_tree.isAncestor(vertexID, predID), "Non-reducible loop found with DFS backedge %d => %d" % (predID, vertexID)
+                    debug.debug_message("%s => %s is a loop-back edge of non-trivial loop" % (predID, vertexID), __name__, 15)
+                    self.add_new_loop(vertexID)
+                    self.loop_back_edges[vertexID].add((predID, vertexID))
+                    self.find_loop_body(predID, vertexID)
+                    
+    def add_new_loop(self, headerID, ):
+        if headerID not in self.abstract_vertices.keys():
+            newID   = self.get_next_vertexID()
+            headerv = vertices.HeaderVertex(newID, headerID)
+            self.the_vertices[newID]         = headerv
+            self.abstract_vertices[headerID] = newID
+            self.loop_bodies[headerID]       = set()
+            self.loop_back_edges[headerID]   = set()
+            self.loop_exit_edges[headerID]   = set()
+            self.loop_entry_edges[headerID]  = set()
             
-            if worklist:
-                self._findLoop (worklist, vertexID)
-                
-    def _addSelfLoop (self, headerID):
-        newVertexID = self.getNextVertexID()
-        headerv = vertices.HeaderVertex(newVertexID, headerID)
-        self.vertices[newVertexID] = headerv
-        self.__headervertices[headerID] = newVertexID
-        self.__loopTails[headerID] = [headerID]
-        self.__loopBodies[headerID] = [headerID]
-        self.__selfLoopHeaders.append(headerID)
-        self.addEdge(newVertexID, headerID)
+    def add_edges(self):
+        for headerID, loop_body in self.loop_bodies.iteritems():
+            abstractID = self.abstract_vertices[headerID]
+            self.addEdge(abstractID, headerID)
+            for vertexID in loop_body:
+                if vertexID in self.abstract_vertices.keys():
+                    if vertexID != headerID:
+                        inner_abstractID = self.abstract_vertices[vertexID]
+                        self.addEdge(abstractID, inner_abstractID)
+                else:
+                    self.addEdge(abstractID, vertexID)        
             
-    def _findLoop (self, worklist, headerID):
-        if headerID not in self.__headervertices.keys():
-            newVertexID = self.getNextVertexID()
-            headerv     = vertices.HeaderVertex(newVertexID, headerID)
-            self.vertices[newVertexID] = headerv
-            self.__headervertices[headerID] = newVertexID
-            self.__loopTails[headerID] = [t for t in worklist]
-        else:
-            self.__loopTails[headerID].extend([t for t in worklist])
-            
-        loopBody = []
-        while worklist:
-            listID = worklist[-1]
-            del worklist[-1]
-            loopBody.append(listID)
-            
+    def find_loop_body(self, tailID, headerID):
+        work_list = []
+        work_list.append(tailID)
+        loop_body = set()
+        while work_list:
+            listID = work_list.pop()
+            loop_body.add(listID)
             v = self.__directedg.getVertex(listID)
-            for predID in v.getPredecessorIDs():
+            for predID in v.predecessors.keys():
                 if not self.__dfs.isDFSBackedge(predID, listID):
                     repID = self.__parent[predID]
-                    if repID not in worklist and repID not in loopBody and repID != headerID:
-                        worklist.append(repID)
-        
-        if loopBody:
-            parentID = self.__headervertices[headerID]
-            for vertexID in loopBody:
-                self.__parent[vertexID] = headerID
-                if vertexID in self.__headervertices.keys():
-                    childID = self.__headervertices[vertexID]
-                    self.addEdge(parentID, childID)
-                else:
-                    self.addEdge(parentID, vertexID)
-            self.addEdge(parentID, headerID)
-            self.__loopBodies[headerID] = [headerID]
-            self.__loopBodies[headerID].extend([v for v in loopBody])
+                    if repID not in work_list \
+                    and repID not in loop_body \
+                    and repID != headerID:
+                        work_list.append(repID)
+        for vertexID in loop_body:
+            self.__parent[vertexID] = headerID
+        self.loop_bodies[headerID].add(headerID)
+        self.loop_bodies[headerID].update(loop_body)             
             
-    def _findExits (self):
-        for headerID in self.__headervertices.keys():
-            self.__loopExits[headerID] = {}
-            for vertexID in self.__loopBodies[headerID]:
+    def find_loop_exits(self):
+        for headerID in self.abstract_vertices.keys():
+            for vertexID in self.loop_bodies[headerID]:
                 v = self.__directedg.getVertex(vertexID)
-                for succID in v.getSuccessorIDs():
-                    if succID not in self.__loopBodies[headerID]:
-                        if headerID != vertexID and self.isLoopHeader(vertexID):
-                            if succID not in self.__loopBodies[vertexID]:
-                                self.__loopExits[headerID][vertexID] = []
-                                self.__loopExits[headerID][vertexID].append(succID)
+                for succID in v.successors.keys():
+                    if succID not in self.loop_bodies[headerID]:
+                        if headerID != vertexID and self.is_loop_header(vertexID):
+                            if succID not in self.loop_bodies[vertexID]:
+                                self.loop_exit_edges[headerID].add((vertexID, succID))
                         else:
-                            self.__loopExits[headerID][vertexID] = []
-                            self.__loopExits[headerID][vertexID].append(succID)
-            debug.debug_message("Exits of %s = %s" % (headerID, self.__loopExits[headerID].keys()), 15)
-            
-    def __str__ (self):
-        string = "*" * 20 + " LNT Output " + "*" * 20 + "\n"
-        for v in self.vertices.values():
-            string += v.__str__()
-        return string
+                            self.loop_exit_edges[headerID].add((vertexID, succID))
+                            
+    def find_loop_entries(self):
+        for headerID in self.abstract_vertices.keys():
+            v = self.__directedg.getVertex(headerID)
+            for predID in v.predecessors.keys():
+                if predID not in self.loop_bodies[headerID]:
+                    self.loop_entry_edges[headerID].add((predID, headerID))
     
-    def isLoopHeader (self, vertexID):
-        return vertexID in self.__headervertices.keys()
+    def get_header_vertices(self):
+        for abstractID in self.abstract_vertices.values():
+            yield self.getVertex(abstractID)
     
-    def getInternalHeaderVertex (self, vertexID):
-        v = self.getVertex(vertexID)
-        assert isinstance(v, vertices.HeaderVertex), "Vertex %s of LNT is not an internal header vertex" % vertexID
-        return v
+    def is_loop_header(self, vertexID):
+        return vertexID in self.abstract_vertices.keys()
     
-    def isSelfLoopHeader (self, vertexID):
-        return vertexID in self.__selfLoopHeaders
-        
-    def getHeaderIDs (self):
-        return self.__headervertices.keys()
-    
-    def getNumberOfHeaders (self):
-        return len(self.__headervertices.keys())
-    
-    def getNumberOfSelfLoopHeaders (self):
-        return len(self.__selfLoopHeaders)
-    
-    def getSelfLoopHeaderIDs (self):
-        return self.__selfLoopHeaders
-    
-    def isLoopTail (self, vertexID):
-        for headerID, tails in self.__loopTails.iteritems():
-            if vertexID in tails:
+    def is_loop_tail(self, vertexID):
+        for headerID in self.abstract_vertices.keys():
+            if vertexID in self.get_loop_tails(headerID):
                 return True
         return False
     
-    def getLoopTails (self, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopTails[headerID]
+    def get_loop_tails(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return [edge[0] for edge in self.loop_back_edges[headerID]]
     
-    def numberOfLoopTails (self, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return len(self.__loopTails[headerID])
+    def get_loop_back_edges(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.loop_back_edges[headerID]
     
-    def getLoopExitSources (self, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopExits[headerID].keys()
+    def get_loop_exit_edges(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.loop_exit_edges[headerID]
     
-    def getLoopExitDestinations (self, headerID, exitID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        assert exitID in self.__loopExits[headerID].keys(), "Vertex %s is not an exit of loop with header %d" % (exitID, headerID)
-        return self.__loopExits[headerID][exitID]
+    def get_loop_exit_sources(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return [edge[0] for edge in self.loop_exit_edges[headerID]]
     
-    def isLoopExitEdge (self, predID, succID):
-        for headerID in self.__headervertices:
-            if self.isLoopExitOfLoop(predID, headerID):
-                if succID in self.__loopExits[headerID][predID]:
-                    return headerID
+    def get_loop_exit_destinations(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return [edge[1] for edge in self.loop_exit_edges[headerID]]
+    
+    def is_loop_exit_source_for_header(self, headerID, vertexID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return vertexID in [edge[0] for edge in self.loop_exit_edges[headerID]]
+    
+    def is_loop_exit_source(self, vertexID):
+        for headerID in self.abstract_vertices.keys():
+            if self.is_loop_exit_source_for_header(headerID, vertexID):
+                return headerID
         return None
     
-    def getLoopBody (self, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return self.__loopBodies[headerID]
+    def is_loop_exit_destination_for_header(self, headerID, vertexID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return vertexID in [edge[1] for edge in self.loop_exit_edges[headerID]]
     
-    def isLoopBackEdge (self, sourceID, destinationID):
-        if destinationID not in self.__headervertices.keys():
-            return False
-        else:
-            return sourceID in self.__loopTails[destinationID]
-        
-    def isLoopExitOfLoop (self, vertexID, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return vertexID in self.__loopExits[headerID]
+    def is_loop_exit_destination(self, vertexID):
+        for headerID in self.abstract_vertices.keys():
+            if self.is_loop_exit_destination_for_header(headerID, vertexID):
+                return headerID
+        return None
     
-    def isLoopExit (self, vertexID):
-        for headerID in self.__headervertices:
-            if self.isLoopExitOfLoop(vertexID, headerID):
+    def get_loop_entry_edges(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return self.loop_entry_edges[headerID]
+    
+    def is_loop_entry_edge(self, predID, succID):
+        for headerID in self.abstract_vertices.keys():
+            if (predID, succID) in self.loop_entry_edges[headerID]:
+                return headerID
+        return None
+    
+    def is_loop_exit_edge_for_header(self, headerID, predID, succID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return (predID, succID) in self.loop_exit_edges[headerID]
+    
+    def is_loop_exit_edge(self, predID, succID):
+        for headerID in self.abstract_vertices.keys():
+            if (predID, succID) in self.loop_exit_edges[headerID]:
+                return headerID
+        return None
+    
+    def is_loop_back_edge(self, predID, succID):
+        for headerID in self.abstract_vertices.keys():
+            if (predID, succID) in self.loop_back_edges[headerID]:
                 return True
         return False
     
-    def isDoWhileLoop (self, headerID):
-        assert headerID in self.__headervertices.keys(), "Vertex %s is not a loop header" % headerID
-        return set(self.__loopTails[headerID]) == set(self.__loopExits[headerID])
+    def is_loop_back_edge_for_header(self, headerID, predID, succID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        return (predID, succID) in self.loop_back_edges[headerID]
     
-    def isNested (self, left, right):
+    def is_do_while_loop(self, headerID):
+        assert headerID in self.abstract_vertices.keys(), "Vertex %s is not a loop header" % headerID
+        exit_sources = set(self.get_loop_exit_sources(headerID))
+        tails        = set(self.get_loop_tails(headerID))
+        return exit_sources.issubset(tails)
+    
+    def is_nested(self, left, right):
         return self.isProperAncestor(right, left)
     
-    def induceSubgraph (self, headerv):
-        assert isinstance(headerv, vertices.HeaderVertex), "To induce the acyclic portion of a loop body, you must pass an internal vertex of the LNT."
-        headerID     = headerv.getHeaderID()
-        inducedCFG   = CFG()
-        vertices     = set([])
-        edges        = set([])
-        bodyvertices = set([])
-        bodyedges    = set([])
-        worklist     = []
-        bodyvertices.add(headerID)
-        worklist.extend(self.getLoopTails(headerID))
-        while worklist:
-            vertexID = worklist.pop()
-            vertices.add(vertexID)
-            if not inducedCFG.hasVertex(vertexID):
-                originalv = self.__directedg.getVertex(vertexID)
-                for predID in originalv.getPredecessorIDs():
-                    treePredv    = self.getVertex(predID)
-                    headerPredv  = self.getVertex(treePredv.getParentID())
-                    predHeaderID = headerPredv.getHeaderID()
-                    if not self.__dfs.isDFSBackedge(predID, vertexID):
-                        if predHeaderID == headerID:
-                            worklist.append(predID)
-                            bodyvertices.add(predID)
-                            edges.add((predID, vertexID))
-                            bodyedges.add((predID, vertexID))
-                        elif self.isNested(headerPredv.vertexID, headerv.vertexID):
-                            worklist.append(predHeaderID)     
-                            vertices.add(predID)      
-                            if predHeaderID != predID:         
-                                edges.add((predHeaderID, predID))
-                            edges.add((predID, vertexID))
-                            bodyedges.add((predID, vertexID))
-        
-        # Add vertices to induced subgraph
-        for vertexID in vertices:
-            bb = vertices.BasicBlock(vertexID)
-            inducedCFG.addVertex(bb)
-        # Add edges to induced subgraph
-        for (predID, succID) in edges:
-            inducedCFG.addEdge(predID, succID)
-        # Ensure the induced subgraph has a single exit point
-        exits = []
-        for v in inducedCFG:
-            if v.numberOfSuccessors() == 0:
-                exits.append(v)
-        assert exits, "No exits found in header region %d" % headerID
-        if len(exits) > 1:
-            # Add a dummy exit vertex to induced subgraph
-            exitID = inducedCFG.getNextVertexID()
-            bb = vertices.BasicBlock(exitID)
-            inducedCFG.addVertex(bb)
-            bb.setDummy()
-            for v in exits:
-                inducedCFG.addEdge(v.vertexID, exitID)
-            # Set exit vertex of induced subgraph
-            inducedCFG.setExitID(exitID)
+    def add_edge_vertices_to_enhanced_CFG(self, headerv, enhanced_CFG, frontier_vertices):
+        worklist = []
+        analysed = set()
+        # Start work list with vertices on the frontier of the analysis
+        for vertexID in frontier_vertices:
+            v = self.__directedg.getVertex(vertexID)
+            if v not in worklist:
+                worklist.append(v)
+        # Work backwards through flow graph until the header is reached, adding edges found along the way
+        while worklist:                        
+            v = worklist.pop()
+            if v.vertexID not in analysed:
+                analysed.add(v.vertexID)
+                for predID in v.predecessors.keys():
+                    predv = self.__directedg.getVertex(predID)
+                    if not self.__dfs.isDFSBackedge(predID, v.vertexID):
+                        pred_headerv = self.getVertex(self.getVertex(predID).parentID)
+                        if pred_headerv.headerID == headerv.headerID:
+                            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+                            new_edgev     = vertices.CFGEdge(edge_vertexID, predID, v.vertexID)
+                            enhanced_CFG.addVertex(new_edgev)
+                            worklist.append(predv)
+                        elif self.is_nested(pred_headerv.vertexID, headerv.vertexID):
+                            worklist.append(self.__directedg.getVertex(pred_headerv.headerID))
+        return analysed 
+                            
+    def add_edge_vertices_for_loop_tails(self, headerv, enhanced_CFG):
+        # Add edge vertices to model loop-back edges
+        for sourceID, destinationID in self.loop_back_edges[headerv.headerID]:
+            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+            new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+            enhanced_CFG.addVertex(new_edgev) 
+            
+    def add_edge_vertices_for_loop_exits(self, headerv, enhanced_CFG):
+        # Add edge vertices to model loop-exit edges out of this loop
+        for sourceID, destinationID in self.loop_exit_edges[headerv.headerID]:
+            edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+            new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+            enhanced_CFG.addVertex(new_edgev)
+            
+    def add_edge_vertices_for_inner_loop_exits(self, headerv, enhanced_CFG, analysed_vertices):
+        # Add edge vertices to model loop-exit edges out of inner loops
+        inner_loop_exit_edges = {}
+        for succID in headerv.successors.keys():
+            succv = self.getVertex(succID)
+            if isinstance(succv, vertices.HeaderVertex):
+                if succv.headerID in analysed_vertices:
+                    for sourceID, destinationID in self.loop_exit_edges[succv.headerID]:
+                        edge_vertexID = enhanced_CFG.get_next_edge_vertexID()
+                        new_edgev     = vertices.CFGEdge(edge_vertexID, sourceID, destinationID)
+                        enhanced_CFG.addVertex(new_edgev)
+                        inner_loop_exit_edges[new_edgev] = succv.headerID
+        return inner_loop_exit_edges
+    
+    def add_vertices_to_enhanced_CFG(self, headerv, enhanced_CFG):
+        # Add basic blocks and abstract loop vertices 
+        for v in enhanced_CFG:
+            assert isinstance(v, vertices.CFGEdge)
+            sourceID            = v.edge[0]
+            destinationID       = v.edge[1]
+            source_headerv      = self.getVertex(self.getVertex(sourceID).parentID)
+            destination_headerv = self.getVertex(self.getVertex(destinationID).parentID)
+            if source_headerv == headerv:
+                if not enhanced_CFG.hasVertex(sourceID):
+                    enhanced_CFG.addVertex(vertices.CFGVertex(sourceID))
+            if destination_headerv == headerv:
+                if not enhanced_CFG.hasVertex(destinationID):
+                    enhanced_CFG.addVertex(vertices.CFGVertex(destinationID))
+            elif self.is_loop_header(destinationID):
+                if not enhanced_CFG.hasVertex(destination_headerv.vertexID):
+                    enhanced_CFG.addVertex(vertices.HeaderVertex(destination_headerv.vertexID, destination_headerv.headerID))
+
+    def add_edges_to_enhanced_CFG(self, headerv, enhanced_CFG, inner_loop_exit_edges):
+        # Link edges
+        for v in enhanced_CFG:
+            if isinstance(v, vertices.CFGEdge):
+                sourceID      = v.edge[0]
+                destinationID = v.edge[1] 
+                if self.is_loop_exit_edge(sourceID, destinationID):
+                    if self.is_loop_exit_edge_for_header(headerv.headerID, sourceID, destinationID):
+                        # Loop-exit edge of this loop
+                        enhanced_CFG.addEdge(sourceID, v.vertexID)
+                    else:
+                        # Loop-exit edge of inner loop  
+                        inner_headerID = inner_loop_exit_edges[v]   
+                        inner_headerv  = self.getVertex(self.getVertex(inner_headerID).parentID)                       
+                        enhanced_CFG.addEdge(inner_headerv.vertexID, v.vertexID)
+                        enhanced_CFG.addEdge(v.vertexID, destinationID)
+                elif self.is_loop_entry_edge(sourceID, destinationID):
+                    inner_headerv = self.getVertex(self.getVertex(destinationID).parentID)
+                    enhanced_CFG.addEdge(sourceID, v.vertexID)
+                    enhanced_CFG.addEdge(v.vertexID, inner_headerv.vertexID)
+                else:
+                    enhanced_CFG.addEdge(sourceID, v.vertexID)
+                    if not self.is_loop_back_edge_for_header(headerv.headerID, sourceID, destinationID):
+                        enhanced_CFG.addEdge(v.vertexID, destinationID)
+
+    def set_entry_and_exit_in_enhanced_CFG(self, headerv, enhanced_CFG):
+        # Set entry vertex
+        enhanced_CFG.entryID = headerv.headerID
+        # Set exit vertex
+        exit_candidates = []
+        for v in enhanced_CFG:
+            if v.number_of_successors() == 0:
+                exit_candidates.append(v)      
+        if headerv.vertexID == self.rootID:
+            assert len(exit_candidates) == 1
+            enhanced_CFG.exitID = exit_candidates[0].vertexID
         else:
-            inducedCFG.setExitID(exits[0].vertexID)
-        # Set entry vertex of induced subgraph
-        inducedCFG.setEntryID(headerv.getHeaderID())
-        return inducedCFG, bodyvertices, bodyedges
+            assert len(exit_candidates) > 0
+            if len(exit_candidates) == 1:
+                enhanced_CFG.exitID = exit_candidates[0].vertexID
+            else:
+                exitv       = vertices.CFGVertex(enhanced_CFG.get_next_vertexID())
+                exitv.dummy = True
+                enhanced_CFG.addVertex(exitv)
+                enhanced_CFG.exitID = exitv.vertexID
+                for v in exit_candidates:
+                    enhanced_CFG.addEdge(v.vertexID, exitv.vertexID)
+
+    def induce_subgraph_with_exits_only(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = EnhancedCFG()
+        analysed_vertices = self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_exit_sources(headerv.headerID))
+        self.add_edge_vertices_for_loop_exits(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG, analysed_vertices)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
+        return enhanced_CFG
+    
+    def induce_subgraph_with_tails_only(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = EnhancedCFG()
+        analysed_vertices = self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_tails(headerv.headerID))
+        self.add_edge_vertices_for_loop_tails(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG, analysed_vertices)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
+        return enhanced_CFG
+              
+    def induce_subgraph_with_tails_and_exits(self, headerv):
+        assert isinstance(headerv, vertices.HeaderVertex), "To induce a region of a loop, you must pass an internal vertex of the LNT"
+        enhanced_CFG = EnhancedCFG()
+        analysed_vertices = self.add_edge_vertices_to_enhanced_CFG(headerv, enhanced_CFG, self.get_loop_tails(headerv.headerID))
+        self.add_edge_vertices_for_loop_tails(headerv, enhanced_CFG)
+        self.add_edge_vertices_for_loop_exits(headerv, enhanced_CFG)
+        inner_loop_exit_edges = self.add_edge_vertices_for_inner_loop_exits(headerv, enhanced_CFG, analysed_vertices)
+        self.add_vertices_to_enhanced_CFG(headerv, enhanced_CFG)
+        self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
+        self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
+        return enhanced_CFG
     

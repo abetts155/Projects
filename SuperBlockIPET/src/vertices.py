@@ -3,7 +3,7 @@ import collections
 
 dummyID = 0
 
-class Vertex ():
+class Vertex:
     def __init__ (self, vertexID):
         self.vertexID = vertexID
         self.predecessors = {}

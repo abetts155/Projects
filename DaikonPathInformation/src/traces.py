@@ -6,6 +6,7 @@ import config
 import random
 import os
 import shlex
+import gzip
 
 newTrace = "=>"
 endTrace = "<="
@@ -98,9 +99,8 @@ class TraceInformation:
         self._executionCountsThisRun = {}
         self._relativeExecutionCountsThisRun = {}
         for cfg in self._program.getcfgs():
-            functionName = cfg.getName()
-            pathg        = self._program.getPathInfoGraph(functionName)
-            lnt          = self._program.getLNT(functionName)
+            pathg        = self._program.getPathInfoGraph(cfg.name)
+            lnt          = self._program.getLNT(cfg.name)
             self._executionCountsThisRun[pathg] = {}
             self._relativeExecutionCountsThisRun[pathg] = {}
             for v in pathg:
@@ -529,7 +529,6 @@ class Gem5Parser (TraceInformation):
         debug.debug_message("End address of root function '%s' is %s" % (rootv.getName(), hex(self.__lastAddr)), 1)
         
     def __parse (self, traceFiles):
-        import gzip
         runID = 0
         for filename in traceFiles:
             parsing = False 

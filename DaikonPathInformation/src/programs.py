@@ -7,10 +7,10 @@ import copy
     
 class Program():
     def __init__(self):
-        self.__callg        = directed_graphs.CallGraph()
+        self.callg          = directed_graphs.CallGraph()
         self.__contextg     = None
         self.__archivedCFGS = {}
-        self.__cfgs         = {}
+        self.cfgs         = {}
         self.__LNTs         = {}
         self.__pathgs       = {}
         self.__bbIDToCFG    = {}
@@ -21,8 +21,8 @@ class Program():
         totalDependencies    = 0
         totalNever           = 0
         totalAlways          = 0        
-        for functionName, cfg in self.__cfgs.iteritems():
-            pathg                = self.getPathInfoGraph(functionName)
+        for function_name, cfg in self.cfgs.iteritems():
+            pathg                = self.getPathInfoGraph(function_name)
             mutualExclusionPairs = len(pathg.mutualExclusionPairs())
             mutualInclusionPairs = len(pathg.mutualInclusionPairs())
             dependencies         = len(pathg.executionDependencies())
@@ -33,7 +33,7 @@ class Program():
             totalDependencies    += dependencies
             totalNever           += neverExecute
             totalAlways          += alwaysExecute
-            debug.verbose_message("In %s..." % functionName, __name__)
+            debug.verbose_message("In %s..." % function_name, __name__)
             debug.verbose_message("...#CFG edges              = %d" % cfg.numOfedges(), __name__)
             debug.verbose_message("...#monitored              = %d" % pathg.numOfvertices(), __name__)
             debug.verbose_message("...#mutual exclusion pairs = %d" % mutualExclusionPairs, __name__)
@@ -50,83 +50,80 @@ class Program():
     def generateAllUDrawFiles (self, suffix=""):
         if suffix:
             suffix = '.' + suffix 
-        udraw.makeUdrawFile(self.__callg, "callg%s" % suffix)
+        udraw.makeUdrawFile(self.callg, "callg%s" % suffix)
         udraw.makeUdrawFile(self.getContextGraph(), "contextg%s" % suffix)
-        for functionName, cfg in self.__cfgs.iteritems():
-            udraw.makeUdrawFile(cfg, "%s.cfg%s" % (functionName, suffix))
-            udraw.makeUdrawFile(self.getPathInfoGraph(functionName), "%s.pathg%s" % (functionName, suffix))
-            udraw.makeUdrawFile(self.getLNT(functionName), "%s.lnt%s" % (functionName, suffix))
-            pathg = self.getPathInfoGraph(functionName)
-            udraw.makeUdrawFile(pathg, "%s.pathg%s" % (functionName, suffix))
-            udraw.makeUdrawFile(pathg.getEnhancedCFG(), "%s.enhancedCFG%s" % (functionName, suffix))
-        
-    def getCallGraph (self):
-        return self.__callg
+        for function_name, cfg in self.cfgs.iteritems():
+            udraw.makeUdrawFile(cfg, "%s.cfg%s" % (function_name, suffix))
+            udraw.makeUdrawFile(self.getPathInfoGraph(function_name), "%s.pathg%s" % (function_name, suffix))
+            udraw.makeUdrawFile(self.getLNT(function_name), "%s.lnt%s" % (function_name, suffix))
+            pathg = self.getPathInfoGraph(function_name)
+            udraw.makeUdrawFile(pathg, "%s.pathg%s" % (function_name, suffix))
+            udraw.makeUdrawFile(pathg.getEnhancedCFG(), "%s.enhancedCFG%s" % (function_name, suffix))
 
     def getContextGraph (self):
         if not self.__contextg:
-            self.__contextg = directed_graphs.ContextGraph(self.__callg)
+            self.__contextg = directed_graphs.ContextGraph(self.callg)
         return self.__contextg
        
-    def addCFG (self, cfg, functionName):
-        assert functionName not in self.__cfgs, "Trying to add duplicate CFG for function '%s'" % functionName
-        self.__callg.addVertex(functionName)
-        self.__cfgs[functionName] = cfg
+    def addCFG (self, cfg):
+        assert cfg.name not in self.cfgs, "Trying to add duplicate CFG for function '%s'" % cfg.name
+        self.callg.addVertex(cfg.name)
+        self.cfgs[cfg.name] = cfg
         
-    def addLNT (self, lnt, functionName):
-        assert functionName not in self.__LNTs, "Trying to add duplicate LNT for function '%s'" % functionName
-        self.__LNTs[functionName] = lnt
+    def addLNT (self, lnt, function_name):
+        assert function_name not in self.__LNTs, "Trying to add duplicate LNT for function '%s'" % function_name
+        self.__LNTs[function_name] = lnt
         
-    def getCFG (self, functionName):
-        assert functionName in self.__cfgs, "Unable to find CFG for function '%s'" % functionName
-        return self.__cfgs[functionName]
+    def getCFG (self, function_name):
+        assert function_name in self.cfgs, "Unable to find CFG for function '%s'" % function_name
+        return self.cfgs[function_name]
     
-    def getPathInfoGraph (self, functionName):
-        if functionName not in self.__pathgs:
-            cfg = self.getCFG(functionName)
-            lnt = self.getLNT(functionName)
+    def getPathInfoGraph (self, function_name):
+        if function_name not in self.__pathgs:
+            cfg = self.getCFG(function_name)
+            lnt = self.getLNT(function_name)
             enhancedCFG = directed_graphs.EnhancedCFG(cfg)
-            self.__pathgs[functionName] = super_blocks.PathInformationGraph(cfg, lnt, enhancedCFG)
-        return self.__pathgs[functionName]
+            self.__pathgs[function_name] = super_blocks.PathInformationGraph(cfg, lnt, enhancedCFG)
+        return self.__pathgs[function_name]
 
-    def getLNT (self, functionName):
-        if functionName not in self.__LNTs:
-            cfg  = self.getCFG(functionName)
-            lnt  = directed_graphs.LoopNests(cfg, cfg.getEntryID())
-            self.__LNTs[functionName] = lnt
-        return self.__LNTs[functionName]
+    def getLNT (self, function_name):
+        if function_name not in self.__LNTs:
+            cfg  = self.getCFG(function_name)
+            lnt  = directed_graphs.LoopNests(cfg, cfg.get_entryID())
+            self.__LNTs[function_name] = lnt
+        return self.__LNTs[function_name]
 
     def getcfgs (self):
-        return self.__cfgs.values().__iter__()
+        return self.cfgs.values().__iter__()
     
     def getPathInformationGraphs (self):
         return self.__pathgs.values().__iter__()
     
-    def removeFunction (self, functionName):
-        if functionName in self.__cfgs:
+    def removeFunction(self, function_name):
+        if function_name in self.cfgs:
             # Archive the CFG as it is no longer needed
-            cfg = self.__cfgs[functionName]
-            self.__archivedCFGS[functionName] = cfg
-            del self.__cfgs[functionName]
-        if self.__callg.hasVertexWithName(functionName):
-            self.__callg.removeVertex(functionName)
+            cfg = self.cfgs[function_name]
+            self.__archivedCFGS[function_name] = cfg
+            del self.cfgs[function_name]
+        if self.callg.hasVertexWithName(function_name):
+            self.callg.removeVertex(function_name)
             
-    def removeProblematicFunctions (self):
-        functions = set([])
-        for functionName, cfg in self.__cfgs.iteritems():
-            exitID = cfg.getExitID()
-            if cfg.isCallSite(exitID) or cfg.getExitID() == vertices.dummyVertexID:
-                functions.add(functionName)
-        for functionName in functions:
+    def remove_problematic_functions(self):
+        functions = set()
+        for function_name, cfg in self.cfgs.iteritems():
+            callee_name = cfg.is_call_site(cfg.get_exitID())
+            if callee_name is not None or cfg.get_exitID() == vertices.dummyID:
+                functions.add(function_name)
+        for function_name in functions:
             # This check is essential as the function may have been removed in the meantime
-            if functionName in self.__cfgs:
-                cfg = self.__cfgs[functionName]
-                dfs = directed_graphs.DepthFirstSearch(self.__callg, self.__callg.getVertexWithName(functionName).vertexID)
+            if function_name in self.cfgs:
+                cfg = self.cfgs[function_name]
+                dfs = directed_graphs.DepthFirstSearch(self.callg, self.callg.getVertexWithName(function_name).vertexID)
                 for vertexID in dfs.getPostorder():
-                    callv = self.__callg.getVertex(vertexID)
+                    callv = self.callg.getVertex(vertexID)
                     for calle in callv.getPredecessoredges():
                         predID = calle.vertexID
-                        predv  = self.__callg.getVertex(predID)
+                        predv  = self.callg.getVertex(predID)
                         for callSiteID in calle.getCallSites():
                             callerName = predv.getName()
                             callerCFG  = self.getCFG(callerName)
@@ -134,19 +131,19 @@ class Program():
                     self.removeFunction(callv.getName())                    
     
     def addExitEntryBackedges (self):
-        for cfg in self.__cfgs.values():
+        for cfg in self.cfgs.values():
             cfg.addExitEntryEdge()
             udraw.makeUdrawFile(cfg, "%s.cfg" % cfg.getName())
     
     def inlineCalls (self):
         debug.verbose_message("Inlining to create single CFG", __name__)
-        rootv = self.__callg.getRootVertex()
-        dfs   = directed_graphs.DepthFirstSearch(self.__callg, rootv.vertexID)
+        rootv = self.callg.getRootVertex()
+        dfs   = directed_graphs.DepthFirstSearch(self.callg, rootv.vertexID)
         for vertexID in dfs.getPostorder():
-            succv = self.__callg.getVertex(vertexID)
+            succv = self.callg.getVertex(vertexID)
             for calle in succv.getPredecessoredges():
                 predID = calle.vertexID
-                predv  = self.__callg.getVertex(predID)
+                predv  = self.callg.getVertex(predID)
                 for callSiteID in calle.getCallSites():
                     calleeName = succv.getName()
                     calleeCFG  = self.getCFG(calleeName)
@@ -157,12 +154,12 @@ class Program():
                     callerCFG.removeCallSite(callSiteID)
                 
         for vertexID in dfs.getPostorder():
-            callv = self.__callg.getVertex(vertexID)
+            callv = self.callg.getVertex(vertexID)
             if callv != rootv:
                 self.removeFunction(callv.getName())
             else:
-                cfg = self.__cfgs[rootv.getName()]
-                cfg.addEdge(cfg.getExitID(), cfg.getEntryID())
+                cfg = self.cfgs[rootv.getName()]
+                cfg.addEdge(cfg.get_exitID(), cfg.get_entryID())
         # Reset the data structures so that they are subsequently rebuilt
         self.__contextg       = None
         self.__LNTs           = {}
@@ -189,11 +186,11 @@ class Program():
         for v in calleeCFG:
             predID = v.vertexID
             for succID in v.getSuccessorIDs():
-                if predID != calleeCFG.getExitID() and succID != calleeCFG.getEntryID():
+                if predID != calleeCFG.get_exitID() and succID != calleeCFG.get_entryID():
                     newPredID = oldIDToNewID[predID]
                     newSuccID = oldIDToNewID[succID]
                     callerCFG.addEdge(newPredID, newSuccID)
-        return oldIDToNewID[calleeCFG.getEntryID()], oldIDToNewID[calleeCFG.getExitID()]
+        return oldIDToNewID[calleeCFG.get_entryID()], oldIDToNewID[calleeCFG.get_exitID()]
     
     def __linkDuplicate (self, callerCFG, callSitev, returnv, newEntryID, newExitID):    
         callerCFG.addEdge(callSitev.vertexID, newEntryID)

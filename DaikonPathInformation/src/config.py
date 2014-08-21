@@ -1,5 +1,9 @@
 
 class Arguments:
-    """Arguments from both the command line and the configuration file"""
-    basename = None
-    basepath = None
+    """Globals and arguments passed on the command line"""
+    
+    m5_trace_directory = "m5out"
+    GCC                = "arm-linux-gnueabi-gcc"
+    objdump            = "arm-linux-gnueabi-objdump"
+    basename           = None
+    basepath           = None

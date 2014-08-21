@@ -1,6 +1,6 @@
 import sys
 
-class Edge ():    
+class Edge:    
     dummyEdgeID = -1
     
     def __init__ (self, vertexID, edgeID=None):        
@@ -10,19 +10,10 @@ class Edge ():
         else:
             self.edgeID = edgeID
     
-class CallGraphEdge (Edge):
+class CallGraphEdge(Edge):
     def __init__ (self, vertexID):
         Edge.__init__(self, vertexID)
-        self.__callSites = set([])
-    
-    def addCallSite (self, vertexID):
-        self.__callSites.add(vertexID)
-        
-    def getCallSites (self):
-        return self.__callSites
-    
-    def numberOfCallSites (self):
-        return len(self.__callSites)
+        self.call_sites = set()
     
 class PathInformationEdgeType:
     INCLUSION       = 0
