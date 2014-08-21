@@ -64,7 +64,7 @@ def second_pass(filename, program):
             if line.startswith(cfg_lexeme):
                 names = name_regex.findall(line)
                 assert len(names) == 2, "Too many names found '%s'" % ' '.join(names)
-                cfg = program.getCFG(names[1])
+                cfg = program.cfgs[names[1]]
             elif line.startswith(basic_block_lexeme):
                 assert cfg, "Found basic block but current CFG is null"
                 ids = int_regex.findall(line) 
@@ -105,7 +105,7 @@ def read_file(filename):
     program = first_pass(filename)
     second_pass(filename, program)
     program.callg.find_and_set_root()
-    for cfg in program.getcfgs():
+    for cfg in program.cfgs.values():
         cfg.add_predecessor_edges()
         cfg.set_entry_and_exit()
         cfg.set_edgeIDs()

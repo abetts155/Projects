@@ -1,12 +1,10 @@
-import sys
+dummyID = 0
 
-class Edge:    
-    dummyEdgeID = -1
-    
+class Edge ():    
     def __init__ (self, vertexID, edgeID=None):        
         self.vertexID = vertexID
         if edgeID is None:
-            self.edgeID = Edge.dummyEdgeID
+            self.edgeID = dummyID
         else:
             self.edgeID = edgeID
     

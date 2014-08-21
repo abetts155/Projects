@@ -1,8 +1,8 @@
 import vertices
 import debug
-import copy
-import itertools
+import udraw
 import utils
+import copy
 
 class DirectedGraph:        
     def __init__ (self):
@@ -190,11 +190,17 @@ class CFG(FlowGraph):
         self.address_to_vertex = {}
         self.call_sites        = {}
         self.lnt               = None
+        self.superg            = None
         
     def get_LNT(self):
         if self.lnt is None:
             self.lnt = LoopNests(self, self.entryID)
         return self.lnt
+    
+    def get_super_block_cfg(self):
+        if self.superg is None:
+            self.superg = SuperBlockCFG(self)
+        return self.superg
         
     def set_entry_and_exit(self):
         without_predecessors = []
@@ -310,7 +316,7 @@ class CallGraph (DirectedGraph):
         predv.add_successor(succv.vertexID, call_siteID)            
         succv.add_predecessor(predv.vertexID, call_siteID)
 
-class ContextGraph (DirectedGraph):    
+class ContextGraph(DirectedGraph):    
     def __init__ (self, callg):
         DirectedGraph.__init__(self)
         self.function_to_contexts                = {}
@@ -437,12 +443,7 @@ class Tree(DirectedGraph):
         for v in self:
             if v.number_of_predecessors() == 0:
                 without_predecessors.add(v)
-        assert len(without_predecessors) == 1  
-        
-    def get_LCA(self):
-        if self.lca is None:
-            self.lca = LeastCommonAncestor(self)
-        return self.lca
+        assert len(without_predecessors) == 1
         
 class DepthFirstSearch (Tree):
     Colors = utils.enum('WHITE', 'BLACK', 'GRAY')
@@ -563,93 +564,6 @@ class Dominators(Tree):
             if v.vertexID != self.rootID:
                 assert self.immediate_dominator[v.vertexID] != vertices.dummyID, "Immediate dominator of %d not set" % v.vertexID
                 self.addEdge(self.immediate_dominator[v.vertexID], v.vertexID)
-    
-class CompressedDominatorTree(Tree):
-    def __init__(self, dominator_tree, lca, vertexID, frontierIDs):
-        Tree.__init__(self)
-        self.build(lca, frontierIDs)
-        self.rootID = dominator_tree.getVertex(vertexID).parentID
-        
-    def build(self, lca, query_set):
-        while len(query_set) > 1:
-            vertex_to_LCA = {}
-            for a_pair in itertools.combinations(query_set, 2):
-                lcaID = lca.query(a_pair[0], a_pair[1])
-                if a_pair[0] in vertex_to_LCA:
-                    old_lcaID = vertex_to_LCA[a_pair[0]]
-                    if lca.vertex_level[lcaID] > lca.vertex_level[old_lcaID] and old_lcaID != a_pair[0]:
-                        vertex_to_LCA[a_pair[0]] = lcaID
-                else:
-                    vertex_to_LCA[a_pair[0]] = lcaID
-                if a_pair[1] in vertex_to_LCA:
-                    old_lcaID = vertex_to_LCA[a_pair[1]]
-                    if lca.vertex_level[lcaID] > lca.vertex_level[old_lcaID] and old_lcaID != a_pair[1]:
-                        vertex_to_LCA[a_pair[1]] = lcaID
-                else:
-                    vertex_to_LCA[a_pair[1]] = lcaID
-            # Add edge links                
-            for vertexID, parentID in vertex_to_LCA.items():
-                if not self.hasVertex(vertexID):
-                    self.addVertex(vertices.TreeVertex(vertexID))                
-                if not self.hasVertex(parentID):
-                    self.addVertex(vertices.TreeVertex(parentID))
-                if parentID != vertexID:
-                    self.addEdge(parentID, vertexID)
-            # Any vertex without a predecessor goes into the query set
-            new_query_set = set()
-            for v in self:
-                if v.number_of_predecessors() == 0:
-                    new_query_set.add(v.vertexID)
-            query_set = new_query_set
-    
-class LeastCommonAncestor:
-    def __init__(self, tree):
-        self.tree           = tree
-        self.euler_tour     = {}
-        self.euler_index    = 0
-        self.level          = {}
-        self.vertex_level   = {}
-        self.representative = {}
-        self.compute()
-        
-    def compute(self):
-        self.dummy_level = 0
-        self.vertex_level[self.tree.rootID] = 0
-        self.do_search(self.tree.rootID)
-        self.dummy_level += 1
-        self.compute_representatives()
-        
-    def do_search(self, vertexID):
-        v = self.tree.getVertex(vertexID)
-        self.euler_tour[self.euler_index] = vertexID
-        self.euler_index += 1
-        for succID in v.successors.keys():
-            self.vertex_level[succID] = self.vertex_level[vertexID] + 1
-            if self.vertex_level[succID] > self.dummy_level:
-                self.dummy_level = self.vertex_level[succID]
-            self.do_search(succID)
-            self.euler_tour[self.euler_index] = vertexID
-            self.euler_index += 1
-    
-    def compute_representatives(self):
-        for index, vertexID in self.euler_tour.iteritems():
-            self.representative[vertexID] = index
-            self.level[index]             = self.vertex_level[vertexID]
-            
-    def query(self, left, right):
-        lowest_level = self.dummy_level
-        level_index  = 2 * self.tree.number_of_vertices()
-        if self.representative[left] < self.representative[right]:
-            startIndex = self.representative[left]
-            endIndex   = self.representative[right]
-        else:
-            startIndex = self.representative[right]
-            endIndex   = self.representative[left]
-        for i in range(startIndex, endIndex+1):
-            if self.level[i] < lowest_level:
-                lowest_level = self.level[i]
-                level_index  = i
-        return self.euler_tour[level_index]
     
 class LoopNests (Tree):
     def __init__(self, directedg, rootID):
@@ -998,4 +912,200 @@ class LoopNests (Tree):
         self.add_edges_to_enhanced_CFG(headerv, enhanced_CFG, inner_loop_exit_edges)
         self.set_entry_and_exit_in_enhanced_CFG(headerv, enhanced_CFG)    
         return enhanced_CFG
+
+class SuperBlockCFG(DirectedGraph):    
+    class SuperBlockSubgraph(DirectedGraph):
+        def __init__(self):
+            DirectedGraph.__init__(self)
+            self.program_point_to_superv = {}
+            self.rootv                   = None
+    
+    def __init__(self, cfg):
+        DirectedGraph.__init__(self)    
+        udraw.make_file(cfg, "%s.cfg" % cfg.name)    
+        self.name                     = cfg.name
+        self.whole_body_subgraphs     = {}
+        self.whole_body_enhanced_CFGs = {}
+        lnt                           = cfg.get_LNT()
+        udraw.make_file(lnt, "%s.lnt" % cfg.name)    
+        for the_vertices in lnt.level_by_level_iterator(True):
+            for treev in the_vertices:
+                if isinstance(treev, vertices.HeaderVertex):
+                    debug.debug_message("Analysing header %d" % treev.headerID, __name__, 1)
+                    self.whole_body_enhanced_CFGs[treev.headerID] = lnt.induce_subgraph_with_tails_and_exits(treev)
+                    udraw.make_file(self.whole_body_enhanced_CFGs[treev.headerID], "%s.header_%d.whole.enhanced_CFG" % (cfg.name, treev.headerID))                                                                                                     
+                    self.whole_body_subgraphs[treev.headerID] = self.construct_super_block_cfg(cfg, 
+                                                                                               lnt, 
+                                                                                               self.whole_body_enhanced_CFGs[treev.headerID],
+                                                                                               treev)
+    
+    def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
+        dfs                  = DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
+        predom_tree          = Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
+        enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
+        postdom_tree         = Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
+        dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
+        sccs                 = StrongComponents(dominator_graph)  
+        subgraph             = SuperBlockCFG.SuperBlockSubgraph()
+        self.add_super_blocks(lnt, enhanced_CFG, dfs, sccs, treev, subgraph)     
+        self.add_edges(lnt, enhanced_CFG, dfs, treev, subgraph)
+        return subgraph
+                        
+    def add_super_blocks(self, lnt, enhanced_CFG, dfs, sccs, headerv, subgraph):
+        for sccID in sccs.scc_vertices.keys():
+            superv                                 = vertices.SuperBlock(sccID, headerv.headerID)
+            subgraph.the_vertices[superv.vertexID] = superv
+        for vertexID in reversed(dfs.post_order):
+            program_point = enhanced_CFG.getVertex(vertexID)
+            if not program_point.dummy: 
+                sccID  = sccs.vertex_SCC[vertexID]
+                superv = subgraph.getVertex(sccID)
+                if isinstance(program_point, vertices.CFGEdge):
+                    subgraph.program_point_to_superv[program_point.edge] = superv
+                    superv.program_points.append(program_point)
+                    if lnt.is_loop_exit_edge_for_header(headerv.headerID, program_point.edge[0], program_point.edge[1]):
+                        superv.exit_edge = (program_point.edge[0], program_point.edge[1])
+                else:
+                    program_point_headerv = lnt.getVertex(lnt.getVertex(program_point.vertexID).parentID)
+                    if program_point_headerv.headerID == headerv.headerID:
+                        superv.program_points.append(program_point)
+                        superv.representative = program_point
+                        subgraph.program_point_to_superv[program_point.vertexID] = superv
+                    else:
+                        superv.program_points.append(program_point_headerv)      
+                        subgraph.program_point_to_superv[program_point_headerv.vertexID] = superv
+        for superv in subgraph:
+            if superv.representative is None:
+                # Representative basic block not yet set.
+                # Just choose the first program point instead
+                superv.representative = superv.program_points[0]
+        subgraph.rootv = subgraph.program_point_to_superv[headerv.headerID] 
+                
+    def add_edges(self, lnt, enhanced_CFG, dfs, headerv, subgraph):
+        first_program_point_to_super_block = {}
+        for superv in subgraph:
+            first_program_point_to_super_block[superv.program_points[0]] = superv
+        for vertexID in reversed(dfs.post_order):
+            program_point = enhanced_CFG.getVertex(vertexID)
+            if program_point in first_program_point_to_super_block:
+                superv = first_program_point_to_super_block[program_point]
+                if isinstance(program_point, vertices.CFGVertex) or isinstance(program_point, vertices.HeaderVertex):
+                    # The program point represents a CFG vertex or an abstract loop vertex.
+                    # Find the CFG edges incident to the CFG vertex.
+                    # Then find the super blocks containing those CFG edges
+                    basic_block = enhanced_CFG.getVertex(program_point.vertexID)
+                    for predID in basic_block.predecessors.keys():
+                        predv = enhanced_CFG.getVertex(predID)
+                        assert isinstance(predv, vertices.CFGEdge)
+                        pred_superv = subgraph.program_point_to_superv[predv.edge]
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
+                        if program_point.vertexID not in pred_superv.successor_partitions:  
+                            pred_superv.successor_partitions[program_point.vertexID] = set()
+                        pred_superv.successor_partitions[program_point.vertexID].add(superv.vertexID)   
+                else:
+                    assert isinstance(program_point, vertices.CFGEdge)
+                    # The program point represents a CFG edge.
+                    # Find the super block which contains the source of the CFG edge 
+                    # and link the super blocks
+                    basic_block_predID = program_point.edge[0]
+                    if lnt.getVertex(lnt.getVertex(basic_block_predID).parentID) == headerv:
+                        pred_superv = subgraph.program_point_to_superv[basic_block_predID] 
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
+                        assert enhanced_CFG.getVertex(basic_block_predID).number_of_successors() > 1
+                        if basic_block_predID not in pred_superv.successor_partitions:
+                            pred_superv.successor_partitions[basic_block_predID] = set()
+                        pred_superv.successor_partitions[basic_block_predID].add(superv.vertexID)
+                    else:
+                        inner_headerv = lnt.getVertex(lnt.getVertex(basic_block_predID).parentID)
+                        pred_superv   = subgraph.program_point_to_superv[inner_headerv.vertexID] 
+                        subgraph.addEdge(pred_superv.vertexID, superv.vertexID)
+                        if inner_headerv.headerID not in pred_superv.successor_partitions:
+                            pred_superv.successor_partitions[inner_headerv.headerID] = set()
+                        pred_superv.successor_partitions[inner_headerv.headerID].add(superv.vertexID)
+                        if superv.exit_edge:
+                            pred_superv.exit_edge_partitions.add(inner_headerv.headerID)
+
+class DominatorGraph (DirectedGraph):
+    def __init__ (self, predom_tree, postdom_tree):
+        DirectedGraph.__init__(self)
+        self.add_vertices(predom_tree, postdom_tree)
+        self.add_edges(predom_tree, postdom_tree)
+        
+    def add_vertices(self, predom_tree, postdom_tree):
+        for v in predom_tree:
+            assert postdom_tree.hasVertex(v.vertexID), "Vertex %d in pre-dominator tree but not in post-dominator tree" % v.vertexID
+            self.the_vertices[v.vertexID] = vertices.Vertex(v.vertexID)        
+
+    def add_edges(self, predom_tree, postdom_tree):
+        for v in predom_tree:
+            if v.vertexID != predom_tree.rootID:
+                self.addEdge(v.parentID, v.vertexID)
+        for v in postdom_tree:
+            if v.vertexID != postdom_tree.rootID: 
+                if not self.getVertex(v.vertexID).has_predecessor(v.parentID):
+                    self.addEdge(v.parentID, v.vertexID)
+
+class StrongComponents:
+    COLORS = utils.enum('WHITE', 'BLACK', 'GRAY', 'BLUE', 'RED')
+    SCCID  = 0
+    
+    def __init__(self, directedg):
+        self.directedg     = directedg
+        self.reverseg      = directedg.get_reverse_graph()
+        self.vertex_colour = {}
+        self.vertex_SCC    = {}
+        self.scc_vertices  = {}
+        self.initialise()
+        self.do_forward_visit()
+        self.do_reverse_visit()
+        
+    def initialise(self):
+        for v in self.directedg:
+            self.vertex_colour[v.vertexID] = StrongComponents.COLORS.WHITE
+            
+    def do_forward_visit(self):
+        self.vertex_list = []
+        for v in self.directedg:
+            if self.vertex_colour[v.vertexID] == StrongComponents.COLORS.WHITE:
+                self.visit1(v)
+
+    def do_reverse_visit(self):
+        for vertexID in reversed(self.vertex_list):
+            if self.vertex_colour[vertexID] == StrongComponents.COLORS.BLACK:
+                StrongComponents.SCCID += 1
+                self.scc_vertices[StrongComponents.SCCID] = set()
+                # The vertex v is from the forward directed graph.
+                # Need to get the vertex from the reverse graph instead
+                self.visit2(self.reverseg.getVertex(vertexID))
+    
+    def visit1(self, v):
+        stack = []
+        stack.append(v)
+        while stack:
+            poppedv = stack.pop()
+            if self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.WHITE:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.GRAY
+                stack.append(poppedv)
+                for succID in poppedv.successors.keys():
+                    if self.vertex_colour[succID] == StrongComponents.COLORS.WHITE:
+                        stack.append(self.directedg.getVertex(succID))
+            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.GRAY:  
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.BLACK
+                self.vertex_list.append(poppedv.vertexID)
+                
+    def visit2(self, v):
+        stack = []
+        stack.append(v)
+        while stack:
+            poppedv = stack.pop()
+            self.vertex_SCC[poppedv.vertexID] = StrongComponents.SCCID
+            self.scc_vertices[StrongComponents.SCCID].add(poppedv.vertexID)
+            if self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.BLACK:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.BLUE
+                stack.append(poppedv)
+                for succID in poppedv.successors.keys():
+                    if self.vertex_colour[succID] == StrongComponents.COLORS.BLACK:
+                        stack.append(self.reverseg.getVertex(succID))
+            elif self.vertex_colour[poppedv.vertexID] == StrongComponents.COLORS.BLUE:
+                self.vertex_colour[poppedv.vertexID] = StrongComponents.COLORS.RED  
     

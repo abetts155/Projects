@@ -3,13 +3,22 @@
 from __future__ import print_function
 
 import program_input_output
-import directed_graphs
 import debug
 import traces
 import calculations
 import config
 import argparse
 import os
+
+def count_program_points(program):
+    superg_program_points = 0
+    cfg_program_points    = 0
+    for cfg in program.cfgs.values():
+        pathg = cfg.get_super_block_cfg()
+        superg_program_points += len(pathg.getMonitoredProgramPoints())
+        cfg_program_points    += min(cfg.number_of_vertices(), cfg.number_of_edges())
+    print(config.Arguments.program, "[Super block program points = %d" % superg_program_points, "CFG program points = %d]" % cfg_program_points)
+    return program
 
 def the_command_line():
     parser = argparse.ArgumentParser(description="Compute super block cfgs")
@@ -29,15 +38,13 @@ def the_command_line():
                         help="generate uDrawGraph files",
                         default=False)
 
-    parser.add_argument("-t",
-                        "--traces",
+    parser.add_argument("--generate-traces",
                         type=int,
-                        help="generate dummy traces for the given program",
+                        help="generate traces for the given program",
                         default=0,
                         metavar="<INT>")
     
-    parser.add_argument("-T",
-                        dest="tracefile",
+    parser.add_argument("--parse-trace",
                         help="parse this trace file",
                         metavar="<FILE>")
     
@@ -49,35 +56,25 @@ def the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
-    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
+    config.Arguments.basename = os.path.splitext(os.path.basename(config.Arguments.program_file))[0]
+    config.Arguments.basepath = os.path.abspath(os.path.dirname(config.Arguments.program_file))
     
-    assert config.Arguments.program.endswith('.txt'), "Please pass a program file with a '%s' suffix" % ('.txt')
+    config.Arguments.program_file = os.path.abspath(config.Arguments.program_file)
+    if not config.Arguments.program_file.endswith(".txt"):
+        debug.exit_message("Please pass a program file with a '%s' suffix" % ".txt")
+        
+    if config.Arguments.parse_trace is not None:
+        config.Arguments.parse_trace = os.path.abspath(config.Arguments.parse_trace)
+        assert os.path.exists(config.Arguments.parse_trace), "Trace file '%s' does not exist" % config.Arguments.parse_trace
+        assert os.path.getmtime(config.Arguments.program_file) <= os.path.getmtime(config.Arguments.parse_trace), "Program file modified AFTER trace file generation"
         
 if __name__ == "__main__":
     the_command_line()
-    program  = program_input_output.read_file(config.Arguments.program)
-    totalSuperBlockProgramPoints = 0
-    totalNaiveProgramPoints      = 0
-    for cfg in program.getcfgs():
-        functionName = cfg.getName()
-        lnt = directed_graphs.LoopNests(cfg, cfg.getEntryID())
-        program.addLNT(lnt, functionName)
-        pathg = program.getPathInfoGraph(functionName)
-        totalSuperBlockProgramPoints += len(pathg.getMonitoredProgramPoints())
-        totalNaiveProgramPoints += min(cfg.numOfvertices(), cfg.numOfedges())
-    print(config.Arguments.program, "[Super block program points = %d" % totalSuperBlockProgramPoints, "CFG program points = %d]" % totalNaiveProgramPoints)
-    program.generateAllUDrawFiles()
-    if config.Arguments.traces:
-        debug.verbose_message("Generating dummy traces", __name__)
+    program = program_input_output.read_file(config.Arguments.program_file)
+    count_program_points(program)
+    if config.Arguments.generate_traces > 0:
         traces.Generatetraces(program, config.Arguments.traces)
-    elif config.Arguments.tracefile:
-        config.Arguments.tracefile = os.path.abspath(config.Arguments.tracefile)
-        assert os.path.exists(config.Arguments.tracefile), "Trace file '%s' does not exist" % config.Arguments.tracefile
-        assert os.path.getmtime(config.Arguments.program) <= os.path.getmtime(config.Arguments.tracefile), "Program file modified AFTER trace file generation"
+    elif config.Arguments.parse_trace:
         data = traces.Parsetraces(config.Arguments.tracefile, program)
         program.output()
-        program.generateAllUDrawFiles()
         calculations.WCETCalculation(program, data)
-        
-        

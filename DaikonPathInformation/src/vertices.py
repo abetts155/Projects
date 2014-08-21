@@ -1,5 +1,6 @@
 import edges
 import shlex
+import collections
 
 dummyID = 0
 
@@ -174,87 +175,16 @@ class CallGraphVertex (Vertex):
     def __str__ (self):
         return "%s\n%s" % (self.name, Vertex.__str__(self))
     
-class SuperBlock (Vertex):
-    def __init__ (self, vertexID):
+class SuperBlock(Vertex):
+    def __init__(self, vertexID, headerID):
         Vertex.__init__(self, vertexID)
-        self.__unstructuredMerge = False
-        self.__basicBlocks       = set([])
-        self.__edges             = set([])
-        self.__loopHeader        = None
-        self.__repID             = None
-        self.__dummy             = False
+        self.headerID             = headerID
+        self.program_points       = []
+        self.representative       = None
+        self.successor_partitions = collections.OrderedDict()
+        self.exit_edge            = False
     
-    def setLoopHeader (self, headerID):
-        self.__loopHeader = headerID
-        
-    def getLoopHeader (self):
-        return self.__loopHeader
-    
-    def setUnstructuredMerge (self):
-        self.__unstructuredMerge = True
-        
-    def isUnstructuredMerge (self):
-        return self.__unstructuredMerge
-    
-    def addBasicBlock (self, vertexID):
-        self.__basicBlocks.add(vertexID)
-        
-    def addBasicBlocks (self, basicBlocks):
-        self.__basicBlocks.update(basicBlocks)
-        
-    def addEdge (self, edge):
-        self.__edges.add(edge)
-        
-    def containsBasicBlock (self, vertexID):
-        return vertexID in self.__basicBlocks
-    
-    def numberOfBasicBlocks (self):
-        return len(self.__basicBlocks)
-    
-    def numberOfedges(self):
-        return len(self.__edges)
-    
-    def getBasicBlockIDs (self):
-        return self.__basicBlocks
-    
-    def getedges (self):
-        return self.__edges
-    
-    def setRepresentativeID (self, vertexID):
-        assert vertexID in self.__basicBlocks
-        self.__repID = vertexID
-        
-    def hasRepresentativeID (self):
-        return self.__repID
-    
-    def getRepresentativeID (self):
-        assert self.__repID, "Representative ID of super block %d not set" % self._vertexID
-        return self.__repID
-    
-    def setDummy (self):
-        self.__dummy = True
-        
-    def isDummy (self):
-        return self.__dummy
-    
-    def getBranchPartitions (self):
-        partitions = {}
-        for succe in self._successors.values():
-            branchID = succe.getBasicBlockID()
-            if branchID not in partitions:
-                partitions[branchID] = set([])
-            partitions[branchID].add(succe)
-        return partitions
-    
-    def __str__ (self):
-        string =  "Vertex ID    = %d\n" % self._vertexID
-        string += "Basic blocks = {%s}\n" % ', '.join(str(id) for id in self.__basicBlocks)
-        string += "edges        = {%s}\n" % ', '.join(str(edge) for edge in self.__edges)
-        string += "pred         = {%s}\n" % ', '.join(str(predID) for predID in self._predecessors.keys())
-        string += "succ         = {%s}\n" % ', '.join(str(succID) for succID in self._successors.keys())
-        return string
-    
-class PathInformationVertex ():
+class PathInformationVertex:
     def __init__ (self, vertexID, programPoint, headerID):
         self.vertexID = vertexID
         self._programPoint = programPoint
