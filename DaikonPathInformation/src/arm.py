@@ -74,8 +74,8 @@ class Disassembler:
         self.create_basic_blocks()
         self.add_edges()
         self.add_jump_table_edges()
-        self.program.callg.rootID = self.program.callg.getVertexWithName(root_function).vertexID
-        for cfg in self.program.getcfgs():
+        self.program.callg.rootID = self.program.callg.get_vertex_with_name(root_function).vertexID
+        for cfg in self.program.cfgs.values():
             cfg.set_entry_and_exit()
         self.program.remove_problematic_functions()
         
@@ -213,7 +213,7 @@ class Disassembler:
                     debug.debug_message("Instruction @ %s is a leader" % hex(instruction.address), __name__, 10)
                     bb       = vertices.BasicBlock(self.next_vertexID, function_name)
                     cfg.addVertex(bb)
-                    self.newVertexID += 1
+                    self.next_vertexID += 1
                 assert bb, "Basic block is currently null"
                 bb.instructions.append(instruction)
                 self.instruction_to_basic_block[instruction] = bb
@@ -223,7 +223,7 @@ class Disassembler:
     def add_edges(self):
         for function_name in self.functions:
             debug.debug_message("Adding edges in '%s'" % function_name, __name__, 10)
-            cfg   = self.program.getCFG(function_name)
+            cfg   = self.program.cfgs[function_name]
             predID = vertices.dummyID
             for instruction in self.function_to_instructions[function_name]:
                 v = self.instruction_to_basic_block[instruction]
@@ -237,19 +237,19 @@ class Disassembler:
                         self.program.callg.addEdge(function_name, callee_name, v.vertexID)
                         predID = v.vertexID
                     elif instruction.the_instruction[1] in InstructionSet.UnconditionalJumps:
-                        jumpAddress       = int(instruction.the_instruction[2], 16)
-                        if jumpAddress >= self.function_to_start_address[function_name] and jumpAddress <= self.function_to_last_address[function_name]:
-                            succv = cfg.getVertexWithAddress(jumpAddress)
+                        jump_address = int(instruction.the_instruction[2], 16)
+                        if jump_address >= self.function_to_start_address[function_name] and jump_address <= self.function_to_last_address[function_name]:
+                            succv = cfg.get_basic_block_with_address(jump_address)
                             cfg.addEdge(v.vertexID, succv.vertexID)
                         else:
-                            callee_name = self.start_address_to_function[jumpAddress]
+                            callee_name = self.start_address_to_function[jump_address]
                             cfg.add_call_site(v.vertexID, callee_name)
                             self.program.callg.addEdge(function_name, callee_name, v.vertexID)
                             predID = v.vertexID
                     elif instruction.the_instruction[1] in InstructionSet.Branches:
-                        branchAddress     = int(instruction.the_instruction[2], 16)
-                        if branchAddress >= self.function_to_start_address[function_name] and branchAddress <= self.function_to_last_address[function_name]:
-                            succv = cfg.getVertexWithAddress(branchAddress)
+                        branch_address = int(instruction.the_instruction[2], 16)
+                        if branch_address >= self.function_to_start_address[function_name] and branch_address <= self.function_to_last_address[function_name]:
+                            succv = cfg.get_basic_block_with_address(branch_address)
                             cfg.addEdge(v.vertexID, succv.vertexID)
                         else:
                             callee_name = self.get_callee_name(instruction.the_instruction)
@@ -264,7 +264,7 @@ class Disassembler:
     def add_jump_table_edges(self):
         for function_name in self.functions:
             debug.debug_message("Adding jump table edges in '%s'" % function_name, __name__, 10)
-            cfg = self.program.getCFG(function_name)
+            cfg = self.program.cfgs[function_name]
             i    = 0
             hasJumpTablePredecessor = set()
             for instr in self.function_to_instructions[function_name]:
@@ -277,7 +277,7 @@ class Disassembler:
                     if instr.the_instruction[0] == InstructionSet.LoadInstructions[3] \
                     or instr.the_instruction[0] == InstructionSet.LoadInstructions[4]:
                         numberOfBranchArms = 3
-                    predv = cfg.getVertexWithAddress(instr.address)
+                    predv = cfg.get_basic_block_with_address(instr.address)
                     # Now go through each successive address, get the vertex associated with
                     # that address, and add an edge if the address belongs to a newly discovered
                     # basic block
@@ -285,7 +285,7 @@ class Disassembler:
                         nextInstr = self.function_to_instructions[function_name][j]
                         address   = nextInstr.address
                         if not predv.hasAddress(address):
-                            succv = cfg.getVertexWithAddress(address)
+                            succv = cfg.get_basic_block_with_address(address)
                             if not predv.hasSuccessor(succv.vertexID) and succv not in hasJumpTablePredecessor:
                                 cfg.addEdge(predv.vertexID, succv.vertexID)
                                 hasJumpTablePredecessor.add(succv)

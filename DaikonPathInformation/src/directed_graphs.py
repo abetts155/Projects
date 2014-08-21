@@ -102,8 +102,11 @@ class DirectedGraph:
 class FlowGraph(DirectedGraph):
     def __init__ (self):
         DirectedGraph.__init__(self)
-        self.entryID = vertices.dummyID
-        self.exitID  = vertices.dummyID
+        self.entryID          = vertices.dummyID
+        self.exitID           = vertices.dummyID
+        self.reverse_graph    = None 
+        self.depth_first_tree = None
+        self.dominator_tree   = None
         
     def get_entryID (self):
         assert self.entryID != vertices.dummyID, "Entry to flow graph not found"
@@ -114,12 +117,23 @@ class FlowGraph(DirectedGraph):
         return self.exitID
         
     def get_reverse_graph(self):
-        reverseg = FlowGraph() 
-        self.add_vertices_to_reverse_graph(reverseg)
-        self.add_edges_to_reverse_graph(reverseg)
-        reverseg.entryID = self.get_exitID()
-        reverseg.exitID  = self.get_entryID()
-        return reverseg
+        if self.reverse_graph is None:
+            self.reverse_graph = FlowGraph() 
+            self.add_vertices_to_reverse_graph(self.reverse_graph)
+            self.add_edges_to_reverse_graph(self.reverse_graph)
+            self.reverse_graph.entryID = self.get_exitID()
+            self.reverse_graph.exitID  = self.get_entryID()
+        return self.reverse_graph
+    
+    def get_depth_first_search_tree(self):
+        if self.depth_first_tree is None:
+            self.depth_first_tree = DepthFirstSearch(self, self.entryID)
+        return self.depth_first_tree            
+    
+    def get_dominator_tree(self):
+        if self.dominator_tree is None:
+            self.dominator_tree = Dominators(self, self.entryID)
+        return self.dominator_tree
             
     def set_edgeIDs (self):
         edgeID = 1
@@ -132,70 +146,55 @@ class FlowGraph(DirectedGraph):
                 prede.edgeID = edgeID
                 edgeID += 1
     
-class EnhancedCFG (FlowGraph):
-    def __init__ (self, cfg=None):
+class EnhancedCFG(FlowGraph):    
+    def __init__ (self):
         FlowGraph.__init__(self)
-        self.__edgeToVertex = {}
-        if cfg:
-            self.name = cfg.name
-            for v in cfg:
-                newVertexID = v.vertexID
-                newv        = vertices.Vertex(newVertexID)
-                self.the_vertices[newVertexID] = newv
-                if newVertexID == cfg.get_entryID():
-                    self._entryID = newVertexID
-                if newVertexID == cfg.get_exitID():
-                    self._exitID = newVertexID
-            assert self._entryID != vertices.dummyID
-            assert self._exitID != vertices.dummyID
-            for v in cfg:
-                vertexID = v.vertexID
-                for succID in v.successors.keys():
-                    newVertexID = self.get_next_vertexID()
-                    newv        = vertices.CFGEdge(newVertexID, vertexID, succID)
-                    self.__edgeToVertex[(vertexID, succID)] = newv
-                    self.the_vertices[newVertexID] = newv
-                    self.addEdge(vertexID, newVertexID)
-                    self.addEdge(newVertexID, succID)
-                    
-    def getVertexForCFGEdge (self, programPoint):
-        assert programPoint in self.__edgeToVertex
-        return self.__edgeToVertex[programPoint]
+        self.edge_to_vertex_representative = {}
         
-    def getReverseGraph (self):
-        reverseg = EnhancedCFG() 
-        # Add vertices
-        for v in self:
-            copyv = copy.copy(v)
-            copyv.removeAllSuccessors()
-            copyv.removeAllPredecessors()
-            reverseg.vertices[copyv.vertexID] = copyv
-        # Add edges
-        for v in self:
-            predID = v.vertexID
-            predv  = reverseg.getVertex(predID)
+    def create_from_CFG(self, cfg):
+        for v in cfg:
+            newv = copy.deepcopy(v) 
+            newv.successors   = {}
+            newv.predecessors = {}
+            self.the_vertices[v.vertexID] = newv
+            if v.vertexID == cfg.get_entryID():
+                self.entryID = v.vertexID
+            if v.vertexID == cfg.get_exitID():
+                self.exitID = v.vertexID
+        assert self.entryID != vertices.dummyID
+        assert self.exitID != vertices.dummyID
+        for v in cfg:
             for succID in v.successors.keys():
-                succv = reverseg.getVertex(succID)
-                predv.add_predecessor(succID)
-                succv.add_successor(predID)
-        # Set the entry and exit IDs
-        reverseg._entryID = self.get_exitID()
-        reverseg._exitID  = self.get_entryID()
-        return reverseg 
-                
-    def __str__ (self):
-        string = "*" * 20 + " Enhanced CFG Output " + "*" * 20 + "\n" + \
-        "Entry ID = %s\n" % str(self._entryID) + \
-        "Exit ID  = %s\n" % str(self._exitID) + "\n"
-        for v in self.the_vertices.values():
-            string += v.__str__() + "\n"
-        return string
+                newID = self.get_next_edge_vertexID()
+                newv  = vertices.CFGEdge(newID, v.vertexID, succID)
+                if self.getVertex(v.vertexID).dummy or self.getVertex(succID).dummy:
+                    newv.dummy = True
+                self.the_vertices[newID] = newv
+                self.addEdge(v.vertexID, newID)
+                self.addEdge(newID, succID)
+    
+    def addVertex(self, v):
+        if isinstance(v, vertices.CFGEdge):
+            self.edge_to_vertex_representative[v.edge] = v
+        DirectedGraph.addVertex(self, v)
+    
+    def get_next_edge_vertexID(self):
+        nextID = -1
+        while nextID in self.the_vertices.keys():
+            nextID -= 1 
+        return nextID 
     
 class CFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
         self.address_to_vertex = {}
         self.call_sites        = {}
+        self.lnt               = None
+        
+    def get_LNT(self):
+        if self.lnt is None:
+            self.lnt = LoopNests(self, self.entryID)
+        return self.lnt
         
     def set_entry_and_exit(self):
         without_predecessors = []
@@ -248,11 +247,10 @@ class CFG(FlowGraph):
             return self.call_sites[vertexID]
         return None
     
-    def removeCallSite(self, vertexID):
-        assert vertexID in self.call_sites, "Vertex %d is not a call site of '%s'" % (vertexID, self.name)
+    def remove_call_site(self, vertexID):
         del self.call_sites[vertexID]        
         
-    def getVertexWithAddress(self, address):
+    def get_basic_block_with_address(self, address):
         if address in self.address_to_vertex:
             return self.address_to_vertex[address]
         for v in self:
@@ -260,65 +258,7 @@ class CFG(FlowGraph):
                 if instruction.address == address:
                     self.address_to_vertex[address] = v
                     return v
-        assert False, "Unable to find basic block with address %s" % hex(address) 
-    
-class ContextGraph (DirectedGraph):
-    nextVertexID = 1
-    
-    def __init__ (self, callg):
-        DirectedGraph.__init__(self)
-        self.rootID = None
-        self.__subprogramToContexts = {}
-        self.__subprogramToUnused   = {}
-        dfs = DepthFirstSearch(callg, callg.getRootID())
-        self.__addvertices(callg, dfs)
-        self.__addedges(callg, dfs)
-        self.__setRootID()
-        
-    def __addvertices (self, callg, dfs):
-        for functionID in reversed(dfs.getPostorder()):
-            callv = callg.getVertex(functionID)
-            self.__subprogramToContexts[functionID] = []
-            self.__subprogramToUnused[functionID]   = []
-            if functionID == callg.getRootID():
-                self.__addVertex(functionID, callv.getName())
-            else:
-                for prede in callv.getPredecessoredges():
-                    predID = prede.vertexID
-                    numOfvertices = prede.numberOfCallSites() * len(self.__subprogramToContexts[predID])
-                    for i in range(1, numOfvertices+1):
-                        self.__addVertex(functionID, callv.getName())
-    
-    def __addVertex (self, functionID, functionName):
-        contextID = ContextGraph.nextVertexID
-        contextv  = vertices.CallGraphVertex(contextID, functionName)
-        self.the_vertices[contextID] = contextv
-        self.__subprogramToContexts[functionID].append(contextv)
-        self.__subprogramToUnused[functionID].append(contextv)
-        ContextGraph.nextVertexID += 1
-    
-    def __addedges (self, callg, dfs):
-        for callerID in reversed(dfs.getPostorder()):
-            callv = callg.getVertex(callerID)
-            for callerv in self.__subprogramToContexts[callerID]:
-                for succe in callv.getSuccessoredges():
-                    calleeID = succe.vertexID
-                    for callSiteID in succe.getCallSites():
-                        calleev = self.__subprogramToUnused[calleeID].pop()
-                        callerv.add_successor(calleev.vertexID, callSiteID)            
-                        calleev.add_predecessor(callerv.vertexID, callSiteID)
-    
-    def __setRootID (self):
-        noPreds = []
-        for v in self:
-            if v.number_of_predecessors() == 0:
-                noPreds.append(v)
-        assert len(noPreds) == 1
-        self.rootID = noPreds[0].vertexID
-    
-    def getRootID (self):
-        assert self.rootID != vertices.dummyID, "Root vertex of call graph has not been set"
-        return self.rootID
+        assert False, "Unable to find basic block with address %s" % hex(address)
 
 class CallGraph (DirectedGraph):   
     def __init__ (self):
@@ -326,30 +266,23 @@ class CallGraph (DirectedGraph):
         self.rootID = vertices.dummyID
         self.function_to_call_vertex = {}
         
-    def addVertex (self, functionName):
-        assert functionName not in self.function_to_call_vertex, "Trying to add duplicate call graph vertex for function '%s'" % functionName
-        debug.debug_message("Adding call graph vertex of function '%s'" % functionName, 5)
+    def addVertex(self, function_name):
+        assert function_name not in self.function_to_call_vertex, "Trying to add duplicate call graph vertex for function '%s'" % function_name
+        debug.debug_message("Adding call graph vertex of function '%s'" % function_name, 5)
         vertexID = self.get_next_vertexID()
-        callv    = vertices.CallGraphVertex(vertexID, functionName)
+        callv    = vertices.CallGraphVertex(vertexID, function_name)
         self.the_vertices[vertexID] = callv 
-        self.function_to_call_vertex[functionName] = callv
+        self.function_to_call_vertex[function_name] = callv
     
-    def removeVertex(self, functionName):
-        debug.debug_message("Removing call graph vertex of function '%s'" % functionName, 5)
-        callv    = self.getVertexWithName(functionName)
+    def removeVertex(self, function_name):
+        debug.debug_message("Removing call graph vertex of function '%s'" % function_name, 5)
+        callv    = self.getVertexWithName(function_name)
         vertexID = callv.vertexID
         for succID in callv.successors.keys():
             self.removeEdge(vertexID, succID)
-        for predID in callv.getPredecessorIDs():
+        for predID in callv.predecessors.keys():
             self.removeEdge(predID, vertexID)
         DirectedGraph.removeVertex(self, vertexID)
-        
-    def hasVertexWithName (self, functionName):
-        return functionName in self.function_to_call_vertex
-        
-    def getVertexWithName (self, functionName):
-        assert functionName in self.function_to_call_vertex, "Unable to find call graph vertex for function '%s'" % functionName
-        return self.function_to_call_vertex[functionName]
     
     def find_and_set_root(self):
         no_predecessors = set()
@@ -366,13 +299,74 @@ class CallGraph (DirectedGraph):
         else:
             self.rootID = list(no_predecessors)[0]
         assert self.rootID, "Unable to set root ID of call graph"
+        
+    def get_vertex_with_name(self, function_name):
+        return self.function_to_call_vertex[function_name]
     
-    def addEdge (self, predName, succName, callSiteID):
-        debug.debug_message("Adding call graph edge %s => %s" % (predName, succName), 5)
-        predv = self.getVertexWithName(predName)
-        succv = self.getVertexWithName(succName)
-        predv.add_successor(succv.vertexID, callSiteID)            
-        succv.add_predecessor(predv.vertexID, callSiteID)
+    def addEdge(self, pred_name, succ_name, call_siteID):
+        debug.debug_message("Adding call graph edge %s => %s" % (pred_name, succ_name), __name__, 5)
+        predv = self.get_vertex_with_name(pred_name)
+        succv = self.get_vertex_with_name(succ_name)
+        predv.add_successor(succv.vertexID, call_siteID)            
+        succv.add_predecessor(predv.vertexID, call_siteID)
+
+class ContextGraph (DirectedGraph):    
+    def __init__ (self, callg):
+        DirectedGraph.__init__(self)
+        self.function_to_contexts                = {}
+        self.function_to_unused_context_vertices = {}
+        self.next_vertexID                       = 1 
+        dfs = DepthFirstSearch(callg, callg.rootID)
+        self.add_vertices(callg, dfs)
+        self.add_edges(callg, dfs)
+        self.find_and_set_root()
+        
+    def add_vertices(self, callg, dfs):
+        def add_vertex(self, functionID, function_name):
+            contextv = vertices.CallGraphVertex(self.next_vertexID, function_name)
+            self.the_vertices[self.next_vertexID] = contextv
+            self.function_to_contexts[functionID].append(contextv)
+            self.function_to_unused_context_vertices[functionID].append(contextv)
+            self.next_vertexID += 1
+        
+        for functionID in reversed(dfs.getPostorder()):
+            self.function_to_contexts[functionID]                = []
+            self.function_to_unused_context_vertices[functionID] = []
+            callv = callg.getVertex(functionID)
+            if functionID == callg.rootID:
+                self.add_vertex(functionID, callv.name)
+            else:
+                for prede in callv.getPredecessoredges():
+                    number_of_vertices = prede.numberOfCallSites() * len(self.function_to_contexts[prede.vertexID])
+                    for i in range(1, number_of_vertices+1):
+                        self.add_vertex(functionID, callv.name)
+    
+    def add_edges(self, callg, dfs):
+        for callerID in reversed(dfs.getPostorder()):
+            callv = callg.getVertex(callerID)
+            for callerv in self.function_to_contexts[callerID]:
+                for succe in callv.getSuccessoredges():
+                    calleeID = succe.vertexID
+                    for callSiteID in succe.getCallSites():
+                        calleev = self.function_to_unused_context_vertices[calleeID].pop()
+                        callerv.add_successor(calleev.vertexID, callSiteID)            
+                        calleev.add_predecessor(callerv.vertexID, callSiteID)
+    
+    def find_and_set_root(self):
+        no_predecessors = set()
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                no_predecessors.add(v.vertexID)
+        if len(no_predecessors) == 0:
+            debug.exit_message("Could not find program entry point as there are no functions without predecessors")
+        elif len(no_predecessors) > 1:
+            debug_string = ""
+            for vertexID in no_predecessors:
+                debug_string += "%s " % self.getVertex(vertexID).name 
+            debug.exit_message("Context graph has too many entry points: %s" % debug_string)
+        else:
+            self.rootID = list(no_predecessors)[0]
+        assert self.rootID, "Unable to set root ID of context graph"
 
 class Tree(DirectedGraph):
     def __init__ (self):
@@ -642,8 +636,7 @@ class LeastCommonAncestor:
             self.representative[vertexID] = index
             self.level[index]             = self.vertex_level[vertexID]
             
-    def query(self, left, right):    
-        debug.debug_message("Computing lca(%d, %d)" % (left, right), 20) 
+    def query(self, left, right):
         lowest_level = self.dummy_level
         level_index  = 2 * self.tree.number_of_vertices()
         if self.representative[left] < self.representative[right]:
@@ -656,7 +649,6 @@ class LeastCommonAncestor:
             if self.level[i] < lowest_level:
                 lowest_level = self.level[i]
                 level_index  = i
-        debug.debug_message("lca(%d, %d) = %d" % (left, right, self.euler_tour[level_index]), 15)
         return self.euler_tour[level_index]
     
 class LoopNests (Tree):
