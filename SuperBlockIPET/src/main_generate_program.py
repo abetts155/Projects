@@ -178,16 +178,19 @@ def the_command_line():
     tracing_group.add_argument("--generate-traces",
                                type=int,
                                help="generate this number of execution traces",
+                               metavar="<INT>",
                                default=0)
     
     tracing_group.add_argument("--maximum-number-of-loop-iterations",
                                type=int,
                                help="ensure a loop never iterates more than this value",
+                               metavar="<INT>",
                                default=10)
     
     tracing_group.add_argument("--maximum-number-of-calls",
                                type=int,
                                help="ensure the number of procedure calls exceeds this value",
+                               metavar="<INT>",
                                default=5)
     
     parser.parse_args(namespace=config.Arguments)

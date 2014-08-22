@@ -2,8 +2,11 @@ import programs
 import directed_graphs
 import vertices
 import config
+import udraw
 import random
 import math
+
+next_vertexID = 1
 
 class SESEComponent:
     def __init__ (self):
@@ -26,12 +29,13 @@ class CreateLoopBody:
         assert self.directedg.exitID, "Directed graph exit ID not set"
         
     def add_vertices(self, number_of_vertices):
+        global next_vertexID
         for i in xrange(1,number_of_vertices+1):
-            vertexID = self.whole_program_CFG.get_next_vertexID()
-            v        = vertices.CFGVertex(vertexID)
+            v        = vertices.CFGVertex(next_vertexID)
             self.whole_program_CFG.addVertex(v)
             self.directedg.addVertex(v)
-            self.disconnected_vertices.append(vertexID)
+            self.disconnected_vertices.append(next_vertexID)
+            next_vertexID += 1
         
     def create(self, number_of_vertices, nested_loop_graphs):
         remaining_vertices           = number_of_vertices - len(nested_loop_graphs)
@@ -376,12 +380,53 @@ class CreateCFG:
                 if succID not in visited:
                     stack.append(succID)
         assert not set(cfg.the_vertices.keys()).difference(visited), "The CFG is not connected"
-    
+        
+def create_call_graph(program):
+    call_site_candidates   = {}
+    root_function          = None
+    disconnected_functions = []
+    # Work out which basic blocks can legitimately make calls and
+    # which function has the largest set of such basic blocks
+    for cfg in program.cfgs.values():
+        disconnected_functions.append(cfg.name)
+        call_site_candidates[cfg.name] = []
+        for v in cfg:
+            if v.number_of_successors() == 1 and v.vertexID != cfg.get_exitID():
+                call_site_candidates[cfg.name].append(v)
+        if root_function is not None:
+            if len(call_site_candidates[cfg.name]) > len(call_site_candidates[root_function]):
+                root_function = cfg.name
+        else:
+            root_function = cfg.name
+    # The root function is not disconnected
+    disconnected_functions.remove(root_function)
+    # Start making calls from the root function
+    caller = root_function
+    while disconnected_functions:
+        callee_idx = random.randint(0, len(disconnected_functions) - 1)
+        callee     = disconnected_functions[callee_idx]
+        del disconnected_functions[callee_idx] 
+        call_site_idx = random.randint(0, len(call_site_candidates[caller]) - 1)
+        call_sitev    = call_site_candidates[caller][call_site_idx]
+        del call_site_candidates[caller][call_site_idx]
+        program.callg.addEdge(caller, callee, call_sitev.vertexID)
+        program.cfgs[caller].add_call_site(call_sitev.vertexID, callee)
+        # Does the caller still have basic blocks from a which call can be initiated?
+        if len(call_site_candidates[caller]) == 0:
+            del call_site_candidates[caller]
+        # Pick a new caller if the current caller's basic blocks are exhausted 
+        # or we just feel like it 
+        if caller not in call_site_candidates or bool(random.getrandbits(1)):
+            candidate_callers = set(call_site_candidates.keys()).difference(set(disconnected_functions))
+            caller            = random.choice(list(candidate_callers)) 
+    program.callg.find_and_set_root() 
+
 def do_it():
     program = programs.Program()
     for functionID in xrange(1, config.Arguments.subprograms+1):
         name = "f%d" % functionID
         cfg  = CreateCFG(name).cfg
         program.add_CFG(cfg)
-        cfg.get_LNT()
+    create_call_graph(program)
+    udraw.make_file(program.callg, "callg")
     return program

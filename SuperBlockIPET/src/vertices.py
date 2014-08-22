@@ -112,4 +112,32 @@ class SuperBlock (Vertex):
         self.representative       = None
         self.successor_partitions = collections.OrderedDict()
         self.exit_edge            = False
+
+class CallGraphVertex(Vertex):
+    def __init__ (self, vertexID, name):
+        Vertex.__init__(self, vertexID)
+        self.name = name
+    
+    def add_predecessor(self, predID, call_siteID):
+        if predID not in self.predecessors:
+            the_edge = edges.CallGraphEdge(predID)
+            self.predecessors[predID] = the_edge
+        the_edge = self.predecessors[predID]
+        the_edge.call_sites.add(call_siteID)
+    
+    def add_successor(self, succID, call_siteID):
+        if succID not in self.successors:
+            the_edge = edges.CallGraphEdge(succID)
+            self.successors[succID] = the_edge
+        the_edge = self.successors[succID]
+        the_edge.call_sites.add(call_siteID)
+        
+    def get_successor_with_call_site(self, call_siteID):
+        for succe in self.successors.values():
+            if call_siteID in succe.call_sites:
+                return succe.vertexID
+        assert False, "Can not find call successor from '%s' with call site %d" % (self.name, call_siteID)
+    
+    def __str__ (self):
+        return "%s\n%s" % (self.name, Vertex.__str__(self))
         

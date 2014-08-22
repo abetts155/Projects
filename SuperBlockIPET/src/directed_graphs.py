@@ -194,8 +194,9 @@ class EnhancedCFG(FlowGraph):
 class CFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
-        self.lnt    = None
-        self.superg = None
+        self.call_sites = {}
+        self.lnt        = None
+        self.superg     = None
         
     def get_LNT(self):
         if self.lnt is None:
@@ -252,6 +253,66 @@ class CFG(FlowGraph):
         assert exitID in self.the_vertices, "Cannot find vertex " + str(exitID) + " in vertices"
         assert exitID != vertices.dummyID, "Exit ID " + str(exitID) + " is not positive"
         self.exitID = exitID
+        
+    def add_call_site(self, vertexID, callee_name):
+        assert vertexID in self.the_vertices, "Vertex %d does not belong to the CFG of '%s'" % (vertexID, self.name)
+        self.call_sites[vertexID] = callee_name
+    
+    def is_call_site(self, vertexID):
+        if vertexID in self.call_sites:
+            return self.call_sites[vertexID]
+        return None
+    
+    def remove_call_site(self, vertexID):
+        del self.call_sites[vertexID]  
+        
+class CallGraph(DirectedGraph):   
+    def __init__ (self):
+        DirectedGraph.__init__(self)
+        self.rootID                  = vertices.dummyID
+        self.function_to_call_vertex = {}
+        
+    def addVertex(self, callv):
+        DirectedGraph.addVertex(self, callv)
+        assert callv.name not in self.function_to_call_vertex, "Trying to add duplicate call graph vertex for function '%s'" % callv.name
+        debug.debug_message("Adding call graph vertex of function '%s'" % callv.name, 5)
+        self.function_to_call_vertex[callv.name] = callv
+    
+    def removeVertex(self, function_name):
+        debug.debug_message("Removing call graph vertex of function '%s'" % function_name, 5)
+        callv    = self.getVertexWithName(function_name)
+        vertexID = callv.vertexID
+        for succID in callv.successors.keys():
+            self.removeEdge(vertexID, succID)
+        for predID in callv.predecessors.keys():
+            self.removeEdge(predID, vertexID)
+        DirectedGraph.removeVertex(self, vertexID)
+    
+    def find_and_set_root(self):
+        no_predecessors = set()
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                no_predecessors.add(v.vertexID)
+        if len(no_predecessors) == 0:
+            debug.exit_message("Could not find program entry point as there are no functions without predecessors")
+        elif len(no_predecessors) > 1:
+            debug_string = ""
+            for vertexID in no_predecessors:
+                debug_string += "%s " % self.getVertex(vertexID).name 
+            debug.exit_message("Call graph has too many entry points: %s" % debug_string)
+        else:
+            self.rootID = list(no_predecessors)[0]
+        assert self.rootID, "Unable to set root ID of call graph"
+        
+    def get_vertex_with_name(self, function_name):
+        return self.function_to_call_vertex[function_name]
+    
+    def addEdge(self, pred_name, succ_name, call_siteID):
+        debug.debug_message("Adding call graph edge %s => %s" % (pred_name, succ_name), __name__, 5)
+        predv = self.get_vertex_with_name(pred_name)
+        succv = self.get_vertex_with_name(succ_name)
+        predv.add_successor(succv.vertexID, call_siteID)            
+        succv.add_predecessor(predv.vertexID, call_siteID)
         
 class Tree(DirectedGraph):
     def __init__ (self):
@@ -862,10 +923,10 @@ class SuperBlockCFG(DirectedGraph):
                                                                                                        treev)
     
     def construct_super_block_cfg(self, cfg, lnt, enhanced_CFG, treev):
-        dfs                  = DepthFirstSearch(enhanced_CFG, enhanced_CFG.get_entryID())
-        predom_tree          = Dominators(enhanced_CFG, enhanced_CFG.get_entryID())
+        dfs                  = enhanced_CFG.get_depth_first_search_tree()
+        predom_tree          = enhanced_CFG.get_dominator_tree()
         enhanced_CFG_reverse = enhanced_CFG.get_reverse_graph()
-        postdom_tree         = Dominators(enhanced_CFG_reverse, enhanced_CFG_reverse.get_entryID())
+        postdom_tree         = enhanced_CFG_reverse.get_dominator_tree()
         dominator_graph      = DominatorGraph(predom_tree, postdom_tree)
         sccs                 = StrongComponents(dominator_graph)  
         subgraph             = SuperBlockCFG.SuperBlockSubgraph()

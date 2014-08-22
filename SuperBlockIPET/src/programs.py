@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import directed_graphs
+import vertices
 import udraw
 import debug
 import calculations
@@ -22,16 +24,15 @@ class ConstraintBasedCalculationInformation:
     
 class Program():
     def __init__(self):
-        self.cfgs                                      = {}
-        self.ilps                                      = ConstraintBasedCalculationInformation("ILP")
-        self.clps                                      = ConstraintBasedCalculationInformation("CLP")
-        self.region_based_calculations                 = {}
-        self.region_based_calculations_super_block_CFG = {}
+        self.callg = directed_graphs.CallGraph()
+        self.cfgs  = {}
         
     def add_CFG(self, cfg):
         assert cfg.name
         self.cfgs[cfg.name] = cfg
         udraw.make_file(cfg, "%s.cfg" % (cfg.name))
+        callv = vertices.CallGraphVertex(self.callg.get_next_vertexID(), cfg.name)
+        self.callg.addVertex(callv)
 
     def repeat_calculation(self, cfg, cfg_calculation, super_block_cfg_calculation, super_block_cfg_folded_calculation):
         cfg_times                    = []
@@ -53,6 +54,7 @@ class Program():
         return cfg_times, super_block_cfg_times, super_block_cfg_folded_times
     
     def do_CLP_calculation(self, data):
+        self.clps = ConstraintBasedCalculationInformation("CLP")
         for cfg in self.cfgs.values():
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
                 function_data = data.function_data[cfg.name]
@@ -77,6 +79,7 @@ class Program():
                     self.clps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean() 
     
     def do_ILP_calculation(self, data):
+        self.ilps = ConstraintBasedCalculationInformation("ILP")
         for cfg in self.cfgs.values():
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
                 function_data = data.function_data[cfg.name]
@@ -98,7 +101,9 @@ class Program():
                     self.ilps.super_block_cfg_calculations[cfg.name].constraint_system.clean()
                     self.ilps.super_block_cfg_folded_calculations[cfg.name].constraint_system.clean()
     
-    def do_region_based_calculation(self, data):
+    def do_region_based_calculation(self, data):        
+        self.region_based_calculations                 = {}
+        self.region_based_calculations_super_block_CFG = {}
         for cfg in self.cfgs.values(): 
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
                 function_data = data.function_data[cfg.name]

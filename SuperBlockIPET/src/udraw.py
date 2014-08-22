@@ -1,7 +1,6 @@
 import os
 import config
 import directed_graphs
-import super_block_graphs
 import vertices
 
 begin_attrs = "["
@@ -75,7 +74,7 @@ def make_file(g, graph_name):
                 for v in g:
                     if v.vertexID != g.get_entryID():
                         write_CFG_vertex(g, v.vertexID, the_file)   
-            elif isinstance(g, super_block_graphs.SuperBlockCFG):
+            elif isinstance(g, directed_graphs.SuperBlockCFG):
                 for subgraph in g.whole_body_subgraphs.values():
                     for superv in subgraph:
                         write_super_block_vertex(superv, the_file)
@@ -88,6 +87,9 @@ def make_file(g, graph_name):
             elif isinstance(g, directed_graphs.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, the_file)
+            elif isinstance(g, directed_graphs.CallGraph):
+                for v in g:
+                    writeCallGraphVertex(g, v.vertexID, the_file)
             else:
                 for v in g:
                     writeVertex(g, v.vertexID, the_file)
@@ -195,6 +197,26 @@ def writeTreeVertex (tree, vertexID, the_file):
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n")   
+    the_file.write(end_vertex + "\n")  
+    
+def writeCallGraphVertex(callg, vertexID, the_file):
+    v = callg.getVertex(vertexID)
+    the_file.write(new_vertex(vertexID))
+    the_file.write(begin_attrs)
+    the_file.write(set_name(v.name))
+    if callg.getVertex(callg.rootID) == v:
+        the_file.write(set_color(COLOR.RED))
+    the_file.write(end_attrs)
+    
+    the_file.write(begin_attrs)
+    for succID in v.successors.keys():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        the_file.write(set_name(str(succID)))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")  
+     
     
     
