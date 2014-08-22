@@ -11,43 +11,8 @@ import subprocess
 import argparse
 import config
 
-def the_command_line():
-    parser = argparse.ArgumentParser(description="Verify dynamic analysis conjectures using CBMC")
-    
-    parser.add_argument("program",
-                         help="a '.c' file with CBMC instrumentation and assertions")
-    
-    parser.add_argument("--CBMC",
-                         dest="cbmc",
-                         help="path to CBMC")
-    
-    parser.add_argument("--timeout",
-                         type=int,
-                         help="set number of seconds at which to timeout",
-                         default=600)
-    
-    parser.add_argument("--uncomment",
-                         action="store_true",
-                         help="uncomment failed assertions")
-    
-    parser.add_argument("-d",
-                         "--debug",
-                         type=int,
-                         help="debug mode",
-                         default=0)
- 
-    parser.add_argument("-v",
-                         "--verbose",
-                         action="store_true",
-                         help="be verbose",
-                         default=False)
-    
-    parser.parse_args(namespace=config.Arguments)
-    
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file)))
-
-totalAssertFailures = 0
-CBMCproc            = None
+number_of_assert_failures = 0
+the_CBMC_process          = None
 
 class CBMCAssertFailure:
     UNWIND    = 0
@@ -58,55 +23,53 @@ class TimeoutException (Exception):
 
 def timeout(seconds=10):
     def decorator(func):
-        def _handle_timeout(signum, frame):
-            if not CBMCproc.poll():
-                CBMCproc.kill()
+        def handle_timeout(signum, frame):
+            if not the_CBMC_process.poll():
+                the_CBMC_process.kill()
                 print("TIMEOUT reached!")
                 raise TimeoutException()
-            
         def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.signal(signal.SIGALRM, handle_timeout)
             signal.alarm(seconds)
             try:
                 result = func(*args, **kwargs)
             finally:
                 signal.alarm(0)
             return result
-
         return functools.wraps(func)(wrapper)
     return decorator
 
-def countAsserts (filename):
-    cmd  = "ack-grep --count assert %s" % filename
+def count_asserts():
+    cmd  = "ack-grep --count assert %s" % config.Arguments.program_file
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
     proc.wait()
-    line  = proc.stdout.readlines()[0].strip()
+    line = proc.stdout.readlines()[0].strip()
     print(line)
     count = re.findall(r':[0-9]+', line)[0]
     return int(count[1:])
 
-def uncommentFailingAsserts (filename):
-    newfilename  = filename + '.temp'
-    newfile      = open(newfilename, 'w')
-    cmd          = "sed 's/\/\/assert/assert/g' %s" % filename
-    proc = subprocess.Popen(cmd, shell=True, stdout=newfile) 
+def uncomment_failing_asserts():
+    new_filename = config.Arguments.program_file + '.temp'
+    new_file     = open(new_filename, 'w')
+    cmd          = "sed 's/\/\/assert/assert/g' %s" % config.Arguments.program_file
+    proc         = subprocess.Popen(cmd, shell=True, stdout=new_file) 
     proc.wait()
-    newfile.close()
-    shutil.move(newfilename, filename)
+    new_file.close()
+    shutil.move(new_filename, config.Arguments.program_file)
 
-def commentOutFailingAssert (filename, failedAssert):
-    commentedAssert = "\/\/assert(%s);" % failedAssert
-    sedAssert       = re.sub(r'\s+', r'.*',failedAssert)
-    assertString    = "assert(%s);" % sedAssert
-    newfilename     = filename + '.temp'
-    newfile         = open(newfilename, 'w')
-    cmd             = "sed 's/%s/%s/g' %s" % (assertString, commentedAssert, filename)
-    proc = subprocess.Popen(cmd, shell=True, stdout=newfile) 
+def comment_failing_assert(failedAssert):
+    commented_assert = "\/\/assert(%s);" % failedAssert
+    sedAssert        = re.sub(r'\s+', r'.*',failedAssert)
+    assert_string    = "assert(%s);" % sedAssert
+    new_filename     = config.Arguments.program_file + '.temp'
+    new_file         = open(new_filename, 'w')
+    cmd              = "sed 's/%s/%s/g' %s" % (assert_string, commented_assert, config.Arguments.program_file)
+    proc             = subprocess.Popen(cmd, shell=True, stdout=new_file) 
     proc.wait()
-    newfile.close()
-    shutil.move(newfilename, filename)
+    new_file.close()
+    shutil.move(new_filename, config.Arguments.program_file)
 
-def getFailingAssert (filename):
+def get_failing_assert(filename):
     stdin,stdout = os.popen2("tail -n 3 %s" % filename)
     stdin.close()
     lines = stdout.readlines()
@@ -118,16 +81,16 @@ def getFailingAssert (filename):
         assert re.search(r'\s*__count_[0-9]+_[0-9]+', line)
         return CBMCAssertFailure.ASSERTION, line
 
-def runCBMC (cbmc, unwind, program, rootFunction):
-    global CBMCproc, totalAssertFailures
-    cmd = '%s --unwind %d -DCBMC %s --function %s' % (cbmc, unwind, program, rootFunction)
+def run_CBMC(unwind, root_function):
+    global the_CBMC_process, number_of_assert_failures
+    cmd = '%s --unwind %d -DCBMC %s --function %s' % (config.Arguments.CBMC, unwind, config.Arguments.program_file, root_function)
     print("Running '%s'" % cmd)
     success = False
-    cbmcOutput = os.path.abspath(os.getcwd() + os.sep + '%s.cbmc' % rootFunction)
+    cbmcOutput = os.path.abspath(os.getcwd() + os.sep + '%s.cbmc' % root_function)
     while not success:
         with open(cbmcOutput,'wb') as out:
-            CBMCproc = subprocess.Popen(cmd, shell=True, stdout=out)    
-            CBMCproc.wait()
+            the_CBMC_process = subprocess.Popen(cmd, shell=True, stdout=out)    
+            the_CBMC_process.wait()
         out = open(cbmcOutput,'r')
         for line in out:
             if line.startswith("VERIFICATION SUCCESSFUL"):
@@ -135,41 +98,77 @@ def runCBMC (cbmc, unwind, program, rootFunction):
                 break
         out.close()
         if not success:
-            failType, failedAssert = getFailingAssert(cbmcOutput)
+            failType, failedAssert = get_failing_assert(cbmcOutput)
             if failType == CBMCAssertFailure.ASSERTION:
-                totalAssertFailures += 1
-                print("Assertion '%s' failed in '%s'" % (failedAssert, program))
-                commentOutFailingAssert(program, failedAssert)
+                number_of_assert_failures += 1
+                print("Assertion '%s' failed in '%s'" % (failedAssert, config.Arguments.program_file))
+                comment_failing_assert(failedAssert)
             else:
                 print("Insufficient unwinding")
                 return success
     return success
 
 @timeout(config.Arguments.timeout)
-def run (cbmc, program, rootFunction):
-    global totalAssertFailures
+def run(root_function):
     unwind  = 4
     success = False
     while not success:
-        success = runCBMC(cbmc, unwind, program, rootFunction)
+        success = run_CBMC(unwind, root_function)
         unwind *= 2
+
+def the_command_line():
+    parser = argparse.ArgumentParser(description="Verify dynamic analysis conjectures using CBMC")
+    
+    parser.add_argument("program_file",
+                         help="a '.c' file with CBMC instrumentation and assertions")
+    
+    parser.add_argument("--CBMC",
+                        help="path to CBMC")
+    
+    parser.add_argument("--timeout",
+                        type=int,
+                        help="set number of seconds at which to timeout",
+                        default=600)
+    
+    parser.add_argument("--uncomment",
+                        action="store_true",
+                        help="uncomment failed assertions")
+    
+    parser.add_argument("-d",
+                        "--debug",
+                        type=int,
+                        help="debug mode",
+                        default=0)
+ 
+    parser.add_argument("-v",
+                        "--verbose",
+                        action="store_true",
+                        help="be verbose",
+                        default=False)
+    
+    parser.parse_args(namespace=config.Arguments)
+    
+    config.Arguments.basename = os.path.splitext(os.path.basename(config.Arguments.program_file))
+    
+    if not config.Arguments.uncomment:
+        assert config.Arguments.CBMC, "You need to pass the path to CBMC"
+        assert os.path.exists(config.Arguments.CBMC), "The CBMC path '%s' does not exist" % config.Arguments.CBMC
+        assert os.path.isfile(config.Arguments.CBMC), "'%s' is not a file" % config.Arguments.CBMC
+        config.Arguments.CBMC = os.path.abspath(config.Arguments.CBMC)
 
 if __name__ == "__main__":
     the_command_line()
     if config.Arguments.uncomment:
-        uncommentFailingAsserts (config.Arguments.program)
+        uncomment_failing_asserts(config.Arguments.program)
     else:
-        assert config.Arguments.cbmc, "You need to pass the path to CBMC"
-        assert os.path.exists(config.Arguments.cbmc), "The CBMC path '%s' does not exist" % config.Arguments.cbmc
-        assert os.path.isfile(config.Arguments.cbmc), "'%s' is not a file" % config.Arguments.cbmc
-        rootFunction          = os.path.splitext(config.Arguments.basename)[0]
-        config.Arguments.cbmc = os.path.abspath(config.Arguments.cbmc)
+        root_function = os.path.splitext(config.Arguments.basename)[0]
         try:
-            run(config.Arguments.cbmc, config.Arguments.program, rootFunction)
+            run(root_function)
         except:
             pass
         finally:
-            print("In '%s', %d asserts out of %d failed" % \
-                  (config.Arguments.program, totalAssertFailures, countAsserts(config.Arguments.program)))
+            print("In %s, %d asserts out of %d failed" % (config.Arguments.program, 
+                                                          number_of_assert_failures, 
+                                                          count_asserts(config.Arguments.program)))
     
     

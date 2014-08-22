@@ -1,6 +1,5 @@
 import programs
 import directed_graphs
-import trees
 import vertices
 import debug
 import database
@@ -25,7 +24,7 @@ def write_file(program, filename):
     with open(filename, 'w') as the_file:
         for cfg in program.cfgs.values():
             if config.Arguments.add_WCET_information:
-                lnt          = trees.LoopNests(cfg, cfg.get_entryID())
+                lnt          = directed_graphs.LoopNests(cfg, cfg.get_entryID())
                 upper_bounds = lnt.get_random_loop_bounds(config.Arguments.maximum_loop_bound)
             the_file.write("%s\n" % divider)
             the_file.write("%s: %s\n" % (cfg_lexeme, cfg.name))

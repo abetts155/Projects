@@ -95,16 +95,14 @@ def the_command_line ():
         debug.exit_message("You must calculate specify how to calculate a WCET estimate with one or more of the following: %s" %
                            ','.join(all_calculations))
     
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.program_file))[0])
-    setattr(config.Arguments, "basepath", os.path.abspath(os.path.dirname(config.Arguments.program_file)))
+    config.Arguments.basename = os.path.splitext(os.path.basename(config.Arguments.program_file))[0]
+    config.Arguments.basepath = os.path.abspath(os.path.dirname(config.Arguments.program_file))
         
 if __name__ == "__main__": 
     threading.stack_size(67108864) # 64MB stack
     sys.setrecursionlimit(2**20)
     the_command_line()
     data, program = program_input_output.read_file(config.Arguments.program_file)
-    program.create_LNTs()
-    program.create_super_block_CFGs()
     program.do_wcet_calculation(data)
     program.print_results()
     

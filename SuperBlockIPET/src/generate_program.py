@@ -1,5 +1,4 @@
 import programs
-import trees
 import directed_graphs
 import vertices
 import config
@@ -208,7 +207,7 @@ class CreateLoopBody:
         random.shuffle(candidate_sources)
         assert len(candidate_sources) >= len(nested_loop_graphs), \
         "Candidates = {%s}, nested loops = %d" % (','.join(str(vertexID) for vertexID in candidate_sources), len(nested_loop_graphs))
-        dfs = trees.DepthFirstSearch(self.directedg, self.directedg.entryID)
+        dfs = directed_graphs.DepthFirstSearch(self.directedg, self.directedg.entryID)
         for nested_loop_graph in nested_loop_graphs:
             # Connect to inner loop header
             predID = candidate_sources.pop()
@@ -253,13 +252,13 @@ class CreateCFG:
         lnt_basic_structure  = self.generate_LNT()
         self.cfg      = self.create_CFG(lnt_basic_structure)
         self.cfg.name = name
-        self.lnt      = trees.LoopNests(self.cfg, self.cfg.get_entryID())
+        self.lnt      = directed_graphs.LoopNests(self.cfg, self.cfg.get_entryID())
         if config.Arguments.unstructured:
             self.find_and_remove_merge_vertices(self.cfg, self.lnt)
         self.check_connected(self.cfg)
     
     def generate_LNT(self):
-        lnt = trees.Tree()
+        lnt = directed_graphs.Tree()
         # Add vertices to the tree, including one extra for the dummy outer loop
         vertex_level = {}
         for i in xrange(1,config.Arguments.loops+2):
@@ -382,6 +381,7 @@ def do_it():
     program = programs.Program()
     for functionID in xrange(1, config.Arguments.subprograms+1):
         name = "f%d" % functionID
-        program.add_CFG(CreateCFG(name).cfg)
-    program.create_LNTs()
+        cfg  = CreateCFG(name).cfg
+        program.add_CFG(cfg)
+        cfg.get_LNT()
     return program

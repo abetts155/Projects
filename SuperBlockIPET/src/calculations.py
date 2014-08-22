@@ -1,3 +1,4 @@
+import directed_graphs
 import vertices
 import config
 import utils
@@ -11,7 +12,6 @@ import random
 import re
 import decimal
 import numpy
-import trees
 import collections
 
 edge_variable_prefix   = "E_"
@@ -1148,7 +1148,7 @@ class RegionalCalculationEnhancedCFG(RegionalCalculation):
     
     def do_calculation_on_subgraph(self, data, lnt, headerv, subgraph, upper_bound_for_continuations, upper_bound_for_exits):
         self.v_wcets = {}                    
-        dfs = trees.DepthFirstSearch(subgraph, subgraph.entryID)
+        dfs = directed_graphs.DepthFirstSearch(subgraph, subgraph.entryID)
         for vertexID in reversed(dfs.post_order):
             v = subgraph.getVertex(vertexID)
             if isinstance(v, vertices.CFGVertex): 
@@ -1269,7 +1269,7 @@ class RegionalCalculationSuperBlockCFG(RegionalCalculation):
         self.v_wcets = {}
         for superv in subgraph:
             self.v_wcets[superv] = {}                    
-        dfs = trees.DepthFirstSearch(subgraph, subgraph.rootv.vertexID)
+        dfs = directed_graphs.DepthFirstSearch(subgraph, subgraph.rootv.vertexID)
         for vertexID in dfs.post_order:
             superv = subgraph.getVertex(vertexID)
             intra_superv_wcet = self.compute_execution_time_within_super_block(data, lnt, superv, headerv, upper_bound_list, region)

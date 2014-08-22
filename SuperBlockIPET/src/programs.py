@@ -1,7 +1,5 @@
 from __future__ import print_function
 
-import trees
-import super_block_graphs
 import udraw
 import debug
 import calculations
@@ -25,8 +23,6 @@ class ConstraintBasedCalculationInformation:
 class Program():
     def __init__(self):
         self.cfgs                                      = {}
-        self.lnts                                      = {}
-        self.super_block_cfgs                          = {}
         self.ilps                                      = ConstraintBasedCalculationInformation("ILP")
         self.clps                                      = ConstraintBasedCalculationInformation("CLP")
         self.region_based_calculations                 = {}
@@ -36,17 +32,6 @@ class Program():
         assert cfg.name
         self.cfgs[cfg.name] = cfg
         udraw.make_file(cfg, "%s.cfg" % (cfg.name))
-        
-    def create_LNTs(self):
-        for name, cfg in self.cfgs.iteritems():
-            self.lnts[name] = trees.LoopNests(cfg, cfg.get_entryID())
-            udraw.make_file(self.lnts[name], "%s.lnt" % (name))
-            
-    def create_super_block_CFGs(self):
-        for name, cfg in self.cfgs.iteritems():
-            debug.debug_message("Analysing CFG %s" % name, __name__, 5)
-            self.super_block_cfgs[name] = super_block_graphs.SuperBlockCFG(cfg, self.lnts[name])
-            udraw.make_file(self.super_block_cfgs[name], "%s.superg" % (name))
 
     def repeat_calculation(self, cfg, cfg_calculation, super_block_cfg_calculation, super_block_cfg_folded_calculation):
         cfg_times                    = []
@@ -70,15 +55,13 @@ class Program():
     def do_CLP_calculation(self, data):
         for cfg in self.cfgs.values():
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
-                lnt           = self.lnts[cfg.name]
-                superg        = self.super_block_cfgs[cfg.name]
                 function_data = data.function_data[cfg.name]
                 
-                cfg_clp_calculation                                     = calculations.CreateCFGCLP(function_data, cfg, lnt)
+                cfg_clp_calculation                                     = calculations.CreateCFGCLP(function_data, cfg, cfg.get_LNT())
                 self.clps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_clp_calculation)
-                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(function_data, cfg, lnt, superg)
+                super_block_cfg_clp_calculation                         = calculations.CreateSuperBlockCFGCLP(function_data, cfg, cfg.get_LNT(), cfg.get_super_block_cfg())
                 self.clps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_clp_calculation)
-                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(function_data, cfg, lnt, superg)
+                super_block_cfg_clp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGCLP(function_data, cfg, cfg.get_LNT(), cfg.get_super_block_cfg())
                 self.clps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_clp_folded_calculation)
                 cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
                                                                                                          self.clps.cfg_calculations[cfg.name].constraint_system, 
@@ -96,15 +79,12 @@ class Program():
     def do_ILP_calculation(self, data):
         for cfg in self.cfgs.values():
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
-                lnt           = self.lnts[cfg.name]
-                superg        = self.super_block_cfgs[cfg.name]
                 function_data = data.function_data[cfg.name]
-                
-                cfg_ilp_calculation                                     = calculations.CreateCFGILP(function_data, cfg, lnt)
+                cfg_ilp_calculation                                     = calculations.CreateCFGILP(function_data, cfg, cfg.get_LNT())
                 self.ilps.cfg_calculations[cfg.name]                    = SolverInformation(cfg_ilp_calculation)
-                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(function_data, cfg, lnt, superg)
+                super_block_cfg_ilp_calculation                         = calculations.CreateSuperBlockCFGILP(function_data, cfg, cfg.get_LNT(), cfg.get_super_block_cfg())
                 self.ilps.super_block_cfg_calculations[cfg.name]        = SolverInformation(super_block_cfg_ilp_calculation)
-                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(function_data, cfg, lnt, superg)
+                super_block_cfg_ilp_folded_calculation                  = calculations.CreateFoldedSuperBlockCFGILP(function_data, cfg, cfg.get_LNT(), cfg.get_super_block_cfg())
                 self.ilps.super_block_cfg_folded_calculations[cfg.name] = SolverInformation(super_block_cfg_ilp_folded_calculation)  
                 cfg_times, super_block_cfg_times, super_block_cfg_folded_times = self.repeat_calculation(cfg, 
                                                                                                          self.ilps.cfg_calculations[cfg.name].constraint_system, 
@@ -121,8 +101,6 @@ class Program():
     def do_region_based_calculation(self, data):
         for cfg in self.cfgs.values(): 
             if config.Arguments.function is None or config.Arguments.function == cfg.name:
-                lnt           = self.lnts[cfg.name]
-                superg        = self.super_block_cfgs[cfg.name]
                 function_data = data.function_data[cfg.name]
                 if config.Arguments.region_based:
                     self.region_based_calculations[cfg.name] = []
@@ -131,10 +109,10 @@ class Program():
                 for i in range(1, config.Arguments.repeat_calculation + 1):
                     print("===== Repetition %d =====" % i)
                     if config.Arguments.region_based:
-                        region_based_calculation = calculations.RegionalCalculationEnhancedCFG(function_data, lnt, superg)
+                        region_based_calculation = calculations.RegionalCalculationEnhancedCFG(function_data, cfg.get_LNT(), cfg.get_super_block_cfg())
                         self.region_based_calculations[cfg.name].append(region_based_calculation)
                     if config.Arguments.region_based_super_block_CFG:
-                        region_based_calculation = calculations.RegionalCalculationSuperBlockCFG(function_data, lnt, superg)
+                        region_based_calculation = calculations.RegionalCalculationSuperBlockCFG(function_data, cfg.get_LNT(), cfg.get_super_block_cfg())
                         self.region_based_calculations_super_block_CFG[cfg.name].append(region_based_calculation)
                     print("Region::                   WCET(%s) = %d" % (cfg.name, region_based_calculation.wcet))
                     if config.Arguments.ilp:

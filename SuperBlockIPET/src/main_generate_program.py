@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import config
+import traces
 import generate_program
 import program_input_output
 import debug
@@ -171,17 +172,38 @@ def the_command_line():
                                  help="add profile information (program points whose execution frequencies we want to count) when writing the program to file",
                                  default=False)
     
+    # Tracing options
+    tracing_group = parser.add_argument_group("Program tracing arguments")
+    
+    tracing_group.add_argument("--generate-traces",
+                               type=int,
+                               help="generate this number of execution traces",
+                               default=0)
+    
+    tracing_group.add_argument("--maximum-number-of-loop-iterations",
+                               type=int,
+                               help="ensure a loop never iterates more than this value",
+                               default=10)
+    
+    tracing_group.add_argument("--maximum-number-of-calls",
+                               type=int,
+                               help="ensure the number of procedure calls exceeds this value",
+                               default=5)
+    
     parser.parse_args(namespace=config.Arguments)
     
     if config.Arguments.basic_blocks < config.Arguments.loops * 2:
         debug.exit_message("The number of vertices in a CFG must be at least twice the number of loops")
     
-    setattr(config.Arguments, "basename", os.path.splitext(os.path.basename(config.Arguments.filename))[0])
-    setattr(config.Arguments, "basepath", os.path.abspath(config.Arguments.directory))
+    config.Arguments.basename = os.path.splitext(os.path.basename(config.Arguments.filename))[0]
+    config.Arguments.basepath = os.path.abspath(config.Arguments.directory)
         
 if __name__ == "__main__":
     the_command_line()
     program = generate_program.do_it()
     program_input_output.write_file(program, config.Arguments.filename)
+    if config.Arguments.generate_traces > 0:
+        traces.GenerateExecutionTraces(program)
+        
     
     

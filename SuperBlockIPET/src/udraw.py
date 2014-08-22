@@ -2,7 +2,6 @@ import os
 import config
 import directed_graphs
 import super_block_graphs
-import trees
 import vertices
 
 begin_attrs = "["
@@ -86,7 +85,7 @@ def make_file(g, graph_name):
                 for subgraph in g.exits_only_subgraphs.values():
                     for superv in subgraph:
                         write_super_block_vertex(superv, the_file)               
-            elif isinstance(g, trees.LoopNests):
+            elif isinstance(g, directed_graphs.LoopNests):
                 for v in g:
                     writeTreeVertex(g, v.vertexID, the_file)
             else:
@@ -181,7 +180,7 @@ def writeTreeVertex (tree, vertexID, the_file):
     the_file.write(new_vertex(vertexID))
     the_file.write(begin_attrs)
     the_file.write(set_name(str(vertexID)))
-    if isinstance(tree, trees.LoopNests):
+    if isinstance(tree, directed_graphs.LoopNests):
         if isinstance(v, vertices.HeaderVertex):
             the_file.write(set_shape(SHAPE.TRIANGLE))
             the_file.write(set_color(COLOR.RED))
