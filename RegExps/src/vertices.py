@@ -2,12 +2,13 @@ import edges
 
 dummyID = 0
 
-class Vertex ():
-    def __init__ (self, vertexID):
-        self.vertexID = vertexID
-        self.predecessors = {}
-        self.successors   = {}
-        self.dummy        = False
+class Vertex:
+    def __init__(self, vertexID):
+        self.vertexID      = vertexID
+        self.real_vertexID = vertexID 
+        self.predecessors  = {}
+        self.successors    = {}
+        self.dummy         = False
     
     def add_predecessor(self, predID, edgeID=None):
         assert predID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, predID)
@@ -55,30 +56,26 @@ class Vertex ():
         assert succID in self.successors, "Vertex %d is not a successor of %d" % (succID, self.vertexID)
         return self.successors[succID]
     
-    def predecessor_string(self):
-        string = "pred = {"
+    def edge_incidence_string(self, the_edges):
+        string = "{"
         count = 1
-        for predID in sorted(self.predecessors.keys()):
+        for predID in sorted(the_edges.keys()):
             string += str(predID)
-            if count < len(self.predecessors):
-                string += ","
-                count = count + 1
-        string += "}"
-        return string
-    
-    def successor_string(self):        
-        string = "succ = {"
-        count = 1
-        for succID in sorted(self.successors.keys()):
-            string += str(succID)
-            if count < len(self.successors):
+            if count < len(the_edges):
                 string += ","
                 count = count + 1
         string += "}"
         return string
     
     def __str__(self):
-        return "%d: %s %s\n" % (self.vertexID, self.successor_string(), self.predecessor_string())
+        return """virtual ID = %d 
+real ID    = %d 
+succ       = %s 
+pred       = %s
+""" % (self.vertexID, 
+       self.real_vertexID, 
+       self.edge_incidence_string(self.successors), 
+       self.edge_incidence_string(self.predecessors))
     
 class TreeVertex(Vertex):
     def __init__ (self, vertexID):
@@ -101,5 +98,14 @@ class CFGEdge(Vertex):
         self.edge = (predID, succID)
     
     def __str__(self):
-        return "%s%s\n" % (Vertex.__str__(self), self.edge)
+        return """virtual ID = %d 
+real ID    = %d 
+edge       = %s
+succ       = %s 
+pred       = %s
+""" % (self.vertexID, 
+       self.real_vertexID, 
+       self.edge,
+       self.edge_incidence_string(self.successors), 
+       self.edge_incidence_string(self.predecessors))
         

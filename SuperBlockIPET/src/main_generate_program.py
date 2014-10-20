@@ -181,6 +181,11 @@ def the_command_line():
                                metavar="<INT>",
                                default=0)
     
+    tracing_group.add_argument("--add-timestamps",
+                               action="store_true",
+                               help="attach timestamps to program points in the trace",
+                               default=False)
+    
     tracing_group.add_argument("--maximum-number-of-loop-iterations",
                                type=int,
                                help="ensure a loop never iterates more than this value",

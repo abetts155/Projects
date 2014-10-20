@@ -74,7 +74,7 @@ class RegExp:
     
     def wrap_in_kleene_operator(self, kleene_operator):
         assert kleene_operator == RegExp.kleene_plus or kleene_operator == RegExp.kleene_star
-        self.elements.insert(0, RegExp.l_parenthesis(1))
+        self.elements.insert(0, RegExp.l_parenthesis())
         self.elements.append(RegExp.r_parenthesis())
         self.elements.append(kleene_operator)
         
@@ -84,13 +84,15 @@ class RegExp:
             if isinstance(elem, vertices.CFGEdge):
                 the_string += "[%d->%d]" % (elem.edge[0], elem.edge[1])
             elif isinstance(elem, vertices.CFGVertex):
-                the_string += elem.vertexID.__repr__()
+                the_string += elem.real_vertexID.__repr__()
+            elif isinstance(elem, vertices.HeaderVertex):
+                the_string += elem.headerID.__repr__()
             else:
                 the_string += elem
         return the_string
             
 class PathExpression:
-    loop_back_edge_path_expression_cache = {}
+    loop_body_expressions = {}
     
     def __init__(self, cfg, lnt, induced_CFG):   
         self.cfg = cfg 
@@ -132,18 +134,6 @@ class PathExpression:
             or predv.number_of_successors() == 1:
                     self.vertex_to_regular_expression[v.vertexID].append(self.vertex_to_regular_expression[predID], RegExp.concatenation)
             self.vertex_to_regular_expression[v.vertexID].append(v)
-            if isinstance(v, vertices.CFGEdge) \
-            and self.lnt.is_loop_back_edge(v.edge[0], v.edge[1]) \
-            and v.vertexID != self.induced_CFG.exitID:
-                if v.edge not in PathExpression.loop_back_edge_path_expression_cache:
-                    enhanced_CFG = self.cfg.enhanced_CFGs[v.edge[1]]
-                    edgev        = enhanced_CFG.edge_to_vertex_representative[v.edge]
-                    induced_CFG  = create_induced_subgraph(self.cfg, v.edge[1], edgev.vertexID)
-                    loop_expr    = PathExpression(self.cfg, self.lnt, induced_CFG)
-                    self.vertex_to_regular_expression[v.vertexID].append(RegExp.l_parenthesis(1))
-                    self.vertex_to_regular_expression[v.vertexID].append(loop_expr.the_expr)
-                    self.vertex_to_regular_expression[v.vertexID].append(RegExp.r_parenthesis(0))
-                    self.vertex_to_regular_expression[v.vertexID].append(RegExp.kleene_star)
                 
     def handle_merge(self, mergev):
         vertex_temp_reg_exprs = {}
@@ -176,69 +166,81 @@ class PathExpression:
     
     def __str__(self):
         return self.the_expr.__str__()
-
-def union_subgraphs_through_backedges(cfg, lnt, headerv, prefix_graph, suffix_graph):
-    induced_CFG = directed_graphs.EnhancedCFG()
-    for v in prefix_graph:
-        induced_CFG.addVertex(v)
-    for v in suffix_graph:
-        induced_CFG.addVertex(v)
-    enhanced_CFG = cfg.enhanced_CFGs[headerv.headerID]
-    for edge in lnt.get_loop_back_edges(headerv.headerID):
-        v = enhanced_CFG.edge_to_vertex_representative[edge]
-        newv = copy.deepcopy(v)
-        newv.predecessors = {}
-        newv.successors   = {}
-        induced_CFG.addVertex(newv) 
-        induced_CFG.addEdge(edge[0], newv.vertexID)
-        induced_CFG.addEdge(newv.vertexID, edge[1])
-    induced_CFG.entryID = prefix_graph.entryID
-    induced_CFG.exitID  = suffix_graph.exitID
-    return induced_CFG
-            
-def create_induced_subgraph(cfg, entry_vertexID, exit_vertexID):
-    lnt               = cfg.get_LNT()
-    headerv           = lnt.getVertex(lnt.getVertex(entry_vertexID).parentID)
-    enhanced_CFG      = cfg.enhanced_CFGs[headerv.headerID]
-    reachability_info = cfg.reachability_info[headerv.headerID]
-    pair_subset       = set([entry_vertexID, exit_vertexID])
-    edges             = set()
-    visited           = set()
-    stack             = []
-    stack.append(exit_vertexID)
-    while stack:
-        vertexID = stack.pop()
-        visited.add(vertexID)
-        if vertexID != entry_vertexID:
-            v = enhanced_CFG.getVertex(vertexID)
-            for predID in v.predecessors.keys():
-                if pair_subset.issubset(reachability_info.unified[predID]):
-                    edges.add((predID, vertexID))
-                    if not predID in visited:
-                        stack.append(predID)
-    # At this point, the edges we need to add to the induced subgraph have been worked out
-    def copy_vertex_into_induced_CFG(vertexID):
+    
+def copy_vertex_into_induced_CFG(enhanced_CFG, induced_CFG, vertexID):
+    if not induced_CFG.hasVertex(vertexID):
         v = enhanced_CFG.getVertex(vertexID)
         newv = copy.deepcopy(v)
         newv.predecessors = {}
         newv.successors   = {}
         induced_CFG.addVertex(newv)
+
+def create_induced_subgraph(cfg, entry_vertexID, exit_vertexIDs):
+    lnt               = cfg.get_LNT()
+    headerv           = lnt.getVertex(lnt.getVertex(entry_vertexID).parentID)
+    enhanced_CFG      = cfg.enhanced_CFGs[headerv.headerID]
+    reachability_info = cfg.reachability_info[headerv.headerID]
+    edges             = set()
+    for exit_vertexID in exit_vertexIDs:
+        pair_subset = set([entry_vertexID, exit_vertexID])
+        visited     = set()
+        stack       = []
+        stack.append(exit_vertexID)
+        while stack:
+            vertexID = stack.pop()
+            visited.add(vertexID)
+            if vertexID != entry_vertexID:
+                v = enhanced_CFG.getVertex(vertexID)
+                for predID in v.predecessors.keys():
+                    if pair_subset.issubset(reachability_info.unified[predID]):
+                        edges.add((predID, vertexID))
+                        if not predID in visited:
+                            stack.append(predID)
+    # At this point, the edges we need to add to the induced subgraph have been worked out
     induced_CFG = directed_graphs.EnhancedCFG()
     for an_edge in edges:
-        if not induced_CFG.hasVertex(an_edge[0]):
-            copy_vertex_into_induced_CFG(an_edge[0])
-        if not induced_CFG.hasVertex(an_edge[1]):
-            copy_vertex_into_induced_CFG(an_edge[1])
+        copy_vertex_into_induced_CFG(enhanced_CFG, induced_CFG, an_edge[0])
+        copy_vertex_into_induced_CFG(enhanced_CFG, induced_CFG, an_edge[1])
         induced_CFG.addEdge(an_edge[0], an_edge[1])
-    # If there are no edges in the graph then we need to add the
-    # entry and exit vertices manually
-    if not induced_CFG.hasVertex(entry_vertexID):
-        copy_vertex_into_induced_CFG(entry_vertexID)
-    if not induced_CFG.hasVertex(exit_vertexID):
-        copy_vertex_into_induced_CFG(exit_vertexID)
+    # Set entry vertex
     induced_CFG.entryID = entry_vertexID
-    induced_CFG.exitID  = exit_vertexID
+    # Set exit vertex
+    exit_candidates = []
+    for v in induced_CFG:
+        if v.number_of_successors() == 0:
+            exit_candidates.append(v)      
+    if len(exit_candidates) == 1:
+        induced_CFG.exitID = exit_candidates[0].vertexID
+    else:
+        exitv       = vertices.CFGVertex(induced_CFG.get_next_vertexID())
+        exitv.dummy = True
+        induced_CFG.addVertex(exitv)
+        induced_CFG.exitID = exitv.vertexID
+        for v in exit_candidates:
+            induced_CFG.addEdge(v.vertexID, exitv.vertexID)
     return induced_CFG
+
+def create_connected_induced_CFG(new_induced_CFG, induced_CFG):    
+    # Relabel each vertex
+    oldID_to_newID = {}
+    for v in induced_CFG:
+        if isinstance(v, vertices.CFGEdge):
+            oldID_to_newID[v.vertexID] = new_induced_CFG.get_next_edge_vertexID()
+        else:
+            oldID_to_newID[v.vertexID] = new_induced_CFG.get_next_vertexID()
+        newv              = copy.deepcopy(induced_CFG.getVertex(v.vertexID))     
+        newv.vertexID     = oldID_to_newID[v.vertexID]
+        newv.predecessors = {}
+        newv.successors   = {}
+        new_induced_CFG.addVertex(newv)
+    # Create edges according to new numbering
+    new_edges = set()
+    for v in induced_CFG:
+        for succID in v.successors.keys():
+            new_edges.add((oldID_to_newID[v.vertexID], oldID_to_newID[succID]))    
+    # Add new edges     
+    for an_edge in new_edges:
+        new_induced_CFG.addEdge(an_edge[0], an_edge[1])
     
 def create_path_expression(cfg, entry_vertexID, exit_vertexID):
     lnt = cfg.get_LNT()
@@ -253,20 +255,35 @@ def create_path_expression(cfg, entry_vertexID, exit_vertexID):
                                   exit_vertexID,
                                   path_expr.__str__()))
     else:
-        if entry_vertexID != exit_vertexID \
-        and exit_vertexID in cfg.reachability_info[headerv.headerID].unified[entry_vertexID]:
-            print("%d can reach %d" % (entry_vertexID,exit_vertexID))
-            induced_CFG = create_induced_subgraph(cfg, entry_vertexID, exit_vertexID)
-            path_expr   = PathExpression(cfg, lnt, induced_CFG)
-            print("P(%d, %d) = %s" % (entry_vertexID,
-                                      exit_vertexID,
-                                      path_expr.__str__()))
-        else:
-            print("%d can NOT reach %d" % (entry_vertexID,exit_vertexID))
-            induced_CFG1 = create_induced_subgraph(cfg, entry_vertexID, lnt.get_loop_tails(headerv.headerID)[0])
-            induced_CFG2 = create_induced_subgraph(cfg, headerv.headerID, exit_vertexID)
-            induced_CFG  = union_subgraphs_through_backedges(cfg, lnt, headerv, induced_CFG1, induced_CFG2)
-            path_expr    = PathExpression(cfg, lnt, induced_CFG)
-            print("P(%d, %d) = %s" % (entry_vertexID,
-                                      exit_vertexID,
-                                      path_expr.__str__()))
+        # Create new induced graph    
+        induced_CFG  = directed_graphs.EnhancedCFG()
+        induced_CFG1 = create_induced_subgraph(cfg, entry_vertexID, lnt.get_loop_tails(headerv.headerID))
+        create_connected_induced_CFG(induced_CFG, induced_CFG1)
+        induced_CFG2 = create_induced_subgraph(cfg, headerv.headerID, set([exit_vertexID]))
+        create_connected_induced_CFG(induced_CFG, induced_CFG2)
+        path_expr1 = PathExpression(cfg, lnt, induced_CFG1)
+        path_expr2 = PathExpression(cfg, lnt, induced_CFG2)
+        print("P(%d, %d) = %s %s" % (entry_vertexID,
+                                  exit_vertexID,
+                                  path_expr1.__str__(),
+                                  path_expr2.__str__()))
+        
+def create_path_expression_for_all_loops(cfg):
+    lnt = cfg.get_LNT()
+    for the_vertices in lnt.level_by_level_iterator(True):
+        for treev in [treev for treev in the_vertices if isinstance(treev, vertices.HeaderVertex)]: 
+            backedges    = lnt.get_backedges(treev.headerID)
+            enhanced_CFG = lnt.induce_subgraph(backedges)
+            path_expr = PathExpression(cfg, lnt, enhanced_CFG)
+            path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
+            PathExpression.loop_body_expressions[treev.headerID] = path_expr
+            print("path expression for loop body with header %d: %s\n" % (treev.headerID,
+                                                                          path_expr.__str__()))
+            for backedge in backedges:
+                enhanced_CFG = lnt.induce_subgraph({backedge})
+                path_expr = PathExpression(cfg, lnt, enhanced_CFG)
+                path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
+                PathExpression.loop_body_expressions[backedge] = path_expr
+                print("path expression for loop body with backedge %s = %s\n" % (backedge,
+                                                                                 path_expr.__str__()))
+            

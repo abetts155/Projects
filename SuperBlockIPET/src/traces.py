@@ -2,8 +2,7 @@ import config
 import debug
 import os
 import random
-
-trace_delimiter = "%s%s%s" % ('<', "-" * 30, '>')
+import gzip
 
 class GenerateExecutionTraces:    
     def __init__ (self, program):
@@ -12,22 +11,27 @@ class GenerateExecutionTraces:
         self.do_it()
                 
     def do_it(self):
-        filename = config.Arguments.basepath + os.sep + config.Arguments.basename + ".traces"
-        with open(filename, 'w') as self.the_file:
+        filename = config.Arguments.basepath + os.sep + config.Arguments.basename + ".traces.gz"
+        with gzip.open(filename, 'wb') as self.the_file:
             for trace in xrange(1, config.Arguments.generate_traces+1):
                 debug.debug_message("Generating trace #%d" % trace, __name__, 10)
-                self.the_file.write("%s\n" % trace_delimiter)
                 self.generate_a_trace() 
-                self.the_file.write("\n")
+                self.the_file.write("\n\n")
     
     def generate_a_trace(self):
+        if config.Arguments.add_timestamps:
+            current_time = random.randint(1, 100)  
         root_callv    = self.program.callg.getVertex(self.program.callg.rootID)
         current_callv = root_callv 
         current_CFG   = self.program.cfgs[root_callv.name]
         currentv      = current_CFG.getVertex(current_CFG.get_entryID())
         call_stack    = []
         while True:
-            self.the_file.write("%d " % currentv.vertexID)
+            if not config.Arguments.add_timestamps:
+                self.the_file.write("(%d) " % currentv.vertexID)
+            else:
+                self.the_file.write("(%d, %d) " % (currentv.vertexID, current_time))
+                current_time += random.randint(1, 100)
             if currentv.vertexID == current_CFG.get_exitID():
                 if current_callv == root_callv:
                     # End of the program reached
