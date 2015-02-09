@@ -47,8 +47,8 @@ def read_file(filename):
                 ids = int_regex.findall(line) 
                 assert len(ids) == 1, "Too many identifiers found '%s'" % ' '.join(ids)
                 assert ids[0].isdigit(), "Vertex identifier '%s' is not an integer" % ids[0]
-                bb = vertices.CFGVertex(int(ids[0]))
-                cfg.addVertex(bb)
+                bb = vertices.Vertex(int(ids[0]))
+                cfg.add_vertex(bb)
             elif line.startswith(successors_lexeme):
                 assert bb, "Found edge but current basic block is null"
                 edges = edges_regex.findall(line)

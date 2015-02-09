@@ -87,25 +87,10 @@ class HeaderVertex(TreeVertex):
     def __init__ (self, vertexID, headerID):
         TreeVertex.__init__(self, vertexID)
         self.headerID = headerID
-    
-class CFGVertex(Vertex):
-    def __init__(self, vertexID):
-        Vertex.__init__(self, vertexID)
-    
-class CFGEdge(Vertex):
-    def __init__(self, vertexID, predID, succID):
-        Vertex.__init__(self, vertexID)
-        self.edge = (predID, succID)
-    
-    def __str__(self):
-        return """virtual ID = %d 
-real ID    = %d 
-edge       = %s
-succ       = %s 
-pred       = %s
-""" % (self.vertexID, 
-       self.real_vertexID, 
-       self.edge,
-       self.edge_incidence_string(self.successors), 
-       self.edge_incidence_string(self.predecessors))
+        
+class ProgramPoint(TreeVertex):
+    def __init__(self, vertexID, the_program_point):
+        TreeVertex.__init__(self, vertexID)
+        self.the_program_point = the_program_point
+        
         

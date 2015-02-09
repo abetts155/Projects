@@ -70,24 +70,26 @@ def make_file(g, graph_name):
         filename = "%s%s%s.%s.%s" % (config.Arguments.basepath, os.sep, config.Arguments.basename, graph_name, "udraw")
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
-            if isinstance(g, directed_graphs.CFG) or isinstance(g, directed_graphs.EnhancedCFG):
-                write_CFG_vertex(g, g.get_entryID(), the_file)
+            if isinstance(g, directed_graphs.CFG):
+                write_CFG_vertex(g, g.get_vertex(g.get_entryID()), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
-                        write_CFG_vertex(g, v.vertexID, the_file)   
+                        write_CFG_vertex(g, v, the_file)   
+            elif isinstance(g, directed_graphs.StateTransitionGraph) or isinstance(g, directed_graphs.StateTransitionComponentDAG):
+                for v in g:
+                    writeStateTransitionVertex(g, v, the_file)
             elif isinstance(g, directed_graphs.LoopNests):
                 for v in g:
-                    writeTreeVertex(g, v.vertexID, the_file)
+                    writeTreeVertex(g, v, the_file)
             else:
                 for v in g:
-                    writeVertex(g, v.vertexID, the_file)
+                    writeVertex(g, v, the_file)
             the_file.write(end_graph) 
             
-def writeVertex(g, vertexID, the_file):
-    v = g.getVertex(vertexID)        
-    the_file.write(new_vertex(vertexID))
+def writeVertex(g, v, the_file):
+    the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
+    the_file.write(set_name(str(v.vertexID)))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -100,20 +102,14 @@ def writeVertex(g, vertexID, the_file):
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n") 
     
-def write_CFG_vertex(cfg, vertexID, the_file):
-    v = cfg.getVertex(vertexID)
-    the_file.write(new_vertex(vertexID))
+def write_CFG_vertex(cfg, v, the_file):
+    name = "%d%s(virtual=%d)" % (v.real_vertexID, new_line, v.vertexID)
+    the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    if isinstance(v, vertices.CFGVertex):
-        the_file.write(set_name(str(vertexID)))
-    elif isinstance(v, vertices.CFGEdge):
-        name = str(v.edge) + "\\n" + str(vertexID)
-        the_file.write(set_name(name))
-    else:
-        the_file.write(set_name(str(vertexID)))
-        the_file.write(set_color(COLOR.RED))
+    the_file.write(set_name(name))
     if v.dummy:
-        the_file.write(set_color(COLOR.YELLOW))
+        the_file.write(set_color(COLOR.RED))
+        the_file.write(set_tool_tip("Dummy vertex"))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -126,16 +122,19 @@ def write_CFG_vertex(cfg, vertexID, the_file):
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
 
-def writeTreeVertex (tree, vertexID, the_file):
-    v = tree.getVertex(vertexID)
-    the_file.write(new_vertex(vertexID))
+def writeTreeVertex (tree, v, the_file):
+    the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
-    if isinstance(tree, directed_graphs.LoopNests):
-        if isinstance(v, vertices.HeaderVertex):
-            the_file.write(set_shape(SHAPE.TRIANGLE))
-            the_file.write(set_color(COLOR.RED))
-            the_file.write(set_tool_tip("Header ID = %s" % v.headerID))
+    if isinstance(v, vertices.ProgramPoint):
+        the_file.write(set_name(str(v.the_program_point)))
+    elif isinstance(v, vertices.HeaderVertex):
+        the_file.write(set_shape(SHAPE.TRIANGLE))
+        the_file.write(set_color(COLOR.RED))
+        the_file.write(set_tool_tip("Header ID = %s" % v.headerID))
+    else:
+        the_file.write(set_shape(SHAPE.CIRCLE))
+        the_file.write(set_color(COLOR.YELLOW))
+        the_file.write(set_name(str(v.vertexID)))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -148,4 +147,26 @@ def writeTreeVertex (tree, vertexID, the_file):
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
     
+def writeStateTransitionVertex(graph, v, the_file):
+    the_file.write(new_vertex(v.vertexID))
+    the_file.write(begin_attrs)
+    the_file.write(set_color(COLOR.YELLOW))
+    the_file.write(set_shape(SHAPE.CIRCLE))
+    the_file.write(set_name(str(v.vertexID)))
+    the_file.write(end_attrs)
+    
+    the_file.write(begin_attrs)
+    for succe in v.successors.values():
+        the_file.write(new_edge)
+        the_file.write(begin_attrs)
+        edge_str = succe.__str__()
+        if edge_str.startswith("set"):
+            the_file.write(set_edge_pattern(EDGESHAPE.SOLID, 4))
+            the_file.write(set_tool_tip(edge_str))
+        else:
+            the_file.write(set_name(edge_str))
+        the_file.write(end_attrs)
+        the_file.write(edge_link(succe.vertexID))
+        the_file.write(end_edge + ",\n")
+    the_file.write(end_vertex + "\n")
     

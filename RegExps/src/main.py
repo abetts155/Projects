@@ -29,6 +29,7 @@ def create_path_expression_between_two_vertices(program):
             if len(program.cfgs) == 1:
                 cfg = program.cfgs.itervalues().next()
             else:
+                print("%s CFGs = {%s}" % (prompt_prefix, ','.join(cfg.name for cfg in program.cfgs.values())))
                 cfg_name = parse_input_from_user("Enter CFG name")
                 if cfg_name not in program.cfgs:
                     debug.warning_message("Program does not have CFG %s" % cfg_name)
@@ -37,14 +38,14 @@ def create_path_expression_between_two_vertices(program):
             if cfg is not None:
                 print("%s Vertices = {%s}" % (prompt_prefix, ','.join(str(v.vertexID) for v in cfg)))
                 startID = parse_input_from_user("Enter start vertex")
-                if not cfg.hasVertex(startID):
+                if not cfg.has_vertex(startID):
                     debug.warning_message("CFG does not have vertex: %d" % startID)
                 else:
                     endID = parse_input_from_user("Enter end vertex")
-                    if not cfg.hasVertex(endID):
+                    if not cfg.has_vertex(endID):
                         debug.warning_message("CFG does not have vertex: %d" % endID)
                     else:
-                        regular_expressions.create_path_expression(cfg, startID, endID)
+                        regular_expressions.create_path_expression(cfg, (startID, endID))
     except KeyboardInterrupt:
         pass
 
