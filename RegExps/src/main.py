@@ -45,7 +45,8 @@ def create_path_expression_between_two_vertices(program):
                     if not cfg.has_vertex(endID):
                         debug.warning_message("CFG does not have vertex: %d" % endID)
                     else:
-                        regular_expressions.create_path_expression(cfg, (startID, endID))
+                        the_query = ((startID,), (endID,))
+                        regular_expressions.create_path_expression(cfg, the_query)
     except KeyboardInterrupt:
         pass
 

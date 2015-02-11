@@ -2,14 +2,12 @@ from __future__ import print_function
 
 import directed_graphs
 import vertices
-import copy
 import udraw
-import itertools
 
 class DominanceFrontiers:
     def __init__(self, cfg, dominator_tree):
         self.vertex_DF = {}
-        for v in cfg:
+        for v in dominator_tree:
             self.vertex_DF[v.vertexID] = set()
         self.compute(cfg, dominator_tree)
         
@@ -34,320 +32,245 @@ class AcyclicReducibility:
             if v.number_of_successors() > 1:
                 if len(predominance_frontier_info.vertex_DF[v.vertexID]) > 1:
                     self.irreducible_branches.add(v.vertexID)
-
-class RegExp:
-    concatenation = '.'
-    union         = '|'
-    kleene_star   = '*'
-    kleene_plus   = '+'
-    empty         = '0'
-    
-    
-    @staticmethod
-    def l_parenthesis(left_spaces=0):
-        return (' ' * left_spaces) + '('
-    
-    @staticmethod
-    def r_parenthesis(right_spaces=0):
-        return ')' + (' ' * right_spaces)
-    
-    def __init__(self):
-        self.elements = []
-        
-    def append(self, *args):
-        for arg in args:
-            if isinstance(arg, RegExp):
-                self.elements.extend(arg.elements)
-            elif isinstance(arg, int):
-                self.elements.append(str(arg))
-            else:
-                self.elements.append(arg)
-    
-    def wrap_in_kleene_operator(self, kleene_operator):
-        assert kleene_operator == RegExp.kleene_plus or kleene_operator == RegExp.kleene_star
-        self.elements.insert(0, RegExp.l_parenthesis())
-        self.elements.append(RegExp.r_parenthesis())
-        self.elements.append(kleene_operator)
-        
-    def lookahead(self, it):
-        it1, it2 = itertools.tee(iter(it))
-        next(it2)
-        return itertools.izip_longest(it1, it2)
-        
-    def __str__ (self):
-        the_string = ""
-        for (elem, lookahead) in self.lookahead(self.elements):
-            if isinstance(elem, vertices.CFGEdge):
-                the_string += "[%d_%d]" % (elem.edge[0], elem.edge[1])
-            elif isinstance(elem, vertices.CFGVertex):
-                if elem == self.elements[0] or elem == RegExp.l_parenthesis(0):
-                    l_space = ""
-                else:
-                    l_space = " "
-                if lookahead == RegExp.r_parenthesis(0):
-                    r_space = ""
-                else:
-                    r_space = " "
-                the_string += "%s%d%s" % (l_space, elem.real_vertexID, r_space)
-            elif isinstance(elem, vertices.HeaderVertex):
-                the_string += " %d " % elem.headerID
-            elif isinstance(elem, PathExpression):
-                the_string += elem.the_expr.__str__()
-            else:
-                the_string += elem
-                if elem == RegExp.kleene_plus or elem == RegExp.kleene_star:
-                    the_string += " "
-        return the_string
             
-class PathExpression:
+class PathExpression(directed_graphs.DirectedGraph):
     loop_body_expressions = {}
     
-    def __init__(self, cfg, lnt, induced_CFG):   
-        self.cfg                    = cfg 
-        self.lnt                    = lnt    
-        self.induced_CFG            = induced_CFG
-        self.predominator_tree      = directed_graphs.Dominators(induced_CFG, induced_CFG.get_entryID())
-        self.lca                    = self.predominator_tree.get_LCA()
-        self.acyclic_reducible_info = AcyclicReducibility(induced_CFG, self.predominator_tree)
-        self.reverse_induced_CFG    = induced_CFG.get_reverse_graph()
-        self.postdominator_tree     = directed_graphs.Dominators(self.reverse_induced_CFG, self.reverse_induced_CFG.get_entryID())
-        self.initialise()
-        self.compute()
-        self.the_expr = self.vertex_to_regular_expression[induced_CFG.get_exitID()]
-                
-    def initialise(self):
-        self.vertex_to_regular_expression = {}
-        for v in self.induced_CFG :
-            self.vertex_to_regular_expression[v.vertexID] = RegExp() 
+    def __init__(self, transition_graph_induced_global):   
+        directed_graphs.DirectedGraph.__init__(self)
+        if transition_graph_induced_global.number_of_vertices() > 0:
+            self.transitiong            = transition_graph_induced_global
+            self.predominator_tree      = directed_graphs.Dominators(transition_graph_induced_global)
+            self.predominator_tree.augment_with_program_point_edges()
+            self.acyclic_reducible_info = AcyclicReducibility(transition_graph_induced_global, self.predominator_tree)
+            self.reverse_transitiong    = transition_graph_induced_global.get_reverse_graph()
+            self.postdominator_tree     = directed_graphs.Dominators(self.reverse_transitiong)
+            self.reg_exp_trees = {}
+            self.compute()
+        
+    def create_program_point_vertex(self, the_program_point):
+        newID = self.get_next_vertexID()
+        newv  = vertices.ProgramPoint(newID, the_program_point)
+        self.add_vertex(newv)
+        return newv
+    
+    def create_sequence_vertex(self):
+        newID = self.get_next_vertexID()
+        newv  = vertices.RegExpVertex(newID, vertices.RegExpVertex.SEQUENCE)
+        self.add_vertex(newv)
+        return newv
+    
+    def create_alternative_vertex(self):
+        newID = self.get_next_vertexID()
+        newv  = vertices.RegExpVertex(newID, vertices.RegExpVertex.ALTERNATIVE)
+        self.add_vertex(newv)
+        return newv
         
     def compute(self):
-        dfs = directed_graphs.DepthFirstSearch(self.induced_CFG, self.induced_CFG .get_entryID())
-        for vertexID in reversed(dfs.post_order):
-            v = self.induced_CFG.get_vertex(vertexID)
-            if v.number_of_predecessors() > 1:
-                self.handle_merge(v)
+        dfs = directed_graphs.DepthFirstSearch(self.transitiong, self.transitiong.get_entryID())
+        for vertexID_transitiong in reversed(dfs.post_order):
+            if vertexID_transitiong == self.transitiong.entryID:
+                self.reg_exp_trees[vertexID_transitiong] = self.create_sequence_vertex()
             else:
-                self.handle_non_merge(v)
-            self.append_loop_body_expression(v)
+                v_transitiong = self.transitiong.get_vertex(vertexID_transitiong)
+                for predID_transitiong, prede_transitiong in v_transitiong.predecessors.iteritems():
+                    predv_transitiong  = self.transitiong.get_vertex(predID_transitiong)
+                    if predv_transitiong.number_of_successors() > 1:
+                        self.reg_exp_trees[prede_transitiong.edgeID] = self.create_sequence_vertex()
+                    else:
+                        self.reg_exp_trees[prede_transitiong.edgeID] = self.reg_exp_trees[predID_transitiong]
+                        
+                    leafv   = self.create_program_point_vertex(prede_transitiong.the_program_point)
+                    parentv = self.reg_exp_trees[prede_transitiong.edgeID]
+                    self.add_edge(parentv.vertexID, leafv.vertexID)
+                
+                if v_transitiong.number_of_predecessors() > 1:
+                    self.reg_exp_trees[vertexID_transitiong] = self.handle_merge(v_transitiong)
+                else:
+                    self.reg_exp_trees[vertexID_transitiong] = self.reg_exp_trees[prede_transitiong.edgeID]
+                    
+    def handle_merge(self, mergev):
+        predominator_tree_compressed = directed_graphs.CompressedDominatorTree(self.predominator_tree, 
+                                                                               self.predominator_tree.get_LCA(), 
+                                                                               mergev)
+        
+        local_reg_exp_trees = {}
+        for the_vertices in predominator_tree_compressed.level_by_level_iterator(True):
+            for treev in the_vertices:
+                if treev.number_of_successors() == 0:
+                    local_reg_exp_trees[treev.edgeID] = self.reg_exp_trees[treev.edgeID]
+                else:
+                    altv = self.create_alternative_vertex()
+                    for succID in treev.successors.keys():
+                        succv = predominator_tree_compressed.get_vertex(succID)
+                        if isinstance(succv, vertices.ProgramPoint):
+                            self.add_edge(altv.vertexID, local_reg_exp_trees[succv.edgeID].vertexID)
+                        else:
+                            self.add_edge(altv.vertexID, local_reg_exp_trees[succID].vertexID)
+                    if treev.vertexID != predominator_tree_compressed.rootID \
+                    or self.postdominator_tree.get_vertex(predominator_tree_compressed.rootID).parentID == mergev.vertexID:
+                        seqv = self.reg_exp_trees[treev.vertexID]
+                    else:
+                        seqv = self.create_sequence_vertex()
+                    self.add_edge(seqv.vertexID, altv.vertexID)
+                    local_reg_exp_trees[treev.vertexID] = seqv
+        return local_reg_exp_trees[predominator_tree_compressed.rootID]
                 
     def append_loop_body_expression(self, v):
-        if self.lnt.is_loop_tail(v.real_vertexID) and self.induced_CFG.get_vertex(v.vertexID).number_of_successors() > 0:
+        return
+        if self.lnt.is_loop_tail(v.real_vertexID) and self.transitiong.get_vertex(v.vertexID).number_of_successors() > 0:
             enhanced_cfg = self.lnt.induce_subgraph_for_tail(v.real_vertexID)
             path_expr = PathExpression(self.cfg, self.lnt, enhanced_cfg)
             path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
             self.vertex_to_regular_expression[v.vertexID].append(path_expr)
-        
-    def handle_non_merge(self, v):
-        if v.number_of_predecessors() == 1:
-            predID = v.predecessors.keys()[0]
-            predv  = self.induced_CFG.get_vertex(predID)
-            if (predv.number_of_successors() > 1 and predID in self.acyclic_reducible_info.irreducible_branches) \
-            or predv.number_of_successors() == 1:
-                self.vertex_to_regular_expression[v.vertexID].append(self.vertex_to_regular_expression[predID])
-        self.vertex_to_regular_expression[v.vertexID].append(v)
-                
-    def handle_merge(self, mergev):
-        vertex_temp_reg_exprs = {}
-        compressed_tree       = directed_graphs.CompressedDominatorTree(self.predominator_tree, 
-                                                                        self.lca, 
-                                                                        mergev.vertexID, 
-                                                                        mergev.predecessors.keys())
-        for the_vertices in compressed_tree.level_by_level_iterator(True):
-            for treev in the_vertices:
-                if treev.number_of_successors() == 0:
-                    vertex_temp_reg_exprs[treev.vertexID] = self.vertex_to_regular_expression[treev.vertexID]
-                else:
-                    new_expr = RegExp()
-                    if treev.vertexID != compressed_tree.rootID:
-                        new_expr.append(self.vertex_to_regular_expression[treev.vertexID])
-                    new_expr.append(RegExp.l_parenthesis())
-                    counter = treev.number_of_successors()
-                    for succID in treev.successors.keys():
-                        new_expr.append(vertex_temp_reg_exprs[succID])
-                        if counter > 1:
-                            new_expr.append(RegExp.union)
-                        counter -= 1
-                    new_expr.append(RegExp.r_parenthesis())
-                    vertex_temp_reg_exprs[treev.vertexID] = new_expr
-        if self.postdominator_tree.get_vertex(compressed_tree.rootID).parentID == mergev.vertexID: 
-            self.vertex_to_regular_expression[mergev.vertexID].append(self.vertex_to_regular_expression[compressed_tree.rootID])
-        self.vertex_to_regular_expression[mergev.vertexID].append(vertex_temp_reg_exprs[compressed_tree.rootID])
-        if not mergev.dummy:
-            self.vertex_to_regular_expression[mergev.vertexID].append(mergev) 
-    
-def copy_vertex_into_induced_CFG(cfg, induced_CFG, vertexID):
-    if not induced_CFG.has_vertex(vertexID):
-        v = cfg.get_vertex(vertexID)
-        newv = copy.deepcopy(v)
-        newv.predecessors = {}
-        newv.successors   = {}
-        induced_CFG.add_vertex(newv)
 
-def create_induced_subgraph(enhanced_cfg, 
-                            enhanced_cfg_lnt, 
-                            reachability_info, 
+def create_induced_subgraph(transition_graph, 
+                            transition_graph_lnt, 
                             headerv, 
-                            the_pair,
+                            query_pair,
                             startID, 
                             is_reverse_graph):
-    edges   = set()
-    visited = set()
-    stack   = []
-    stack.append(startID)
+    edges     = set()
+    visited   = set()
+    v_startID = transition_graph.program_point_to_predecessor_state[query_pair[0]]
+    stack     = []
+    stack.append(v_startID)
     while stack:
-        vertexID = stack.pop()
-        visited.add(vertexID)
-        v = enhanced_cfg.get_vertex(vertexID)
-        for succID in v.successors.keys():
-            if not enhanced_cfg_lnt.is_backedge(vertexID, succID) \
-            and not enhanced_cfg_lnt.is_backedge(succID, vertexID):
-                if headerv.vertexID == enhanced_cfg_lnt.rootID:
-                    if reachability_info.is_reachable(succID, set(the_pair)):
-                        edges.add((vertexID, succID))
-                        if succID != the_pair[1] and succID not in visited:
-                            stack.append(succID)
+        v_stackID = stack.pop()
+        v_stack   = transition_graph.get_vertex(v_stackID)
+        visited.add(v_stackID)
+        for e_succ in v_stack.successors.values():
+            if not transition_graph_lnt.is_backedge(v_stack.vertexID, e_succ.vertexID) \
+            and not transition_graph_lnt.is_backedge(e_succ.vertexID, v_stack.vertexID):
+                if headerv.vertexID == transition_graph_lnt.rootID:
+                    if transition_graph.is_reachable(e_succ.the_program_point, set(query_pair)):
+                        edges.add((v_stack.vertexID, e_succ.vertexID, e_succ.the_program_point))
+                        if e_succ.the_program_point != query_pair[1] and e_succ.vertexID not in visited:
+                            stack.append(e_succ.vertexID)
                 else:
-                    if enhanced_cfg_lnt.is_ancestor(headerv.vertexID, succID):
-                        edges.add((vertexID, succID))
-                        if succID not in visited:
-                            stack.append(succID)
+                    v_succ_lnt = transition_graph_lnt.get_program_point_vertex(e_succ.vertexID)
+                    if transition_graph_lnt.is_ancestor(headerv.vertexID, v_succ_lnt.vertexID):
+                        edges.add((v_stack.vertexID, e_succ.vertexID, e_succ.the_program_point))
+                        if e_succ.vertexID not in visited:
+                            stack.append(e_succ.vertexID)
+                            
     # At this point, the edges we need to add to the induced subgraph have been worked out
-    induced_enhanced_CFG = directed_graphs.EnhancedCFG()
+    transition_graph_induced = directed_graphs.StateTransitionGraph()
     for an_edge in edges:
-        copy_vertex_into_induced_CFG(enhanced_cfg, induced_enhanced_CFG, an_edge[0])
-        copy_vertex_into_induced_CFG(enhanced_cfg, induced_enhanced_CFG, an_edge[1])
+        if not transition_graph_induced.has_vertex(an_edge[0]):
+            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[0]))
+        if not transition_graph_induced.has_vertex(an_edge[1]):
+            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[1]))
         if is_reverse_graph:
-            induced_enhanced_CFG.addEdge(an_edge[1], an_edge[0])
+            transition_graph_induced.add_edge(an_edge[1], an_edge[0], an_edge[2])
         else:
-            induced_enhanced_CFG.addEdge(an_edge[0], an_edge[1])
-    return induced_enhanced_CFG
+            transition_graph_induced.add_edge(an_edge[0], an_edge[1], an_edge[2])
+    return transition_graph_induced
 
-def detect_non_terminal_backedges(enhanced_cfg_lnt, global_induced_CFG, sink_vertices):
+def detect_non_terminal_backedges(transition_graph_lnt, transition_graph_induced_global, sink_vertices):
     to_remove = set()
     for v in sink_vertices:
-        if isinstance(v, vertices.CFGEdge):
-            assert v.number_of_predecessors() == 1
-            predv = global_induced_CFG.get_vertex(v.predecessors.keys()[0])
-            if predv.number_of_successors() > 1:
-                to_remove.add(v)
+        pass
     return to_remove
 
-def create_connected_induced_CFG(global_induced_CFG, induced_CFG):    
+def create_connected_transition_graph(transition_graph_induced_global, transition_graph_induced):    
     # Relabel each vertex
     oldID_to_newID = {}
-    for v in induced_CFG:
-        if isinstance(v, vertices.CFGEdge):
-            oldID_to_newID[v.vertexID] = global_induced_CFG.get_next_edge_vertexID()
-        else:
-            oldID_to_newID[v.vertexID] = global_induced_CFG.get_next_vertexID()
-        newv              = copy.deepcopy(induced_CFG.get_vertex(v.vertexID))     
-        newv.vertexID     = oldID_to_newID[v.vertexID]
-        newv.predecessors = {}
-        newv.successors   = {}
-        global_induced_CFG.add_vertex(newv)
+    for v in transition_graph_induced:
+        oldID_to_newID[v.vertexID] = transition_graph_induced_global.get_next_vertexID()
+        transition_graph_induced_global.add_vertex(vertices.Vertex(oldID_to_newID[v.vertexID]))
     # Create edges according to new numbering
     new_edges = set()
-    for v in induced_CFG:
-        for succID in v.successors.keys():
-            new_edges.add((oldID_to_newID[v.vertexID], oldID_to_newID[succID]))    
+    for v in transition_graph_induced:
+        for succe in v.successors.values():
+            new_edges.add((oldID_to_newID[v.vertexID], oldID_to_newID[succe.vertexID], succe.the_program_point))    
     # Add new edges     
     for an_edge in new_edges:
-        global_induced_CFG.addEdge(an_edge[0], an_edge[1])
+        transition_graph_induced_global.add_edge(an_edge[0], an_edge[1], an_edge[2])
         
-def create_subgraph_for_vertices_in_same_loop_nest(enhanced_cfg,
-                                                   enhanced_cfg_lnt,
-                                                   enhanced_cfg_reachability,
+def create_subgraph_for_vertices_in_same_loop_nest(transition_graph,
+                                                   transition_graph_lnt,
+                                                   transition_graph_induced_global,
                                                    headerv,
-                                                   the_pair,
-                                                   global_induced_CFG):
-    induced_CFG1 = create_induced_subgraph(enhanced_cfg, 
-                                           enhanced_cfg_lnt, 
-                                           enhanced_cfg_reachability, 
-                                           headerv,  
-                                           the_pair,
-                                           the_pair[0],
-                                           False) 
+                                                   query_pair):
     
-    create_connected_induced_CFG(global_induced_CFG, induced_CFG1)
+    transition_graph_one = create_induced_subgraph(transition_graph, 
+                                                   transition_graph_lnt, 
+                                                   headerv,  
+                                                   query_pair,
+                                                   query_pair[0],
+                                                   False) 
     
-    # Set the entry vertex of the global induced CFG
-    source_vertices1 = global_induced_CFG.get_source_vertices()
-    assert len(source_vertices1) == 1
-    global_induced_CFG.entryID = list(source_vertices1)[0].vertexID
+    create_connected_transition_graph(transition_graph_induced_global, transition_graph_one)
     
-    # Remove any sink vertices which represent loop-back edges but are not terminal in the induced CFG
-    sink_vertices1 = global_induced_CFG.get_sink_vertices()
-    to_remove     = detect_non_terminal_backedges(enhanced_cfg_lnt, global_induced_CFG, sink_vertices1)
-    for v in to_remove:
-        sink_vertices1.remove(v)
-        global_induced_CFG.removeVertex(v.vertexID)
-    
-    if enhanced_cfg_lnt.get_vertex(enhanced_cfg_lnt.get_vertex(the_pair[0]).parentID).vertexID == enhanced_cfg_lnt.rootID \
-    or enhanced_cfg_lnt.get_vertex(enhanced_cfg_lnt.get_vertex(the_pair[1]).parentID).vertexID  == enhanced_cfg_lnt.rootID:
-        assert len(sink_vertices1) == 1
-        global_induced_CFG.exitID  = list(sink_vertices1)[0].vertexID
-    else:
-        induced_CFG2 = create_induced_subgraph(enhanced_cfg.get_reverse_graph(), 
-                                               enhanced_cfg_lnt, 
-                                               enhanced_cfg_reachability, 
-                                               headerv, 
-                                               the_pair,
-                                               the_pair[1],
-                                               True)
-        create_connected_induced_CFG(global_induced_CFG, induced_CFG2)
-        source_vertices2   = global_induced_CFG.get_source_vertices()
-        source_vertices2   = source_vertices2.difference(source_vertices1)
-        sink_vertices2     = global_induced_CFG.get_sink_vertices()
-        sink_vertices2     = sink_vertices2.difference(sink_vertices1)
+    if transition_graph_induced_global.number_of_vertices() > 0:
+        # Set the entry vertex of the global induced CFG
+        source_vertices1 = transition_graph_induced_global.get_source_vertices()
+        assert len(source_vertices1) == 1
+        transition_graph_induced_global.entryID = list(source_vertices1)[0].vertexID
         
-        for sourcev in sink_vertices1:
-            for destinationv in source_vertices2:
-                global_induced_CFG.addEdge(sourcev.vertexID, destinationv.vertexID)
+        # Remove any sink vertices which represent loop-back edges but are not terminal in the induced CFG
+        sink_vertices1 = transition_graph_induced_global.get_sink_vertices()
+        to_remove     = detect_non_terminal_backedges(transition_graph, transition_graph_lnt, sink_vertices1)
+        for v in to_remove:
+            sink_vertices1.remove(v)
+            transition_graph_induced_global.removeVertex(v.vertexID)
         
-        assert len(sink_vertices2) == 1
-        global_induced_CFG.exitID  = list(sink_vertices2)[0].vertexID
-
-
-def create_subgraph_for_vertices_in_different_loop_nest(enhanced_cfg,
-                                                        enhanced_cfg_lnt,
-                                                        enhanced_cfg_reachability,
-                                                        headerv,
-                                                        the_pair,
-                                                        global_induced_CFG):
-    pass
-
-def create_path_expression(cfg, the_pair):
-    transition_graph          = cfg.get_transition_graph()
-    transition_graph.get_reverse_graph()
-    udraw.make_file(transition_graph.get_component_DAG(), "%s.dag" % cfg.name)
-    transition_graph_lnt      = transition_graph.get_LNT()
-    udraw.make_file(transition_graph_lnt, "%s.lnt" % cfg.name)
-    headerv                   = transition_graph_lnt.get_vertex(transition_graph_lnt.get_LCA().query(the_pair))
-    print(headerv.headerID)
-    enhanced_cfg_reachability = enhanced_cfg.get_reachability_info()
-    
-    if not enhanced_cfg_reachability.is_reachable(the_pair[0], {the_pair[1]}) \
-    and not enhanced_cfg_reachability.is_reachable(the_pair[1], {the_pair[0]}) \
-    and headerv.vertexID == enhanced_cfg_lnt.rootID:
-        reg_expr = RegExp.empty
-    else:
-        global_induced_CFG = directed_graphs.EnhancedCFG()
+        program_point_one_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_program_point_vertex(query_pair[0]).parentID)
+        program_point_two_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_program_point_vertex(query_pair[1]).parentID)
         
-        if headerv.vertexID == enhanced_cfg_lnt.rootID:
-            print("DIFFERENT LOOP NESTS")
+        if program_point_one_header.vertexID == transition_graph_lnt.rootID \
+        or program_point_two_header.vertexID  == transition_graph_lnt.rootID:
+            assert len(sink_vertices1) == 1
+            transition_graph_induced_global.exitID  = list(sink_vertices1)[0].vertexID
         else:
-            create_subgraph_for_vertices_in_same_loop_nest(enhanced_cfg, 
-                                                           enhanced_cfg_lnt, 
-                                                           enhanced_cfg_reachability, 
+            transition_graph_two = create_induced_subgraph(transition_graph.get_reverse_graph(), 
+                                                           transition_graph_lnt, 
                                                            headerv, 
-                                                           the_pair, 
-                                                           global_induced_CFG)
+                                                           query_pair,
+                                                           query_pair[1],
+                                                           True)
+            create_connected_transition_graph(transition_graph_induced_global, transition_graph_two)
+            source_vertices2   = transition_graph_induced_global.get_source_vertices()
+            source_vertices2   = source_vertices2.difference(source_vertices1)
+            sink_vertices2     = transition_graph_induced_global.get_sink_vertices()
+            sink_vertices2     = sink_vertices2.difference(sink_vertices1)
             
-        udraw.make_file(global_induced_CFG, "%s.%d.%d" % (cfg.name, the_pair[0], the_pair[1]))
-        reg_expr = PathExpression(cfg, cfg.get_LNT(), global_induced_CFG).the_expr
+            for sourcev in sink_vertices1:
+                for destinationv in source_vertices2:
+                    transition_graph_induced_global.addEdge(sourcev.vertexID, destinationv.vertexID)
+            
+            assert len(sink_vertices2) == 1
+            transition_graph_induced_global.exitID  = list(sink_vertices2)[0].vertexID
+
+def create_path_expression(cfg, query_pair):
+    transition_graph     = cfg.get_transition_graph()
+    transition_graph_lnt = transition_graph.get_LNT()
+    if query_pair[0] == query_pair[1]:
+        lntv    = transition_graph_lnt.get_vertex(transition_graph_lnt.program_point_to_lnt_vertexID[query_pair[0]])
+        headerv = transition_graph_lnt.get_vertex(lntv.parentID)
+    else:
+        headerv = transition_graph_lnt.get_vertex(transition_graph_lnt.get_LCA().query(query_pair))
+    
+    transition_graph_induced_global = directed_graphs.StateTransitionGraph()
         
-    prologue  = "P(%s)" % (the_pair,)
-    print("%s\n%s\n%s\n%s" % ('=' * len(prologue), prologue, '=' * len(prologue), reg_expr.__str__()))
+    create_subgraph_for_vertices_in_same_loop_nest(transition_graph, 
+                                                   transition_graph_lnt,
+                                                   transition_graph_induced_global,
+                                                   headerv, 
+                                                   query_pair)
+        
+    transition_graph_induced_global.set_edgeIDs()
+    
+    udraw_suffix = "%s.%s" % (('_'.join(map(str, query_pair[0]))), ('_'.join(map(str, query_pair[1]))))
+    
+    udraw.make_file(transition_graph_induced_global, 
+                    "%s.transition.%s" % (cfg.name, udraw_suffix)) 
+    
+    expressiont = PathExpression(transition_graph_induced_global)
+    
+    udraw.make_file(expressiont, 
+                    "%s.regexp.%s" % (cfg.name, udraw_suffix))  
     
 def create_path_expression_for_all_loops(cfg):
     lnt = cfg.get_LNT()

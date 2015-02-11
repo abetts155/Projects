@@ -28,12 +28,12 @@ class DirectedGraph:
         predv.add_successor(succID)
         succv.add_predecessor(predID)
         
-    def hasEdge(self, predID, succID):
+    def has_edge(self, predID, succID):
         predv = self.get_vertex(predID)
         succv = self.get_vertex(succID)
         return predv.has_successor(succID) or succv.has_predecessor(predID)
     
-    def removeEdge(self, predID, succID):
+    def remove_edge(self, predID, succID):
         predv = self.get_vertex(predID)
         succv = self.get_vertex(succID)
         predv.remove_successor(succID)
@@ -120,17 +120,14 @@ class FlowGraph(DirectedGraph):
         assert self.exitID != vertices.dummyID, "Exit to flow graph not found"
         return self.exitID
     
-    def set_edgeIDs(self):
-        edgeID = 1
-        for v in self:
-            for e_succ in v.successors.values():
-                e_succ.edgeID = edgeID
-                v_succ = self.get_vertex(e_succ.vertexID)
-                e_pred = v_succ.get_predecessor_edge(v.vertexID)
-                e_pred.edgeID = edgeID
-                edgeID += 1
+    def get_reverse_graph(self):
+        reverseg = FlowGraph() 
+        self.add_vertices_to_reverse_graph(reverseg)
+        self.add_edges_to_reverse_graph(reverseg)
+        reverseg.entryID = self.exitID
+        reverseg.exitID  = self.entryID
+        return reverseg
                 
-
 class CFG(FlowGraph):    
     def __init__ (self):
         FlowGraph.__init__(self)
@@ -179,13 +176,11 @@ class CFG(FlowGraph):
 class StateTransitionGraph(FlowGraph):
     def __init__(self, cfg=None):
         FlowGraph.__init__(self)
-        self.depth_first_tree = None
-        self.dominator_tree   = None
-        self.lnt              = None
-        self.component_dag    = None
-        self.program_point_to_predecessor_state = {}
-        self.program_point_to_successor_state   = {}
         if cfg:
+            self.lnt              = None
+            self.component_dag    = None
+            self.program_point_to_predecessor_state = {}
+            self.program_point_to_successor_state   = {}
             self.create(cfg)
         
     def create(self, cfg):
@@ -195,12 +190,12 @@ class StateTransitionGraph(FlowGraph):
             new_stateID += 1
             v_pred_state = vertices.Vertex(new_stateID)
             self.the_vertices[new_stateID] = v_pred_state
-            self.program_point_to_predecessor_state[v_cfg.vertexID] = v_pred_state
+            self.program_point_to_predecessor_state[(v_cfg.vertexID,)] = v_pred_state.vertexID
             new_stateID += 1
             v_succ_state = vertices.Vertex(new_stateID)
             self.the_vertices[new_stateID] = v_succ_state
-            self.program_point_to_successor_state[v_cfg.vertexID] = v_succ_state
-            self.add_edge(v_pred_state, v_succ_state, v_cfg.vertexID)
+            self.program_point_to_successor_state[(v_cfg.vertexID,)] = v_succ_state.vertexID
+            self.add_edge(v_pred_state.vertexID, v_succ_state.vertexID, (v_cfg.vertexID,))
             if v_cfg.vertexID == cfg.entryID:
                 self.entryID = v_pred_state.vertexID
             if v_cfg.vertexID == cfg.exitID:
@@ -209,40 +204,46 @@ class StateTransitionGraph(FlowGraph):
         # Add a state transition per CFG edge
         for v_cfg in cfg:
             predID_cfg = v_cfg.vertexID
-            v_pred_state = self.program_point_to_successor_state[predID_cfg]
+            v_pred_stateID = self.program_point_to_successor_state[(predID_cfg,)]
             for succID_cfg in v_cfg.successors.keys():
-                v_succ_state = self.program_point_to_predecessor_state[succID_cfg]
-                self.add_edge(v_pred_state, v_succ_state, (predID_cfg, succID_cfg))
-                self.program_point_to_predecessor_state[(predID_cfg, succID_cfg)] = v_pred_state
-                self.program_point_to_successor_state[(predID_cfg, succID_cfg)] = v_succ_state
+                v_succ_stateID = self.program_point_to_predecessor_state[(succID_cfg,)]
+                self.add_edge(v_pred_stateID, v_succ_stateID, (predID_cfg, succID_cfg))
+                self.program_point_to_predecessor_state[(predID_cfg, succID_cfg)] = v_pred_stateID
+                self.program_point_to_successor_state[(predID_cfg, succID_cfg)] = v_succ_stateID
                 
-    def add_edge(self, v_pred, v_succ, the_program_point):
+    def add_edge(self, predID, succID, the_program_point):
+        v_pred = self.get_vertex(predID)
+        v_succ = self.get_vertex(succID)
         e_pred = edges.TransitionEdge(v_pred.vertexID, the_program_point)
         e_succ = edges.TransitionEdge(v_succ.vertexID, the_program_point)
         v_pred.add_successor_edge(e_succ)
         v_succ.add_predecessor_edge(e_pred)
     
-    def get_depth_first_search_tree(self):
-        if self.depth_first_tree is None:
-            self.depth_first_tree = DepthFirstSearch(self, self.entryID)
-        return self.depth_first_tree            
-    
-    def get_dominator_tree(self):
-        if self.dominator_tree is None:
-            self.dominator_tree = Dominators(self, self.entryID)
-        return self.dominator_tree
-    
     def get_LNT(self):
         if self.lnt is None:
             self.lnt = LoopNests(self, self.entryID)
         return self.lnt
-
-    def get_component_DAG(self):
+    
+    def is_reachable(self, a_program_point, the_set):
         if self.component_dag is None:
             self.component_dag = StateTransitionComponentDAG()
             self.component_dag.build(self, self.get_LNT())
             self.component_dag.compute_reachability_information(self)
-        return self.component_dag
+        assert a_program_point in self.component_dag.reachability_info
+        return the_set.issubset(self.component_dag.reachability_info[a_program_point])
+    
+    def set_edgeIDs(self):
+        edgeID = 1
+        for v in self:
+            edgeID = max(edgeID, v.vertexID)
+        edgeID += 1
+        for v in self:
+            for e_succ in v.successors.values():
+                e_succ.edgeID = edgeID
+                v_succ = self.get_vertex(e_succ.vertexID)
+                e_pred = v_succ.get_predecessor_edge(v.vertexID)
+                e_pred.edgeID = edgeID
+                edgeID += 1
 
 class StateTransitionComponentDAG(FlowGraph):
     def __init__(self):
@@ -397,10 +398,6 @@ class StateTransitionComponentDAG(FlowGraph):
                     self.reachability_info[a_program_point] = unified[an_edge]
             else:
                 self.reachability_info[succe.the_program_point] = unified[an_edge]
-        
-    def is_reachable(self, a_program_point, the_set):
-        assert a_program_point in self.reachability_info
-        return the_set.issubset(self.unified[a_program_point])
     
 class Tree(DirectedGraph):
     def __init__ (self):
@@ -463,7 +460,12 @@ class Tree(DirectedGraph):
         for v in self:
             if v.number_of_predecessors() == 0:
                 without_predecessors.add(v)
-        assert len(without_predecessors) == 1  
+            elif v.number_of_predecessors() > 1:
+                debug.exit_message("%d does not have a unique parent" % v.vertexID)
+        if len(without_predecessors) == 0:
+            debug.exit_message("No root vertex found")
+        elif len(without_predecessors) > 1:
+            debug.exit_message("Too many root vertices") 
         
     def get_LCA(self):
         if self.lca is None:
@@ -531,47 +533,47 @@ class DepthFirstSearch(Tree):
         return (sourceID, destinationID) in self.back_edges
         
 class Dominators(Tree):
-    def __init__(self, directedg, rootID):
+    def __init__(self, flowg):
         Tree.__init__(self)
-        assert rootID in directedg.the_vertices.keys(), "Unable to find vertex %d from which to initiate depth-first search" % rootID
-        self.rootID = rootID
-        self.immediate_dominator = {}
-        self.initialise(rootID, directedg)
-        self.solve(directedg)
+        self.flowg  = flowg
+        self.rootID = self.flowg.get_entryID()
+        self.initialise()
+        self.solve()
         self.add_edges()
     
-    def initialise(self, rootID, directedg):
-        for v in directedg:           
+    def initialise(self):
+        self.immediate_dominator = {}
+        for v in self.flowg:           
             self.the_vertices[v.vertexID] = vertices.TreeVertex(v.vertexID)
-            if v.vertexID == rootID:
+            if v.vertexID == self.flowg.get_entryID():
                 self.immediate_dominator[v.vertexID] = v.vertexID
             else:
                 self.immediate_dominator[v.vertexID] = vertices.dummyID
     
-    def solve(self, directedg):
-        dfs = DepthFirstSearch(directedg, self.rootID)
+    def solve(self):
+        dfs = DepthFirstSearch(self.flowg, self.flowg.get_entryID())
         changed = True
         while changed:
             changed = False
-            postID  = directedg.number_of_vertices()
+            postID  = self.flowg.number_of_vertices()
             while postID >= 1:
                 vertexID = dfs.getPostorderVertexID(postID)
                 if vertexID != self.rootID:
-                    v               = directedg.get_vertex(vertexID)
-                    processedPredID = vertices.dummyID
-                    newIdomID       = vertices.dummyID
+                    v                = self.flowg.get_vertex(vertexID)
+                    processed_predID = vertices.dummyID
+                    new_idomID       = vertices.dummyID
                     for predID in v.predecessors.keys():
                         if self.immediate_dominator[predID] != vertices.dummyID:
-                            processedPredID = predID
-                            newIdomID       = processedPredID
+                            processed_predID = predID
+                            new_idomID       = processed_predID
                     for predID in v.predecessors.keys():
-                        if predID != processedPredID:
+                        if predID != processed_predID:
                             if self.immediate_dominator[predID] != vertices.dummyID:
-                                newIdomID = self.intersect(dfs, predID, newIdomID)
-                    if newIdomID != vertices.dummyID:
-                        if self.immediate_dominator[vertexID] != newIdomID:
+                                new_idomID = self.intersect(dfs, predID, new_idomID)
+                    if new_idomID != vertices.dummyID:
+                        if self.immediate_dominator[vertexID] != new_idomID:
                             changed = True
-                            self.immediate_dominator[vertexID] = newIdomID
+                            self.immediate_dominator[vertexID] = new_idomID
                 postID -= 1
     
     def intersect(self, dfs, left, right):
@@ -585,18 +587,39 @@ class Dominators(Tree):
         return uID
     
     def add_edges(self):
-        for v in self:
-            if v.vertexID != self.rootID:
-                assert self.immediate_dominator[v.vertexID] != vertices.dummyID, "Immediate dominator of %d not set" % v.vertexID
-                self.add_edge(self.immediate_dominator[v.vertexID], v.vertexID)
+        for vertexID, idomID in self.immediate_dominator.iteritems():
+            if vertexID != idomID:
+                self.add_edge(idomID, vertexID)
+                
+    def augment_with_program_point_edges(self):
+        self.program_point_edge_to_dominatort_vertexID = {}
+        for v in self.flowg:
+            for e_succ in v.successors.values():
+                newID = self.get_next_vertexID()
+                newv  = vertices.ProgramPoint(newID, e_succ.the_program_point, e_succ.edgeID)
+                self.add_vertex(newv)
+                self.program_point_edge_to_dominatort_vertexID[e_succ.edgeID] = newID
+        for v in self.flowg:
+            for e_succ in v.successors.values():
+                newv = self.get_vertex(self.program_point_edge_to_dominatort_vertexID[e_succ.edgeID])
+                self.add_edge(v.vertexID, newv.vertexID)
+                if self.flowg.get_vertex(e_succ.vertexID).number_of_predecessors() == 1:
+                    self.remove_edge(self.get_vertex(e_succ.vertexID).parentID, e_succ.vertexID)
+                    self.add_edge(newv.vertexID, e_succ.vertexID)
+        self.check_is_tree()
     
 class CompressedDominatorTree(Tree):
-    def __init__(self, dominator_tree, lca, vertexID, frontierIDs):
+    def __init__(self, dominator_tree, lca, v_merge):
+        assert v_merge.number_of_predecessors() > 1
         Tree.__init__(self)
-        self.build(lca, frontierIDs)
-        self.rootID = dominator_tree.get_vertex(vertexID).parentID
+        initial_query_set = set()
+        for prede in v_merge.predecessors.values():
+            vertexID_dominatort = dominator_tree.program_point_edge_to_dominatort_vertexID[prede.edgeID]
+            initial_query_set.add(vertexID_dominatort)
+        self.build(dominator_tree, lca, initial_query_set)
+        self.rootID = dominator_tree.get_vertex(v_merge.vertexID).parentID
         
-    def build(self, lca, query_set):
+    def build(self, dominator_tree, lca, query_set):
         while len(query_set) > 1:
             vertex_to_LCA = {}
             for a_pair in itertools.combinations(query_set, 2):
@@ -615,10 +638,8 @@ class CompressedDominatorTree(Tree):
                     vertex_to_LCA[a_pair[1]] = lcaID
             # Add edge links                
             for vertexID, parentID in vertex_to_LCA.items():
-                if not self.has_vertex(vertexID):
-                    self.add_vertex(vertices.TreeVertex(vertexID))                
-                if not self.has_vertex(parentID):
-                    self.add_vertex(vertices.TreeVertex(parentID))
+                self.create_vertex_if_needed(dominator_tree, vertexID)
+                self.create_vertex_if_needed(dominator_tree, parentID)         
                 if parentID != vertexID:
                     self.add_edge(parentID, vertexID)
             # Any vertex without a predecessor goes into the query set
@@ -627,6 +648,16 @@ class CompressedDominatorTree(Tree):
                 if v.number_of_predecessors() == 0:
                     new_query_set.add(v.vertexID)
             query_set = new_query_set
+            
+    def create_vertex_if_needed(self, dominator_tree, vertexID):
+        if not self.has_vertex(vertexID):
+            v_in_dominator_tree = dominator_tree.get_vertex(vertexID)
+            if isinstance(v_in_dominator_tree, vertices.ProgramPoint):
+                self.add_vertex(vertices.ProgramPoint(vertexID, 
+                                                              v_in_dominator_tree.the_program_point, 
+                                                              v_in_dominator_tree.edgeID))   
+            else:
+                self.add_vertex(vertices.TreeVertex(vertexID))  
     
 class LeastCommonAncestor:
     def __init__(self, tree):
@@ -712,7 +743,7 @@ class LoopNests(Tree):
     def find_loops_of_states(self, rootID):
         for v in self.__transition_graph:
             self.current_parent[v.vertexID] = v.vertexID
-        predom_tree = Dominators(self.__transition_graph, rootID)
+        predom_tree = Dominators(self.__transition_graph)
         for vertexID in reversed(self.__dfs.pre_order):
             v = self.__transition_graph.get_vertex(vertexID)
             for predID in v.predecessors.keys():
@@ -822,6 +853,10 @@ class LoopNests(Tree):
             for predID in v.predecessors.keys():
                 if (predID, headerID) not in self.loop_bodies_per_backedge.keys():
                     self.loop_entry_edges_per_header[headerID].add((predID, headerID))
+                    
+    def get_program_point_vertex(self, program_point):
+        assert program_point in self.program_point_to_lnt_vertexID, "Unable to find program point %s" % program_point
+        return self.get_vertex(self.program_point_to_lnt_vertexID[program_point])
     
     def get_header_vertices(self):
         for abstractID in self.abstract_vertices.values():

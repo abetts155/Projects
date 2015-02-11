@@ -75,7 +75,8 @@ def make_file(g, graph_name):
                 for v in g:
                     if v.vertexID != g.get_entryID():
                         write_CFG_vertex(g, v, the_file)   
-            elif isinstance(g, directed_graphs.StateTransitionGraph) or isinstance(g, directed_graphs.StateTransitionComponentDAG):
+            elif isinstance(g, directed_graphs.StateTransitionGraph) \
+            or isinstance(g, directed_graphs.StateTransitionComponentDAG):
                 for v in g:
                     writeStateTransitionVertex(g, v, the_file)
             elif isinstance(g, directed_graphs.LoopNests):
@@ -89,7 +90,17 @@ def make_file(g, graph_name):
 def writeVertex(g, v, the_file):
     the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(v.vertexID)))
+    if isinstance(v, vertices.ProgramPoint):
+        the_file.write(set_name(str(v.the_program_point)))
+    elif isinstance(v, vertices.RegExpVertex):
+        the_file.write(set_shape(SHAPE.TRIANGLE))
+        the_file.write(set_name(v.operator))
+        if v.operator == vertices.RegExpVertex.ALTERNATIVE:
+            the_file.write(set_color(COLOR.BLUE))
+        else:
+            the_file.write(set_color(COLOR.YELLOW))
+    else:
+        the_file.write(set_name(str(v.vertexID)))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -122,7 +133,7 @@ def write_CFG_vertex(cfg, v, the_file):
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
 
-def writeTreeVertex (tree, v, the_file):
+def writeTreeVertex(tree, v, the_file):
     the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
     if isinstance(v, vertices.ProgramPoint):

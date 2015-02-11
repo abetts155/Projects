@@ -16,7 +16,5 @@ class TransitionEdge(Edge):
     def __str__(self):
         if isinstance(self.the_program_point, set):
             return "%s" % self.the_program_point
-        elif isinstance(self.the_program_point, tuple):
-            return "%s" % (self.the_program_point,)
         else:
-            return "%d" % self.the_program_point
+            return "%s" % (self.the_program_point,)
