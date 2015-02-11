@@ -96,11 +96,24 @@ class DirectedGraph:
         for v in self.the_vertices.values():
             total += v.number_of_successors()
         return total
+        
+    def set_edgeIDs(self):
+        edgeID = 1
+        for v in self:
+            edgeID = max(edgeID, v.vertexID)
+        edgeID += 1
+        for v in self:
+            for e_succ in v.successors.values():
+                e_succ.edgeID = edgeID
+                v_succ = self.get_vertex(e_succ.vertexID)
+                e_pred = v_succ.get_predecessor_edge(v.vertexID)
+                e_pred.edgeID = edgeID
+                edgeID += 1
     
-    def __iter__ (self):
+    def __iter__(self):
         return self.the_vertices.values().__iter__()
     
-    def __str__ (self):
+    def __str__(self):
         string = "*" * 40 + "\n"
         for v in self.the_vertices.values():
             string += v.__str__() + "\n"
@@ -231,19 +244,6 @@ class StateTransitionGraph(FlowGraph):
             self.component_dag.compute_reachability_information(self)
         assert a_program_point in self.component_dag.reachability_info
         return the_set.issubset(self.component_dag.reachability_info[a_program_point])
-    
-    def set_edgeIDs(self):
-        edgeID = 1
-        for v in self:
-            edgeID = max(edgeID, v.vertexID)
-        edgeID += 1
-        for v in self:
-            for e_succ in v.successors.values():
-                e_succ.edgeID = edgeID
-                v_succ = self.get_vertex(e_succ.vertexID)
-                e_pred = v_succ.get_predecessor_edge(v.vertexID)
-                e_pred.edgeID = edgeID
-                edgeID += 1
 
 class StateTransitionComponentDAG(FlowGraph):
     def __init__(self):

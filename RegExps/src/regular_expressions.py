@@ -47,6 +47,8 @@ class PathExpression(directed_graphs.DirectedGraph):
             self.postdominator_tree     = directed_graphs.Dominators(self.reverse_transitiong)
             self.reg_exp_trees = {}
             self.compute()
+            self.set_edgeIDs()
+            self.create_textual_format()
         
     def create_program_point_vertex(self, the_program_point):
         newID = self.get_next_vertexID()
@@ -70,13 +72,18 @@ class PathExpression(directed_graphs.DirectedGraph):
         dfs = directed_graphs.DepthFirstSearch(self.transitiong, self.transitiong.get_entryID())
         for vertexID_transitiong in reversed(dfs.post_order):
             if vertexID_transitiong == self.transitiong.entryID:
-                self.reg_exp_trees[vertexID_transitiong] = self.create_sequence_vertex()
+                seqv = self.create_sequence_vertex()
+                self.rootID = seqv.vertexID
+                self.reg_exp_trees[vertexID_transitiong] = seqv
             else:
                 v_transitiong = self.transitiong.get_vertex(vertexID_transitiong)
                 for predID_transitiong, prede_transitiong in v_transitiong.predecessors.iteritems():
                     predv_transitiong  = self.transitiong.get_vertex(predID_transitiong)
                     if predv_transitiong.number_of_successors() > 1:
-                        self.reg_exp_trees[prede_transitiong.edgeID] = self.create_sequence_vertex()
+                        seqv = self.create_sequence_vertex()
+                        self.reg_exp_trees[prede_transitiong.edgeID] = seqv
+                        if predID_transitiong in self.acyclic_reducible_info.irreducible_branches:
+                            self.add_edge(seqv.vertexID, self.reg_exp_trees[predID_transitiong].vertexID)
                     else:
                         self.reg_exp_trees[prede_transitiong.edgeID] = self.reg_exp_trees[predID_transitiong]
                         
@@ -123,6 +130,37 @@ class PathExpression(directed_graphs.DirectedGraph):
             path_expr = PathExpression(self.cfg, self.lnt, enhanced_cfg)
             path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
             self.vertex_to_regular_expression[v.vertexID].append(path_expr)
+            
+    def create_textual_format(self):
+        temporary_expressions = {}
+        dfs = directed_graphs.DepthFirstSearch(self, self.rootID)
+        for vertexID in dfs.post_order:
+            v = self.get_vertex(vertexID)
+            if isinstance(v, vertices.RegExpVertex):
+                the_text = ""
+                if v.operator == vertices.RegExpVertex.ALTERNATIVE:
+                    the_text += "[ "
+                for succe in v.successors.values():
+                    succv = self.get_vertex(succe.vertexID)
+                    if isinstance(succv, vertices.ProgramPoint):
+                        if len(succv.the_program_point) == 1:
+                            the_text += str(succv.the_program_point[0])
+                        else:
+                            the_text += str(succv.the_program_point)
+                    else:
+                        the_text += temporary_expressions[succe.edgeID]
+                    if succe.vertexID != v.successors.keys()[v.number_of_successors()-1]:
+                        the_text += v.operator    
+                if v.operator == vertices.RegExpVertex.ALTERNATIVE:
+                    the_text += " ]"
+                    
+                for predID in v.predecessors.keys():
+                    predv = self.get_vertex(predID)
+                    succe = predv.get_successor_edge(vertexID)
+                    temporary_expressions[succe.edgeID] = the_text
+                if vertexID == self.rootID:
+                    temporary_expressions[vertexID] = the_text
+        return temporary_expressions[vertexID] 
 
 def create_induced_subgraph(transition_graph, 
                             transition_graph_lnt, 

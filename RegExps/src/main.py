@@ -36,7 +36,15 @@ def create_path_expression_between_two_vertices(program):
                 else:
                     cfg = program.cfgs[cfg_name]
             if cfg is not None:
-                print("%s Vertices = {%s}" % (prompt_prefix, ','.join(str(v.vertexID) for v in cfg)))
+                vertex_choices = ""
+                for v in cfg:
+                    vertex_choices += "%d " % v.vertexID
+                    if v.vertexID == cfg.get_entryID():
+                        vertex_choices += "(entry) "
+                    if v.vertexID == cfg.get_exitID():
+                        vertex_choices += "(exit) "
+                
+                print("%s Vertices = %s" % (prompt_prefix, vertex_choices))
                 startID = parse_input_from_user("Enter start vertex")
                 if not cfg.has_vertex(startID):
                     debug.warning_message("CFG does not have vertex: %d" % startID)
