@@ -49,3 +49,47 @@ succ: (F1, 8)
 
 bb: 14
 succ:
+
+CFG: F2
+bb: 1
+succ: (F2, 2)
+
+bb: 2
+succ: (F2, 3) (F2, 9)
+
+bb: 3
+succ: (F2, 4)
+
+bb: 4
+succ: (F2, 5) (F2, 6)
+
+bb: 5
+succ: (F2, 7)
+
+bb: 6
+succ: (F2, 7)
+
+bb: 7
+succ: (F2, 8)
+
+bb: 8
+succ: (F2, 14)
+
+bb: 9
+succ: (F2, 10) (F2, 5)
+
+bb: 10
+succ: (F2, 11) (F2, 12)
+
+bb: 11
+succ: (F2, 13)
+
+bb: 12
+succ: (F2, 13)
+
+bb: 13
+succ: (F2, 8)
+
+bb: 14
+succ:
+

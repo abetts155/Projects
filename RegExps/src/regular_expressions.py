@@ -34,7 +34,8 @@ class AcyclicReducibility:
                     self.irreducible_branches.add(v.vertexID)
             
 class PathExpression(directed_graphs.DirectedGraph):
-    loop_body_expressions = {}
+    EMPTY_SET         = "{}"
+    LAMBDA_EXPRESSION = "__"
     
     def __init__(self, transition_graph_induced_global):   
         directed_graphs.DirectedGraph.__init__(self)
@@ -48,7 +49,6 @@ class PathExpression(directed_graphs.DirectedGraph):
             self.reg_exp_trees = {}
             self.compute()
             self.set_edgeIDs()
-            self.create_textual_format()
         
     def create_program_point_vertex(self, the_program_point):
         newID = self.get_next_vertexID()
@@ -131,36 +131,39 @@ class PathExpression(directed_graphs.DirectedGraph):
             path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
             self.vertex_to_regular_expression[v.vertexID].append(path_expr)
             
-    def create_textual_format(self):
-        temporary_expressions = {}
-        dfs = directed_graphs.DepthFirstSearch(self, self.rootID)
-        for vertexID in dfs.post_order:
-            v = self.get_vertex(vertexID)
-            if isinstance(v, vertices.RegExpVertex):
-                the_text = ""
-                if v.operator == vertices.RegExpVertex.ALTERNATIVE:
-                    the_text += "[ "
-                for succe in v.successors.values():
-                    succv = self.get_vertex(succe.vertexID)
-                    if isinstance(succv, vertices.ProgramPoint):
-                        if len(succv.the_program_point) == 1:
-                            the_text += str(succv.the_program_point[0])
+    def get_textual_format(self):
+        if self.number_of_vertices() == 0:
+            return PathExpression.EMPTY_SET
+        else:
+            temporary_expressions = {}
+            dfs = directed_graphs.DepthFirstSearch(self, self.rootID)
+            for vertexID in dfs.post_order:
+                v = self.get_vertex(vertexID)
+                if isinstance(v, vertices.RegExpVertex):
+                    the_text = ""
+                    if v.operator == vertices.RegExpVertex.ALTERNATIVE:
+                        the_text += "[ "
+                    for succe in v.successors.values():
+                        succv = self.get_vertex(succe.vertexID)
+                        if isinstance(succv, vertices.ProgramPoint):
+                            if len(succv.the_program_point) == 1:
+                                the_text += str(succv.the_program_point[0])
+                            else:
+                                the_text += str(succv.the_program_point)
                         else:
-                            the_text += str(succv.the_program_point)
-                    else:
-                        the_text += temporary_expressions[succe.edgeID]
-                    if succe.vertexID != v.successors.keys()[v.number_of_successors()-1]:
-                        the_text += v.operator    
-                if v.operator == vertices.RegExpVertex.ALTERNATIVE:
-                    the_text += " ]"
-                    
-                for predID in v.predecessors.keys():
-                    predv = self.get_vertex(predID)
-                    succe = predv.get_successor_edge(vertexID)
-                    temporary_expressions[succe.edgeID] = the_text
-                if vertexID == self.rootID:
-                    temporary_expressions[vertexID] = the_text
-        return temporary_expressions[vertexID] 
+                            the_text += temporary_expressions[succe.edgeID]
+                        if succe.vertexID != v.successors.keys()[v.number_of_successors()-1]:
+                            the_text += v.operator    
+                    if v.operator == vertices.RegExpVertex.ALTERNATIVE:
+                        the_text += " ]"
+                        
+                    for predID in v.predecessors.keys():
+                        predv = self.get_vertex(predID)
+                        succe = predv.get_successor_edge(vertexID)
+                        temporary_expressions[succe.edgeID] = the_text
+                    if vertexID == self.rootID:
+                        temporary_expressions[vertexID] = the_text
+            return temporary_expressions[vertexID] 
 
 def create_induced_subgraph(transition_graph, 
                             transition_graph_lnt, 
@@ -309,6 +312,8 @@ def create_path_expression(cfg, query_pair):
     
     udraw.make_file(expressiont, 
                     "%s.regexp.%s" % (cfg.name, udraw_suffix))  
+    
+    print("P(%s) = %s" % (udraw_suffix, expressiont.get_textual_format()))
     
 def create_path_expression_for_all_loops(cfg):
     lnt = cfg.get_LNT()
