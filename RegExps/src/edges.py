@@ -9,9 +9,10 @@ class Edge:
             self.edgeID = edgeID
             
 class TransitionEdge(Edge):
-    def __init__(self, vertexID, the_program_point):
+    def __init__(self, vertexID, the_program_point, represents_collapsed_loop=False):
         Edge.__init__(self, vertexID)
-        self.the_program_point = the_program_point
+        self.the_program_point         = the_program_point
+        self.represents_collapsed_loop = represents_collapsed_loop 
     
     def __str__(self):
         if isinstance(self.the_program_point, set):

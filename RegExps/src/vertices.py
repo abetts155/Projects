@@ -6,11 +6,11 @@ dummyID = 0
 class Vertex:
     def __init__(self, vertexID):
         self.vertexID      = vertexID
-        self.real_vertexID = vertexID 
         self.predecessors  = collections.OrderedDict()
         self.successors    = collections.OrderedDict()
         self.dummy         = False
-    
+        self.loop_header   = False
+        
     def add_predecessor(self, predID, edgeID=None):
         assert predID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, predID)
         self.predecessors[predID] = edges.Edge(predID, edgeID)
@@ -67,12 +67,10 @@ class Vertex:
         return string
     
     def __str__(self):
-        return """virtual ID = %d 
-real ID    = %d 
-succ       = %s 
-pred       = %s
+        return """ID   = %d 
+succ = %s 
+pred = %s
 """ % (self.vertexID, 
-       self.real_vertexID, 
        self.edge_incidence_string(self.successors), 
        self.edge_incidence_string(self.predecessors))
     
@@ -97,14 +95,12 @@ class RegExpVertex(TreeVertex):
     ALTERNATIVE   = "|"
     SEQUENCE      = "."
     FOR_LOOP      = "*"
-    DO_WHILE_LOOP = "+" 
     
     def __init__(self, vertexID, operator):
         TreeVertex.__init__(self, vertexID)
         assert operator == RegExpVertex.ALTERNATIVE \
         or operator == RegExpVertex.SEQUENCE \
-        or operator == RegExpVertex.FOR_LOOP \
-        or operator == RegExpVertex.DO_WHILE_LOOP
+        or operator == RegExpVertex.FOR_LOOP
         self.operator = operator
         
 class ProgramPoint(TreeVertex):

@@ -97,6 +97,8 @@ def writeVertex(g, v, the_file):
         the_file.write(set_name(v.operator))
         if v.operator == vertices.RegExpVertex.ALTERNATIVE:
             the_file.write(set_color(COLOR.BLUE))
+        elif v.operator == vertices.RegExpVertex.FOR_LOOP:
+            the_file.write(set_color(COLOR.RED))
         else:
             the_file.write(set_color(COLOR.YELLOW))
     else:
@@ -114,10 +116,9 @@ def writeVertex(g, v, the_file):
     the_file.write(end_vertex + "\n") 
     
 def write_CFG_vertex(cfg, v, the_file):
-    name = "%d%s(virtual=%d)" % (v.real_vertexID, new_line, v.vertexID)
     the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(name))
+    the_file.write(set_name(str(v.vertexID)))
     if v.dummy:
         the_file.write(set_color(COLOR.RED))
         the_file.write(set_tool_tip("Dummy vertex"))

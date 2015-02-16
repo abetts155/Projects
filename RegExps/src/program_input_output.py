@@ -2,6 +2,7 @@ import programs
 import directed_graphs
 import vertices
 import debug
+import udraw
 import re
 
 cfg_lexeme         = "cfg"
@@ -33,14 +34,11 @@ def read_file(filename):
         for line in the_file:
             line = line.lower()
             if line.startswith(cfg_lexeme):
-                if cfg is not None:
-                    cfg.add_predecessor_edges()
-                    cfg.set_entry_and_exit()
-                    program.add_CFG(cfg)
                 names = name_regex.findall(line)
                 assert len(names) == 2, "Too many names found '%s'" % ' '.join(names)
                 cfg      = directed_graphs.CFG()
                 cfg.name = names[1]
+                program.add_CFG(cfg)
                 debug.debug_message("Found new CFG '%s'" % cfg.name, __name__, 1)
             elif line.startswith(basic_block_lexeme):
                 assert cfg, "Found basic block but current CFG is null"
@@ -58,7 +56,9 @@ def read_file(filename):
                     assert a_tuple[0] == cfg.name, "Call edge found which is currently not handled" 
                     assert a_tuple[1].isdigit(), "Successor identifier '%s' is not an integer" % a_tuple[1]
                     bb.add_successor(int(a_tuple[1]))
-    cfg.add_predecessor_edges()
-    cfg.set_entry_and_exit()
-    program.add_CFG(cfg)
+    for cfg in program.cfgs.values():
+        cfg.add_predecessor_edges()
+        cfg.set_entry_and_exit()
+        cfg.add_dummy_loop_between_exit_and_entry()
+        udraw.make_file(cfg, "%s.cfg" % (cfg.name))
     return program     

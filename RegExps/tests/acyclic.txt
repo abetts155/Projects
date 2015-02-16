@@ -93,3 +93,27 @@ succ: (F2, 8)
 bb: 14
 succ:
 
+CFG: F3
+bb: 1
+succ: (F3, 2) (F3, 3)
+
+bb: 2
+succ: (F3, 4) (F3, 6)
+
+bb: 3
+succ: (F3, 4)
+
+bb: 4
+succ: (F3, 5)
+
+bb: 5
+succ: (F3, 8)
+
+bb: 6
+succ: (F3, 7)
+
+bb: 7
+succ: (F3, 8)
+
+bb: 8
+succ:

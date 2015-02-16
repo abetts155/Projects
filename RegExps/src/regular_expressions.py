@@ -3,6 +3,7 @@ from __future__ import print_function
 import directed_graphs
 import vertices
 import udraw
+import debug
 
 class DominanceFrontiers:
     def __init__(self, cfg, dominator_tree):
@@ -34,21 +35,35 @@ class AcyclicReducibility:
                     self.irreducible_branches.add(v.vertexID)
             
 class PathExpression(directed_graphs.DirectedGraph):
-    EMPTY_SET         = "{}"
-    LAMBDA_EXPRESSION = "__"
+    next_vertexID    = 0
+    loop_expressions = {}
     
-    def __init__(self, transition_graph_induced_global):   
+    def __init__(self, transition_graph, transition_graph_lnt, transition_graph_induced):   
         directed_graphs.DirectedGraph.__init__(self)
-        if transition_graph_induced_global.number_of_vertices() > 0:
-            self.transitiong            = transition_graph_induced_global
-            self.predominator_tree      = directed_graphs.Dominators(transition_graph_induced_global)
+        if transition_graph_induced.number_of_vertices() > 0:
+            self.transition_graph         = transition_graph
+            self.transition_graph_lnt     = transition_graph_lnt
+            self.transition_graph_induced = transition_graph_induced
+            self.predominator_tree        = directed_graphs.Dominators(transition_graph_induced)
             self.predominator_tree.augment_with_program_point_edges()
-            self.acyclic_reducible_info = AcyclicReducibility(transition_graph_induced_global, self.predominator_tree)
-            self.reverse_transitiong    = transition_graph_induced_global.get_reverse_graph()
-            self.postdominator_tree     = directed_graphs.Dominators(self.reverse_transitiong)
+            self.acyclic_reducible_info   = AcyclicReducibility(transition_graph_induced, self.predominator_tree)
+            self.reverse_transitiong      = transition_graph_induced.get_reverse_graph()
+            self.postdominator_tree       = directed_graphs.Dominators(self.reverse_transitiong)
             self.reg_exp_trees = {}
             self.compute()
             self.set_edgeIDs()
+            self.set_rootID()
+            
+    def get_next_vertexID(self):
+        PathExpression.next_vertexID += 1
+        return PathExpression.next_vertexID
+    
+    def transform_into_for_loop(self):
+        newID = self.get_next_vertexID()
+        newv  = vertices.RegExpVertex(newID, vertices.RegExpVertex.FOR_LOOP)
+        self.add_vertex(newv)
+        self.add_edge(newID, self.rootID)
+        self.rootID = newID
         
     def create_program_point_vertex(self, the_program_point):
         newID = self.get_next_vertexID()
@@ -69,16 +84,17 @@ class PathExpression(directed_graphs.DirectedGraph):
         return newv
         
     def compute(self):
-        dfs = directed_graphs.DepthFirstSearch(self.transitiong, self.transitiong.get_entryID())
+        dfs = directed_graphs.DepthFirstSearch(self.transition_graph_induced, self.transition_graph_induced.get_entryID())
         for vertexID_transitiong in reversed(dfs.post_order):
-            if vertexID_transitiong == self.transitiong.entryID:
+            if vertexID_transitiong == self.transition_graph_induced.entryID:
                 seqv = self.create_sequence_vertex()
                 self.rootID = seqv.vertexID
                 self.reg_exp_trees[vertexID_transitiong] = seqv
             else:
-                v_transitiong = self.transitiong.get_vertex(vertexID_transitiong)
+                v_transitiong = self.transition_graph_induced.get_vertex(vertexID_transitiong)
+                
                 for predID_transitiong, prede_transitiong in v_transitiong.predecessors.iteritems():
-                    predv_transitiong  = self.transitiong.get_vertex(predID_transitiong)
+                    predv_transitiong  = self.transition_graph_induced.get_vertex(predID_transitiong)
                     if predv_transitiong.number_of_successors() > 1:
                         seqv = self.create_sequence_vertex()
                         self.reg_exp_trees[prede_transitiong.edgeID] = seqv
@@ -87,14 +103,42 @@ class PathExpression(directed_graphs.DirectedGraph):
                     else:
                         self.reg_exp_trees[prede_transitiong.edgeID] = self.reg_exp_trees[predID_transitiong]
                         
-                    leafv   = self.create_program_point_vertex(prede_transitiong.the_program_point)
-                    parentv = self.reg_exp_trees[prede_transitiong.edgeID]
-                    self.add_edge(parentv.vertexID, leafv.vertexID)
+                    if self.transition_graph_lnt.is_loop_header(prede_transitiong.the_program_point):
+                        v_header = self.transition_graph_lnt.get_vertex(self.transition_graph_lnt.get_vertex(prede_transitiong.the_program_point).parentID)
+                    
+                        if v_header.headerID not in PathExpression.loop_expressions:
+                            # Create path expressions for inner loop iteration and exit spaces on the fly
+                            iteration_subgraph, exit_subgraph = create_induced_subgraphs_for_non_dummy_loop(self.transition_graph, 
+                                                                                                            self.transition_graph_lnt, 
+                                                                                                            v_header)
+                        
+                            iteration_subgraph_path_expression = PathExpression(self.transition_graph,
+                                                                                self.transition_graph_lnt,
+                                                                                iteration_subgraph)
+                            iteration_subgraph_path_expression.transform_into_for_loop()
+                            
+                            exit_subgraph_path_expression = PathExpression(self.transition_graph,
+                                                                           self.transition_graph_lnt,
+                                                                           exit_subgraph)
+                            
+                            PathExpression.loop_expressions[v_header.headerID] = (iteration_subgraph_path_expression, exit_subgraph_path_expression)
+                        
+                        iteration_subgraph_path_expression, exit_subgraph_path_expression = PathExpression.loop_expressions[v_header.headerID]
+                        self.union_subgraph(iteration_subgraph_path_expression)
+                        self.union_subgraph(exit_subgraph_path_expression)
+                        
+                        self.add_edge(self.reg_exp_trees[prede_transitiong.edgeID].vertexID, iteration_subgraph_path_expression.rootID)
+                        self.add_edge(self.reg_exp_trees[prede_transitiong.edgeID].vertexID, exit_subgraph_path_expression.rootID)
+                    else:
+                        leafv   = self.create_program_point_vertex(prede_transitiong.the_program_point)
+                        parentv = self.reg_exp_trees[prede_transitiong.edgeID]
+                        self.add_edge(parentv.vertexID, leafv.vertexID)
                 
                 if v_transitiong.number_of_predecessors() > 1:
                     self.reg_exp_trees[vertexID_transitiong] = self.handle_merge(v_transitiong)
                 else:
                     self.reg_exp_trees[vertexID_transitiong] = self.reg_exp_trees[prede_transitiong.edgeID]
+                    
                     
     def handle_merge(self, mergev):
         predominator_tree_compressed = directed_graphs.CompressedDominatorTree(self.predominator_tree, 
@@ -122,14 +166,22 @@ class PathExpression(directed_graphs.DirectedGraph):
                     self.add_edge(seqv.vertexID, altv.vertexID)
                     local_reg_exp_trees[treev.vertexID] = seqv
         return local_reg_exp_trees[predominator_tree_compressed.rootID]
-                
-    def append_loop_body_expression(self, v):
-        return
-        if self.lnt.is_loop_tail(v.real_vertexID) and self.transitiong.get_vertex(v.vertexID).number_of_successors() > 0:
-            enhanced_cfg = self.lnt.induce_subgraph_for_tail(v.real_vertexID)
-            path_expr = PathExpression(self.cfg, self.lnt, enhanced_cfg)
-            path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
-            self.vertex_to_regular_expression[v.vertexID].append(path_expr)
+    
+    def set_rootID(self):
+        without_predecessors = []
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                without_predecessors.append(v.vertexID)
+        if len(without_predecessors) > 1:
+            debug.exit_message("Too many roots found: %s" % ','.join(str(vertexID) for vertexID in without_predecessors))
+        elif len(without_predecessors) == 0:
+            debug.exit_message("No root found")
+        else:
+            self.rootID = without_predecessors[0]
+            
+    def union_subgraph(self, subgraph):
+        for v in subgraph:
+            self.add_vertex(v)
             
     def get_textual_format(self):
         if self.number_of_vertices() == 0:
@@ -141,8 +193,10 @@ class PathExpression(directed_graphs.DirectedGraph):
                 v = self.get_vertex(vertexID)
                 if isinstance(v, vertices.RegExpVertex):
                     the_text = ""
-                    if v.operator == vertices.RegExpVertex.ALTERNATIVE:
-                        the_text += "[ "
+                    if v.operator == vertices.RegExpVertex.ALTERNATIVE \
+                    or v.operator == vertices.RegExpVertex.FOR_LOOP:
+                        the_text += "["
+                    
                     for succe in v.successors.values():
                         succv = self.get_vertex(succe.vertexID)
                         if isinstance(succv, vertices.ProgramPoint):
@@ -154,8 +208,11 @@ class PathExpression(directed_graphs.DirectedGraph):
                             the_text += temporary_expressions[succe.edgeID]
                         if succe.vertexID != v.successors.keys()[v.number_of_successors()-1]:
                             the_text += v.operator    
+                    
                     if v.operator == vertices.RegExpVertex.ALTERNATIVE:
-                        the_text += " ]"
+                        the_text += "]"
+                    elif v.operator == vertices.RegExpVertex.FOR_LOOP:
+                        the_text += "]*"
                         
                     for predID in v.predecessors.keys():
                         predv = self.get_vertex(predID)
@@ -164,6 +221,90 @@ class PathExpression(directed_graphs.DirectedGraph):
                     if vertexID == self.rootID:
                         temporary_expressions[vertexID] = the_text
             return temporary_expressions[vertexID] 
+        
+def create_induced_subgraphs_for_non_dummy_loop(transition_graph,
+                                                transition_graph_lnt,
+                                                v_header):
+    return (create_induced_subgraph_for_loop_iteration_space(transition_graph, 
+                                                             transition_graph_lnt, 
+                                                             v_header),
+            create_induced_subgraph_for_loop_exit_space(transition_graph, 
+                                                        transition_graph_lnt, 
+                                                        v_header))
+    
+def create_induced_subgraph_for_loop_iteration_space(transition_graph,
+                                                     transition_graph_lnt,
+                                                     v_header):
+    loop_tailIDs = transition_graph_lnt.get_loop_tails(v_header.headerID)
+    transition_graph_induced = create_induced_subgraph_for_loop(transition_graph, 
+                                                                transition_graph_lnt, 
+                                                                v_header,
+                                                                loop_tailIDs)
+    
+    v_unrolled_headerID = transition_graph_induced.get_next_vertexID()
+    transition_graph_induced.add_vertex(vertices.Vertex(v_unrolled_headerID))
+    
+    for tailID in loop_tailIDs:
+        v_tail = transition_graph.get_vertex(tailID)
+        for e_succ in v_tail.successors.values():
+            if e_succ.vertexID == v_header.headerID:
+                transition_graph_induced.add_edge(tailID, v_unrolled_headerID, e_succ.the_program_point, False)
+        
+    transition_graph_induced.set_edgeIDs()
+    transition_graph_induced.set_entry_and_exit()
+    
+    return transition_graph_induced
+
+def create_induced_subgraph_for_loop_exit_space(transition_graph,
+                                                transition_graph_lnt,
+                                                v_header):
+    transition_graph_induced = create_induced_subgraph_for_loop(transition_graph, 
+                                                                transition_graph_lnt, 
+                                                                v_header,
+                                                                transition_graph_lnt.get_loop_exit_sources(v_header.headerID))
+    
+    transition_graph_induced.set_edgeIDs()
+    transition_graph_induced.set_entry_and_exit()
+    
+    return transition_graph_induced
+
+def create_induced_subgraph_for_loop(transition_graph,
+                                     transition_graph_lnt,
+                                     v_header,
+                                     frontier_vertexIDs):
+    edges   = set()
+    visited = set()
+    stack   = []
+    stack.extend(frontier_vertexIDs)
+    while stack:
+        v_stackID = stack.pop()
+        v_stack   = transition_graph.get_vertex(v_stackID)
+        visited.add(v_stackID)
+        for e_pred in v_stack.predecessors.values():
+            if not transition_graph_lnt.is_backedge(e_pred.vertexID, v_stackID):
+                v_header_pred = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(e_pred.vertexID).parentID)
+                if v_header_pred.headerID == v_header.headerID:
+                    edges.add((e_pred.vertexID, v_stackID, e_pred.the_program_point))
+                    if e_pred.vertexID not in visited:
+                        stack.append(e_pred.vertexID)
+                elif transition_graph_lnt.is_nested(v_header_pred.vertexID, v_header.vertexID):
+                    stack.append(transition_graph.get_vertex(v_header_pred.headerID).vertexID)
+                    edges.add((transition_graph.get_vertex(v_header_pred.headerID).vertexID, e_pred.vertexID, v_header_pred.headerID))
+                    edges.add((e_pred.vertexID, v_stackID, e_pred.the_program_point))
+                    
+    # At this point, the edges we need to add to the induced subgraph have been worked out
+    transition_graph_induced = directed_graphs.StateTransitionGraph()
+    for an_edge in edges:
+        if not transition_graph_induced.has_vertex(an_edge[0]):
+            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[0]))
+        if not transition_graph_induced.has_vertex(an_edge[1]):
+            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[1]))
+        if transition_graph_lnt.is_loop_header(an_edge[0]):
+            transition_graph_induced.get_vertex(an_edge[0]).loop_header = True
+        if transition_graph_lnt.is_loop_header(an_edge[1]):
+            transition_graph_induced.get_vertex(an_edge[1]).loop_header = True
+        transition_graph_induced.add_edge(an_edge[0], an_edge[1], an_edge[2], False)
+    return transition_graph_induced
 
 def create_induced_subgraph(transition_graph, 
                             transition_graph_lnt, 
@@ -203,9 +344,13 @@ def create_induced_subgraph(transition_graph,
         if not transition_graph_induced.has_vertex(an_edge[1]):
             transition_graph_induced.add_vertex(vertices.Vertex(an_edge[1]))
         if is_reverse_graph:
-            transition_graph_induced.add_edge(an_edge[1], an_edge[0], an_edge[2])
+            transition_graph_induced.add_edge(an_edge[1], an_edge[0], an_edge[2], False)
         else:
-            transition_graph_induced.add_edge(an_edge[0], an_edge[1], an_edge[2])
+            transition_graph_induced.add_edge(an_edge[0], an_edge[1], an_edge[2], False)
+            
+    transition_graph_induced.set_edgeIDs()
+    transition_graph_induced.set_entry_and_exit()
+            
     return transition_graph_induced
 
 def detect_non_terminal_backedges(transition_graph_lnt, transition_graph_induced_global, sink_vertices):
@@ -227,7 +372,7 @@ def create_connected_transition_graph(transition_graph_induced_global, transitio
             new_edges.add((oldID_to_newID[v.vertexID], oldID_to_newID[succe.vertexID], succe.the_program_point))    
     # Add new edges     
     for an_edge in new_edges:
-        transition_graph_induced_global.add_edge(an_edge[0], an_edge[1], an_edge[2])
+        transition_graph_induced_global.add_edge(an_edge[0], an_edge[1], an_edge[2], False)
         
 def create_subgraph_for_vertices_in_same_loop_nest(transition_graph,
                                                    transition_graph_lnt,
@@ -301,14 +446,14 @@ def create_path_expression(cfg, query_pair):
                                                    headerv, 
                                                    query_pair)
         
-    transition_graph_induced_global.set_edgeIDs()
-    
     udraw_suffix = "%s.%s" % (('_'.join(map(str, query_pair[0]))), ('_'.join(map(str, query_pair[1]))))
     
     udraw.make_file(transition_graph_induced_global, 
                     "%s.transition.%s" % (cfg.name, udraw_suffix)) 
     
-    expressiont = PathExpression(transition_graph_induced_global)
+    expressiont = PathExpression(transition_graph,
+                                 transition_graph_lnt,
+                                 transition_graph_induced_global)
     
     udraw.make_file(expressiont, 
                     "%s.regexp.%s" % (cfg.name, udraw_suffix))  
@@ -316,21 +461,41 @@ def create_path_expression(cfg, query_pair):
     print("P(%s) = %s" % (udraw_suffix, expressiont.get_textual_format()))
     
 def create_path_expression_for_all_loops(cfg):
-    lnt = cfg.get_LNT()
-    for the_vertices in lnt.level_by_level_iterator(True):
-        for treev in [treev for treev in the_vertices if isinstance(treev, vertices.HeaderVertex)]: 
-            backedges    = lnt.get_backedges(treev.headerID)
-            enhanced_cfg = lnt.induce_subgraph(backedges)
-            path_expr = PathExpression(cfg, lnt, enhanced_cfg)
-            path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
-            PathExpression.loop_body_expressions[treev.headerID] = path_expr
-            print("path expression for loop body with header %d: %s\n" % (treev.headerID,
-                                                                          path_expr.__str__()))
-            for backedge in backedges:
-                enhanced_cfg = lnt.induce_subgraph({backedge})
-                path_expr = PathExpression(cfg, lnt, enhanced_cfg)
-                path_expr.the_expr.wrap_in_kleene_operator(RegExp.kleene_star)
-                PathExpression.loop_body_expressions[backedge] = path_expr
-                print("path expression for loop body with backedge %s = %s\n" % (backedge,
-                                                                                 path_expr.__str__()))
-            
+    transition_graph     = cfg.get_transition_graph()
+    transition_graph_lnt = transition_graph.get_LNT()
+    for the_vertices in transition_graph_lnt.level_by_level_iterator(True):
+        for v_header in [v_tree for v_tree in the_vertices if isinstance(v_tree, vertices.HeaderVertex)]:
+            if v_header.vertexID == transition_graph_lnt.rootID:
+                iteration_subgraph = create_induced_subgraph_for_loop_iteration_space(transition_graph, 
+                                                                                      transition_graph_lnt,
+                                                                                      v_header)
+                
+                iteration_subgraph_path_expression = PathExpression(transition_graph,
+                                                                    transition_graph_lnt,
+                                                                    iteration_subgraph)
+                print("P(iterations(L_%d)) = %s\n" % (v_header.headerID,
+                                                      iteration_subgraph_path_expression.get_textual_format()))
+                
+                udraw.make_file(iteration_subgraph_path_expression, "%s.L_%d" % (cfg.name, v_header.headerID))
+            else:
+                iteration_subgraph, exit_subgraph = create_induced_subgraphs_for_non_dummy_loop(transition_graph, 
+                                                                                                transition_graph_lnt, 
+                                                                                                v_header)
+                
+                iteration_subgraph_path_expression = PathExpression(transition_graph,
+                                                                    transition_graph_lnt,
+                                                                    iteration_subgraph)
+                iteration_subgraph_path_expression.transform_into_for_loop()
+                
+                exit_subgraph_path_expression = PathExpression(transition_graph,
+                                                               transition_graph_lnt,
+                                                               exit_subgraph)
+                
+                print("P(iterations(L_%d)) = %s\n" % (v_header.headerID,
+                                                      iteration_subgraph_path_expression.get_textual_format()))
+                
+                print("P(exits(L_%d)) = %s\n" % (v_header.headerID,
+                                                 exit_subgraph_path_expression.get_textual_format()))
+                
+
+                
