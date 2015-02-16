@@ -403,6 +403,16 @@ class Tree(DirectedGraph):
         DirectedGraph.add_edge(self, predID, succID)
         succv = self.get_vertex(succID)
         succv.parentID = predID
+        
+    def set_rootID(self):
+        for v in self:
+            if v.number_of_predecessors() == 0:
+                if self.rootID != vertices.dummyID:
+                    debug.exit_message("There are multiple tree roots")
+                else:
+                    self.rootID = v.vertexID
+        if self.rootID == vertices.dummyID:
+            debug.exit_message("No tree root found")
     
     def is_ancestor(self, left, right):
         if left == right:
@@ -612,7 +622,7 @@ class CompressedDominatorTree(Tree):
             vertexID_dominatort = dominator_tree.program_point_edge_to_dominatort_vertexID[prede.edgeID]
             initial_query_set.add(vertexID_dominatort)
         self.build(dominator_tree, lca, initial_query_set)
-        self.rootID = dominator_tree.get_vertex(v_merge.vertexID).parentID
+        self.set_rootID()
         
     def build(self, dominator_tree, lca, query_set):
         while len(query_set) > 1:
