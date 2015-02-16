@@ -597,7 +597,8 @@ class Dominators(Tree):
             for e_succ in v.successors.values():
                 newv = self.get_vertex(self.program_point_edge_to_dominatort_vertexID[e_succ.edgeID])
                 self.add_edge(v.vertexID, newv.vertexID)
-                if self.flowg.get_vertex(e_succ.vertexID).number_of_predecessors() == 1:
+                if self.flowg.get_vertex(e_succ.vertexID).number_of_predecessors() == 1 \
+                and e_succ.vertexID != self.rootID:
                     self.remove_edge(self.get_vertex(e_succ.vertexID).parentID, e_succ.vertexID)
                     self.add_edge(newv.vertexID, e_succ.vertexID)
         self.check_is_tree()
