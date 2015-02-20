@@ -36,7 +36,6 @@ def create_path_expression_between_two_vertices(program):
                 else:
                     cfg = program.cfgs[cfg_name]
             if cfg is not None:
-                regular_expressions.create_path_expression_for_all_loops(cfg)
                 vertex_choices = ""
                 for v in cfg:
                     vertex_choices += "%d " % v.vertexID

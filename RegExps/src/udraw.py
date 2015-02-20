@@ -71,12 +71,11 @@ def make_file(g, graph_name):
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
             if isinstance(g, directed_graphs.CFG):
-                write_CFG_vertex(g, g.get_vertex(g.get_entryID()), the_file)
+                writeVertex(g, g.get_vertex(g.get_entryID()), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
-                        write_CFG_vertex(g, v, the_file)   
-            elif isinstance(g, directed_graphs.StateTransitionGraph) \
-            or isinstance(g, directed_graphs.StateTransitionComponentDAG):
+                        writeVertex(g, v, the_file)   
+            elif isinstance(g, directed_graphs.StateTransitionGraph):
                 for v in g:
                     writeStateTransitionVertex(g, v, the_file)
             elif isinstance(g, directed_graphs.LoopNests):
@@ -113,25 +112,6 @@ def writeVertex(g, v, the_file):
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n") 
-    
-def write_CFG_vertex(cfg, v, the_file):
-    the_file.write(new_vertex(v.vertexID))
-    the_file.write(begin_attrs)
-    the_file.write(set_name(str(v.vertexID)))
-    if v.dummy:
-        the_file.write(set_color(COLOR.RED))
-        the_file.write(set_tool_tip("Dummy vertex"))
-    the_file.write(end_attrs)
-    
-    the_file.write(begin_attrs)
-    for succe in v.successors.values():
-        the_file.write(new_edge)
-        the_file.write(begin_attrs)
-        the_file.write(set_name("%d" % succe.edgeID))
-        the_file.write(end_attrs)
-        the_file.write(edge_link(succe.vertexID))
-        the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
 
 def writeTreeVertex(tree, v, the_file):
@@ -164,7 +144,7 @@ def writeStateTransitionVertex(graph, v, the_file):
     the_file.write(begin_attrs)
     the_file.write(set_color(COLOR.YELLOW))
     the_file.write(set_shape(SHAPE.CIRCLE))
-    the_file.write(set_name(str(v.vertexID)))
+    the_file.write(set_name(str(v.real_vertexID) + new_line + str(v.vertexID)))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)

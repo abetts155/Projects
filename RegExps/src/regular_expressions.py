@@ -59,6 +59,8 @@ class PathExpression(directed_graphs.DirectedGraph):
             if is_loop_body:
                 self.transform_into_loop_expression()
             self.set_edgeIDs()
+            if is_loop_body:
+                PathExpression.loop_expressions[transition_graph_induced.get_entryID()] = self
             
     def get_next_vertexID(self):
         PathExpression.next_vertexID += 1
@@ -92,12 +94,12 @@ class PathExpression(directed_graphs.DirectedGraph):
     def compute(self):
         for index, vertexID_transitiong in enumerate(reversed(self.the_order)):
             if index == 0:
+                # Special handling of the first vertex in the depth-first search post order 
                 seqv = self.create_sequence_vertex()
                 self.rootID = seqv.vertexID
                 self.reg_exp_trees[vertexID_transitiong] = seqv
             else:
                 v_transitiong = self.transition_graph_induced.get_vertex(vertexID_transitiong)
-                
                 for predID_transitiong, prede_transitiong in v_transitiong.predecessors.iteritems():
                     predv_transitiong  = self.transition_graph_induced.get_vertex(predID_transitiong)
                     if predv_transitiong.number_of_successors() > 1:
@@ -117,24 +119,26 @@ class PathExpression(directed_graphs.DirectedGraph):
                 else:
                     self.reg_exp_trees[vertexID_transitiong] = self.reg_exp_trees[prede_transitiong.edgeID]
                 
-                if self.transition_graph_lnt.is_loop_header(vertexID_transitiong) \
-                and vertexID_transitiong != self.transition_graph_induced.entryID:
+                if v_transitiong.loop_header:
                     v_header = self.transition_graph_lnt.get_vertex(self.transition_graph_lnt.get_vertex(vertexID_transitiong).parentID)
                 
                     if v_header.headerID not in PathExpression.loop_expressions:
-                        # Create path expressions for inner loop iteration and exit spaces on the fly
+                        # Create path expression for inner loop iteration space on the fly
                         iteration_subgraph = create_induced_subgraph_for_loop_iteration_space(self.transition_graph, 
                                                                                               self.transition_graph_lnt, 
                                                                                               v_header)
                     
-                        PathExpression.loop_expressions[v_header.headerID] = PathExpression(self.transition_graph,
-                                                                                            self.transition_graph_lnt,
-                                                                                            iteration_subgraph,
-                                                                                            True)
+                        iteration_subgraph_path_expression = PathExpression(self.transition_graph,
+                                                                            self.transition_graph_lnt,
+                                                                            iteration_subgraph,
+                                                                            True)
                         
-                    iteration_subgraph_path_expression = PathExpression.loop_expressions[v_header.headerID]
-                    self.union_subgraph(iteration_subgraph_path_expression)
-                    self.add_edge(self.reg_exp_trees[vertexID_transitiong].vertexID, iteration_subgraph_path_expression.rootID)
+                        PathExpression.loop_expressions[v_header.headerID] = iteration_subgraph_path_expression
+                    
+                    self.union_subgraph(PathExpression.loop_expressions[v_header.headerID])
+                        
+                    self.add_edge(self.reg_exp_trees[vertexID_transitiong].vertexID, 
+                                  PathExpression.loop_expressions[v_header.headerID].rootID)
                 
                 
     def handle_merge(self, mergev):
@@ -178,11 +182,12 @@ class PathExpression(directed_graphs.DirectedGraph):
             
     def union_subgraph(self, subgraph):
         for v in subgraph:
-            self.add_vertex(v)
+            if not self.has_vertex(v.vertexID):
+                self.add_vertex(v)
             
     def get_textual_format(self):
         if self.number_of_vertices() == 0:
-            return PathExpression.EMPTY_SET
+            return "{}"
         else:
             temporary_expressions = {}
             dfs = directed_graphs.DepthFirstSearch(self, self.rootID)
@@ -204,7 +209,7 @@ class PathExpression(directed_graphs.DirectedGraph):
                         else:
                             the_text += temporary_expressions[succe.edgeID]
                         if succe.vertexID != v.successors.keys()[v.number_of_successors()-1]:
-                            the_text += v.operator    
+                            the_text += v.operator
                     
                     if v.operator == vertices.RegExpVertex.ALTERNATIVE:
                         the_text += "]"
@@ -222,23 +227,23 @@ class PathExpression(directed_graphs.DirectedGraph):
 def create_induced_subgraph_for_loop_iteration_space(transition_graph,
                                                      transition_graph_lnt,
                                                      v_header):
-    edges   = set()
+    edges   = []
     visited = set()
     stack   = []
     stack.append(v_header.headerID)
     while stack:
-        v_stackID = stack.pop()
-        v_stack   = transition_graph.get_vertex(v_stackID)
-        visited.add(v_stackID)
-        for e_pred in v_stack.predecessors.values():
+        v_queueID = stack.pop()
+        v_queue   = transition_graph.get_vertex(v_queueID)
+        visited.add(v_queueID)
+        for e_pred in v_queue.predecessors.values():
             v_header_pred = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(e_pred.vertexID).parentID)
             if v_header_pred.headerID == v_header.headerID:
-                edges.add((e_pred.vertexID, v_stackID, e_pred.the_program_point))
+                edges.append((e_pred.vertexID, v_queueID, e_pred.the_program_point))
                 if e_pred.vertexID not in visited:
                     stack.append(e_pred.vertexID)
             elif transition_graph_lnt.is_nested(v_header_pred.vertexID, v_header.vertexID) \
-            and not transition_graph_lnt.is_backedge(e_pred.vertexID, v_stackID):
-                edges.add((e_pred.vertexID, v_stackID, e_pred.the_program_point))
+            and not transition_graph_lnt.is_backedge(e_pred.vertexID, v_queueID):
+                edges.append((e_pred.vertexID, v_queueID, e_pred.the_program_point))
                 if e_pred.vertexID not in visited:
                     stack.append(e_pred.vertexID)
                     
@@ -257,180 +262,183 @@ def create_induced_subgraph_for_loop_iteration_space(transition_graph,
         
     transition_graph_induced.set_edgeIDs()
     transition_graph_induced.entryID = v_header.headerID
-    transition_graph_induced.exitID  = v_header.headerID
-    
+    transition_graph_induced.exitID  = v_header.headerID    
     return transition_graph_induced
 
-def create_induced_subgraph(transition_graph, 
-                            transition_graph_lnt, 
-                            headerv, 
-                            query_pair,
-                            startID, 
-                            is_reverse_graph):
-    edges     = set()
-    visited   = set()
-    v_startID = transition_graph.program_point_to_predecessor_state[query_pair[0]]
-    stack     = []
-    stack.append(v_startID)
-    while stack:
-        v_stackID = stack.pop()
-        v_stack   = transition_graph.get_vertex(v_stackID)
-        visited.add(v_stackID)
-        for e_succ in v_stack.successors.values():
-            if not transition_graph_lnt.is_backedge(v_stack.vertexID, e_succ.vertexID) \
-            and not transition_graph_lnt.is_backedge(e_succ.vertexID, v_stack.vertexID):
-                if headerv.vertexID == transition_graph_lnt.rootID:
-                    if transition_graph.is_reachable(e_succ.the_program_point, set(query_pair)):
-                        edges.add((v_stack.vertexID, e_succ.vertexID, e_succ.the_program_point))
-                        if e_succ.the_program_point != query_pair[1] and e_succ.vertexID not in visited:
-                            stack.append(e_succ.vertexID)
-                else:
-                    v_succ_lnt = transition_graph_lnt.get_program_point_vertex(e_succ.vertexID)
-                    if transition_graph_lnt.is_ancestor(headerv.vertexID, v_succ_lnt.vertexID):
-                        edges.add((v_stack.vertexID, e_succ.vertexID, e_succ.the_program_point))
-                        if e_succ.vertexID not in visited:
-                            stack.append(e_succ.vertexID)
-                            
-    # At this point, the edges we need to add to the induced subgraph have been worked out
-    transition_graph_induced = directed_graphs.StateTransitionGraph()
+def induce_subgraph_from_source_to_destination(transition_graph,
+                                               transition_graph_lnt,
+                                               transition_graph_induced,
+                                               source_stateID,
+                                               destination_stateID):
+    edges    = []
+    enqueued = set()
+    queue    = []
+    
+    queue.append(source_stateID)
+    while queue:
+        v_queueID = queue.pop(0)
+        v_queue   = transition_graph.get_vertex(v_queueID)
+        for e_succ in v_queue.successors.values():
+            if transition_graph.is_reachable(e_succ.vertexID, {destination_stateID})\
+            and v_queueID != destination_stateID \
+            and not transition_graph_lnt.is_backedge(v_queueID, e_succ.vertexID):
+                edges.append((v_queueID, e_succ.vertexID, e_succ.the_program_point))
+                if e_succ.vertexID not in enqueued:
+                    queue.append(e_succ.vertexID)
+                    enqueued.add(e_succ.vertexID)
+    
+    no_predecessors = set()
+    real_vertexID_to_new_vertexID = {}
     for an_edge in edges:
-        if not transition_graph_induced.has_vertex(an_edge[0]):
-            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[0]))
-        if not transition_graph_induced.has_vertex(an_edge[1]):
-            transition_graph_induced.add_vertex(vertices.Vertex(an_edge[1]))
-        if is_reverse_graph:
-            transition_graph_induced.add_edge(an_edge[1], an_edge[0], an_edge[2], False)
-        else:
-            transition_graph_induced.add_edge(an_edge[0], an_edge[1], an_edge[2], False)
-            
-    transition_graph_induced.set_edgeIDs()
-    transition_graph_induced.set_entry_and_exit()
-            
-    return transition_graph_induced
+        if an_edge[0] not in real_vertexID_to_new_vertexID:
+            new_vertexID = transition_graph_induced.get_next_vertexID()
+            newv         = vertices.Vertex(new_vertexID, an_edge[0])
+            transition_graph_induced.add_vertex(newv)
+            real_vertexID_to_new_vertexID[an_edge[0]] = new_vertexID
+            no_predecessors.add(new_vertexID)
+        if an_edge[1] not in real_vertexID_to_new_vertexID:
+            new_vertexID = transition_graph_induced.get_next_vertexID()
+            newv         = vertices.Vertex(new_vertexID, an_edge[1])
+            transition_graph_induced.add_vertex(newv)
+            real_vertexID_to_new_vertexID[an_edge[1]] = new_vertexID
+            no_predecessors.add(new_vertexID)
+                        
+    for an_edge in edges:
+        transition_graph_induced.add_edge(real_vertexID_to_new_vertexID[an_edge[0]], 
+                                          real_vertexID_to_new_vertexID[an_edge[1]], 
+                                          an_edge[2], 
+                                          False)
+        try:
+            no_predecessors.remove(real_vertexID_to_new_vertexID[an_edge[1]])
+        except KeyError:
+            pass
+    
+    assert len(no_predecessors) == 1
+    return list(no_predecessors)[0]
+        
+def induce_subgraph_from_source_to_outermost_header(transition_graph,
+                                                    transition_graph_lnt,
+                                                    transition_graph_induced,
+                                                    query_pair):
+    edges            = []
+    enqueued         = set()
+    queue            = [] 
+    start_stateID    = transition_graph.program_point_to_predecessor_stateID[query_pair[0]]
+    v_current_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(start_stateID).parentID)
 
-def detect_non_terminal_backedges(transition_graph_lnt, transition_graph_induced_global, sink_vertices):
-    to_remove = set()
-    for v in sink_vertices:
-        pass
-    return to_remove
-
-def create_connected_transition_graph(transition_graph_induced_global, transition_graph_induced):    
-    # Relabel each vertex
-    oldID_to_newID = {}
-    for v in transition_graph_induced:
-        oldID_to_newID[v.vertexID] = transition_graph_induced_global.get_next_vertexID()
-        transition_graph_induced_global.add_vertex(vertices.Vertex(oldID_to_newID[v.vertexID]))
-    # Create edges according to new numbering
-    new_edges = set()
-    for v in transition_graph_induced:
-        for succe in v.successors.values():
-            new_edges.add((oldID_to_newID[v.vertexID], oldID_to_newID[succe.vertexID], succe.the_program_point))    
-    # Add new edges     
-    for an_edge in new_edges:
-        transition_graph_induced_global.add_edge(an_edge[0], an_edge[1], an_edge[2], False)
-        
-def create_subgraph_for_vertices_in_same_loop_nest(transition_graph,
-                                                   transition_graph_lnt,
-                                                   transition_graph_induced_global,
-                                                   headerv,
-                                                   query_pair):
+    queue.append(start_stateID)
+    while queue:
+        v_queueID = queue.pop(0)
+        v_queue   = transition_graph.get_vertex(v_queueID)
+        if transition_graph_lnt.is_loop_header(v_queueID)\
+        and v_queueID != transition_graph.get_entryID():
+            v_current_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(v_current_header.vertexID).parentID)
+        if v_current_header.vertexID != transition_graph_lnt.rootID:
+            for e_succ in v_queue.successors.values():
+                if transition_graph.header_is_reachable(e_succ.vertexID, v_current_header.headerID):
+                    edges.append((v_queueID, e_succ.vertexID, e_succ.the_program_point))
+                    if e_succ.vertexID not in enqueued:
+                        queue.append(e_succ.vertexID)
+                        enqueued.add(e_succ.vertexID)
     
-    transition_graph_one = create_induced_subgraph(transition_graph, 
-                                                   transition_graph_lnt, 
-                                                   headerv,  
-                                                   query_pair,
-                                                   query_pair[0],
-                                                   False) 
-    
-    create_connected_transition_graph(transition_graph_induced_global, transition_graph_one)
-    
-    if transition_graph_induced_global.number_of_vertices() > 0:
-        # Set the entry vertex of the global induced CFG
-        source_vertices1 = transition_graph_induced_global.get_source_vertices()
-        assert len(source_vertices1) == 1
-        transition_graph_induced_global.entryID = list(source_vertices1)[0].vertexID
+    no_successors = set()
+    real_vertexID_to_new_vertexID = {}
+    for an_edge in edges:
+        if an_edge[0] not in real_vertexID_to_new_vertexID:
+            new_vertexID = transition_graph_induced.get_next_vertexID()
+            newv         = vertices.Vertex(new_vertexID, an_edge[0])
+            transition_graph_induced.add_vertex(newv)
+            real_vertexID_to_new_vertexID[an_edge[0]] = new_vertexID
+            no_successors.add(new_vertexID)
+        if an_edge[1] not in real_vertexID_to_new_vertexID:
+            new_vertexID = transition_graph_induced.get_next_vertexID()
+            newv         = vertices.Vertex(new_vertexID, an_edge[1])
+            transition_graph_induced.add_vertex(newv)
+            real_vertexID_to_new_vertexID[an_edge[1]] = new_vertexID
+            no_successors.add(new_vertexID)
+                        
+    for an_edge in edges:
+        transition_graph_induced.add_edge(real_vertexID_to_new_vertexID[an_edge[0]], 
+                                          real_vertexID_to_new_vertexID[an_edge[1]], 
+                                          an_edge[2], 
+                                          False)
+        try:
+            no_successors.remove(real_vertexID_to_new_vertexID[an_edge[0]])
+        except KeyError:
+            pass
         
-        # Remove any sink vertices which represent loop-back edges but are not terminal in the induced CFG
-        sink_vertices1 = transition_graph_induced_global.get_sink_vertices()
-        to_remove     = detect_non_terminal_backedges(transition_graph, transition_graph_lnt, sink_vertices1)
-        for v in to_remove:
-            sink_vertices1.remove(v)
-            transition_graph_induced_global.removeVertex(v.vertexID)
-        
-        program_point_one_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_program_point_vertex(query_pair[0]).parentID)
-        program_point_two_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_program_point_vertex(query_pair[1]).parentID)
-        
-        if program_point_one_header.vertexID == transition_graph_lnt.rootID \
-        or program_point_two_header.vertexID  == transition_graph_lnt.rootID:
-            assert len(sink_vertices1) == 1
-            transition_graph_induced_global.exitID  = list(sink_vertices1)[0].vertexID
-        else:
-            transition_graph_two = create_induced_subgraph(transition_graph.get_reverse_graph(), 
-                                                           transition_graph_lnt, 
-                                                           headerv, 
-                                                           query_pair,
-                                                           query_pair[1],
-                                                           True)
-            create_connected_transition_graph(transition_graph_induced_global, transition_graph_two)
-            source_vertices2   = transition_graph_induced_global.get_source_vertices()
-            source_vertices2   = source_vertices2.difference(source_vertices1)
-            sink_vertices2     = transition_graph_induced_global.get_sink_vertices()
-            sink_vertices2     = sink_vertices2.difference(sink_vertices1)
-            
-            for sourcev in sink_vertices1:
-                for destinationv in source_vertices2:
-                    transition_graph_induced_global.addEdge(sourcev.vertexID, destinationv.vertexID)
-            
-            assert len(sink_vertices2) == 1
-            transition_graph_induced_global.exitID  = list(sink_vertices2)[0].vertexID
+    assert len(no_successors) == 1
+    return list(no_successors)[0]
 
 def create_path_expression(cfg, query_pair):
-    transition_graph     = cfg.get_transition_graph()
-    transition_graph_lnt = transition_graph.get_LNT()
-    if query_pair[0] == query_pair[1]:
-        lntv    = transition_graph_lnt.get_vertex(transition_graph_lnt.program_point_to_lnt_vertexID[query_pair[0]])
-        headerv = transition_graph_lnt.get_vertex(lntv.parentID)
-    else:
-        headerv = transition_graph_lnt.get_vertex(transition_graph_lnt.get_LCA().query(query_pair))
+    transition_graph         = cfg.get_transition_graph()
+    transition_graph_lnt     = transition_graph.get_LNT()
+    v_lnt_source             = transition_graph_lnt.get_vertex(transition_graph_lnt.program_point_to_lnt_vertexID[query_pair[0]])
+    source_stateID           = transition_graph.program_point_to_predecessor_stateID[query_pair[0]]
+    destination_stateID      = transition_graph.program_point_to_successor_stateID[query_pair[1]]
+    transition_graph_induced = directed_graphs.StateTransitionGraph()
     
-    transition_graph_induced_global = directed_graphs.StateTransitionGraph()
+    if transition_graph.is_reachable(source_stateID, {destination_stateID}):
+        if v_lnt_source.parentID == transition_graph_lnt.rootID:
+            induce_subgraph_from_source_to_destination(transition_graph, 
+                                                       transition_graph_lnt,
+                                                       transition_graph_induced,
+                                                       source_stateID,
+                                                       destination_stateID)
+        else:
+            v_pred_stateID = induce_subgraph_from_source_to_outermost_header(transition_graph,
+                                                                             transition_graph_lnt,
+                                                                             transition_graph_induced,
+                                                                             query_pair)
+            
+            v_succ_stateID = induce_subgraph_from_source_to_destination(transition_graph,
+                                                                        transition_graph_lnt,
+                                                                        transition_graph_induced,
+                                                                        transition_graph_lnt.get_vertex(v_lnt_source.parentID).headerID,
+                                                                        destination_stateID)
+            
+            transition_graph_induced.add_edge(v_pred_stateID, v_succ_stateID, (), False)
+            
+        transition_graph_induced.set_entry_and_exit() 
+        transition_graph_induced.set_edgeIDs()
         
-    create_subgraph_for_vertices_in_same_loop_nest(transition_graph, 
-                                                   transition_graph_lnt,
-                                                   transition_graph_induced_global,
-                                                   headerv, 
-                                                   query_pair)
-        
-    udraw_suffix = "%s.%s" % (('_'.join(map(str, query_pair[0]))), ('_'.join(map(str, query_pair[1]))))
+    udraw_suffix = "%s-%s" % (('_'.join(map(str, query_pair[0]))), ('_'.join(map(str, query_pair[1]))))
     
-    udraw.make_file(transition_graph_induced_global, 
+    udraw.make_file(transition_graph_induced, 
                     "%s.transition.%s" % (cfg.name, udraw_suffix)) 
     
     expressiont = PathExpression(transition_graph,
                                  transition_graph_lnt,
-                                 transition_graph_induced_global)
+                                 transition_graph_induced)
     
     udraw.make_file(expressiont, 
-                    "%s.regexp.%s" % (cfg.name, udraw_suffix))  
+                    "%s.re.%s" % (cfg.name, udraw_suffix))  
     
     print("P(%s) = %s" % (udraw_suffix, expressiont.get_textual_format()))
     
 def create_path_expression_for_all_loops(cfg):
+    print("%s CFG: %s %s" % ('*' * 10, cfg.name, '*' * 10))
     transition_graph     = cfg.get_transition_graph()
     transition_graph_lnt = transition_graph.get_LNT()
     for the_vertices in transition_graph_lnt.level_by_level_iterator(True):
         for v_header in [v_tree for v_tree in the_vertices if isinstance(v_tree, vertices.HeaderVertex)]:
+            v_state       = transition_graph.get_vertex(v_header.headerID)
+            e_succ        = v_state.successors.values()[0]
+            real_headerID = e_succ.the_program_point[0]
+            
             iteration_subgraph = create_induced_subgraph_for_loop_iteration_space(transition_graph, 
                                                                                   transition_graph_lnt,
                                                                                   v_header)
+            
+            udraw.make_file(iteration_subgraph, "%s.induced.L_%d" % (cfg.name, real_headerID))
             
             iteration_subgraph_path_expression = PathExpression(transition_graph,
                                                                 transition_graph_lnt,
                                                                 iteration_subgraph,
                                                                 v_header.vertexID != transition_graph_lnt.rootID)
             
-            print("P(iterations(L_%d)) = %s\n" % (v_header.headerID,
-                                                  iteration_subgraph_path_expression.get_textual_format()))
+            print("P(L_%d)::\n%s\n" % (real_headerID, iteration_subgraph_path_expression.get_textual_format()))
+        
+            udraw.make_file(iteration_subgraph_path_expression, "%s.re.L_%d" % (cfg.name, real_headerID))
             
-            udraw.make_file(iteration_subgraph_path_expression, "%s.L_%d" % (cfg.name, v_header.headerID))
             

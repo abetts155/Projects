@@ -184,11 +184,11 @@ class StateTransitionGraph(FlowGraph):
     def __init__(self, cfg=None):
         FlowGraph.__init__(self)
         if cfg:
-            self.lnt              = None
-            self.component_dag    = None
-            self.program_point_to_predecessor_state = {}
-            self.program_point_to_successor_state   = {}
+            self.lnt = None
+            self.program_point_to_predecessor_stateID = {}
+            self.program_point_to_successor_stateID   = {}
             self.create(cfg)
+            self.compute_reachability_information()
         
     def create(self, cfg):
         # Add a state transition per CFG vertex 
@@ -197,11 +197,11 @@ class StateTransitionGraph(FlowGraph):
             new_stateID += 1
             v_pred_state = vertices.Vertex(new_stateID)
             self.the_vertices[new_stateID] = v_pred_state
-            self.program_point_to_predecessor_state[(v_cfg.vertexID,)] = v_pred_state.vertexID
+            self.program_point_to_predecessor_stateID[(v_cfg.vertexID,)] = v_pred_state.vertexID
             new_stateID += 1
             v_succ_state = vertices.Vertex(new_stateID)
             self.the_vertices[new_stateID] = v_succ_state
-            self.program_point_to_successor_state[(v_cfg.vertexID,)] = v_succ_state.vertexID
+            self.program_point_to_successor_stateID[(v_cfg.vertexID,)] = v_succ_state.vertexID
             self.add_edge(v_pred_state.vertexID, v_succ_state.vertexID, (v_cfg.vertexID,), False)
             if v_cfg.vertexID == cfg.entryID:
                 self.entryID = v_pred_state.vertexID
@@ -211,12 +211,12 @@ class StateTransitionGraph(FlowGraph):
         # Add a state transition per CFG edge
         for v_cfg in cfg:
             predID_cfg = v_cfg.vertexID
-            v_pred_stateID = self.program_point_to_successor_state[(predID_cfg,)]
+            v_pred_stateID = self.program_point_to_successor_stateID[(predID_cfg,)]
             for succID_cfg in v_cfg.successors.keys():
-                v_succ_stateID = self.program_point_to_predecessor_state[(succID_cfg,)]
+                v_succ_stateID = self.program_point_to_predecessor_stateID[(succID_cfg,)]
                 self.add_edge(v_pred_stateID, v_succ_stateID, (predID_cfg, succID_cfg), False)
-                self.program_point_to_predecessor_state[(predID_cfg, succID_cfg)] = v_pred_stateID
-                self.program_point_to_successor_state[(predID_cfg, succID_cfg)] = v_succ_stateID
+                self.program_point_to_predecessor_stateID[(predID_cfg, succID_cfg)] = v_pred_stateID
+                self.program_point_to_successor_stateID[(predID_cfg, succID_cfg)] = v_succ_stateID
                 
     def add_edge(self, predID, succID, the_program_point, represents_collapsed_loop):
         v_pred = self.get_vertex(predID)
@@ -231,167 +231,49 @@ class StateTransitionGraph(FlowGraph):
             self.lnt = LoopNests(self, self.entryID)
         return self.lnt
     
-    def is_reachable(self, a_program_point, the_set):
-        if self.component_dag is None:
-            self.component_dag = StateTransitionComponentDAG()
-            self.component_dag.build(self, self.get_LNT())
-            self.component_dag.compute_reachability_information(self)
-        assert a_program_point in self.component_dag.reachability_info
-        return the_set.issubset(self.component_dag.reachability_info[a_program_point])
-
-class StateTransitionComponentDAG(FlowGraph):
-    def __init__(self):
-        FlowGraph.__init__(self)
-        
-    def build(self, transition_graph, transition_graph_lnt):
-        loop_entry_states = {}
-        loop_exit_states  = {}
-        self.add_vertices(transition_graph, 
-                          transition_graph_lnt, 
-                          loop_entry_states,
-                          loop_exit_states)
-        self.add_edges(transition_graph, 
-                       transition_graph_lnt,
-                       loop_entry_states,
-                       loop_exit_states)
-        self.entryID = transition_graph.entryID
-        self.exitID  = transition_graph.exitID
-        
-    def add_vertices(self, 
-                     transition_graph, 
-                     transition_graph_lnt, 
-                     loop_entry_states,
-                     loop_exit_states):
-        for v in transition_graph:
-            if transition_graph_lnt.get_vertex(v.vertexID).parentID == transition_graph_lnt.rootID:
-                self.the_vertices[v.vertexID] = vertices.Vertex(v.vertexID)               
-        for headerv in transition_graph_lnt.get_header_vertices():
-            if headerv.vertexID != transition_graph_lnt.rootID \
-            and headerv.parentID == transition_graph_lnt.rootID:
-                loop_entry_stateID = self.get_next_vertexID()
-                self.the_vertices[loop_entry_stateID] = vertices.Vertex(loop_entry_stateID)
-                loop_entry_states[headerv.headerID] = loop_entry_stateID
-                loop_exit_states[headerv.headerID] = list()
-                for an_edge in transition_graph_lnt.loop_exit_edges_per_header[headerv.headerID]:
-                    exit_stateID = self.get_next_vertexID()
-                    self.the_vertices[exit_stateID] = vertices.Vertex(exit_stateID)
-                    loop_exit_states[headerv.headerID].append(exit_stateID)
-                
-    def add_edges(self, 
-                  transition_graph, 
-                  transition_graph_lnt, 
-                  loop_entry_states,
-                  loop_exit_states):
-        for v in transition_graph:
-            if transition_graph_lnt.get_vertex(v.vertexID).parentID == transition_graph_lnt.rootID:
-                for succe in v.successors.values():
-                    if transition_graph_lnt.get_vertex(succe.vertexID).parentID == transition_graph_lnt.rootID:
-                        v_pred        = self.get_vertex(v.vertexID)
-                        v_succ        = self.get_vertex(succe.vertexID)
-                        self.add_edge(v_pred, v_succ, succe.the_program_point)
-                    else:
-                        v_header_succ = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(succe.vertexID).parentID)
-                        v_pred        = self.get_vertex(v.vertexID)
-                        v_succ        = self.get_vertex(loop_entry_states[v_header_succ.headerID])
-                        self.add_edge(v_pred, v_succ, succe.the_program_point)
-        for headerv in transition_graph_lnt.get_header_vertices():
-            if headerv.vertexID != transition_graph_lnt.rootID and headerv.parentID == transition_graph_lnt.rootID:
-                loop_body = self.compute_loop_nest_body(transition_graph_lnt, headerv) 
-                v_pred    = self.get_vertex(loop_entry_states[headerv.headerID])
-                for an_edge in transition_graph_lnt.loop_exit_edges_per_header[headerv.headerID]:
-                    v_exit = self.get_vertex(loop_exit_states[headerv.headerID].pop())
-                    self.add_edge(v_pred, v_exit, loop_body)
-                    if transition_graph_lnt.get_vertex(an_edge[1]).parentID == transition_graph_lnt.rootID:
-                        v_succ = self.get_vertex(an_edge[1])
-                    else:
-                        v_succ_header = transition_graph_lnt.get_vertex(transition_graph_lnt.get_vertex(an_edge[1]).parentID)
-                        v_succ        = self.get_vertex(loop_entry_states[v_succ_header.headerID])
-                    v_pred_in_transitiong = transition_graph.get_vertex(an_edge[0])
-                    e_in_transitiong      = v_pred_in_transitiong.get_successor_edge(an_edge[1])
-                    self.add_edge(v_exit, v_succ, e_in_transitiong.the_program_point)
-                    
-    def compute_loop_nest_body(self, transition_graph_lnt, headerv):
-        loop_body = set()
-        stack = []
-        stack.append(headerv)
-        while stack:
-            v_lnt = stack.pop()
-            for succID in v_lnt.successors.keys():
-                v_succ_lnt = transition_graph_lnt.get_vertex(succID)
-                if isinstance(v_succ_lnt, vertices.HeaderVertex):
-                    stack.append(v_succ_lnt)
-                elif isinstance(v_succ_lnt, vertices.ProgramPoint):
-                    loop_body.add(v_succ_lnt.the_program_point)
-        return loop_body
-                        
-    def add_edge(self, v_pred, v_succ, the_program_point):
-        e_pred = edges.TransitionEdge(v_pred.vertexID, the_program_point)
-        e_succ = edges.TransitionEdge(v_succ.vertexID, the_program_point)
-        v_pred.add_successor_edge(e_succ)
-        v_succ.add_predecessor_edge(e_pred)
-        
-    def get_reverse_graph(self):
-        reverse_graph = StateTransitionComponentDAG()
-        for v in self:
-            reverse_graph.the_vertices[v.vertexID] = vertices.Vertex(v.vertexID)
-        for v in self:
-            for succe in v.successors.values():
-                reverse_graph.add_edge(reverse_graph.get_vertex(succe.vertexID), 
-                                      reverse_graph.get_vertex(v.vertexID), 
-                                      succe.the_program_point)
-        reverse_graph.entryID = self.exitID
-        reverse_graph.exitID  = self.entryID
-        return reverse_graph
-        
-    def compute_reachability_information(self, transition_graph):
+    def compute_reachability_information(self):
         # Initialise
-        unified  = {}
-        forward  = {}
-        reverse  = {}
+        self.state_reachability  = {}
+        self.header_reachability = {}
+        forward = {}
+        reverse = {}
         for v in self:
-            for succe in v.successors.values():
-                unified[(v.vertexID, succe.vertexID)] = set()
-                forward[(v.vertexID, succe.vertexID)] = set()
-                reverse[(v.vertexID, succe.vertexID)] = set()
-                if isinstance(succe.the_program_point, set):
-                    forward[(v.vertexID, succe.vertexID)].update(succe.the_program_point)
-                    reverse[(v.vertexID, succe.vertexID)].update(succe.the_program_point)
-                else:
-                    forward[(v.vertexID, succe.vertexID)].add(succe.the_program_point)
-                    reverse[(v.vertexID, succe.vertexID)].add(succe.the_program_point)
-         
-        # Solve data flow equations in forward direction
-        dfs = DepthFirstSearch(self, self.entryID)
-        for vertexID in reversed(dfs.post_order):
-            v = self.get_vertex(vertexID)
-            for succe in v.successors.values():
-                for prede in v.predecessors.values():
-                    forward[(v.vertexID, succe.vertexID)].update(forward[(prede.vertexID, v.vertexID)])
-        
-        # Solve data flow equations in backward direction
-        reverseg = self.get_reverse_graph()
-        dfs      = DepthFirstSearch(reverseg, reverseg.entryID)
-        for vertexID in reversed(dfs.post_order):
-            v = reverseg.get_vertex(vertexID)
-            for succe in v.successors.values():
-                for prede in v.predecessors.values():
-                    reverse[(succe.vertexID, v.vertexID)].update(reverse[(v.vertexID, prede.vertexID)])
-        
-        # Unify forward and backward information
-        for v in self:
+            self.state_reachability[v.vertexID] = set()
+            self.state_reachability[v.vertexID].add(v.vertexID)
+            
+        lnt = self.get_LNT()
+        dfs = DepthFirstSearch(self, self.entryID) 
+        # Compute header reachable information
+        # Note that we use a post-order traversal here, and not the reversal
+        for vertexID in dfs.post_order:
+            self.header_reachability[vertexID] = set()
+            v        = self.get_vertex(vertexID)
+            v_header = lnt.get_vertex(lnt.get_vertex(vertexID).parentID)
             for succID in v.successors.keys():
-                unified[(v.vertexID, succID)] = forward[(v.vertexID, succID)].union(reverse[(v.vertexID, succID)])
-        
-        # Store reachability information per program point    
-        self.reachability_info = {}
-        for an_edge in unified.keys():
-            v_pred = self.get_vertex(an_edge[0])
-            succe  = v_pred.get_successor_edge(an_edge[1])
-            if isinstance(succe.the_program_point, set):
-                for a_program_point in succe.the_program_point:
-                    self.reachability_info[a_program_point] = unified[an_edge]
-            else:
-                self.reachability_info[succe.the_program_point] = unified[an_edge]
+                if not lnt.is_backedge(vertexID, succID):
+                    for headerID in self.header_reachability[succID]:
+                        v_other_header = lnt.get_vertex(lnt.get_vertex(headerID).parentID)
+                        if v_other_header.vertexID == v_header.vertexID \
+                        or lnt.is_nested(v_header.vertexID, v_other_header.vertexID):
+                        # Either at the same loop-nesting level or inside a nested loop:
+                        # add header
+                            self.header_reachability[vertexID].add(headerID)
+                else:
+                    # Backedge detected: add header
+                    self.header_reachability[vertexID].add(succID)
+
+        # Solve data flow equations in the backward direction
+        for vertexID in dfs.post_order:
+            v = self.get_vertex(vertexID)
+            for succID in v.successors.keys():
+                if not lnt.is_backedge(vertexID, succID):
+                    self.state_reachability[vertexID].update(self.state_reachability[succID])
+    
+    def is_reachable(self, stateID, the_set):
+        return the_set.issubset(self.state_reachability[stateID])
+    
+    def header_is_reachable(self, stateID, headerID):
+        return headerID in self.header_reachability[stateID]
     
 class Tree(DirectedGraph):
     def __init__ (self):

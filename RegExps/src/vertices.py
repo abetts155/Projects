@@ -4,12 +4,15 @@ import collections
 dummyID = 0
 
 class Vertex:
-    def __init__(self, vertexID):
-        self.vertexID      = vertexID
-        self.predecessors  = collections.OrderedDict()
-        self.successors    = collections.OrderedDict()
-        self.dummy         = False
-        self.loop_header   = False
+    def __init__(self, vertexID, real_vertexID=None):
+        self.vertexID = vertexID
+        if real_vertexID:
+            self.real_vertexID = real_vertexID
+        else:
+            self.real_vertexID = vertexID
+        self.predecessors = collections.OrderedDict()
+        self.successors   = collections.OrderedDict()
+        self.loop_header  = False
         
     def add_predecessor(self, predID, edgeID=None):
         assert predID not in self.predecessors, "Vertex %d already has predecessor %d" % (self.vertexID, predID)
@@ -67,10 +70,12 @@ class Vertex:
         return string
     
     def __str__(self):
-        return """ID   = %d 
-succ = %s 
-pred = %s
+        return """ID      = %d
+real ID = %d
+succ    = %s 
+pred    = %s
 """ % (self.vertexID, 
+       self.real_vertexID,
        self.edge_incidence_string(self.successors), 
        self.edge_incidence_string(self.predecessors))
     
@@ -91,26 +96,26 @@ class HeaderVertex(TreeVertex):
         TreeVertex.__init__(self, vertexID)
         self.headerID = headerID
 
-class RegExpVertex(TreeVertex):
+class RegExpVertex(Vertex):
     ALTERNATIVE   = "|"
     SEQUENCE      = "."
     FOR_LOOP      = "*"
     
     def __init__(self, vertexID, operator):
-        TreeVertex.__init__(self, vertexID)
+        Vertex.__init__(self, vertexID)
         assert operator == RegExpVertex.ALTERNATIVE \
         or operator == RegExpVertex.SEQUENCE \
         or operator == RegExpVertex.FOR_LOOP
         self.operator = operator
         
-class ProgramPoint(TreeVertex):
+class ProgramPoint(Vertex):
     def __init__(self, vertexID, the_program_point, edgeID=None):
-        TreeVertex.__init__(self, vertexID)
+        Vertex.__init__(self, vertexID)
         self.the_program_point = the_program_point
         self.edgeID = edgeID
         
     def __str__(self):
-        return TreeVertex.__str__(self) + """program point = %s
+        return Vertex.__str__(self) + """program point = %s
 edge ID  = %s
 """ % (self.the_program_point, self.edgeID)
         
