@@ -123,10 +123,10 @@ class FlowGraph(DirectedGraph):
         for v in self:
             for succID in v.successors.keys():
                 succe = v.get_successor_edge(succID)
-                succe.set_edgeID(edgeID)
+                succe.edgeID = edgeID
                 succv = self.getVertex(succID)
                 prede = succv.get_predecessor_edge(v.vertexID)
-                prede.set_edgeID(edgeID)
+                prede.edgeID = edgeID
                 edgeID += 1
                 
     def get_reverse_graph(self):

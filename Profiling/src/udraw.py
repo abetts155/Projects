@@ -1,7 +1,6 @@
 import os
 import config
 import directed_graphs
-import super_block_graphs
 import vertices
 
 begin_attrs = "["
@@ -72,35 +71,25 @@ def make_file(g, graph_name):
         with open(filename, 'w') as the_file:
             the_file.write(begin_graph)
             if isinstance(g, directed_graphs.CFG):
-                write_CFG_vertex(g, g.get_entryID(), the_file)
+                write_cfg_vertex(g, g.get_vertex(g.get_entryID()), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
-                        write_CFG_vertex(g, v.vertexID, the_file)
+                        write_cfg_vertex(g, v, the_file)   
             elif isinstance(g, directed_graphs.EnhancedCFG):
-                write_enhanced_CFG_vertex(g, g.get_entryID(), the_file)
+                write_enhanced_cfg_vertex(g, g.get_vertex(g.get_entryID()), the_file)
                 for v in g:
                     if v.vertexID != g.get_entryID():
-                        write_enhanced_CFG_vertex(g, v.vertexID, the_file)
-            elif isinstance(g, super_block_graphs.SuperBlockCFG):
-                for subgraph in g.forward_subgraphs.values():
-                    for superv in subgraph:
-                        write_super_block_vertex(superv, the_file) 
-                for subgraph in g.reverse_subgraphs.values():
-                    for superv in subgraph:
-                        write_super_block_vertex(superv, the_file)             
-            elif isinstance(g, directed_graphs.LoopNests):
-                for v in g:
-                    writeTreeVertex(g, v.vertexID, the_file)
+                        write_enhanced_cfg_vertex(g, v, the_file)
             else:
-                for v in g:
-                    writeVertex(g, v.vertexID, the_file)
+                assert False
             the_file.write(end_graph) 
             
-def writeVertex(g, vertexID, the_file):
-    v = g.getVertex(vertexID)        
-    the_file.write(new_vertex(vertexID))
+def write_cfg_vertex(g, v, the_file):
+    the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
+    the_file.write(set_name(str(v.vertexID)))
+    if v.instrumented:
+        the_file.write(set_color(COLOR.YELLOW))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -111,104 +100,17 @@ def writeVertex(g, vertexID, the_file):
         the_file.write(end_attrs)
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n") 
-    
-def write_CFG_vertex(cfg, vertexID, the_file):
-    v = cfg.getVertex(vertexID)
-    the_file.write(new_vertex(vertexID))
-    the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
-    if v.vertexID in cfg.program_points_to_profile:
-        the_file.write(set_color(COLOR.RED))
-    the_file.write(end_attrs)
-    
-    the_file.write(begin_attrs)
-    for succe in v.successors.values():
-        the_file.write(new_edge)
-        the_file.write(begin_attrs)
-        the_file.write(set_name("%d" % succe.edgeID))
-        if (v.vertexID, succe.vertexID) in cfg.program_points_to_profile:
-            the_file.write(set_edge_color(COLOR.RED))
-        the_file.write(end_attrs)
-        the_file.write(edge_link(succe.vertexID))
-        the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")
-    
-def write_enhanced_CFG_vertex(cfg, vertexID, the_file):
-    v = cfg.getVertex(vertexID)
-    the_file.write(new_vertex(vertexID))
-    the_file.write(begin_attrs)
-    if isinstance(v, vertices.CFGVertex):
-        the_file.write(set_name(str(vertexID)))
-    elif isinstance(v, vertices.CFGEdge):
-        name = str(v.edge) + "\\n" + str(vertexID)
-        the_file.write(set_name(name))
-    else:
-        the_file.write(set_name(str(vertexID)))
-        the_file.write(set_color(COLOR.RED))
-    if v.dummy:
-        the_file.write(set_color(COLOR.YELLOW))
-    the_file.write(end_attrs)
-    
-    the_file.write(begin_attrs)
-    for succe in v.successors.values():
-        the_file.write(new_edge)
-        the_file.write(begin_attrs)
-        the_file.write(set_name("%d" % succe.edgeID))
-        the_file.write(end_attrs)
-        the_file.write(edge_link(succe.vertexID))
-        the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n")
-    
-def write_super_block_vertex(superv, the_file):
-    the_file.write(new_vertex(superv.vertexID))
-    the_file.write(begin_attrs)
-    name = "super ID = %d%s" % (superv.vertexID, new_line)
-    for idx, program_point in enumerate(superv.program_points):
-        if isinstance(program_point, vertices.CFGVertex):
-            name += "%d" % (program_point.vertexID)
-        elif isinstance(program_point, vertices.CFGEdge):
-            name += "(%d, %d)" % (program_point.edge[0], program_point.edge[1])
-        else:
-            name += "%d"% (program_point.headerID)
-        if idx < len(superv.program_points) - 1:
-            name += new_line
-    if superv.reverse_graph:
-        the_file.write(set_color(COLOR.YELLOW))
-    the_file.write(set_name(name))
-    the_file.write(end_attrs)
-    
-    added = set()
-    the_file.write(begin_attrs)
-    for branchID, partition in superv.successor_partitions.iteritems():
-        for succID in partition:
-            the_file.write(new_edge)
-            the_file.write(begin_attrs)
-            the_file.write(set_name("%d" % branchID))
-            the_file.write(end_attrs)
-            the_file.write(edge_link(succID))
-            the_file.write(end_edge + ",\n")
-            added.add(succID)
             
-    for succe in superv.successors.values():
-        if succe.vertexID not in added:
-            the_file.write(new_edge)
-            the_file.write(begin_attrs)
-            the_file.write(end_attrs)
-            the_file.write(edge_link(succe.vertexID))
-            the_file.write(end_edge + ",\n")
-    the_file.write(end_vertex + "\n")  
-
-def writeTreeVertex (tree, vertexID, the_file):
-    v = tree.getVertex(vertexID)
-    the_file.write(new_vertex(vertexID))
+def write_enhanced_cfg_vertex(g, v, the_file):
+    the_file.write(new_vertex(v.vertexID))
     the_file.write(begin_attrs)
-    the_file.write(set_name(str(vertexID)))
-    if isinstance(tree, directed_graphs.LoopNests):
-        if isinstance(v, vertices.HeaderVertex):
-            the_file.write(set_shape(SHAPE.TRIANGLE))
-            the_file.write(set_color(COLOR.RED))
-            the_file.write(set_tool_tip("Header ID = %s" % v.headerID))
+    if isinstance(v, vertices.CFGEdge):
+        the_file.write(set_name(str(v.edge)))
+        the_file.write(set_color("#37FDFC"))
+    else:
+        the_file.write(set_name(str(v.vertexID)))
+        the_file.write(set_color(COLOR.YELLOW))
     the_file.write(end_attrs)
     
     the_file.write(begin_attrs)
@@ -220,5 +122,3 @@ def writeTreeVertex (tree, vertexID, the_file):
         the_file.write(edge_link(succID))
         the_file.write(end_edge + ",\n")
     the_file.write(end_vertex + "\n")   
-    
-    

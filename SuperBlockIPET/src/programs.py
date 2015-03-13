@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import directed_graphs
 import vertices
-import udraw
 import debug
 import calculations
 import config
@@ -22,7 +21,7 @@ class ConstraintBasedCalculationInformation:
         self.super_block_cfg_calculations        = {}
         self.super_block_cfg_folded_calculations = {}
     
-class Program():
+class Program:
     def __init__(self):
         self.callg = directed_graphs.CallGraph()
         self.cfgs  = {}
@@ -30,7 +29,6 @@ class Program():
     def add_CFG(self, cfg):
         assert cfg.name
         self.cfgs[cfg.name] = cfg
-        udraw.make_file(cfg, "%s.cfg" % (cfg.name))
         callv = vertices.CallGraphVertex(self.callg.get_next_vertexID(), cfg.name)
         self.callg.addVertex(callv)
 

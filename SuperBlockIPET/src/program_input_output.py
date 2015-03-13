@@ -6,6 +6,7 @@ import database
 import re
 import random
 import config
+import udraw
 
 cfg_lexeme         = "cfg"
 basic_block_lexeme = "bb"
@@ -120,4 +121,5 @@ def read_file(filename):
         cfg.add_predecessor_edges()
         cfg.set_entry_and_exit()
         cfg.set_edgeIDs()
+        udraw.make_file(cfg, "%s.cfg" % (cfg.name))
     return data, program     

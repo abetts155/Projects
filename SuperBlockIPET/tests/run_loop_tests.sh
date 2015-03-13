@@ -7,12 +7,12 @@ function ctrl_c()
   exit 0
 }
 
-loopbound=${loopbound:=10}
-lower=${lower:=20}
+loopbound=${loopbound:=20}
+lower=${lower:=40}
 upper=${upper:=100}
-subprograms=${subprograms:=10}
-loops=${loops:=1}
-depth=${depth:=1}
+subprograms=${subprograms:=1}
+loops=${loops:=5}
+depth=${depth:=5}
 
 for i in $(seq $lower $upper)
 do

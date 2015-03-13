@@ -12,7 +12,7 @@ def debug_message (string, module, debug_level=1):
         print("[%s] %s" % (module, string), file=sys.stderr)
         
 def warning_message(string):
-    print("%s WARNING %s: %s" % ('*' * 10, string, '*' * 10), file=sys.stderr)
+    print("[*****WARNING*****] %s" % string, file=sys.stderr)
 
 def exit_message(string):
     print(string, file=sys.stderr)
