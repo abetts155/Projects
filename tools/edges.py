@@ -1,3 +1,6 @@
+"""
+This module includes all edge types that appear in graphs. 
+"""
 
 
 class Edge:    
@@ -38,6 +41,12 @@ class CallGraphEdge(Edge):
     def call_sites(self):
         return self._call_sites
 
+
+    def __repr__(self):
+        return '%s(id=%r edge_id=%r call_sites=%r)' % (self.__class__.__name__,
+                                                       self._vertex_id,
+                                                       self._edge_id,
+                                                       self._call_sites)
 
 
 class TransitionEdge(Edge):

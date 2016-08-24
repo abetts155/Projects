@@ -1,7 +1,12 @@
+"""
+This module includes all directed graphs used in different types of analyses. 
+"""
+
+
 import collections
 
-from . import edges
-from . import vertices
+from programs import edges
+from programs import vertices
 
 
 class DuplicateVertexError(Exception):
@@ -46,9 +51,9 @@ class DirectedGraph:
     """
 
     def __init__(self):
-        self._vertices = collections.OrderedDict()
+        self._vertices     = collections.OrderedDict()
         self._name         = None
-        self.__edge_id     = 0
+        self.__new_edge_id = 0
         
         
     @property
@@ -69,8 +74,8 @@ class DirectedGraph:
     
     
     def get_new_edge_id(self):
-        self.__edge_id += 1
-        return self.__edge_id
+        self.__new_edge_id += 1
+        return self.__new_edge_id
     
         
     def add_vertex(self, vertex):
@@ -275,6 +280,21 @@ class CallGraph(DirectedGraph):
             return self.function_name_to_vertex[function_name]
         except ValueError:
             raise ValueError('No vertex found for function %s' % function_name)
+        
+    
+    def add_edge(self, pred_vertex, succ_vertex, call_site_id):
+        edge_id = self.get_new_edge_id()
+        if not pred_vertex.has_successor(succ_vertex.vertex_id):
+            succ_edge = edges.CallGraphEdge(succ_vertex.vertex_id, edge_id) 
+            pred_vertex.add_successor_edge(succ_edge)
+        if not succ_vertex.has_predecessor(pred_vertex.vertex_id):
+            pred_edge = edges.CallGraphEdge(pred_vertex.vertex_id, edge_id)
+            succ_vertex.add_predecessor_edge(pred_edge)
+        succ_edge = pred_vertex.get_successor_edge(succ_vertex.vertex_id)
+        pred_edge = succ_vertex.get_predecessor_edge(pred_vertex.vertex_id)
+        succ_edge.call_sites.add(call_site_id)
+        pred_edge.call_sites.add(call_site_id)
+        
         
 
 class ContextGraph(DirectedGraph):

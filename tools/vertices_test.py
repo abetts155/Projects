@@ -1,5 +1,7 @@
-from programs.graphs import vertices
 import unittest
+
+from programs import vertices
+
 
 
 class SanityChecks(unittest.TestCase):

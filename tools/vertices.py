@@ -4,8 +4,6 @@ This module includes all vertex types that appear in graphs.
 
 import collections
 
-from . import edges
-
 
 class DuplicateEdgeError(Exception):
     
@@ -162,6 +160,11 @@ class TreeVertex(Vertex):
     
 class LoopHeaderVertex(TreeVertex):
     
+    """
+    Models an internal vertex in a loop-nesting tree, in effect the abstract
+    vertex representation of a loop.
+    """
+    
     def __init__ (self, vertex_id, header_id):
         TreeVertex.__init__(self, vertex_id)
         self._header_id = header_id
@@ -173,7 +176,11 @@ class LoopHeaderVertex(TreeVertex):
         
         
 
-class CallVertex(Vertex):
+class SubprogramVertex(Vertex):
+    
+    """
+    Models a method/procedure/function of a program in the call graph.
+    """
     
     def __init__(self, vertex_id, name):
         Vertex.__init__(self, vertex_id)
@@ -182,19 +189,15 @@ class CallVertex(Vertex):
     @property
     def name(self):
         return self._name
-    
-    def add_predecessor(self, pred_id, call_site_id):
-        if pred_id not in self._predecessors:
-            self._predecessors[pred_id] = edges.CallGraphEdge(pred_id)
-        edge = self._predecessors[pred_id]
-        edge.add_call_site(call_site_id)
-    
-    def add_successor(self, succ_id, call_site_id):
-        if succ_id not in self._successors:
-            self._successors[succ_id] = edges.CallGraphEdge(succ_id)
-        edge = self._successors[succ_id]
-        edge.add_call_site(call_site_id)
 
+
+    def __repr__(self):
+        return '%s(id=%r name=%r pred=%r succ=%r)' \
+            % (self.__class__.__name__,
+               self._vertex_id,
+               self._name,
+               ','.join(repr(value) for value in self._predecessors.values()),
+               ','.join(repr(value) for value in self._successors.values()))
 
 
 class SuperBlock(Vertex):

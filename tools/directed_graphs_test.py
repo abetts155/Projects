@@ -1,6 +1,8 @@
-from programs.graphs import vertices
-from programs.graphs import directed_graphs
 import unittest
+
+from programs import vertices
+from programs import directed_graphs
+
 
 
 class SanityChecks(unittest.TestCase):
