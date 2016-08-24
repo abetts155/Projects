@@ -2,8 +2,8 @@ import collections
 import re
 import sys
 
-from programs import directed_graphs
-from programs import vertices
+from tools.lib.system import directed_graphs
+from tools.lib.system import vertices
 
 
 
@@ -32,6 +32,7 @@ def read_program_information_from_file(file_name):
     program = Program()
     program.create_from_parsed_input(edges_in__control_flow_graphs, 
                                      edges_in__call_graph)
+    return program
 
 
 
@@ -83,10 +84,9 @@ class Program:
                 pred_vertex = control_flow_graph.get_vertex(pred_id)
                 succ_vertex = control_flow_graph.get_vertex(succ_id)
                 control_flow_graph.add_edge(pred_vertex, succ_vertex)
+            control_flow_graph.find_and_set_entry_vertex()
+            control_flow_graph.find_and_set_exit_vertex()
             self._control_flow_graphs[function_name] = control_flow_graph
-    
-            print(control_flow_graph)
-            print(self.get_state_transition_graph(function_name))
         
         for call_site_id, caller, callee in edges_in__call_graph:
             pred_call_vertex = self._call_graph.get_vertex_with_name(caller)
@@ -94,8 +94,16 @@ class Program:
             self._call_graph.add_edge(pred_call_vertex, 
                                      succ_call_vertex, 
                                      call_site_id)       
-        print(self._call_graph)
+    
+    
+    def has_function(self, function_name):
+        return function_name in self._control_flow_graphs
         
+    
+    def control_flow_graph_iterator(self):
+        for _, control_flow_graph in self._control_flow_graphs.items():
+            yield control_flow_graph
+    
     
     def get_control_flow_graph(self, function_name):
         try:
@@ -110,6 +118,10 @@ class Program:
             self._state_transition_graphs[function_name] = directed_graphs.\
                 StateTransitionGraph(self.get_control_flow_graph(function_name))
         return self._state_transition_graphs[function_name]
+    
+    
+    def __len__(self):
+        return len(self._control_flow_graphs)
 
                     
 if __name__ == "__main__":

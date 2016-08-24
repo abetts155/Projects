@@ -1,7 +1,7 @@
 import unittest
 
-from programs import vertices
-from programs import directed_graphs
+from tools.lib import vertices
+from tools.lib import directed_graphs
 
 
 

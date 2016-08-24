@@ -5,8 +5,8 @@ This module includes all directed graphs used in different types of analyses.
 
 import collections
 
-from programs import edges
-from programs import vertices
+from tools.lib.system import edges
+from tools.lib.system import vertices
 
 
 class DuplicateVertexError(Exception):
@@ -88,8 +88,8 @@ class DirectedGraph:
     def get_vertex(self, vertex_id):
         try:
             return self._vertices[vertex_id]
-        except ValueError:
-            raise ValueError('Vertex %d is not in the graph' % vertex_id)
+        except KeyError:
+            raise KeyError('Vertex %d is not in the graph' % vertex_id)
         
         
     def remove_vertex(self, vertex_id):
