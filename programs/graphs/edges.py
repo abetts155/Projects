@@ -22,7 +22,9 @@ class Edge:
         
     
     def __repr__(self):
-        return 'Edge(%r: edge id=%r)' % (self._vertex_id, self._edge_id)
+        return '%s(id=%r edge_id=%r)' % (self.__class__.__name__, 
+                                         self._vertex_id, 
+                                         self._edge_id)
 
 
 
@@ -42,8 +44,23 @@ class TransitionEdge(Edge):
     def __init__(self, 
                  vertex_id, 
                  edge_id,
-                 the_program_point, 
+                 program_point, 
                  is_collapsed_loop=False):
         Edge.__init__(self, vertex_id, edge_id)
-        self._the_program_point = the_program_point
+        self._program_point = program_point
         self._is_collapsed_loop = is_collapsed_loop
+        
+    
+    @property
+    def program_point(self):
+        return self._program_point
+    
+    
+    def __repr__(self):
+        return '%s(id=%r edge_id=%r program_point=%r)' % (self.__class__.__name__,
+                                                          self._vertex_id,
+                                                          self._edge_id,
+                                                          self._program_point)
+    
+    
+    

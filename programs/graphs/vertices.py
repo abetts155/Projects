@@ -2,8 +2,9 @@
 This module includes all vertex types that appear in graphs. 
 """
 
-from programs.graphs import edges
 import collections
+
+from . import edges
 
 
 class DuplicateEdgeError(Exception):
@@ -36,11 +37,11 @@ class Vertex:
         return self._vertex_id
     
     
-    def add_predecessor(self, pred_id, edge_id):
-        if pred_id in self._predecessors:
+    def add_predecessor_edge(self, pred_edge):
+        if pred_edge.vertex_id in self._predecessors:
             raise DuplicateEdgeError('Vertex %d already has predecessor %d' % \
-                                     (self._vertex_id, pred_id))
-        self._predecessors[pred_id] = edges.Edge(pred_id, edge_id)
+                                     (self._vertex_id, pred_edge.vertex_id))
+        self._predecessors[pred_edge.vertex_id] = pred_edge
         
             
     def remove_predecessor(self, pred_id):
@@ -67,16 +68,16 @@ class Vertex:
         return pred_id in self._predecessors.keys()
             
     
-    def predecessors_iterator(self):
-        for pred_id, pred_e in self._predecessors.items():
-            yield pred_id, pred_e
+    def predecessor_edge_iterator(self):
+        for _, pred_edge in self._predecessors.items():
+            yield pred_edge
             
     
-    def add_successor(self, succ_id, edge_id):
-        if succ_id in self._successors:
+    def add_successor_edge(self, succ_edge):
+        if succ_edge.vertex_id in self._successors:
             raise DuplicateEdgeError('Vertex %r already has successor %r' % \
-                                     (self._vertex_id, succ_id))
-        self._successors[succ_id] = edges.Edge(succ_id, edge_id)
+                                     (self._vertex_id, succ_edge.vertex_id))
+        self._successors[succ_edge.vertex_id] = succ_edge
         
         
     def remove_successor(self, succ_id):
@@ -103,17 +104,17 @@ class Vertex:
         return succ_id in self._successors.keys()
     
     
-    def successors_iterator(self):
-        for succ_id, succ_e in self._successors.items():
-            yield succ_id, succ_e
+    def successor_edge_iterator(self):
+        for _, succ_edge in self._successors.items():
+            yield succ_edge
             
     
     def __repr__(self):
-        return '%s(%d: pred=%r succ=%r)' \
+        return '%s(id=%r pred=%r succ=%r)' \
             % (self.__class__.__name__,
                self._vertex_id,
-               ','.join(str(key) for key in self._predecessors.keys()),
-               ','.join(str(key) for key in self._successors.keys()))
+               ','.join(repr(value) for value in self._predecessors.values()),
+               ','.join(repr(value) for value in self._successors.values()))
 
 
 
@@ -151,7 +152,7 @@ class TreeVertex(Vertex):
         
     
     def __repr__(self):
-        return '%s(%d: parent=%r level=%r)' \
+        return '%s(id=%r parent=%r level=%r)' \
             % (self.__class__.__name__,
                self._vertex_id,
                self._parent_id,
@@ -172,7 +173,7 @@ class LoopHeaderVertex(TreeVertex):
         
         
 
-class ContextVertex(Vertex):
+class CallVertex(Vertex):
     
     def __init__(self, vertex_id, name):
         Vertex.__init__(self, vertex_id)
@@ -185,14 +186,14 @@ class ContextVertex(Vertex):
     def add_predecessor(self, pred_id, call_site_id):
         if pred_id not in self._predecessors:
             self._predecessors[pred_id] = edges.CallGraphEdge(pred_id)
-        the_edge = self._predecessors[pred_id]
-        the_edge.add_call_site(call_site_id)
+        edge = self._predecessors[pred_id]
+        edge.add_call_site(call_site_id)
     
     def add_successor(self, succ_id, call_site_id):
         if succ_id not in self._successors:
             self._successors[succ_id] = edges.CallGraphEdge(succ_id)
-        the_edge = self._successors[succ_id]
-        the_edge.add_call_site(call_site_id)
+        edge = self._successors[succ_id]
+        edge.add_call_site(call_site_id)
 
 
 
