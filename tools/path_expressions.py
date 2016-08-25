@@ -4,8 +4,8 @@ import os
 import argparse
 import ast
 
-from tools.lib.env import config
-from tools.lib.env import debug
+from tools.lib.utils import config
+from tools.lib.utils import debug
 from tools.lib.system import program
 
 
@@ -57,7 +57,8 @@ def parse_the_command_line():
                                      "Compute path expressions from a CFG")
     
     parser.add_argument("program_file",
-                        help="a file containing program information (with '.txt' extension)")
+                        help="a file containing program information"
+                        " (with '.txt' extension)")
     
     parser.add_argument("-d",
                         "--debug",
@@ -65,10 +66,10 @@ def parse_the_command_line():
                         help="debug mode",
                         default=0)
     
-    parser.add_argument("-l",
-                        "--loops",
+    parser.add_argument("--dot",
                         action="store_true",
-                        help="generate path expressions for loop bodies only",
+                        help="produce Graphviz dot files of graphs produced"
+                        " during the analysis",
                         default=False)
 
     parser.add_argument("-v",
@@ -88,5 +89,5 @@ def parse_the_command_line():
 if __name__ == "__main__": 
     parse_the_command_line()
     the_program = program.read_program_information_from_file(config.Arguments.program_file)
-    create_path_expression_between_two_program_points(the_program)
+    #create_path_expression_between_two_program_points(the_program)
     

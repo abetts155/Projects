@@ -1,6 +1,8 @@
 import sys
 
-from tools.lib.env import config
+from tools.lib.utils import config
+
+
 
 def verbose_message(string, module):
     if config.Arguments.verbose:

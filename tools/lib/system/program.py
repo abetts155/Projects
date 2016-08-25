@@ -4,6 +4,7 @@ import sys
 
 from tools.lib.system import directed_graphs
 from tools.lib.system import vertices
+from tools.lib.utils import dot
 
 
 
@@ -87,13 +88,15 @@ class Program:
             control_flow_graph.find_and_set_entry_vertex()
             control_flow_graph.find_and_set_exit_vertex()
             self._control_flow_graphs[function_name] = control_flow_graph
+            dot.make_file(control_flow_graph, '%s.cfg' % function_name)
         
         for call_site_id, caller, callee in edges_in__call_graph:
             pred_call_vertex = self._call_graph.get_vertex_with_name(caller)
             succ_call_vertex = self._call_graph.get_vertex_with_name(callee)
             self._call_graph.add_edge(pred_call_vertex, 
                                      succ_call_vertex, 
-                                     call_site_id)       
+                                     get_vertex_id(call_site_id))
+        dot.make_file(self._call_graph, 'call_graph')  
     
     
     def has_function(self, function_name):
@@ -117,6 +120,8 @@ class Program:
         if function_name not in self._state_transition_graphs:
             self._state_transition_graphs[function_name] = directed_graphs.\
                 StateTransitionGraph(self.get_control_flow_graph(function_name))
+            dot.make_file(self.get_state_transition_graph(function_name), 
+                          '%s.stg' % function_name)
         return self._state_transition_graphs[function_name]
     
     

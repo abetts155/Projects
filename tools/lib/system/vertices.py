@@ -113,6 +113,26 @@ class Vertex:
                self._vertex_id,
                ','.join(repr(value) for value in self._predecessors.values()),
                ','.join(repr(value) for value in self._successors.values()))
+            
+
+
+def ProgramPointVertex(Vertex):
+    
+    """
+    Models a program point (i.e., a basic block or a transition between two
+    basic blocks) as a vertex.  These vertices are used in data structures
+    that represent certain properties of a function, e.g., the loop-nesting
+    tree or the dominator tree.
+    """
+    
+    def __init__(self, vertex_id, program_point):
+        Vertex.__init__(self, vertex_id)
+        self._program_point = program_point
+        
+    
+    @property
+    def program_point(self):
+        return self._program_point
 
 
 
