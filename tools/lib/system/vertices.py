@@ -27,7 +27,7 @@ class Vertex:
     def __init__(self, vertex_id):
         self._vertex_id = vertex_id
         self._predecessors = collections.OrderedDict()
-        self._successors   = collections.OrderedDict()
+        self._successors = collections.OrderedDict()
 
     
     @property
@@ -42,7 +42,7 @@ class Vertex:
         self._predecessors[pred_edge.vertex_id] = pred_edge
         
             
-    def remove_predecessor(self, pred_id):
+    def remove_predecessor_edge(self, pred_id):
         try:
             del self._predecessors[pred_id]
         except KeyError:
@@ -78,7 +78,7 @@ class Vertex:
         self._successors[succ_edge.vertex_id] = succ_edge
         
         
-    def remove_successor(self, succ_id):
+    def remove_successor_edge(self, succ_id):
         try:
             del self._successors[succ_id]
         except KeyError:
@@ -105,7 +105,7 @@ class Vertex:
     def successor_edge_iterator(self):
         for _, succ_edge in self._successors.items():
             yield succ_edge
-            
+    
     
     def __repr__(self):
         return '%s(id=%r pred=%r succ=%r)' \
@@ -116,7 +116,37 @@ class Vertex:
             
 
 
-def ProgramPointVertex(Vertex):
+class TreeVertex(Vertex):
+    
+    """
+    Models a vertex in a tree by extending the vertex class with parent and
+    tree level information.
+    """
+    
+    def __init__(self, vertex_id):
+        Vertex.__init__(self, vertex_id)
+        self._parent_id = None
+        
+    
+    @property
+    def parent_id(self):
+        return self._parent_id
+    
+    
+    @parent_id.setter
+    def parent_id(self, value):
+        self._parent_id = value
+        
+    
+    def __repr__(self):
+        return '%s(id=%r parent=%r)' \
+            % (self.__class__.__name__,
+               self._vertex_id,
+               self._parent_id)
+            
+
+            
+class ProgramPointVertex(TreeVertex):
     
     """
     Models a program point (i.e., a basic block or a transition between two
@@ -134,50 +164,8 @@ def ProgramPointVertex(Vertex):
     def program_point(self):
         return self._program_point
 
-
-
-class TreeVertex(Vertex):
-    
-    """
-    Models a vertex in a tree by extending the vertex class with parent and
-    tree level information.
-    """
-    
-    def __init__ (self, vertex_id):
-        Vertex.__init__(self, vertex_id)
-        self._parent_id     = None
-        self._level_in_tree = None
-        
-    
-    @property
-    def parent_id(self):
-        return self._parent_id
-    
-    
-    @parent_id.setter
-    def parent_id(self, value):
-        self._parent_id = value
-    
-    
-    @property
-    def level_in_tree(self):
-        return self._level_in_tree
-    
-    
-    @level_in_tree.setter
-    def level_in_tree(self, value):
-        self._level_in_tree = value
-        
-    
-    def __repr__(self):
-        return '%s(id=%r parent=%r level=%r)' \
-            % (self.__class__.__name__,
-               self._vertex_id,
-               self._parent_id,
-               self._level_in_tree)
         
         
-    
 class LoopHeaderVertex(TreeVertex):
     
     """
@@ -220,12 +208,19 @@ class SubprogramVertex(Vertex):
                ','.join(repr(value) for value in self._successors.values()))
 
 
+
 class SuperBlock(Vertex):
-    def __init__ (self, vertex_id, header_id):
+    
+    """
+    Models a set of program points whose execution counts are guaranteed to be 
+    equal and must always execute together.
+    """
+    
+    def __init__(self, vertex_id, header_id):
         Vertex.__init__(self, vertex_id)
-        self.header_id            = header_id
-        self.program_points       = []
-        self.representative       = None
-        self.successor_partitions = collections.OrderedDict()
-        self.exit_edge            = False
+        self._program_points = []
+        self._header_id = header_id
+        self._representative = None
+        self._successor_partitions = collections.OrderedDict()
+        self._exit_edge = False
         

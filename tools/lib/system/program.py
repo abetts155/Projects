@@ -1,6 +1,5 @@
 import collections
 import re
-import sys
 
 from tools.lib.system import directed_graphs
 from tools.lib.system import vertices
@@ -9,7 +8,7 @@ from tools.lib.utils import dot
 
 
 def read_program_information_from_file(file_name):
-    edges_in__control_flow_graphs = {}
+    edges_in__control_flow_graphs = collections.OrderedDict()
     edges_in__call_graph          = []
     current_function             = None
     with open(file_name) as the_file:
@@ -48,11 +47,13 @@ class Program:
     
     def __init__(self):
         self._call_graph                   = directed_graphs.CallGraph()
-        self._control_flow_graphs          = collections.OrderedDict()
-        self._state_transition_graphs      = collections.OrderedDict()
-        self._loop_nesting_trees           = collections.OrderedDict()
-        self._super_block_graphs           = collections.OrderedDict()
-        self._instrumentation_point_graphs = collections.OrderedDict()
+        self._control_flow_graphs          = {}
+        self._state_transition_graphs      = {}
+        self._pre_dominator_trees          = {}
+        self._post_dominator_trees         = {}
+        self._loop_nesting_trees           = {}
+        self._super_block_graphs           = {}
+        self._instrumentation_point_graphs = {}
     
     def create_from_parsed_input(self, 
                                  edges_in__control_flow_graphs, 
@@ -70,7 +71,7 @@ class Program:
                                         function_name))
             
             # Create new control flow graph and add vertices to it
-            control_flow_graph = directed_graphs.ControlFlowGraph(function_name)
+            control_flow_graph = directed_graphs.FlowGraph(function_name)
             for an_edge in edge_list:
                 pred_id = get_vertex_id(an_edge[0])
                 succ_id = get_vertex_id(an_edge[1])
@@ -87,9 +88,14 @@ class Program:
                 control_flow_graph.add_edge(pred_vertex, succ_vertex)
             control_flow_graph.find_and_set_entry_vertex()
             control_flow_graph.find_and_set_exit_vertex()
+            control_flow_graph.add_edge(control_flow_graph.exit_vertex,
+                                        control_flow_graph.entry_vertex)
             self._control_flow_graphs[function_name] = control_flow_graph
             dot.make_file(control_flow_graph, '%s.cfg' % function_name)
+            self.get_pre_dominator_tree(function_name)
+            
         
+        # Create call graph edges
         for call_site_id, caller, callee in edges_in__call_graph:
             pred_call_vertex = self._call_graph.get_vertex_with_name(caller)
             succ_call_vertex = self._call_graph.get_vertex_with_name(callee)
@@ -120,15 +126,42 @@ class Program:
         if function_name not in self._state_transition_graphs:
             self._state_transition_graphs[function_name] = directed_graphs.\
                 StateTransitionGraph(self.get_control_flow_graph(function_name))
-            dot.make_file(self.get_state_transition_graph(function_name), 
+            dot.make_file(self._state_transition_graphs[function_name], 
                           '%s.stg' % function_name)
         return self._state_transition_graphs[function_name]
     
     
+    def get_loop_nesting_tree(self, function_name):
+        if function_name not in self._loop_nesting_trees:
+            state_transition_graph = self.get_state_transition_graph(function_name)
+            self._loop_nesting_trees[function_name]\
+                = directed_graphs.LoopNestingHierarchy(state_transition_graph, 
+                                                       state_transition_graph.entry_vertex)
+            dot.make_file(self._loop_nesting_trees[function_name], 
+                          '%s.lnt' % function_name)
+        return self._loop_nesting_trees[function_name]
+    
+    
+    def get_pre_dominator_tree(self, function_name):
+        if function_name not in self._pre_dominator_trees:
+            self._pre_dominator_trees[function_name]\
+                = directed_graphs.Dominators\
+                    (self.get_state_transition_graph(function_name))
+            dot.make_file(self._pre_dominator_trees[function_name], 
+                          '%s.pre' % function_name)
+        return self._pre_dominator_trees[function_name]
+    
+    
+    def get_post_dominator_tree(self, function_name):
+        if function_name not in self._post_dominator_trees:
+            self._post_dominator_trees[function_name]\
+                = directed_graphs.Dominators\
+                    (self.get_state_transition_graph(function_name))
+            dot.make_file(self._pre_dominator_trees[function_name], 
+                          '%s.post' % function_name)
+        return self._post_dominator_trees[function_name]
+    
+    
     def __len__(self):
         return len(self._control_flow_graphs)
-
-                    
-if __name__ == "__main__":
-    read_program_information_from_file(sys.argv[1]) 
 

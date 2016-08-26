@@ -9,6 +9,7 @@ import subprocess
 from tools.lib.utils import debug
 from tools.lib.utils import config
 from tools.lib.system import directed_graphs
+from tools.lib.system import vertices
 
 
 
@@ -21,27 +22,22 @@ def make_file(graph, graph_name):
                                          "dot")
         with open(dot_filename, 'w') as dot_file:
             dot_file.write('digraph {\n')
-            if isinstance(graph, directed_graphs.ControlFlowGraph):
-                write_control_flow_graph(dot_file, graph)
-            elif isinstance(graph, directed_graphs.StateTransitionGraph):
+            if isinstance(graph, directed_graphs.StateTransitionGraph):
                 write_state_transition_graph(dot_file, graph)
+            elif isinstance(graph, directed_graphs.LoopNestingHierarchy):
+                write_loop_nesting_tree(dot_file, graph)
             elif isinstance(graph, directed_graphs.CallGraph):
                 write_call_graph(dot_file, graph)
+            elif isinstance(graph, directed_graphs.FlowGraph):
+                write_flow_graph(dot_file, graph)
+            elif isinstance(graph,directed_graphs.Dominators):
+                write_dominator_tree(dot_file, graph)
             dot_file.write('}\n')
-        
+        # Create PNG file
         output_to_png_file(dot_filename)
-            
-            
-def write_control_flow_graph(dot_file, control_flow_graph):
-    for basic_block in control_flow_graph:
-        dot_file.write('%d -> {' % basic_block.vertex_id)
-        for succ_edge in basic_block.successor_edge_iterator():
-            dot_file.write('%d; ' % succ_edge.vertex_id)
-        dot_file.write('}\n')
         
 
 def write_state_transition_graph(dot_file, state_transition_graph):
-    dot_file.write('node [shape=point]\n')
     for state in state_transition_graph:
         for succ_edge in state.successor_edge_iterator():
             if len(succ_edge.program_point) == 1:
@@ -54,6 +50,28 @@ def write_state_transition_graph(dot_file, state_transition_graph):
                                                           program_point_string))
         dot_file.write('\n')
         
+        
+def write_loop_nesting_tree(dot_file, loop_nesting_tree):
+    for vertex in loop_nesting_tree:
+        if isinstance(vertex, vertices.LoopHeaderVertex):
+            dot_file.write('%d [shape=triangle, style=filled, fillcolor=red,'
+                           ' label="%d"];\n' % (vertex.vertex_id, 
+                                                vertex.header_id))
+        elif isinstance(vertex, vertices.ProgramPointVertex):
+            if len(vertex.program_point) == 1:
+                program_point_string = str(vertex.program_point[0])
+            else:
+                program_point_string = str(vertex.program_point)
+            dot_file.write('%d [label="%s"];\n'\
+                           % (vertex.vertex_id, program_point_string))
+    for vertex in loop_nesting_tree:
+        for succ_edge in vertex.successor_edge_iterator():
+            succ_vertex = loop_nesting_tree.get_vertex(succ_edge.vertex_id)
+            if isinstance(succ_vertex, vertices.LoopHeaderVertex)\
+            or isinstance(succ_vertex, vertices.ProgramPointVertex):
+                dot_file.write('%d -> %d;\n' % (vertex.vertex_id,
+                                               succ_edge.vertex_id))
+        
 
 def write_call_graph(dot_file, call_graph):
     for caller in call_graph:
@@ -62,6 +80,28 @@ def write_call_graph(dot_file, call_graph):
             dot_file.write('%s -> %s  [label ="%s"];\n' % (caller.name,
                                                            callee.name,
                                                            succ_edge.call_sites))
+            
+            
+def write_flow_graph(dot_file, flow_graph):
+    for vertex in flow_graph:
+        dot_file.write('%d -> {' % vertex.vertex_id)
+        for succ_edge in vertex.successor_edge_iterator():
+            dot_file.write('%d; ' % succ_edge.vertex_id)
+        dot_file.write('}\n')
+        
+
+def write_dominator_tree(dot_file, dominator_tree):
+    for vertex in dominator_tree:
+        if isinstance(vertex, vertices.ProgramPointVertex):
+            dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id, 
+                                                   vertex.program_point))
+        else:
+            dot_file.write('%d [shape=point];\n' % vertex.vertex_id)
+    for vertex in dominator_tree:
+        dot_file.write('%d -> {' % vertex.vertex_id)
+        for succ_edge in vertex.successor_edge_iterator():
+            dot_file.write('%d; ' % succ_edge.vertex_id)
+        dot_file.write('}\n')
         
 
 def output_to_png_file(dot_filename):
