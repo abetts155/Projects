@@ -53,23 +53,23 @@ class TransitionEdge(Edge):
     def __init__(self, 
                  vertex_id, 
                  edge_id,
-                 program_point, 
+                 path_expression, 
                  is_collapsed_loop=False):
         Edge.__init__(self, vertex_id, edge_id)
-        self._program_point = program_point
+        self._path_expression = path_expression
         self._is_collapsed_loop = is_collapsed_loop
         
     
     @property
-    def program_point(self):
-        return self._program_point
+    def path_expression(self):
+        return self._path_expression
     
     
     def __repr__(self):
-        return '%s(id=%r edge_id=%r program_point=%r)' % (self.__class__.__name__,
-                                                          self._vertex_id,
-                                                          self._edge_id,
-                                                          self._program_point)
+        return '%s(id=%r edge_id=%r path_expression=%r)' % (self.__class__.__name__,
+                                                            self._vertex_id,
+                                                            self._edge_id,
+                                                            self._path_expression)
     
     
     

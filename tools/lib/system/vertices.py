@@ -113,7 +113,7 @@ class Vertex:
                self._vertex_id,
                ','.join(repr(value) for value in self._predecessors.values()),
                ','.join(repr(value) for value in self._successors.values()))
-            
+
 
 
 class TreeVertex(Vertex):
@@ -145,24 +145,23 @@ class TreeVertex(Vertex):
                self._parent_id)
             
 
-            
-class ProgramPointVertex(TreeVertex):
+
+class TransitionVertex(TreeVertex):
     
     """
-    Models a program point (i.e., a basic block or a transition between two
-    basic blocks) as a vertex.  These vertices are used in data structures
-    that represent certain properties of a function, e.g., the loop-nesting
-    tree or the dominator tree.
+    Models a state transition (i.e., an edge in the state transition graph) as
+    a vertex.  These vertices are used in data structures that represent certain
+    properties of a function, e.g., the loop-nesting tree or the dominator tree.
     """
     
-    def __init__(self, vertex_id, program_point):
-        Vertex.__init__(self, vertex_id)
-        self._program_point = program_point
+    def __init__(self, vertex_id, transition):
+        TreeVertex.__init__(self, vertex_id)
+        self._transition = transition
         
     
-    @property
-    def program_point(self):
-        return self._program_point
+    @property 
+    def transition(self):
+        return self._transition
 
         
         
@@ -223,4 +222,48 @@ class SuperBlock(Vertex):
         self._representative = None
         self._successor_partitions = collections.OrderedDict()
         self._exit_edge = False
+        
+        
+class RegularExpressionVertex(Vertex):
+    
+    """
+    Models an internal vertex of a regular expression tree.
+    """
+    
+    ALTERNATIVE   = '|'
+    SEQUENCE      = '.'
+    MIGHT_ITERATE = '*'
+    MUST_ITERATE  = '+'
+    
+    def __init__(self, vertex_id, operator):
+        Vertex.__init__(self, vertex_id)
+        assert operator == RegularExpressionVertex.ALTERNATIVE\
+        or operator == RegularExpressionVertex.SEQUENCE\
+        or operator == RegularExpressionVertex.MIGHT_ITERATE\
+        or operator == RegularExpressionVertex.MUST_ITERATE,\
+        'Invalid regular expression operator %r' % operator
+        self.operator = operator
+
+
+
+class ProgramPointVertex(Vertex):
+    
+    """
+    Models a program point (i.e., a basic block or a transition between two
+    basic blocks) as a vertex.  These vertices are used in path expressions.
+    """
+    
+    def __init__(self, vertex_id, program_point):
+        Vertex.__init__(self, vertex_id)
+        self._program_point = program_point
+        
+    
+    @property
+    def program_point(self):
+        return self._program_point
+    
+    
+    def __str__(self):
+        return str(self._program_point)
+        
         
