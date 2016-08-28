@@ -54,36 +54,32 @@ def create_path_expression_between_two_program_points(the_program):
 
 def parse_the_command_line(): 
     parser = argparse.ArgumentParser(description=
-                                     "Compute path expressions from a CFG")
+                                     'Compute path expressions from a CFG')
     
-    parser.add_argument("program_file",
-                        help="a file containing program information"
-                        " (with '.txt' extension)")
+    parser.add_argument('program_file',
+                        help='a file containing program information'
+                        ' (with .txt extension)')
     
-    parser.add_argument("-d",
-                        "--debug",
+    parser.add_argument('-d',
+                        '--debug',
                         type=int,
-                        help="debug mode",
+                        help='debug mode',
                         default=0)
     
-    parser.add_argument("--dot",
-                        action="store_true",
-                        help="produce Graphviz dot files of graphs produced"
-                        " during the analysis",
+    parser.add_argument('--dot',
+                        action='store_true',
+                        help='produce Graphviz dot files of graphs produced'
+                        ' during the analysis',
                         default=False)
 
-    parser.add_argument("-v",
-                        "--verbose",
-                        action="store_true",
-                        help="be verbose",
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true',
+                        help='be verbose',
                         default=False)
     
     parser.parse_args(namespace=config.Arguments)
-    
-    config.Arguments.basename =\
-        os.path.splitext(os.path.basename(config.Arguments.program_file))[0]
-    config.Arguments.basepath =\
-        os.path.abspath(os.path.dirname(config.Arguments.program_file))
+    config.set_filename_prefix()
 
 
 if __name__ == "__main__": 

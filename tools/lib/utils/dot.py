@@ -13,15 +13,15 @@ from tools.lib.system import vertices
 
 
 
-def make_file(graph, graph_name):
+def make_file(graph):
     if config.Arguments.dot:
-        dot_filename = '%s%s%s.%s.%s' % (config.Arguments.basepath,
-                                         os.sep, 
-                                         config.Arguments.basename, 
-                                         graph_name, 
-                                         "dot")
+        dot_filename = graph.dot_filename() + '.dot'
         with open(dot_filename, 'w') as dot_file:
             dot_file.write('digraph {\n')
+            dot_file.write('ranksep=0.3;\n')
+            dot_file.write('nodesep=0.25;\n')
+            dot_file.write('node [fontcolor=grey50];\n')
+            dot_file.write('edge [fontcolor=blue];\n')
             if isinstance(graph, directed_graphs.StateTransitionGraph):
                 write_state_transition_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.LoopNestingHierarchy):
