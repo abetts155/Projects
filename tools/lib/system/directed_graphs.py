@@ -5,6 +5,7 @@ This module includes all directed graphs used in different types of analyses.
 
 import collections
 import abc
+import random
 
 from tools.lib.utils import dot
 from tools.lib.utils import config
@@ -149,168 +150,53 @@ class DirectedGraph:
 class ControlFlowGraph(DirectedGraph):
     
     """
-    Models a control flow graph where vertices are basic blocks and edges are
-    potential changes in the direction of control flow.  Every control flow 
-    graph has a unique entry and a unique exit.
+    Models a control flow graph.  We use vertices to represent BOTH basic blocks
+    and transitions among basic blocks.  An edge in the control flow graph either
+    shows that:
+    a) the source is a basic block and the destination is a transition among basic 
+    blocks such that the source basic block equals the first element of the 
+    transition; or,
+    b) the source is a transition among basic blocks and the destination is
+    a basic block such that the second element of the transition equals the
+    basic block. 
+    Every control flow graph has a unique entry and a unique exit.
     """
     
     def __init__(self, name):
         DirectedGraph.__init__(self, name)
         self._entry_vertex = None
         self._exit_vertex  = None
-        self._state_transition_graph = None
-    
-    
-    @property
-    def entry_vertex(self):
-        return self._entry_vertex
-    
-    
-    @property
-    def exit_vertex(self):
-        return self._exit_vertex
-        
-        
-    def find_and_set_entry_vertex(self):
-        without_predecessors = []
-        for vertex in self:
-            if vertex.number_of_predecessors() == 0:
-                without_predecessors.append(vertex)
-                
-        if len(without_predecessors) == 0:
-            raise NoValidVertexError('All vertices have at least one predecessor')
-        elif len(without_predecessors) > 1:
-            raise NoValidVertexError('Too many entry candidates found: %r' %\
-                                    ','.join(str(v.vertex_id) for v in without_predecessors))
-        else:
-            self._entry_vertex = without_predecessors[0]
-            
-    
-    def find_and_set_exit_vertex(self):
-        without_successors = []
-        for vertex in self:
-            if vertex.number_of_successors() == 0:
-                without_successors.append(vertex)
-                
-        if len(without_successors) == 0:
-            raise NoValidVertexError('All vertices have at least one successor')
-        elif len(without_successors) > 1:
-            raise NoValidVertexError('Too many exit candidates found: %r' %\
-                                    ','.join(str(v.vertex_id) for v in without_successors))
-        else:
-            self._exit_vertex = without_successors[0]
-            
-            
-    def get_all_program_points(self):
-        basic_blocks = set()
-        control_flow_edges = set()
-        for vertex in self:
-            basic_blocks.add(vertex.vertex_id)
-            for succ_edge in vertex.successor_edge_iterator():
-                control_flow_edges.add((vertex.vertex_id, succ_edge.vertex_id))
-        return basic_blocks, control_flow_edges
-            
-    
-    def get_state_transition_graph(self, rebuild=False):
-        if self._state_transition_graph is None\
-        or rebuild:
-            self._state_transition_graph = StateTransitionGraph.\
-                                            create_from_control_flow_graph(self)
-            dot.make_file(self._state_transition_graph)
-        return self._state_transition_graph
-        
-    
-    def dot_filename(self):
-        return '%s.%s.cfg' % (config.get_filename_prefix(), self.name)
-    
-        
-        
-class StateTransitionGraph(DirectedGraph):
-    
-    """
-    Models transitions between states such that each transition contains a chunk
-    of code and each state is a snapshot of computation at that point.
-    """
-    
-    @staticmethod
-    def create_from_control_flow_graph(control_flow_graph):
-        basic_block_pred_state = {}
-        basic_block_succ_state = {}
-        state_transition_graph = StateTransitionGraph(control_flow_graph.name)
-        # Add two states for each basic block, for before and after execution.
-        # The transition between these states triggers when that basic block
-        # is executed.
-        for basic_block in control_flow_graph:
-            pred_state = vertices.Vertex\
-                            (state_transition_graph.get_new_vertex_id())
-            state_transition_graph.add_vertex(pred_state)
-            succ_state = vertices.Vertex\
-                            (state_transition_graph.get_new_vertex_id())
-            state_transition_graph.add_vertex(succ_state)
-            path_expression = PathExpression.\
-                                create_sequence_of_single_program_point\
-                                    (basic_block.vertex_id)
-            state_transition_graph.add_edge(pred_state, 
-                                            succ_state, 
-                                            path_expression)
-            basic_block_pred_state[basic_block] = pred_state
-            basic_block_succ_state[basic_block] = succ_state
-            if basic_block == control_flow_graph.entry_vertex:
-                state_transition_graph._entry_vertex = pred_state
-            if basic_block == control_flow_graph.exit_vertex:
-                state_transition_graph._exit_vertex = succ_state
-        # Add transitions for edges in the control flow graph.
-        for basic_block in control_flow_graph:
-            for succ_edge in basic_block.successor_edge_iterator():
-                succ_basic_block = control_flow_graph.\
-                    get_vertex(succ_edge.vertex_id)
-                pred_state = basic_block_succ_state[basic_block]
-                succ_state = basic_block_pred_state[succ_basic_block]
-                control_flow_edge = (basic_block.vertex_id, succ_edge.vertex_id)
-                path_expression = PathExpression.\
-                                    create_sequence_of_single_program_point\
-                                        (control_flow_edge)
-                state_transition_graph.add_edge(pred_state, 
-                                                succ_state, 
-                                                path_expression)        
-        return state_transition_graph
-    
-    
-    @staticmethod
-    def create_reverse_state_transition_graph(state_transition_graph):
-        reverse_graph = StateTransitionGraph(state_transition_graph.name)
-        for vertex in state_transition_graph:
-            reverse_graph.add_vertex(vertices.Vertex(vertex.vertex_id))
-        for vertex in state_transition_graph:
-            for succ_edge in vertex.successor_edge_iterator():
-                reverse_graph.add_edge(reverse_graph.get_vertex(succ_edge.vertex_id), 
-                                       reverse_graph.get_vertex(vertex.vertex_id), 
-                                       succ_edge.path_expression)
-        reverse_graph._entry_vertex = reverse_graph.get_vertex\
-                                        (state_transition_graph._exit_vertex.vertex_id)
-        reverse_graph._exit_vertex = reverse_graph.get_vertex\
-                                        (state_transition_graph._entry_vertex.vertex_id)
-        
-        return reverse_graph
-    
-    
-    def __init__(self, name):
-        DirectedGraph.__init__(self, name)
-        self._entry_vertex = None
-        self._exit_vertex  = None
+        self._program_point_to_vertex = {}
+        self._depth_first_search_tree = None
         self._pre_dominator_tree = None
         self._post_dominator_tree = None
         self._loop_nesting_tree = None
-    
-    
+        self._reverse_control_flow_graph = None
+        
+        
     @property
     def entry_vertex(self):
         return self._entry_vertex
     
     
+    @entry_vertex.setter
+    def entry_vertex(self, value):
+        self._entry_vertex = value
+    
+    
     @property
     def exit_vertex(self):
         return self._exit_vertex
+    
+    
+    @exit_vertex.setter
+    def exit_vertex(self, value):
+        self._exit_vertex = value
+    
+    
+    def add_vertex(self, vertex):
+        DirectedGraph.add_vertex(self, vertex)
+        self._program_point_to_vertex[vertex.program_point] = vertex
         
     
     def add_edge(self, pred_vertex, succ_vertex, path_expression):
@@ -322,12 +208,56 @@ class StateTransitionGraph(DirectedGraph):
                                                               edge_id, 
                                                               path_expression))
         
+    
+    def get_vertex_for_program_point(self, program_point):
+        try:
+            return self._program_point_to_vertex[program_point]
+        except KeyError:
+            raise KeyError('No vertex found for program point %r' % program_point)
+            
         
+    def find_entry_vertex(self):
+        without_predecessors = []
+        for vertex in self:
+            if vertex.number_of_predecessors() == 0:
+                without_predecessors.append(vertex)    
+        if len(without_predecessors) == 0:
+            raise NoValidVertexError('All vertices have at least one predecessor')
+        elif len(without_predecessors) > 1:
+            raise NoValidVertexError('Too many entry candidates found: %r' %\
+                                    ','.join(str(v.vertex_id) for v in without_predecessors))
+        else:
+            return without_predecessors[0]
+            
+    
+    def find_exit_vertex(self):
+        without_successors = []
+        for vertex in self:
+            if vertex.number_of_successors() == 0:
+                without_successors.append(vertex)
+        if len(without_successors) == 0:
+            raise NoValidVertexError('All vertices have at least one successor')
+        elif len(without_successors) > 1:
+            raise NoValidVertexError('Too many exit candidates found: %r' %\
+                                    ','.join(str(v.vertex_id) for v in without_successors))
+        else:
+            return without_successors[0]
+    
+    
+    def get_depth_first_search_tree(self):
+        if self._depth_first_search_tree is None:
+            self._depth_first_search_tree = DepthFirstSearch\
+                                                (self, 
+                                                 self._entry_vertex)
+        return self._depth_first_search_tree
+    
+            
     def get_loop_nesting_tree(self):
         if self._loop_nesting_tree is None:
             self._loop_nesting_tree = LoopNestingHierarchy\
                                         (self, 
-                                         self.get_pre_dominator_tree())
+                                         self.get_pre_dominator_tree(),
+                                         self.get_depth_first_search_tree())
             dot.make_file(self._loop_nesting_tree)
         return self._loop_nesting_tree
     
@@ -341,49 +271,134 @@ class StateTransitionGraph(DirectedGraph):
     
     def get_post_dominator_tree(self):
         if self._post_dominator_tree is None:
-            reverse_graph = StateTransitionGraph.\
-                                create_reverse_state_transition_graph(self)
-            self._post_dominator_tree = Dominators(reverse_graph,
+            self._post_dominator_tree = Dominators(self.get_reverse_control_flow_graph(),
                                                    Dominators.POST)
             dot.make_file(self._post_dominator_tree)
         return self._post_dominator_tree
-
-
-    def dot_filename(self):
-        return '%s.%s.stg' % (config.get_filename_prefix(), self.name)
     
     
-    def eliminate_states_of_unmonitored_program_points(self, 
-                                                       unmonitored_program_points):
-        # Find the states to remove by sweeping through all edges and identifying
-        # which program points are NOT monitored: the destinations of these edges
-        # will be squashed
+    def get_reverse_control_flow_graph(self):
+        if self._reverse_control_flow_graph is None:
+            self._reverse_control_flow_graph = ControlFlowGraph(self._name)
+            for vertex in self:
+                self._reverse_control_flow_graph.\
+                    add_vertex(vertices.ProgramPointVertex(vertex.vertex_id,
+                                                           vertex.program_point))
+            for vertex in self:
+                for succ_edge in vertex.successor_edge_iterator():
+                    self._reverse_control_flow_graph.\
+                        add_edge(self._reverse_control_flow_graph.\
+                                    get_vertex(succ_edge.vertex_id), 
+                                 self._reverse_control_flow_graph.\
+                                    get_vertex(vertex.vertex_id), 
+                                 succ_edge.path_expression)
+            self._reverse_control_flow_graph._entry_vertex\
+                = self._reverse_control_flow_graph.get_vertex\
+                    (self._exit_vertex.vertex_id)
+            self._reverse_control_flow_graph._exit_vertex\
+                = self._reverse_control_flow_graph.get_vertex\
+                    (self._entry_vertex.vertex_id)
+        return self._reverse_control_flow_graph
+    
+    
+    def split_program_points_into_basic_blocks_and_edges(self):
+        basic_blocks = set()
+        control_flow_edges = set()
+        for vertex in self:
+            if isinstance(vertex.program_point, int):
+                basic_blocks.add(vertex.program_point)
+            else:
+                control_flow_edges.add(vertex.program_point)
+        return basic_blocks, control_flow_edges
+            
+            
+    def reduce_but_maintain_path_reconstructibility(self,
+                                                    unmonitored_program_points):
+        # We use a temporary state transition to path expression mapping to
+        # ensure linear growth of path expression trees. 
+        state_transition_to_path_expression = {}
+        
+        def connect_predecessors_to_successors(vertex):
+            """
+            For this vertex, connect each of its predecessor to each of its 
+            successors.
+            """
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                for succ_edge in vertex.successor_edge_iterator():
+                    succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                    state_transition_to_path_expression[(pred_vertex, succ_vertex)]\
+                        = state_transition_to_path_expression[(pred_vertex, vertex)]\
+                        + [vertex.program_point]\
+                        + state_transition_to_path_expression[(vertex, succ_vertex)]
+                    self.add_edge(pred_vertex, succ_vertex, None)
+                    
+        
+        def can_remove_program_point(vertex):
+            """
+            Is it possible to remove this program point while maintaining path
+            reconstructibility?
+            """
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                for succ_edge in vertex.successor_edge_iterator():
+                    if pred_vertex.has_successor(succ_edge.vertex_id):
+                        return False
+            return True
+                    
+        
+        # The following loop does two things:
+        # 1) It removes unmonitored program points.
+        # 2) It sets up the temporary state transition to path expression 
+        # mapping. Initially the values in the mapping will be empty.
         states_to_remove = set()
         for vertex in self:
+            if vertex.program_point in unmonitored_program_points:
+                    states_to_remove.add(vertex)    
             for succ_edge in vertex.successor_edge_iterator():
-                assert(succ_edge.path_expression.number_of_vertices() == 2,
-                       'Unable to eliminate states because the edge %d->%d contains '
-                       'more than a single program point' % (vertex.vertex_id, 
-                                                             succ_edge.vertex_id))
-                for tree_vertex in succ_edge.path_expression:
-                    if isinstance(tree_vertex, vertices.ProgramPointVertex):
-                        if tree_vertex.program_point in unmonitored_program_points:
-                            states_to_remove.add(self.get_vertex(succ_edge.vertex_id))
-        # Remove the states.  For each removed state, reconnect each of its
-        # predecessors to each of its successors
-        for state in states_to_remove:
-            for pred_edge in state.predecessor_edge_iterator():
-                pred_vertex = self.get_vertex(pred_edge.vertex_id)
-                for succ_edge in state.successor_edge_iterator():
-                    succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                    path_expression = PathExpression.create_sequence_of_two_path_expressions\
-                                        (pred_edge.path_expression, 
-                                         succ_edge.path_expression)
-                    self.add_edge(pred_vertex, 
-                                  succ_vertex, 
-                                  path_expression)
-            self.remove_vertex(state)
-                
+                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                assert succ_edge.path_expression is None,\
+                       'Expected the path expression of the edge %d->%d to be empty'\
+                        % (vertex.vertex_id,
+                           succ_edge.vertex_id)
+                state_transition_to_path_expression[(vertex, succ_vertex)] = []
+                    
+        
+        # Maintain graph connectedness and remove each unneeded state.
+        for vertex in states_to_remove:
+            connect_predecessors_to_successors(vertex)
+            self.remove_vertex(vertex)
+
+        # Reduce graph until removal of vertex violates path reconstructibility   
+        changed = True
+        while changed:
+            changed = False
+            candidiate_states = list(self._vertices.values())
+            random.shuffle(candidiate_states)
+            for vertex in candidiate_states:
+                if can_remove_program_point(vertex):
+                    changed = True
+                    connect_predecessors_to_successors(vertex)
+                    self.remove_vertex(vertex)
+        
+        
+        # Create each path expression tree from a list of program points
+        for vertex in self:
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                pred_edge = succ_vertex.get_predecessor_edge(vertex.vertex_id)
+                path_expression = PathExpression.create_sequence_from_list_of_program_points\
+                    (state_transition_to_path_expression[(vertex, succ_vertex)], 
+                     self._name, 
+                     vertex, 
+                     succ_vertex)
+                succ_edge.path_expression = path_expression
+                pred_edge.path_expression = path_expression
+    
+    
+    def dot_filename(self):
+        return '%s.%s.cfg' % (config.get_filename_prefix(), self.name)
+                    
 
 
 class CallGraph(DirectedGraph):
@@ -598,7 +613,7 @@ class DepthFirstSearch(Tree):
         
     def __initialise(self, directed_graph, root_vertex):
         for vertex in directed_graph:
-            self.add_vertex(vertices.TreeVertex(vertex.vertex_id))
+            self.add_vertex(vertices.Vertex(vertex.vertex_id))
             self._vertex_pre_order_numbering[vertex] = None
             self._vertex_post_order_numbering[vertex] = None
         self._root_vertex = self.get_vertex(root_vertex.vertex_id)
@@ -634,47 +649,44 @@ class Dominators(Tree):
     PRE  = 'pre'
     POST = 'post'
     
-    def __init__(self, state_transition_graph, tree_type):
-        assert tree_type == Dominators.PRE \
-        or tree_type == Dominators.POST,\
+    def __init__(self, control_flow_graph, tree_type):
+        assert tree_type == Dominators.PRE or tree_type == Dominators.POST,\
         '%s is an invalid type of dominator tree' % tree_type
-        Tree.__init__(self, state_transition_graph.name)
+        Tree.__init__(self, control_flow_graph.name)
         self.__tree_type = tree_type
-        self.__state_transition_to_vertex_in_tree = {}
         self.__immediate_dominator = {}
-        self.__initialise(state_transition_graph)
-        self.__solve(state_transition_graph)
-        self.__add_vertices(state_transition_graph)
-        self.__add_edges(state_transition_graph)
+        self.__initialise(control_flow_graph)
+        self.__solve(control_flow_graph)
+        self.__add_vertices(control_flow_graph)
+        self.__add_edges(control_flow_graph)
         
     
-    def __initialise(self, state_transition_graph):
-        for vertex in state_transition_graph:
+    def __initialise(self, control_flow_graph):
+        for vertex in control_flow_graph:
             self.__immediate_dominator[vertex] = vertex if \
-                vertex == state_transition_graph.entry_vertex else None
+                vertex == control_flow_graph.entry_vertex else None
                 
     
-    def __solve(self, state_transition_graph):
-        depth_first_search = DepthFirstSearch(state_transition_graph, 
-                                              state_transition_graph.entry_vertex)
+    def __solve(self, control_flow_graph):
+        depth_first_search = control_flow_graph.get_depth_first_search_tree()
         changed = True
         while changed:
             changed = False
-            post_order_id = state_transition_graph.number_of_vertices()
+            post_order_id = control_flow_graph.number_of_vertices()
             while post_order_id >= 1:
                 vertex = depth_first_search.\
                             get_vertex_with_this_post_order_value(post_order_id)
-                if vertex != state_transition_graph.entry_vertex:
+                if vertex != control_flow_graph.entry_vertex:
                     pred_vertex_processed = None
                     new_immediate_dominator = None
                     for pred_edge in vertex.predecessor_edge_iterator():
-                        pred_vertex = state_transition_graph.\
+                        pred_vertex = control_flow_graph.\
                                         get_vertex(pred_edge.vertex_id)
                         if self.__immediate_dominator[pred_vertex] is not None:
                             pred_vertex_processed   = pred_vertex
                             new_immediate_dominator = pred_vertex_processed
                     for pred_edge in vertex.predecessor_edge_iterator():
-                        pred_vertex = state_transition_graph.\
+                        pred_vertex = control_flow_graph.\
                                         get_vertex(pred_edge.vertex_id)
                         if pred_vertex != pred_vertex_processed:
                             if self.__immediate_dominator[pred_vertex] is not None:
@@ -705,43 +717,18 @@ class Dominators(Tree):
         return vertex_one
                 
                 
-    def __add_vertices(self, state_transition_graph):
-        for vertex in state_transition_graph:
-            self.add_vertex(vertices.TreeVertex(vertex.vertex_id))
-        for vertex in state_transition_graph:
-            for succ_edge in vertex.successor_edge_iterator():
-                transition = (vertex.vertex_id, succ_edge.vertex_id)
-                transition_vertex = vertices.TransitionVertex\
-                                        (self.get_new_vertex_id(),
-                                         transition)
-                self.add_vertex(transition_vertex)
-                self.__state_transition_to_vertex_in_tree[transition]\
-                    = transition_vertex
+    def __add_vertices(self, control_flow_graph):
+        for vertex in control_flow_graph:
+            self.add_vertex(vertices.ProgramPointVertex(vertex.vertex_id,
+                                                        vertex.program_point))
             
     
-    def __add_edges(self, state_transition_graph):
+    def __add_edges(self, control_flow_graph):
         # Add dominator edges between states
         for vertex, immediate_dominator in self.__immediate_dominator.items():
-            if vertex != state_transition_graph.entry_vertex:
+            if vertex != control_flow_graph.entry_vertex:
                 self.add_edge(self.get_vertex(immediate_dominator.vertex_id), 
                               self.get_vertex(vertex.vertex_id))
-        # Transform the tree to include transitions between states
-        for vertex in state_transition_graph:
-            for succ_edge in vertex.successor_edge_iterator():
-                transition = (vertex.vertex_id, succ_edge.vertex_id)
-                transition_vertex =\
-                    self.__state_transition_to_vertex_in_tree[transition]
-                self.add_edge(self.get_vertex(vertex.vertex_id),
-                              transition_vertex)
-                succ_vertex = state_transition_graph.get_vertex(succ_edge.vertex_id)
-                # An edge dominates its destination state if the state only has
-                # one predecessor and it is not the entry state
-                if succ_vertex.number_of_predecessors() == 1\
-                and succ_vertex != state_transition_graph.entry_vertex:
-                    succ_vertex_in_tree = self.get_vertex(succ_edge.vertex_id)
-                    parent_vertex = self.get_vertex(succ_vertex_in_tree.parent_id)
-                    self.remove_edge(parent_vertex, succ_vertex_in_tree)
-                    self.add_edge(transition_vertex, succ_vertex_in_tree)
 
 
     def dot_filename(self):
@@ -757,26 +744,22 @@ class LoopNestingHierarchy(Tree):
     Models the loop-nesting hierarchy of a function in a program.
     """
     
-    def __init__(self, state_transition_graph, pre_dominator_tree):
-        Tree.__init__(self, state_transition_graph.name)
+    def __init__(self, 
+                 control_flow_graph, 
+                 pre_dominator_tree, 
+                 depth_first_search_tree):
+        Tree.__init__(self, control_flow_graph.name)
         self.__loop_body_of_backedge = {}
         self.__abstract_vertices = {}
         self.__current_parent = {}
         self.__state_to_header = {}
         self.__inner_loop_headers_per_header = {}
-        self.__state_transition_to_vertex_in_tree = {}
-        self.__construct(state_transition_graph, pre_dominator_tree)
+        self.__construct(control_flow_graph, 
+                         pre_dominator_tree, 
+                         depth_first_search_tree)
         # The following are used to cache results of queries on this data
         # structure
         self.__loop_bodies_per_header = {}
-        
-    
-    def get_vertex_for_state_transition(self, transition):
-        try:
-            return self.__state_transition_to_vertex_in_tree[transition]
-        except KeyError:
-            raise NoValidVertexError('No tree vertex for state transition %r' % 
-                                     transition)
     
     
     def backedge_and_loop_body_iterator(self):
@@ -817,26 +800,28 @@ class LoopNestingHierarchy(Tree):
         return '%s.%s.lnt' % (config.get_filename_prefix(), self._name)
         
         
-    def __construct(self, state_transition_graph, pre_dominator_tree):
+    def __construct(self, 
+                    control_flow_graph, 
+                    pre_dominator_tree,
+                    depth_first_search_tree):
         # The parent of a vertex in the loop-nesting tree is initially itself
-        for vertex in state_transition_graph:
+        for vertex in control_flow_graph:
             self.__current_parent[vertex] = vertex
-        self.__find_loops(state_transition_graph,
+        self.__find_loops(control_flow_graph,
                           pre_dominator_tree,
-                          DepthFirstSearch(state_transition_graph, 
-                                           state_transition_graph.entry_vertex))
-        self.__add_vertices(state_transition_graph)
-        self.__add_edges(state_transition_graph)
+                          depth_first_search_tree)
+        self.__add_vertices(control_flow_graph)
+        self.__add_edges(control_flow_graph)
         
 
     def __find_loops(self, 
-                     state_transition_graph, 
+                     control_flow_graph, 
                      pre_dominator_tree, 
-                     depth_first_search):
-        for vertex in reversed(depth_first_search.pre_order):
+                     depth_first_search_tree):
+        for vertex in reversed(depth_first_search_tree.pre_order):
             for pred_edge in vertex.predecessor_edge_iterator():
-                pred_vertex = state_transition_graph.get_vertex(pred_edge.vertex_id)
-                if (pred_vertex, vertex) in depth_first_search.backedges:
+                pred_vertex = control_flow_graph.get_vertex(pred_edge.vertex_id)
+                if (pred_vertex, vertex) in depth_first_search_tree.backedges:
                     if not pre_dominator_tree.is_ancestor\
                         (pre_dominator_tree.get_vertex(vertex.vertex_id),
                          pre_dominator_tree.get_vertex(pred_vertex.vertex_id)):
@@ -845,15 +830,15 @@ class LoopNestingHierarchy(Tree):
                                                    ' irreducible loop' % 
                                                    (pred_vertex.vertex_id,
                                                     vertex.vertex_id))
-                    self.__find_loop_body(state_transition_graph,
-                                          depth_first_search,
+                    self.__find_loop_body(control_flow_graph,
+                                          depth_first_search_tree,
                                           pred_vertex, 
                                           vertex)
         
             
     def __find_loop_body(self, 
-                         state_transition_graph, 
-                         depth_first_search, 
+                         control_flow_graph, 
+                         depth_first_search_tree, 
                          tail, 
                          header):
         if header not in self.__inner_loop_headers_per_header:  
@@ -868,10 +853,10 @@ class LoopNestingHierarchy(Tree):
             work_list_vertex = work_list.pop()
             self.__loop_body_of_backedge[(tail, header)].add(work_list_vertex)
             for pred_edge in work_list_vertex.predecessor_edge_iterator():
-                pred_vertex = state_transition_graph.\
+                pred_vertex = control_flow_graph.\
                                 get_vertex(pred_edge.vertex_id)
                 if (pred_vertex, work_list_vertex) not in\
-                    depth_first_search.backedges:
+                    depth_first_search_tree.backedges:
                     representative_vertex = self.__current_parent[pred_vertex]
                     if representative_vertex not in work_list\
                     and representative_vertex not in self.__loop_body_of_backedge[(tail, header)]\
@@ -889,78 +874,66 @@ class LoopNestingHierarchy(Tree):
             (self.__inner_loop_headers_per_header[header])
 
 
-    def __add_vertices(self, state_transition_graph):
-        # Add a vertex for each state
-        for vertex in state_transition_graph:
-            self.add_vertex(vertices.TreeVertex(vertex.vertex_id))
-        # Add a vertex for each edge, because edges represent program points in
-        # the program and these are the entities that ultimately we care about
-        for vertex in state_transition_graph:
-            for succ_edge in vertex.successor_edge_iterator():
-                transition = (vertex.vertex_id, succ_edge.vertex_id)
-                transition_vertex = vertices.TransitionVertex\
-                                        (self.get_new_vertex_id(), 
-                                         transition)
-                self.add_vertex(transition_vertex)
-                self.__state_transition_to_vertex_in_tree[transition] =\
-                    transition_vertex
-        # Add an abstract vertex per loop header
-        for header in self.__inner_loop_headers_per_header.keys():
-            abstract_vertex_id = self.get_new_vertex_id()
-            self.add_vertex(vertices.LoopHeaderVertex(abstract_vertex_id,
-                                                      header.vertex_id))
-            self.__abstract_vertices[header] = self.get_vertex(abstract_vertex_id)
+    def __add_vertices(self, control_flow_graph):
+        for vertex in control_flow_graph:
+            self.add_vertex(vertices.ProgramPointVertex(vertex.vertex_id,
+                                                        vertex.program_point))
+        # Add an abstract vertex per loop tail
+        for (tail, header) in self.__loop_body_of_backedge.keys():
+            abstract_vertex = vertices.LoopInternalVertex(self.get_new_vertex_id(),
+                                                          tail.program_point) 
+            self.add_vertex(abstract_vertex)
+            self.__abstract_vertices[tail] = abstract_vertex
+            if header not in self.__abstract_vertices:
+                abstract_vertex = vertices.LoopInternalVertex(self.get_new_vertex_id(),
+                                                              header.program_point) 
+                self.add_vertex(abstract_vertex)
+                self.__abstract_vertices[header] = abstract_vertex
         # Set the tree root to the abstract vertex representing the root of the 
         # directed graph
-        self._root_vertex = self.__abstract_vertices\
-                                [state_transition_graph.entry_vertex]
+        self._root_vertex = self.__abstract_vertices[control_flow_graph.entry_vertex]
     
     
-    def __add_edges(self, state_transition_graph):
-        # Add edges between abstract vertices
+    def __add_edges(self, control_flow_graph):
+        # Add edges between abstract vertices representing headers
         for outer_header_vertex in self.__inner_loop_headers_per_header.keys():
-            outer_header_abstract_vertex = self.__abstract_vertices\
-                                                [outer_header_vertex]
             for inner_header_vertex in self.__inner_loop_headers_per_header\
                                                 [outer_header_vertex]:
-                    self.add_edge(outer_header_abstract_vertex,
+                    self.add_edge(self.__abstract_vertices[outer_header_vertex],
                                   self.__abstract_vertices[inner_header_vertex])
-        # Add edges between abstract vertices and states/program point
-        # transitions
-        # A state may be visited more than once if a header is the target of
-        # multiple backedges.  To prevent duplicate edges being added to the 
-        # tree, we track already visited states
-        visited_states = set()
-        for (_, header), loop_body in self.__loop_body_of_backedge.items():
-            header_abstract_vertex = self.__abstract_vertices[header]
+        # Add edges between abstract vertices representing headers and abstract
+        # vertices representing tails
+        for (tail, header) in self.__loop_body_of_backedge.keys():
+            self.add_edge(self.__abstract_vertices[header], 
+                          self.__abstract_vertices[tail])
+        # Add edges between abstract vertices and program point vertices.
+        # First work out which headers have multiple backedges and, for each
+        # such header, the set of vertices shared among those loops.  Then, 
+        # for each vertex in the shared loop body, set the header's abstract
+        # vertex as the parent.  For vertices not in the shared loop body, set 
+        # the tail's abstract vertex as the parent.  For vertices in loops whose
+        # bodies are not shared, set the tail's abstract vertex as the parent 
+        header_to_loop_body = {}
+        for (tail, header), loop_body in self.__loop_body_of_backedge.items():
+            if header not in header_to_loop_body:
+                header_to_loop_body[header] = set(loop_body)
+            else:
+                header_to_loop_body[header].intersection_update(loop_body)
+                
+        for (tail, header), loop_body in self.__loop_body_of_backedge.items():
             for vertex in loop_body:
-                if vertex not in visited_states:
-                    # State not yet analysed
-                    visited_states.add(vertex)
-                    self.add_edge(header_abstract_vertex, 
+                if header_to_loop_body[header] == loop_body:
+                    self.add_edge(self.__abstract_vertices[tail], 
                                   self.get_vertex(vertex.vertex_id))
-                    for succ_edge in vertex.successor_edge_iterator():
-                        transition = (vertex.vertex_id, succ_edge.vertex_id)
-                        transition_vertex =\
-                            self.__state_transition_to_vertex_in_tree[transition]
-                        if state_transition_graph.get_vertex(succ_edge.vertex_id) \
-                            in loop_body:
-                            self.add_edge(header_abstract_vertex, 
-                                          transition_vertex)
-                        else:
-                            succ_vertex = state_transition_graph.\
-                                            get_vertex(succ_edge.vertex_id)
-                            header_vertex_two = self.__state_to_header[succ_vertex]
-                            header_abstract_vertex_two = self.__abstract_vertices\
-                                                            [header_vertex_two]
-                            if self.is_proper_ancestor(header_abstract_vertex_two, 
-                                                       header_abstract_vertex):
-                                self.add_edge(header_abstract_vertex_two, 
-                                              transition_vertex)
-                            else:
-                                self.add_edge(header_abstract_vertex, 
-                                              transition_vertex)
-                            
+                else:
+                    if vertex in header_to_loop_body[header]:
+                        if not self.__abstract_vertices[header].has_successor(vertex.vertex_id):
+                            self.add_edge(self.__abstract_vertices[header], 
+                                          self.get_vertex(vertex.vertex_id))
+                    else:
+                        self.add_edge(self.__abstract_vertices[tail], 
+                                  self.get_vertex(vertex.vertex_id))
+        
                         
     def __find_loop_exits(self, state_transition_graph):
         for (tail, header), loop_body in self.__loop_body_of_backedge.items():
@@ -994,44 +967,47 @@ class LoopNestingHierarchy(Tree):
 class PathExpression(DirectedGraph):
     
     """
-    Models a path expression between two states in a state transition graph.
+    Models a path expression between two states in a control flow graph.
     """    
-
+    
     @staticmethod
-    def create_sequence_of_single_program_point(program_point):
-        path_expression = PathExpression()
+    def create_sequence_from_list_of_program_points(the_list,
+                                                    name,
+                                                    pred_vertex,
+                                                    succ_vertex):
+        path_expression = PathExpression(name,
+                                         pred_vertex,
+                                         succ_vertex)
         sequence_vertex =\
             vertices.RegularExpressionVertex(path_expression.get_new_vertex_id(),
                                              vertices.RegularExpressionVertex.SEQUENCE)
         path_expression.add_vertex(sequence_vertex)
         path_expression._root_vertex = sequence_vertex
-        program_point_vertex = vertices.ProgramPointVertex(path_expression.get_new_vertex_id(),
-                                                           program_point)
-        path_expression.add_vertex(program_point_vertex)
-        path_expression.add_edge(sequence_vertex, program_point_vertex)
-        return path_expression
-    
-    
-    @staticmethod
-    def create_sequence_of_two_path_expressions(path_expression_one, path_expression_two):
-        path_expression = PathExpression()
-        path_expression._vertices.update(path_expression_one._vertices)
-        path_expression._vertices.update(path_expression_two._vertices)
-        sequence_vertex =\
-            vertices.RegularExpressionVertex(path_expression.get_new_vertex_id(),
-                                             vertices.RegularExpressionVertex.SEQUENCE)
-        path_expression.add_vertex(sequence_vertex)
-        path_expression._root_vertex = sequence_vertex 
-        path_expression.add_edge(sequence_vertex, path_expression_one.root_vertex)
-        path_expression.add_edge(sequence_vertex, path_expression_two.root_vertex)
+        for program_point in the_list:
+            program_point_vertex = vertices.ProgramPointVertex(path_expression.get_new_vertex_id(),
+                                                               program_point)
+            path_expression.add_vertex(program_point_vertex)
+            path_expression.add_edge(sequence_vertex, program_point_vertex)
         return path_expression
         
     
-    def __init__(self):   
-        DirectedGraph.__init__(self, None)
+    def __init__(self, name, pred_vertex, succ_vertex):   
+        DirectedGraph.__init__(self, name)
+        self._pred_vertex = pred_vertex
+        self._succ_vertex = succ_vertex
         self._root_vertex = None
         self.__string = None
         
+        
+    @property
+    def pred_vertex(self):
+        return self._pred_vertex
+    
+    
+    @property
+    def succ_state(self):
+        return self._succ_vertex
+    
     
     @property
     def root_vertex(self):
@@ -1041,7 +1017,14 @@ class PathExpression(DirectedGraph):
     new_vertex_id = 0
     def get_new_vertex_id(self):
         PathExpression.new_vertex_id += 1
-        return PathExpression.new_vertex_id       
+        return PathExpression.new_vertex_id     
+    
+    
+    def dot_filename(self):
+        return '%s.%s.%d_%d.pe' % (config.get_filename_prefix(), 
+                                   self._name,
+                                   self._pred_vertex.vertex_id,
+                                   self._succ_vertex.vertex_id)  
         
     
     def __str__(self):

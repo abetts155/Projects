@@ -60,31 +60,59 @@ class Program:
                 raise ValueError('Unable to convert %r into a vertex id' % the_input)
         
         for function_name, edge_list in edges_in__control_flow_graphs.items():
-            # Create new call graph vertex
             self._call_graph.add_vertex(vertices.SubprogramVertex
                                        (self._call_graph.get_new_vertex_id(),
                                         function_name))
             
-            # Create new control flow graph and add vertices to it
             control_flow_graph = directed_graphs.ControlFlowGraph(function_name)
+            # Add vertices to control flow graph representing basic blocks
             for an_edge in edge_list:
                 pred_id = get_vertex_id(an_edge[0])
                 succ_id = get_vertex_id(an_edge[1])
                 if not control_flow_graph.has_vertex(pred_id):
-                    control_flow_graph.add_vertex(vertices.Vertex(pred_id))
+                    control_flow_graph.add_vertex(vertices.\
+                                                  ProgramPointVertex(pred_id, pred_id))
                 if not control_flow_graph.has_vertex(succ_id):
-                    control_flow_graph.add_vertex(vertices.Vertex(succ_id))
-            # Add edges to the control flow graph and construct the call graph
+                    control_flow_graph.add_vertex(vertices.\
+                                                  ProgramPointVertex(succ_id, succ_id))
+            # Add vertices to control flow graph representing transitions and
+            # then link these to basic blocks
             for an_edge in edge_list:
                 pred_id = get_vertex_id(an_edge[0])
                 succ_id = get_vertex_id(an_edge[1])
-                pred_vertex = control_flow_graph.get_vertex(pred_id)
-                succ_vertex = control_flow_graph.get_vertex(succ_id)
-                control_flow_graph.add_edge(pred_vertex, succ_vertex)
-            control_flow_graph.find_and_set_entry_vertex()
-            control_flow_graph.find_and_set_exit_vertex()
-            control_flow_graph.add_edge(control_flow_graph.exit_vertex,
-                                        control_flow_graph.entry_vertex)
+                vertex = vertices.ProgramPointVertex(control_flow_graph.get_new_vertex_id(),
+                                                     (pred_id, succ_id))
+                control_flow_graph.add_vertex(vertex)
+                control_flow_graph.add_edge(control_flow_graph.get_vertex(pred_id),
+                                            vertex,
+                                            None)
+                control_flow_graph.add_edge(vertex,
+                                            control_flow_graph.get_vertex(succ_id),
+                                            None)
+            # Find entry and exit vertex, then add vertex representing an edge 
+            # from the exit vertex to the entry vertex 
+            entry_vertex = control_flow_graph.find_entry_vertex()
+            exit_vertex = control_flow_graph.find_exit_vertex()
+            exit_to_entry_edge = (exit_vertex.vertex_id,
+                                  entry_vertex.vertex_id)
+            exit_to_entry_vertex = vertices.ProgramPointVertex\
+                                        (control_flow_graph.get_new_vertex_id(),
+                                         exit_to_entry_edge)
+            control_flow_graph.add_vertex(exit_to_entry_vertex)
+            control_flow_graph.add_edge(exit_vertex,
+                                        exit_to_entry_vertex,
+                                        None)
+            control_flow_graph.add_edge(exit_to_entry_vertex,
+                                        entry_vertex,
+                                        None)
+            control_flow_graph.entry_vertex = entry_vertex
+            # This may seem weird but bear with me.  The reason we set the
+            # exit of the control flow graph to the control flow edge is that 
+            # this edge always executes last, even though technically it does 
+            # not actually exist in the program.  Really, this makes sures the 
+            # post-dominator tree is correct.
+            control_flow_graph.exit_vertex = exit_to_entry_vertex
+            
             self._control_flow_graphs[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
         

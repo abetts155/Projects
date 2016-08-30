@@ -48,15 +48,30 @@ if __name__ == '__main__':
     the_program = program.read_program_information_from_file\
                             (config.Arguments.program_file)
     for control_flow_graph in the_program.control_flow_graph_iterator():
-        basic_blocks, control_flow_edges = control_flow_graph.\
-                                            get_all_program_points()
-        state_transition_graph = control_flow_graph.get_state_transition_graph()
+        print('=====================>', control_flow_graph.name)
+        
+        
+        dot.make_file(control_flow_graph)
+        control_flow_graph.get_pre_dominator_tree()
+        control_flow_graph.get_loop_nesting_tree()
+        control_flow_graph.get_post_dominator_tree()
+        basic_blocks, control_flow_edges\
+            = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
         if config.Arguments.instrument == 'vertices':
-            state_transition_graph.eliminate_states_of_unmonitored_program_points\
+            control_flow_graph.reduce_but_maintain_path_reconstructibility\
                                     (control_flow_edges)
         elif config.Arguments.instrument == 'edges':
-            state_transition_graph.eliminate_states_of_unmonitored_program_points\
+            control_flow_graph.reduce_but_maintain_path_reconstructibility\
                                     (basic_blocks)
-        dot.make_file(state_transition_graph)
+        elif config.Arguments.instrument == 'mixed':
+            control_flow_graph.reduce_but_maintain_path_reconstructibility\
+                                    (set())
+        else:
+            assert False
+                                    
+        for vertex in control_flow_graph:
+            print(vertex.program_point)
+        
+
         
     

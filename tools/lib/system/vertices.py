@@ -64,6 +64,14 @@ class Vertex:
     
     def has_predecessor(self, pred_id):
         return pred_id in self._predecessors.keys()
+    
+    
+    def get_ith_predecessor_edge(self, index):
+        try:
+            return list(self._predecessors.values())[index]
+        except KeyError:
+            raise KeyError('Vertex %d does not have a %d-th predecessor' %\
+                           (self._vertex_id, index))
             
     
     def predecessor_edge_iterator(self):
@@ -102,6 +110,14 @@ class Vertex:
         return succ_id in self._successors.keys()
     
     
+    def get_ith_successor_edge(self, index):
+        try:
+            return list(self._successors.values())[index]
+        except KeyError:
+            raise KeyError('Vertex %d does not have a %d-th successor' %\
+                           (self._vertex_id, index))
+    
+    
     def successor_edge_iterator(self):
         for _, succ_edge in self._successors.items():
             yield succ_edge
@@ -113,73 +129,23 @@ class Vertex:
                self._vertex_id,
                ','.join(repr(value) for value in self._predecessors.values()),
                ','.join(repr(value) for value in self._successors.values()))
-
-
-
-class TreeVertex(Vertex):
-    
-    """
-    Models a vertex in a tree by extending the vertex class with parent and
-    tree level information.
-    """
-    
-    def __init__(self, vertex_id):
-        Vertex.__init__(self, vertex_id)
-        self._parent_id = None
-        
-    
-    @property
-    def parent_id(self):
-        return self._parent_id
-    
-    
-    @parent_id.setter
-    def parent_id(self, value):
-        self._parent_id = value
-        
-    
-    def __repr__(self):
-        return '%s(id=%r parent=%r)' \
-            % (self.__class__.__name__,
-               self._vertex_id,
-               self._parent_id)
-            
-
-
-class TransitionVertex(TreeVertex):
-    
-    """
-    Models a state transition (i.e., an edge in the state transition graph) as
-    a vertex.  These vertices are used in data structures that represent certain
-    properties of a function, e.g., the loop-nesting tree or the dominator tree.
-    """
-    
-    def __init__(self, vertex_id, transition):
-        TreeVertex.__init__(self, vertex_id)
-        self._transition = transition
-        
-    
-    @property 
-    def transition(self):
-        return self._transition
-
         
         
-class LoopHeaderVertex(TreeVertex):
+class LoopInternalVertex(Vertex):
     
     """
     Models an internal vertex in a loop-nesting tree, in effect the abstract
     vertex representation of a loop.
     """
     
-    def __init__ (self, vertex_id, header_id):
-        TreeVertex.__init__(self, vertex_id)
-        self._header_id = header_id
+    def __init__ (self, vertex_id, program_point):
+        Vertex.__init__(self, vertex_id)
+        self._program_point = program_point
         
     
     @property
-    def header_id(self):
-        return self._header_id
+    def program_point(self):
+        return self._program_point
         
         
 
@@ -250,7 +216,8 @@ class ProgramPointVertex(Vertex):
     
     """
     Models a program point (i.e., a basic block or a transition between two
-    basic blocks) as a vertex.  These vertices are used in path expressions.
+    basic blocks) as a vertex.  These vertices are used in control flow graphs
+    and path expressions.
     """
     
     def __init__(self, vertex_id, program_point):
