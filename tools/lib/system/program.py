@@ -9,8 +9,8 @@ from tools.lib.utils import dot
 
 def read_program_information_from_file(file_name):
     edges_in__control_flow_graphs = collections.OrderedDict()
-    edges_in__call_graph          = []
-    current_function             = None
+    edges_in__call_graph = []
+    current_function = None
     with open(file_name) as the_file:
         for line in the_file:
             if re.match(r'\S', line):

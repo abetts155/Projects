@@ -28,6 +28,12 @@ def parse_the_command_line():
                         help='produce Graphviz dot files of graphs produced'
                         ' during the analysis',
                         default=False)
+    
+    parser.add_argument('--purge-dot',
+                        action='store_true',
+                        help='remove all files created by dot in the target'
+                        ' directory',
+                        default=False)
 
     parser.add_argument('-v',
                         '--verbose',
@@ -45,16 +51,11 @@ def parse_the_command_line():
 
 if __name__ == '__main__': 
     parse_the_command_line()
+    config.purge_png_files()
     the_program = program.read_program_information_from_file\
                             (config.Arguments.program_file)
     for control_flow_graph in the_program.control_flow_graph_iterator():
         print('=====================>', control_flow_graph.name)
-        
-        
-        dot.make_file(control_flow_graph)
-        control_flow_graph.get_pre_dominator_tree()
-        control_flow_graph.get_loop_nesting_tree()
-        control_flow_graph.get_post_dominator_tree()
         basic_blocks, control_flow_edges\
             = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
         if config.Arguments.instrument == 'vertices':
@@ -71,6 +72,8 @@ if __name__ == '__main__':
                                     
         for vertex in control_flow_graph:
             print(vertex.program_point)
+        dot.make_file(control_flow_graph)
+        
         
 
         

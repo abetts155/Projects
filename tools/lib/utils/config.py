@@ -12,6 +12,7 @@ class Arguments:
     debug        = None
     dot          = None
     program_file = None
+    purge_dot    = None
     instrument   = None
     
 
@@ -24,3 +25,12 @@ def set_filename_prefix():
 
 def get_filename_prefix():
     return Arguments.basepath + os.sep + Arguments.basename
+
+
+def purge_png_files():
+    if Arguments.purge_dot:
+        for filename in os.listdir(Arguments.basepath):
+            _, ext = os.path.splitext(filename) 
+            if ext == '.png' or ext == '.dot':
+                complete_path = os.path.join(Arguments.basepath, filename)
+                os.remove(complete_path)

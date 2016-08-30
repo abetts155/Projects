@@ -64,14 +64,6 @@ class Vertex:
     
     def has_predecessor(self, pred_id):
         return pred_id in self._predecessors.keys()
-    
-    
-    def get_ith_predecessor_edge(self, index):
-        try:
-            return list(self._predecessors.values())[index]
-        except KeyError:
-            raise KeyError('Vertex %d does not have a %d-th predecessor' %\
-                           (self._vertex_id, index))
             
     
     def predecessor_edge_iterator(self):
@@ -108,14 +100,6 @@ class Vertex:
     
     def has_successor(self, succ_id):
         return succ_id in self._successors.keys()
-    
-    
-    def get_ith_successor_edge(self, index):
-        try:
-            return list(self._successors.values())[index]
-        except KeyError:
-            raise KeyError('Vertex %d does not have a %d-th successor' %\
-                           (self._vertex_id, index))
     
     
     def successor_edge_iterator(self):

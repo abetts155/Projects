@@ -369,13 +369,13 @@ class ControlFlowGraph(DirectedGraph):
             connect_predecessors_to_successors(vertex)
             self.remove_vertex(vertex)
 
-        # Reduce graph until removal of vertex violates path reconstructibility   
+        # Reduce graph until removal of state violates path reconstructibility
         changed = True
         while changed:
             changed = False
-            candidiate_states = list(self._vertices.values())
-            random.shuffle(candidiate_states)
-            for vertex in candidiate_states:
+            candidiates = list(self._vertices.values())
+            random.shuffle(candidiates)
+            for vertex in candidiates:
                 if can_remove_program_point(vertex):
                     changed = True
                     connect_predecessors_to_successors(vertex)
