@@ -24,6 +24,8 @@ def make_file(graph):
             dot_file.write('edge [fontcolor=blue];\n')
             if isinstance(graph, directed_graphs.LoopNestingHierarchy):
                 write_loop_nesting_tree(dot_file, graph)
+            elif isinstance(graph, directed_graphs.SuperBlockGraph):
+                write_super_block_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.CallGraph):
                 write_call_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.ControlFlowGraph):
@@ -42,13 +44,13 @@ def make_file(graph):
         
 def write_loop_nesting_tree(dot_file, loop_nesting_tree):
     for vertex in loop_nesting_tree:
-        if isinstance(vertex, vertices.LoopInternalVertex):
+        if vertex.number_of_successors() > 0:
             color = 'orange' if isinstance(vertex.program_point, int) else 'cornsilk'
             dot_file.write('%d [shape=triangle, style=filled, fillcolor=%s,'
                            ' label="%r"];\n' % (vertex.vertex_id, 
                                                 color,
                                                 vertex.program_point))
-        elif isinstance(vertex, vertices.ProgramPointVertex):
+        else:
             dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id, 
                                                    vertex.program_point))
     for vertex in loop_nesting_tree:
@@ -109,7 +111,23 @@ def write_pass_expression(dot_file, path_expression):
         dot_file.write('%d -> {' % vertex.vertex_id)
         for succ_edge in vertex.successor_edge_iterator():
             dot_file.write('%d; ' % succ_edge.vertex_id)
-        dot_file.write('}\n')      
+        dot_file.write('}\n')   
+        
+        
+def write_super_block_graph(dot_file, super_block_graph): 
+    for vertex in super_block_graph:
+        vertex_label = ''
+        for program_point in vertex.program_points:
+            vertex_label += str(program_point)
+            if program_point == vertex.representative:
+                vertex_label += ' *'
+            vertex_label += '\n'
+        dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id,
+                                               vertex_label))  
+    for vertex in super_block_graph:
+        for succ_edge in vertex.successor_edge_iterator():
+            dot_file.write('%d -> %d;\n' % (vertex.vertex_id,
+                                            succ_edge.vertex_id))
         
 
 def output_to_png_file(dot_filename):

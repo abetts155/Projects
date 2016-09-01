@@ -2,21 +2,6 @@
 This module includes all vertex types that appear in graphs. 
 """
 
-import collections
-
-
-class DuplicateEdgeError(Exception):
-    
-    """
-    Exception to catch when a duplicate predecessor or successor is added to a
-    vertex.
-    """
-    
-    def __init__(self, message):
-        Exception.__init__(self, message)
-
-
-
 class Vertex:
     
     """
@@ -26,8 +11,8 @@ class Vertex:
     
     def __init__(self, vertex_id):
         self._vertex_id = vertex_id
-        self._predecessors = collections.OrderedDict()
-        self._successors = collections.OrderedDict()
+        self._predecessors = {}
+        self._successors = {}
 
     
     @property
@@ -36,9 +21,9 @@ class Vertex:
     
     
     def add_predecessor_edge(self, pred_edge):
-        if pred_edge.vertex_id in self._predecessors:
-            raise DuplicateEdgeError('Vertex %d already has predecessor %d' % \
-                                     (self._vertex_id, pred_edge.vertex_id))
+        assert pred_edge.vertex_id not in self._predecessors,\
+        'Vertex %d already has predecessor %d' % (self._vertex_id, 
+                                                  pred_edge.vertex_id)
         self._predecessors[pred_edge.vertex_id] = pred_edge
         
             
@@ -71,10 +56,20 @@ class Vertex:
             yield pred_edge
             
     
+    def get_ith_predecessor_edge(self, index):
+        try:
+            return list(self._predecessors.values())[index]
+        except KeyError:
+            raise KeyError('Vertex %d has %d predecessors:' 
+                           ' element %d does not exist' % (self._vertex_id,
+                                                           self.number_of_predecessors(),
+                                                           index))
+            
+    
     def add_successor_edge(self, succ_edge):
-        if succ_edge.vertex_id in self._successors:
-            raise DuplicateEdgeError('Vertex %r already has successor %r' % \
-                                     (self._vertex_id, succ_edge.vertex_id))
+        assert succ_edge.vertex_id not in self._successors,\
+        'Vertex %d already has successor %d' % (self._vertex_id, 
+                                                succ_edge.vertex_id)
         self._successors[succ_edge.vertex_id] = succ_edge
         
         
@@ -105,6 +100,16 @@ class Vertex:
     def successor_edge_iterator(self):
         for _, succ_edge in self._successors.items():
             yield succ_edge
+            
+    
+    def get_ith_successor_edge(self, index):
+        try:
+            return list(self._successors.values())[index]
+        except KeyError:
+            raise KeyError('Vertex %d has %d successors:' 
+                           ' element %d does not exist' % (self._vertex_id,
+                                                           self.number_of_successors(),
+                                                           index))
     
     
     def __repr__(self):
@@ -113,23 +118,40 @@ class Vertex:
                self._vertex_id,
                ','.join(repr(value) for value in self._predecessors.values()),
                ','.join(repr(value) for value in self._successors.values()))
-        
-        
-class LoopInternalVertex(Vertex):
+            
+            
+            
+class ProgramPointVertex(Vertex):
     
     """
-    Models an internal vertex in a loop-nesting tree, in effect the abstract
-    vertex representation of a loop.
+    Models a program point (i.e., a basic block or a transition between two
+    basic blocks) as a vertex.  These vertices are used in control flow graphs
+    and path expressions.
     """
     
-    def __init__ (self, vertex_id, program_point):
+    @staticmethod
+    def is_basic_block(program_point):
+        return isinstance(program_point, int)
+        
+    
+    def __init__(self, vertex_id, program_point, abstract=False):
         Vertex.__init__(self, vertex_id)
         self._program_point = program_point
+        self._abstract = abstract
         
     
     @property
     def program_point(self):
         return self._program_point
+    
+    
+    @property
+    def abstract(self):
+        return self._abstract
+    
+    
+    def __str__(self):
+        return str(self._program_point)
         
         
 
@@ -142,6 +164,7 @@ class SubprogramVertex(Vertex):
     def __init__(self, vertex_id, name):
         Vertex.__init__(self, vertex_id)
         self._name = name
+        
         
     @property
     def name(self):
@@ -165,13 +188,28 @@ class SuperBlock(Vertex):
     equal and must always execute together.
     """
     
-    def __init__(self, vertex_id, header_id):
+    def __init__(self, vertex_id):
         Vertex.__init__(self, vertex_id)
         self._program_points = []
-        self._header_id = header_id
         self._representative = None
-        self._successor_partitions = collections.OrderedDict()
+        self._successor_partitions = {}
         self._exit_edge = False
+        
+        
+    @property
+    def program_points(self):
+        return self._program_points
+    
+    
+    @property
+    def representative(self):
+        return self._representative
+    
+    
+    @representative.setter
+    def representative(self, value):
+        self._representative = value 
+        
         
         
 class RegularExpressionVertex(Vertex):
@@ -194,27 +232,4 @@ class RegularExpressionVertex(Vertex):
         'Invalid regular expression operator %r' % operator
         self.operator = operator
 
-
-
-class ProgramPointVertex(Vertex):
-    
-    """
-    Models a program point (i.e., a basic block or a transition between two
-    basic blocks) as a vertex.  These vertices are used in control flow graphs
-    and path expressions.
-    """
-    
-    def __init__(self, vertex_id, program_point):
-        Vertex.__init__(self, vertex_id)
-        self._program_point = program_point
-        
-    
-    @property
-    def program_point(self):
-        return self._program_point
-    
-    
-    def __str__(self):
-        return str(self._program_point)
-        
         

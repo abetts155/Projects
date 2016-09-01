@@ -2,7 +2,6 @@
 
 import argparse
 
-from tools.lib.utils import dot
 from tools.lib.utils import config
 from tools.lib.system import program
 
@@ -52,10 +51,9 @@ def parse_the_command_line():
 if __name__ == '__main__': 
     parse_the_command_line()
     config.purge_png_files()
-    the_program = program.read_program_information_from_file\
-                            (config.Arguments.program_file)
+
+    the_program = program.Program.create()
     for control_flow_graph in the_program.control_flow_graph_iterator():
-        print('=====================>', control_flow_graph.name)
         basic_blocks, control_flow_edges\
             = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
         if config.Arguments.instrument == 'vertices':
@@ -69,10 +67,11 @@ if __name__ == '__main__':
                                     (set())
         else:
             assert False
-                                    
+        
         for vertex in control_flow_graph:
             print(vertex.program_point)
-        dot.make_file(control_flow_graph)
+        print('=======>', control_flow_graph.number_of_vertices(), control_flow_graph.number_of_edges())
+        print()
         
         
 
