@@ -122,8 +122,12 @@ def write_super_block_graph(dot_file, super_block_graph):
             if program_point == vertex.representative:
                 vertex_label += ' *'
             vertex_label += '\n'
-        dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id,
-                                               vertex_label))  
+        color = 'white'
+        if vertex.is_loop_exit_edge:
+            color = 'yellow'
+        dot_file.write('%d [label="%s", style=filled, fillcolor=%s];\n' 
+                       % (vertex.vertex_id, vertex_label, color))
+          
     for vertex in super_block_graph:
         for succ_edge in vertex.successor_edge_iterator():
             dot_file.write('%d -> %d;\n' % (vertex.vertex_id,

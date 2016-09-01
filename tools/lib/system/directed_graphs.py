@@ -220,7 +220,8 @@ class ControlFlowGraph(DirectedGraph):
         try:
             return self._program_point_to_vertex[program_point]
         except KeyError:
-            raise KeyError('No vertex found for program point %r' % program_point)
+            raise KeyError('No vertex found for program point {0}'.\
+                           format(program_point))
             
         
     def find_entry_vertex(self):
@@ -293,6 +294,11 @@ class ControlFlowGraph(DirectedGraph):
             else:
                 control_flow_edges.add(vertex.program_point)
         return basic_blocks, control_flow_edges
+    
+    
+    def reduce(self, unmonitored_program_points):
+        
+        state_transition_to_path_expression = {}
             
             
     def reduce_but_maintain_path_reconstructibility(self,
@@ -840,6 +846,14 @@ class LoopNestingHierarchy(Tree):
         return vertex in self.__abstract_vertices
     
     
+    def get_loop_exit_edges_for_header(self, header):
+        try:
+            return self.__loop_exit_edges_of_header[header]
+        except KeyError:
+            raise KeyError('No loop exit edges for program point %r' %
+                           header.program_point)
+    
+    
     def get_abstract_vertex(self, header):
         try:
             return self.__abstract_vertices[header]
@@ -851,9 +865,7 @@ class LoopNestingHierarchy(Tree):
     def induce_subgraph_with_tails_and_exits(self, 
                                              name,
                                              control_flow_graph, 
-                                             header_vertex):
-        
-        
+                                             header_vertex):        
         induced_graph = ControlFlowGraph(name)
         inner_header_vertices = set()
         
@@ -1366,19 +1378,14 @@ class SuperBlockGraph(DirectedGraph):
                                          pre_dominator_tree,
                                          post_dominator_tree)
         strong_components = StronglyConnectedComponents(dominator_graph) 
-        depth_first_search_tree = DepthFirstSearch(induced_subgraph,
-                                                   induced_subgraph.entry_vertex,
-                                                   False)
          
-        super_block_graph.add_super_blocks(control_flow_graph,
-                                           loop_nesting_tree,
+        super_block_graph.add_super_blocks(loop_nesting_tree,
                                            header_vertex,
                                            induced_subgraph,
-                                           strong_components,
-                                           depth_first_search_tree)
+                                           strong_components)
         super_block_graph.add_edges(header_vertex,
                                     induced_subgraph) 
-        super_block_graph.sanity_check()       
+        super_block_graph.check_properties()       
         return super_block_graph
     
     
@@ -1394,12 +1401,10 @@ class SuperBlockGraph(DirectedGraph):
     
     
     def add_super_blocks(self, 
-                         control_flow_graph,
                          loop_nesting_tree,
                          header_vertex,
                          induced_subgraph,
-                         strong_components_of_dominator_graph,
-                         depth_first_search_tree):
+                         strong_components_of_dominator_graph):
         # Add a super block for every strong component identified in the 
         # dominator graph 
         for scc_id, _ in strong_components_of_dominator_graph:
@@ -1407,6 +1412,9 @@ class SuperBlockGraph(DirectedGraph):
 
         # Add program points to super blocks and set the representative program
         # point in each one
+        depth_first_search_tree = DepthFirstSearch(induced_subgraph,
+                                                   induced_subgraph.entry_vertex,
+                                                   False)
         for induced_vertex in reversed(depth_first_search_tree.post_order):
             if induced_vertex.program_point is not None: 
                 scc_id = strong_components_of_dominator_graph.\
@@ -1419,18 +1427,40 @@ class SuperBlockGraph(DirectedGraph):
                 if not induced_vertex.abstract:
                     super_vertex.representative = induced_vertex.program_point
                     
+                if not ProgramPointVertex.is_basic_block(induced_vertex.program_point):
+                    for (_, succ_vertex) in loop_nesting_tree.get_loop_exit_edges_for_header(header_vertex):
+                        if succ_vertex.program_point == induced_vertex.program_point:
+                            super_vertex.is_loop_exit_edge = True
+                            break
+                    
         # The root vertex of the super block graph is the super block containing
         # the header
         self._root_vertex = self.__program_point_to_super_vertex[header_vertex.program_point] 
     
         
-    def add_edges(self, 
-                  header_vertex,
-                  induced_subgraph):
+    def add_edges(self, header_vertex, induced_subgraph):
         for super_vertex in self:
-            if not ProgramPointVertex.is_basic_block(super_vertex.program_points[0])\
-            or super_vertex.program_points[0] != header_vertex.program_point:
-                induced_vertex = induced_subgraph.get_vertex_for_program_point(super_vertex.program_points[0])
+            induced_vertex = induced_subgraph.get_vertex_for_program_point\
+                                (super_vertex.program_points[0])
+            if not ProgramPointVertex.is_basic_block(super_vertex.program_points[0]):
+                # The first program point in the super block is a control-flow 
+                # edge
+                assert induced_vertex.number_of_predecessors() == 1
+                pred_edge = induced_vertex.get_ith_predecessor_edge(0)
+                pred_induced_vertex = induced_subgraph.\
+                                        get_vertex(pred_edge.vertex_id)
+                pred_super_vertex = self.__program_point_to_super_vertex\
+                                            [pred_induced_vertex.program_point]
+                self.add_edge(pred_super_vertex, super_vertex)                
+                pred_super_vertex.\
+                    add_successor_edge_to_partition(pred_induced_vertex,
+                                                    pred_super_vertex.\
+                                                        get_successor_edge(super_vertex.vertex_id))
+                
+            elif super_vertex.program_points[0] != header_vertex.program_point:
+                # The first program point in the super block is a basic block 
+                # but not the loop header of this region
+                assert induced_vertex.number_of_predecessors() > 1
                 for pred_edge in induced_vertex.predecessor_edge_iterator():
                     pred_induced_vertex = induced_subgraph.\
                                             get_vertex(pred_edge.vertex_id)
@@ -1439,7 +1469,7 @@ class SuperBlockGraph(DirectedGraph):
                     self.add_edge(pred_super_vertex, super_vertex)
                     
     
-    def sanity_check(self):
+    def check_properties(self):
         visited = {}
         for super_vertex in self:
             visited[super_vertex] = False
@@ -1460,6 +1490,7 @@ class SuperBlockGraph(DirectedGraph):
             'Super block with program points ' +\
             ','.join(str(program_point) for program_point in super_vertex.program_points) +\
             ' can not be reached from root vertex'
+    
     
     def dot_filename(self):
         return '%s.%s.super' % (config.get_filename_prefix(), 

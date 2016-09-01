@@ -54,6 +54,7 @@ if __name__ == '__main__':
 
     the_program = program.Program.create()
     for control_flow_graph in the_program.control_flow_graph_iterator():
+        print(control_flow_graph.name)
         basic_blocks, control_flow_edges\
             = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
         if config.Arguments.instrument == 'vertices':
@@ -67,11 +68,6 @@ if __name__ == '__main__':
                                     (set())
         else:
             assert False
-        
-        for vertex in control_flow_graph:
-            print(vertex.program_point)
-        print('=======>', control_flow_graph.number_of_vertices(), control_flow_graph.number_of_edges())
-        print()
         
         
 

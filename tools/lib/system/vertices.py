@@ -138,6 +138,7 @@ class ProgramPointVertex(Vertex):
         Vertex.__init__(self, vertex_id)
         self._program_point = program_point
         self._abstract = abstract
+        self._instrumented = False
         
     
     @property
@@ -148,6 +149,16 @@ class ProgramPointVertex(Vertex):
     @property
     def abstract(self):
         return self._abstract
+    
+
+    @property
+    def instrumented(self):
+        return self._instrumented
+    
+    
+    @instrumented.setter
+    def instrumented(self, value):
+        self._instrumented = value
     
     
     def __str__(self):
@@ -192,8 +203,8 @@ class SuperBlock(Vertex):
         Vertex.__init__(self, vertex_id)
         self._program_points = []
         self._representative = None
+        self._is_loop_exit_edge = False
         self._successor_partitions = {}
-        self._exit_edge = False
         
         
     @property
@@ -210,6 +221,27 @@ class SuperBlock(Vertex):
     def representative(self, value):
         self._representative = value 
         
+        
+    @property
+    def is_loop_exit_edge(self):
+        return self._is_loop_exit_edge
+    
+    
+    @is_loop_exit_edge.setter
+    def is_loop_exit_edge(self, value):
+        self._is_loop_exit_edge = value
+
+
+    def add_successor_edge_to_partition(self, branch_vertex, succ_edge):
+        if branch_vertex not in self._successor_partitions:
+            self._successor_partitions[branch_vertex] = set()
+        self._successor_partitions[branch_vertex].add(succ_edge)
+        
+    
+    def successor_edge_partition_iterator(self):
+        for branch_vertex, successor_edges in self._successor_partitions:
+            yield branch_vertex, successor_edges
+
         
         
 class RegularExpressionVertex(Vertex):
