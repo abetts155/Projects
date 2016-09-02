@@ -80,6 +80,7 @@ def parse_the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
+    config.purge_png_files()
 
 
 if __name__ == "__main__": 

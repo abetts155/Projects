@@ -94,9 +94,8 @@ class Program:
                 # not actually exist in the program.  Really, this makes sures the 
                 # post-dominator tree is correct.
                 control_flow_graph.exit_vertex = exit_to_entry_vertex
-                program.add_control_flow_graph(control_flow_graph)
-                control_flow_graph.get_super_block_graph()
-                
+                program.add_control_flow_graph(control_flow_graph) 
+        
         
         instrumentation_in_control_flow_graphs = {}
         def set_instrumented_program_points():
@@ -130,6 +129,7 @@ class Program:
                                 ('Program point %d does not belong to'
                                 ' control flow graph %s' % (vertex_id,
                                                             function_name)) 
+                dot.make_file(control_flow_graph)
                 
         
         edges_in_call_graph = set()
@@ -159,10 +159,12 @@ class Program:
                     # Transform line into lower case and then strip all whitespace
                     line = ''.join(line.lower().split())
                     if re.match(r'[a-zA-Z]\w+', line):
+                        # Function name
                         current_function = line
                         edges_in_control_flow_graphs[current_function] = set()
                         instrumentation_in_control_flow_graphs[current_function] = set()
                     elif re.match(r'\{.*\}', line):
+                        # Instrumented program points in this function
                         line = line[1:len(line)-1]
                         for program_point in line.split(','):
                             if re.match(r'\d+-\d+', program_point):
@@ -173,6 +175,7 @@ class Program:
                                 instrumentation_in_control_flow_graphs\
                                     [current_function].add(program_point)
                     else:
+                        # An edge in this function
                         source, destination = line.split('-')
                         if re.match(r'\d+', destination):
                             edges_in_control_flow_graphs[current_function].\
@@ -207,7 +210,6 @@ class Program:
         assert control_flow_graph.name not in self._control_flow_graphs,\
             'Duplicate control flow graph with name {0}'.\
             format(control_flow_graph.name)
-        dot.make_file(control_flow_graph)
         self._control_flow_graphs[control_flow_graph.name] = control_flow_graph
     
     

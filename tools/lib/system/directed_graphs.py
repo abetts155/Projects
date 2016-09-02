@@ -357,8 +357,8 @@ class ControlFlowGraph(DirectedGraph):
         for vertex in states_to_remove:
             connect_predecessors_to_successors(vertex)
             self.remove_vertex(vertex)
-        dot.make_file(self)
         
+    
         # Reduce graph until removal of state violates path reconstructibility
         changed = True
         while changed:
@@ -487,58 +487,23 @@ class Tree(DirectedGraph):
     def __init__ (self, name):
         DirectedGraph.__init__(self, name)
         self._root_vertex = None
-        self._level_to_vertices = collections.OrderedDict()
         self._least_common_ancestor_query = None
+        self.__level_to_vertices = collections.OrderedDict()
         
     
     @property
-    def root_id(self):
-        return self._root_id
+    def root_vertex(self):
+        return self._root_vertex
     
     
-    def set_tree_properties(self):
-        # Find and set the root vertex
-        for vertex in self:
-            if vertex.number_of_predecessors() == 0:
-                if self.root_vertex is not None:
-                    raise NoValidVertexError('The tree has multiple root vertices')
-                self.root_vertex = vertex
-        if self.root_vertex is None:
-            raise NoValidVertexError("The tree has no root vertex")
-        
-        # Find the vertices at each level of the tree
-        vertices_to_level = {}
-        queue = [self._root_vertex]
-        while queue:
-            vertex = queue.pop()
-            for succ_edge in vertex.successor_edge_iterator():
-                queue.insert(0, self.get_vertex(succ_edge.vertex_id))
-            if vertex == self._root_vertex:
-                self._level_to_vertices[0] = [self._root_vertex]
-                vertices_to_level[self._root_vertex] = 0
-            else:
-                parent_vertex = self.get_vertex(vertex.get_ith_predecessor_edge(0).\
-                                                vertex_id)
-                vertex_level = vertices_to_level[parent_vertex] + 1
-                if vertex_level not in self._level_to_vertices.keys():
-                    self._level_to_vertices[vertex_level] = []
-                self._level_to_vertices[vertex_level].append(vertex)
-                vertices_to_level[vertex] = vertex_level
-                
-                
     def level_by_level_iterator(self, up=True):
         if up:
-            for level in reversed(sorted(self._level_to_vertices.keys())):
-                yield self._level_to_vertices[level]
+            for level in reversed(sorted(self.__level_to_vertices.keys())):
+                yield self.__level_to_vertices[level]
         else:
-            for level in sorted(self._level_to_vertices.keys()):
-                yield self._level_to_vertices[level]
+            for level in sorted(self.__level_to_vertices.keys()):
+                yield self.__level_to_vertices[level]
 
-        
-    def remove_edge(self, pred_vertex, succ_vertex):
-        pred_vertex.remove_successor_edge(succ_vertex.vertex_id)
-        succ_vertex.remove_predecessor_edge(pred_vertex.vertex_id)
-    
     
     def is_ancestor(self, candidate_ancestor_vertex, vertex):
         if candidate_ancestor_vertex == vertex:
@@ -559,7 +524,36 @@ class Tree(DirectedGraph):
             return False
         else:
             return self.is_ancestor(candidate_ancestor_vertex, vertex)
+    
+    
+    def _set_tree_properties(self):
+        # Find and set the root vertex
+        for vertex in self:
+            if vertex.number_of_predecessors() == 0:
+                if self._root_vertex is not None:
+                    raise NoValidVertexError('The tree has multiple root vertices')
+                self._root_vertex = vertex
+        if self._root_vertex is None:
+            raise NoValidVertexError("The tree has no root vertex")
         
+        # Find the vertices at each level of the tree
+        vertices_to_level = {}
+        queue = [self._root_vertex]
+        while queue:
+            vertex = queue.pop()
+            for succ_edge in vertex.successor_edge_iterator():
+                queue.insert(0, self.get_vertex(succ_edge.vertex_id))
+            if vertex == self._root_vertex:
+                self.__level_to_vertices[0] = [self._root_vertex]
+                vertices_to_level[self._root_vertex] = 0
+            else:
+                parent_vertex = self.get_vertex(vertex.get_ith_predecessor_edge(0).\
+                                                vertex_id)
+                vertex_level = vertices_to_level[parent_vertex] + 1
+                if vertex_level not in self.__level_to_vertices.keys():
+                    self.__level_to_vertices[vertex_level] = []
+                self.__level_to_vertices[vertex_level].append(vertex)
+                vertices_to_level[vertex] = vertex_level
         
 
        
@@ -684,6 +678,7 @@ class Dominators(Tree):
         self.__solve(control_flow_graph, root_vertex)
         self.__add_vertices(control_flow_graph)
         self.__add_edges(control_flow_graph, root_vertex)
+        self._set_tree_properties()
         
     
     def __initialise(self, control_flow_graph, root_vertex):
@@ -973,6 +968,7 @@ class LoopNestingHierarchy(Tree):
                           depth_first_search_tree)
         self.__add_vertices(control_flow_graph)
         self.__add_edges(control_flow_graph)
+        self._set_tree_properties()
         
 
     def __find_loops(self, 
@@ -1051,9 +1047,6 @@ class LoopNestingHierarchy(Tree):
                                                      True) 
                 self.add_vertex(abstract_vertex)
                 self.__abstract_vertices[header] = abstract_vertex
-        # Set the tree root to the abstract vertex representing the root of the 
-        # directed graph
-        self._root_vertex = self.__abstract_vertices[control_flow_graph.entry_vertex]
     
     
     def __add_edges(self, control_flow_graph):

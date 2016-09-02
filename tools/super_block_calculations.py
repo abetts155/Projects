@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
+import threading
+import sys
 
 from tools.lib.utils import config
 from tools.lib.system import program
-
 
 
 def parse_the_command_line(): 
@@ -40,10 +41,18 @@ def parse_the_command_line():
                         help='be verbose',
                         default=False)
     
-    parser.add_argument('--instrument',
-                        choices=['vertices', 'edges', 'mixed'],
-                        required=True,
-                        help='instrument vertices, edges, or both')
+    parser.add_argument('--repeat-calculation',
+                        type=int,
+                        help='repeat the calculation this many times',
+                        default=1,
+                        metavar='<INT>')
+    
+    parser.add_argument('--shuffle-constraints',
+                        action='store_true',
+                        help='before repeating the solve stage of a '
+                        'constraint-based WCET calculation, shuffle '
+                        'the constraints',
+                        default=False)
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
@@ -51,26 +60,13 @@ def parse_the_command_line():
 
 
 if __name__ == '__main__': 
+    threading.stack_size(67108864) # 64MB stack
+    sys.setrecursionlimit(2**20)
+    
     parse_the_command_line()
     the_program = program.Program.create()
-    
     for control_flow_graph in the_program.control_flow_graph_iterator():
-        print(control_flow_graph.name)
-        basic_blocks, control_flow_edges\
-            = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
-        if config.Arguments.instrument == 'vertices':
-            control_flow_graph.reduce_but_maintain_path_reconstructibility\
-                                    (control_flow_edges)
-        elif config.Arguments.instrument == 'edges':
-            control_flow_graph.reduce_but_maintain_path_reconstructibility\
-                                    (basic_blocks)
-        elif config.Arguments.instrument == 'mixed':
-            control_flow_graph.reduce_but_maintain_path_reconstructibility\
-                                    (set())
-        else:
-            assert False
-        
-        
+        control_flow_graph.get_super_block_graph()
 
-        
+    
     
