@@ -66,9 +66,8 @@ if __name__ == '__main__':
     
     parse_the_command_line()
     program = environment.Program.create()
-    for control_flow_graph in program.control_flow_graph_iterator():
-        control_flow_graph.get_super_block_graph()
-    calculations.calculate_wcet_using_integer_linear_programming(program, 
-                                                                 config.Arguments.repeat)
+    calculations.calculate_wcet_using_integer_linear_programming\
+        (program, 
+         config.Arguments.repeat)
     
     

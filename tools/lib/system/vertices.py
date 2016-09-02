@@ -201,15 +201,15 @@ class SuperBlock(Vertex):
     
     def __init__(self, vertex_id):
         Vertex.__init__(self, vertex_id)
-        self._program_points = []
+        self._vertices = []
         self._representative = None
         self._is_loop_exit_edge = False
         self._successor_partitions = {}
         
         
     @property
-    def program_points(self):
-        return self._program_points
+    def vertices(self):
+        return self._vertices
     
     
     @property
@@ -239,7 +239,7 @@ class SuperBlock(Vertex):
         
     
     def successor_edge_partition_iterator(self):
-        for branch_vertex, successor_edges in self._successor_partitions:
+        for branch_vertex, successor_edges in self._successor_partitions.items():
             yield branch_vertex, successor_edges
 
         

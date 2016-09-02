@@ -139,9 +139,9 @@ def write_super_block_graph(dot_file, super_block_graph):
     
     def write_vertex(vertex):
         vertex_label = ''
-        for program_point in vertex.program_points:
-            vertex_label += str(program_point)
-            if program_point == vertex.representative:
+        for induced_vertex in vertex.vertices:
+            vertex_label += str(induced_vertex.program_point)
+            if induced_vertex == vertex.representative:
                 vertex_label += ' *'
             vertex_label += '\n'
         color = 'white'
