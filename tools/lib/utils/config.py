@@ -3,17 +3,18 @@ import os
 class Arguments:
     
     """
-    Arguments from both the command line and the configuration file.
+    Arguments set during parsing of the command line.
     """
     
     basepath     = None
     basename     = None
     verbose      = None
     debug        = None
-    dot          = None
+    graphviz     = None
     program_file = None
     purge_dot    = None
     instrument   = None
+    repeat       = 1
     
 
 def set_filename_prefix():
@@ -27,8 +28,11 @@ def get_filename_prefix():
     return Arguments.basepath + os.sep + Arguments.basename
 
 
-def purge_png_files():
-    if Arguments.purge_dot:
+def purge_graphviz_files():
+    """
+    Remove anything and everything created for visual display through Graphviz.
+    """
+    if Arguments.purge_graphviz:
         for filename in os.listdir(Arguments.basepath):
             _, ext = os.path.splitext(filename) 
             if ext == '.png' or ext == '.dot':

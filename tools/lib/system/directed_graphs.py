@@ -89,8 +89,8 @@ class DirectedGraph:
         
     def add_vertex(self, vertex):
         if vertex.vertex_id in self._vertices:
-            raise DuplicateVertexError('The graph already has vertex %d' % 
-                                       vertex.vertex_id)
+            raise DuplicateVertexError('The graph already has vertex {}'.\
+                                       format(vertex.vertex_id))
         self._vertices[vertex.vertex_id] = vertex
         
     
@@ -98,7 +98,7 @@ class DirectedGraph:
         try:
             return self._vertices[vertex_id]
         except KeyError:
-            raise KeyError('Vertex %d is not in the graph' % vertex_id)
+            raise KeyError('Vertex {} is not in the graph'.format(vertex_id))
         
         
     def remove_vertex(self, vertex):
@@ -144,9 +144,9 @@ class DirectedGraph:
 
 
     def __repr__(self):
-        return '%s(vertices=%r)' % (self.__class__.__name__,
-                                    ' '.join(repr(vertex) 
-                                             for vertex in self))
+        return '{}(vertices={})'.format(self.__class__.__name__,
+                                        ' '.join(repr(vertex) 
+                                                 for vertex in self))
         
     
     @abc.abstractmethod
@@ -220,7 +220,7 @@ class ControlFlowGraph(DirectedGraph):
         try:
             return self._program_point_to_vertex[program_point]
         except KeyError:
-            raise KeyError('No vertex found for program point {0}'.\
+            raise KeyError('No vertex found for program point {}'.\
                            format(program_point))
             
         
@@ -232,8 +232,9 @@ class ControlFlowGraph(DirectedGraph):
         if len(without_predecessors) == 0:
             raise NoValidVertexError('All vertices have at least one predecessor')
         elif len(without_predecessors) > 1:
-            raise NoValidVertexError('Too many entry candidates found: %r' %\
-                                    ','.join(str(v.vertex_id) for v in without_predecessors))
+            raise NoValidVertexError('Too many entry candidates found: {}'.\
+                                     format(','.join(str(vertex.vertex_id) 
+                                                     for vertex in without_predecessors)))
         else:
             return without_predecessors[0]
             
@@ -246,8 +247,9 @@ class ControlFlowGraph(DirectedGraph):
         if len(without_successors) == 0:
             raise NoValidVertexError('All vertices have at least one successor')
         elif len(without_successors) > 1:
-            raise NoValidVertexError('Too many exit candidates found: %r' %\
-                                    ','.join(str(v.vertex_id) for v in without_successors))
+            raise NoValidVertexError('Too many exit candidates found: {}'.\
+                                    format(','.join(str(vertex.vertex_id) 
+                                                    for vertex in without_successors)))
         else:
             return without_successors[0]
     
@@ -347,9 +349,8 @@ class ControlFlowGraph(DirectedGraph):
             for succ_edge in vertex.successor_edge_iterator():
                 succ_vertex = self.get_vertex(succ_edge.vertex_id)
                 assert succ_edge.path_expression is None,\
-                       'Expected the path expression of the edge %d->%d to be empty'\
-                        % (vertex.vertex_id,
-                           succ_edge.vertex_id)
+                       'Expected the path expression of the edge {}->{} to be '\
+                       ' empty'.format(vertex.vertex_id, succ_edge.vertex_id)
                 state_transition_to_path_expression[(vertex, succ_vertex)] = []
                     
         
@@ -388,7 +389,7 @@ class ControlFlowGraph(DirectedGraph):
     
     
     def dot_filename(self):
-        return '%s.%s.cfg' % (config.get_filename_prefix(), self.name)
+        return '{}.{}.cfg'.format(config.get_filename_prefix(), self.name)
     
     
     def __str__(self):
@@ -396,23 +397,25 @@ class ControlFlowGraph(DirectedGraph):
             value = ''
             counter = 1
             for edge in edge_iterator:
-                value += '%d' % edge.vertex_id
+                value += '{}'.format(edge.vertex_id)
                 if counter < total_number_of_edges:
                     value += ', '
                 counter += 1
             return value
         
-        value = 'CFG: %s\n' % self._name
+        value = 'CFG: {}\n'.format(self._name)
         value += '{\n'
         for vertex in self:
-            value += 'vertex(id=%d, program_point=%r, abstract=%r)\n' \
-                        % (vertex.vertex_id, 
-                           vertex.program_point,
-                           vertex.abstract)
-            value += '  pred = {%s}\n' % write_edges(vertex.predecessor_edge_iterator(),
-                                                     vertex.number_of_predecessors())      
-            value += '  succ = {%s}\n' % write_edges(vertex.successor_edge_iterator(),
-                                                     vertex.number_of_successors())
+            value += 'vertex(id={}, program_point={}, abstract={})\n'.\
+                        format(vertex.vertex_id, 
+                               vertex.program_point,
+                               vertex.abstract)
+            value += '  pred = {{{}}}\n'.\
+                        format(write_edges(vertex.predecessor_edge_iterator(),
+                                           vertex.number_of_predecessors()))      
+            value += '  succ = {{{}}}\n'.\
+                        format(write_edges(vertex.successor_edge_iterator(),
+                                           vertex.number_of_successors()))
         value += '}\n'
         return value
 
@@ -441,7 +444,8 @@ class CallGraph(DirectedGraph):
         try:
             return self.function_name_to_vertex[function_name]
         except ValueError:
-            raise ValueError('No vertex found for function %s' % function_name)
+            raise ValueError('No vertex found for function {}'.\
+                             format(function_name))
         
     
     def add_edge(self, pred_vertex, succ_vertex, call_site_id):
@@ -459,7 +463,7 @@ class CallGraph(DirectedGraph):
         
     
     def dot_filename(self):
-        return '%s.%s' % (config.get_filename_prefix(), self._name)
+        return '{}.{}'.format(config.get_filename_prefix(), self._name)
         
         
 
@@ -595,30 +599,32 @@ class DepthFirstSearch(Tree):
         try:
             return self._post_order[post_order_value-1]
         except KeyError:
-            raise KeyError('Post-order value %d is out of range' % post_order_value)
+            raise KeyError('Post-order value {} is out of range'.\
+                           format(post_order_value))
         
     
     def get_vertex_with_this_pre_order_value(self, pre_order_value):
         try:
             return self._pre_order[pre_order_value-1]
         except KeyError:
-            raise KeyError('Pre-order value %d is out of range' % pre_order_value)
+            raise KeyError('Pre-order value {} is out of range'.\
+                           format(pre_order_value))
         
         
     def get_pre_order_value_for_vertex(self, vertex):
         try:
             return self._vertex_pre_order_numbering[vertex]
         except KeyError:
-            raise KeyError('No pre-order value found for vertex %d' % 
-                           vertex.vertex_id)
+            raise KeyError('No pre-order value found for vertex {}'.\
+                           format(vertex.vertex_id))
     
     
     def get_post_order_value_for_vertex(self, vertex):
         try:
             return self._vertex_post_order_numbering[vertex]
         except KeyError:
-            raise KeyError('No post-order value found for vertex %d' % 
-                           vertex.vertex_id)
+            raise KeyError('No post-order value found for vertex {}'.\
+                           format(vertex.vertex_id))
     
         
     def __initialise(self, directed_graph, root_vertex):
@@ -765,7 +771,7 @@ class Dominators(Tree):
 
 
     def dot_filename(self):
-        return '%s.%s.%s' % (config.get_filename_prefix(), 
+        return '{}.{}.{}' % (config.get_filename_prefix(), 
                              self.name, 
                              ('post' 
                               if self.__reverse_edge_directions 
@@ -836,6 +842,14 @@ class LoopNestingHierarchy(Tree):
             if ProgramPointVertex.is_basic_block(vertex.program_point):
                 yield vertex
                 
+                
+    def get_loop_body(self, header):
+        try:
+            return self.__loop_body_of_header[header]
+        except KeyError:
+            raise KeyError('Program point {} is not a loop header'.
+                           format(header.program_point))
+                
         
     def is_loop_header(self, vertex):
         return vertex in self.__abstract_vertices
@@ -845,16 +859,16 @@ class LoopNestingHierarchy(Tree):
         try:
             return self.__loop_exit_edges_of_header[header]
         except KeyError:
-            raise KeyError('No loop exit edges for program point %r' %
-                           header.program_point)
+            raise KeyError('No loop exit edges for program point {}'.\
+                           format(header.program_point))
     
     
     def get_abstract_vertex(self, header):
         try:
             return self.__abstract_vertices[header]
         except KeyError:
-            raise KeyError('No abstract vertex for program point %r' %
-                           header.program_point)
+            raise KeyError('No abstract vertex for program point {}'.\
+                           format(header.program_point))
         
         
     def induce_subgraph_with_tails_and_exits(self, 
@@ -953,7 +967,7 @@ class LoopNestingHierarchy(Tree):
            
             
     def dot_filename(self):
-        return '%s.%s.lnt' % (config.get_filename_prefix(), self._name)
+        return '{}.{}.lnt'.format(config.get_filename_prefix(), self._name)
         
         
     def __construct(self, 
@@ -983,10 +997,11 @@ class LoopNestingHierarchy(Tree):
                         (pre_dominator_tree.get_vertex(vertex.vertex_id),
                          pre_dominator_tree.get_vertex(pred_vertex.vertex_id)):
                         raise IrreducibleLoopError('Depth-first backedge' 
-                                                   ' (%d, %d) identifies an'
-                                                   ' irreducible loop' % 
-                                                   (pred_vertex.vertex_id,
-                                                    vertex.vertex_id))
+                                                   ' ({}, {}) identifies an'
+                                                   ' irreducible loop'.
+                                                   format(pred_vertex.vertex_id,
+                                                          vertex.vertex_id)
+                                                   )
                     self.__find_loop_body(control_flow_graph,
                                           depth_first_search_tree,
                                           pred_vertex, 
@@ -1191,10 +1206,10 @@ class PathExpression(DirectedGraph):
     
     
     def dot_filename(self):
-        return '%s.%s.%d_%d.pe' % (config.get_filename_prefix(), 
-                                   self._name,
-                                   self._pred_vertex.vertex_id,
-                                   self._succ_vertex.vertex_id)  
+        return '{}.{}.{}_{}.pe'.format(config.get_filename_prefix(), 
+                                       self._name,
+                                       self._pred_vertex.vertex_id,
+                                       self._succ_vertex.vertex_id)  
         
     
     def __str__(self):
@@ -1279,14 +1294,11 @@ class StronglyConnectedComponents:
         try:
             return self.__program_point_to_scc_id[program_point]
         except:
-            raise KeyError('Unable to find SCC for program point %r' % 
-                           program_point)
+            raise KeyError('Unable to find SCC for program point {}'.\
+                           format(program_point))
         
     
     def __iter__(self):
-        """
-        Iterate through each strong component.
-        """        
         for scc_id, vertices in self.__scc_id_to_vertices.items():
             yield scc_id, vertices
 
@@ -1359,7 +1371,7 @@ class SuperBlockGraph(DirectedGraph):
     
     @staticmethod
     def create_for_loop(control_flow_graph, loop_nesting_tree, header_vertex):
-        name = '%s.%d' % (control_flow_graph.name, header_vertex.vertex_id)
+        name = '{}.{}'.format(control_flow_graph.name, header_vertex.vertex_id)
         super_block_graph = SuperBlockGraph(name)
         induced_subgraph = loop_nesting_tree.\
                             induce_subgraph_with_tails_and_exits(name,
@@ -1486,7 +1498,7 @@ class SuperBlockGraph(DirectedGraph):
     
     
     def dot_filename(self):
-        return '%s.%s.super' % (config.get_filename_prefix(), 
-                                self._name)
+        return '{}.{}.super'.format(config.get_filename_prefix(), 
+                                    self._name)
             
         

@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-import os
 import argparse
 import ast
 
 from tools.lib.utils import config
 from tools.lib.utils import debug
-from tools.lib.system import program
+from tools.lib.system import environment
 
 
 
@@ -66,10 +65,16 @@ def parse_the_command_line():
                         help='debug mode',
                         default=0)
     
-    parser.add_argument('--dot',
+    parser.add_argument('--graphviz',
                         action='store_true',
-                        help='produce Graphviz dot files of graphs produced'
-                        ' during the analysis',
+                        help='using Graphviz, produce PNG files of graphs'
+                        ' produced during the analysis',
+                        default=False)
+    
+    parser.add_argument('--purge-graphviz',
+                        action='store_true',
+                        help='remove all files created by Graphviz in the'
+                        'target directory',
                         default=False)
 
     parser.add_argument('-v',
@@ -80,11 +85,11 @@ def parse_the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
-    config.purge_png_files()
+    config.purge_graphviz_files()
 
 
 if __name__ == "__main__": 
     parse_the_command_line()
-    the_program = program.read_program_information_from_file(config.Arguments.program_file)
+    the_program = environment.Program.create()
     #create_path_expression_between_two_program_points(the_program)
     

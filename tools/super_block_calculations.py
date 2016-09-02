@@ -5,7 +5,8 @@ import threading
 import sys
 
 from tools.lib.utils import config
-from tools.lib.system import program
+from tools.lib.system import environment
+from tools.lib.system import calculations
 
 
 def parse_the_command_line(): 
@@ -23,16 +24,16 @@ def parse_the_command_line():
                         help='debug mode',
                         default=0)
     
-    parser.add_argument('--dot',
+    parser.add_argument('--graphviz',
                         action='store_true',
-                        help='produce Graphviz dot files of graphs produced'
-                        ' during the analysis',
+                        help='using Graphviz, produce PNG files of graphs'
+                        ' produced during the analysis',
                         default=False)
     
-    parser.add_argument('--purge-dot',
+    parser.add_argument('--purge-graphviz',
                         action='store_true',
-                        help='remove all files created by dot in the target'
-                        ' directory',
+                        help='remove all files created by Graphviz in the'
+                        'target directory',
                         default=False)
 
     parser.add_argument('-v',
@@ -41,10 +42,10 @@ def parse_the_command_line():
                         help='be verbose',
                         default=False)
     
-    parser.add_argument('--repeat-calculation',
+    parser.add_argument('--repeat',
                         type=int,
                         help='repeat the calculation this many times',
-                        default=1,
+                        default=config.Arguments.repeat,
                         metavar='<INT>')
     
     parser.add_argument('--shuffle-constraints',
@@ -56,7 +57,7 @@ def parse_the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
-    config.purge_png_files()
+    config.purge_graphviz_files()
 
 
 if __name__ == '__main__': 
@@ -64,9 +65,10 @@ if __name__ == '__main__':
     sys.setrecursionlimit(2**20)
     
     parse_the_command_line()
-    the_program = program.Program.create()
-    for control_flow_graph in the_program.control_flow_graph_iterator():
+    program = environment.Program.create()
+    for control_flow_graph in program.control_flow_graph_iterator():
         control_flow_graph.get_super_block_graph()
-
+    calculations.calculate_wcet_using_integer_linear_programming(program, 
+                                                                 config.Arguments.repeat)
     
     

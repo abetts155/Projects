@@ -14,7 +14,7 @@ from tools.lib.system import vertices
 
 
 def make_file(graph):
-    if config.Arguments.dot:
+    if config.Arguments.graphviz:
         dot_filename = graph.dot_filename() + '.dot'
         with open(dot_filename, 'w') as dot_file:
             dot_file.write('digraph {\n')

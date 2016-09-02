@@ -3,7 +3,7 @@
 import argparse
 
 from tools.lib.utils import config
-from tools.lib.system import program
+from tools.lib.system import environment
 
 
 
@@ -22,16 +22,16 @@ def parse_the_command_line():
                         help='debug mode',
                         default=0)
     
-    parser.add_argument('--dot',
+    parser.add_argument('--graphviz',
                         action='store_true',
-                        help='produce Graphviz dot files of graphs produced'
-                        ' during the analysis',
+                        help='using Graphviz, produce PNG files of graphs'
+                        ' produced during the analysis',
                         default=False)
     
-    parser.add_argument('--purge-dot',
+    parser.add_argument('--purge-graphviz',
                         action='store_true',
-                        help='remove all files created by dot in the target'
-                        ' directory',
+                        help='remove all files created by Graphviz in the'
+                        'target directory',
                         default=False)
 
     parser.add_argument('-v',
@@ -47,14 +47,14 @@ def parse_the_command_line():
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
-    config.purge_png_files()
+    config.purge_graphviz_files()
 
 
 if __name__ == '__main__': 
     parse_the_command_line()
-    the_program = program.Program.create()
+    program = environment.Program.create()
     
-    for control_flow_graph in the_program.control_flow_graph_iterator():
+    for control_flow_graph in program.control_flow_graph_iterator():
         print(control_flow_graph.name)
         basic_blocks, control_flow_edges\
             = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
