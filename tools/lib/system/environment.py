@@ -7,6 +7,7 @@ from tools.lib.system.directed_graphs import ControlFlowGraph, CallGraph
 from tools.lib.system.vertices import ProgramPointVertex, SubprogramVertex
 from tools.lib.utils import dot
 from tools.lib.utils import config
+from tools.lib.utils import debug
 
 
 
@@ -61,8 +62,41 @@ class TimingAnalysisData:
     
     def __create_loop_bound_data(self, control_flow_graph):
         loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
-        for header in loop_nesting_tree.header_iterator():
-            self._header_to_loop_bound[header] = random.randint(1, 10) 
+        maximum_loop_bound = random.randint(1, config.Arguments.max_loop_bound)
+        
+        def create_loop_bound_tuple_for_header(level, abstract_vertex):
+            if level == 0:
+                loop_bound_tuple = (1,)
+            elif level == 1:
+                loop_bound_tuple = (random.randint(1, maximum_loop_bound),)
+            else:
+                parent_abstract_vertex = loop_nesting_tree.get_vertex\
+                                            (abstract_vertex.
+                                             get_ith_predecessor_edge(0).
+                                             vertex_id)
+                parent_header = control_flow_graph.\
+                                    get_vertex_for_program_point\
+                                        (parent_abstract_vertex.program_point)
+                
+                loop_bound_tuple = ()                        
+                for number_of_iterations in self._header_to_loop_bound[parent_header]:
+                    for _ in range(1, number_of_iterations+1):
+                        loop_bound_tuple += (random.randint(1, maximum_loop_bound),)
+            
+            header = control_flow_graph.get_vertex_for_program_point\
+                        (abstract_vertex.program_point)
+            self._header_to_loop_bound[header] = loop_bound_tuple
+            debug.debug_message('{} {} {}'.format(control_flow_graph.name, 
+                                                  header.program_point, 
+                                                  loop_bound_tuple),
+                                __name__)
+        
+        for level, tree_vertices in loop_nesting_tree.\
+                                        level_by_level_iterator(False, True):
+            for abstract_vertex in tree_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    create_loop_bound_tuple_for_header(level, abstract_vertex)
+            
 
 
 
@@ -276,8 +310,8 @@ class Program:
                            format(function_name))
             
             
-    def get_timing_data_for_function(self, function_name):
-        if function_name not in self._timing_analysis_data:
+    def get_timing_data_for_function(self, function_name, redo=False):
+        if function_name not in self._timing_analysis_data or redo:
             function_data = TimingAnalysisData\
                                 (self.get_control_flow_graph(function_name))
             self._timing_analysis_data[function_name] = function_data

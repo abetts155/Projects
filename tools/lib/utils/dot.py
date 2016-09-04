@@ -44,7 +44,7 @@ def make_file(graph):
         
 def write_loop_nesting_tree(dot_file, loop_nesting_tree):
     for vertex in loop_nesting_tree:
-        if vertex.number_of_successors() > 0:
+        if vertex.abstract:
             color = 'orange' if isinstance(vertex.program_point, int) else 'cornsilk'
             dot_file.write('%d [shape=triangle, style=filled, fillcolor=%s,'
                            ' label="%r"];\n' % (vertex.vertex_id, 

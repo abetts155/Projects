@@ -6,15 +6,16 @@ class Arguments:
     Arguments set during parsing of the command line.
     """
     
-    basepath     = None
-    basename     = None
-    verbose      = None
-    debug        = None
-    graphviz     = None
-    program_file = None
-    purge_dot    = None
-    instrument   = None
-    repeat       = 1
+    basepath       = None
+    basename       = None
+    verbose        = None
+    debug          = None
+    graphviz       = None
+    program_file   = None
+    purge_dot      = None
+    instrument     = None
+    repeat         = 1
+    max_loop_bound = 10
     
 
 def set_filename_prefix():

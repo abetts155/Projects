@@ -120,6 +120,10 @@ class Vertex:
                ','.join(repr(value) for value in self._successors.values()))
             
             
+    def __hash__(self):
+        return self._vertex_id
+            
+            
             
 class ProgramPointVertex(Vertex):
     

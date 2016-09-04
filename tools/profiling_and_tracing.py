@@ -18,9 +18,15 @@ def parse_the_command_line():
     
     parser.add_argument('-d',
                         '--debug',
-                        type=int,
+                        action='store_true',
                         help='debug mode',
-                        default=0)
+                        default=False)
+    
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true',
+                        help='be verbose',
+                        default=False)
     
     parser.add_argument('--graphviz',
                         action='store_true',
@@ -32,12 +38,6 @@ def parse_the_command_line():
                         action='store_true',
                         help='remove all files created by Graphviz in the'
                         'target directory',
-                        default=False)
-
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true',
-                        help='be verbose',
                         default=False)
     
     parser.add_argument('--instrument',

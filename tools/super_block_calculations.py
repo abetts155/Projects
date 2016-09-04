@@ -17,12 +17,18 @@ def parse_the_command_line():
     parser.add_argument('program_file',
                         help='a file containing program information'
                         ' (with .txt extension)')
-    
+     
     parser.add_argument('-d',
                         '--debug',
-                        type=int,
+                        action='store_true',
                         help='debug mode',
-                        default=0)
+                        default=False)
+    
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true',
+                        help='be verbose',
+                        default=False)
     
     parser.add_argument('--graphviz',
                         action='store_true',
@@ -36,24 +42,18 @@ def parse_the_command_line():
                         'target directory',
                         default=False)
 
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true',
-                        help='be verbose',
-                        default=False)
-    
     parser.add_argument('--repeat',
                         type=int,
                         help='repeat the calculation this many times',
                         default=config.Arguments.repeat,
                         metavar='<INT>')
     
-    parser.add_argument('--shuffle-constraints',
-                        action='store_true',
-                        help='before repeating the solve stage of a '
-                        'constraint-based WCET calculation, shuffle '
-                        'the constraints',
-                        default=False)
+    parser.add_argument('--max-loop-bound',
+                        type=int,
+                        help='set the maximum possible value for automatically '
+                        'generated loop bounds',
+                        default=config.Arguments.max_loop_bound,
+                        metavar='<INT>')
     
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
