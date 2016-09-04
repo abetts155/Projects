@@ -24,29 +24,24 @@ def calculate_wcet_using_integer_linear_programming(program,
             # construct the constraint system is unfairly attributed to that
             # activity.
             loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
-            timing_data = program.get_timing_data_for_function\
-                            (control_flow_graph.name, True)
+            control_flow_graph.create_timing_data_if_required()
             ilp_for_control_flow_graph = IntegerLinearProgramForControlFlowGraph\
                                             (control_flow_graph,
-                                             loop_nesting_tree,
-                                             timing_data)
+                                             loop_nesting_tree)
             ilp_for_control_flow_graph.solve()
             debug.verbose_message('wcet({})={}'.
                                   format(control_flow_graph.name,
                                          ilp_for_control_flow_graph.wcet), 
                                   __name__)
-            
-            control_flow_graph.construct_super_blocks_graph()
-             
-#             ilp_for_super_block_graph = IntegerLinearProgramForSuperBlockGraph\
-#                                             (control_flow_graph,
-#                                              loop_nesting_tree,
-#                                              timing_data)
-#             ilp_for_super_block_graph.solve()
-#             debug.verbose_message('wcet({})={}'.
-#                                   format(control_flow_graph.name,
-#                                          ilp_for_super_block_graph.wcet), 
-#                                   __name__)
+              
+            ilp_for_super_block_graph = IntegerLinearProgramForSuperBlockGraph\
+                                            (control_flow_graph,
+                                             loop_nesting_tree)
+            ilp_for_super_block_graph.solve()
+            debug.verbose_message('wcet({})={}'.
+                                  format(control_flow_graph.name,
+                                         ilp_for_super_block_graph.wcet), 
+                                  __name__)
              
 
 edge_variable_prefix = 'E_'
@@ -87,8 +82,8 @@ class ConstraintSystem:
         self._solve_time = None
         self._construction_time = None
         self._variable_execution_counts = {}
-        self._the_constraints = set()
-        self._the_variables = set()
+        self._constraints = set()
+        self._variables = set()
     
     
     @property
@@ -141,8 +136,8 @@ class IntegerLinearProgram(ConstraintSystem):
           
     def _create_integer_constraint(self):
         self.int_constraint = 'int'
-        counter = len(self._the_variables)
-        for variable in self._the_variables:
+        counter = len(self._variables)
+        for variable in self._variables:
             self.int_constraint += ' {}'.format(variable)
             if counter > 1:
                 self.int_constraint += ','
@@ -154,7 +149,7 @@ class IntegerLinearProgram(ConstraintSystem):
         with open(self._filename, 'w') as the_file:
             the_file.write(self.obj_function)
             the_file.write(get_new_line(2))
-            for constraint in self._the_constraints:
+            for constraint in self._constraints:
                 the_file.write(constraint)
                 the_file.write(get_new_line())
             the_file.write(get_new_line())
@@ -206,35 +201,29 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
     times of basic blocks and upper bounds on loop header execution counts.
     """
     
-    def __init__(self, control_flow_graph, 
-                 loop_nesting_tree,
-                 timing_analysis_data):
+    def __init__(self, control_flow_graph, loop_nesting_tree):
         ConstraintSystem.__init__(self)
         self._filename = '{}.{}.cfg.ilp'.format(config.get_filename_prefix(), 
                                                control_flow_graph.name)
         start = timeit.default_timer()
-        self.__create_objective_function(control_flow_graph, 
-                                         timing_analysis_data)
+        self.__create_objective_function(control_flow_graph)
         self.__create_structural_constraints(control_flow_graph)
         self.__create_loop_bound_constraints(control_flow_graph,
-                                             loop_nesting_tree,
-                                             timing_analysis_data)
+                                             loop_nesting_tree)
         self._create_integer_constraint()
         end = timeit.default_timer()
         self._construction_time = end - start
         
         
     def __create_objective_function(self, 
-                                    control_flow_graph, 
-                                    timing_analysis_data):
+                                    control_flow_graph):
         self.obj_function = 'max: '
         counter = control_flow_graph.number_of_basic_blocks()
         for vertex in control_flow_graph:
             if ProgramPointVertex.is_basic_block(vertex.program_point):
                 vertex_variable = get_execution_count_variable(vertex.program_point) 
                 self.obj_function += '{} {}'.format\
-                                        (timing_analysis_data.get_wcet(vertex),
-                                         vertex_variable)
+                                        (vertex.wcet, vertex_variable)
                 if counter > 1:
                     self.obj_function += ' + '
                 counter -= 1
@@ -248,72 +237,71 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                 if vertex not in handled_flow_in_constraint:
                     vertex_variable = get_execution_count_variable\
                                         (vertex.program_point)
-                    self._the_variables.add(vertex_variable)
-                    new_constraint = vertex_variable
-                    new_constraint += ' = '
+                    self._variables.add(vertex_variable)
+                    constraint = vertex_variable
+                    constraint += ' = '
                     pred_vertex = control_flow_graph.\
                                     get_vertex(vertex.
                                                get_ith_predecessor_edge(0).
                                                vertex_id)
                     pred_vertex_variable = get_execution_count_variable\
                                             (pred_vertex.program_point)
-                    self._the_variables.add(pred_vertex_variable)
-                    new_constraint += pred_vertex_variable
-                    new_constraint += ';'
-                    self._the_constraints.add(new_constraint)                    
+                    self._variables.add(pred_vertex_variable)
+                    constraint += pred_vertex_variable
+                    constraint += ';'
+                    self._constraints.add(constraint)                    
             else:
                 vertex_variable = get_execution_count_variable\
                                         (vertex.program_point)
-                self._the_variables.add(vertex_variable)
-                new_constraint = vertex_variable
-                new_constraint += ' = '
+                self._variables.add(vertex_variable)
+                constraint = vertex_variable
+                constraint += ' = '
                 counter = vertex.number_of_predecessors()
                 for pred_edge in vertex.predecessor_edge_iterator():
                     pred_vertex = control_flow_graph.\
                                     get_vertex(pred_edge.vertex_id)
                     pred_vertex_variable = get_execution_count_variable\
                                             (pred_vertex.program_point)
-                    self._the_variables.add(pred_vertex_variable)
-                    new_constraint += pred_vertex_variable
+                    self._variables.add(pred_vertex_variable)
+                    constraint += pred_vertex_variable
                     if counter > 1:
-                        new_constraint += ' + '
+                        constraint += ' + '
                     counter -= 1 
-                new_constraint += ';'
-                self._the_constraints.add(new_constraint)
+                constraint += ';'
+                self._constraints.add(constraint)
                 
             if vertex.number_of_successors() > 1:
                 vertex_variable = get_execution_count_variable\
                                         (vertex.program_point)
-                self._the_variables.add(vertex_variable)
-                new_constraint = vertex_variable
-                new_constraint += ' = '
+                self._variables.add(vertex_variable)
+                constraint = vertex_variable
+                constraint += ' = '
                 counter = vertex.number_of_successors()
                 for succ_edge in vertex.successor_edge_iterator():
                     succ_vertex = control_flow_graph.\
                                     get_vertex(succ_edge.vertex_id)
                     succ_vertex_variable = get_execution_count_variable\
                                             (succ_vertex.program_point)
-                    self._the_variables.add(succ_vertex_variable)
-                    new_constraint += succ_vertex_variable
+                    self._variables.add(succ_vertex_variable)
+                    constraint += succ_vertex_variable
                     handled_flow_in_constraint.add(succ_vertex)
                     if counter > 1:
-                        new_constraint += ' + '
+                        constraint += ' + '
                     counter -= 1 
-                new_constraint += ';'
-                self._the_constraints.add(new_constraint)     
+                constraint += ';'
+                self._constraints.add(constraint)     
             
             
     def __create_loop_bound_constraints(self, 
                                         control_flow_graph,
-                                        loop_nesting_tree,
-                                        timing_analysis_data):
+                                        loop_nesting_tree):
         
-        def create_local_loop_bound_constraint(header,
-                                               loop_bound_tuple):
-            new_constraint = get_execution_count_variable(header.program_point)
-            
+        def create_local_loop_bound_constraint(abstract_vertex):
+            header = control_flow_graph.get_vertex_for_program_point\
+                                (abstract_vertex.program_point)
+            constraint = get_execution_count_variable(header.program_point)
             if header.program_point == loop_nesting_tree.root_vertex.program_point:
-                new_constraint += ' = {};'.format(max(loop_bound_tuple))
+                constraint += ' = {};'.format(max(header.loop_bound))
             else:
                 loop_body = loop_nesting_tree.\
                                 get_loop_body_for_program_point(header.program_point)
@@ -323,34 +311,36 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                     if pred_vertex not in loop_body:
                         loop_entry_predecessor_vertices.add(pred_vertex)
                        
-                new_constraint += ' <= ' 
+                constraint += ' <= ' 
                 counter = len(loop_entry_predecessor_vertices)
                 for pred_vertex in loop_entry_predecessor_vertices:
-                    new_constraint += '{} {}'.format(max(loop_bound_tuple),
+                    constraint += '{} {}'.format(max(header.loop_bound),
                                                      get_execution_count_variable
                                                      (pred_vertex.program_point))
                     if counter > 1:
-                        new_constraint += ' + '
+                        constraint += ' + '
                     counter -= 1 
-                new_constraint += ';'
-    
-            self._the_constraints.add(new_constraint)
+                constraint += ';'
+            self._constraints.add(constraint)
+            
         
-        for _, tree_vertices in loop_nesting_tree.level_by_level_iterator\
-                                    (abstract_vertices_only=True):
+        def create_global_loop_bound_constraint(abstract_vertex):
+            header = control_flow_graph.get_vertex_for_program_point\
+                                (abstract_vertex.program_point)
+            constraint = get_execution_count_variable(header.program_point)
+            constraint += ' <= '
+            constraint += '{};'.format(sum(header.loop_bound))
+            self._constraints.add(constraint)
+            
+        
+        for _, tree_vertices in loop_nesting_tree.\
+                                    level_by_level_iterator\
+                                        (abstract_vertices_only=True):
             for abstract_vertex in tree_vertices:
                 if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
-                    header = control_flow_graph.get_vertex_for_program_point\
-                                (abstract_vertex.program_point)
-                    loop_bound_tuple = timing_analysis_data.\
-                                        get_loop_bound(header)
-                    create_local_loop_bound_constraint(header,
-                                                       loop_bound_tuple)
+                    create_local_loop_bound_constraint(abstract_vertex)
+                    create_global_loop_bound_constraint(abstract_vertex)
                     
-                    new_constraint = get_execution_count_variable(header.program_point)
-                    new_constraint += ' <= '
-                    new_constraint += '{};'.format(sum(loop_bound_tuple))
-                    self._the_constraints.add(new_constraint)
             
     
 
@@ -361,28 +351,22 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
     times of basic blocks and upper bounds on loop header execution counts.
     """
     
-    def __init__(self, control_flow_graph, 
-                 loop_nesting_tree,
-                 timing_analysis_data):
+    def __init__(self, control_flow_graph, loop_nesting_tree):
         ConstraintSystem.__init__(self)
         self._filename = '{}.{}.super.ilp'.format(config.get_filename_prefix(), 
                                                   control_flow_graph.name)
         start = timeit.default_timer()
-        self.__create_objective_function(control_flow_graph,
-                                         timing_analysis_data)
+        self.__create_objective_function(control_flow_graph)
         self.__create_structural_constraints(control_flow_graph,
                                              loop_nesting_tree)
         self.__create_loop_bound_constraints(control_flow_graph,
-                                             loop_nesting_tree,
-                                             timing_analysis_data)
+                                             loop_nesting_tree)
         self._create_integer_constraint()
         end = timeit.default_timer()
         self._construction_time = end - start
                 
         
-    def __create_objective_function(self,
-                                    control_flow_graph,
-                                    timing_analysis_data):
+    def __create_objective_function(self, control_flow_graph):
         self.obj_function = 'max: '
         counter = control_flow_graph.number_of_basic_blocks()
         for _, subgraph in control_flow_graph.super_block_graph_iterator():
@@ -392,11 +376,10 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                     and not induced_vertex.abstract:
                         vertex_variable = get_execution_count_variable\
                                             (induced_vertex.program_point)   
-                        self._the_variables.add(vertex_variable)  
-                        wcet = timing_analysis_data.get_wcet\
-                                (control_flow_graph.get_vertex_for_program_point
-                                 (induced_vertex.program_point))  
-                        self.obj_function += '{} {}'.format(wcet,
+                        self._variables.add(vertex_variable) 
+                        cfg_vertex = control_flow_graph.get_vertex_for_program_point\
+                                        (induced_vertex.program_point)
+                        self.obj_function += '{} {}'.format(cfg_vertex.wcet,
                                                             vertex_variable)
                         if counter > 1:
                             self.obj_function += ' + '
@@ -407,8 +390,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
     def __create_structural_constraints(self,
                                         control_flow_graph,
                                         loop_nesting_tree):
-        for header, subgraph in control_flow_graph.super_block_graph_iterator():
-            self.__header_to_loop_exit_super_blocks[header] = set()
+        for _, subgraph in control_flow_graph.super_block_graph_iterator():
             for super_vertex in subgraph:
                 self.__create_intra_super_block_constraints(super_vertex)
                         
@@ -419,8 +401,6 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                     
                 if super_vertex.number_of_successors() > 1:
                     self.__create_successor_super_block_constraints(control_flow_graph,
-                                                                    loop_nesting_tree,
-                                                                    header,
                                                                     subgraph,
                                                                     super_vertex)
                     
@@ -432,118 +412,104 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
             if induced_vertex != super_vertex.representative\
             and not induced_vertex.abstract\
             and ProgramPointVertex.is_basic_block(induced_vertex.program_point):
-                new_constraint = get_execution_count_variable\
+                constraint = get_execution_count_variable\
                                     (induced_vertex.program_point)
-                new_constraint += ' = '
-                new_constraint += get_execution_count_variable\
+                constraint += ' = '
+                constraint += get_execution_count_variable\
                                     (super_vertex.representative.program_point)
-                new_constraint += ';'
-                self._the_constraints.add(new_constraint)
+                constraint += ';'
+                self._constraints.add(constraint)
                 
                 
     def __create_predecessor_super_block_constraints(self,
                                                      subgraph, 
                                                      super_vertex):
-        new_constraint = get_execution_count_variable(super_vertex.
+        constraint = get_execution_count_variable(super_vertex.
                                                       representative.
                                                       program_point)
-        new_constraint += ' = '
+        constraint += ' = '
         counter = super_vertex.number_of_predecessors()
         for pred_edge in super_vertex.predecessor_edge_iterator():
             super_pred_vertex = subgraph.get_vertex\
                                 (pred_edge.vertex_id)
-            new_constraint += get_execution_count_variable(super_pred_vertex.
+            constraint += get_execution_count_variable(super_pred_vertex.
                                                            representative.
                                                            program_point)
             if counter > 1:
-                new_constraint += ' + '
+                constraint += ' + '
             counter -= 1
-        new_constraint += ';'
-        self._the_constraints.add(new_constraint)
+        constraint += ';'
+        self._constraints.add(constraint)
         
         
     def __create_successor_super_block_constraints(self,
                                                    control_flow_graph,
-                                                   loop_nesting_tree,
-                                                   header,
                                                    subgraph,
-                                                   super_vertex):
-        
-        def get_super_block_in_outer_loop(super_succ_vertex):
-            tree_vertex = loop_nesting_tree.get_vertex_for_program_point\
-                            (super_succ_vertex.representative.program_point)
-            parent_tree_vertex = loop_nesting_tree.get_vertex\
-                            (tree_vertex.get_ith_predecessor_edge(0).vertex_id)
-            # The parent of the program point might be a loop tail: we want the
-            # loop header instead
-            if not ProgramPointVertex.is_basic_block(parent_tree_vertex.program_point):
-                parent_tree_vertex = loop_nesting_tree.get_vertex\
-                                        (parent_tree_vertex.
-                                         get_ith_predecessor_edge(0).
-                                         vertex_id)                                        
-            assert ProgramPointVertex.is_basic_block(parent_tree_vertex.program_point)
-            outer_header = control_flow_graph.get_vertex(parent_tree_vertex.
-                                                         program_point)
-            outer_loop_subgraph = control_flow_graph.get_super_block_subgraph(outer_header)
-            program_point_vertex = outer_loop_subgraph.induced_subgraph.\
-                                    get_vertex_for_program_point(super_succ_vertex.
-                                                                 representative.
-                                                                 program_point) 
-            return outer_loop_subgraph.get_super_vertex_for_induced_vertex(program_point_vertex)
-        
-        
+                                                   super_vertex):        
         for _, partition in super_vertex.successor_edge_partition_iterator():
             if len(partition) > 1:
-                new_constraint = get_execution_count_variable(super_vertex.
-                                                              representative.
-                                                              program_point)
-                new_constraint += ' = '
+                constraint = get_execution_count_variable(super_vertex.
+                                                          representative.
+                                                          program_point)
+                constraint += ' = '
                 counter = len(partition)
                 for succ_edge in partition:
                     super_succ_vertex = subgraph.get_vertex(succ_edge.vertex_id)
-                    if super_succ_vertex.is_loop_exit_edge:
-                        super_succ_vertex = get_super_block_in_outer_loop(super_succ_vertex)
-                    new_constraint += get_execution_count_variable\
+                    constraint += get_execution_count_variable\
                                         (super_succ_vertex.representative.program_point)
                     if counter > 1:
-                        new_constraint += ' + '
+                        constraint += ' + '
                     counter -= 1
-                new_constraint += ';'
-                self._the_constraints.add(new_constraint)
+                constraint += ';'
+                self._constraints.add(constraint)
     
     
     def __create_loop_bound_constraints(self,
                                         control_flow_graph,
-                                        loop_nesting_tree,
-                                        timing_analysis_data):
-        for header in loop_nesting_tree.header_iterator():
-            loop_bound_tuple = timing_analysis_data.get_loop_bound(header)
-            
-            new_constraint = get_execution_count_variable(header.program_point)
-            if header.program_point == loop_nesting_tree.root_vertex.program_point:
-                new_constraint += ' = {};'.format(max(loop_bound_tuple))
+                                        loop_nesting_tree):
+        
+        def create_local_loop_bound_constraint(abstract_vertex):
+            header = control_flow_graph.get_vertex_for_program_point\
+                                            (abstract_vertex.program_point)
+            subgraph = control_flow_graph.get_super_block_subgraph(abstract_vertex)
+            constraint = get_execution_count_variable(abstract_vertex.program_point)
+            if abstract_vertex.program_point == loop_nesting_tree.root_vertex.program_point:
+                constraint += ' = {};'.format(max(header.loop_bound))
             else:
-                parent_header_tree = loop_nesting_tree.get_parent_header(header)
-                parent_header = control_flow_graph.get_vertex(parent_header_tree.vertex_id)
-                parent_subgraph = control_flow_graph.get_super_block_subgraph(parent_header)
-                super_vertex = parent_subgraph.get_super_vertex_for_induced_vertex
-                new_constraint += ' <= '
-                counter = len(self.__header_to_loop_exit_super_blocks[header])
-                for super_vertex in self.__header_to_loop_exit_super_blocks[header]:
-                    new_constraint += '{} {}'.format(max(loop_bound_tuple),
-                                                     get_execution_count_variable
-                                                     (super_vertex.representative.program_point))
+                constraint += ' <= ' 
+                loop_exit_super_blocks = [super_vertex for super_vertex in subgraph
+                                          if super_vertex.is_loop_exit_edge]
+                
+                counter = len(loop_exit_super_blocks)
+                for succ_vertex in loop_exit_super_blocks:
+                    constraint += '{} {}'.format(max(header.loop_bound),
+                                                 get_execution_count_variable
+                                                 (succ_vertex.representative.
+                                                  program_point))
                     if counter > 1:
-                        new_constraint += ' + '
-                    counter -= 1
-                new_constraint += ';'
+                        constraint += ' + '
+                    counter -= 1 
+                constraint += ';'
+            self._constraints.add(constraint)
             
-            self._the_constraints.add(new_constraint)
-            
-            new_constraint = get_execution_count_variable(header.program_point)
-            new_constraint += ' <= '
-            new_constraint += '{};'.format(sum(loop_bound_tuple))
-            self._the_constraints.add(new_constraint)
+        
+        def create_global_loop_bound_constraint(abstract_vertex):
+            header = control_flow_graph.get_vertex_for_program_point\
+                                            (abstract_vertex.program_point)
+            constraint = get_execution_count_variable(abstract_vertex.program_point)
+            constraint += ' <= '
+            constraint += '{};'.format(sum(header.loop_bound))
+            self._constraints.add(constraint)
+        
+        
+        for _, tree_vertices in loop_nesting_tree.\
+                                    level_by_level_iterator\
+                                        (abstract_vertices_only=True):
+            for abstract_vertex in tree_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    create_local_loop_bound_constraint(abstract_vertex)
+                    create_global_loop_bound_constraint(abstract_vertex) 
+                    
         
     
     

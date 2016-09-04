@@ -52,7 +52,7 @@ def parse_the_command_line():
 
 if __name__ == '__main__': 
     parse_the_command_line()
-    program = environment.Program.create()
+    program = environment.create_program_from_input_file()
     
     for control_flow_graph in program.control_flow_graph_iterator():
         print(control_flow_graph.name)

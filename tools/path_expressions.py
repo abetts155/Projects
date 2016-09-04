@@ -90,6 +90,6 @@ def parse_the_command_line():
 
 if __name__ == "__main__": 
     parse_the_command_line()
-    the_program = environment.Program.create()
+    the_program = environment.create_program_from_input_file()
     #create_path_expression_between_two_program_points(the_program)
     

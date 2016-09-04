@@ -232,6 +232,10 @@ class ControlFlowGraph(DirectedGraph):
                                                         path_expression))
         
     
+    def has_vertex_for_program_point(self, program_point):
+        return program_point in self._program_point_to_vertex
+    
+    
     def get_vertex_for_program_point(self, program_point):
         try:
             return self._program_point_to_vertex[program_point]
@@ -370,11 +374,11 @@ class ControlFlowGraph(DirectedGraph):
                     succ_vertex = induced_graph.get_vertex(succ_edge.vertex_id)   
                     induced_graph.add_edge(vertex, succ_vertex, None)    
             
-        # Add a vertex for each loop-exit edge out of this loop.
+        # Add a vertex for each loop-exit program point out of this loop.
         for tree_vertex in loop_exits:
             induced_graph.add_vertex(ProgramPointVertex(tree_vertex.vertex_id,
                                                         tree_vertex.program_point))
-        # Add edges between basic block source and loop-exit edge.
+        # Add edges between basic block source and loop-exit program point.
         for tree_vertex in loop_exits:
             succ_vertex = induced_graph.get_vertex(tree_vertex.vertex_id)
             vertex = induced_graph.get_vertex_for_program_point(succ_vertex.program_point[0])
@@ -385,7 +389,7 @@ class ControlFlowGraph(DirectedGraph):
             induced_graph.add_vertex(ProgramPointVertex(tree_vertex.vertex_id,
                                                         tree_vertex.program_point,
                                                         True))
-        # Add edges between loop-entry edge and the inner loop header.
+        # Add edges between loop-entry program points and the inner loop header.
         loop_body_edge_program_points = [vertex for vertex in loop_body 
                                          if not ProgramPointVertex.is_basic_block
                                          (vertex.program_point)]
@@ -396,7 +400,7 @@ class ControlFlowGraph(DirectedGraph):
             for source_tree_vertex in source_tree_vertices:
                 vertex = induced_graph.get_vertex(source_tree_vertex.vertex_id)
                 induced_graph.add_edge(vertex, succ_vertex, None)
-        # Add edges from each inner loop header to its loop-exit edges.
+        # Add edges from each inner loop header to its loop-exit program points.
         for succ_vertex in induced_graph:
             if succ_vertex.program_point != header_program_point\
             and succ_vertex.number_of_predecessors() == 0:
@@ -408,6 +412,7 @@ class ControlFlowGraph(DirectedGraph):
                     if tree_vertex.program_point == abstract_vertex.program_point:
                         vertex = induced_graph.get_vertex(tree_vertex.vertex_id)
                         induced_graph.add_edge(vertex, succ_vertex, None)
+                        
         # Guarantee that there is a unique exit vertex
         without_successors = []
         for vertex in induced_graph:
@@ -428,6 +433,45 @@ class ControlFlowGraph(DirectedGraph):
         induced_graph.exit_vertex = induced_graph.find_exit_vertex()
         dot.make_file(induced_graph)
         return induced_graph
+    
+    
+    def create_timing_data_if_required(self):
+        for vertex in self:
+            if ProgramPointVertex.is_basic_block(vertex.program_point)\
+            and vertex.wcet is None:
+                vertex.wcet = random.randint(1, 20)
+                
+        
+        maximum_loop_bound = random.randint(1, config.Arguments.max_loop_bound)
+        def create_loop_bound_tuple_for_header(level, abstract_vertex):
+            if level == 0:
+                return (1,)
+            elif level == 1:
+                return (random.randint(1, maximum_loop_bound),)
+            else:
+                parent_abstract_vertex = loop_nesting_tree.get_vertex\
+                                            (abstract_vertex.
+                                             get_ith_predecessor_edge(0).
+                                             vertex_id)
+                parent_header = self.get_vertex_for_program_point\
+                                    (parent_abstract_vertex.program_point)
+                
+                loop_bound = ()                        
+                for number_of_iterations in parent_header.loop_bound:
+                    for _ in range(1, number_of_iterations+1):
+                        loop_bound += (random.randint(1, maximum_loop_bound),)
+                return loop_bound
+    
+        loop_nesting_tree = self.get_loop_nesting_tree()
+        for level, tree_vertices in loop_nesting_tree.\
+                                        level_by_level_iterator(False, True):
+            for abstract_vertex in tree_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    header = self.get_vertex_for_program_point\
+                                (abstract_vertex.program_point)
+                    if header.loop_bound is None:
+                        header.loop_bound = create_loop_bound_tuple_for_header\
+                                                (level, abstract_vertex)            
     
     
     def reduce(self, unmonitored_program_points):
@@ -1176,10 +1220,10 @@ class LoopNestingHierarchy(Tree):
                 else:
                     tree_vertex = self.get_vertex(vertex.vertex_id)
                     if tree_vertex.number_of_predecessors() == 0:
-                        if len(header_loop_bodies[header]) == len(loop_body):
+                        if header_loop_bodies[header] == loop_body:
                             self.add_edge(abstract_vertices[tail], 
                                           tree_vertex)
-                        elif vertex in header_loop_bodies[header]: 
+                        elif vertex not in header_loop_bodies[header]: 
                             self.add_edge(abstract_vertices[tail],
                                           tree_vertex)
                         else:
@@ -1458,7 +1502,7 @@ class SuperBlockGraph(DirectedGraph):
                            'program point {}'.format(induced_vertex.program_point))
     
     
-    def add_super_blocks(self, 
+    def add_super_blocks(self,
                          abstract_vertex,
                          induced_subgraph,
                          strong_components_of_dominator_graph):
@@ -1481,11 +1525,18 @@ class SuperBlockGraph(DirectedGraph):
                     super_vertex
                 super_vertex.vertices.append(induced_vertex) 
                 
-                if not induced_vertex.abstract \
-                and ProgramPointVertex.is_basic_block(induced_vertex.program_point):
-                    super_vertex.representative = induced_vertex
+                if ProgramPointVertex.is_basic_block(induced_vertex.program_point):
+                    if not induced_vertex.abstract:
+                        super_vertex.representative = induced_vertex
+                else:
+                    if induced_subgraph.has_vertex_for_program_point\
+                        (induced_vertex.program_point[0])\
+                    and not induced_subgraph.has_vertex_for_program_point\
+                        (induced_vertex.program_point[1]):
+                        super_vertex.is_loop_exit_edge = True
 
-                        
+        # If the super block does not have a representative yet, then set it to
+        # the first program point              
         for super_vertex in self:
             if super_vertex.representative is None:
                 super_vertex.representative = super_vertex.vertices[0]

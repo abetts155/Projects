@@ -65,9 +65,8 @@ if __name__ == '__main__':
     sys.setrecursionlimit(2**20)
     
     parse_the_command_line()
-    program = environment.Program.create()
+    program = environment.create_program_from_input_file()
     calculations.calculate_wcet_using_integer_linear_programming\
-        (program, 
-         config.Arguments.repeat)
+        (program, config.Arguments.repeat)
     
     

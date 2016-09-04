@@ -130,7 +130,9 @@ class ProgramPointVertex(Vertex):
     """
     Models a program point (i.e., a basic block or a transition between two
     basic blocks) as a vertex.  These vertices are used in control flow graphs
-    and path expressions.
+    and path expressions.  Various satellite data is attached to these vertices,
+    depending on the type of analysis, e.g., whether the program oiint is
+    interested.
     """
     
     @staticmethod
@@ -143,6 +145,8 @@ class ProgramPointVertex(Vertex):
         self._program_point = program_point
         self._abstract = abstract
         self._instrumented = False
+        self._wcet = None
+        self._loop_bound = None
         
     
     @property
@@ -163,6 +167,26 @@ class ProgramPointVertex(Vertex):
     @instrumented.setter
     def instrumented(self, value):
         self._instrumented = value
+        
+        
+    @property
+    def wcet(self):
+        return self._wcet
+    
+    
+    @wcet.setter
+    def wcet(self, value):
+        self._wcet = value
+        
+        
+    @property
+    def loop_bound(self):
+        return self._loop_bound
+    
+    
+    @loop_bound.setter
+    def loop_bound(self, value):
+        self._loop_bound = value
     
     
     def __str__(self):
