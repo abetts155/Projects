@@ -59,7 +59,7 @@ def parse_the_command_line():
                         help='a file containing program information'
                         ' (with .txt extension)')
     
-    pparser.add_argument('-d',
+    parser.add_argument('-d',
                         '--debug',
                         action='store_true',
                         help='debug mode',

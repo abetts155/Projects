@@ -2,6 +2,10 @@
 This module includes all vertex types that appear in graphs. 
 """
 
+import collections
+
+
+
 class Vertex:
     
     """
@@ -11,8 +15,8 @@ class Vertex:
     
     def __init__(self, vertex_id):
         self._vertex_id = vertex_id
-        self._predecessors = {}
-        self._successors = {}
+        self._predecessors = collections.OrderedDict()
+        self._successors = collections.OrderedDict()
 
     
     @property

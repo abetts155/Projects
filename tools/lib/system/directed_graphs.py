@@ -9,6 +9,7 @@ import random
 
 from tools.lib.utils import dot
 from tools.lib.utils import config
+from tools.lib.utils import debug
 
 from tools.lib.system.edges import (Edge,
                                     TransitionEdge,
@@ -64,7 +65,7 @@ class DirectedGraph:
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, name):
-        self._vertices = collections.OrderedDict()
+        self._vertices = {}
         self._name = name
         self._reverse_graph = None
         self.__new_edge_id = 0
@@ -181,6 +182,7 @@ class ControlFlowGraph(DirectedGraph):
         self._post_dominator_tree = None
         self._loop_nesting_tree = None
         self._super_block_graphs = {}
+        self._reduced = False
         
         
     @property
@@ -220,6 +222,14 @@ class ControlFlowGraph(DirectedGraph):
                 self._basic_block_vertices.add(vertex)
             else:
                 self._control_flow_edge_vertices.add(vertex)
+                
+                
+    def remove_vertex(self, vertex):
+        DirectedGraph.remove_vertex(self, vertex)
+        if vertex == self._entry_vertex:
+            self._entry_vertex = None
+        if vertex == self._exit_vertex:
+            self._exit_vertex = None
         
     
     def add_edge(self, pred_vertex, succ_vertex, path_expression):
@@ -474,12 +484,112 @@ class ControlFlowGraph(DirectedGraph):
                                                 (level, abstract_vertex)            
     
     
-    def reduce(self, unmonitored_program_points):
-        state_transition_to_path_expression = {}
+    def reduce(self):
+        
+        """
+        Eliminate program points that are not instrumented.  During this reduction.
+         and reconnect the
+        remaining program points if there is at least one path between them
+        in the original control flow graph.
+        """
+        
+        self._reduced = True
+        
+        def create_path_expression_for_edge(pred_vertex,
+                                            succ_vertex,
+                                            pred_to_vertex_edge,
+                                            vertex_to_succ_edge,
+                                            loop_expression):
+            list_of_child_expressions = []
+                        
+            if loop_expression is not None:
+                list_of_child_expressions.append(loop_expression)
+                
+            if pred_to_vertex_edge.path_expression is not None:
+                list_of_child_expressions.append(pred_to_vertex_edge.
+                                                 path_expression)
+            
+            program_point_path_expression =\
+                PathExpression.create_sequence_from_single_program_point\
+                    (vertex.program_point, self._name)
+            list_of_child_expressions.append(program_point_path_expression)
+            
+            if vertex_to_succ_edge.path_expression is not None:
+                list_of_child_expressions.append(vertex_to_succ_edge.
+                                                 path_expression)
+           
+            pred_vertex_to_succ_vertex_path_expression =\
+                PathExpression.create_sequence_of_path_expressions\
+                    (list_of_child_expressions, self._name)
+            
+            if not pred_vertex.has_successor(vertex_to_succ_edge.vertex_id):
+                self.add_edge(pred_vertex, 
+                              succ_vertex, 
+                              pred_vertex_to_succ_vertex_path_expression)
+            else:
+                pred_to_succ_edge = pred_vertex.get_successor_edge(vertex_to_succ_edge.
+                                                                   vertex_id)
+                alternative_expression =\
+                    PathExpression.create_alternative_of_two_path_expressions\
+                        (pred_to_succ_edge.path_expression,
+                         pred_vertex_to_succ_vertex_path_expression,
+                         self._name)
+                pred_to_succ_edge.path_expression = alternative_expression
+        
+        
+        def connect_predecessors_to_successors(vertex):
+            """
+            For this vertex, connect each of its predecessor to each of its 
+            successors.
+            """
+            
+            loop_expression = None
+            if vertex.has_successor(vertex.vertex_id):
+                self_loop_edge = vertex.get_successor_edge(vertex.vertex_id)
+                loop_expression =\
+                    PathExpression.create_loop_path_expression\
+                        (self_loop_edge.path_expression, 
+                         self._name)
+            
+            for pred_edge in vertex.predecessor_edge_iterator():
+                if pred_edge.vertex_id != vertex.vertex_id:
+                    pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                    for succ_edge in vertex.successor_edge_iterator():
+                        if succ_edge.vertex_id != vertex.vertex_id:
+                            succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                            create_path_expression_for_edge(pred_vertex, 
+                                                            succ_vertex,
+                                                            pred_edge,
+                                                            succ_edge,
+                                                            loop_expression)
+        
+        
+        states_to_remove = [vertex for vertex in self if not vertex.instrumented]
+        random.shuffle(states_to_remove)
+        for vertex in states_to_remove:
+            debug.verbose_message('Removing program point {}'.
+                                  format(vertex.program_point), 
+                                  __name__)
+            connect_predecessors_to_successors(vertex)
+            self.remove_vertex(vertex)
+            
+            
+        for vertex in self:
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                succ_edge.path_expression.pred_vertex = vertex
+                succ_edge.path_expression.succ_vertex = succ_vertex
+                dot.make_file(succ_edge.path_expression)
+                
+         
+        dot.make_file(self)
             
             
     def reduce_but_maintain_path_reconstructibility(self,
                                                     unmonitored_program_points):
+        
+        self._reduced = True
+        
         # We use a temporary state transition to path expression mapping to
         # ensure linear growth of path expression trees. 
         state_transition_to_path_expression = {}
@@ -556,15 +666,18 @@ class ControlFlowGraph(DirectedGraph):
                 pred_edge = succ_vertex.get_predecessor_edge(vertex.vertex_id)
                 path_expression = PathExpression.create_sequence_from_list_of_program_points\
                     (state_transition_to_path_expression[(vertex, succ_vertex)], 
-                     self._name, 
-                     vertex, 
-                     succ_vertex)
+                     self._name)
                 succ_edge.path_expression = path_expression
                 pred_edge.path_expression = path_expression
     
+        dot.make_file(self)
+    
     
     def dot_filename(self):
-        return '{}.{}.cfg'.format(config.get_filename_prefix(), self.name)
+        if self._reduced:
+            return '{}.{}.cfg.reduced'.format(config.get_filename_prefix(), self.name)
+        else:
+            return '{}.{}.cfg'.format(config.get_filename_prefix(), self.name)
     
     
     def __str__(self):
@@ -1240,13 +1353,73 @@ class PathExpression(DirectedGraph):
     """    
     
     @staticmethod
-    def create_sequence_from_list_of_program_points(the_list,
-                                                    name,
-                                                    pred_vertex,
-                                                    succ_vertex):
-        path_expression = PathExpression(name,
-                                         pred_vertex,
-                                         succ_vertex)
+    def create_loop_path_expression(child_expression,
+                                    name):
+        path_expression = PathExpression(name)
+        loop_vertex =\
+            RegularExpressionVertex(path_expression.get_new_vertex_id(),
+                                    RegularExpressionVertex.MIGHT_ITERATE)
+        path_expression.add_vertex(loop_vertex)
+        path_expression._root_vertex = loop_vertex
+        path_expression.add_edge(loop_vertex,
+                                 child_expression.root_vertex)
+        path_expression._vertices.update(child_expression._vertices)
+        return path_expression
+    
+    
+    @staticmethod
+    def create_alternative_of_two_path_expressions(child_expression_one,
+                                                   child_expression_two,
+                                                   name):
+        path_expression = PathExpression(name)
+        alternative_vertex =\
+            RegularExpressionVertex(path_expression.get_new_vertex_id(),
+                                    RegularExpressionVertex.ALTERNATIVE)
+        path_expression.add_vertex(alternative_vertex)
+        path_expression._root_vertex = alternative_vertex
+        path_expression.add_edge(alternative_vertex,
+                                 child_expression_one.root_vertex)
+        path_expression._vertices.update(child_expression_one._vertices)
+        path_expression.add_edge(alternative_vertex,
+                                 child_expression_two.root_vertex)
+        path_expression._vertices.update(child_expression_two._vertices)
+        return path_expression
+    
+    
+    @staticmethod
+    def create_sequence_of_path_expressions(list_of_child_expressions, 
+                                            name):
+        path_expression = PathExpression(name)
+        sequence_vertex =\
+            RegularExpressionVertex(path_expression.get_new_vertex_id(),
+                                    RegularExpressionVertex.SEQUENCE)
+        path_expression.add_vertex(sequence_vertex)
+        path_expression._root_vertex = sequence_vertex
+        for child_path_expression in list_of_child_expressions:
+            path_expression.add_edge(sequence_vertex,
+                                     child_path_expression.root_vertex)
+            path_expression._vertices.update(child_path_expression._vertices)
+        return path_expression
+        
+    
+    @staticmethod
+    def create_sequence_from_single_program_point(program_point, name):
+        path_expression = PathExpression(name)
+        sequence_vertex =\
+            RegularExpressionVertex(path_expression.get_new_vertex_id(),
+                                    RegularExpressionVertex.SEQUENCE)
+        path_expression.add_vertex(sequence_vertex)
+        path_expression._root_vertex = sequence_vertex
+        program_point_vertex = ProgramPointVertex(path_expression.get_new_vertex_id(),
+                                                      program_point)
+        path_expression.add_vertex(program_point_vertex)
+        path_expression.add_edge(sequence_vertex, program_point_vertex)
+        return path_expression
+        
+    
+    @staticmethod
+    def create_sequence_from_list_of_program_points(the_list, name):
+        path_expression = PathExpression(name)
         sequence_vertex =\
             RegularExpressionVertex(path_expression.get_new_vertex_id(),
                                     RegularExpressionVertex.SEQUENCE)
@@ -1260,27 +1433,37 @@ class PathExpression(DirectedGraph):
         return path_expression
         
     
-    def __init__(self, name, pred_vertex, succ_vertex):   
+    def __init__(self, name):   
         DirectedGraph.__init__(self, name)
-        self._pred_vertex = pred_vertex
-        self._succ_vertex = succ_vertex
         self._root_vertex = None
         self.__string = None
+        self._pred_vertex = None
+        self._succ_vertex = None
         
-        
+    
+    @property
+    def root_vertex(self):
+        return self._root_vertex
+    
+    
     @property
     def pred_vertex(self):
         return self._pred_vertex
     
     
     @property
-    def succ_state(self):
+    def succ_vertex(self):
         return self._succ_vertex
     
     
-    @property
-    def root_vertex(self):
-        return self._root_vertex
+    @pred_vertex.setter
+    def pred_vertex(self, value):
+        self._pred_vertex = value
+    
+    
+    @succ_vertex.setter
+    def succ_vertex(self, value):
+        self._succ_vertex = value
     
     
     new_vertex_id = 0
@@ -1299,7 +1482,9 @@ class PathExpression(DirectedGraph):
     def __str__(self):
         if self.__string is None:
             cached_strings = {}
-            depth_first_search = DepthFirstSearch(self, self._root_vertex)
+            depth_first_search = DepthFirstSearch(self, 
+                                                  self._root_vertex, 
+                                                  False)
             for vertex in depth_first_search.post_order:
                 if isinstance(vertex, RegularExpressionVertex):
                     string = ''

@@ -16,7 +16,7 @@ def create_program_from_input_file():
         try:
             return int(value)
         except ValueError:
-            raise ValueError('Unable to convert {} into a vertex id'.\
+            raise ValueError('Unable to convert {} into an integer'.\
                              format(value))
 
     
@@ -79,37 +79,39 @@ def create_program_from_input_file():
     edges_in_call_graph = set()
     def create_call_graph():
         call_graph = CallGraph()
+        for control_flow_graph in program.control_flow_graph_iterator():
+            call_graph.add_vertex(SubprogramVertex
+                                    (call_graph.get_new_vertex_id(),
+                                     control_flow_graph.name))
         for call_site_id, caller, callee in edges_in_call_graph:
-            if not call_graph.has_vertex_with_name(caller):
-                call_graph.add_vertex(SubprogramVertex
-                                      (call_graph.get_new_vertex_id(),
-                                       caller))
-            if not call_graph.has_vertex_with_name(callee):
-                call_graph.add_vertex(SubprogramVertex
-                                      (call_graph.get_new_vertex_id(),
-                                       callee))
             pred_call_vertex = call_graph.get_vertex_with_name(caller)
             succ_call_vertex = call_graph.get_vertex_with_name(callee)
             call_graph.add_edge(pred_call_vertex, 
                                 succ_call_vertex, 
                                 parse_int(call_site_id))
         program.call_graph = call_graph
+        dot.make_file(program.call_graph)
     
     
+    function_name_regex = re.compile(r'[a-zA-Z]\w+')
+    edge_regex = re.compile(r'\d+-\w+$')
+    basic_block_id_regex = re.compile(r'\d+')
+    program_property_regex = re.compile(r'(\d+|\d+-\d+)\.[a-zA-Z]+')
+    delimiter_regex = re.compile(r'(\-|\.|=)')
+        
     def first_pass_of_input_file():
-        current_function = None
         with open(config.Arguments.program_file) as the_file:
             for line in the_file:
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
-                    if re.match(r'[a-zA-Z]\w+', line):
+                    if function_name_regex.match(line):
                         # Function name
                         current_function = line
                         edges_in_control_flow_graphs[current_function] = set()
-                    elif re.match(r'\d+-\w+$', line): 
+                    elif edge_regex.match(line): 
                         # An edge in this function
                         source, destination = line.split('-')
-                        if re.match(r'\d+', destination):
+                        if basic_block_id_regex.match(destination):
                             edges_in_control_flow_graphs[current_function].\
                                 add((source, destination))
                         else:
@@ -119,41 +121,52 @@ def create_program_from_input_file():
                         
                         
     def second_pass_of_input_file():
-        current_function = None
         with open(config.Arguments.program_file) as the_file:
             for line in the_file:
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
-                    if re.match(r'[a-zA-Z]\w+', line):
+                    if function_name_regex.match(line):
                         # Function name
                         current_function = line
                         control_flow_graph = program.get_control_flow_graph\
                                                 (current_function)
-                    elif re.match(r'(\d+|\d+-\d+)\.[a-zA-Z]+', line):
+                    elif program_property_regex.match(line):
                         # A property concerning a program point
                         assert control_flow_graph, 'The property {} is not '
                         'attached to any control flow graph'.format(line)
                         
-                        lexemes = re.split(r'(\.|=)', line)
-                        if re.match(r'\d+-\d+', lexemes[0]):
-                            source, destination = lexemes[0].split('-')
-                            program_point = (parse_int(source), 
-                                             parse_int(destination))
-                        else:
+                        lexemes = delimiter_regex.split(line)
+                        if len(lexemes) == 5:
+                            # Vertex program point
                             program_point = parse_int(lexemes[0])
+                            property_index = 2
+                        else:
+                            # Edge program point
+                            program_point = (parse_int(lexemes[0]), 
+                                             parse_int(lexemes[2]))
+                            property_index = 4
                         
                         vertex = control_flow_graph.get_vertex_for_program_point\
                                     (program_point)
-                        
-                        if lexemes[2] == 'instrument':
-                            vertex.instrumented = True
-                        elif lexemes[2] == 'wcet':
-                            vertex.wcet = parse_int(lexemes[4])
-                        elif lexemes[2] == 'loop_bound':
-                            vertex.loop_bound = parse_int(lexemes[4])
+                                    
+                        if lexemes[property_index] == 'instrument':
+                            if lexemes[-1].startswith('t'):
+                                vertex.instrumented = True
+                            else:
+                                vertex.instrumented = False
+                        elif lexemes[property_index] == 'wcet':
+                            vertex.wcet = parse_int(lexemes[-1])
+                        elif lexemes[property_index] == 'loop_bound':
+                            assert lexemes[-1][0] == '(' \
+                            and lexemes[-1][len(lexemes[-1])-1] == ')'
+                            # Strip parentheses from tuple
+                            loop_bound_tuple = lexemes[-1][1:len(lexemes[-1])-1]
+                            loop_bound_tuple = tuple(parse_int(val) for val in 
+                                                     loop_bound_tuple.split(','))
+                            vertex.loop_bound = loop_bound_tuple
                         else:
                             assert False, 'Unknown program point property {}'.\
-                            format(lexemes[2])   
+                            format(lexemes[property_index])   
                                 
     
     first_pass_of_input_file()  
@@ -210,7 +223,17 @@ class Program:
         except KeyError:
             raise KeyError('Unable to find control flow graph for function {}'.\
                            format(function_name))
+            
     
+    def delete_functions_not_listed(self, functions_to_keep):
+        functions_to_delete = [function_name for function_name in 
+                               self._control_flow_graphs.keys() 
+                               if function_name not in functions_to_keep]
+        for function_name in functions_to_delete:
+            del self._control_flow_graphs[function_name]
+            call_vertex = self._call_graph.get_vertex_with_name(function_name)
+            self._call_graph.remove_vertex(call_vertex)
+            
     
     def __len__(self):
         return len(self._control_flow_graphs)

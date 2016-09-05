@@ -20,8 +20,6 @@ def make_file(graph):
             dot_file.write('digraph {\n')
             dot_file.write('ranksep=0.3;\n')
             dot_file.write('nodesep=0.25;\n')
-            dot_file.write('node [fontcolor=grey50];\n')
-            dot_file.write('edge [fontcolor=blue];\n')
             if isinstance(graph, directed_graphs.LoopNestingHierarchy):
                 write_loop_nesting_tree(dot_file, graph)
             elif isinstance(graph, directed_graphs.SuperBlockGraph):
@@ -61,11 +59,13 @@ def write_loop_nesting_tree(dot_file, loop_nesting_tree):
 
 def write_call_graph(dot_file, call_graph):
     for caller in call_graph:
+        dot_file.write('{} [label ="{}"];\n'.format(caller.vertex_id,
+                                                    caller.name))
         for succ_edge in caller.successor_edge_iterator():
             callee = call_graph.get_vertex(succ_edge.vertex_id)
-            dot_file.write('%s -> %s  [label ="%s"];\n' % (caller.name,
-                                                           callee.name,
-                                                           succ_edge.call_sites))
+            dot_file.write('%d -> %d [label ="%s"];\n' % (caller.vertex_id,
+                                                          callee.vertex_id,
+                                                          succ_edge.call_sites))
             
             
 def write_control_flow_graph(dot_file, control_flow_graph):
@@ -85,7 +85,8 @@ def write_control_flow_graph(dot_file, control_flow_graph):
                                                           succ_edge.path_expression))
     
     
-    write_vertex(control_flow_graph.entry_vertex)
+    if control_flow_graph.entry_vertex is not None:
+        write_vertex(control_flow_graph.entry_vertex)
     for vertex in control_flow_graph:
         if vertex != control_flow_graph.entry_vertex:
             write_vertex(vertex)
@@ -115,12 +116,15 @@ def write_pass_expression(dot_file, path_expression):
         if isinstance(vertex, vertices.RegularExpressionVertex):
             if vertex.operator == vertices.RegularExpressionVertex.SEQUENCE:
                 label = 'SEQ'
+                color = 'yellow'
             elif vertex.operator == vertices.RegularExpressionVertex.ALTERNATIVE:
                 label = 'ALT'
+                color = 'lightblue'
             else:
                 label = 'LOOP'
-            dot_file.write('%d [label=%s, shape=triangle];\n' % (vertex.vertex_id,
-                                                                 label))
+                color = 'red'
+            dot_file.write('{} [label={}, shape=triangle, fillcolor={}, style=filled];\n'.
+                           format(vertex.vertex_id, label, color))
         else:            
             dot_file.write('%d [label="%r"];\n' % (vertex.vertex_id, 
                                                    vertex.program_point))
@@ -130,7 +134,8 @@ def write_pass_expression(dot_file, path_expression):
                                             succ_edge.vertex_id)) 
     
     depth_first_search = directed_graphs.DepthFirstSearch(path_expression, 
-                                                          path_expression._root_vertex)
+                                                          path_expression._root_vertex,
+                                                          False)
     for vertex in depth_first_search.post_order:
         write_vertex(vertex)
         

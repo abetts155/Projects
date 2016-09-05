@@ -55,18 +55,26 @@ def parse_the_command_line():
                         default=config.Arguments.max_loop_bound,
                         metavar='<INT>')
     
+    parser.add_argument('--functions',
+                        nargs='*',
+                        help='analyse these functions only')
+    
     parser.parse_args(namespace=config.Arguments)
     config.set_filename_prefix()
     config.purge_graphviz_files()
-
+    
 
 if __name__ == '__main__': 
     threading.stack_size(67108864) # 64MB stack
     sys.setrecursionlimit(2**20)
     
     parse_the_command_line()
-    program = environment.create_program_from_input_file()
-    calculations.calculate_wcet_using_integer_linear_programming\
-        (program, config.Arguments.repeat)
+    program = environment.create_program_from_input_file() 
+    program.delete_functions_not_listed(config.Arguments.functions)
+           
+    calculations.calculate_wcet_using_integer_linear_programming(program, 
+                                                                 config.Arguments.repeat)
+
+            
     
     

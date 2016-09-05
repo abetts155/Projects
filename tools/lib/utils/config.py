@@ -1,4 +1,7 @@
+
 import os
+
+from tools.lib.utils import debug
 
 class Arguments:
     
@@ -16,6 +19,7 @@ class Arguments:
     instrument     = None
     repeat         = 1
     max_loop_bound = 10
+    functions      = None
     
 
 def set_filename_prefix():
@@ -39,3 +43,5 @@ def purge_graphviz_files():
             if ext == '.png' or ext == '.dot':
                 complete_path = os.path.join(Arguments.basepath, filename)
                 os.remove(complete_path)
+                
+                
