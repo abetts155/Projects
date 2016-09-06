@@ -147,7 +147,9 @@ def write_super_block_graph(dot_file, super_block_graph):
         for induced_vertex in vertex.vertices:
             vertex_label += str(induced_vertex.program_point)
             if induced_vertex == vertex.representative:
-                vertex_label += ' *'
+                vertex_label += ' *' 
+            if induced_vertex.abstract:
+                vertex_label += ' (A)'
             vertex_label += '\n'
         color = 'white'
         if vertex.is_loop_exit_edge:

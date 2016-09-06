@@ -11,6 +11,7 @@ from tools.lib.utils import debug
 from tools.lib.system.vertices import ProgramPointVertex
 
 
+
 def calculate_wcet_using_integer_linear_programming(program,
                                                     repeat=1):
     
@@ -24,12 +25,12 @@ def calculate_wcet_using_integer_linear_programming(program,
             # construct the constraint system is unfairly attributed to that
             # activity.
             loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
-            control_flow_graph.create_timing_data_if_required()
+            control_flow_graph.create_timing_data(True)
             ilp_for_control_flow_graph = IntegerLinearProgramForControlFlowGraph\
                                             (control_flow_graph,
                                              loop_nesting_tree)
             ilp_for_control_flow_graph.solve()
-            debug.verbose_message('wcet({})={}'.
+            debug.verbose_message('WCET({}) = {}'.\
                                   format(control_flow_graph.name,
                                          ilp_for_control_flow_graph.wcet), 
                                   __name__)
@@ -38,11 +39,12 @@ def calculate_wcet_using_integer_linear_programming(program,
                                             (control_flow_graph,
                                              loop_nesting_tree)
             ilp_for_super_block_graph.solve()
-            debug.verbose_message('wcet({})={}'.
+            debug.verbose_message('WCET({}) = {}'.\
                                   format(control_flow_graph.name,
                                          ilp_for_super_block_graph.wcet), 
                                   __name__)
-             
+            
+            assert ilp_for_super_block_graph.wcet == ilp_for_control_flow_graph.wcet
 
 edge_variable_prefix = 'E_'
 vertex_variable_prefix = 'V_'
@@ -191,6 +193,15 @@ class IntegerLinearProgram(ConstraintSystem):
         # We only need the ILP file for debugging purposes        
         if not config.Arguments.debug and os.path.exists(self._filename):
             os.remove(self._filename)
+            
+                
+    def output(self, function_name):
+        print()
+        print('wcet({})={}'.format(function_name, self._wcet))
+        for variable in sorted(self._variable_execution_counts.keys()):
+            if self._variable_execution_counts[variable] > 0:
+                print('{} = {}'.format(variable, 
+                                       self._variable_execution_counts[variable]))
 
     
     
@@ -307,9 +318,9 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                                 get_loop_body_for_program_point(header.program_point)
                 loop_entry_predecessor_vertices = set()
                 for pred_edge in header.predecessor_edge_iterator():
-                    pred_vertex = control_flow_graph.get_vertex(pred_edge.vertex_id)
-                    if pred_vertex not in loop_body:
-                        loop_entry_predecessor_vertices.add(pred_vertex)
+                    pred_tree_vertex = loop_nesting_tree.get_vertex(pred_edge.vertex_id)
+                    if pred_tree_vertex not in loop_body:
+                        loop_entry_predecessor_vertices.add(pred_tree_vertex)
                        
                 constraint += ' <= ' 
                 counter = len(loop_entry_predecessor_vertices)
@@ -333,14 +344,14 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
             self._constraints.add(constraint)
             
         
-        for _, tree_vertices in loop_nesting_tree.\
+        for level, tree_vertices in loop_nesting_tree.\
                                     level_by_level_iterator\
                                         (abstract_vertices_only=True):
             for abstract_vertex in tree_vertices:
                 if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
                     create_local_loop_bound_constraint(abstract_vertex)
-                    create_global_loop_bound_constraint(abstract_vertex)
-                    
+                    if level > 1:
+                        create_global_loop_bound_constraint(abstract_vertex)                 
             
     
 
@@ -355,11 +366,10 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
         ConstraintSystem.__init__(self)
         self._filename = '{}.{}.super.ilp'.format(config.get_filename_prefix(), 
                                                   control_flow_graph.name)
+        self.__loop_exit_edges = set()
         start = timeit.default_timer()
         self.__create_objective_function(control_flow_graph)
-        self.__create_structural_constraints(control_flow_graph,
-                                             loop_nesting_tree)
-        self.__create_loop_bound_constraints(control_flow_graph,
+        self.__create_constraints(control_flow_graph,
                                              loop_nesting_tree)
         self._create_integer_constraint()
         end = timeit.default_timer()
@@ -387,54 +397,74 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
         self.obj_function += ';'
         
         
-    def __create_structural_constraints(self,
-                                        control_flow_graph,
-                                        loop_nesting_tree):
-        for _, subgraph in control_flow_graph.super_block_graph_iterator():
-            for super_vertex in subgraph:
-                self.__create_intra_super_block_constraints(super_vertex)
-                        
-                if super_vertex.number_of_predecessors() > 1\
-                and not super_vertex.representative.abstract:
-                    self.__create_predecessor_super_block_constraints(subgraph,
-                                                                      super_vertex)
-                    
-                if super_vertex.number_of_successors() > 1:
-                    self.__create_successor_super_block_constraints(control_flow_graph,
-                                                                    subgraph,
-                                                                    super_vertex)
-                    
+    def __create_constraints(self, control_flow_graph, loop_nesting_tree):        
+        for level, tree_vertices in loop_nesting_tree.level_by_level_iterator\
+                                    (abstract_vertices_only=True):
+            for abstract_vertex in tree_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    subgraph = control_flow_graph.get_super_block_subgraph\
+                                (abstract_vertex)
+                    for super_vertex in subgraph:
+                        self.__create_intra_super_block_constraints(super_vertex)
+                                
+                        if super_vertex.number_of_predecessors() > 1:
+                            self.__create_predecessor_super_block_constraints\
+                                (subgraph, super_vertex)
+                            
+                        if super_vertex.number_of_successors() > 1\
+                        and not super_vertex.representative.abstract:
+                            self.__create_successor_super_block_constraints\
+                                (control_flow_graph, subgraph, super_vertex)
+                                
+                    self.__create_loop_bound_constraints(control_flow_graph, 
+                                                         loop_nesting_tree, 
+                                                         level, 
+                                                         abstract_vertex)
                             
                             
     def __create_intra_super_block_constraints(self, 
                                                super_vertex):
         for induced_vertex in super_vertex.vertices:
             if induced_vertex != super_vertex.representative\
-            and not induced_vertex.abstract\
-            and ProgramPointVertex.is_basic_block(induced_vertex.program_point):
-                constraint = get_execution_count_variable\
-                                    (induced_vertex.program_point)
-                constraint += ' = '
-                constraint += get_execution_count_variable\
-                                    (super_vertex.representative.program_point)
-                constraint += ';'
-                self._constraints.add(constraint)
+            and not induced_vertex.abstract:
+                if ProgramPointVertex.is_basic_block(induced_vertex.program_point)\
+                or induced_vertex.program_point in self.__loop_exit_edges:
+                    constraint = get_execution_count_variable\
+                                        (induced_vertex.program_point)
+                    constraint += ' = '
+                    constraint += get_execution_count_variable\
+                                        (super_vertex.representative.program_point)
+                    constraint += ';'
+                    self._constraints.add(constraint)
                 
                 
     def __create_predecessor_super_block_constraints(self,
                                                      subgraph, 
                                                      super_vertex):
-        constraint = get_execution_count_variable(super_vertex.
+        
+        if super_vertex.representative.abstract:  
+            # An abstract vertex in its own super block
+            constraint = ''
+            counter = super_vertex.number_of_successors()
+            for succ_edge in super_vertex.successor_edge_iterator():
+                super_succ_vertex = subgraph.get_vertex(succ_edge.vertex_id)
+                constraint += get_execution_count_variable(super_succ_vertex.representative.program_point)
+                if counter > 1:
+                    constraint += ' + '
+                counter -= 1
+        else:   
+            constraint = get_execution_count_variable(super_vertex.
                                                       representative.
                                                       program_point)
+            
         constraint += ' = '
         counter = super_vertex.number_of_predecessors()
         for pred_edge in super_vertex.predecessor_edge_iterator():
             super_pred_vertex = subgraph.get_vertex\
                                 (pred_edge.vertex_id)
             constraint += get_execution_count_variable(super_pred_vertex.
-                                                           representative.
-                                                           program_point)
+                                                       representative.
+                                                       program_point)
             if counter > 1:
                 constraint += ' + '
             counter -= 1
@@ -466,7 +496,19 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
     
     def __create_loop_bound_constraints(self,
                                         control_flow_graph,
-                                        loop_nesting_tree):
+                                        loop_nesting_tree,
+                                        level,
+                                        abstract_vertex):
+        
+        def get_subgraph_of_outer_loop(subgraph, super_vertex):
+            for _, candidate_subgraph in control_flow_graph.\
+                                            super_block_graph_iterator():
+                if subgraph.root_vertex.vertex_id !=\
+                    candidate_subgraph.root_vertex.vertex_id\
+                and candidate_subgraph.has_vertex_for_program_point(super_vertex.
+                                                                    representative.
+                                                                    program_point):
+                    return candidate_subgraph
         
         def create_local_loop_bound_constraint(abstract_vertex):
             header = control_flow_graph.get_vertex_for_program_point\
@@ -479,13 +521,22 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                 constraint += ' <= ' 
                 loop_exit_super_blocks = [super_vertex for super_vertex in subgraph
                                           if super_vertex.is_loop_exit_edge]
+                parent_subgraph = get_subgraph_of_outer_loop(subgraph,
+                                                             loop_exit_super_blocks[0])                             
                 
                 counter = len(loop_exit_super_blocks)
                 for succ_vertex in loop_exit_super_blocks:
+                    succ_vertex_in_parent_subgraph =\
+                        parent_subgraph.get_vertex_for_program_point\
+                            (succ_vertex.representative.program_point)
                     constraint += '{} {}'.format(max(header.loop_bound),
                                                  get_execution_count_variable
-                                                 (succ_vertex.representative.
+                                                 (succ_vertex_in_parent_subgraph.
+                                                  representative.
                                                   program_point))
+                    self.__loop_exit_edges.add(succ_vertex.
+                                               representative.
+                                               program_point)
                     if counter > 1:
                         constraint += ' + '
                     counter -= 1 
@@ -501,14 +552,9 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
             constraint += '{};'.format(sum(header.loop_bound))
             self._constraints.add(constraint)
         
-        
-        for _, tree_vertices in loop_nesting_tree.\
-                                    level_by_level_iterator\
-                                        (abstract_vertices_only=True):
-            for abstract_vertex in tree_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
-                    create_local_loop_bound_constraint(abstract_vertex)
-                    create_global_loop_bound_constraint(abstract_vertex) 
+        create_local_loop_bound_constraint(abstract_vertex)
+        if level > 1:
+            create_global_loop_bound_constraint(abstract_vertex) 
                     
         
     

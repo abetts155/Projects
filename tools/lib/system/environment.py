@@ -155,7 +155,7 @@ def create_program_from_input_file():
                             else:
                                 vertex.instrumented = False
                         elif lexemes[property_index] == 'wcet':
-                            vertex.wcet = parse_int(lexemes[-1])
+                            vertex.wcet = (parse_int(lexemes[-1]), True)
                         elif lexemes[property_index] == 'loop_bound':
                             assert lexemes[-1][0] == '(' \
                             and lexemes[-1][len(lexemes[-1])-1] == ')'
@@ -163,7 +163,7 @@ def create_program_from_input_file():
                             loop_bound_tuple = lexemes[-1][1:len(lexemes[-1])-1]
                             loop_bound_tuple = tuple(parse_int(val) for val in 
                                                      loop_bound_tuple.split(','))
-                            vertex.loop_bound = loop_bound_tuple
+                            vertex.loop_bound = (loop_bound_tuple, True)
                         else:
                             assert False, 'Unknown program point property {}'.\
                             format(lexemes[property_index])   
@@ -226,14 +226,15 @@ class Program:
             
     
     def delete_functions_not_listed(self, functions_to_keep):
-        functions_to_delete = [function_name for function_name in 
-                               self._control_flow_graphs.keys() 
-                               if function_name not in functions_to_keep]
-        for function_name in functions_to_delete:
-            del self._control_flow_graphs[function_name]
-            call_vertex = self._call_graph.get_vertex_with_name(function_name)
-            self._call_graph.remove_vertex(call_vertex)
-            
+        if functions_to_keep is not None:
+            functions_to_delete = [function_name for function_name in 
+                                   self._control_flow_graphs.keys() 
+                                   if function_name not in functions_to_keep]
+            for function_name in functions_to_delete:
+                del self._control_flow_graphs[function_name]
+                call_vertex = self._call_graph.get_vertex_with_name(function_name)
+                self._call_graph.remove_vertex(call_vertex)
+                
     
     def __len__(self):
         return len(self._control_flow_graphs)

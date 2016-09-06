@@ -445,13 +445,12 @@ class ControlFlowGraph(DirectedGraph):
         return induced_graph
     
     
-    def create_timing_data_if_required(self):
+    def create_timing_data(self, redo=False):
         for vertex in self:
-            if ProgramPointVertex.is_basic_block(vertex.program_point)\
-            and vertex.wcet is None:
-                vertex.wcet = random.randint(1, 20)
-                
-        
+            if ProgramPointVertex.is_basic_block(vertex.program_point):
+                if vertex.wcet is None or redo:
+                    vertex.wcet = random.randint(1, 20)
+                    
         maximum_loop_bound = random.randint(1, config.Arguments.max_loop_bound)
         def create_loop_bound_tuple_for_header(level, abstract_vertex):
             if level == 0:
@@ -479,9 +478,9 @@ class ControlFlowGraph(DirectedGraph):
                 if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
                     header = self.get_vertex_for_program_point\
                                 (abstract_vertex.program_point)
-                    if header.loop_bound is None:
+                    if header.loop_bound is None or redo:
                         header.loop_bound = create_loop_bound_tuple_for_header\
-                                                (level, abstract_vertex)            
+                                                (level, abstract_vertex)         
     
     
     def reduce(self):
@@ -1658,7 +1657,6 @@ class SuperBlockGraph(DirectedGraph):
                                            strong_components)
         super_block_graph.add_edges(abstract_vertex,
                                     induced_subgraph) 
-        super_block_graph.check_properties()       
         return super_block_graph
     
     
@@ -1666,7 +1664,7 @@ class SuperBlockGraph(DirectedGraph):
         DirectedGraph.__init__(self, name)
         self._induced_subgraph = induced_subgraph
         self._root_vertex = None
-        self.__induced_vertex_to_super_vertex = {}
+        self._program_point_to_vertex = {}
     
     
     @property
@@ -1679,12 +1677,16 @@ class SuperBlockGraph(DirectedGraph):
         return self._root_vertex
     
     
-    def get_super_vertex_for_induced_vertex(self, induced_vertex):
+    def has_vertex_for_program_point(self, program_point):
+        return program_point in self._program_point_to_vertex
+    
+    
+    def get_vertex_for_program_point(self, program_point):
         try:
-            return self.__induced_vertex_to_super_vertex[induced_vertex]
+            return self._program_point_to_vertex[program_point]
         except KeyError:
-            raise KeyError('No super block found for induced vertex with '
-                           'program point {}'.format(induced_vertex.program_point))
+            raise KeyError('No super block found for program point {}'.
+                           format(program_point))
     
     
     def add_super_blocks(self,
@@ -1706,9 +1708,9 @@ class SuperBlockGraph(DirectedGraph):
                 scc_id = strong_components_of_dominator_graph.\
                             get_scc_id_for_program_point(induced_vertex.program_point)
                 super_vertex = self.get_vertex(scc_id)
-                self.__induced_vertex_to_super_vertex[induced_vertex] =\
-                    super_vertex
-                super_vertex.vertices.append(induced_vertex) 
+                super_vertex.vertices.append(induced_vertex)
+                self._program_point_to_vertex[induced_vertex.program_point] =\
+                    super_vertex 
                 
                 if ProgramPointVertex.is_basic_block(induced_vertex.program_point):
                     if not induced_vertex.abstract:
@@ -1719,19 +1721,25 @@ class SuperBlockGraph(DirectedGraph):
                     and not induced_subgraph.has_vertex_for_program_point\
                         (induced_vertex.program_point[1]):
                         super_vertex.is_loop_exit_edge = True
+                
+                # The root vertex of the super block graph is the super block containing
+                # the header.
+                if induced_vertex.program_point == abstract_vertex.program_point:
+                    assert self._root_vertex == None
+                    self._root_vertex = super_vertex
 
-        # If the super block does not have a representative yet, then set it to
-        # the first program point              
+        # If the super block does not have a representative yet, then there is
+        # no suitable basic block program point.  Instead, select the first 
+        # transition between basic blocks.             
         for super_vertex in self:
             if super_vertex.representative is None:
-                super_vertex.representative = super_vertex.vertices[0]
+                for induced_vertex in super_vertex.vertices:
+                    super_vertex.representative = induced_vertex
+                    if not ProgramPointVertex.is_basic_block(induced_vertex.
+                                                             program_point):
+                        super_vertex.representative = induced_vertex
+                        break
                     
-        # The root vertex of the super block graph is the super block containing
-        # the header
-        self._root_vertex = self.__induced_vertex_to_super_vertex\
-                                [induced_subgraph.get_vertex_for_program_point
-                                 (abstract_vertex.program_point)] 
-    
         
     def add_edges(self, abstract_vertex, induced_subgraph):
         for super_vertex in self:
@@ -1743,8 +1751,8 @@ class SuperBlockGraph(DirectedGraph):
                 pred_edge = induced_vertex.get_ith_predecessor_edge(0)
                 pred_induced_vertex = induced_subgraph.\
                                         get_vertex(pred_edge.vertex_id)
-                pred_super_vertex = self.__induced_vertex_to_super_vertex\
-                                        [pred_induced_vertex]
+                pred_super_vertex = self._program_point_to_vertex\
+                                        [pred_induced_vertex.program_point]
                 self.add_edge(pred_super_vertex, super_vertex)                
                 pred_super_vertex.\
                     add_successor_edge_to_partition(pred_induced_vertex,
@@ -1758,32 +1766,9 @@ class SuperBlockGraph(DirectedGraph):
                 for pred_edge in induced_vertex.predecessor_edge_iterator():
                     pred_induced_vertex = induced_subgraph.\
                                             get_vertex(pred_edge.vertex_id)
-                    pred_super_vertex = self.__induced_vertex_to_super_vertex\
-                                            [pred_induced_vertex]
+                    pred_super_vertex = self._program_point_to_vertex\
+                                            [pred_induced_vertex.program_point]
                     self.add_edge(pred_super_vertex, super_vertex)
-                    
-    
-    def check_properties(self):
-        visited = {}
-        for super_vertex in self:
-            visited[super_vertex] = False
-            assert super_vertex.representative is not None,\
-            'No representative found for super block with program points ' +\
-            ','.join(str(program_point) for program_point in super_vertex.program_points)
-            
-        
-        stack = [self._root_vertex]
-        while stack:
-            stack_vertex = stack.pop()
-            visited[stack_vertex] = True
-            for succ_edge in stack_vertex.successor_edge_iterator():
-                stack.append(self.get_vertex(succ_edge.vertex_id))
-        
-        for super_vertex in self:
-            assert visited[super_vertex],\
-            'Super block with program points ' +\
-            ','.join(str(program_point) for program_point in super_vertex.program_points) +\
-            ' can not be reached from root vertex'
     
     
     def dot_filename(self):
