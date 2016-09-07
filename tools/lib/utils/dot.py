@@ -6,11 +6,10 @@ then immediately converts the file to PNG format for viewing.
 import os
 import subprocess
 
-from tools.lib.utils import debug
-from tools.lib.utils import config
 from tools.lib.system import directed_graphs
 from tools.lib.system import vertices
-
+from tools.lib.utils import config
+from tools.lib.utils import debug
 
 
 def make_file(graph):
@@ -28,7 +27,7 @@ def make_file(graph):
                 write_call_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.ControlFlowGraph):
                 write_control_flow_graph(dot_file, graph)
-            elif isinstance(graph,directed_graphs.Dominators):
+            elif isinstance(graph, directed_graphs.Dominators):
                 write_dominator_tree(dot_file, graph)
             elif isinstance(graph, directed_graphs.PathExpression):
                 write_pass_expression(dot_file, graph)
@@ -45,11 +44,11 @@ def write_loop_nesting_tree(dot_file, loop_nesting_tree):
         if vertex.abstract:
             color = 'orange' if isinstance(vertex.program_point, int) else 'cornsilk'
             dot_file.write('%d [shape=triangle, style=filled, fillcolor=%s,'
-                           ' label="%r"];\n' % (vertex.vertex_id, 
+                           ' label="%r"];\n' % (vertex.vertex_id,
                                                 color,
                                                 vertex.program_point))
         else:
-            dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id, 
+            dot_file.write('%d [label="%s"];\n' % (vertex.vertex_id,
                                                    vertex.program_point))
             
         for succ_edge in vertex.successor_edge_iterator():
@@ -75,7 +74,7 @@ def write_control_flow_graph(dot_file, control_flow_graph):
         if vertex.instrumented:
             color = 'yellow'
         dot_file.write('%d [label="%r", style=filled, fillcolor=%s];\n' 
-                       % (vertex.vertex_id, 
+                       % (vertex.vertex_id,
                           vertex.program_point,
                           color)) 
         
@@ -96,7 +95,7 @@ def write_control_flow_graph(dot_file, control_flow_graph):
 def write_dominator_tree(dot_file, dominator_tree):
     
     def write_write(vertex):
-        dot_file.write('%d [label="%r"];\n' % (vertex.vertex_id, 
+        dot_file.write('%d [label="%r"];\n' % (vertex.vertex_id,
                                                vertex.program_point))
         
         for succ_edge in vertex.successor_edge_iterator():
@@ -126,14 +125,14 @@ def write_pass_expression(dot_file, path_expression):
             dot_file.write('{} [label={}, shape=triangle, fillcolor={}, style=filled];\n'.
                            format(vertex.vertex_id, label, color))
         else:            
-            dot_file.write('%d [label="%r"];\n' % (vertex.vertex_id, 
+            dot_file.write('%d [label="%r"];\n' % (vertex.vertex_id,
                                                    vertex.program_point))
             
         for succ_edge in vertex.successor_edge_iterator():
             dot_file.write('%d -> %d;\n' % (vertex.vertex_id,
                                             succ_edge.vertex_id)) 
     
-    depth_first_search = directed_graphs.DepthFirstSearch(path_expression, 
+    depth_first_search = directed_graphs.DepthFirstSearch(path_expression,
                                                           path_expression._root_vertex,
                                                           False)
     for vertex in depth_first_search.post_order:
@@ -170,7 +169,7 @@ def write_super_block_graph(dot_file, super_block_graph):
 def output_to_png_file(dot_filename):
     png_filename = os.path.splitext(dot_filename)[0] + '.png'
     with open(png_filename, 'w') as png_file:
-        cmd  = 'dot -Tpng %s' % dot_filename 
+        cmd = 'dot -Tpng %s' % dot_filename 
         proc = subprocess.Popen(cmd,
                                 shell=True,
                                 stdout=png_file,

@@ -2,11 +2,34 @@
 import collections
 import re
 
-from tools.lib.system.directed_graphs import ControlFlowGraph, CallGraph
-from tools.lib.system.vertices import ProgramPointVertex, SubprogramVertex
+from tools.lib.system.directed_graphs import (ControlFlowGraph, 
+                                              CallGraph)
+from tools.lib.system.vertices import (ProgramPointVertex, 
+                                       SubprogramVertex)
 from tools.lib.utils import dot
 from tools.lib.utils import config
 
+
+def generate_program():
+    program = Program()
+    for function_id in range(1, config.Arguments.subprograms+1):
+        function_name = 'F{}'.format(function_id)
+        control_flow_graph = ControlFlowGraph.create(function_name)
+        program.add_control_flow_graph(control_flow_graph)
+    return program
+
+
+def write_program_to_file(program):
+    print(config.Arguments.program_file)
+    with open(config.Arguments.program_file, 'w') as the_file:
+        for control_flow_graph in program.control_flow_graph_iterator():
+            the_file.write('{}\n'.format(control_flow_graph.name))
+            for vertex in control_flow_graph:
+                if vertex != control_flow_graph.exit_vertex:
+                    for succ_edge in vertex.successor_edge_iterator():
+                        the_file.write('{}-{}\n'.format(vertex.vertex_id, 
+                                                        succ_edge.vertex_id))
+            the_file.write('\n')
 
 
 def create_program_from_input_file():

@@ -11,8 +11,8 @@ from tools.lib.system import calculations
 
 def parse_the_command_line(): 
     parser = argparse.ArgumentParser(description=
-                                     'Instrument program to collect execution '
-                                     'profiles at run time')
+                                     'Do WCET calculation using super blocks '
+                                     'analysis')
     
     parser.add_argument('program_file',
                         help='a file containing program information'
@@ -71,7 +71,6 @@ if __name__ == '__main__':
     parse_the_command_line()
     program = environment.create_program_from_input_file() 
     program.delete_functions_not_listed(config.Arguments.functions)
-           
     calculations.calculate_wcet_using_integer_linear_programming(program, 
                                                                  config.Arguments.repeat)
 

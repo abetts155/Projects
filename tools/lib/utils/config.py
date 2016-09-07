@@ -1,5 +1,7 @@
 
 import os
+import random
+
 
 class Arguments:
     
@@ -7,23 +9,29 @@ class Arguments:
     Arguments set during parsing of the command line.
     """
     
-    basepath       = None
-    basename       = None
-    verbose        = None
-    debug          = None
-    graphviz       = None
-    program_file   = None
-    purge_dot      = None
-    instrument     = None
-    repeat         = 1
+    basepath = None
+    basename = None
+    verbose = None
+    debug = None
+    graphviz = None
+    program_file = None
+    purge_dot = None
+    instrument = None
+    repeat = 1
     max_loop_bound = 10
-    functions      = None
+    functions = None
+    subprograms = 1
+    basic_blocks = 10
+    loops = 0
+    nesting_depth = 1
+    fan_out = random.randint(2, 10)
+    unstructured = None
     
 
 def set_filename_prefix():
-    Arguments.basepath =\
+    Arguments.basepath = \
         os.path.abspath(os.path.dirname(Arguments.program_file))
-    Arguments.basename =\
+    Arguments.basename = \
         os.path.splitext(os.path.basename(Arguments.program_file))[0]
 
 
