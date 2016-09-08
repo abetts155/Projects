@@ -1,7 +1,7 @@
 
 import sys
 
-from tools.lib.utils import config
+from lib.utils import config
 
 
 def verbose_message(string, module):

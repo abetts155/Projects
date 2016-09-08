@@ -6,9 +6,9 @@ import subprocess
 import decimal
 import re
 
-from tools.lib.utils import config
-from tools.lib.utils import debug
-from tools.lib.system.vertices import ProgramPointVertex
+from lib.utils import config
+from lib.utils import debug
+from lib.system.vertices import ProgramPointVertex
 
 
 def calculate_wcet_using_integer_linear_programming(program,

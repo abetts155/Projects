@@ -6,10 +6,10 @@ then immediately converts the file to PNG format for viewing.
 import os
 import subprocess
 
-from tools.lib.system import directed_graphs
-from tools.lib.system import vertices
-from tools.lib.utils import config
-from tools.lib.utils import debug
+from lib.system import directed_graphs
+from lib.system import vertices
+from lib.utils import config
+from lib.utils import debug
 
 
 def make_file(graph):

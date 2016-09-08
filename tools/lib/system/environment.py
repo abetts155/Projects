@@ -2,12 +2,12 @@
 import collections
 import re
 
-from tools.lib.system.directed_graphs import (ControlFlowGraph, 
+from lib.system.directed_graphs import (ControlFlowGraph, 
                                               CallGraph)
-from tools.lib.system.vertices import (ProgramPointVertex, 
+from lib.system.vertices import (ProgramPointVertex, 
                                        SubprogramVertex)
-from tools.lib.utils import dot
-from tools.lib.utils import config
+from lib.utils import dot
+from lib.utils import config
 
 
 def generate_program():
@@ -74,21 +74,20 @@ def create_program_from_input_file():
                                             None)
             # Find entry and exit vertex, then add vertex representing an edge 
             # from the exit vertex to the entry vertex 
-            entry_vertex = control_flow_graph.find_entry_vertex()
-            exit_vertex = control_flow_graph.find_exit_vertex()
-            exit_to_entry_edge = (exit_vertex.vertex_id,
-                                  entry_vertex.vertex_id)
+            control_flow_graph.set_entry_vertex()
+            control_flow_graph.set_exit_vertex()
+            exit_to_entry_edge = (control_flow_graph.exit_vertex.vertex_id,
+                                  control_flow_graph.entry_vertex.vertex_id)
             exit_to_entry_vertex = ProgramPointVertex\
                                     (control_flow_graph.get_new_vertex_id(),
                                      exit_to_entry_edge)
             control_flow_graph.add_vertex(exit_to_entry_vertex)
-            control_flow_graph.add_edge(exit_vertex,
+            control_flow_graph.add_edge(control_flow_graph.exit_vertex,
                                         exit_to_entry_vertex,
                                         None)
             control_flow_graph.add_edge(exit_to_entry_vertex,
-                                        entry_vertex,
+                                        control_flow_graph.entry_vertex,
                                         None)
-            control_flow_graph.entry_vertex = entry_vertex
             # This may seem weird but bear with me.  The reason we set the
             # exit of the control flow graph to the control flow edge is that 
             # this edge always executes last, even though technically it does 
