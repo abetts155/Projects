@@ -9,8 +9,8 @@ import random
 import math
 
 from lib.utils import dot
-from lib.utils import config
 from lib.utils import debug
+from lib.utils import globals
 
 from lib.system.edges import (Edge,
                                     TransitionEdge,
@@ -149,11 +149,6 @@ class DirectedGraph:
         return '{}(vertices={})'.format(self.__class__.__name__,
                                         ' '.join(repr(vertex) 
                                                  for vertex in self))
-        
-    
-    @abc.abstractmethod
-    def dot_filename(self):
-        pass
     
 
 
@@ -233,7 +228,7 @@ class ControlFlowGraph(DirectedGraph):
                                         if random.random() > 0.3 else 0
             number_of_if_then = how_many_components(3)\
                                     if random.random() > 0.3 else 0
-            number_of_switch = how_many_components(2 + config.Arguments.fan_out)\
+            number_of_switch = how_many_components(globals.args['fan_out'] + 2)\
                                     if random.random() > 0.3 else 0
             
             number_of_singleton_vertices += remaining_vertices
@@ -264,7 +259,7 @@ class ControlFlowGraph(DirectedGraph):
         def create_switch(self, control_flow_graph):
             branch_vertex = self.__disconnected_vertices.pop()
             merge_vertex = self.__disconnected_vertices.pop()
-            for _ in range(1, config.Arguments.fan_out+1):
+            for _ in range(1, globals.args['fan_out'] + 1):
                 switch_arm = self.create_sese_region(control_flow_graph)
                 control_flow_graph.add_edge(branch_vertex, switch_arm[0], None)
                 control_flow_graph.add_edge(switch_arm[1], merge_vertex, None)
@@ -596,12 +591,12 @@ class ControlFlowGraph(DirectedGraph):
         control_flow_graph = ControlFlowGraph(name)
         bare_loop_nesting_tree = create_artificial_hierarchy\
                                     (name, 
-                                     config.Arguments.loops, 
-                                     config.Arguments.nesting_depth)
+                                     globals.args['loops'], 
+                                     globals.args['nesting_depth'])
         create_structure(control_flow_graph,
                          bare_loop_nesting_tree, 
-                         config.Arguments.basic_blocks)
-        if config.Arguments.unstructured:
+                         globals.args['basic_blocks'])
+        if globals.args['unstructured']:
             pick_and_remove_random_merge_vertices(control_flow_graph)
         control_flow_graph.check_connected()
         return control_flow_graph
@@ -1110,9 +1105,9 @@ class ControlFlowGraph(DirectedGraph):
     
     def dot_filename(self):
         if self._reduced:
-            return '{}.{}.cfg.reduced'.format(config.get_filename_prefix(), self.name)
+            return '{}.cfg.reduced'.format(self.name)
         else:
-            return '{}.{}.cfg'.format(config.get_filename_prefix(), self.name)
+            return '{}.cfg'.format(self.name)
     
     
     def __str__(self):
@@ -1187,7 +1182,7 @@ class CallGraph(DirectedGraph):
         
     
     def dot_filename(self):
-        return '{}.{}'.format(config.get_filename_prefix(), self._name)
+        return '{}'.format(self._name)
         
         
 
@@ -1496,9 +1491,7 @@ class Dominators(Tree):
 
     def dot_filename(self):
         suffix = 'post' if self.__reverse_edge_directions else 'pre'
-        return '{}.{}.{}'.format(config.get_filename_prefix(), 
-                                 self.name, 
-                                 suffix)
+        return '{}.{}'.format(self.name, suffix)
         
         
         
@@ -1627,7 +1620,7 @@ class LoopNestingHierarchy(Tree):
             
             
     def dot_filename(self):
-        return '{}.{}.lnt'.format(config.get_filename_prefix(), self._name)
+        return '{}.lnt'.format(self._name)
         
         
     def __construct(self, 
@@ -1909,10 +1902,9 @@ class PathExpression(DirectedGraph):
     
     
     def dot_filename(self):
-        return '{}.{}.{}_{}.pe'.format(config.get_filename_prefix(), 
-                                       self._name,
-                                       self._pred_vertex.vertex_id,
-                                       self._succ_vertex.vertex_id)  
+        return '{}.{}_{}.pe'.format(self._name,
+                                    self._pred_vertex.vertex_id,
+                                    self._succ_vertex.vertex_id)  
         
     
     def __str__(self):
@@ -2209,7 +2201,6 @@ class SuperBlockGraph(DirectedGraph):
     
     
     def dot_filename(self):
-        return '{}.{}.super'.format(config.get_filename_prefix(), 
-                                    self._name)
+        return '{}.super'.format(self._name)
             
         

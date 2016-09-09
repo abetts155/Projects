@@ -4,9 +4,9 @@ import argparse
 import threading
 import sys
 
-from tools.lib.utils import config
-from tools.lib.system import environment
-from tools.lib.system import calculations
+from lib.utils import config
+from lib.system import environment
+from lib.system import calculations
 
 
 def parse_the_command_line(): 

@@ -2,8 +2,8 @@
 
 import argparse
 
-from tools.lib.utils import config
-from tools.lib.system import environment
+from lib.utils import config
+from lib.system import environment
 
 
 

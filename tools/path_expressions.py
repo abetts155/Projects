@@ -3,9 +3,9 @@
 import argparse
 import ast
 
-from tools.lib.utils import config
-from tools.lib.utils import debug
-from tools.lib.system import environment
+from lib.utils import config
+from lib.utils import debug
+from lib.system import environment
 
 
 

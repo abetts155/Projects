@@ -7,12 +7,12 @@ from lib.system.directed_graphs import (ControlFlowGraph,
 from lib.system.vertices import (ProgramPointVertex, 
                                        SubprogramVertex)
 from lib.utils import dot
-from lib.utils import config
+from lib.utils import globals
 
 
 def generate_program():
     program = Program()
-    for function_id in range(1, config.Arguments.subprograms+1):
+    for function_id in range(1, globals.args['subprograms'] + 1):
         function_name = 'F{}'.format(function_id)
         control_flow_graph = ControlFlowGraph.create(function_name)
         program.add_control_flow_graph(control_flow_graph)
@@ -20,8 +20,7 @@ def generate_program():
 
 
 def write_program_to_file(program):
-    print(config.Arguments.program_file)
-    with open(config.Arguments.program_file, 'w') as the_file:
+    with open(globals.args['program_file'], 'w') as the_file:
         for control_flow_graph in program.control_flow_graph_iterator():
             the_file.write('{}\n'.format(control_flow_graph.name))
             for vertex in control_flow_graph:
@@ -122,7 +121,7 @@ def create_program_from_input_file():
     delimiter_regex = re.compile(r'(\-|\.|=)')
         
     def first_pass_of_input_file():
-        with open(config.Arguments.program_file) as the_file:
+        with open(globals.args['program_file']) as the_file:
             for line in the_file:
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
@@ -143,7 +142,7 @@ def create_program_from_input_file():
                         
                         
     def second_pass_of_input_file():
-        with open(config.Arguments.program_file) as the_file:
+        with open(globals.args['program_file']) as the_file:
             for line in the_file:
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
@@ -256,7 +255,7 @@ class Program:
                 del self._control_flow_graphs[function_name]
                 call_vertex = self._call_graph.get_vertex_with_name(function_name)
                 self._call_graph.remove_vertex(call_vertex)
-                
+    
     
     def __len__(self):
         return len(self._control_flow_graphs)

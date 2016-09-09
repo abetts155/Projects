@@ -8,13 +8,14 @@ import subprocess
 
 from lib.system import directed_graphs
 from lib.system import vertices
-from lib.utils import config
 from lib.utils import debug
+from lib.utils import globals
 
 
 def make_file(graph):
-    if config.Arguments.graphviz:
-        dot_filename = graph.dot_filename() + '.dot'
+    if globals.args['graphviz']:
+        dot_filename = '{}.{}.dot'.format(globals.args['filename_prefix'],
+                                          graph.dot_filename())
         with open(dot_filename, 'w') as dot_file:
             dot_file.write('digraph {\n')
             dot_file.write('ranksep=0.3;\n')
@@ -34,7 +35,7 @@ def make_file(graph):
             dot_file.write('}\n')
         # Create PNG file
         output_to_png_file(dot_filename)
-        if not config.Arguments.debug:
+        if not globals.args['debug']:
             # We only need the DOT file for debugging purposes
             os.remove(dot_filename)
 
