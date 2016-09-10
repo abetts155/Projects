@@ -56,6 +56,7 @@ class TransitionEdge(Edge):
                  path_expression):
         Edge.__init__(self, vertex_id, edge_id)
         self._path_expression = path_expression
+        self._loopback = False
         
     
     @property
@@ -66,13 +67,24 @@ class TransitionEdge(Edge):
     @path_expression.setter
     def path_expression(self, value):
         self._path_expression = value
+        
+    
+    @property
+    def loopback(self):
+        return self._loopback
+    
+    
+    @loopback.setter
+    def loopback(self, value):
+        self._loopback = value
     
     
     def __repr__(self):
-        return '%s(id=%r edge_id=%r path_expression=%r)' % (self.__class__.__name__,
-                                                            self._vertex_id,
-                                                            self._edge_id,
-                                                            self._path_expression)
+        return '{}(id={} edge_id={} path_expression={})'.\
+            format(self.__class__.__name__,
+                   self._vertex_id,
+                   self._edge_id,
+                   self._path_expression)
     
     
     

@@ -20,14 +20,16 @@ def make_file(graph):
             dot_file.write('digraph {\n')
             dot_file.write('ranksep=0.3;\n')
             dot_file.write('nodesep=0.25;\n')
-            if isinstance(graph, directed_graphs.LoopNestingHierarchy):
+            if isinstance(graph, directed_graphs.ControlFlowGraph):
+                write_control_flow_graph(dot_file, graph)
+            elif isinstance(graph, directed_graphs.InstrumentationPointGraph):
+                write_instrumentation_point_graph(dot_file, graph)
+            elif isinstance(graph, directed_graphs.LoopNestingHierarchy):
                 write_loop_nesting_tree(dot_file, graph)
             elif isinstance(graph, directed_graphs.SuperBlockGraph):
                 write_super_block_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.CallGraph):
                 write_call_graph(dot_file, graph)
-            elif isinstance(graph, directed_graphs.ControlFlowGraph):
-                write_control_flow_graph(dot_file, graph)
             elif isinstance(graph, directed_graphs.Dominators):
                 write_dominator_tree(dot_file, graph)
             elif isinstance(graph, directed_graphs.PathExpression):
@@ -71,18 +73,13 @@ def write_call_graph(dot_file, call_graph):
 def write_control_flow_graph(dot_file, control_flow_graph):
     
     def write_vertex(vertex):
-        color = 'white'
-        if vertex.instrumented:
-            color = 'yellow'
-        dot_file.write('%d [label="%r", style=filled, fillcolor=%s];\n' 
+        dot_file.write('%d [label="%r"];\n' 
                        % (vertex.vertex_id,
-                          vertex.program_point,
-                          color)) 
-        
+                          vertex.program_point)) 
         for succ_edge in vertex.successor_edge_iterator():
-            dot_file.write('%d -> %d [label ="%s"];\n' % (vertex.vertex_id,
-                                                          succ_edge.vertex_id,
-                                                          succ_edge.path_expression))
+            dot_file.write('{} -> {};\n'.\
+                           format(vertex.vertex_id, 
+                                  succ_edge.vertex_id))
     
     
     if control_flow_graph.entry_vertex is not None:
@@ -90,6 +87,25 @@ def write_control_flow_graph(dot_file, control_flow_graph):
     for vertex in control_flow_graph:
         if vertex != control_flow_graph.entry_vertex:
             write_vertex(vertex)
+            
+            
+def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
+    def write_vertex(vertex):
+        dot_file.write('%d [label="%r"];\n' 
+                       % (vertex.vertex_id,
+                          vertex.program_point)) 
+        
+        for succ_edge in vertex.successor_edge_iterator():
+            penwidth = 3 if succ_edge.loopback else 1
+            dot_file.write('{} -> {} [label ="{}", penwidth={}];\n'.\
+                           format(vertex.vertex_id, 
+                                  succ_edge.vertex_id,
+                                  succ_edge.path_expression,
+                                  penwidth))
+    
+    
+    for vertex in instrumentation_point_graph:
+        write_vertex(vertex)
         
         
 
@@ -134,7 +150,7 @@ def write_pass_expression(dot_file, path_expression):
                                             succ_edge.vertex_id)) 
     
     depth_first_search = directed_graphs.DepthFirstSearch(path_expression,
-                                                          path_expression._root_vertex,
+                                                          path_expression.root_vertex,
                                                           False)
     for vertex in depth_first_search.post_order:
         write_vertex(vertex)

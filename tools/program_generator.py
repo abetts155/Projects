@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import sys
+assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
+
 from argparse import Action, ArgumentError, ArgumentParser
 import os
 import re
@@ -43,24 +46,6 @@ def parse_the_command_line():
     parser.add_argument('--directory',
                         help='write the program file to this directory',
                         default=os.path.abspath(os.curdir))
-    
-    parser.add_argument('-d',
-                        '--debug',
-                        action='store_true',
-                        help='debug mode',
-                        default=False)
-    
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true',
-                        help='be verbose',
-                        default=False)
-    
-    parser.add_argument('--graphviz',
-                        action='store_true',
-                        help='using Graphviz, produce PNG files of graphs'
-                        ' produced during the analysis',
-                        default=False)
     
     parser.add_argument('--subprograms',
                         action=CheckForPositiveValue,
@@ -110,6 +95,7 @@ def parse_the_command_line():
                         help='add unstructured edges to the CFG',
                         default=False)
     
+    globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     base_directory = os.path.abspath(globals.args['directory'])
     program_file = create_program_filename(base_directory)

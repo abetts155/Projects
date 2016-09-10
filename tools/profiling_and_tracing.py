@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import sys
+assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
+
 import argparse
 
-from lib.utils import config
+from lib.utils import globals
 from lib.system import environment
-
 
 
 def parse_the_command_line(): 
@@ -16,38 +18,14 @@ def parse_the_command_line():
                         help='a file containing program information'
                         ' (with .txt extension)')
     
-    parser.add_argument('-d',
-                        '--debug',
-                        action='store_true',
-                        help='debug mode',
-                        default=False)
-    
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true',
-                        help='be verbose',
-                        default=False)
-    
-    parser.add_argument('--graphviz',
-                        action='store_true',
-                        help='using Graphviz, produce PNG files of graphs'
-                        ' produced during the analysis',
-                        default=False)
-    
-    parser.add_argument('--purge-graphviz',
-                        action='store_true',
-                        help='remove all files created by Graphviz in the'
-                        'target directory',
-                        default=False)
-    
     parser.add_argument('--instrument',
                         choices=['vertices', 'edges', 'mixed'],
                         required=True,
                         help='instrument vertices, edges, or both')
     
-    parser.parse_args(namespace=config.Arguments)
-    config.set_filename_prefix()
-    config.purge_graphviz_files()
+    globals.add_common_command_line_arguments(parser)
+    globals.args = vars(parser.parse_args())
+    globals.set_filename_prefix(globals.args['program_file'])
 
 
 if __name__ == '__main__': 
@@ -58,13 +36,13 @@ if __name__ == '__main__':
         print(control_flow_graph.name)
         basic_blocks, control_flow_edges\
             = control_flow_graph.split_program_points_into_basic_blocks_and_edges()
-        if config.Arguments.instrument == 'vertices':
+        if globals.args['instrument'] == 'vertices':
             control_flow_graph.reduce_but_maintain_path_reconstructibility\
                                     (control_flow_edges)
-        elif config.Arguments.instrument == 'edges':
+        elif globals.args['instrument'] == 'edges':
             control_flow_graph.reduce_but_maintain_path_reconstructibility\
                                     (basic_blocks)
-        elif config.Arguments.instrument == 'mixed':
+        elif globals.args['instrument'] == 'mixed':
             control_flow_graph.reduce_but_maintain_path_reconstructibility\
                                     (set())
         else:

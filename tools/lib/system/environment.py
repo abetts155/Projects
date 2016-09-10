@@ -66,11 +66,9 @@ def create_program_from_input_file():
                              (pred_id, succ_id))
                 control_flow_graph.add_vertex(vertex)
                 control_flow_graph.add_edge(control_flow_graph.get_vertex(pred_id),
-                                            vertex,
-                                            None)
+                                            vertex)
                 control_flow_graph.add_edge(vertex,
-                                            control_flow_graph.get_vertex(succ_id),
-                                            None)
+                                            control_flow_graph.get_vertex(succ_id))
             # Find entry and exit vertex, then add vertex representing an edge 
             # from the exit vertex to the entry vertex 
             control_flow_graph.set_entry_vertex()
@@ -82,35 +80,27 @@ def create_program_from_input_file():
                                      exit_to_entry_edge)
             control_flow_graph.add_vertex(exit_to_entry_vertex)
             control_flow_graph.add_edge(control_flow_graph.exit_vertex,
-                                        exit_to_entry_vertex,
-                                        None)
+                                        exit_to_entry_vertex)
             control_flow_graph.add_edge(exit_to_entry_vertex,
-                                        control_flow_graph.entry_vertex,
-                                        None)
+                                        control_flow_graph.entry_vertex)
             # This may seem weird but bear with me.  The reason we set the
             # exit of the control flow graph to the control flow edge is that 
             # this edge always executes last, even though technically it does 
             # not actually exist in the program.  Really, this makes sures the 
             # post-dominator tree is correct.
             control_flow_graph.exit_vertex = exit_to_entry_vertex
-            program.add_control_flow_graph(control_flow_graph) 
+            program[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
     
     
     edges_in_call_graph = set()
     def create_call_graph():
-        call_graph = CallGraph()
-        for control_flow_graph in program.control_flow_graph_iterator():
-            call_graph.add_vertex(SubprogramVertex
-                                    (call_graph.get_new_vertex_id(),
-                                     control_flow_graph.name))
         for call_site_id, caller, callee in edges_in_call_graph:
-            pred_call_vertex = call_graph.get_vertex_with_name(caller)
-            succ_call_vertex = call_graph.get_vertex_with_name(callee)
-            call_graph.add_edge(pred_call_vertex, 
-                                succ_call_vertex, 
-                                parse_int(call_site_id))
-        program.call_graph = call_graph
+            pred_call_vertex = program.call_graph.get_vertex_with_name(caller)
+            succ_call_vertex = program.call_graph.get_vertex_with_name(callee)
+            program.call_graph.add_edge(pred_call_vertex, 
+                                        succ_call_vertex, 
+                                        parse_int(call_site_id))
         dot.make_file(program.call_graph)
     
     
@@ -149,8 +139,7 @@ def create_program_from_input_file():
                     if function_name_regex.match(line):
                         # Function name
                         current_function = line
-                        control_flow_graph = program.get_control_flow_graph\
-                                                (current_function)
+                        control_flow_graph = program[current_function]
                     elif program_property_regex.match(line):
                         # A property concerning a program point
                         assert control_flow_graph, 'The property {} is not '
@@ -167,16 +156,19 @@ def create_program_from_input_file():
                                              parse_int(lexemes[2]))
                             property_index = 4
                         
-                        vertex = control_flow_graph.get_vertex_for_program_point\
-                                    (program_point)
-                                    
                         if lexemes[property_index] == 'instrument':
                             if lexemes[-1].startswith('t'):
-                                vertex.instrumented = True
+                                control_flow_graph.\
+                                program_point_data.\
+                                set_instrumented(program_point, True)
                             else:
-                                vertex.instrumented = False
+                                control_flow_graph.\
+                                program_point_data.\
+                                set_instrumented(program_point, False)
                         elif lexemes[property_index] == 'wcet':
-                            vertex.wcet = (parse_int(lexemes[-1]), True)
+                            control_flow_graph.\
+                            program_point_data.\
+                            set_wcet(program_point, parse_int(lexemes[-1]))
                         elif lexemes[property_index] == 'loop_bound':
                             assert lexemes[-1][0] == '(' \
                             and lexemes[-1][len(lexemes[-1])-1] == ')'
@@ -184,7 +176,9 @@ def create_program_from_input_file():
                             loop_bound_tuple = lexemes[-1][1:len(lexemes[-1])-1]
                             loop_bound_tuple = tuple(parse_int(val) for val in 
                                                      loop_bound_tuple.split(','))
-                            vertex.loop_bound = (loop_bound_tuple, True)
+                            control_flow_graph.\
+                            program_point_data.\
+                            set_loop_bound(program_point, loop_bound_tuple)
                         else:
                             assert False, 'Unknown program point property {}'.\
                             format(lexemes[property_index])   
@@ -208,7 +202,7 @@ class Program:
     """
     
     def __init__(self):
-        self._call_graph = None
+        self._call_graph = CallGraph()
         self._control_flow_graphs = collections.OrderedDict()
         
     
@@ -220,41 +214,51 @@ class Program:
     @call_graph.setter
     def call_graph(self, value):
         self._call_graph = value
-    
-    
-    def add_control_flow_graph(self, control_flow_graph):
-        assert control_flow_graph.name not in self._control_flow_graphs,\
-            'Duplicate control flow graph with name {}'.\
-            format(control_flow_graph.name)
-        self._control_flow_graphs[control_flow_graph.name] = control_flow_graph
-    
-    
-    def has_function(self, function_name):
-        return function_name in self._control_flow_graphs
         
     
-    def control_flow_graph_iterator(self):
-        for _, control_flow_graph in self._control_flow_graphs.items():
-            yield control_flow_graph
+    def delete_unlisted_functions(self, functions_to_keep):
+        if functions_to_keep is not None:
+            functions_to_delete = [vertex.name for vertex in self._call_graph 
+                                   if vertex.name not in functions_to_keep]
+            for function_name in functions_to_delete:
+                del self[function_name]
     
     
-    def get_control_flow_graph(self, function_name):
+    def __delitem__(self, function_name):
+        try:
+            del self._control_flow_graphs[function_name]
+            call_vertex = self._call_graph.get_vertex_with_name(function_name)
+            self._call_graph.remove_vertex(call_vertex)
+        except KeyError:
+            raise KeyError('No function called {} to delete'.
+                           format(function_name))
+    
+    
+    def __setitem__(self, function_name, control_flow_graph):
+        assert function_name not in self._control_flow_graphs,\
+            'Duplicate control flow graph with name {}'.\
+            format(function_name)
+        self._control_flow_graphs[function_name] = control_flow_graph
+        self._call_graph.add_vertex(SubprogramVertex
+                                    (self._call_graph.get_new_vertex_id(),
+                                     control_flow_graph.name))
+    
+    
+    def __getitem__(self, function_name):
         try:
             return self._control_flow_graphs[function_name]
         except KeyError:
             raise KeyError('Unable to find control flow graph for function {}'.\
                            format(function_name))
-            
     
-    def delete_functions_not_listed(self, functions_to_keep):
-        if functions_to_keep is not None:
-            functions_to_delete = [function_name for function_name in 
-                                   self._control_flow_graphs.keys() 
-                                   if function_name not in functions_to_keep]
-            for function_name in functions_to_delete:
-                del self._control_flow_graphs[function_name]
-                call_vertex = self._call_graph.get_vertex_with_name(function_name)
-                self._call_graph.remove_vertex(call_vertex)
+    
+    def __contains__(self, function_name):
+        return function_name in self._control_flow_graphs
+        
+    
+    def __iter__(self):
+        for control_flow_graph in self._control_flow_graphs.values():
+            yield control_flow_graph
     
     
     def __len__(self):

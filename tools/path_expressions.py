@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+import sys
+assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
+
 import argparse
 import ast
 
-from lib.utils import config
+from lib.utils import globals
 from lib.utils import debug
 from lib.system import environment
-
 
 
 def create_path_expression_between_two_program_points(the_program):
@@ -59,33 +61,9 @@ def parse_the_command_line():
                         help='a file containing program information'
                         ' (with .txt extension)')
     
-    parser.add_argument('-d',
-                        '--debug',
-                        action='store_true',
-                        help='debug mode',
-                        default=False)
-    
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true',
-                        help='be verbose',
-                        default=False)
-    
-    parser.add_argument('--graphviz',
-                        action='store_true',
-                        help='using Graphviz, produce PNG files of graphs'
-                        ' produced during the analysis',
-                        default=False)
-    
-    parser.add_argument('--purge-graphviz',
-                        action='store_true',
-                        help='remove all files created by Graphviz in the'
-                        'target directory',
-                        default=False)
-    
-    parser.parse_args(namespace=config.Arguments)
-    config.set_filename_prefix()
-    config.purge_graphviz_files()
+    globals.add_common_command_line_arguments(parser)
+    globals.args = vars(parser.parse_args())
+    globals.set_filename_prefix(globals.args['program_file'])
 
 
 if __name__ == "__main__": 

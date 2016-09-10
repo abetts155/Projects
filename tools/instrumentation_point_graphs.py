@@ -4,7 +4,6 @@ import sys
 assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
 
 import argparse
-import threading
 
 from lib.utils import globals
 from lib.system import environment
@@ -19,7 +18,7 @@ def parse_the_command_line():
     parser.add_argument('program_file',
                         help='a file containing program information'
                         ' (with .txt extension)')
-
+    
     parser.add_argument('--repeat',
                         type=int,
                         help='repeat the calculation this many times',
@@ -33,11 +32,6 @@ def parse_the_command_line():
                         default=10,
                         metavar='<INT>')
     
-    parser.add_argument('--folded',
-                        action='store_true',
-                        help='fold super blocks before constraint solving',
-                        default=False)
-    
     parser.add_argument('--functions',
                         nargs='*',
                         help='analyse these functions only')
@@ -45,16 +39,13 @@ def parse_the_command_line():
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     globals.set_filename_prefix(globals.args['program_file'])
-    
+
 
 if __name__ == '__main__': 
-    threading.stack_size(67108864) # 64MB stack
-    sys.setrecursionlimit(2**20)
-    
     parse_the_command_line()
     program = environment.create_program_from_input_file() 
     program.delete_unlisted_functions(globals.args['functions'])
-    calculations.calculate_wcet_using_integer_linear_programming(program)
+    calculations.calculate_wcet_using_instrumentation_point_graph(program)
 
             
     

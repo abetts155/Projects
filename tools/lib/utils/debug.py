@@ -9,9 +9,13 @@ def verbose_message(string, module):
         print('[{}] {}'.format(module, string), file=sys.stderr)
 
         
-def debug_message (string, module):
+def debug_message(string, module):
     if globals.args['debug']:
         print('[{}] {}'.format(module, string), file=sys.stderr)
+        
+        
+def warning_message(string):
+    print('[WARNING] {}'.format(*string))
 
 
 def exit_message(string):
