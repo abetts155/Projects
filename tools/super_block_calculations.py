@@ -1,7 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
+
+import shutil
+import os
+assert shutil.which('lp_solve', mode=os.X_OK), 'Script requires lp_solve to be in your path'
 
 import argparse
 import threading
@@ -54,6 +58,7 @@ if __name__ == '__main__':
     parse_the_command_line()
     program = environment.create_program_from_input_file() 
     program.delete_unlisted_functions(globals.args['functions'])
+    program.add_dummy_outermost_loop_to_each_control_flow_graph()
     calculations.calculate_wcet_using_integer_linear_programming(program)
 
             

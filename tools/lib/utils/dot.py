@@ -73,9 +73,14 @@ def write_call_graph(dot_file, call_graph):
 def write_control_flow_graph(dot_file, control_flow_graph):
     
     def write_vertex(vertex):
-        dot_file.write('%d [label="%r"];\n' 
-                       % (vertex.vertex_id,
-                          vertex.program_point)) 
+        color = 'white'
+        if control_flow_graph.program_point_data.\
+            get_instrumented(vertex.program_point):
+            color = 'yellow'
+        dot_file.write('{} [label="{}", style=filled, fillcolor={}];\n'.\
+                       format(vertex.vertex_id,
+                              vertex.program_point,
+                              color)) 
         for succ_edge in vertex.successor_edge_iterator():
             dot_file.write('{} -> {};\n'.\
                            format(vertex.vertex_id, 
@@ -96,12 +101,14 @@ def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
                           vertex.program_point)) 
         
         for succ_edge in vertex.successor_edge_iterator():
-            penwidth = 3 if succ_edge.loopback else 1
-            dot_file.write('{} -> {} [label ="{}", penwidth={}];\n'.\
+            penwidth = 1
+            color = 'black'
+            dot_file.write('{} -> {} [label ="{}", penwidth={}, color={}];\n'.\
                            format(vertex.vertex_id, 
                                   succ_edge.vertex_id,
                                   succ_edge.path_expression,
-                                  penwidth))
+                                  penwidth,
+                                  color))
     
     
     for vertex in instrumentation_point_graph:

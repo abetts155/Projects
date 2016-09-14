@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'

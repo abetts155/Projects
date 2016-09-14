@@ -1,11 +1,11 @@
 
 import collections
 import re
+import numpy
 
-from lib.system.directed_graphs import (ControlFlowGraph, 
-                                              CallGraph)
 from lib.system.vertices import (ProgramPointVertex, 
                                        SubprogramVertex)
+from lib.system import directed_graphs
 from lib.utils import dot
 from lib.utils import globals
 
@@ -14,7 +14,8 @@ def generate_program():
     program = Program()
     for function_id in range(1, globals.args['subprograms'] + 1):
         function_name = 'F{}'.format(function_id)
-        control_flow_graph = ControlFlowGraph.create(function_name)
+        control_flow_graph = directed_graphs.create_control_flow_graph\
+                                (function_name)
         program.add_control_flow_graph(control_flow_graph)
     return program
 
@@ -45,7 +46,7 @@ def create_program_from_input_file():
     edges_in_control_flow_graphs = collections.OrderedDict()
     def create_control_flow_graphs(): 
         for function_name, edge_list in edges_in_control_flow_graphs.items():
-            control_flow_graph = ControlFlowGraph(function_name)
+            control_flow_graph = directed_graphs.ControlFlowGraph(function_name)
             # Add vertices to control flow graph representing basic blocks
             for an_edge in edge_list:
                 pred_id = parse_int(an_edge[0])
@@ -73,22 +74,6 @@ def create_program_from_input_file():
             # from the exit vertex to the entry vertex 
             control_flow_graph.set_entry_vertex()
             control_flow_graph.set_exit_vertex()
-            exit_to_entry_edge = (control_flow_graph.exit_vertex.vertex_id,
-                                  control_flow_graph.entry_vertex.vertex_id)
-            exit_to_entry_vertex = ProgramPointVertex\
-                                    (control_flow_graph.get_new_vertex_id(),
-                                     exit_to_entry_edge)
-            control_flow_graph.add_vertex(exit_to_entry_vertex)
-            control_flow_graph.add_edge(control_flow_graph.exit_vertex,
-                                        exit_to_entry_vertex)
-            control_flow_graph.add_edge(exit_to_entry_vertex,
-                                        control_flow_graph.entry_vertex)
-            # This may seem weird but bear with me.  The reason we set the
-            # exit of the control flow graph to the control flow edge is that 
-            # this edge always executes last, even though technically it does 
-            # not actually exist in the program.  Really, this makes sures the 
-            # post-dominator tree is correct.
-            control_flow_graph.exit_vertex = exit_to_entry_vertex
             program[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
     
@@ -174,8 +159,8 @@ def create_program_from_input_file():
                             and lexemes[-1][len(lexemes[-1])-1] == ')'
                             # Strip parentheses from tuple
                             loop_bound_tuple = lexemes[-1][1:len(lexemes[-1])-1]
-                            loop_bound_tuple = tuple(parse_int(val) for val in 
-                                                     loop_bound_tuple.split(','))
+                            loop_bound_tuple = numpy.array([parse_int(val) for val in 
+                                                            loop_bound_tuple.split(',')])
                             control_flow_graph.\
                             program_point_data.\
                             set_loop_bound(program_point, loop_bound_tuple)
@@ -202,7 +187,7 @@ class Program:
     """
     
     def __init__(self):
-        self._call_graph = CallGraph()
+        self._call_graph = directed_graphs.CallGraph()
         self._control_flow_graphs = collections.OrderedDict()
         
     
@@ -222,6 +207,11 @@ class Program:
                                    if vertex.name not in functions_to_keep]
             for function_name in functions_to_delete:
                 del self[function_name]
+                
+                
+    def add_dummy_outermost_loop_to_each_control_flow_graph(self):
+        for control_flow_graph in self:
+            control_flow_graph.add_exit_to_entry_edge()
     
     
     def __delitem__(self, function_name):

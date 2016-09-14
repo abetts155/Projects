@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
@@ -68,7 +68,8 @@ def parse_the_command_line():
 
 if __name__ == "__main__": 
     parse_the_command_line()
-    the_program = environment.create_program_from_input_file()
+    program = environment.create_program_from_input_file()
+    program.add_dummy_outermost_loop_to_each_control_flow_graph()
     #create_path_expression_between_two_program_points(the_program)
     
     

@@ -7,6 +7,7 @@ import collections
 import abc
 import random
 import math
+import numpy
 
 from lib.utils import dot
 from lib.utils import debug
@@ -72,6 +73,16 @@ class DirectedGraph:
         'The graph already has vertex {}'.format(vertex.vertex_id)
         self._vertices[vertex.vertex_id] = vertex
         
+        
+    def remove_vertex(self, vertex):
+        for pred_edge in vertex.predecessor_edge_iterator():
+            pred_vertex = self.get_vertex(pred_edge.vertex_id)
+            pred_vertex.remove_successor_edge(vertex.vertex_id)
+        for succ_edge in vertex.successor_edge_iterator():
+            succ_vertex = self.get_vertex(succ_edge.vertex_id)
+            succ_vertex.remove_predecessor_edge(vertex.vertex_id)
+        del self._vertices[vertex.vertex_id]
+        
     
     def get_vertex(self, vertex_id):
         try:
@@ -118,6 +129,7 @@ class DirectedGraph:
                                                  for vertex in self))
     
 
+
 class ProgramPointData:
     def __init__(self, control_flow_graph):
         self._control_flow_graph = control_flow_graph
@@ -135,10 +147,6 @@ class ProgramPointData:
     
     def set_instrumented(self, program_point, value):
         self._instrumented[program_point] = value
-        
-        
-    def instrumentation_set(self, program_point):
-        return program_point in self._instrumented
         
     
     def get_wcet(self, program_point):
@@ -161,8 +169,12 @@ class ProgramPointData:
         try:
             return self._instrumented[program_point]
         except KeyError:
+            if program_point is None:
+                # This is a dummy vertex added for analysis purposes.  Assume
+                # that it is not instrumented. 
+                return False
             raise KeyError('No information on whether program point {} is'
-                           ' instrumented'.format(program_point))
+                            ' instrumented'.format(program_point))
     
         
     def create_timing_data(self, redo=False):
@@ -176,20 +188,20 @@ class ProgramPointData:
         maximum_loop_bound = random.randint(1, globals.args['max_loop_bound'])
         def create_loop_bound_tuple_for_header(level, abstract_vertex):
             if level == 0:
-                return (1,)
+                return numpy.array([1])
             elif level == 1:
-                return (random.randint(1, maximum_loop_bound),)
+                return numpy.array([random.randint(1, maximum_loop_bound)])
             else:
                 parent_abstract_vertex = loop_nesting_tree.get_vertex\
                                             (abstract_vertex.
                                              get_ith_predecessor_edge(0).
                                              vertex_id)
-                loop_bound = ()                        
+                loop_bound = []                        
                 for number_of_iterations in self._loop_bounds[parent_abstract_vertex.
                                                               program_point]:
                     for _ in range(1, number_of_iterations+1):
-                        loop_bound += (random.randint(1, maximum_loop_bound),)
-                return loop_bound
+                        loop_bound.append(random.randint(1, maximum_loop_bound))
+                return numpy.array(loop_bound)
     
         loop_nesting_tree = self._control_flow_graph.get_loop_nesting_tree()
         for level, tree_vertices in loop_nesting_tree.\
@@ -201,6 +213,7 @@ class ProgramPointData:
                     if header not in self._loop_bounds or redo:
                         self._loop_bounds[header.program_point] =\
                             create_loop_bound_tuple_for_header(level, abstract_vertex)
+
 
 
 class ControlFlowGraph(DirectedGraph):
@@ -216,420 +229,6 @@ class ControlFlowGraph(DirectedGraph):
     a basic block such that the second element of the transition equals the
     basic block.
     """
-    
-    class ArtificialLoopBody():
-        """
-        A loop body created during artificial construction of a control flow graph.
-        """
-        
-        def __init__(self, 
-                     control_flow_graph, 
-                     number_of_vertices, 
-                     nested_loop_components):
-            self._header_vertex = None
-            self.__created_vertices = set()
-            self.__disconnected_vertices = []
-            self.__singleton_vertices = []
-            self.__free_seses = []
-            self.add_vertices(control_flow_graph, 
-                              number_of_vertices)
-            self.create_sese_regions(control_flow_graph,
-                                     number_of_vertices, 
-                                     nested_loop_components)
-            self.connect_sese_regions(control_flow_graph)
-            self.connect_singleton_vertices(control_flow_graph)
-            self.add_nested_loop_entry_and_exit_edges(control_flow_graph,
-                                                      nested_loop_components)
-            self.add_backedges_and_find_exit_sources(control_flow_graph)  
-            
-            
-        @property
-        def header_vertex(self):
-            return self._header_vertex
-            
-            
-        def add_vertices(self, control_flow_graph, number_of_vertices):
-            for _ in range(1, number_of_vertices+1):
-                vertex_id = control_flow_graph.get_new_vertex_id()
-                vertex = ProgramPointVertex(vertex_id, vertex_id)
-                control_flow_graph.add_vertex(vertex)
-                self.__created_vertices.add(vertex)
-                self.__disconnected_vertices.append(vertex)
-            
-            
-        def create_sese_regions(self, 
-                                control_flow_graph, 
-                                number_of_vertices, 
-                                nested_loop_components):
-            remaining_vertices = number_of_vertices - len(nested_loop_components)
-            number_of_singleton_vertices = len(nested_loop_components)
-            
-            def how_many_components(component_size):
-                nonlocal remaining_vertices
-                number_of_components = 0
-                if remaining_vertices >= component_size:
-                    number_of_components = random.randint\
-                                            (1, math.floor(remaining_vertices/component_size))
-                    remaining_vertices -= component_size * number_of_components
-                return number_of_components
-            
-            number_of_if_then_else = how_many_components(4)\
-                                        if random.random() > 0.3 else 0
-            number_of_short_circuit = how_many_components(5)\
-                                        if random.random() > 0.3 else 0
-            number_of_if_then = how_many_components(3)\
-                                    if random.random() > 0.3 else 0
-            number_of_switch = how_many_components(globals.args['fan_out'] + 2)\
-                                    if random.random() > 0.3 else 0
-            
-            number_of_singleton_vertices += remaining_vertices
-            for _ in range(1, number_of_singleton_vertices):
-                vertex = self.__disconnected_vertices.pop()
-                self.__singleton_vertices.append(vertex)
-                
-            while number_of_if_then_else > 0 or number_of_if_then > 0\
-            or number_of_short_circuit > 0 or number_of_switch > 0:
-                if number_of_if_then_else > 0 and bool(random.getrandbits(1)):
-                    sese = self.create_if_then_else(control_flow_graph)
-                    self.__free_seses.append(sese)
-                    number_of_if_then_else -= 1
-                if number_of_if_then > 0 and bool(random.getrandbits(1)):
-                    sese = self.create_if_then(control_flow_graph)
-                    self.__free_seses.append(sese)
-                    number_of_if_then -= 1
-                if number_of_short_circuit > 0 and bool(random.getrandbits(1)):
-                    sese = self.create_short_circuit(control_flow_graph)
-                    self.__free_seses.append(sese)
-                    number_of_short_circuit -= 1
-                if number_of_switch > 0 and bool(random.getrandbits(1)):
-                    sese = self.create_switch(control_flow_graph)
-                    self.__free_seses.append(sese)
-                    number_of_switch -= 1
-        
-        
-        def create_switch(self, control_flow_graph):
-            branch_vertex = self.__disconnected_vertices.pop()
-            merge_vertex = self.__disconnected_vertices.pop()
-            for _ in range(1, globals.args['fan_out'] + 1):
-                switch_arm = self.create_sese_region(control_flow_graph)
-                control_flow_graph.add_edge(branch_vertex, switch_arm[0])
-                control_flow_graph.add_edge(switch_arm[1], merge_vertex)
-            return [branch_vertex, merge_vertex]
-        
-        
-        def create_short_circuit(self, control_flow_graph):
-            outer_branch_vertex = self.__disconnected_vertices.pop()
-            inner_branch_vertex = self.__disconnected_vertices.pop()
-            merge_vertex = self.__disconnected_vertices.pop()
-            then_branch = self.create_sese_region(control_flow_graph)
-            else_branch = self.create_sese_region(control_flow_graph)
-            control_flow_graph.add_edge(outer_branch_vertex, 
-                                        inner_branch_vertex)
-            control_flow_graph.add_edge(outer_branch_vertex,
-                                        else_branch[0])
-            control_flow_graph.add_edge(inner_branch_vertex, 
-                                        then_branch[0])
-            control_flow_graph.add_edge(inner_branch_vertex, 
-                                        else_branch[0])
-            control_flow_graph.add_edge(then_branch[1], 
-                                        merge_vertex)
-            control_flow_graph.add_edge(else_branch[1], 
-                                        merge_vertex)
-            return [outer_branch_vertex, merge_vertex]
-        
-        
-        def create_if_then(self, control_flow_graph):
-            branch_vertex = self.__disconnected_vertices.pop()
-            merge_vertex = self.__disconnected_vertices.pop()
-            then_branch = self.create_sese_region(control_flow_graph)
-            control_flow_graph.add_edge(branch_vertex, 
-                                        then_branch[0])
-            control_flow_graph.add_edge(then_branch[1], 
-                                        merge_vertex)
-            control_flow_graph.add_edge(branch_vertex, 
-                                        merge_vertex)
-            return [branch_vertex, merge_vertex]
-        
-        
-        def create_if_then_else(self, control_flow_graph):
-            branch_vertex = self.__disconnected_vertices.pop()
-            merge_vertex  = self.__disconnected_vertices.pop()
-            then_branch = self.create_sese_region(control_flow_graph)
-            else_branch = self.create_sese_region(control_flow_graph)
-            control_flow_graph.add_edge(branch_vertex, 
-                                        then_branch[0])
-            control_flow_graph.add_edge(branch_vertex, 
-                                        else_branch[0])
-            control_flow_graph.add_edge(then_branch[1], 
-                                        merge_vertex)
-            control_flow_graph.add_edge(else_branch[1], 
-                                        merge_vertex)
-            return [branch_vertex, merge_vertex]
-        
-        
-        def create_sese_region(self, control_flow_graph):
-            entry_vertex = self.__disconnected_vertices.pop()
-            exit_vertex = entry_vertex
-            if self.__singleton_vertices and bool(random.getrandbits(1)):
-                vertex = self.__singleton_vertices.pop()
-                control_flow_graph.add_edge(exit_vertex, vertex)
-                exit_vertex = vertex
-            elif self.__free_seses and bool(random.getrandbits(1)):
-                nested_sese = self.__free_seses.pop()
-                control_flow_graph.add_edge(exit_vertex, nested_sese[0])
-                exit_vertex = nested_sese[1]
-            return [entry_vertex, exit_vertex]
-        
-        
-        def connect_sese_regions(self, control_flow_graph):
-            while len(self.__free_seses) > 1:
-                sese1 = self.__free_seses.pop()
-                sese2 = self.__free_seses.pop()
-                source_vertex = sese1[1]
-                while self.__singleton_vertices and bool(random.getrandbits(1)):
-                    vertex = self.__singleton_vertices.pop()
-                    control_flow_graph.add_edge(source_vertex, 
-                                                vertex)
-                    source_vertex = vertex
-                control_flow_graph.add_edge(source_vertex, 
-                                            sese2[0])
-                sese1[1] = sese2[1]
-                self.__free_seses.append(sese1)
-        
-        
-        def connect_singleton_vertices(self, control_flow_graph):
-            if self.__free_seses:
-                last_sese = self.__free_seses.pop()
-                while self.__singleton_vertices:
-                    vertex = self.__singleton_vertices.pop()
-                    if bool(random.getrandbits(1)):
-                        control_flow_graph.add_edge(vertex, last_sese[0])
-                        last_sese[0] = vertex
-                    else:
-                        control_flow_graph.add_edge(last_sese[1], vertex)
-                        last_sese[1] = vertex        
-                self._header_vertex = last_sese[0]
-            elif self.__singleton_vertices:
-                pred_vertex = None 
-                vertex = None
-                while self.__singleton_vertices:
-                    vertex = self.__singleton_vertices.pop()
-                    if pred_vertex is not None:
-                        control_flow_graph.add_edge(pred_vertex, 
-                                                    vertex)
-                    else:
-                        self._header_vertex = vertex
-                    pred_vertex = vertex
-                
-            while self.__disconnected_vertices:
-                vertex = self.__disconnected_vertices.pop()
-                control_flow_graph.add_edge(vertex, 
-                                            self._header_vertex)
-                self._header_vertex = vertex
-                    
-                    
-        def add_nested_loop_entry_and_exit_edges(self, 
-                                                 control_flow_graph,
-                                                 nested_loop_components):
-            if nested_loop_components:
-                candidate_sources = [vertex for vertex in self.__created_vertices 
-                                     if vertex.number_of_successors() == 1]
-                random.shuffle(candidate_sources)
-                assert len(candidate_sources) >= len(nested_loop_components)
-                
-                depth_first_search = DepthFirstSearch(control_flow_graph, 
-                                                      self._header_vertex, 
-                                                      False)
-                for loop_component in nested_loop_components:
-                    # Connect to inner loop header
-                    pred_vertex = candidate_sources.pop()
-                    control_flow_graph.add_edge(pred_vertex, loop_component.header_vertex)
-                    # Connect inner loop exits to vertices whose post-order numbering is 
-                    # less than the predecessor. This ensures exit control flow is in a 
-                    # forward direction.
-                    pred_vertex_index = depth_first_search.post_order.index(pred_vertex)
-                    candidate_destinations = depth_first_search.post_order[:pred_vertex_index]
-                    for exit_vertex in loop_component.exit_vertices:
-                        succ_vertex_index = random.randint(0, len(candidate_destinations)-1)
-                        succ_vertex = candidate_destinations[succ_vertex_index]
-                        control_flow_graph.add_edge(exit_vertex, succ_vertex)
-                    
-                    
-        def add_backedges_and_find_exit_sources(self, control_flow_graph):
-            self._tail_vertices = [vertex for vertex in self.__created_vertices
-                                   if vertex.number_of_successors() == 0]
-            assert len(self._tail_vertices) == 1
-            
-            for tail_vertex in self._tail_vertices:
-                control_flow_graph.add_edge(tail_vertex, 
-                                            self._header_vertex)
-    
-    
-    
-    @staticmethod
-    def create(name):
-        
-        def create_artificial_hierarchy(name, number_of_loops, maximum_nesting_depth):
-            loop_nesting_tree = Tree(name)
-            # Add abstract vertices to the tree, including an extra one for the 
-            # dummy outer loop.
-            vertex_to_level = {}
-            root_vertex = None
-            for loop_number in range(1, number_of_loops+2):
-                tree_vertex = Vertex(loop_number)
-                loop_nesting_tree.add_vertex(tree_vertex)
-                root_vertex = tree_vertex
-                vertex_to_level[tree_vertex] = 0
-            # Add edges to the tree
-            parent_vertex = root_vertex
-            for vertex in loop_nesting_tree:
-                if vertex != root_vertex:
-                    new_level = vertex_to_level[parent_vertex] + 1
-                    if new_level <= maximum_nesting_depth:
-                        loop_nesting_tree.add_edge(parent_vertex, vertex)
-                        vertex_to_level[vertex] = new_level
-                    else:
-                        # The height of the tree now exceeds the maximum depth, so
-                        # backtrack to an arbitrary proper ancestor
-                        ancestor_vertex = parent_vertex
-                        while True:
-                            pred_edge = ancestor_vertex.get_ith_predecessor_edge(0)
-                            ancestor_vertex = loop_nesting_tree.get_vertex\
-                                                (pred_edge.vertex_id)
-                            if bool(random.getrandbits(1)) \
-                            or ancestor_vertex == root_vertex:
-                                break
-                        parent_vertex = ancestor_vertex
-                        loop_nesting_tree.add_edge(parent_vertex, vertex)
-                        vertex_to_level[vertex] = vertex_to_level[parent_vertex] + 1
-                    parent_vertex = vertex
-            loop_nesting_tree._set_tree_properties()
-            return loop_nesting_tree
-        
-        
-        def create_structure(control_flow_graph, 
-                             bare_loop_nesting_tree, 
-                             number_of_basic_blocks):
-            # Compute number of vertices in each loop.  Guarantee each loop has at 
-            # least 2 vertices plus vertices needed to connect inner nested loops.
-            number_of_vertices_per_loop = {}
-            number_of_vertices_remaining = number_of_basic_blocks
-            for tree_vertex in bare_loop_nesting_tree:
-                min_vertices = 2 + tree_vertex.number_of_successors()
-                number_of_vertices_per_loop[tree_vertex] = min_vertices
-                number_of_vertices_remaining -= min_vertices
-            # Arbitrarily distribute any remaining vertices to the loop bodies.
-            while number_of_vertices_remaining > 0:
-                for tree_vertex in bare_loop_nesting_tree:
-                    additional_vertices = random.randint(0, number_of_vertices_remaining)
-                    number_of_vertices_per_loop[tree_vertex] += additional_vertices
-                    number_of_vertices_remaining -= additional_vertices
-            # Generate each loop body
-            loop_components = {}
-            for _, vertices in bare_loop_nesting_tree.level_by_level_iterator():
-                for tree_vertex in vertices:
-                    nested_loop_components = []
-                    for succ_edge in tree_vertex.successor_edge_iterator():
-                        succ_vertex = bare_loop_nesting_tree.\
-                                        get_vertex(succ_edge.vertex_id)
-                        nested_loop_components.append(loop_components[succ_vertex])
-                    loop_component = ControlFlowGraph.ArtificialLoopBody\
-                                        (control_flow_graph, 
-                                         number_of_vertices_per_loop[tree_vertex], 
-                                         nested_loop_components)
-                    if tree_vertex == bare_loop_nesting_tree.root_vertex:
-                        pred_edge = loop_component.\
-                                    header_vertex.\
-                                    get_ith_predecessor_edge(0)
-                        control_flow_graph.entry_vertex =\
-                            loop_component.header_vertex
-                        control_flow_graph.exit_vertex =\
-                            control_flow_graph.get_vertex(pred_edge.vertex_id)
-                    else:
-                        loop_components[tree_vertex] = loop_component
-                   
-                        
-        def pick_and_remove_random_merge_vertices(control_flow_graph):
-            disconnected_vertices = []
-            
-            def connect_predecessors_to_successors(vertex):
-                for pred_edge in vertex.predecessor_edge_iterator():
-                    pred_vertex = control_flow_graph.get_vertex(pred_edge.
-                                                                vertex_id)
-                    for succ_edge in vertex.successor_edge_iterator():
-                        if not pred_vertex.has_successor(succ_edge.vertex_id):
-                            succ_vertex = control_flow_graph.\
-                                            get_vertex(succ_edge.vertex_id)
-                            control_flow_graph.add_edge(pred_vertex, 
-                                                        succ_vertex)
-                            
-            
-            def disconnect_vertex(vertex):
-                pred_edges_to_remove = set()
-                for pred_edge in vertex.predecessor_edge_iterator():
-                    pred_vertex = control_flow_graph.get_vertex(pred_edge.
-                                                                vertex_id)
-                    pred_vertex.remove_successor_edge(vertex.vertex_id)
-                    pred_edges_to_remove.add(pred_edge)
-                for pred_edge in pred_edges_to_remove:
-                    vertex.remove_predecessor_edge(pred_edge.vertex_id)
-                    
-                succ_edges_to_remove = set()
-                for succ_edge in vertex.successor_edge_iterator():
-                    succ_vertex = control_flow_graph.get_vertex(succ_edge.
-                                                                vertex_id)
-                    succ_vertex.remove_predecessor_edge(vertex.vertex_id)
-                    succ_edges_to_remove.add(succ_edge)
-                for succ_edge in succ_edges_to_remove:
-                    vertex.remove_successor_edge(succ_edge.vertex_id)
-            
-            
-            for vertex in control_flow_graph:
-                if vertex.number_of_predecessors() > 1\
-                and bool(random.getrandbits(1)):
-                    if not (control_flow_graph.exit_vertex == vertex):
-                        connect_predecessors_to_successors(vertex)
-                        disconnect_vertex(vertex)
-                        disconnected_vertices.append(vertex)
-    
-            # At this point there is a bunch of vertices disconnected from the 
-            # control flow graph.  Reconnect them to vertices which currently only 
-            # have one successor or make the disconnected vertex the entry of the
-            # control flow graph.
-            candidate_sources = []
-            for vertex in control_flow_graph:
-                if vertex.number_of_successors() == 1 \
-                and vertex != control_flow_graph.exit_vertex:
-                    assert vertex not in disconnected_vertices
-                    candidate_sources.append(vertex)
-                    
-            random.shuffle(candidate_sources)
-            
-            for vertex in disconnected_vertices:
-                if candidate_sources and bool(random.getrandbits(1)):
-                    source_index = random.randint(0, len(candidate_sources)-1)
-                    source_vertex = candidate_sources[source_index]
-                    for succ_edge in source_vertex.successor_edge_iterator():
-                        succ_vertex = control_flow_graph.get_vertex(succ_edge.vertex_id)
-                        control_flow_graph.add_edge(vertex, succ_vertex)
-                    control_flow_graph.add_edge(source_vertex, vertex)
-                else:
-                    control_flow_graph.entry_vertex = vertex
-        
-        
-        control_flow_graph = ControlFlowGraph(name)
-        bare_loop_nesting_tree = create_artificial_hierarchy\
-                                    (name, 
-                                     globals.args['loops'], 
-                                     globals.args['nesting_depth'])
-        create_structure(control_flow_graph,
-                         bare_loop_nesting_tree, 
-                         globals.args['basic_blocks'])
-        if globals.args['unstructured']:
-            pick_and_remove_random_merge_vertices(control_flow_graph)
-        control_flow_graph.check_connected()
-        return control_flow_graph
-    
     
     def __init__(self, name):
         DirectedGraph.__init__(self, name)
@@ -716,6 +315,7 @@ class ControlFlowGraph(DirectedGraph):
                 self._basic_block_vertices.add(vertex)
             else:
                 self._control_flow_edge_vertices.add(vertex)
+            self.program_point_data.set_instrumented(vertex.program_point, False)
            
             
     def has_vertex_for_program_point(self, program_point):
@@ -778,21 +378,48 @@ class ControlFlowGraph(DirectedGraph):
                     self.get_super_block_subgraph(abstract_vertex)
     
     
-    def set_program_points_uninstrumented_if_not_set_yet(self):
+    def instrument_all_control_flow_edges(self):
         for vertex in self:
-            if not self._program_point_data.instrumentation_set(vertex.program_point):
-                self._program_point_data.set_instrumented(vertex.program_point,
-                                                          False)
+            if not ProgramPointVertex.is_basic_block(vertex.program_point):
+                self.program_point_data.set_instrumented(vertex.program_point,
+                                                         True)
+            
+                
+                
+    def instrument_all_basic_blocks(self):
+        for vertex in self:
+            if ProgramPointVertex.is_basic_block(vertex.program_point):
+                self.program_point_data.set_instrumented(vertex.program_point,
+                                                         True)
+        
     
-    
-    def get_instrumentation_point_graph(self):
-        if self._instrumentation_point_graph is None:
-            self.set_program_points_uninstrumented_if_not_set_yet()
-            self._instrumentation_point_graph = InstrumentationPointGraph(self)
-            dot.make_file(self._instrumentation_point_graph)
-        return self._instrumentation_point_graph
-    
-    
+    def add_exit_to_entry_edge(self):
+        exit_to_entry_edge = (self.exit_vertex.vertex_id,
+                              self.entry_vertex.vertex_id)
+        exit_to_entry_vertex = ProgramPointVertex\
+                                (self.get_new_vertex_id(),
+                                 exit_to_entry_edge)
+        self.add_vertex(exit_to_entry_vertex)
+        self.add_edge(self.exit_vertex, exit_to_entry_vertex)
+        self.add_edge(exit_to_entry_vertex, self.entry_vertex)
+        # The reason we set the exit of the control flow graph to the control 
+        # flow edge is that this edge always executes last, even though 
+        # technically it does not actually exist in the program.  Really, this 
+        # makes sures the post-dominator tree is correct.
+        self.exit_vertex = exit_to_entry_vertex
+                
+                
+    def add_persistent_dummy_entry_and_exit_vertices(self):
+        new_entry_vertex = ProgramPointVertex(self.get_new_vertex_id(), None)
+        self.add_vertex(new_entry_vertex)
+        self.add_edge(new_entry_vertex, self._entry_vertex)
+        self._entry_vertex = new_entry_vertex
+        new_exit_vertex = ProgramPointVertex(self.get_new_vertex_id(), None)
+        self.add_vertex(new_exit_vertex)
+        self.add_edge(self._exit_vertex, new_exit_vertex)
+        self._exit_vertex = new_exit_vertex
+        
+        
     def get_vertices_on_frontier_of_loop_body(self, loop_body):
         loop_nesting_tree = self.get_loop_nesting_tree()
         loop_exits = set()
@@ -889,90 +516,6 @@ class ControlFlowGraph(DirectedGraph):
         induced_graph.set_exit_vertex()
         dot.make_file(induced_graph)
         return induced_graph
-    
-    
-    def reduce_but_maintain_path_reconstructibility(self,
-                                                    unmonitored_program_points):
-        # We use a temporary state transition to path expression mapping to
-        # ensure linear growth of path expression trees. 
-        state_transition_to_path_expression = {}
-        
-        def connect_predecessors_to_successors(vertex):
-            """
-            For this vertex, connect each of its predecessor to each of its 
-            successors.
-            """
-            for pred_edge in vertex.predecessor_edge_iterator():
-                pred_vertex = self.get_vertex(pred_edge.vertex_id)
-                for succ_edge in vertex.successor_edge_iterator():
-                    succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                    state_transition_to_path_expression[(pred_vertex, succ_vertex)]\
-                        = state_transition_to_path_expression[(pred_vertex, vertex)]\
-                        + [vertex.program_point]\
-                        + state_transition_to_path_expression[(vertex, succ_vertex)]
-                    self.add_edge(pred_vertex, succ_vertex, None)
-                    
-        
-        def can_remove_program_point(vertex):
-            """
-            Is it possible to remove this program point while maintaining path
-            reconstructibility?
-            """
-            for pred_edge in vertex.predecessor_edge_iterator():
-                pred_vertex = self.get_vertex(pred_edge.vertex_id)
-                for succ_edge in vertex.successor_edge_iterator():
-                    if pred_vertex.has_successor(succ_edge.vertex_id):
-                        return False
-            return True
-                    
-        
-        # The following loop does two things:
-        # 1) It removes unmonitored program points.
-        # 2) It sets up the temporary state transition to path expression 
-        # mapping. Initially the values in the mapping will be empty.
-        program_points_to_remove = set()
-        for vertex in self:
-            if vertex.program_point in unmonitored_program_points:
-                    program_points_to_remove.add(vertex)    
-            for succ_edge in vertex.successor_edge_iterator():
-                succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                assert succ_edge.path_expression is None,\
-                       'Expected the path expression of the edge {}->{} to be '\
-                       ' empty'.format(vertex.vertex_id, succ_edge.vertex_id)
-                state_transition_to_path_expression[(vertex, succ_vertex)] = []
-                    
-        
-        # Maintain graph connectedness and remove each unneeded program point.
-        for vertex in program_points_to_remove:
-            connect_predecessors_to_successors(vertex)
-            self.remove_vertex(vertex)
-        
-    
-        # Reduce graph until removal of state violates path reconstructibility
-        changed = True
-        while changed:
-            changed = False
-            candidiates = list(self._vertices.values())
-            random.shuffle(candidiates)
-            for vertex in candidiates:
-                if can_remove_program_point(vertex):
-                    changed = True
-                    connect_predecessors_to_successors(vertex)
-                    self.remove_vertex(vertex)
-        
-        
-        # Create each path expression tree from a list of program points
-        for vertex in self:
-            for succ_edge in vertex.successor_edge_iterator():
-                succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                pred_edge = succ_vertex.get_predecessor_edge(vertex.vertex_id)
-                path_expression = PathExpression.create_sequence_from_list_of_program_points\
-                    (state_transition_to_path_expression[(vertex, succ_vertex)], 
-                     self._name)
-                succ_edge.path_expression = path_expression
-                pred_edge.path_expression = path_expression
-    
-        dot.make_file(self)
         
     
     def check_connected(self):
@@ -1026,20 +569,129 @@ class ControlFlowGraph(DirectedGraph):
 
 class InstrumentationPointGraph(DirectedGraph):
     
-    def __init__(self, control_flow_graph):
-        DirectedGraph.__init__(self, control_flow_graph.name)
+    @staticmethod
+    def instrument_as_per_user_instruction(control_flow_graph):
+        instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
+        instrumentation_point_graph._reduce_for_timing_analysis(control_flow_graph)
+        return instrumentation_point_graph
+    
+    
+    @staticmethod
+    def instrument_but_maintain_path_reconstructibility(control_flow_graph):
+        instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
+        instrumentation_point_graph._reduce_for_profiling_and_tracing(control_flow_graph)
+        return instrumentation_point_graph
+        
+    
+    def __init__(self, name):
+        DirectedGraph.__init__(self, name)
         self._program_point_to_vertex = {}
         self._program_point_to_removed_vertex = {}
-        self._loop_headers = {}
-        self._loop_tails = {}
-        self._is_vertex_source_of_backedge = {}
-        self._is_vertex_destination_of_backedge = {}
-        loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
+        
+        
+    def _reduce_for_profiling_and_tracing(self, control_flow_graph):
+        # We use a temporary state transition to path expression mapping to
+        # ensure linear growth of path expression trees. 
+        state_transition_to_path_expression = {}
+        
+        def connect_predecessors_to_successors(vertex):
+            """
+            For this vertex, connect each of its predecessor to each of its 
+            successors.
+            """
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                for succ_edge in vertex.successor_edge_iterator():
+                    succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                    state_transition_to_path_expression[(pred_vertex, succ_vertex)]\
+                        = state_transition_to_path_expression[(pred_vertex, vertex)]\
+                        + [vertex.program_point]\
+                        + state_transition_to_path_expression[(vertex, succ_vertex)]
+                    self.add_edge(pred_vertex, succ_vertex, None)
+                    
+        
+        def can_remove_program_point(vertex):
+            """
+            Is it possible to remove this program point while maintaining path
+            reconstructibility?
+            """
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                for succ_edge in vertex.successor_edge_iterator():
+                    if pred_vertex.has_successor(succ_edge.vertex_id):
+                        return False
+            return True
+                    
+                    
+        # Do not destroy the original control flow graph structure.
         self.__copy_control_flow_graph(control_flow_graph)
-        self.__initialise_loop_properties(control_flow_graph, loop_nesting_tree)
-        self.__reduce(control_flow_graph, loop_nesting_tree)
-        self.__update_loop_properties(control_flow_graph, loop_nesting_tree)
+        
+        # The following loop does two things:
+        # 1) It removes unmonitored program points.
+        # 2) It sets up the temporary state transition to path expression 
+        # mapping. Initially the values in the mapping will be empty.
+        program_points_to_remove = set()
+        for vertex in self:
+            if not control_flow_graph.program_point_data.get_instrumented(vertex.program_point)\
+            and vertex.vertex_id != control_flow_graph.entry_vertex.vertex_id\
+            and vertex.vertex_id != control_flow_graph.exit_vertex.vertex_id:
+                program_points_to_remove.add(vertex)
+            
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                assert succ_edge.path_expression is None,\
+                       'Expected the path expression of the edge {}->{} to be '\
+                       ' empty'.format(vertex.vertex_id, succ_edge.vertex_id)
+                state_transition_to_path_expression[(vertex, succ_vertex)] = []
+                    
+        
+        # Maintain graph connectedness and remove each unneeded program point.
+        for vertex in program_points_to_remove:
+            connect_predecessors_to_successors(vertex)
+            self.__remove_vertex(vertex)
+            control_flow_graph.program_point_data.set_instrumented(vertex.program_point,
+                                                                   False)
+        
     
+        # Reduce graph until removal of state violates path reconstructibility
+        changed = True
+        while changed:
+            changed = False
+            candidiates = [vertex for vertex in list(self._vertices.values()) 
+                           if vertex.vertex_id != control_flow_graph.entry_vertex.vertex_id 
+                           and vertex.vertex_id != control_flow_graph.exit_vertex.vertex_id]
+            random.shuffle(candidiates)
+            for vertex in candidiates:
+                if can_remove_program_point(vertex):
+                    changed = True
+                    connect_predecessors_to_successors(vertex)
+                    self.__remove_vertex(vertex)
+                    control_flow_graph.program_point_data.set_instrumented(vertex.program_point,
+                                                                           False)
+        
+        
+        # Create each path expression tree from a list of program points
+        for vertex in self:
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                pred_edge = succ_vertex.get_predecessor_edge(vertex.vertex_id)
+                path_expression = PathExpression.create_sequence_from_list_of_program_points\
+                    (state_transition_to_path_expression[(vertex, succ_vertex)], 
+                     self._name)
+                succ_edge.path_expression = path_expression
+                pred_edge.path_expression = path_expression
+                
+        dot.make_file(self)
+        
+        
+    def _reduce_for_timing_analysis(self, control_flow_graph):
+        self.__copy_control_flow_graph(control_flow_graph)
+        self.__scatter_loop_bounds(control_flow_graph.get_loop_nesting_tree(),
+                                   control_flow_graph.program_point_data)
+        self.__initialise_loop_properties(control_flow_graph.get_loop_nesting_tree())
+        self.__reduce(control_flow_graph.get_loop_nesting_tree(), 
+                      control_flow_graph.program_point_data)
+        
     
     def get_vertex_for_program_point(self, program_point):
         try:
@@ -1049,14 +701,6 @@ class InstrumentationPointGraph(DirectedGraph):
         except KeyError:
             raise KeyError('No vertex found for program point {}'.
                            format(program_point))
-            
-    
-    def get_destinations_of_loopback_edges(self, abstract_vertex):
-        try:
-            return self._loop_headers[abstract_vertex.program_point]
-        except KeyError:
-            raise KeyError('Nothing found for header {}'.
-                           format(abstract_vertex.program_point))
     
         
     def add_edge(self, pred_vertex, succ_vertex, path_expression):
@@ -1070,15 +714,10 @@ class InstrumentationPointGraph(DirectedGraph):
         
     
     def __remove_vertex(self, vertex):
-        for pred_edge in vertex.predecessor_edge_iterator():
-            pred_vertex = self.get_vertex(pred_edge.vertex_id)
-            pred_vertex.remove_successor_edge(vertex.vertex_id)
-        for succ_edge in vertex.successor_edge_iterator():
-            succ_vertex = self.get_vertex(succ_edge.vertex_id)
-            succ_vertex.remove_predecessor_edge(vertex.vertex_id)
-        del self._vertices[vertex.vertex_id]
-        del self._program_point_to_vertex[vertex.program_point]
-        self._program_point_to_removed_vertex[vertex.program_point] = vertex
+        DirectedGraph.remove_vertex(self, vertex)
+        if vertex.program_point:
+            del self._program_point_to_vertex[vertex.program_point]
+            self._program_point_to_removed_vertex[vertex.program_point] = vertex
         
     
     def __copy_control_flow_graph(self, control_flow_graph):
@@ -1092,47 +731,105 @@ class InstrumentationPointGraph(DirectedGraph):
                 self.add_edge(self.get_vertex(vertex.vertex_id),
                               self.get_vertex(succ_edge.vertex_id),
                               None)
+                
+                
+    def __scatter_loop_bounds(self,
+                              loop_nesting_tree,
+                              program_point_data):
+        for level, the_vertices in loop_nesting_tree.level_by_level_iterator\
+                                (abstract_vertices_only=True):
+            for abstract_vertex in the_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    loop_body = set()
+                    loop_body_when_exiting = set()
+                    
+                    # The loop body returned by the loop-nesting tree contains
+                    # tree type vertices.  For the analysis below, we want 
+                    # vertices in the instrumentation point graph, so grab them.
+                    for tree_vertex in loop_nesting_tree.\
+                                        get_loop_body_for_program_point\
+                                        (abstract_vertex.program_point):
+                        vertex = self.get_vertex(tree_vertex.vertex_id)
+                        loop_body.add(vertex)
+                    
+                    if level == 0:
+                        # The outermost (dummy) loop: all vertices found in the
+                        # loop body are part of the exit space.
+                        loop_body_when_exiting = loop_body
+                    else:
+                        # Work out which vertices are sources of loop-exit edges
+                        # and then travel backwards from those vertices.  During
+                        # the search, any vertex met can feasibly be executed
+                        # each time the loop executes its final iteration (with
+                        # respect to the parent loop).
+                        loop_exits = set()
+                        for vertex in loop_body:
+                            for succ_edge in vertex.successor_edge_iterator():
+                                succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                                abstract_vertex_for_succ =\
+                                    loop_nesting_tree.get_header_abstract_vertex_for_program_point\
+                                        (succ_vertex.program_point)
+                                if not loop_nesting_tree.is_ancestor(abstract_vertex, abstract_vertex_for_succ):
+                                    loop_exits.add(vertex)
+                                           
+                        stack = [vertex for vertex in loop_exits]
+                        while stack:
+                            stack_vertex = stack.pop()
+                            loop_body_when_exiting.add(stack_vertex)
+                            for pred_edge in stack_vertex.predecessor_edge_iterator():
+                                pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                                abstract_vertex_for_pred = loop_nesting_tree.\
+                                                            get_header_abstract_vertex_for_program_point\
+                                                                (pred_vertex.program_point)
+                                if not loop_nesting_tree.is_loop_tail(pred_vertex.program_point)\
+                                and loop_nesting_tree.is_ancestor(abstract_vertex, abstract_vertex_for_pred)\
+                                and pred_vertex not in loop_body_when_exiting:
+                                    stack.append(pred_vertex)
+                    
+                    # Strip off one iteration from the loop-bound tuple if the 
+                    # vertex cannot be executed on the final iteration.
+                    loop_bound_when_exiting = program_point_data.\
+                                                get_loop_bound\
+                                                    (abstract_vertex.program_point)
+                    loop_bound_when_iterating = numpy.array(loop_bound_when_exiting,
+                                                            copy=True)
+                    for index, value in enumerate(loop_bound_when_iterating):
+                        loop_bound_when_iterating[index] = value-1
+                    for vertex in loop_body:
+                        if vertex in loop_body_when_exiting:
+                            program_point_data.set_loop_bound(vertex.program_point,
+                                                              loop_bound_when_exiting)
+                        else:
+                            program_point_data.set_loop_bound(vertex.program_point,
+                                                              loop_bound_when_iterating)
+                    
+                            
+                    
+        for vertex in self:
+            if vertex.number_of_predecessors() == 1:
+                for pred_edge in vertex.predecessor_edge_iterator():
+                    pred_edge.loop_bound = program_point_data.get_loop_bound(vertex.program_point)
+                
+            if vertex.number_of_successors() == 1:
+                for succ_edge in vertex.successor_edge_iterator():
+                    succ_edge.loop_bound = program_point_data.get_loop_bound(vertex.program_point)
+                    
+        
+        for vertex in self:
+            if vertex.number_of_predecessors() > 1:
+                pass
 
     
-    def __initialise_loop_properties(self, 
-                                     control_flow_graph,
+    def __initialise_loop_properties(self,
                                      loop_nesting_tree):
-        # Initially assume that each program point is neither a source nor a 
-        # destination of a backedge.
-        for vertex in self:
-            self._is_vertex_source_of_backedge[vertex] = set()
-            self._is_vertex_destination_of_backedge[vertex] = set()
-        
         for _, the_vertices in loop_nesting_tree.level_by_level_iterator\
                                 (abstract_vertices_only=True):
-            for tree_vertex in the_vertices:
-                if ProgramPointVertex.is_basic_block(tree_vertex.program_point):
-                    # Before the reduction starts, a loop header is the only 
-                    # destination of a backedge.
-                    control_flow_graph_vertex =\
-                        control_flow_graph.get_vertex_for_program_point\
-                            (tree_vertex.program_point)
-                    vertex = self.get_vertex(control_flow_graph_vertex.vertex_id)
-                    self._is_vertex_destination_of_backedge\
-                        [vertex].add(tree_vertex.program_point)
-                    self._loop_headers[tree_vertex.program_point] = set()
-                    self._loop_tails[tree_vertex.program_point] = set()
-                else:
-                    # Before the reduction starts, a loop tail is the only 
-                    # source of a backedge.
-                    control_flow_graph_vertex =\
-                        control_flow_graph.get_vertex_for_program_point\
-                            (tree_vertex.program_point)
-                    vertex = self.get_vertex(control_flow_graph_vertex.vertex_id)
-                    parent_tree_vertex = loop_nesting_tree.get_vertex\
-                                            (tree_vertex.
-                                             get_ith_predecessor_edge(0).
-                                             vertex_id)
-                    self._is_vertex_source_of_backedge\
-                        [vertex].add(parent_tree_vertex.program_point)
+            for abstract_vertex in the_vertices:
+                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                    pass    
     
         
-    def __reduce(self, control_flow_graph, loop_nesting_tree):
+    def __reduce(self, loop_nesting_tree, program_point_data):
         
         """
         Eliminate program points that are not instrumented.  During this 
@@ -1162,34 +859,11 @@ class InstrumentationPointGraph(DirectedGraph):
                     (list_of_child_expressions, self._name)
         
         
-        def update_backedge_information(vertex):
-            abstract_vertex_one = loop_nesting_tree.\
-                                    get_header_abstract_vertex_for_program_point\
-                                        (vertex.program_point)
+        def update_loop_information(pred_to_vertex_edge,
+                                    vertex_to_succ_edge, 
+                                    new_edge_tuple):
+            pass
             
-            for pred_edge in vertex.predecessor_edge_iterator():
-                if pred_edge.vertex_id != vertex.vertex_id:
-                    pred_vertex = self.get_vertex(pred_edge.vertex_id)
-                    abstract_vertex_two = loop_nesting_tree.\
-                                            get_header_abstract_vertex_for_program_point\
-                                            (pred_vertex.program_point)
-                    if loop_nesting_tree.is_ancestor(abstract_vertex_one, 
-                                                     abstract_vertex_two):
-                        self._is_vertex_source_of_backedge[pred_vertex].\
-                        update(self._is_vertex_source_of_backedge[vertex])
-                        
-                        
-            for succ_edge in vertex.successor_edge_iterator():
-                if succ_edge.vertex_id != vertex.vertex_id:
-                    succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                    abstract_vertex_two = loop_nesting_tree.\
-                                            get_header_abstract_vertex_for_program_point\
-                                            (succ_vertex.program_point)
-                    if loop_nesting_tree.is_ancestor(abstract_vertex_one, 
-                                                     abstract_vertex_two):
-                        self._is_vertex_destination_of_backedge[succ_vertex].\
-                        update(self._is_vertex_destination_of_backedge[vertex])
-                
         
         def connect_predecessors_to_successors(vertex):
             """
@@ -1204,7 +878,7 @@ class InstrumentationPointGraph(DirectedGraph):
                     PathExpression.create_loop_path_expression\
                         (self_loop_edge.path_expression, 
                          self._name)
-            
+                        
             for pred_edge in vertex.predecessor_edge_iterator():
                 if pred_edge.vertex_id != vertex.vertex_id:
                     pred_vertex = self.get_vertex(pred_edge.vertex_id)
@@ -1234,9 +908,17 @@ class InstrumentationPointGraph(DirectedGraph):
                                          self._name)
                                 pred_edge.path_expression = alternative_expression
                                 succ_edge.path_expression = alternative_expression
+                            
+                            pred_edge = succ_vertex.get_predecessor_edge\
+                                            (pred_vertex.vertex_id)
+                            succ_edge = pred_vertex.get_successor_edge\
+                                            (succ_vertex.vertex_id)
+                            new_edge_tuple = (pred_edge, succ_edge)
+                            update_loop_information(vertex.get_predecessor_edge(pred_vertex.vertex_id),
+                                                    vertex.get_successor_edge(succ_vertex.vertex_id),
+                                                    new_edge_tuple)                                    
         
         
-        program_point_data = control_flow_graph.program_point_data
         program_points_to_remove = [vertex for vertex in self 
                                     if not program_point_data.
                                     get_instrumented(vertex.program_point)]
@@ -1245,7 +927,6 @@ class InstrumentationPointGraph(DirectedGraph):
             debug.debug_message('Removing program point {}'.
                                 format(vertex.program_point), 
                                 __name__)
-            update_backedge_information(vertex)
             connect_predecessors_to_successors(vertex)
             self.__remove_vertex(vertex)
             
@@ -1253,30 +934,10 @@ class InstrumentationPointGraph(DirectedGraph):
         for vertex in self:
             for succ_edge in vertex.successor_edge_iterator():
                 succ_vertex = self.get_vertex(succ_edge.vertex_id)
-                succ_edge.path_expression.pred_vertex = vertex
-                succ_edge.path_expression.succ_vertex = succ_vertex
-                dot.make_file(succ_edge.path_expression)
-
-
-    def __update_loop_properties(self, control_flow_graph, loop_nesting_tree):
-        for vertex in self:
-            for header_program_point in self._is_vertex_destination_of_backedge[vertex]:
-                self._loop_headers[header_program_point].add(vertex)
-            for header_program_point in self._is_vertex_source_of_backedge[vertex]:
-                self._loop_tails[header_program_point].add(vertex)
-        
-        for _, the_vertices in loop_nesting_tree.level_by_level_iterator\
-                                (abstract_vertices_only=True):
-            for tree_vertex in the_vertices:
-                if ProgramPointVertex.is_basic_block(tree_vertex.program_point):
-                    for pred_vertex in self._loop_tails[tree_vertex.program_point]:
-                        for succ_vertex in self._loop_headers[tree_vertex.program_point]:
-                            succ_edge = pred_vertex.get_successor_edge\
-                                            (succ_vertex.vertex_id)
-                            succ_edge.loopback = True
-                            pred_edge = succ_vertex.get_predecessor_edge\
-                                            (pred_vertex.vertex_id)
-                            pred_edge.loopback = True
+                if succ_edge.path_expression:
+                    succ_edge.path_expression.pred_vertex = vertex
+                    succ_edge.path_expression.succ_vertex = succ_vertex
+                    dot.make_file(succ_edge.path_expression)
 
 
     def dot_filename(self):
@@ -1429,9 +1090,7 @@ class Tree(DirectedGraph):
                 parent_vertex = self.get_vertex(vertex.get_ith_predecessor_edge(0).\
                                                 vertex_id)
                 vertex_level = vertices_to_level[parent_vertex] + 1
-                if vertex_level not in self._level_to_vertices.keys():
-                    self._level_to_vertices[vertex_level] = set()
-                self._level_to_vertices[vertex_level].add(vertex)
+                self._level_to_vertices.setdefault(vertex_level, set()).add(vertex)
                 vertices_to_level[vertex] = vertex_level
         
 
@@ -1717,6 +1376,15 @@ class LoopNestingHierarchy(Tree):
         return abstract_vertex.program_point == program_point
     
     
+    def is_loop_tail(self, program_point):
+        program_point_vertex = self._program_point_to_vertex[program_point]
+        abstract_vertex = self.get_vertex(program_point_vertex.
+                                          get_ith_predecessor_edge(0).
+                                          vertex_id)
+        return not ProgramPointVertex.is_basic_block(program_point)\
+            and abstract_vertex.program_point == program_point
+    
+    
     def get_header_abstract_vertex_for_program_point(self, program_point):
         program_point_vertex = self._program_point_to_vertex[program_point]
         abstract_vertex = self.get_vertex(program_point_vertex.
@@ -1896,8 +1564,7 @@ class LoopNestingHierarchy(Tree):
         # such header, the set of vertices shared among those loops.
         header_loop_bodies = {}
         for (_, header), loop_body in loop_bodies.items():
-            if header not in header_loop_bodies:
-                header_loop_bodies[header] = set(loop_body)
+            header_loop_bodies.setdefault(header, set()).update(loop_body)
             header_loop_bodies[header].intersection_update(loop_body)
                         
         # For each vertex in a shared loop body, set the header's abstract
@@ -2071,13 +1738,14 @@ class PathExpression(DirectedGraph):
             for vertex in depth_first_search.post_order:
                 if isinstance(vertex, RegularExpressionVertex):
                     string = ''
+                    
                     # Do we need to parenthesise the sub-expression?
                     if vertex.operator in [RegularExpressionVertex.ALTERNATIVE,
                                            RegularExpressionVertex.MIGHT_ITERATE,
                                            RegularExpressionVertex.MUST_ITERATE]:
                         string += '['
                     
-                    # Construct the meat of the expression
+                    # Construct the meat of the expression.
                     counter = 1
                     for succ_edge in vertex.successor_edge_iterator():
                         succ_vertex = self.get_vertex(succ_edge.vertex_id)
@@ -2095,12 +1763,13 @@ class PathExpression(DirectedGraph):
                                            RegularExpressionVertex.MIGHT_ITERATE,
                                            RegularExpressionVertex.MUST_ITERATE]:
                         string += ']'
-                    # Repeat the expression zero or more times?
-                    if vertex.operator == RegularExpressionVertex.MIGHT_ITERATE:
-                        string += '*'
-                    elif vertex.operator == RegularExpressionVertex.MUST_ITERATE:
-                        string += '+'
                         
+                    # Repeat the expression zero or more times?
+                    if vertex.operator in [RegularExpressionVertex.MIGHT_ITERATE,
+                                           RegularExpressionVertex.MUST_ITERATE]:
+                        string += vertex.operator
+                    
+                    # Move the expression up the DAG.
                     for pred_edge in vertex.predecessor_edge_iterator():
                         if self.has_vertex(pred_edge.vertex_id):
                             pred_vertex = self.get_vertex(pred_edge.vertex_id)
@@ -2108,6 +1777,7 @@ class PathExpression(DirectedGraph):
                             cached_strings[succ_edge] = string
                     if vertex == self.root_vertex:
                         cached_strings[vertex] = string
+                        
             self.__string = cached_strings[self._root_vertex]
         return self.__string
                 
@@ -2357,5 +2027,421 @@ class SuperBlockGraph(DirectedGraph):
     
     def dot_filename(self):
         return '{}.super'.format(self._name)
-            
+
+
+
+
+class ArtificialLoopBody:
+    """
+    A loop body created during artificial construction of a control flow graph.
+    """
+    
+    def __init__(self, 
+                 control_flow_graph, 
+                 number_of_vertices, 
+                 nested_loop_components):
+        self._header_vertex = None
+        self.__created_vertices = set()
+        self.__disconnected_vertices = []
+        self.__singleton_vertices = []
+        self.__free_seses = []
+        self.add_vertices(control_flow_graph, 
+                          number_of_vertices)
+        self.create_sese_regions(control_flow_graph,
+                                 number_of_vertices, 
+                                 nested_loop_components)
+        self.connect_sese_regions(control_flow_graph)
+        self.connect_singleton_vertices(control_flow_graph)
+        self.add_nested_loop_entry_and_exit_edges(control_flow_graph,
+                                                  nested_loop_components)
+        self.add_backedges_and_find_exit_sources(control_flow_graph)  
         
+        
+    @property
+    def header_vertex(self):
+        return self._header_vertex
+        
+        
+    def add_vertices(self, control_flow_graph, number_of_vertices):
+        for _ in range(1, number_of_vertices+1):
+            vertex_id = control_flow_graph.get_new_vertex_id()
+            vertex = ProgramPointVertex(vertex_id, vertex_id)
+            control_flow_graph.add_vertex(vertex)
+            self.__created_vertices.add(vertex)
+            self.__disconnected_vertices.append(vertex)
+        
+        
+    def create_sese_regions(self, 
+                            control_flow_graph, 
+                            number_of_vertices, 
+                            nested_loop_components):
+        remaining_vertices = number_of_vertices - len(nested_loop_components)
+        number_of_singleton_vertices = len(nested_loop_components)
+        
+        def how_many_components(component_size):
+            nonlocal remaining_vertices
+            number_of_components = 0
+            if remaining_vertices >= component_size:
+                number_of_components = random.randint\
+                                        (1, math.floor(remaining_vertices/component_size))
+                remaining_vertices -= component_size * number_of_components
+            return number_of_components
+        
+        number_of_if_then_else = how_many_components(4)\
+                                    if random.random() > 0.3 else 0
+        number_of_short_circuit = how_many_components(5)\
+                                    if random.random() > 0.3 else 0
+        number_of_if_then = how_many_components(3)\
+                                if random.random() > 0.3 else 0
+        number_of_switch = how_many_components(globals.args['fan_out'] + 2)\
+                                if random.random() > 0.3 else 0
+        
+        number_of_singleton_vertices += remaining_vertices
+        for _ in range(1, number_of_singleton_vertices):
+            vertex = self.__disconnected_vertices.pop()
+            self.__singleton_vertices.append(vertex)
+            
+        while number_of_if_then_else > 0 or number_of_if_then > 0\
+        or number_of_short_circuit > 0 or number_of_switch > 0:
+            if number_of_if_then_else > 0 and bool(random.getrandbits(1)):
+                sese = self.create_if_then_else(control_flow_graph)
+                self.__free_seses.append(sese)
+                number_of_if_then_else -= 1
+            if number_of_if_then > 0 and bool(random.getrandbits(1)):
+                sese = self.create_if_then(control_flow_graph)
+                self.__free_seses.append(sese)
+                number_of_if_then -= 1
+            if number_of_short_circuit > 0 and bool(random.getrandbits(1)):
+                sese = self.create_short_circuit(control_flow_graph)
+                self.__free_seses.append(sese)
+                number_of_short_circuit -= 1
+            if number_of_switch > 0 and bool(random.getrandbits(1)):
+                sese = self.create_switch(control_flow_graph)
+                self.__free_seses.append(sese)
+                number_of_switch -= 1
+    
+    
+    def create_switch(self, control_flow_graph):
+        branch_vertex = self.__disconnected_vertices.pop()
+        merge_vertex = self.__disconnected_vertices.pop()
+        for _ in range(1, globals.args['fan_out'] + 1):
+            switch_arm = self.create_sese_region(control_flow_graph)
+            control_flow_graph.add_edge(branch_vertex, switch_arm[0])
+            control_flow_graph.add_edge(switch_arm[1], merge_vertex)
+        return [branch_vertex, merge_vertex]
+    
+    
+    def create_short_circuit(self, control_flow_graph):
+        outer_branch_vertex = self.__disconnected_vertices.pop()
+        inner_branch_vertex = self.__disconnected_vertices.pop()
+        merge_vertex = self.__disconnected_vertices.pop()
+        then_branch = self.create_sese_region(control_flow_graph)
+        else_branch = self.create_sese_region(control_flow_graph)
+        control_flow_graph.add_edge(outer_branch_vertex, 
+                                    inner_branch_vertex)
+        control_flow_graph.add_edge(outer_branch_vertex,
+                                    else_branch[0])
+        control_flow_graph.add_edge(inner_branch_vertex, 
+                                    then_branch[0])
+        control_flow_graph.add_edge(inner_branch_vertex, 
+                                    else_branch[0])
+        control_flow_graph.add_edge(then_branch[1], 
+                                    merge_vertex)
+        control_flow_graph.add_edge(else_branch[1], 
+                                    merge_vertex)
+        return [outer_branch_vertex, merge_vertex]
+    
+    
+    def create_if_then(self, control_flow_graph):
+        branch_vertex = self.__disconnected_vertices.pop()
+        merge_vertex = self.__disconnected_vertices.pop()
+        then_branch = self.create_sese_region(control_flow_graph)
+        control_flow_graph.add_edge(branch_vertex, 
+                                    then_branch[0])
+        control_flow_graph.add_edge(then_branch[1], 
+                                    merge_vertex)
+        control_flow_graph.add_edge(branch_vertex, 
+                                    merge_vertex)
+        return [branch_vertex, merge_vertex]
+    
+    
+    def create_if_then_else(self, control_flow_graph):
+        branch_vertex = self.__disconnected_vertices.pop()
+        merge_vertex  = self.__disconnected_vertices.pop()
+        then_branch = self.create_sese_region(control_flow_graph)
+        else_branch = self.create_sese_region(control_flow_graph)
+        control_flow_graph.add_edge(branch_vertex, 
+                                    then_branch[0])
+        control_flow_graph.add_edge(branch_vertex, 
+                                    else_branch[0])
+        control_flow_graph.add_edge(then_branch[1], 
+                                    merge_vertex)
+        control_flow_graph.add_edge(else_branch[1], 
+                                    merge_vertex)
+        return [branch_vertex, merge_vertex]
+    
+    
+    def create_sese_region(self, control_flow_graph):
+        entry_vertex = self.__disconnected_vertices.pop()
+        exit_vertex = entry_vertex
+        if self.__singleton_vertices and bool(random.getrandbits(1)):
+            vertex = self.__singleton_vertices.pop()
+            control_flow_graph.add_edge(exit_vertex, vertex)
+            exit_vertex = vertex
+        elif self.__free_seses and bool(random.getrandbits(1)):
+            nested_sese = self.__free_seses.pop()
+            control_flow_graph.add_edge(exit_vertex, nested_sese[0])
+            exit_vertex = nested_sese[1]
+        return [entry_vertex, exit_vertex]
+    
+    
+    def connect_sese_regions(self, control_flow_graph):
+        while len(self.__free_seses) > 1:
+            sese1 = self.__free_seses.pop()
+            sese2 = self.__free_seses.pop()
+            source_vertex = sese1[1]
+            while self.__singleton_vertices and bool(random.getrandbits(1)):
+                vertex = self.__singleton_vertices.pop()
+                control_flow_graph.add_edge(source_vertex, 
+                                            vertex)
+                source_vertex = vertex
+            control_flow_graph.add_edge(source_vertex, 
+                                        sese2[0])
+            sese1[1] = sese2[1]
+            self.__free_seses.append(sese1)
+    
+    
+    def connect_singleton_vertices(self, control_flow_graph):
+        if self.__free_seses:
+            last_sese = self.__free_seses.pop()
+            while self.__singleton_vertices:
+                vertex = self.__singleton_vertices.pop()
+                if bool(random.getrandbits(1)):
+                    control_flow_graph.add_edge(vertex, last_sese[0])
+                    last_sese[0] = vertex
+                else:
+                    control_flow_graph.add_edge(last_sese[1], vertex)
+                    last_sese[1] = vertex        
+            self._header_vertex = last_sese[0]
+        elif self.__singleton_vertices:
+            pred_vertex = None 
+            vertex = None
+            while self.__singleton_vertices:
+                vertex = self.__singleton_vertices.pop()
+                if pred_vertex is not None:
+                    control_flow_graph.add_edge(pred_vertex, 
+                                                vertex)
+                else:
+                    self._header_vertex = vertex
+                pred_vertex = vertex
+            
+        while self.__disconnected_vertices:
+            vertex = self.__disconnected_vertices.pop()
+            control_flow_graph.add_edge(vertex, 
+                                        self._header_vertex)
+            self._header_vertex = vertex
+                
+                
+    def add_nested_loop_entry_and_exit_edges(self, 
+                                             control_flow_graph,
+                                             nested_loop_components):
+        if nested_loop_components:
+            candidate_sources = [vertex for vertex in self.__created_vertices 
+                                 if vertex.number_of_successors() == 1]
+            random.shuffle(candidate_sources)
+            assert len(candidate_sources) >= len(nested_loop_components)
+            
+            depth_first_search = DepthFirstSearch(control_flow_graph, 
+                                                  self._header_vertex, 
+                                                  False)
+            for loop_component in nested_loop_components:
+                # Connect to inner loop header
+                pred_vertex = candidate_sources.pop()
+                control_flow_graph.add_edge(pred_vertex, loop_component.header_vertex)
+                # Connect inner loop exits to vertices whose post-order numbering is 
+                # less than the predecessor. This ensures exit control flow is in a 
+                # forward direction.
+                pred_vertex_index = depth_first_search.post_order.index(pred_vertex)
+                candidate_destinations = depth_first_search.post_order[:pred_vertex_index]
+                for exit_vertex in loop_component.exit_vertices:
+                    succ_vertex_index = random.randint(0, len(candidate_destinations)-1)
+                    succ_vertex = candidate_destinations[succ_vertex_index]
+                    control_flow_graph.add_edge(exit_vertex, succ_vertex)
+                
+                
+    def add_backedges_and_find_exit_sources(self, control_flow_graph):
+        self._tail_vertices = [vertex for vertex in self.__created_vertices
+                               if vertex.number_of_successors() == 0]
+        assert len(self._tail_vertices) == 1
+        
+        for tail_vertex in self._tail_vertices:
+            control_flow_graph.add_edge(tail_vertex, 
+                                        self._header_vertex)
+            
+
+
+def create_control_flow_graph(name):
+    
+    def create_artificial_hierarchy(name, number_of_loops, maximum_nesting_depth):
+        loop_nesting_tree = Tree(name)
+        # Add abstract vertices to the tree, including an extra one for the 
+        # dummy outer loop.
+        vertex_to_level = {}
+        root_vertex = None
+        for loop_number in range(1, number_of_loops+2):
+            tree_vertex = Vertex(loop_number)
+            loop_nesting_tree.add_vertex(tree_vertex)
+            root_vertex = tree_vertex
+            vertex_to_level[tree_vertex] = 0
+        # Add edges to the tree
+        parent_vertex = root_vertex
+        for vertex in loop_nesting_tree:
+            if vertex != root_vertex:
+                new_level = vertex_to_level[parent_vertex] + 1
+                if new_level <= maximum_nesting_depth:
+                    loop_nesting_tree.add_edge(parent_vertex, vertex)
+                    vertex_to_level[vertex] = new_level
+                else:
+                    # The height of the tree now exceeds the maximum depth, so
+                    # backtrack to an arbitrary proper ancestor
+                    ancestor_vertex = parent_vertex
+                    while True:
+                        pred_edge = ancestor_vertex.get_ith_predecessor_edge(0)
+                        ancestor_vertex = loop_nesting_tree.get_vertex\
+                                            (pred_edge.vertex_id)
+                        if bool(random.getrandbits(1)) \
+                        or ancestor_vertex == root_vertex:
+                            break
+                    parent_vertex = ancestor_vertex
+                    loop_nesting_tree.add_edge(parent_vertex, vertex)
+                    vertex_to_level[vertex] = vertex_to_level[parent_vertex] + 1
+                parent_vertex = vertex
+        loop_nesting_tree._set_tree_properties()
+        return loop_nesting_tree
+    
+    
+    def create_structure(control_flow_graph, 
+                         bare_loop_nesting_tree, 
+                         number_of_basic_blocks):
+        # Compute number of vertices in each loop.  Guarantee each loop has at 
+        # least 2 vertices plus vertices needed to connect inner nested loops.
+        number_of_vertices_per_loop = {}
+        number_of_vertices_remaining = number_of_basic_blocks
+        for tree_vertex in bare_loop_nesting_tree:
+            min_vertices = 2 + tree_vertex.number_of_successors()
+            number_of_vertices_per_loop[tree_vertex] = min_vertices
+            number_of_vertices_remaining -= min_vertices
+        # Arbitrarily distribute any remaining vertices to the loop bodies.
+        while number_of_vertices_remaining > 0:
+            for tree_vertex in bare_loop_nesting_tree:
+                additional_vertices = random.randint(0, number_of_vertices_remaining)
+                number_of_vertices_per_loop[tree_vertex] += additional_vertices
+                number_of_vertices_remaining -= additional_vertices
+        # Generate each loop body
+        loop_components = {}
+        for _, vertices in bare_loop_nesting_tree.level_by_level_iterator():
+            for tree_vertex in vertices:
+                nested_loop_components = []
+                for succ_edge in tree_vertex.successor_edge_iterator():
+                    succ_vertex = bare_loop_nesting_tree.\
+                                    get_vertex(succ_edge.vertex_id)
+                    nested_loop_components.append(loop_components[succ_vertex])
+                loop_component = ControlFlowGraph.ArtificialLoopBody\
+                                    (control_flow_graph, 
+                                     number_of_vertices_per_loop[tree_vertex], 
+                                     nested_loop_components)
+                if tree_vertex == bare_loop_nesting_tree.root_vertex:
+                    pred_edge = loop_component.\
+                                header_vertex.\
+                                get_ith_predecessor_edge(0)
+                    control_flow_graph.entry_vertex =\
+                        loop_component.header_vertex
+                    control_flow_graph.exit_vertex =\
+                        control_flow_graph.get_vertex(pred_edge.vertex_id)
+                else:
+                    loop_components[tree_vertex] = loop_component
+               
+                    
+    def pick_and_remove_random_merge_vertices(control_flow_graph):
+        disconnected_vertices = []
+        
+        def connect_predecessors_to_successors(vertex):
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = control_flow_graph.get_vertex(pred_edge.
+                                                            vertex_id)
+                for succ_edge in vertex.successor_edge_iterator():
+                    if not pred_vertex.has_successor(succ_edge.vertex_id):
+                        succ_vertex = control_flow_graph.\
+                                        get_vertex(succ_edge.vertex_id)
+                        control_flow_graph.add_edge(pred_vertex, 
+                                                    succ_vertex)
+                        
+        
+        def disconnect_vertex(vertex):
+            pred_edges_to_remove = set()
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = control_flow_graph.get_vertex(pred_edge.
+                                                            vertex_id)
+                pred_vertex.remove_successor_edge(vertex.vertex_id)
+                pred_edges_to_remove.add(pred_edge)
+            for pred_edge in pred_edges_to_remove:
+                vertex.remove_predecessor_edge(pred_edge.vertex_id)
+                
+            succ_edges_to_remove = set()
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = control_flow_graph.get_vertex(succ_edge.
+                                                            vertex_id)
+                succ_vertex.remove_predecessor_edge(vertex.vertex_id)
+                succ_edges_to_remove.add(succ_edge)
+            for succ_edge in succ_edges_to_remove:
+                vertex.remove_successor_edge(succ_edge.vertex_id)
+        
+        
+        for vertex in control_flow_graph:
+            if vertex.number_of_predecessors() > 1\
+            and bool(random.getrandbits(1)):
+                if not (control_flow_graph.exit_vertex == vertex):
+                    connect_predecessors_to_successors(vertex)
+                    disconnect_vertex(vertex)
+                    disconnected_vertices.append(vertex)
+
+        # At this point there is a bunch of vertices disconnected from the 
+        # control flow graph.  Reconnect them to vertices which currently only 
+        # have one successor or make the disconnected vertex the entry of the
+        # control flow graph.
+        candidate_sources = []
+        for vertex in control_flow_graph:
+            if vertex.number_of_successors() == 1 \
+            and vertex != control_flow_graph.exit_vertex:
+                assert vertex not in disconnected_vertices
+                candidate_sources.append(vertex)
+                
+        random.shuffle(candidate_sources)
+        
+        for vertex in disconnected_vertices:
+            if candidate_sources and bool(random.getrandbits(1)):
+                source_index = random.randint(0, len(candidate_sources)-1)
+                source_vertex = candidate_sources[source_index]
+                for succ_edge in source_vertex.successor_edge_iterator():
+                    succ_vertex = control_flow_graph.get_vertex(succ_edge.vertex_id)
+                    control_flow_graph.add_edge(vertex, succ_vertex)
+                control_flow_graph.add_edge(source_vertex, vertex)
+            else:
+                control_flow_graph.entry_vertex = vertex
+    
+    
+    control_flow_graph = ControlFlowGraph(name)
+    bare_loop_nesting_tree = create_artificial_hierarchy\
+                                (name, 
+                                 globals.args['loops'], 
+                                 globals.args['nesting_depth'])
+    create_structure(control_flow_graph,
+                     bare_loop_nesting_tree, 
+                     globals.args['basic_blocks'])
+    if globals.args['unstructured']:
+        pick_and_remove_random_merge_vertices(control_flow_graph)
+    control_flow_graph.check_connected()
+    return control_flow_graph
+
+
+    

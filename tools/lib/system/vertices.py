@@ -230,9 +230,8 @@ class SuperBlock(Vertex):
 
 
     def add_successor_edge_to_partition(self, branch_vertex, succ_edge):
-        if branch_vertex not in self._successor_partitions:
-            self._successor_partitions[branch_vertex] = set()
-        self._successor_partitions[branch_vertex].add(succ_edge)
+        self._successor_partitions[branch_vertex].\
+            set_default(branch_vertex, set()).add(succ_edge)
         
     
     def successor_edge_partition_iterator(self):

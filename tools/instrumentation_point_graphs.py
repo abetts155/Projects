@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parse_the_command_line()
     program = environment.create_program_from_input_file() 
     program.delete_unlisted_functions(globals.args['functions'])
+    program.add_dummy_outermost_loop_to_each_control_flow_graph()
     calculations.calculate_wcet_using_instrumentation_point_graph(program)
 
             
