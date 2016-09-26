@@ -43,9 +43,9 @@ def parse_the_command_line():
 if __name__ == '__main__': 
     parse_the_command_line()
     program = environment.create_program_from_input_file()
-    program.delete_unlisted_functions(globals.args['functions'])
 
     for control_flow_graph in program:
+        print('======> function', control_flow_graph.name)
         for repetition in range(1, globals.args['repeat']+1):
             if globals.args['instrument'] == 'vertices':
                 control_flow_graph.instrument_all_basic_blocks()
@@ -61,14 +61,17 @@ if __name__ == '__main__':
                                             instrument_but_maintain_path_reconstructibility\
                                                 (control_flow_graph)
             dot.make_file(control_flow_graph)
-            print('===>',
-                  repetition,
-                  control_flow_graph.name,
-                  instrumentation_point_graph.number_of_vertices(),
-                  ','.join(str(vertex.program_point) for vertex in control_flow_graph
-                           if control_flow_graph.program_point_data.get_instrumented(vertex.program_point)
-                           and vertex.program_point))
-        print()
+            print('IPG: {}'.format(', '.join(str(vertex.program_point) 
+                                            for vertex in control_flow_graph
+                                            if control_flow_graph.program_point_data.get_instrumented(vertex.program_point)
+                                            and vertex.program_point)))
+            
+            for _, subgraph in control_flow_graph.super_block_graph_iterator():
+                instrumented_program_points = subgraph.choose_instrumentation_points_for_profiling()
+                print('Super: {}'.format(', '.join(str(program_point) 
+                                            for program_point in instrumented_program_points)))
+            
+            print()
 
         
     

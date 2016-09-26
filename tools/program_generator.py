@@ -73,27 +73,12 @@ def parse_the_command_line():
                         metavar='<INT>',
                         default=2)
     
-    parser.add_argument('--basic-blocks',
+    parser.add_argument('--vertices',
                         type=int,
                         action=CheckForPositiveValue,
                         help='maximum number of basic blocks in a control flow graph',
                         metavar='<INT>',
                         default=10)
-    
-    parser.add_argument('--breaks',
-                        action='store_true',
-                        help='allow break-like constructs out of loops',
-                        default=False)
-    
-    parser.add_argument('--continues',
-                        action='store_true',
-                        help='allow continue-like constructs out of loops',
-                        default=False)
-    
-    parser.add_argument('--unstructured',
-                        action='store_true',
-                        help='add unstructured edges to the CFG',
-                        default=False)
     
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
@@ -102,7 +87,7 @@ def parse_the_command_line():
     globals.args['program_file'] = base_directory + os.sep + program_file
     globals.set_filename_prefix(globals.args['program_file']) 
     
-    if globals.args['basic_blocks'] < globals.args['loops'] * 2:
+    if globals.args['vertices'] < globals.args['loops'] * 2:
         debug.exit_message('The number of vertices in a control flow graph ' 
                            'must be at least twice the number of loops')
     

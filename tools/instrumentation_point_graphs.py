@@ -43,9 +43,7 @@ def parse_the_command_line():
 
 if __name__ == '__main__': 
     parse_the_command_line()
-    program = environment.create_program_from_input_file() 
-    program.delete_unlisted_functions(globals.args['functions'])
-    program.add_dummy_outermost_loop_to_each_control_flow_graph()
+    program = environment.create_program_from_input_file()
     calculations.calculate_wcet_using_instrumentation_point_graph(program)
 
             

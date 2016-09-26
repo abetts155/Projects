@@ -52,13 +52,10 @@ def parse_the_command_line():
     
 
 if __name__ == '__main__': 
-    threading.stack_size(67108864) # 64MB stack
+    threading.stack_size(2**6 * 2**20)
     sys.setrecursionlimit(2**20)
-    
     parse_the_command_line()
-    program = environment.create_program_from_input_file() 
-    program.delete_unlisted_functions(globals.args['functions'])
-    program.add_dummy_outermost_loop_to_each_control_flow_graph()
+    program = environment.create_program_from_input_file()
     calculations.calculate_wcet_using_integer_linear_programming(program)
 
             

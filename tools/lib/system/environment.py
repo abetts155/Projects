@@ -2,6 +2,7 @@
 import collections
 import re
 import numpy
+import random
 
 from lib.system.vertices import (ProgramPointVertex, 
                                        SubprogramVertex)
@@ -13,16 +14,65 @@ from lib.utils import globals
 def generate_program():
     program = Program()
     for function_id in range(1, globals.args['subprograms'] + 1):
-        function_name = 'F{}'.format(function_id)
+        function_name = 'f{}'.format(function_id)
         control_flow_graph = directed_graphs.create_control_flow_graph\
                                 (function_name)
-        program.add_control_flow_graph(control_flow_graph)
+        program[function_name] = control_flow_graph
+        dot.make_file(control_flow_graph)
+    
+    # Work out which basic blocks can legitimately make calls and
+    # which function has the largest set of such basic blocks.
+    disconnected_functions = []
+    call_site_candidates = {}
+    root_function = None
+    for control_flow_graph in program:
+        disconnected_functions.append(control_flow_graph)
+        call_site_candidates[control_flow_graph] =\
+            [vertex for vertex in control_flow_graph 
+             if vertex.number_of_successors() == 1]
+        
+        if root_function:
+            if len(call_site_candidates[control_flow_graph]) >\
+            len(call_site_candidates[root_function]):
+                root_function = control_flow_graph
+        else:
+            root_function = control_flow_graph
+    
+    # The root function is not disconnected.
+    disconnected_functions.remove(root_function)
+    
+    # Start making calls from the root function.
+    caller_control_flow_graph = root_function
+    while disconnected_functions:
+        callee_control_flow_graph = disconnected_functions\
+                                        [random.randint(0, len(disconnected_functions)-1)]
+        call_site_vertex = call_site_candidates[caller_control_flow_graph]\
+                            [random.randint(0, len(call_site_candidates[caller_control_flow_graph]) - 1)]
+        program.call_graph.add_edge(program.call_graph.get_vertex_with_name(caller_control_flow_graph.name),
+                                    program.call_graph.get_vertex_with_name(callee_control_flow_graph.name),
+                                    call_site_vertex.vertex_id)
+        
+        disconnected_functions.remove(callee_control_flow_graph)
+        call_site_candidates[caller_control_flow_graph].remove(call_site_vertex)
+        
+        # Does the caller still have basic blocks from a which call can be initiated?
+        if len(call_site_candidates[caller_control_flow_graph]) == 0:
+            del call_site_candidates[caller_control_flow_graph]
+        # Pick a new caller if the current caller's basic blocks are exhausted 
+        # or we just feel like it 
+        if caller_control_flow_graph not in call_site_candidates\
+        or bool(random.getrandbits(1)):
+            candidate_callers = set(call_site_candidates.keys()).difference(set(disconnected_functions))
+            caller_control_flow_graph = random.choice(list(candidate_callers)) 
+    
+    dot.make_file(program.call_graph)
+    
     return program
 
 
 def write_program_to_file(program):
     with open(globals.args['program_file'], 'w') as the_file:
-        for control_flow_graph in program.control_flow_graph_iterator():
+        for control_flow_graph in program:
             the_file.write('{}\n'.format(control_flow_graph.name))
             for vertex in control_flow_graph:
                 if vertex != control_flow_graph.exit_vertex:
@@ -74,6 +124,7 @@ def create_program_from_input_file():
             # from the exit vertex to the entry vertex 
             control_flow_graph.set_entry_vertex()
             control_flow_graph.set_exit_vertex()
+            control_flow_graph.add_exit_to_entry_edge()
             program[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
     
@@ -102,9 +153,13 @@ def create_program_from_input_file():
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
                         # Function name
-                        current_function = line
-                        edges_in_control_flow_graphs[current_function] = set()
-                    elif edge_regex.match(line): 
+                        if globals.args['functions'] is None\
+                        or line in globals.args['functions']:
+                            current_function = line
+                            edges_in_control_flow_graphs[current_function] = set()
+                        else:
+                            current_function = None
+                    elif current_function and edge_regex.match(line): 
                         # An edge in this function
                         source, destination = line.split('-')
                         if basic_block_id_regex.match(destination):
@@ -123,13 +178,13 @@ def create_program_from_input_file():
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
                         # Function name
-                        current_function = line
-                        control_flow_graph = program[current_function]
-                    elif program_property_regex.match(line):
-                        # A property concerning a program point
-                        assert control_flow_graph, 'The property {} is not '
-                        'attached to any control flow graph'.format(line)
-                        
+                        if globals.args['functions'] is None\
+                        or line in globals.args['functions']:
+                            current_function = line
+                            control_flow_graph = program[current_function]
+                        else:
+                            current_function = None
+                    elif current_function and program_property_regex.match(line):
                         lexemes = delimiter_regex.split(line)
                         if len(lexemes) == 5:
                             # Vertex program point
@@ -199,19 +254,6 @@ class Program:
     @call_graph.setter
     def call_graph(self, value):
         self._call_graph = value
-        
-    
-    def delete_unlisted_functions(self, functions_to_keep):
-        if functions_to_keep is not None:
-            functions_to_delete = [vertex.name for vertex in self._call_graph 
-                                   if vertex.name not in functions_to_keep]
-            for function_name in functions_to_delete:
-                del self[function_name]
-                
-                
-    def add_dummy_outermost_loop_to_each_control_flow_graph(self):
-        for control_flow_graph in self:
-            control_flow_graph.add_exit_to_entry_edge()
     
     
     def __delitem__(self, function_name):

@@ -69,7 +69,6 @@ def parse_the_command_line():
 if __name__ == "__main__": 
     parse_the_command_line()
     program = environment.create_program_from_input_file()
-    program.add_dummy_outermost_loop_to_each_control_flow_graph()
     #create_path_expression_between_two_program_points(the_program)
     
     
