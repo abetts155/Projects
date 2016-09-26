@@ -2106,7 +2106,7 @@ def create_control_flow_graph(name):
             # tail, or if we decide the proportion of loop tails to the number 
             # of loop body vertices is too great.
             if (tree_vertex.number_of_predecessors() == 0 and len(loop_tails) > 1)\
-            or len(loop_tails)/len(self._vertex_to_level) > 0.5:
+            or len(loop_tails)/len(self._vertex_to_level) > 0.2:
                     # Promote a random vertex to be the unique loop tail.
                     new_highest_level = highest_level + 1
                     vertex = loop_tails[random.randint(0, len(loop_tails)-1)]

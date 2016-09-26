@@ -20,53 +20,83 @@ def generate_program():
         program[function_name] = control_flow_graph
         dot.make_file(control_flow_graph)
     
-    # Work out which basic blocks can legitimately make calls and
-    # which function has the largest set of such basic blocks.
-    disconnected_functions = []
+    # For each control flow graph, work out which basic blocks can legitimately 
+    # make calls.
     call_site_candidates = {}
-    root_function = None
     for control_flow_graph in program:
-        disconnected_functions.append(control_flow_graph)
-        call_site_candidates[control_flow_graph] =\
-            [vertex for vertex in control_flow_graph 
-             if vertex.number_of_successors() == 1]
-        
-        if root_function:
-            if len(call_site_candidates[control_flow_graph]) >\
-            len(call_site_candidates[root_function]):
-                root_function = control_flow_graph
-        else:
-            root_function = control_flow_graph
+        depth_first_search = directed_graphs.DepthFirstSearch(control_flow_graph, 
+                                                              control_flow_graph.entry_vertex,
+                                                              False)
+        candidates_for_this_function = []
+        for vertex in control_flow_graph:
+            if vertex.number_of_successors() == 1:
+                succ_vertex = control_flow_graph.get_vertex(vertex.
+                                                            get_ith_successor_edge(0).
+                                                            vertex_id)
+                # Check that the sole successor is not a loop header.
+                if (vertex, succ_vertex) not in depth_first_search.backedges:
+                    candidates_for_this_function.append(vertex)
+        call_site_candidates[control_flow_graph.name] = candidates_for_this_function
     
-    # The root function is not disconnected.
-    disconnected_functions.remove(root_function)
+    # Sort the functions by the number of call sites.
+    function_ordering = collections.OrderedDict(sorted(call_site_candidates.items(), 
+                                                       key=lambda tup: len(tup[1]),
+                                                       reverse=True))
     
-    # Start making calls from the root function.
-    caller_control_flow_graph = root_function
-    while disconnected_functions:
-        callee_control_flow_graph = disconnected_functions\
-                                        [random.randint(0, len(disconnected_functions)-1)]
-        call_site_vertex = call_site_candidates[caller_control_flow_graph]\
-                            [random.randint(0, len(call_site_candidates[caller_control_flow_graph]) - 1)]
-        program.call_graph.add_edge(program.call_graph.get_vertex_with_name(caller_control_flow_graph.name),
-                                    program.call_graph.get_vertex_with_name(callee_control_flow_graph.name),
-                                    call_site_vertex.vertex_id)
-        
-        disconnected_functions.remove(callee_control_flow_graph)
-        call_site_candidates[caller_control_flow_graph].remove(call_site_vertex)
-        
-        # Does the caller still have basic blocks from a which call can be initiated?
-        if len(call_site_candidates[caller_control_flow_graph]) == 0:
-            del call_site_candidates[caller_control_flow_graph]
-        # Pick a new caller if the current caller's basic blocks are exhausted 
-        # or we just feel like it 
-        if caller_control_flow_graph not in call_site_candidates\
-        or bool(random.getrandbits(1)):
-            candidate_callers = set(call_site_candidates.keys()).difference(set(disconnected_functions))
-            caller_control_flow_graph = random.choice(list(candidate_callers)) 
+    # Assign each function a level in the call graph.
+    levels_in_call_graph = {}
+    level = 0
+    for function_name in function_ordering.keys():
+        levels_in_call_graph.setdefault(level, []).append(function_name)
+        if level == 0:
+            level += 1
+        elif bool(random.getrandbits(1))\
+        and len(call_site_candidates[function_name]) > 0:
+            level += 1
     
+    # Add acyclic call graph edges by finding a caller that is at a lower level
+    # than the callee.       
+    for level in sorted(levels_in_call_graph.keys(), reverse=True):
+        if level > 0:
+            for callee in levels_in_call_graph[level]:
+                if random.random() < 0.2:
+                    level_lower_than_current = random.randint(0, level-1)
+                else:
+                    level_lower_than_current = level-1
+                    
+                candidate_callers = levels_in_call_graph[level_lower_than_current]
+                caller = candidate_callers[random.randint(0, len(candidate_callers)-1)]
+                call_site_index = random.randint(0, len(call_site_candidates[caller])-1)
+                call_site_vertex = call_site_candidates[caller][call_site_index]
+                call_site_candidates[caller].remove(call_site_vertex)
+                program.call_graph.add_edge(program.call_graph.get_vertex_with_name(caller),
+                                            program.call_graph.get_vertex_with_name(callee),
+                                            call_site_vertex.vertex_id)
+                if len(call_site_candidates[caller]) == 0:
+                    candidate_callers.remove(caller)
+                    
+    # Now that we have tried our best so that there is a path from a designated
+    # root vertex to every function, add acyclic edges indiscriminately.
+    for level in sorted(levels_in_call_graph.keys(), reverse=True):
+        if level > 0:
+            for callee in levels_in_call_graph[level]:
+                if bool(random.getrandbits(1)):
+                    while True:
+                        level_lower_than_current = random.randint(0, level-1)
+                        candidate_callers = levels_in_call_graph[level_lower_than_current]
+                        if candidate_callers:
+                            caller = candidate_callers[random.randint(0, len(candidate_callers)-1)]
+                            call_site_index = random.randint(0, len(call_site_candidates[caller])-1)
+                            call_site_vertex = call_site_candidates[caller][call_site_index]
+                            call_site_candidates[caller].remove(call_site_vertex)
+                            program.call_graph.add_edge(program.call_graph.get_vertex_with_name(caller),
+                                                        program.call_graph.get_vertex_with_name(callee),
+                                                        call_site_vertex.vertex_id)
+                            if len(call_site_candidates[caller]) == 0:
+                                candidate_callers.remove(caller)
+                        else:
+                            break
     dot.make_file(program.call_graph)
-    
     return program
 
 
