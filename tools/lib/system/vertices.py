@@ -128,6 +128,9 @@ class Vertex:
         return self._vertex_id
             
             
+def is_basic_block(program_point):
+    return isinstance(program_point, int)
+
             
 class ProgramPointVertex(Vertex):
     
@@ -136,11 +139,6 @@ class ProgramPointVertex(Vertex):
     basic blocks) as a vertex.  These vertices are used in control flow graphs
     and path expressions.
     """
-    
-    @staticmethod
-    def is_basic_block(program_point):
-        return isinstance(program_point, int)
-        
     
     def __init__(self, vertex_id, program_point, abstract=False):
         Vertex.__init__(self, vertex_id)

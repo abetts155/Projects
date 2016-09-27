@@ -5,7 +5,7 @@ import numpy
 import random
 
 from lib.system.vertices import (ProgramPointVertex, 
-                                       SubprogramVertex)
+                                 SubprogramVertex)
 from lib.system import directed_graphs
 from lib.utils import dot
 from lib.utils import globals

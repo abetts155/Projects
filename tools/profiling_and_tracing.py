@@ -9,6 +9,7 @@ from lib.utils import globals
 from lib.utils import dot
 from lib.system import environment
 from lib.system.directed_graphs import InstrumentationPointGraph
+from lib.system.vertices import is_basic_block
 
 
 def parse_the_command_line(): 
@@ -66,10 +67,15 @@ if __name__ == '__main__':
                                             if control_flow_graph.program_point_data.get_instrumented(vertex.program_point)
                                             and vertex.program_point)))
             
-            for _, subgraph in control_flow_graph.super_block_graph_iterator():
-                instrumented_program_points = subgraph.choose_instrumentation_points_for_profiling()
-                print('Super: {}'.format(', '.join(str(program_point) 
-                                            for program_point in instrumented_program_points)))
+            for _, abstract_vertices in control_flow_graph.get_loop_nesting_tree().\
+                                        level_by_level_iterator\
+                                        (abstract_vertices_only=True):
+                for abstract_vertex in abstract_vertices:
+                    if is_basic_block(abstract_vertex.program_point):
+                        subgraph = control_flow_graph.get_super_block_subgraph(abstract_vertex)
+                        instrumented_program_points = subgraph.choose_instrumentation_points_for_profiling()
+                        print('Super: {}'.format(', '.join(str(program_point) 
+                                                           for program_point in instrumented_program_points)))
             
             print()
 

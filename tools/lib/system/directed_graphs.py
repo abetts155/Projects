@@ -19,7 +19,8 @@ from lib.system.edges import (Edge,
 from lib.system.vertices import (Vertex, 
                                  ProgramPointVertex, 
                                  RegularExpressionVertex, 
-                                 SuperBlock)
+                                 SuperBlock,
+                                 is_basic_block)
 
 
         
@@ -179,7 +180,7 @@ class ProgramPointData:
         
     def create_timing_data(self, redo=False):
         for vertex in self._control_flow_graph:
-            if ProgramPointVertex.is_basic_block(vertex.program_point):
+            if is_basic_block(vertex.program_point):
                 if vertex.program_point not in self._wcets or redo:
                     self._wcets[vertex.program_point] = random.randint(1, 20)
             else:
@@ -207,7 +208,7 @@ class ProgramPointData:
         for level, tree_vertices in loop_nesting_tree.\
                                         level_by_level_iterator(False, True):
             for abstract_vertex in tree_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                if is_basic_block(abstract_vertex.program_point):
                     header = self._control_flow_graph.get_vertex_for_program_point\
                                 (abstract_vertex.program_point)
                     if header not in self._loop_bounds or redo:
@@ -311,7 +312,7 @@ class ControlFlowGraph(DirectedGraph):
         if vertex.program_point is not None:
             # No program point means that the vertex is dummy
             self._program_point_to_vertex[vertex.program_point] = vertex
-            if ProgramPointVertex.is_basic_block(vertex.program_point):
+            if is_basic_block(vertex.program_point):
                 self._basic_block_vertices.add(vertex)
             else:
                 self._control_flow_edge_vertices.add(vertex)
@@ -351,36 +352,17 @@ class ControlFlowGraph(DirectedGraph):
         return self._loop_nesting_tree
     
     
-    def super_block_graph_iterator(self):
-        for _, abstract_vertices in self.get_loop_nesting_tree().\
-                                        level_by_level_iterator\
-                                            (abstract_vertices_only=True):
-            for abstract_vertex in abstract_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
-                    yield (abstract_vertex, 
-                           self.get_super_block_subgraph(abstract_vertex))
-            
-            
-    def get_super_block_subgraph(self, abstract_vertex):
-        if abstract_vertex not in self._super_block_graphs:
+    def get_super_block_subgraph(self, abstract_vertex, redo=False):
+        if abstract_vertex not in self._super_block_graphs or redo:
             subgraph = SuperBlockGraph.create_for_loop(self, abstract_vertex)
             self._super_block_graphs[abstract_vertex] = subgraph
             dot.make_file(subgraph)
         return self._super_block_graphs[abstract_vertex]
-    
-    
-    def construct_super_blocks_graph(self):
-        for _, abstract_vertices in self.get_loop_nesting_tree().\
-                                        level_by_level_iterator\
-                                            (abstract_vertices_only=True):
-            for abstract_vertex in abstract_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
-                    self.get_super_block_subgraph(abstract_vertex)
-    
+
     
     def instrument_all_control_flow_edges(self):
         for vertex in self:
-            if not ProgramPointVertex.is_basic_block(vertex.program_point):
+            if not is_basic_block(vertex.program_point):
                 self.program_point_data.set_instrumented(vertex.program_point,
                                                          True)
             
@@ -388,7 +370,7 @@ class ControlFlowGraph(DirectedGraph):
                 
     def instrument_all_basic_blocks(self):
         for vertex in self:
-            if ProgramPointVertex.is_basic_block(vertex.program_point):
+            if is_basic_block(vertex.program_point):
                 self.program_point_data.set_instrumented(vertex.program_point,
                                                          True)
         
@@ -478,7 +460,7 @@ class ControlFlowGraph(DirectedGraph):
                                                         True))
         # Add edges between loop-entry program points and the inner loop header.
         loop_body_edge_program_points = [vertex for vertex in loop_body 
-                                         if not ProgramPointVertex.is_basic_block
+                                         if not is_basic_block
                                          (vertex.program_point)]
         for tree_vertex in loop_headers:
             succ_vertex = induced_graph.get_vertex(tree_vertex.vertex_id)
@@ -491,7 +473,7 @@ class ControlFlowGraph(DirectedGraph):
         for succ_vertex in induced_graph:
             if succ_vertex.program_point != header_program_point\
             and succ_vertex.number_of_predecessors() == 0:
-                assert not ProgramPointVertex.is_basic_block(succ_vertex.program_point)   
+                assert not is_basic_block(succ_vertex.program_point)   
                 abstract_vertex = loop_nesting_tree.\
                                     get_header_abstract_vertex_for_program_point\
                                         (succ_vertex.program_point[0]) 
@@ -748,7 +730,7 @@ class InstrumentationPointGraph(DirectedGraph):
         for level, the_vertices in loop_nesting_tree.level_by_level_iterator\
                                 (abstract_vertices_only=True):
             for abstract_vertex in the_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                if is_basic_block(abstract_vertex.program_point):
                     loop_body = set()
                     loop_body_when_exiting = set()
                     
@@ -834,7 +816,7 @@ class InstrumentationPointGraph(DirectedGraph):
         for _, the_vertices in loop_nesting_tree.level_by_level_iterator\
                                 (abstract_vertices_only=True):
             for abstract_vertex in the_vertices:
-                if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+                if is_basic_block(abstract_vertex.program_point):
                     pass    
     
         
@@ -1390,7 +1372,7 @@ class LoopNestingHierarchy(Tree):
         abstract_vertex = self.get_vertex(program_point_vertex.
                                           get_ith_predecessor_edge(0).
                                           vertex_id)
-        return not ProgramPointVertex.is_basic_block(program_point)\
+        return not is_basic_block(program_point)\
             and abstract_vertex.program_point == program_point
     
     
@@ -1399,7 +1381,7 @@ class LoopNestingHierarchy(Tree):
         abstract_vertex = self.get_vertex(program_point_vertex.
                                           get_ith_predecessor_edge(0).
                                           vertex_id)
-        if ProgramPointVertex.is_basic_block(abstract_vertex.program_point):
+        if is_basic_block(abstract_vertex.program_point):
             return abstract_vertex
         return self.get_vertex(abstract_vertex.
                                get_ith_predecessor_edge(0).
@@ -1419,7 +1401,7 @@ class LoopNestingHierarchy(Tree):
                 for succ_edge in stack_vertex.successor_edge_iterator():
                     succ_vertex = self.get_vertex(succ_edge.vertex_id)
                     if succ_vertex.abstract: 
-                        if not ProgramPointVertex.is_basic_block(succ_vertex.
+                        if not is_basic_block(succ_vertex.
                                                                  program_point):
                             stack.append(succ_vertex)
                     else:
@@ -1583,7 +1565,7 @@ class LoopNestingHierarchy(Tree):
             for vertex in loop_body:
                 if vertex in abstract_vertices\
                 and vertex != header\
-                and ProgramPointVertex.is_basic_block(vertex.program_point):
+                and is_basic_block(vertex.program_point):
                     # An inner loop header.  Add an edge to the inner loop header's
                     # abstract vertex but not to the inner loop header's program 
                     # point vertex.  The latter edge insertion will be handled 
@@ -1978,7 +1960,7 @@ class SuperBlockGraph(DirectedGraph):
                 self._program_point_to_vertex[induced_vertex.program_point] =\
                     super_vertex 
                 
-                if ProgramPointVertex.is_basic_block(induced_vertex.program_point):
+                if is_basic_block(induced_vertex.program_point):
                     if not induced_vertex.abstract:
                         super_vertex.representative = induced_vertex
                 else:
@@ -2001,7 +1983,7 @@ class SuperBlockGraph(DirectedGraph):
             if super_vertex.representative is None:
                 for induced_vertex in super_vertex.vertices:
                     super_vertex.representative = induced_vertex
-                    if not ProgramPointVertex.is_basic_block(induced_vertex.
+                    if not is_basic_block(induced_vertex.
                                                              program_point):
                         super_vertex.representative = induced_vertex
                         break
@@ -2010,7 +1992,7 @@ class SuperBlockGraph(DirectedGraph):
     def add_edges(self, abstract_vertex, induced_subgraph):
         for super_vertex in self:
             induced_vertex = super_vertex.vertices[0]
-            if not ProgramPointVertex.is_basic_block(induced_vertex.program_point):
+            if not is_basic_block(induced_vertex.program_point):
                 # The first program point in the super block is a control-flow 
                 # edge
                 assert induced_vertex.number_of_predecessors() == 1
