@@ -23,6 +23,9 @@ def parse_the_command_line():
     parser.add_argument('program_file',
                         help='a file containing program information'
                         ' (with .txt extension)')
+    
+    parser.add_argument('--output',
+                        help='write results to this file')
 
     parser.add_argument('--repeat',
                         type=int,
@@ -44,7 +47,8 @@ def parse_the_command_line():
     
     parser.add_argument('--functions',
                         nargs='*',
-                        help='analyse these functions only')
+                        help='analyse these functions only',
+                        metavar='<STR>')
     
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())

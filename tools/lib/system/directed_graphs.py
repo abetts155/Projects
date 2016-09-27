@@ -136,6 +136,7 @@ class ProgramPointData:
         self._loop_bounds = {}
         self._instrumented = {}
     
+    
     def set_wcet(self, program_point, value):
         self._wcets[program_point] = value
     
@@ -2105,8 +2106,9 @@ def create_control_flow_graph(name):
             # Yes, if this is the outermost loop and there is no single loop 
             # tail, or if we decide the proportion of loop tails to the number 
             # of loop body vertices is too great.
-            if (tree_vertex.number_of_predecessors() == 0 and len(loop_tails) > 1)\
-            or len(loop_tails)/len(self._vertex_to_level) > 0.2:
+            if len(loop_tails) > 1: 
+                if tree_vertex.number_of_predecessors() == 0\
+                or len(loop_tails)/len(self._vertex_to_level) > 0.2:
                     # Promote a random vertex to be the unique loop tail.
                     new_highest_level = highest_level + 1
                     vertex = loop_tails[random.randint(0, len(loop_tails)-1)]
@@ -2119,15 +2121,11 @@ def create_control_flow_graph(name):
             highest_level = max(self._level_to_vertices.keys())
             for level in sorted(self._level_to_vertices.keys(), reverse=True):
                 if level > 0:
-                    level_lower_than_current = level-1
-                    if random.random() < 0.2:
+                    if random.random() < 0.3:
                         level_lower_than_current = random.randint(0, level-1)
-                    candidate_vertices = [vertex for vertex in 
-                                          self._level_to_vertices[level_lower_than_current] 
-                                          if vertex.number_of_successors() == 0]
-                    if not candidate_vertices:
-                        candidate_vertices = self._level_to_vertices[level_lower_than_current]
-                    
+                    else:
+                        level_lower_than_current = level-1
+                    candidate_vertices = self._level_to_vertices[level_lower_than_current]
                     for succ_vertex in self._level_to_vertices[level]:      
                         pred_vertex = candidate_vertices\
                                         [random.randint(0, len(candidate_vertices)-1)]
@@ -2168,11 +2166,13 @@ def create_control_flow_graph(name):
                     loop_exit_destinations_level = random.randint\
                                                     (self._vertex_to_level[loop_entry_vertex]+1, 
                                                      highest_level)
-                    candidate_loop_exit_destinations = self._level_to_vertices[loop_exit_destinations_level]
-                    loop_exit_destination = candidate_loop_exit_destinations[random.randint(0, len(candidate_loop_exit_destinations)-1)]
+                    candidate_loop_exit_destinations = self._level_to_vertices\
+                                                        [loop_exit_destinations_level]
+                    loop_exit_destination = candidate_loop_exit_destinations\
+                                                [random.randint(0, 
+                                                                len(candidate_loop_exit_destinations)-1)]
                     control_flow_graph.add_edge(loop_exit_source,
                                                 loop_exit_destination)
-            
                 
                 
         def select_loop_exit_sources(self):

@@ -40,12 +40,15 @@ def parse_the_command_line():
                                     format(option_string))
             setattr(namespace, self.dest, value)
     
-    
     parser = ArgumentParser(description='Generate a random program')
     
     parser.add_argument('--directory',
                         help='write the program file to this directory',
                         default=os.path.abspath(os.curdir))
+    
+    parser.add_argument('--program_file',
+                        help='write the program to this file',
+                        default=None)
     
     parser.add_argument('--subprograms',
                         action=CheckForPositiveValue,
@@ -83,8 +86,9 @@ def parse_the_command_line():
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     base_directory = os.path.abspath(globals.args['directory'])
-    program_file = create_program_filename(base_directory)
-    globals.args['program_file'] = base_directory + os.sep + program_file
+    if globals.args['program_file'] is None:
+        globals.args['program_file'] = create_program_filename(base_directory)
+    globals.args['program_file'] = base_directory + os.sep + globals.args['program_file']
     globals.set_filename_prefix(globals.args['program_file']) 
     
     if globals.args['vertices'] < globals.args['loops'] * 2:

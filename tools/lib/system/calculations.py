@@ -5,6 +5,7 @@ import timeit
 import subprocess
 import decimal
 import re
+import sys
 
 from lib.utils import globals
 from lib.utils import debug
@@ -37,79 +38,86 @@ def calculate_wcet_using_instrumentation_point_graph(program):
             'IPG = {}, CFG = {}'.format(ilp_for_instrumentation_point_graph.wcet,
                                         ilp_for_control_flow_graph.wcet)
             
-            print('==========> {} <=========='.format(control_flow_graph.name))
-            print('Standard calculation:')
-            print('WCET              = {}'.format(ilp_for_control_flow_graph.wcet))
-            print('#Variables        = {}'.format(len(ilp_for_control_flow_graph.variables)))
-            print('#Constraints      = {}'.format(len(ilp_for_control_flow_graph.constraints)))
-            print('Construction time = {}'.format(ilp_for_control_flow_graph.construction_time))
-            print('Solve time        = {}'.format(ilp_for_control_flow_graph.solve_time))
+            print('>', control_flow_graph.name)
+            print('control_flow_graph')
+            print('WCET         = {}'.format(ilp_for_control_flow_graph.wcet))
+            print('Variables    = {}'.format(len(ilp_for_control_flow_graph.variables)))
+            print('Constraints  = {}'.format(len(ilp_for_control_flow_graph.constraints)))
+            print('Construction = {}'.format(ilp_for_control_flow_graph.construction_time))
+            print('Solve        = {}'.format(ilp_for_control_flow_graph.solve_time))
             print('-' * 25)
-            print('Instrumentation point graph calculation:')
-            print('WCET              = {}'.format(ilp_for_instrumentation_point_graph.wcet))
-            print('#Variables        = {}'.format(len(ilp_for_instrumentation_point_graph.variables)))
-            print('#Constraints      = {}'.format(len(ilp_for_instrumentation_point_graph.constraints)))
-            print('Construction time = {}'.format(ilp_for_instrumentation_point_graph.construction_time))
-            print('Solve time        = {}'.format(ilp_for_instrumentation_point_graph.solve_time))    
+            print('instrumentation_point_graph')
+            print('WCET         = {}'.format(ilp_for_instrumentation_point_graph.wcet))
+            print('Variables    = {}'.format(len(ilp_for_instrumentation_point_graph.variables)))
+            print('Constraints  = {}'.format(len(ilp_for_instrumentation_point_graph.constraints)))
+            print('Construction = {}'.format(ilp_for_instrumentation_point_graph.construction_time))
+            print('Solve        = {}'.format(ilp_for_instrumentation_point_graph.solve_time))    
 
 
 def calculate_wcet_using_integer_linear_programming(program):
-    for repetition in range(1, globals.args['repeat']+1):
-        debug.verbose_message('Repetition {}'.format(repetition), __name__)
-        for control_flow_graph in program:
-            # The reason we grab the loop-nesting tree here and not inside the
-            # constraint system is because we time how long it takes to 
-            # construct the constraint system.  Since the loop-nesting tree is
-            # built on the fly, it may happen that a portion of the time to
-            # construct the constraint system is unfairly attributed to that
-            # activity.
-            loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
-            control_flow_graph.program_point_data.create_timing_data(True)
-            ilp_for_control_flow_graph = IntegerLinearProgramForControlFlowGraph\
-                                            (control_flow_graph,
-                                             loop_nesting_tree,
-                                             control_flow_graph.program_point_data)
-            ilp_for_control_flow_graph.solve()
-              
-            ilp_for_super_block_graph = IntegerLinearProgramForSuperBlockGraph\
-                                            (control_flow_graph,
-                                             loop_nesting_tree,
-                                             control_flow_graph.program_point_data)
-            ilp_for_super_block_graph.solve()
-            
-            assert ilp_for_super_block_graph.wcet == ilp_for_control_flow_graph.wcet
-           
-            print('==========> {} <=========='.format(control_flow_graph.name))
-            print('Standard calculation:')
-            print('WCET              = {}'.format(ilp_for_control_flow_graph.wcet))
-            print('#Variables        = {}'.format(len(ilp_for_control_flow_graph.variables)))
-            print('#Constraints      = {}'.format(len(ilp_for_control_flow_graph.constraints)))
-            print('Construction time = {}'.format(ilp_for_control_flow_graph.construction_time))
-            print('Solve time        = {}'.format(ilp_for_control_flow_graph.solve_time))
-            print('-' * 25)
-            print('Super block calculation:')
-            print('WCET              = {}'.format(ilp_for_super_block_graph.wcet))
-            print('#Variables        = {}'.format(len(ilp_for_super_block_graph.variables)))
-            print('#Constraints      = {}'.format(len(ilp_for_super_block_graph.constraints)))
-            print('Construction time = {}'.format(ilp_for_super_block_graph.construction_time))
-            print('Solve time        = {}'.format(ilp_for_super_block_graph.solve_time))
-            
-            if globals.args['folded']:
-                ilp_with_folding =\
-                    IntegerLinearProgramForSuperBlockGraphWithFolding\
-                        (control_flow_graph,
-                         loop_nesting_tree,
-                         control_flow_graph.program_point_data)
-                ilp_with_folding.solve()
+    if globals.args['output']:
+        log_file = open(os.path.abspath(globals.args['output']), 'w')
+        old_stdout = sys.stdout
+        sys.stdout = log_file
+    try:
+        for repetition in range(1, globals.args['repeat']+1):
+            debug.verbose_message('Repetition {}'.format(repetition), __name__)
+            for control_flow_graph in program:
+                # The reason we grab the loop-nesting tree here and not inside the
+                # constraint system is because we time how long it takes to 
+                # construct the constraint system.  Since the loop-nesting tree is
+                # built on the fly, it may happen that a portion of the time to
+                # construct the constraint system is unfairly attributed to that
+                # activity.
+                loop_nesting_tree = control_flow_graph.get_loop_nesting_tree()
+                control_flow_graph.program_point_data.create_timing_data(True)
+                ilp_for_control_flow_graph = IntegerLinearProgramForControlFlowGraph\
+                                                (control_flow_graph,
+                                                 loop_nesting_tree,
+                                                 control_flow_graph.program_point_data)
+                ilp_for_control_flow_graph.solve()
+                  
+                ilp_for_super_block_graph = IntegerLinearProgramForSuperBlockGraph\
+                                                (control_flow_graph,
+                                                 loop_nesting_tree,
+                                                 control_flow_graph.program_point_data)
+                ilp_for_super_block_graph.solve()
                 
-                assert ilp_with_folding.wcet == ilp_for_control_flow_graph.wcet
-                print('-' * 25)
-                print('Super block calculation with folding:')
-                print('WCET              = {}'.format(ilp_with_folding.wcet))
-                print('#Variables        = {}'.format(len(ilp_with_folding.variables)))
-                print('#Constraints      = {}'.format(len(ilp_with_folding.constraints)))
-                print('Construction time = {}'.format(ilp_with_folding.construction_time))
-                print('Solve time        = {}'.format(ilp_with_folding.solve_time))
+                assert ilp_for_super_block_graph.wcet == ilp_for_control_flow_graph.wcet
+               
+                print('>', control_flow_graph.name)
+                print('control_flow_graph')
+                print('WCET = {}'.format(ilp_for_control_flow_graph.wcet))
+                print('Variables = {}'.format(len(ilp_for_control_flow_graph.variables)))
+                print('Constraints = {}'.format(len(ilp_for_control_flow_graph.constraints)))
+                print('Construction = {}'.format(ilp_for_control_flow_graph.construction_time))
+                print('Solve = {}'.format(ilp_for_control_flow_graph.solve_time))
+                print('super_blocks')
+                print('WCET = {}'.format(ilp_for_super_block_graph.wcet))
+                print('Variables = {}'.format(len(ilp_for_super_block_graph.variables)))
+                print('Constraints = {}'.format(len(ilp_for_super_block_graph.constraints)))
+                print('Construction = {}'.format(ilp_for_super_block_graph.construction_time))
+                print('Solve = {}'.format(ilp_for_super_block_graph.solve_time))
+                
+                if globals.args['folded']:
+                    ilp_with_folding =\
+                        IntegerLinearProgramForSuperBlockGraphWithFolding\
+                            (control_flow_graph,
+                             loop_nesting_tree,
+                             control_flow_graph.program_point_data)
+                    ilp_with_folding.solve()
+                    
+                    assert ilp_with_folding.wcet == ilp_for_control_flow_graph.wcet
+                    print('super_blocks_folded')
+                    print('WCET = {}'.format(ilp_with_folding.wcet))
+                    print('Variables = {}'.format(len(ilp_with_folding.variables)))
+                    print('Constraints = {}'.format(len(ilp_with_folding.constraints)))
+                    print('Construction = {}'.format(ilp_with_folding.construction_time))
+                    print('Solve = {}'.format(ilp_with_folding.solve_time))
+    finally:
+        if globals.args['output']:
+            log_file.close()
+            sys.stdout = old_stdout
 
 
 edge_variable_prefix = 'E_'
