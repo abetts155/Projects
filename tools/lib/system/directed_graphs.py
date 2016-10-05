@@ -388,7 +388,7 @@ class ControlFlowGraph(DirectedGraph):
         # flow edge is that this edge always executes last, even though 
         # technically it does not actually exist in the program.  Really, this 
         # makes sures the post-dominator tree is correct.
-        self.exit_vertex = exit_to_entry_vertex
+        self._exit_vertex = exit_to_entry_vertex
                 
                 
     def add_persistent_dummy_entry_and_exit_vertices(self):
@@ -498,7 +498,27 @@ class ControlFlowGraph(DirectedGraph):
         induced_graph.set_exit_vertex()
         dot.make_file(induced_graph)
         return induced_graph
+    
+    
+    def generate_trace(self, executions=1):
+        vertex_count = {vertex:0 for vertex in self}
+        trace = []
+        vertex = self._entry_vertex
+        while True:
+            vertex_count[vertex] += 1
+            trace.append(vertex.program_point)
+            
+            if vertex == self._exit_vertex\
+            and vertex_count[vertex] == executions:
+                break
+            
+            # Move to random successor vertex.
+            random_index = random.randint(0, vertex.number_of_successors()-1)
+            succ_edge = vertex.get_ith_successor_edge(random_index)
+            vertex = self.get_vertex(succ_edge.vertex_id)
         
+        return trace
+    
     
     def check_connected(self):
         reachable_from_entry = set()
@@ -610,6 +630,9 @@ class InstrumentationPointGraph(DirectedGraph):
             Is it possible to remove this program point while maintaining path
             reconstructibility?
             """
+            if vertex.program_point is None:
+                return False
+            
             for pred_edge in vertex.predecessor_edge_iterator():
                 pred_vertex = self.get_vertex(pred_edge.vertex_id)
                 for succ_edge in vertex.successor_edge_iterator():
@@ -621,13 +644,26 @@ class InstrumentationPointGraph(DirectedGraph):
         # Do not destroy the original control flow graph structure.
         self.__copy_control_flow_graph(control_flow_graph)
         
+        entry_vertex = ProgramPointVertex(self.get_new_vertex_id(), None)
+        self.add_vertex(entry_vertex)
+        exit_vertex = ProgramPointVertex(self.get_new_vertex_id(), None)
+        self.add_vertex(exit_vertex)
+        self.add_edge(entry_vertex, 
+                      self.get_vertex(control_flow_graph.entry_vertex.vertex_id), 
+                      None)
+        self.add_edge(self.get_vertex(control_flow_graph.exit_vertex.vertex_id), 
+                      exit_vertex, 
+                      None)
+        
+        
         # The following loop does two things:
         # 1) It removes unmonitored program points.
         # 2) It sets up the temporary state transition to path expression 
         # mapping. Initially the values in the mapping will be empty.
         program_points_to_remove = set()
         for vertex in self:
-            if not control_flow_graph.program_point_data.get_instrumented(vertex.program_point):
+            if not control_flow_graph.program_point_data.get_instrumented(vertex.program_point)\
+            and vertex.program_point:
                 program_points_to_remove.add(vertex)
             
             for succ_edge in vertex.successor_edge_iterator():
@@ -636,7 +672,6 @@ class InstrumentationPointGraph(DirectedGraph):
                        'Expected the path expression of the edge {}->{} to be '\
                        ' empty'.format(vertex.vertex_id, succ_edge.vertex_id)
                 state_transition_to_path_expression[(vertex, succ_vertex)] = []
-                    
         
         # Maintain graph connectedness and remove each unneeded program point.
         for vertex in program_points_to_remove:
@@ -645,7 +680,7 @@ class InstrumentationPointGraph(DirectedGraph):
             control_flow_graph.program_point_data.set_instrumented(vertex.program_point,
                                                                    False)
         
-    
+        
         # Reduce graph until removal of state violates path reconstructibility
         changed = True
         while changed:
@@ -682,7 +717,13 @@ class InstrumentationPointGraph(DirectedGraph):
         self.__initialise_loop_properties(control_flow_graph.get_loop_nesting_tree())
         self.__reduce(control_flow_graph.get_loop_nesting_tree(), 
                       control_flow_graph.program_point_data)
-        
+    
+    
+    def get_entry_vertex(self):
+        for vertex in self:
+            if vertex.program_point is None and vertex.number_of_predecessors() == 0:
+                return vertex
+        assert False, 'Unable to find entry vertex of instrumentation point graph'
     
     def get_vertex_for_program_point(self, program_point):
         try:
@@ -2009,7 +2050,7 @@ class SuperBlockGraph(DirectedGraph):
                 
             elif induced_vertex.program_point != abstract_vertex.program_point:
                 # The first program point in the super block is a basic block 
-                # but not the loop header of this region
+                # but not the loop header of this region.
                 assert induced_vertex.number_of_predecessors() > 1
                 for pred_edge in induced_vertex.predecessor_edge_iterator():
                     pred_induced_vertex = induced_subgraph.\
@@ -2019,15 +2060,50 @@ class SuperBlockGraph(DirectedGraph):
                     self.add_edge(pred_super_vertex, super_vertex)
     
                     
-    def choose_instrumentation_points_for_profiling(self):
-        instrumented_program_points = set()
+    def choose_instrumentation_points_for_profiling(self,
+                                                    instrumentation_points):
+        # Filter out basic blocks or transitions between basic blocks 
+        # depending on the wished of the user.
+        if globals.args['instrument'] != 'mixed':
+            for super_vertex in self:
+                super_vertex.vertices = [vertex for vertex in super_vertex.vertices
+                                         if (is_basic_block(vertex.program_point) and 
+                                             globals.args['instrument'] == 'vertices')
+                                         or (not is_basic_block(vertex.program_point) and
+                                             globals.args['instrument'] == 'edges')]
+        
+        # Remove super blocks that no longer have any program points.
+        vertices_to_remove = set()
         for super_vertex in self:
-            if super_vertex.number_of_predecessors() == 1\
-            and (super_vertex.number_of_successors() == 1 or 
-                 super_vertex.number_of_successors() == 0):
-                instrumented_program_points.add(super_vertex.representative.program_point)
-        return instrumented_program_points
-    
+            if not super_vertex.vertices:
+                vertices_to_remove.add(super_vertex)
+                for pred_edge in super_vertex.predecessor_edge_iterator():
+                    pred_vertex = self.get_vertex(pred_edge.vertex_id)
+                    for succ_edge in super_vertex.successor_edge_iterator():
+                        succ_vertex = self.get_vertex(succ_edge.vertex_id)
+                        self.add_edge(pred_vertex, succ_vertex)
+        
+        for super_vertex in vertices_to_remove:
+            self.remove_vertex(super_vertex)
+        
+        # Set the representative because filtering out non-candidate program
+        # points may have clobbered it.
+        for super_vertex in self:
+            random_index = random.randint(0,len(super_vertex.vertices)-1)
+            super_vertex.representative = super_vertex.vertices[random_index]
+        
+        # Pick out super blocks to instrument and then choose the representatives
+        # of those super blocks.
+        for super_vertex in self:
+            if super_vertex.number_of_successors() == 0:
+                instrumentation_points.add(super_vertex.representative.program_point)
+            if super_vertex.number_of_predecessors() > 1:
+                list_of_predecessors = [pred_edge for pred_edge in super_vertex.predecessor_edge_iterator()]
+                pred_edge_to_remove = list_of_predecessors[random.randint(0, len(list_of_predecessors)-1)]
+                list_of_predecessors.remove(pred_edge_to_remove)
+                for pred_edge in list_of_predecessors:
+                    pred_super_vertex = self.get_vertex(pred_edge.vertex_id)
+                    instrumentation_points.add(pred_super_vertex.representative.program_point)
     
     def dot_filename(self):
         return '{}.super'.format(self._name)

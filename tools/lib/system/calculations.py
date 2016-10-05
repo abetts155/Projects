@@ -89,17 +89,9 @@ def calculate_wcet_using_integer_linear_programming(program):
                
                 print('>', control_flow_graph.name)
                 print('control_flow_graph')
-                print('WCET = {}'.format(ilp_for_control_flow_graph.wcet))
-                print('Variables = {}'.format(len(ilp_for_control_flow_graph.variables)))
-                print('Constraints = {}'.format(len(ilp_for_control_flow_graph.constraints)))
-                print('Construction = {}'.format(ilp_for_control_flow_graph.construction_time))
-                print('Solve = {}'.format(ilp_for_control_flow_graph.solve_time))
+                print(ilp_for_control_flow_graph)
                 print('super_blocks')
-                print('WCET = {}'.format(ilp_for_super_block_graph.wcet))
-                print('Variables = {}'.format(len(ilp_for_super_block_graph.variables)))
-                print('Constraints = {}'.format(len(ilp_for_super_block_graph.constraints)))
-                print('Construction = {}'.format(ilp_for_super_block_graph.construction_time))
-                print('Solve = {}'.format(ilp_for_super_block_graph.solve_time))
+                print(ilp_for_super_block_graph)
                 
                 if globals.args['folded']:
                     ilp_with_folding =\
@@ -108,14 +100,10 @@ def calculate_wcet_using_integer_linear_programming(program):
                              loop_nesting_tree,
                              control_flow_graph.program_point_data)
                     ilp_with_folding.solve()
-                    
+        
                     assert ilp_with_folding.wcet == ilp_for_control_flow_graph.wcet
                     print('super_blocks_folded')
-                    print('WCET = {}'.format(ilp_with_folding.wcet))
-                    print('Variables = {}'.format(len(ilp_with_folding.variables)))
-                    print('Constraints = {}'.format(len(ilp_with_folding.constraints)))
-                    print('Construction = {}'.format(ilp_with_folding.construction_time))
-                    print('Solve = {}'.format(ilp_with_folding.solve_time))
+                    print(ilp_with_folding)
     finally:
         if globals.args['output']:
             log_file.close()
@@ -167,9 +155,7 @@ def get_new_line(num=1):
 class ConstraintSystem:
     
     """
-    Any constraint system that solves to a WCET estimate must, at the least,
-    generate an objective function, structural constraints and execution
-    count constraints on program points in loops.
+    A constraint system that solves to a WCET estimate.
     """
     
     __metaclass__ = abc.ABCMeta
@@ -207,8 +193,20 @@ class ConstraintSystem:
     @property
     def constraints(self):
         return self._constraints
+    
+    
+    def __str__(self):
+        return """WCET: {}
+variables: {}
+constraints: {}
+construction: {}
+solve: {}""".format(self._wcet, 
+                    len(self._variables), 
+                    len(self._constraints), 
+                    self._construction_time, 
+                    self._solve_time)
 
-   
+
 
 class SolverError(Exception):
     

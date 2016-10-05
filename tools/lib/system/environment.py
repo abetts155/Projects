@@ -162,11 +162,13 @@ def create_program_from_input_file():
     edges_in_call_graph = set()
     def create_call_graph():
         for call_site_id, caller, callee in edges_in_call_graph:
-            pred_call_vertex = program.call_graph.get_vertex_with_name(caller)
-            succ_call_vertex = program.call_graph.get_vertex_with_name(callee)
-            program.call_graph.add_edge(pred_call_vertex, 
-                                        succ_call_vertex, 
-                                        parse_int(call_site_id))
+            if program.call_graph.has_vertex_with_name(caller)\
+            and program.call_graph.has_vertex_with_name(callee):
+                pred_call_vertex = program.call_graph.get_vertex_with_name(caller)
+                succ_call_vertex = program.call_graph.get_vertex_with_name(callee)
+                program.call_graph.add_edge(pred_call_vertex, 
+                                            succ_call_vertex, 
+                                            parse_int(call_site_id))
         dot.make_file(program.call_graph)
     
     
@@ -182,7 +184,6 @@ def create_program_from_input_file():
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
-                        # Function name
                         if globals.args['functions'] is None\
                         or line in globals.args['functions']:
                             current_function = line
@@ -190,7 +191,6 @@ def create_program_from_input_file():
                         else:
                             current_function = None
                     elif current_function and edge_regex.match(line): 
-                        # An edge in this function
                         source, destination = line.split('-')
                         if basic_block_id_regex.match(destination):
                             edges_in_control_flow_graphs[current_function].\
@@ -207,7 +207,6 @@ def create_program_from_input_file():
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
-                        # Function name
                         if globals.args['functions'] is None\
                         or line in globals.args['functions']:
                             current_function = line
@@ -217,11 +216,11 @@ def create_program_from_input_file():
                     elif current_function and program_property_regex.match(line):
                         lexemes = delimiter_regex.split(line)
                         if len(lexemes) == 5:
-                            # Vertex program point
+                            # Vertex program point.
                             program_point = parse_int(lexemes[0])
                             property_index = 2
                         else:
-                            # Edge program point
+                            # Edge program point.
                             program_point = (parse_int(lexemes[0]), 
                                              parse_int(lexemes[2]))
                             property_index = 4

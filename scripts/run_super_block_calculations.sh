@@ -46,7 +46,7 @@ do
     --subprograms $SUBPROGRAMS --loops $LOOPS --nesting-depth $NESTING_DEPTH
   python3 ../tools/super_block_calculations.py $i.txt\
     --output $OUTPUT_DIR/$i.subprograms_$SUBPROGRAMS.loops_$LOOPS.depth_$NESTING_DEPTH.txt\
-		--repeat 100
+    --repeat 10 --folded
 done
 
 

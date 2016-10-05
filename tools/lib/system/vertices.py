@@ -207,6 +207,11 @@ class SuperBlock(Vertex):
         return self._vertices
     
     
+    @vertices.setter
+    def vertices(self, value):
+        self._vertices = value
+        
+    
     @property
     def representative(self):
         return self._representative
