@@ -9,14 +9,20 @@ from lib.system import directed_graphs
 from lib.utils import dot
 from lib.utils import globals
 
+INSTRUMENT = 'instrument'
+WCET = 'wcet'
+LOOP_BOUND = 'loop_bound'
+
 
 def generate_program():
+    start_vertex_id = 1
     program = analysis.Program()
     for function_id in range(1, globals.args['subprograms'] + 1):
         function_name = 'f{}'.format(function_id)
         control_flow_graph = directed_graphs.create_control_flow_graph \
-            (function_name)
+            (function_name, start_vertex_id)
         program[function_name] = control_flow_graph
+        start_vertex_id += control_flow_graph.number_of_vertices()
         dot.make_file(control_flow_graph)
 
     # For each control flow graph, work out which basic blocks can legitimately 
@@ -102,12 +108,24 @@ def generate_program():
 def write_program_to_file(program):
     with open(globals.args['program_file'], 'w') as the_file:
         for control_flow_graph in program:
+            call_vertex = program.call_graph.get_vertex_with_name(control_flow_graph.name)
             the_file.write('{}\n'.format(control_flow_graph.name))
             for vertex in control_flow_graph:
+                if control_flow_graph.program_point_data.is_instrumented\
+                            (vertex.vertex_id):
+                    the_file.write('{}.{}=t\n'.format(vertex.vertex_id, INSTRUMENT))
                 if vertex != control_flow_graph.exit_vertex:
                     for succ_edge in vertex.successor_edge_iterator():
-                        the_file.write('{}-{}\n'.format(vertex.vertex_id,
-                                                        succ_edge.vertex_id))
+                        edge_str = '{}-{}'.format(vertex.vertex_id, succ_edge.vertex_id)
+                        the_file.write(edge_str + '\n')
+                        if control_flow_graph.program_point_data.is_instrumented\
+                                    ((vertex.vertex_id, succ_edge.vertex_id)):
+                            the_file.write('{}.{}=t\n'.format(edge_str, INSTRUMENT))
+                    for succ_edge in call_vertex.successor_edge_iterator():
+                        if vertex.vertex_id in succ_edge.call_sites:
+                            succ_vertex = program.call_graph.get_vertex(succ_edge.vertex_id)
+                            the_file.write('{}-{}\n'.format(vertex.vertex_id, succ_vertex.name))
+
             the_file.write('\n')
 
 
@@ -153,7 +171,6 @@ def create_program_from_input_file():
             # from the exit vertex to the entry vertex 
             control_flow_graph.set_entry_vertex()
             control_flow_graph.set_exit_vertex()
-            control_flow_graph.add_exit_to_entry_edge()
             program[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
 
@@ -182,12 +199,8 @@ def create_program_from_input_file():
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
-                        if globals.args['functions'] is None \
-                                or line in globals.args['functions']:
-                            current_function = line
-                            edges_in_control_flow_graphs[current_function] = set()
-                        else:
-                            current_function = None
+                        current_function = line
+                        edges_in_control_flow_graphs[current_function] = set()
                     elif current_function and edge_regex.match(line):
                         source, destination = line.split('-')
                         if basic_block_id_regex.match(destination):
@@ -204,12 +217,8 @@ def create_program_from_input_file():
                 if re.match(r'\S', line):
                     line = ''.join(line.lower().split())
                     if function_name_regex.match(line):
-                        if globals.args['functions'] is None \
-                                or line in globals.args['functions']:
-                            current_function = line
-                            control_flow_graph = program[current_function]
-                        else:
-                            current_function = None
+                        current_function = line
+                        control_flow_graph = program[current_function]
                     elif current_function and program_property_regex.match(line):
                         lexemes = delimiter_regex.split(line)
                         if len(lexemes) == 5:
@@ -222,7 +231,7 @@ def create_program_from_input_file():
                                              parse_int(lexemes[2]))
                             property_index = 4
 
-                        if lexemes[property_index] == 'instrument':
+                        if lexemes[property_index] == INSTRUMENT:
                             if lexemes[-1].startswith('t'):
                                 control_flow_graph. \
                                     program_point_data. \
@@ -231,11 +240,11 @@ def create_program_from_input_file():
                                 control_flow_graph. \
                                     program_point_data. \
                                     set_instrumented(program_point, False)
-                        elif lexemes[property_index] == 'wcet':
+                        elif lexemes[property_index] == WCET:
                             control_flow_graph. \
                                 program_point_data. \
                                 set_wcet(program_point, parse_int(lexemes[-1]))
-                        elif lexemes[property_index] == 'loop_bound':
+                        elif lexemes[property_index] == LOOP_BOUND:
                             assert lexemes[-1][0] == '(' \
                                    and lexemes[-1][len(lexemes[-1]) - 1] == ')'
                             # Strip parentheses from tuple

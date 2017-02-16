@@ -75,12 +75,10 @@ def write_control_flow_graph(dot_file, control_flow_graph):
     def write_vertex(vertex):
         color = 'white'
         if control_flow_graph.program_point_data.\
-            get_instrumented(vertex.program_point):
+            is_instrumented(vertex.program_point):
             color = 'yellow'
-        dot_file.write('{} [label="{}", style=filled, fillcolor={}];\n'.\
-                       format(vertex.vertex_id,
-                              vertex.program_point,
-                              color)) 
+        dot_file.write('{} [label="{}", style=filled, fillcolor={}];\n'.format
+                       (vertex.vertex_id, vertex.program_point, color))
         for succ_edge in vertex.successor_edge_iterator():
             dot_file.write('{} -> {};\n'.\
                            format(vertex.vertex_id, 
@@ -96,9 +94,11 @@ def write_control_flow_graph(dot_file, control_flow_graph):
             
 def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
     def write_vertex(vertex):
-        dot_file.write('%d [label="%r"];\n' 
-                       % (vertex.vertex_id,
-                          vertex.program_point)) 
+        color = 'white'
+        if vertex.abstract:
+            color = 'yellow'
+        dot_file.write('{} [label="{}", style=filled, fillcolor={}];\n'.format
+                       (vertex.vertex_id, vertex.program_point, color))
         
         for succ_edge in vertex.successor_edge_iterator():
             penwidth = 1
@@ -110,9 +110,10 @@ def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
                                   penwidth,
                                   color))
     
-    
+    write_vertex(instrumentation_point_graph.entry_vertex)
     for vertex in instrumentation_point_graph:
-        write_vertex(vertex)
+        if vertex != instrumentation_point_graph.entry_vertex:
+            write_vertex(vertex)
         
         
 

@@ -45,11 +45,6 @@ def parse_the_command_line():
                         help='fold super blocks before constraint solving',
                         default=False)
     
-    parser.add_argument('--functions',
-                        nargs='*',
-                        help='analyse these functions only',
-                        metavar='<STR>')
-    
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     globals.set_filename_prefix(globals.args['program_file'])

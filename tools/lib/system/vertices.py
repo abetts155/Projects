@@ -3,11 +3,10 @@ This module includes all vertex types that appear in graphs.
 """
 
 import collections
-
+import itertools
 
 
 class Vertex:
-    
     """
     Models a vertex in a graph as a vertex id, a set of predecessors and a set
     of successors.
@@ -133,7 +132,6 @@ def is_basic_block(program_point):
 
             
 class ProgramPointVertex(Vertex):
-    
     """
     Models a program point (i.e., a basic block or a transition between two
     basic blocks) as a vertex.  These vertices are used in control flow graphs
@@ -144,25 +142,24 @@ class ProgramPointVertex(Vertex):
         Vertex.__init__(self, vertex_id)
         self._program_point = program_point
         self._abstract = abstract
-        
     
     @property
     def program_point(self):
         return self._program_point
     
-    
     @property
     def abstract(self):
         return self._abstract
-    
+
+    @abstract.setter
+    def abstract(self, value):
+        self._abstract = value
     
     def __str__(self):
         return str(self._program_point)
-        
-        
+
 
 class SubprogramVertex(Vertex):
-    
     """
     Models a method/procedure/function of a program in the call graph.
     """
@@ -171,11 +168,12 @@ class SubprogramVertex(Vertex):
         Vertex.__init__(self, vertex_id)
         self._name = name
         
-        
     @property
     def name(self):
         return self._name
 
+    def call_sites(self):
+        return list(itertools.chain.from_iterable([succ_edge.call_sites for succ_edge in self.successor_edge_iterator()]))
 
     def __repr__(self):
         return '%s(id=%r name=%r pred=%r succ=%r)' \

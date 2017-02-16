@@ -7,7 +7,7 @@ assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run
 
 from lib.utils import globals
 from lib.system import environment
-from lib.system import calculations
+from lib.system import directed_graphs
 
 
 def parse_the_command_line():
@@ -30,10 +30,6 @@ def parse_the_command_line():
                         default=10,
                         metavar='<INT>')
 
-    parser.add_argument('--functions',
-                        nargs='*',
-                        help='analyse these functions only')
-
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     globals.set_filename_prefix(globals.args['program_file'])
@@ -42,4 +38,6 @@ def parse_the_command_line():
 if __name__ == '__main__':
     parse_the_command_line()
     program = environment.create_program_from_input_file()
-    calculations.calculate_wcet_using_instrumentation_point_graph(program)
+    for control_flow_graph in program:
+        ipg = directed_graphs.InstrumentationPointGraph.instrument_as_per_user_instruction(control_flow_graph)
+

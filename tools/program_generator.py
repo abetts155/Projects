@@ -108,5 +108,3 @@ if __name__ == '__main__':
     if globals.args['instrument_branches']:
         analysis.instrument_branches(program)
     environment.write_program_to_file(program)
-    
-    

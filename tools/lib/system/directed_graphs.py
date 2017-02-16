@@ -109,17 +109,17 @@ class DirectedGraph:
                                         ' '.join(repr(vertex)
                                                  for vertex in self))
 
-class ControlFlowGraph(DirectedGraph):
+
+class ExecutionFlowGraph(DirectedGraph):
     """
-    Models a control flow graph.  We use vertices to represent BOTH basic blocks
-    and transitions among basic blocks.  An edge in the control flow graph either
-    shows that:
-    a) the source is a basic block and the destination is a transition among basic 
-    blocks such that the source basic block equals the first element of the 
-    transition; or,
-    b) the source is a transition among basic blocks and the destination is
-    a basic block such that the second element of the transition equals the
-    basic block.
+    Models execution through a set of vertices, representing program points,
+    and a set of edges, representing possible transition between those program
+    points. An execution flow graph has a designated entry vertex from which all
+    program points withing the graph are reachable, and a designated exit vertex
+    which is reachable from all program points.
+
+    Both control flow graphs and instrumentation points graphs share these features,
+    and hence they are derived classes.
     """
 
     def __init__(self, name):
@@ -127,14 +127,6 @@ class ControlFlowGraph(DirectedGraph):
         self._entry_vertex = None
         self._exit_vertex = None
         self._program_point_to_vertex = {}
-        self._basic_block_vertices = set()
-        self._control_flow_edge_vertices = set()
-        self._pre_dominator_tree = None
-        self._post_dominator_tree = None
-        self._loop_nesting_tree = None
-        self._super_block_graphs = {}
-        self._instrumentation_point_graph = None
-        self._program_point_data = analysis.ProgramPointData(self)
 
     @property
     def entry_vertex(self):
@@ -152,52 +144,53 @@ class ControlFlowGraph(DirectedGraph):
     def exit_vertex(self, value):
         self._exit_vertex = value
 
-    @property
-    def basic_block_vertices(self):
-        return self._basic_block_vertices
-
-    @property
-    def control_flow_edge_vertices(self):
-        return self._control_flow_edge_vertices
-
-    @property
-    def program_point_data(self):
-        return self._program_point_data
-
     def set_entry_vertex(self):
-        without_predecessors = [vertex for vertex in self
-                                if vertex.number_of_predecessors() == 0]
-        if len(without_predecessors) == 0:
+        candidates = [vertex for vertex in self
+                      if vertex.number_of_predecessors() == 0]
+        if len(candidates) == 0:
             raise NoValidVertexError('All vertices have at least one predecessor')
-        elif len(without_predecessors) > 1:
+        elif len(candidates) > 1:
             raise NoValidVertexError('Too many entry candidates found: {}'. \
                                      format(','.join(str(vertex.vertex_id)
-                                                     for vertex in without_predecessors)))
+                                                     for vertex in candidates)))
         else:
-            self._entry_vertex = without_predecessors[0]
+            self._entry_vertex = candidates[0]
 
     def set_exit_vertex(self):
-        without_successors = [vertex for vertex in self
+        candidates = [vertex for vertex in self
                               if vertex.number_of_successors() == 0]
-        if len(without_successors) == 0:
+        if len(candidates) == 0:
             raise NoValidVertexError('All vertices have at least one successor')
-        elif len(without_successors) > 1:
+        elif len(candidates) > 1:
             raise NoValidVertexError('Too many exit candidates found: {}'. \
                                      format(','.join(str(vertex.vertex_id)
-                                                     for vertex in without_successors)))
+                                                     for vertex in candidates)))
         else:
-            self._exit_vertex = without_successors[0]
+            self._exit_vertex = candidates[0]
 
     def add_vertex(self, vertex):
         DirectedGraph.add_vertex(self, vertex)
-        if vertex.program_point is not None:
-            # No program point means that the vertex is dummy
-            self._program_point_to_vertex[vertex.program_point] = vertex
-            if is_basic_block(vertex.program_point):
-                self._basic_block_vertices.add(vertex)
-            else:
-                self._control_flow_edge_vertices.add(vertex)
-            self.program_point_data.set_instrumented(vertex.program_point, False)
+        self._program_point_to_vertex[vertex.program_point] = vertex
+
+    def remove_vertex(self, vertex):
+        DirectedGraph.remove_vertex(self, vertex)
+        del self._program_point_to_vertex[vertex.program_point]
+
+    def add_exit_to_entry_edge(self):
+        exit_to_entry_edge = (self.exit_vertex.vertex_id,
+                              self.entry_vertex.vertex_id)
+        exit_to_entry_vertex = ProgramPointVertex \
+            (self.get_new_vertex_id(),
+             exit_to_entry_edge)
+        self.add_vertex(exit_to_entry_vertex)
+        self.add_edge(self.exit_vertex, exit_to_entry_vertex)
+        self.add_edge(exit_to_entry_vertex, self.entry_vertex)
+
+    def remove_exit_to_entry_edge(self):
+        exit_to_entry_edge = (self.exit_vertex.vertex_id,
+                              self.entry_vertex.vertex_id)
+        exit_to_entry_vertex = self._program_point_to_vertex[exit_to_entry_edge]
+        self.remove_vertex(exit_to_entry_vertex)
 
     def has_vertex_for_program_point(self, program_point):
         return program_point in self._program_point_to_vertex
@@ -208,6 +201,32 @@ class ControlFlowGraph(DirectedGraph):
         except KeyError:
             raise KeyError('No vertex found for program point {}'. \
                            format(program_point))
+
+
+class ControlFlowGraph(ExecutionFlowGraph):
+    """
+    Models a control flow graph.  We use vertices to represent BOTH basic blocks
+    and transitions among basic blocks.  An edge in the control flow graph either
+    shows that:
+    a) the source is a basic block and the destination is a transition among basic 
+    blocks such that the source basic block equals the first element of the 
+    transition; or,
+    b) the source is a transition among basic blocks and the destination is
+    a basic block such that the second element of the transition equals the
+    basic block.
+    """
+
+    def __init__(self, name):
+        ExecutionFlowGraph.__init__(self, name)
+        self._pre_dominator_tree = None
+        self._post_dominator_tree = None
+        self._loop_nesting_tree = None
+        self._super_block_graphs = {}
+        self._program_point_data = analysis.ProgramPointData(self)
+
+    @property
+    def program_point_data(self):
+        return self._program_point_data
 
     def get_pre_dominator_tree(self):
         if self._pre_dominator_tree is None:
@@ -223,15 +242,11 @@ class ControlFlowGraph(DirectedGraph):
 
     def get_loop_nesting_tree(self):
         if self._loop_nesting_tree is None:
+            self.add_exit_to_entry_edge()
             self._loop_nesting_tree = LoopNestingHierarchy(self)
+            self.remove_exit_to_entry_edge()
             dot.make_file(self._loop_nesting_tree)
         return self._loop_nesting_tree
-
-    def get_instrumentation_point_graph(self):
-        if self._instrumentation_point_graph is None:
-            self._instrumentation_point_graph = InstrumentationPointGraph.instrument_as_per_user_instruction(self)
-            dot.make_file(self._instrumentation_point_graph)
-        return self._instrumentation_point_graph
 
     def get_super_block_subgraph(self, abstract_vertex, redo=False):
         if abstract_vertex not in self._super_block_graphs or redo:
@@ -251,21 +266,6 @@ class ControlFlowGraph(DirectedGraph):
             if is_basic_block(vertex.program_point):
                 self.program_point_data.set_instrumented(vertex.program_point,
                                                          True)
-
-    def add_exit_to_entry_edge(self):
-        exit_to_entry_edge = (self.exit_vertex.vertex_id,
-                              self.entry_vertex.vertex_id)
-        exit_to_entry_vertex = ProgramPointVertex \
-            (self.get_new_vertex_id(),
-             exit_to_entry_edge)
-        self.add_vertex(exit_to_entry_vertex)
-        self.add_edge(self.exit_vertex, exit_to_entry_vertex)
-        self.add_edge(exit_to_entry_vertex, self.entry_vertex)
-        # The reason we set the exit of the control flow graph to the control 
-        #  flow edge is that this edge always executes last, even though
-        # technically it does not actually exist in the program.  Really, this 
-        #  makes sures the post-dominator tree is correct.
-        self._exit_vertex = exit_to_entry_vertex
 
     def add_persistent_dummy_entry_and_exit_vertices(self):
         new_entry_vertex = ProgramPointVertex(self.get_new_vertex_id(), None)
@@ -451,7 +451,7 @@ class ControlFlowGraph(DirectedGraph):
         return value
 
 
-class InstrumentationPointGraph(DirectedGraph):
+class InstrumentationPointGraph(ExecutionFlowGraph):
     @staticmethod
     def instrument_as_per_user_instruction(control_flow_graph):
         instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
@@ -463,11 +463,6 @@ class InstrumentationPointGraph(DirectedGraph):
         instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
         instrumentation_point_graph._reduce_for_profiling_and_tracing(control_flow_graph)
         return instrumentation_point_graph
-
-    def __init__(self, name):
-        DirectedGraph.__init__(self, name)
-        self._program_point_to_vertex = {}
-        self._program_point_to_removed_vertex = {}
 
     def _reduce_for_profiling_and_tracing(self, control_flow_graph):
         # We use a temporary state transition to path expression mapping to
@@ -524,7 +519,7 @@ class InstrumentationPointGraph(DirectedGraph):
         # mapping. Initially the values in the mapping will be empty.
         program_points_to_remove = set()
         for vertex in self:
-            if not control_flow_graph.program_point_data.get_instrumented(vertex.program_point) \
+            if not control_flow_graph.program_point_data.is_instrumented(vertex.program_point) \
                     and vertex.program_point:
                 program_points_to_remove.add(vertex)
 
@@ -546,9 +541,9 @@ class InstrumentationPointGraph(DirectedGraph):
         changed = True
         while changed:
             changed = False
-            candidiates = list(self._vertices.values())
-            random.shuffle(candidiates)
-            for vertex in candidiates:
+            candidates = list(self._vertices.values())
+            random.shuffle(candidates)
+            for vertex in candidates:
                 if can_remove_program_point(vertex):
                     changed = True
                     connect_predecessors_to_successors(vertex)
@@ -571,26 +566,11 @@ class InstrumentationPointGraph(DirectedGraph):
 
     def _reduce_for_timing_analysis(self, control_flow_graph):
         self.__copy_control_flow_graph(control_flow_graph)
-        self.__scatter_loop_bounds(control_flow_graph.get_loop_nesting_tree(),
-                                   control_flow_graph.program_point_data)
         self.__initialise_loop_properties(control_flow_graph.get_loop_nesting_tree())
-        self.__reduce(control_flow_graph.get_loop_nesting_tree(),
+        self.__reduce(control_flow_graph,
+                      control_flow_graph.get_loop_nesting_tree(),
                       control_flow_graph.program_point_data)
-
-    def get_entry_vertex(self):
-        for vertex in self:
-            if vertex.program_point is None and vertex.number_of_predecessors() == 0:
-                return vertex
-        assert False, 'Unable to find entry vertex of instrumentation point graph'
-
-    def get_vertex_for_program_point(self, program_point):
-        try:
-            if program_point in self._program_point_to_vertex:
-                return self._program_point_to_vertex[program_point]
-            return self._program_point_to_removed_vertex[program_point]
-        except KeyError:
-            raise KeyError('No vertex found for program point {}'.
-                           format(program_point))
+        dot.make_file(self)
 
     def add_edge(self, pred_vertex, succ_vertex, path_expression):
         edge_id = self.get_new_edge_id()
@@ -600,12 +580,6 @@ class InstrumentationPointGraph(DirectedGraph):
         succ_vertex.add_predecessor_edge(TransitionEdge(pred_vertex.vertex_id,
                                                         edge_id,
                                                         path_expression))
-
-    def __remove_vertex(self, vertex):
-        DirectedGraph.remove_vertex(self, vertex)
-        if vertex.program_point:
-            del self._program_point_to_vertex[vertex.program_point]
-            self._program_point_to_removed_vertex[vertex.program_point] = vertex
 
     def __copy_control_flow_graph(self, control_flow_graph):
         for vertex in control_flow_graph:
@@ -710,8 +684,7 @@ class InstrumentationPointGraph(DirectedGraph):
                 if is_basic_block(abstract_vertex.program_point):
                     pass
 
-    def __reduce(self, loop_nesting_tree, program_point_data):
-
+    def __reduce(self, control_flow_graph, loop_nesting_tree, program_point_data):
         """
         Eliminate program points that are not instrumented.  During this 
         reduction, reconnect the remaining program points if there is at 
@@ -797,16 +770,22 @@ class InstrumentationPointGraph(DirectedGraph):
                                                     vertex.get_successor_edge(succ_vertex.vertex_id),
                                                     new_edge_tuple)
 
-        program_points_to_remove = [vertex for vertex in self
-                                    if not program_point_data.
-                get_instrumented(vertex.program_point)]
+        program_points_to_remove = [vertex for vertex in self if
+                                    not program_point_data.is_instrumented (vertex.program_point) and
+                                    not (vertex.program_point == control_flow_graph.entry_vertex.program_point or
+                                         vertex.program_point == control_flow_graph.exit_vertex.program_point)]
         random.shuffle(program_points_to_remove)
         for vertex in program_points_to_remove:
             debug.debug_message('Removing program point {}'.
                                 format(vertex.program_point),
                                 __name__)
             connect_predecessors_to_successors(vertex)
-            self.__remove_vertex(vertex)
+            self.remove_vertex(vertex)
+
+        self._entry_vertex = self._program_point_to_vertex[control_flow_graph.entry_vertex.program_point]
+        self._entry_vertex.abstract = not program_point_data.is_instrumented(self._entry_vertex.program_point)
+        self._exit_vertex = self._program_point_to_vertex[control_flow_graph.exit_vertex.program_point]
+        self._exit_vertex.abstract = not program_point_data.is_instrumented(self._exit_vertex.program_point)
 
         for vertex in self:
             for succ_edge in vertex.successor_edge_iterator():
@@ -828,6 +807,25 @@ class CallGraph(DirectedGraph):
     def __init__(self):
         DirectedGraph.__init__(self, 'call')
         self._function_name_to_vertex = {}
+        self._root_function = None
+
+    @property
+    def root_function(self):
+        if self._root_function is None:
+            self.__set_root_function()
+        return self._root_function
+
+    def __set_root_function(self):
+        candidates = [vertex for vertex in self
+                      if vertex.number_of_predecessors() == 0]
+        if len(candidates) == 0:
+            raise NoValidVertexError('All functions have a caller')
+        elif len(candidates) > 1:
+            raise NoValidVertexError('Too many root functions found: {}'. \
+                                     format(','.join(vertex.name
+                                                     for vertex in candidates)))
+        else:
+            self._root_function = candidates[0]
 
     def add_vertex(self, vertex):
         DirectedGraph.add_vertex(self, vertex)
@@ -1864,7 +1862,7 @@ class SuperBlockGraph(DirectedGraph):
         return '{}.super'.format(self._name)
 
 
-def create_control_flow_graph(name):
+def create_control_flow_graph(name, start_vertex_id):
     class ArtificialLoopBody:
         """
         A loop body created during artificial construction of a control flow graph.
@@ -1890,13 +1888,14 @@ def create_control_flow_graph(name):
                          number_of_nested_loops,
                          tree_vertex):
             level = 0
+            vertex_id = start_vertex_id
             while number_of_vertices > 0:
-                vertex_id = control_flow_graph.get_new_vertex_id()
                 vertex = ProgramPointVertex(vertex_id, vertex_id)
                 control_flow_graph.add_vertex(vertex)
                 self._level_to_vertices.setdefault(level, []).append(vertex)
                 self._vertex_to_level[vertex] = level
                 number_of_vertices -= 1
+                vertex_id += 1
 
                 if level == 0:
                     self._header_vertex = vertex
@@ -1924,6 +1923,7 @@ def create_control_flow_graph(name):
                     self._level_to_vertices.setdefault(new_highest_level, []).append(vertex)
                     self._level_to_vertices[highest_level].remove(vertex)
                     self._vertex_to_level[vertex] = new_highest_level
+
 
         def add_acyclic_edges(self, control_flow_graph):
             highest_level = max(self._level_to_vertices.keys())
