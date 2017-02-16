@@ -10,6 +10,7 @@ import re
 from lib.utils import globals
 from lib.utils import debug
 from lib.system import environment
+from lib.system import analysis
 
 
 def create_program_filename(base_directory):
@@ -46,7 +47,7 @@ def parse_the_command_line():
                         help='write the program file to this directory',
                         default=os.path.abspath(os.curdir))
     
-    parser.add_argument('--program_file',
+    parser.add_argument('--program-file',
                         help='write the program to this file',
                         default=None)
     
@@ -82,7 +83,12 @@ def parse_the_command_line():
                         help='maximum number of basic blocks in a control flow graph',
                         metavar='<INT>',
                         default=10)
-    
+
+    parser.add_argument('--instrument-branches',
+                        action='store_true',
+                        help='instrument branches (i.e., both edges of 2-way conditionals, and calls/returns)',
+                        default=False)
+
     globals.add_common_command_line_arguments(parser)
     globals.args = vars(parser.parse_args())
     base_directory = os.path.abspath(globals.args['directory'])
@@ -99,6 +105,8 @@ def parse_the_command_line():
 if __name__ == '__main__': 
     parse_the_command_line()
     program = environment.generate_program()
+    if globals.args['instrument_branches']:
+        analysis.instrument_branches(program)
     environment.write_program_to_file(program)
     
     

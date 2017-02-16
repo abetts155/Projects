@@ -1,4 +1,3 @@
-
 import abc
 import os
 import timeit
@@ -12,10 +11,16 @@ from lib.utils import debug
 from lib.system.vertices import (RegularExpressionVertex, 
                                  ProgramPointVertex,
                                  is_basic_block)
-from lib.system import directed_graphs
+from lib.system import directed_graphs, environment
 
 
-def calculate_wcet_using_instrumentation_point_graph(program):
+edge_variable_prefix = 'E_'
+vertex_variable_prefix = 'V_'
+transition_variable_prefix = 'T_'
+wcet_variable_prefix   = 'W_'
+
+
+def calculate_wcet_using_instrumentation_point_graph(program: environment.Program):
     for repetition in range(1, globals.args['repeat']+1):
         debug.verbose_message('Repetition {}'.format(repetition), __name__)
         for control_flow_graph in program:
@@ -109,9 +114,6 @@ def calculate_wcet_using_integer_linear_programming(program):
             log_file.close()
             sys.stdout = old_stdout
 
-
-edge_variable_prefix = 'E_'
-vertex_variable_prefix = 'V_'
 def get_variable_for_program_point(program_point, variables):
     if is_basic_block(program_point):
         variable = '{}{}'.format(vertex_variable_prefix,
@@ -124,7 +126,7 @@ def get_variable_for_program_point(program_point, variables):
     return variable
 
 
-transition_variable_prefix = 'T_'
+
 def get_variable_for_edge_between_program_points(program_point_one, 
                                                  program_point_two, 
                                                  variables):
@@ -141,19 +143,13 @@ def get_variable_for_edge_between_program_points(program_point_one,
     variables.add(variable)
     return variable
 
-
-wcet_variable_prefix   = 'W_'
 def get_vertex_wcet_variable(vertex_id):
     return '{}{}'.format(wcet_variable_prefix, vertex_id)
-
 
 def get_new_line(num=1):
     return '\n' * num
 
-
-
 class ConstraintSystem:
-    
     """
     A constraint system that solves to a WCET estimate.
     """
