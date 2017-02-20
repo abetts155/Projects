@@ -89,7 +89,7 @@ def generate_program():
                     while True:
                         level_lower_than_current = random.randint(0, level - 1)
                         candidate_callers = levels_in_call_graph[level_lower_than_current]
-                        if candidate_callers:
+                        if candidate_callers and random.random() < 0.75:
                             caller = candidate_callers[random.randint(0, len(candidate_callers) - 1)]
                             call_site_index = random.randint(0, len(call_site_candidates[caller]) - 1)
                             call_site_vertex = call_site_candidates[caller][call_site_index]

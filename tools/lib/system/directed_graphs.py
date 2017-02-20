@@ -452,16 +452,23 @@ class ControlFlowGraph(ExecutionFlowGraph):
 
 
 class InstrumentationPointGraph(ExecutionFlowGraph):
-    @staticmethod
-    def instrument_as_per_user_instruction(control_flow_graph):
-        instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
-        instrumentation_point_graph._reduce_for_timing_analysis(control_flow_graph)
-        return instrumentation_point_graph
+    def add_edge(self, pred_vertex, succ_vertex, path_expression):
+        edge_id = self.get_new_edge_id()
+        pred_vertex.add_successor_edge(TransitionEdge(succ_vertex.vertex_id,
+                                                      edge_id,
+                                                      path_expression))
+        succ_vertex.add_predecessor_edge(TransitionEdge(pred_vertex.vertex_id,
+                                                        edge_id,
+                                                        path_expression))
+
+    def dot_filename(self):
+        return '{}.ipg'.format(self.name)
 
     @staticmethod
     def instrument_but_maintain_path_reconstructibility(control_flow_graph):
         instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
         instrumentation_point_graph._reduce_for_profiling_and_tracing(control_flow_graph)
+        dot.make_file(instrumentation_point_graph)
         return instrumentation_point_graph
 
     def _reduce_for_profiling_and_tracing(self, control_flow_graph):
@@ -533,7 +540,7 @@ class InstrumentationPointGraph(ExecutionFlowGraph):
         # Maintain graph connectedness and remove each unneeded program point.
         for vertex in program_points_to_remove:
             connect_predecessors_to_successors(vertex)
-            self.__remove_vertex(vertex)
+            self.remove_vertex(vertex)
             control_flow_graph.program_point_data.set_instrumented(vertex.program_point,
                                                                    False)
 
@@ -547,7 +554,7 @@ class InstrumentationPointGraph(ExecutionFlowGraph):
                 if can_remove_program_point(vertex):
                     changed = True
                     connect_predecessors_to_successors(vertex)
-                    self.__remove_vertex(vertex)
+                    self.remove_vertex(vertex)
                     control_flow_graph.program_point_data.set_instrumented(vertex.program_point,
                                                                            False)
 
@@ -562,24 +569,16 @@ class InstrumentationPointGraph(ExecutionFlowGraph):
                 succ_edge.path_expression = path_expression
                 pred_edge.path_expression = path_expression
 
-        dot.make_file(self)
-
-    def _reduce_for_timing_analysis(self, control_flow_graph):
-        self.__copy_control_flow_graph(control_flow_graph)
-        self.__initialise_loop_properties(control_flow_graph.get_loop_nesting_tree())
-        self.__reduce(control_flow_graph,
-                      control_flow_graph.get_loop_nesting_tree(),
-                      control_flow_graph.program_point_data)
-        dot.make_file(self)
-
-    def add_edge(self, pred_vertex, succ_vertex, path_expression):
-        edge_id = self.get_new_edge_id()
-        pred_vertex.add_successor_edge(TransitionEdge(succ_vertex.vertex_id,
-                                                      edge_id,
-                                                      path_expression))
-        succ_vertex.add_predecessor_edge(TransitionEdge(pred_vertex.vertex_id,
-                                                        edge_id,
-                                                        path_expression))
+    @staticmethod
+    def instrument_as_per_user_instruction(control_flow_graph):
+        instrumentation_point_graph = InstrumentationPointGraph(control_flow_graph.name)
+        instrumentation_point_graph.__copy_control_flow_graph(control_flow_graph)
+        instrumentation_point_graph.__initialise_loop_properties(control_flow_graph.get_loop_nesting_tree())
+        instrumentation_point_graph.__reduce(control_flow_graph,
+                                             control_flow_graph.get_loop_nesting_tree(),
+                                             control_flow_graph.program_point_data)
+        dot.make_file(instrumentation_point_graph)
+        return instrumentation_point_graph
 
     def __copy_control_flow_graph(self, control_flow_graph):
         for vertex in control_flow_graph:
@@ -794,9 +793,6 @@ class InstrumentationPointGraph(ExecutionFlowGraph):
                     succ_edge.path_expression.pred_vertex = vertex
                     succ_edge.path_expression.succ_vertex = succ_vertex
                     dot.make_file(succ_edge.path_expression)
-
-    def dot_filename(self):
-        return '{}.ipg'.format(self.name)
 
 
 class CallGraph(DirectedGraph):

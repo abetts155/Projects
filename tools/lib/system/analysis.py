@@ -8,6 +8,7 @@ from lib.system.directed_graphs import (DepthFirstSearch,
                                         InstrumentationPointGraph)
 from lib.system.vertices import ProgramPointVertex
 from lib.utils import globals
+from lib.utils import dot
 
 
 class ProgramPointData:
@@ -149,23 +150,78 @@ def build_instrumentation_point_graphs(program : Program):
     depth_first_search_tree = DepthFirstSearch(program.call_graph,
                                                program.call_graph.root_function,
                                                False)
+    # Traverse call graph in reverse topological order
     for call_vertex in depth_first_search_tree.post_order:
         caller_ipg = InstrumentationPointGraph.instrument_as_per_user_instruction\
             (program[call_vertex.name])
         instrumentation_point_graphs[call_vertex.name] = caller_ipg
+        # Process every call made by this function
         for call_edge in call_vertex.successor_edge_iterator():
             callee_vertex = program.call_graph.get_vertex(call_edge.vertex_id)
             callee_ipg = instrumentation_point_graphs[callee_vertex.name]
+            # Grab each instrumentation point from the callee that may be executed
+            # first when the function begins
             entry_sign_posts = []
-            for succ_edge in callee_ipg.entry_vertex.successor_edge_iterator():
-                entry_sign_posts.append(callee_ipg.get_vertex(succ_edge.vertex_id))
-            exit_sign_posts = [callee_ipg.exit_vertex]
+            if not callee_ipg.entry_vertex.abstract:
+                entry_sign_posts.append(callee_ipg.entry_vertex)
+            else:
+                for succ_edge in callee_ipg.entry_vertex.successor_edge_iterator():
+                    entry_sign_posts.append(callee_ipg.get_vertex(succ_edge.vertex_id))
+            # Grab each instrumentation point from the callee that may be executed
+            # last before the function returns
+            exit_sign_posts = []
+            if not callee_ipg.exit_vertex.abstract:
+                exit_sign_posts.append(callee_ipg.exit_vertex)
+            else:
+                for pred_edge in callee_ipg.exit_vertex.predecessor_edge_iterator():
+                    exit_sign_posts.append(callee_ipg.get_vertex(pred_edge.vertex_id))
 
             for call_site in call_edge.call_sites:
-                print(caller_ipg.get_vertex_for_program_point(call_site))
+                # Inline the sign posts to callee entry and exit into the caller
+                inlined_program_points = {}
+                for vertex in entry_sign_posts + exit_sign_posts:
+                    assert vertex.program_point not in inlined_program_points,\
+                        ('Already inlined program point {} while inlining call {} @ call site {}'.
+                         format(vertex.program_point, callee_vertex.name, call_site))
+                    vertex_copy = ProgramPointVertex(caller_ipg.get_new_vertex_id(),
+                                                     vertex.program_point,
+                                                     abstract=True)
+                    inlined_program_points[vertex.program_point] = vertex_copy
+                    caller_ipg.add_vertex(vertex_copy)
 
-            print("In {}, {} are entry instrumentation points and {} are exit instrumentation points".format(callee_ipg.name, len(entry_sign_posts), len(exit_sign_posts)))
+                # Add a special vertex for this call to avoid a potential quadratic growth in
+                # edges between inlined entry and exit instrumentation points
+                bridge_vertex = ProgramPointVertex(caller_ipg.get_new_vertex_id(),
+                                                   None,
+                                                   abstract=True)
+                caller_ipg.add_vertex(bridge_vertex)
 
+                # Link the inlined instrumentation points through the bridge
+                for vertex in entry_sign_posts:
+                    pred_vertex = inlined_program_points[vertex.program_point]
+                    caller_ipg.add_edge(pred_vertex, bridge_vertex, None)
+                for vertex in exit_sign_posts:
+                    succ_vertex = inlined_program_points[vertex.program_point]
+                    caller_ipg.add_edge(bridge_vertex, succ_vertex, None)
+
+                # Relink the call site vertex
+                edges_to_purge = set()
+                call_site_vertex = caller_ipg.get_vertex_for_program_point(call_site)
+                for vertex in exit_sign_posts:
+                    pred_vertex = inlined_program_points[vertex.program_point]
+                    for succ_edge in call_site_vertex.successor_edge_iterator():
+                        succ_vertex = caller_ipg.get_vertex(succ_edge.vertex_id)
+                        caller_ipg.add_edge(pred_vertex, succ_vertex, None)
+                        edges_to_purge.add((call_site_vertex, succ_vertex))
+
+                for edge in edges_to_purge:
+                    caller_ipg.remove_edge(*edge)
+
+                for vertex in entry_sign_posts:
+                    succ_vertex = inlined_program_points[vertex.program_point]
+                    caller_ipg.add_edge(call_site_vertex, succ_vertex, None)
+        dot.make_file(caller_ipg)
+    return instrumentation_point_graphs
 
 def instrument_branches(program : Program):
     for control_flow_graph in program:

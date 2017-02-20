@@ -3,48 +3,75 @@
 import sys
 import os
 import random
+import typing
+import collections
 
 from argparse import Action, ArgumentError, ArgumentParser
 
 import lib.utils
 from lib.system import analysis
 from lib.system.environment import create_program_from_input_file
-from lib.system.directed_graphs import InstrumentationPointGraph
+from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph
 from lib.system.vertices import is_basic_block
 
 assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
 
 
-def generate_trace(program : analysis.Program):
-    # Maintain the call stack of instrumentation point graphs
-    call_stack = []
-    call_stack.append(InstrumentationPointGraph.instrument_as_per_user_instruction(program[program.call_graph.root_function.name]))
+State = collections.namedtuple('State', ['ipg', 'vertex'])
+
+
+def generate_trace(out_file, call_graph : CallGraph, instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
     # Start execution from the entry point of the program
-    vertex = call_stack[-1].entry_vertex
+    function = instrumentation_point_graphs[call_graph.root_function.name]
+    vertex = function.entry_vertex
+    # Maintain a call stack
+    call_stack = [State(function, vertex)]
+    time = 1
     while call_stack:
-        # Ignore program points added for analysis purposes
+        # A trace event only happens if the program point has not been added
+        # for analysis purposes
         if not vertex.abstract:
-            print(vertex.program_point)
+            out_file.write('{} {}\n'.format(vertex.program_point, time))
+            time += random.randint(1, 200)
 
         call_or_return = False
         if is_basic_block(vertex.program_point):
-            call_vertex = program.call_graph.get_vertex_with_name(call_stack[-1].name)
-            for succ_edge in call_vertex.successor_edge_iterator():
-                if vertex.program_point in succ_edge.call_sites:
-                    call_or_return = True
-                    succ_vertex = program.call_graph.get_vertex(succ_edge.vertex_id)
-                    call_stack.append(InstrumentationPointGraph.instrument_as_per_user_instruction(program[succ_vertex.name]))
-                    break
-        else:
-            if vertex == call_stack[-1].exit_vertex:
+            call_vertex = program.call_graph.get_vertex_with_name(function.name)
+            call_edges = [succ_edge for succ_edge in call_vertex.successor_edge_iterator()
+                          if vertex.program_point in succ_edge.call_sites]
+            assert len(call_edges) <= 1
+            if call_edges:
                 call_or_return = True
-                call_stack.pop()
+                call_stack.append(State(function, vertex))
+                callee_vertex = program.call_graph.get_vertex(call_edges.pop().vertex_id)
+                function = instrumentation_point_graphs[callee_vertex.name]
+                vertex = function.entry_vertex
+
+        if vertex == function.exit_vertex:
+            call_or_return = True
+            state = call_stack.pop()
+            if function != instrumentation_point_graphs[call_graph.root_function.name]:
+                # We have returned to the state just before the function call.
+                # Advance to the function return program point that was
+                # inlined from the callee
+                function = state.ipg
+                next_state = function.get_vertex(state.vertex.get_ith_successor_edge(0).vertex_id)
+                next_state = function.get_vertex(next_state.get_ith_successor_edge(0).vertex_id)
+                idx = 0
+                found = False
+                while idx < next_state.number_of_successors() and not found:
+                    succ_edge = next_state.get_ith_successor_edge(idx)
+                    succ_vertex = function.get_vertex(succ_edge.vertex_id)
+                    found = succ_vertex.program_point == vertex.program_point
+                    if found:
+                        vertex = succ_vertex
+                    idx += 1
+                assert found
 
         if not call_or_return:
             edge_idx = random.randint(0, vertex.number_of_successors()-1)
             succ_edge = vertex.get_ith_successor_edge(edge_idx)
-            vertex = call_stack[-1].get_vertex(succ_edge.vertex_id)
-    print()
+            vertex = function.get_vertex(succ_edge.vertex_id)
 
 
 def parse_the_command_line():
@@ -78,7 +105,9 @@ def parse_the_command_line():
 if __name__ == '__main__':
     parse_the_command_line()
     program = create_program_from_input_file()
-    analysis.build_instrumentation_point_graphs(program)
-    for _ in range(1,lib.utils.globals.args['number_of_runs']+1):
-        pass#generate_trace(program)
+    instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
+    with open(lib.utils.globals.args['trace_file'], 'w') as out_file:
+        for _ in range(1,lib.utils.globals.args['number_of_runs']+1):
+            generate_trace(out_file, program.call_graph, instrumentation_point_graphs)
+            out_file.write('\n')
 
