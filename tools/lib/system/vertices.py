@@ -130,6 +130,12 @@ class Vertex:
 def is_basic_block(program_point):
     return isinstance(program_point, int)
 
+
+def is_direct_transition(program_point):
+    return isinstance(program_point, tuple) and \
+           isinstance(program_point[0], int) and \
+           isinstance(program_point[1], int)
+
             
 class ProgramPointVertex(Vertex):
     """

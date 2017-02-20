@@ -11,13 +11,15 @@ assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run
 from lib.utils import globals
 from lib.system import environment
 from lib.system import analysis
-from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph
+from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph, DepthFirstSearch
+from lib.system import calculations
 
 
 State = collections.namedtuple('State', ['ipg', 'vertex'])
 
 
-def parse_trace(call_graph: CallGraph, instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
+def parse_trace(call_graph: CallGraph,
+                instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
     def parse_trace_event(line):
         line = line.replace('(', '').replace(')', '').replace(',', '').strip()
         lexemes = line.split(' ')
@@ -42,7 +44,8 @@ def parse_trace(call_graph: CallGraph, instrumentation_point_graphs : typing.Dic
         assert False, ('Unable to transition from {} to {} in function {}'.
                        format(vertex.program_point, program_point, function.name))
 
-    execution_times = {}
+    end_to_end_execution_times = []
+    transition_execution_times = {}
     root_function = instrumentation_point_graphs[call_graph.root_function.name]
     with open(globals.args['trace_file'], 'r') as in_file:
         for line in in_file:
@@ -53,12 +56,13 @@ def parse_trace(call_graph: CallGraph, instrumentation_point_graphs : typing.Dic
                     function = root_function
                     vertex = root_function.entry_vertex
                     call_stack = []
+                    start_time = time
                     pred_time = time
                 else:
                     # Inch forward one transition
                     pred_vertex = vertex
                     vertex = transition(function, vertex, program_point)
-                    execution_times.setdefault((pred_vertex, vertex), []).append(time-pred_time)
+                    transition_execution_times.setdefault((pred_vertex, vertex), []).append(time-pred_time)
                     pred_time = time
 
                     if vertex.abstract:
@@ -73,12 +77,15 @@ def parse_trace(call_graph: CallGraph, instrumentation_point_graphs : typing.Dic
                         function = instrumentation_point_graphs[callee_vertex.name]
                         vertex = transition(function, function.entry_vertex, program_point)
 
-                    if vertex == function.exit_vertex and function.name != call_graph.root_function.name:
-                        state = call_stack.pop()
-                        function = state.ipg
-                        pred_vertex = function.get_vertex(state.vertex.get_ith_successor_edge(0).vertex_id)
-                        vertex = transition(function, pred_vertex, vertex.program_point)
-    return execution_times
+                    if vertex == function.exit_vertex:
+                        if function.name != call_graph.root_function.name:
+                            state = call_stack.pop()
+                            function = state.ipg
+                            pred_vertex = function.get_vertex(state.vertex.get_ith_successor_edge(0).vertex_id)
+                            vertex = transition(function, pred_vertex, vertex.program_point)
+                        else:
+                            end_to_end_execution_times.append(time-start_time)
+    return transition_execution_times, end_to_end_execution_times
 
 
 def parse_the_command_line():
@@ -103,10 +110,35 @@ def parse_the_command_line():
     globals.set_filename_prefix(globals.args['program_file'])
 
 
+def do_wcet_calculation(program : analysis.Program,
+                        instrumentation_point_graphs,
+                        transition_execution_times):
+    depth_first_search_tree = DepthFirstSearch(program.call_graph,
+                                               program.call_graph.root_function,
+                                               False)
+    call_execution_times = {}
+    # Traverse call graph in reverse topological order to process callees before callers
+    for call_vertex in depth_first_search_tree.post_order:
+        instrumentation_point_graph = instrumentation_point_graphs[call_vertex.name]
+        wcet = calculations.do_wcet_calculation_for_instrumentation_point_graph(instrumentation_point_graph,
+                                                                                transition_execution_times,
+                                                                                call_execution_times)
+        call_execution_times[call_vertex.name] = wcet
+        if call_vertex == depth_first_search_tree.post_order[-1]:
+            return wcet
+
+
 if __name__ == '__main__':
     parse_the_command_line()
     program = environment.create_program_from_input_file()
+    analysis.instrument_branches(program)
     instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
-    execution_times = parse_trace(program.call_graph, instrumentation_point_graphs)
+    transition_execution_times, end_to_end_execution_times = parse_trace(program.call_graph, instrumentation_point_graphs)
+    wcet = do_wcet_calculation(program, instrumentation_point_graphs, transition_execution_times)
+    hwmt = max(end_to_end_execution_times)
+    assert wcet >= hwmt
+    print('WCET = {}'.format(wcet))
+    print('HWMT = {}'.format(hwmt))
+
 
 

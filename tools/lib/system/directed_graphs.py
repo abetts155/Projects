@@ -1617,6 +1617,10 @@ class StronglyConnectedComponents:
             raise KeyError('Unable to find SCC for program point {}'. \
                            format(program_point))
 
+
+    def __len__(self):
+        return len(self.__scc_id_to_vertices.items())
+
     def __iter__(self):
         for scc_id, vertices in self.__scc_id_to_vertices.items():
             yield scc_id, vertices

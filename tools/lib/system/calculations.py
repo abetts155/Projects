@@ -5,12 +5,14 @@ import subprocess
 import decimal
 import re
 import sys
+import collections
 
 from lib.utils import globals
 from lib.utils import debug
 from lib.system.vertices import (RegularExpressionVertex,
                                  ProgramPointVertex,
-                                 is_basic_block)
+                                 is_basic_block,
+                                 is_direct_transition)
 from lib.system import directed_graphs
 from lib.system import analysis
 
@@ -20,7 +22,35 @@ TRANSITION_VARIABLE_PREFIX = 'T_'
 WCET_VARIABLE_PREFIX = 'W_'
 
 
-def calculate_wcet_using_instrumentation_point_graph(program: analysis.Program):
+def do_wcet_calculation_for_instrumentation_point_graph(instrumentation_point_graph : directed_graphs.InstrumentationPointGraph,
+                                                        transition_execution_times,
+                                                        call_execution_times):
+    strong_components = directed_graphs.StronglyConnectedComponents(instrumentation_point_graph)
+    if len(strong_components) == instrumentation_point_graph.number_of_vertices():
+        # If every instrumentation point belongs to its own strong component, then the IPG is acyclic.
+        # Then we can calculate a WCET estimate during a topological traversal of instrumentation points.
+        depth_first_search_tree = directed_graphs.DepthFirstSearch(instrumentation_point_graph,
+                                                                   instrumentation_point_graph.entry_vertex,
+                                                                   False)
+        calculated_times = {}
+        for vertex in reversed(depth_first_search_tree.post_order):
+            calculated_times[vertex] = 0
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = instrumentation_point_graph.get_vertex(pred_edge.vertex_id)
+                key = (pred_vertex, vertex)
+                transition_time = 0 if key not in transition_execution_times else max(transition_execution_times[key])
+                calculated_times[vertex] = max(calculated_times[vertex],
+                                               transition_time + calculated_times[pred_vertex])
+            if not is_basic_block(vertex.program_point) and not is_direct_transition(vertex.program_point):
+                # Call detected
+                calculated_times[vertex] = calculated_times[vertex] + call_execution_times[vertex.program_point]
+        # The exit vertex of the IPG is annotated with the WCET estimate of the function
+        return calculated_times[instrumentation_point_graph.exit_vertex]
+    else:
+        assert False
+
+
+def compute_and_compare_wcet_estimates_between_cfg_and_ipg(program: analysis.Program):
     for repetition in range(1, globals.args['repeat'] + 1):
         debug.verbose_message('Repetition {}'.format(repetition), __name__)
         for control_flow_graph in program:

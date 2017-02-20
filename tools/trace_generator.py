@@ -105,6 +105,7 @@ def parse_the_command_line():
 if __name__ == '__main__':
     parse_the_command_line()
     program = create_program_from_input_file()
+    analysis.instrument_branches(program)
     instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
     with open(lib.utils.globals.args['trace_file'], 'w') as out_file:
         for _ in range(1,lib.utils.globals.args['number_of_runs']+1):
