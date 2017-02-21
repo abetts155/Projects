@@ -5,7 +5,6 @@ import subprocess
 import decimal
 import re
 import sys
-import collections
 
 from lib.utils import globals
 from lib.utils import debug

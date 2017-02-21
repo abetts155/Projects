@@ -6,9 +6,11 @@ import random
 import typing
 import collections
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from argparse import Action, ArgumentError, ArgumentParser
 
-import lib.utils
+from lib.utils import globals
 from lib.system import analysis
 from lib.system.environment import create_program_from_input_file
 from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph
@@ -20,18 +22,19 @@ assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run
 State = collections.namedtuple('State', ['ipg', 'vertex'])
 
 
-def generate_trace(out_file, call_graph : CallGraph, instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
+def generate_trace(call_graph : CallGraph, instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
     # Start execution from the entry point of the program
     function = instrumentation_point_graphs[call_graph.root_function.name]
     vertex = function.entry_vertex
     # Maintain a call stack
     call_stack = [State(function, vertex)]
     time = 1
+    trace = []
     while call_stack:
         # A trace event only happens if the program point has not been added
         # for analysis purposes
         if not vertex.abstract:
-            out_file.write('{} {}\n'.format(vertex.program_point, time))
+            trace.append('{} {}'.format(vertex.program_point, time))
             time += random.randint(1, 200)
 
         call_or_return = False
@@ -72,6 +75,7 @@ def generate_trace(out_file, call_graph : CallGraph, instrumentation_point_graph
             edge_idx = random.randint(0, vertex.number_of_successors()-1)
             succ_edge = vertex.get_ith_successor_edge(edge_idx)
             vertex = function.get_vertex(succ_edge.vertex_id)
+    return trace
 
 
 def parse_the_command_line():
@@ -95,11 +99,11 @@ def parse_the_command_line():
                         metavar='<INT>',
                         required=True)
 
-    lib.utils.globals.add_common_command_line_arguments(parser)
-    lib.utils.globals.args = vars(parser.parse_args())
-    lib.utils.globals.set_filename_prefix(lib.utils.globals.args['program_file'])
-    base, _ = os.path.splitext(os.path.abspath(lib.utils.globals.args['program_file']))
-    lib.utils.globals.args['trace_file'] = base + '.trace.txt'
+    globals.add_common_command_line_arguments(parser)
+    globals.args = vars(parser.parse_args())
+    globals.set_filename_prefix(globals.args['program_file'])
+    base, _ = os.path.splitext(os.path.abspath(globals.args['program_file']))
+    globals.args['trace_file'] = base + '.trace.txt'
 
 
 if __name__ == '__main__':
@@ -107,8 +111,11 @@ if __name__ == '__main__':
     program = create_program_from_input_file()
     analysis.instrument_branches(program)
     instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
-    with open(lib.utils.globals.args['trace_file'], 'w') as out_file:
-        for _ in range(1,lib.utils.globals.args['number_of_runs']+1):
-            generate_trace(out_file, program.call_graph, instrumentation_point_graphs)
+    with open(globals.args['trace_file'], 'w') as out_file:
+        for _ in range(1, globals.args['number_of_runs']+1):
+            for t in generate_trace(program.call_graph, instrumentation_point_graphs):
+                out_file.write(t)
+                out_file.write('\n')
             out_file.write('\n')
+
 

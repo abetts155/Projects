@@ -2,6 +2,8 @@ import collections
 import numpy
 import random
 
+from concurrent.futures import ThreadPoolExecutor
+
 from lib.system.vertices import SubprogramVertex, is_basic_block
 from lib.system.directed_graphs import (DepthFirstSearch,
                                         CallGraph,
@@ -230,17 +232,23 @@ def build_instrumentation_point_graphs(program : Program):
 
 
 def instrument_branches(program : Program):
-    for control_flow_graph in program:
-        call_vertex = program.call_graph.get_vertex_with_name(control_flow_graph.name)
+    def do_instrumentation(args):
+        control_flow_graph, call_vertex = args[0], args[1]
         call_sites = call_vertex.call_sites()
         for vertex in control_flow_graph:
             if vertex.number_of_successors() > 1:
                 for succ_edge in vertex.successor_edge_iterator():
-                    control_flow_graph.program_point_data.set_instrumented((vertex.vertex_id, succ_edge.vertex_id), True)
+                    control_flow_graph.program_point_data.set_instrumented((vertex.vertex_id, succ_edge.vertex_id),
+                                                                           True)
             if vertex.vertex_id in call_sites:
                 control_flow_graph.program_point_data.set_instrumented(vertex.vertex_id, True)
             if vertex.vertex_id == control_flow_graph.exit_vertex.vertex_id:
                 control_flow_graph.program_point_data.set_instrumented(vertex.vertex_id, True)
             if vertex.vertex_id == control_flow_graph.entry_vertex.vertex_id and call_vertex.number_of_predecessors() == 0:
                 control_flow_graph.program_point_data.set_instrumented(vertex.vertex_id, True)
+
+    work = [(control_flow_graph, program.call_graph.get_vertex_with_name(control_flow_graph.name)) for control_flow_graph in program]
+    with ThreadPoolExecutor(min(len(program), 10)) as executor:
+        result = executor.map(do_instrumentation, work)
+
 

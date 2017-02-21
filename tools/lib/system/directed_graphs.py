@@ -792,7 +792,6 @@ class InstrumentationPointGraph(ExecutionFlowGraph):
                 if succ_edge.path_expression:
                     succ_edge.path_expression.pred_vertex = vertex
                     succ_edge.path_expression.succ_vertex = succ_vertex
-                    dot.make_file(succ_edge.path_expression)
 
 
 class CallGraph(DirectedGraph):
@@ -1886,16 +1885,16 @@ def create_control_flow_graph(name, start_vertex_id):
                          control_flow_graph,
                          number_of_vertices,
                          number_of_nested_loops,
-                         tree_vertex):
+                         tree_vertex,
+                         next_vertex_id):
             level = 0
-            vertex_id = start_vertex_id
             while number_of_vertices > 0:
-                vertex = ProgramPointVertex(vertex_id, vertex_id)
+                vertex = ProgramPointVertex(next_vertex_id, next_vertex_id)
                 control_flow_graph.add_vertex(vertex)
                 self._level_to_vertices.setdefault(level, []).append(vertex)
                 self._vertex_to_level[vertex] = level
                 number_of_vertices -= 1
-                vertex_id += 1
+                next_vertex_id += 1
 
                 if level == 0:
                     self._header_vertex = vertex
@@ -1916,7 +1915,7 @@ def create_control_flow_graph(name, start_vertex_id):
             #  of loop body vertices is too great.
             if len(loop_tails) > 1:
                 if tree_vertex.number_of_predecessors() == 0 \
-                        or len(loop_tails) / len(self._vertex_to_level) > 0.2:
+                        or len(loop_tails)/len(self._vertex_to_level) > 0.2:
                     # Promote a random vertex to be the unique loop tail.
                     new_highest_level = highest_level + 1
                     vertex = loop_tails[random.randint(0, len(loop_tails) - 1)]
@@ -1924,31 +1923,32 @@ def create_control_flow_graph(name, start_vertex_id):
                     self._level_to_vertices[highest_level].remove(vertex)
                     self._vertex_to_level[vertex] = new_highest_level
 
-
-        def add_acyclic_edges(self, control_flow_graph):
+        def add_edges_between_adjacent_levels(self, control_flow_graph):
             highest_level = max(self._level_to_vertices.keys())
             for level in sorted(self._level_to_vertices.keys(), reverse=True):
                 if level > 0:
-                    level_lower_than_current = level - 1
-                    candidate_vertices = [vertex for vertex in
-                                          self._level_to_vertices[level - 1]
-                                          if vertex.number_of_successors() < globals.args['fan_out']]
                     for succ_vertex in self._level_to_vertices[level]:
-                        pred_vertex = candidate_vertices \
-                            [random.randint(0, len(candidate_vertices) - 1)]
+                        candidate_predecessors = [vertex for vertex in
+                                                  self._level_to_vertices[level-1]
+                                                  if vertex.number_of_successors() < globals.args['fan_out']]
+                        idx = random.randint(0, len(candidate_predecessors)-1)
+                        pred_vertex = candidate_predecessors[idx]
                         control_flow_graph.add_edge(pred_vertex, succ_vertex)
                         if pred_vertex.number_of_successors() == globals.args['fan_out']:
-                            candidate_vertices.remove(pred_vertex)
+                            candidate_predecessors.remove(pred_vertex)
 
-                if level < highest_level:
-                    vertices_without_successors = [vertex for vertex in
-                                                   self._level_to_vertices[level]
-                                                   if vertex.number_of_successors() == 0]
-                    level_higher_than_current = random.randint(level + 1, highest_level)
-                    candidate_vertices = self._level_to_vertices[level_higher_than_current]
-                    for pred_vertex in vertices_without_successors:
-                        succ_vertex = candidate_vertices \
-                            [random.randint(0, len(candidate_vertices) - 1)]
+        def connect_terminal_vertices(self, control_flow_graph):
+            highest_level = max(self._level_to_vertices.keys())
+            for level in sorted(self._level_to_vertices.keys(), reverse=True):
+                if 0 < level < highest_level:
+                    candidate_predecessors = [vertex for vertex in
+                                              self._level_to_vertices[level]
+                                              if vertex.number_of_successors() == 0]
+                    level_higher_than_current = random.randint(level+1, highest_level)
+                    candidate_successors = self._level_to_vertices[level_higher_than_current]
+                    for pred_vertex in candidate_predecessors:
+                        idx = random.randint(0, len(candidate_successors)-1)
+                        succ_vertex = candidate_successors[idx]
                         control_flow_graph.add_edge(pred_vertex, succ_vertex)
 
         def add_backedges(self, control_flow_graph):
@@ -2032,11 +2032,13 @@ def create_control_flow_graph(name, start_vertex_id):
         loop_nesting_tree._set_tree_properties()
         return loop_nesting_tree
 
-    def create_structure(control_flow_graph,
+    def create_structure(start_vertex_id,
+                         control_flow_graph,
                          bare_loop_nesting_tree,
                          number_of_basic_blocks):
-        # Compute number of vertices in each loop.  Guarantee each loop has at 
-        # least 2 vertices plus vertices needed to connect inner nested loops.
+        # Compute number of vertices in each loop.
+        # Guarantee each loop has at least 2 vertices plus vertices needed
+        # to connect inner nested loops.
         number_of_vertices_per_loop = {}
         number_of_vertices_remaining = number_of_basic_blocks
         for tree_vertex in bare_loop_nesting_tree:
@@ -2051,22 +2053,25 @@ def create_control_flow_graph(name, start_vertex_id):
                 number_of_vertices_remaining -= additional_vertices
         # Generate each loop body.
         loop_components = {}
+        next_vertex_id = start_vertex_id
         for _, vertices in bare_loop_nesting_tree.level_by_level_iterator():
             for tree_vertex in vertices:
                 nested_loop_components = []
                 for succ_edge in tree_vertex.successor_edge_iterator():
                     succ_vertex = bare_loop_nesting_tree.get_vertex(succ_edge.vertex_id)
                     nested_loop_components.append(loop_components[succ_vertex])
-
                 loop_component = ArtificialLoopBody()
                 loop_component.add_vertices(control_flow_graph,
                                             number_of_vertices_per_loop[tree_vertex],
                                             tree_vertex.number_of_successors(),
-                                            tree_vertex)
+                                            tree_vertex,
+                                            next_vertex_id)
+                loop_component.add_edges_between_adjacent_levels(control_flow_graph)
                 loop_component.connect_nested_loops(control_flow_graph,
                                                     nested_loop_components)
-                loop_component.add_acyclic_edges(control_flow_graph)
+                loop_component.connect_terminal_vertices(control_flow_graph)
                 loop_component.add_backedges(control_flow_graph)
+                next_vertex_id += number_of_vertices_per_loop[tree_vertex]
 
                 if tree_vertex == bare_loop_nesting_tree.root_vertex:
                     pred_edge = loop_component. \
@@ -2085,7 +2090,8 @@ def create_control_flow_graph(name, start_vertex_id):
         (name,
          globals.args['loops'],
          globals.args['nesting_depth'])
-    create_structure(control_flow_graph,
+    create_structure(start_vertex_id,
+                     control_flow_graph,
                      bare_loop_nesting_tree,
                      globals.args['vertices'])
     control_flow_graph.check_connected()

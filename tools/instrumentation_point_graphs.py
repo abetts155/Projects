@@ -51,6 +51,7 @@ def parse_trace(call_graph: CallGraph,
         for line in in_file:
             if re.match(r'\S', line):
                 program_point, time = parse_trace_event(line)
+                print(program_point, time)
                 if program_point == root_function.entry_vertex.program_point:
                     # New trace: reset everything
                     function = root_function
@@ -75,7 +76,14 @@ def parse_trace(call_graph: CallGraph,
                         call_stack.append(State(function, vertex))
                         callee_vertex = call_graph.get_vertex(call_edges.pop().vertex_id)
                         function = instrumentation_point_graphs[callee_vertex.name]
-                        vertex = transition(function, function.entry_vertex, program_point)
+                        if not function.entry_vertex.abstract:
+                            # The entry point of the function represents a call.
+                            # Stay here.
+                            vertex = function.entry_vertex
+                        else:
+                            # The entry point of the function was added for analysis only.
+                            # Find the program point where we should be
+                            vertex = transition(function, function.entry_vertex, program_point)
 
                     if vertex == function.exit_vertex:
                         if function.name != call_graph.root_function.name:
