@@ -95,7 +95,7 @@ def parse_the_command_line():
     if globals.args['program_file'] is None:
         globals.args['program_file'] = create_program_filename(base_directory)
     globals.args['program_file'] = base_directory + os.sep + globals.args['program_file']
-    globals.set_filename_prefix(globals.args['program_file']) 
+    globals.set_filename_prefix(globals.args['program_file'])
     
     if globals.args['vertices'] < globals.args['loops'] * 2:
         debug.exit_message('The number of vertices in a control flow graph ' 

@@ -6,8 +6,6 @@ import random
 import typing
 import collections
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from argparse import Action, ArgumentError, ArgumentParser
 
 from lib.utils import globals
