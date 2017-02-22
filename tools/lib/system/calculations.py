@@ -21,28 +21,37 @@ TRANSITION_VARIABLE_PREFIX = 'T_'
 WCET_VARIABLE_PREFIX = 'W_'
 
 
-def do_wcet_calculation_for_instrumentation_point_graph(instrumentation_point_graph : directed_graphs.InstrumentationPointGraph,
+def do_wcet_calculation_for_instrumentation_point_graph(program: analysis.Program,
+                                                        instrumentation_point_graph : directed_graphs.InstrumentationPointGraph,
                                                         transition_execution_times,
                                                         call_execution_times):
     strong_components = directed_graphs.StronglyConnectedComponents(instrumentation_point_graph)
     if len(strong_components) == instrumentation_point_graph.number_of_vertices():
         # If every instrumentation point belongs to its own strong component, then the IPG is acyclic.
-        # Then we can calculate a WCET estimate during a topological traversal of instrumentation points.
+        # We can calculate a WCET estimate during a topological traversal of instrumentation points.
         depth_first_search_tree = directed_graphs.DepthFirstSearch(instrumentation_point_graph,
                                                                    instrumentation_point_graph.entry_vertex,
                                                                    False)
         calculated_times = {}
         for vertex in reversed(depth_first_search_tree.post_order):
-            calculated_times[vertex] = 0
-            for pred_edge in vertex.predecessor_edge_iterator():
-                pred_vertex = instrumentation_point_graph.get_vertex(pred_edge.vertex_id)
-                key = (pred_vertex, vertex)
-                transition_time = 0 if key not in transition_execution_times else max(transition_execution_times[key])
-                calculated_times[vertex] = max(calculated_times[vertex],
-                                               transition_time + calculated_times[pred_vertex])
-            if not is_basic_block(vertex.program_point) and not is_direct_transition(vertex.program_point):
-                # Call detected
-                calculated_times[vertex] = calculated_times[vertex] + call_execution_times[vertex.program_point]
+            if vertex.number_of_predecessors():
+                transition_times = set()
+                for pred_edge in vertex.predecessor_edge_iterator():
+                    pred_vertex = instrumentation_point_graph.get_vertex(pred_edge.vertex_id)
+                    transition_time = 0
+                    if pred_vertex.abstract and vertex.abstract:
+                        callee = program.find_subprogram_with_program_point(vertex.program_point)
+                        assert callee == program.find_subprogram_with_program_point(pred_vertex.program_point)
+                        transition_time += call_execution_times[callee]
+                    else:
+                        key = (pred_vertex, vertex)
+                        if key in transition_execution_times:
+                            transition_time = max(transition_execution_times[key])
+                    transition_times.add(transition_time + calculated_times[pred_vertex])
+                calculated_times[vertex] = max(transition_times)
+            else:
+                calculated_times[vertex] = 0
+
         # The exit vertex of the IPG is annotated with the WCET estimate of the function
         return calculated_times[instrumentation_point_graph.exit_vertex]
     else:

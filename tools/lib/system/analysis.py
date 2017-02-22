@@ -112,6 +112,12 @@ class Program:
     def call_graph(self, value):
         self._call_graph = value
 
+    def find_subprogram_with_program_point(self, program_point):
+        for control_flow_graph in self:
+            if control_flow_graph.has_vertex_for_program_point(program_point):
+                return control_flow_graph.name
+        assert False
+
     def __delitem__(self, function_name):
         try:
             del self._control_flow_graphs[function_name]
@@ -200,18 +206,10 @@ def build_instrumentation_point_graphs(program : Program):
                     inlined_exit_program_points.add(vertex_copy)
                     caller_ipg.add_vertex(vertex_copy)
 
-                # Add a special vertex for this call to avoid a potential quadratic growth in
-                # edges between inlined entry and exit instrumentation points
-                bridge_vertex = ProgramPointVertex(caller_ipg.get_new_vertex_id(),
-                                                   callee_vertex.name,
-                                                   abstract=True)
-                caller_ipg.add_vertex(bridge_vertex)
-
-                # Link the inlined instrumentation points through the bridge
+                # Link the inlined instrumentation points
                 for pred_vertex in inlined_entry_program_points:
-                    caller_ipg.add_edge(pred_vertex, bridge_vertex, None)
-                for succ_vertex in inlined_exit_program_points:
-                    caller_ipg.add_edge(bridge_vertex, succ_vertex, None)
+                    for succ_vertex in inlined_exit_program_points:
+                        caller_ipg.add_edge(pred_vertex, succ_vertex, None)
 
                 # Relink the call site vertex
                 edges_to_purge = set()

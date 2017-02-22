@@ -846,7 +846,7 @@ class CallGraph(DirectedGraph):
             raise ValueError('No vertex found for function {}'. \
                              format(function_name))
 
-    def add_edge(self, pred_vertex, succ_vertex, call_site_id):
+    def add_edge(self, pred_vertex, succ_vertex, call_site):
         edge_id = self.get_new_edge_id()
         if not pred_vertex.has_successor(succ_vertex.vertex_id):
             succ_edge = CallGraphEdge(succ_vertex.vertex_id, edge_id)
@@ -856,8 +856,8 @@ class CallGraph(DirectedGraph):
             succ_vertex.add_predecessor_edge(pred_edge)
         succ_edge = pred_vertex.get_successor_edge(succ_vertex.vertex_id)
         pred_edge = succ_vertex.get_predecessor_edge(pred_vertex.vertex_id)
-        succ_edge.call_sites.add(call_site_id)
-        pred_edge.call_sites.add(call_site_id)
+        succ_edge.call_sites.add(call_site)
+        pred_edge.call_sites.add(call_site)
 
     def dot_filename(self):
         return '{}'.format(self._name)

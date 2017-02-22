@@ -51,7 +51,6 @@ def parse_trace(call_graph: CallGraph,
         for line in in_file:
             if re.match(r'\S', line):
                 program_point, time = parse_trace_event(line)
-                print(program_point, time)
                 if program_point == root_function.entry_vertex.program_point:
                     # New trace: reset everything
                     function = root_function
@@ -89,8 +88,7 @@ def parse_trace(call_graph: CallGraph,
                         if function.name != call_graph.root_function.name:
                             state = call_stack.pop()
                             function = state.ipg
-                            pred_vertex = function.get_vertex(state.vertex.get_ith_successor_edge(0).vertex_id)
-                            vertex = transition(function, pred_vertex, vertex.program_point)
+                            vertex = transition(function, state.vertex, vertex.program_point)
                         else:
                             end_to_end_execution_times.append(time-start_time)
     return transition_execution_times, end_to_end_execution_times
@@ -128,10 +126,12 @@ def do_wcet_calculation(program : analysis.Program,
     # Traverse call graph in reverse topological order to process callees before callers
     for call_vertex in depth_first_search_tree.post_order:
         instrumentation_point_graph = instrumentation_point_graphs[call_vertex.name]
-        wcet = calculations.do_wcet_calculation_for_instrumentation_point_graph(instrumentation_point_graph,
+        wcet = calculations.do_wcet_calculation_for_instrumentation_point_graph(program,
+                                                                                instrumentation_point_graph,
                                                                                 transition_execution_times,
                                                                                 call_execution_times)
         call_execution_times[call_vertex.name] = wcet
+        print('WCET of {} = {}'.format(call_vertex.name, wcet))
         if call_vertex == depth_first_search_tree.post_order[-1]:
             return wcet
 
