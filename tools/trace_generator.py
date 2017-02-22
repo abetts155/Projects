@@ -9,10 +9,10 @@ import collections
 from argparse import Action, ArgumentError, ArgumentParser
 
 from lib.utils import globals
+from lib.utils import debug
 from lib.system import analysis
 from lib.system.environment import create_program_from_input_file
 from lib.system.directed_graphs import InstrumentationPointGraph
-from lib.system.vertices import is_basic_block
 
 assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
 
@@ -122,7 +122,8 @@ if __name__ == '__main__':
     analysis.instrument_branches(program)
     instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
     with open(globals.args['trace_file'], 'w') as out_file:
-        for _ in range(1, globals.args['number_of_runs']+1):
+        for i in range(1, globals.args['number_of_runs']+1):
+            debug.verbose_message('Generating trace #{}'.format(i), __name__)
             for t in generate_trace(program, instrumentation_point_graphs):
                 out_file.write(t)
                 out_file.write('\n')

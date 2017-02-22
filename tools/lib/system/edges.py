@@ -56,28 +56,32 @@ class TransitionEdge(Edge):
                  path_expression):
         Edge.__init__(self, vertex_id, edge_id)
         self._path_expression = path_expression
+        self._backedge = False
         self._loop_bound = None
-        
-    
+
     @property
     def path_expression(self):
         return self._path_expression
-    
-    
+
     @path_expression.setter
     def path_expression(self, value):
         self._path_expression = value
-        
-        
+
+    @property
+    def backedge(self):
+        return self._backedge
+
+    @backedge.setter
+    def backedge(self, value):
+        self._backedge = value
+
     @property
     def loop_bound(self):
         return self._loop_bound
     
-    
     @loop_bound.setter
     def loop_bound(self, value):
         self._loop_bound = value
-    
     
     def __repr__(self):
         return '{}(id={} edge_id={} path_expression={})'.\

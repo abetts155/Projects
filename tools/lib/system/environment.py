@@ -171,6 +171,7 @@ def create_program_from_input_file():
             # from the exit vertex to the entry vertex 
             control_flow_graph.set_entry_vertex()
             control_flow_graph.set_exit_vertex()
+            control_flow_graph.add_exit_to_entry_edge()
             program[function_name] = control_flow_graph
             dot.make_file(control_flow_graph)
 

@@ -24,6 +24,7 @@ WCET_VARIABLE_PREFIX = 'W_'
 def do_wcet_calculation_for_instrumentation_point_graph(program: analysis.Program,
                                                         instrumentation_point_graph : directed_graphs.InstrumentationPointGraph,
                                                         transition_execution_times,
+                                                        transition_max_freqs,
                                                         call_execution_times):
     strong_components = directed_graphs.StronglyConnectedComponents(instrumentation_point_graph)
     if len(strong_components) == instrumentation_point_graph.number_of_vertices():
@@ -44,18 +45,20 @@ def do_wcet_calculation_for_instrumentation_point_graph(program: analysis.Progra
                         assert callee == program.find_subprogram_with_program_point(pred_vertex.program_point)
                         transition_time += call_execution_times[callee]
                     else:
-                        key = (pred_vertex, vertex)
-                        if key in transition_execution_times:
-                            transition_time = max(transition_execution_times[key])
+                        if (pred_vertex, vertex) in transition_execution_times:
+                            transition_time = max(transition_execution_times[(pred_vertex, vertex)])
                     transition_times.add(transition_time + calculated_times[pred_vertex])
                 calculated_times[vertex] = max(transition_times)
             else:
                 calculated_times[vertex] = 0
-
         # The exit vertex of the IPG is annotated with the WCET estimate of the function
         return calculated_times[instrumentation_point_graph.exit_vertex]
     else:
-        assert False
+        optimisation_problem = IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(instrumentation_point_graph,
+                                                                         transition_execution_times,
+                                                                         transition_max_freqs)
+        optimisation_problem.solve()
+        return optimisation_problem.wcet
 
 
 def compute_and_compare_wcet_estimates_between_cfg_and_ipg(program: analysis.Program):
@@ -315,6 +318,100 @@ class IntegerLinearProgram(ConstraintSystem):
             if self._variable_execution_counts[variable] > 0:
                 print('{} = {}'.format(variable,
                                        self._variable_execution_counts[variable]))
+
+
+class IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(IntegerLinearProgram):
+    """
+    The integer linear program derived from an instrumentation point graph, execution
+    times of transitions and upper bounds on transition execution counts.
+    """
+
+    def __init__(self,
+                 instrumentation_point_graph,
+                 transition_execution_times,
+                 transition_max_freqs):
+        ConstraintSystem.__init__(self)
+        self._filename = '{}.{}.ipg.ilp'.format(globals.args['filename_prefix'],
+                                                instrumentation_point_graph.name)
+        start = timeit.default_timer()
+        self.__create_objective_function(instrumentation_point_graph,
+                                         transition_execution_times)
+        self.__create_structural_constraints(instrumentation_point_graph)
+        self.__create_capacity_constraints(instrumentation_point_graph,
+                                           transition_max_freqs)
+        self._create_integer_constraint()
+        end = timeit.default_timer()
+        self._construction_time = end - start
+
+    def __create_objective_function(self,
+                                    instrumentation_point_graph,
+                                    transition_execution_times):
+        self.obj_function = 'max: '
+
+        counter = instrumentation_point_graph.number_of_edges()
+        for vertex in instrumentation_point_graph:
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = instrumentation_point_graph.get_vertex(succ_edge.vertex_id)
+                key = (vertex, succ_vertex)
+                wcet_of_edge = (0 if key not in transition_execution_times else max(transition_execution_times[key]))
+                vertex_variable = get_variable_for_edge_between_program_points(vertex.program_point,
+                                                                               succ_vertex.program_point,
+                                                                               self._variables)
+                self.obj_function += '{} {}'.format(wcet_of_edge, vertex_variable)
+                if counter > 1:
+                    self.obj_function += ' + '
+                counter -= 1
+        self.obj_function += ';'
+
+    def __create_structural_constraints(self, instrumentation_point_graph):
+        for vertex in instrumentation_point_graph:
+            constraint = get_variable_for_program_point(vertex.program_point,
+                                                        self._variables)
+            constraint += ' = '
+            counter = vertex.number_of_successors()
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = instrumentation_point_graph.get_vertex \
+                    (succ_edge.vertex_id)
+                constraint += get_variable_for_edge_between_program_points(vertex.program_point,
+                                                                           succ_vertex.program_point,
+                                                                           self._variables)
+                if counter > 1:
+                    constraint += ' + '
+                counter -= 1
+            constraint += ';'
+            self._constraints.add(constraint)
+
+            constraint = get_variable_for_program_point(vertex.program_point,
+                                                        self._variables)
+            constraint += ' = '
+            counter = vertex.number_of_predecessors()
+            for pred_edge in vertex.predecessor_edge_iterator():
+                pred_vertex = instrumentation_point_graph.get_vertex \
+                    (pred_edge.vertex_id)
+                constraint += get_variable_for_edge_between_program_points(pred_vertex.program_point,
+                                                                           vertex.program_point,
+                                                                           self._variables)
+                if counter > 1:
+                    constraint += ' + '
+                counter -= 1
+            constraint += ';'
+            self._constraints.add(constraint)
+
+    def __create_capacity_constraints(self,
+                                      instrumentation_point_graph,
+                                      transition_max_freqs):
+        for vertex in instrumentation_point_graph:
+            constraint = ''
+            for succ_edge in vertex.successor_edge_iterator():
+                succ_vertex = instrumentation_point_graph.get_vertex(succ_edge.vertex_id)
+                key = (vertex, succ_vertex)
+                freq_of_edge = (0 if key not in transition_max_freqs else transition_max_freqs[key])
+                constraint = '{} {} {};'.format(get_variable_for_edge_between_program_points(vertex.program_point,
+                                                                                             succ_vertex.program_point,
+                                                                                             self._variables),
+                                                '<=',
+                                                freq_of_edge)
+                self._constraints.add(constraint)
 
 
 class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):

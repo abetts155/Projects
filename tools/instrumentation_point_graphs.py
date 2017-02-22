@@ -9,6 +9,7 @@ import collections
 assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
 
 from lib.utils import globals
+from lib.utils import debug
 from lib.system import environment
 from lib.system import analysis
 from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph, DepthFirstSearch
@@ -46,23 +47,27 @@ def parse_trace(call_graph: CallGraph,
 
     end_to_end_execution_times = []
     transition_execution_times = {}
+    transition_max_freqs = collections.Counter()
     root_function = instrumentation_point_graphs[call_graph.root_function.name]
     with open(globals.args['trace_file'], 'r') as in_file:
         for line in in_file:
             if re.match(r'\S', line):
                 program_point, time = parse_trace_event(line)
                 if program_point == root_function.entry_vertex.program_point:
+                    debug.verbose_message('Parsing new trace', __name__)
                     # New trace: reset everything
                     function = root_function
                     vertex = root_function.entry_vertex
                     call_stack = []
                     start_time = time
                     pred_time = time
+                    transition_freqs = collections.Counter()
                 else:
                     # Inch forward one transition
                     pred_vertex = vertex
                     vertex = transition(function, vertex, program_point)
                     transition_execution_times.setdefault((pred_vertex, vertex), []).append(time-pred_time)
+                    transition_freqs[(pred_vertex, vertex)] += 1
                     pred_time = time
 
                     if vertex.abstract:
@@ -91,7 +96,10 @@ def parse_trace(call_graph: CallGraph,
                             vertex = transition(function, state.vertex, vertex.program_point)
                         else:
                             end_to_end_execution_times.append(time-start_time)
-    return transition_execution_times, end_to_end_execution_times
+                            for k, v in transition_freqs.items():
+                                transition_max_freqs[k] = max(transition_max_freqs[k], v)
+
+    return transition_execution_times, transition_max_freqs, end_to_end_execution_times
 
 
 def parse_the_command_line():
@@ -118,7 +126,8 @@ def parse_the_command_line():
 
 def do_wcet_calculation(program : analysis.Program,
                         instrumentation_point_graphs,
-                        transition_execution_times):
+                        transition_execution_times,
+                        transition_max_freqs):
     depth_first_search_tree = DepthFirstSearch(program.call_graph,
                                                program.call_graph.root_function,
                                                False)
@@ -129,6 +138,7 @@ def do_wcet_calculation(program : analysis.Program,
         wcet = calculations.do_wcet_calculation_for_instrumentation_point_graph(program,
                                                                                 instrumentation_point_graph,
                                                                                 transition_execution_times,
+                                                                                transition_max_freqs,
                                                                                 call_execution_times)
         call_execution_times[call_vertex.name] = wcet
         print('WCET of {} = {}'.format(call_vertex.name, wcet))
@@ -141,8 +151,8 @@ if __name__ == '__main__':
     program = environment.create_program_from_input_file()
     analysis.instrument_branches(program)
     instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
-    transition_execution_times, end_to_end_execution_times = parse_trace(program.call_graph, instrumentation_point_graphs)
-    wcet = do_wcet_calculation(program, instrumentation_point_graphs, transition_execution_times)
+    transition_execution_times, transition_max_freqs, end_to_end_execution_times = parse_trace(program.call_graph, instrumentation_point_graphs)
+    wcet = do_wcet_calculation(program, instrumentation_point_graphs, transition_execution_times, transition_max_freqs)
     hwmt = max(end_to_end_execution_times)
     assert wcet >= hwmt
     print('WCET = {}'.format(wcet))

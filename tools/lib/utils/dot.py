@@ -101,8 +101,12 @@ def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
                        (vertex.vertex_id, vertex.program_point, color))
         
         for succ_edge in vertex.successor_edge_iterator():
-            penwidth = 1
-            color = 'black'
+            if succ_edge.backedge:
+                penwidth = 3
+                color = 'blue'
+            else:
+                penwidth = 1
+                color = 'black'
             dot_file.write('{} -> {} [label ="{}", penwidth={}, color={}];\n'.\
                            format(vertex.vertex_id, 
                                   succ_edge.vertex_id,
