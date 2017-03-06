@@ -54,9 +54,11 @@ def do_wcet_calculation_for_instrumentation_point_graph(program: analysis.Progra
         # The exit vertex of the IPG is annotated with the WCET estimate of the function
         return calculated_times[instrumentation_point_graph.exit_vertex]
     else:
-        optimisation_problem = IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(instrumentation_point_graph,
-                                                                         transition_execution_times,
-                                                                         transition_max_freqs)
+        optimisation_problem = IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(program,
+                                                                                                instrumentation_point_graph,
+                                                                                                transition_execution_times,
+                                                                                                transition_max_freqs,
+                                                                                                call_execution_times)
         optimisation_problem.solve()
         return optimisation_problem.wcet
 
@@ -206,7 +208,7 @@ class ConstraintSystem:
         self._solve_time = None
         self._construction_time = None
         self._variable_execution_counts = {}
-        self._constraints = set()
+        self._constraints = []
         self._variables = set()
 
     @property
@@ -278,12 +280,10 @@ class IntegerLinearProgram(ConstraintSystem):
 
     def solve(self):
         self._write_to_file()
-
         # Launch lp_solve with the created file
-        command = 'lp_solve {}'.format(self._filename)
+        command = 'lp_solve -s -presolve {}'.format(self._filename)
         start = timeit.default_timer()
-        process = subprocess.Popen(command,
-                                   shell=True,
+        process = subprocess.Popen(command.split(),
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
         stdout, _ = process.communicate()
@@ -291,7 +291,7 @@ class IntegerLinearProgram(ConstraintSystem):
         self._solve_time = end - start
 
         if process.returncode != 0:
-            raise SolverError('Running {} failed'.format(command))
+            raise SolverError("Running '{}' failed".format(command))
 
         # Grab the WCET estimate and the execution counts of program
         # points in the control flow graph
@@ -327,15 +327,19 @@ class IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(IntegerLi
     """
 
     def __init__(self,
+                 program,
                  instrumentation_point_graph,
                  transition_execution_times,
-                 transition_max_freqs):
+                 transition_max_freqs,
+                 call_execution_times):
         ConstraintSystem.__init__(self)
         self._filename = '{}.{}.ipg.ilp'.format(globals.args['filename_prefix'],
                                                 instrumentation_point_graph.name)
         start = timeit.default_timer()
-        self.__create_objective_function(instrumentation_point_graph,
-                                         transition_execution_times)
+        self.__create_objective_function(program,
+                                         instrumentation_point_graph,
+                                         transition_execution_times,
+                                         call_execution_times)
         self.__create_structural_constraints(instrumentation_point_graph)
         self.__create_capacity_constraints(instrumentation_point_graph,
                                            transition_max_freqs)
@@ -344,20 +348,28 @@ class IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(IntegerLi
         self._construction_time = end - start
 
     def __create_objective_function(self,
+                                    program,
                                     instrumentation_point_graph,
-                                    transition_execution_times):
+                                    transition_execution_times,
+                                    call_execution_times):
         self.obj_function = 'max: '
 
         counter = instrumentation_point_graph.number_of_edges()
         for vertex in instrumentation_point_graph:
             for succ_edge in vertex.successor_edge_iterator():
                 succ_vertex = instrumentation_point_graph.get_vertex(succ_edge.vertex_id)
-                key = (vertex, succ_vertex)
-                wcet_of_edge = (0 if key not in transition_execution_times else max(transition_execution_times[key]))
-                vertex_variable = get_variable_for_edge_between_program_points(vertex.program_point,
-                                                                               succ_vertex.program_point,
-                                                                               self._variables)
-                self.obj_function += '{} {}'.format(wcet_of_edge, vertex_variable)
+                if vertex.abstract and succ_vertex.abstract:
+                    callee = program.find_subprogram_with_program_point(vertex.program_point)
+                    assert callee == program.find_subprogram_with_program_point(succ_vertex.program_point)
+                    transition_time = call_execution_times[callee]
+                elif (vertex, succ_vertex) in transition_execution_times:
+                    transition_time = max(transition_execution_times[(vertex, succ_vertex)])
+                else:
+                    transition_time = 0
+                self.obj_function += '{} {}'.format(transition_time,
+                                                    get_variable_for_edge_between_program_points(vertex.vertex_id,
+                                                                                                 succ_vertex.vertex_id,
+                                                                                                 self._variables))
                 if counter > 1:
                     self.obj_function += ' + '
                 counter -= 1
@@ -365,53 +377,61 @@ class IntegerLinearProgramForInstrumentationPointGraphFromMeasurements(IntegerLi
 
     def __create_structural_constraints(self, instrumentation_point_graph):
         for vertex in instrumentation_point_graph:
-            constraint = get_variable_for_program_point(vertex.program_point,
+            constraint = get_variable_for_program_point(vertex.vertex_id,
                                                         self._variables)
             constraint += ' = '
             counter = vertex.number_of_successors()
             for succ_edge in vertex.successor_edge_iterator():
                 succ_vertex = instrumentation_point_graph.get_vertex \
                     (succ_edge.vertex_id)
-                constraint += get_variable_for_edge_between_program_points(vertex.program_point,
-                                                                           succ_vertex.program_point,
+                constraint += get_variable_for_edge_between_program_points(vertex.vertex_id,
+                                                                           succ_vertex.vertex_id,
                                                                            self._variables)
                 if counter > 1:
                     constraint += ' + '
                 counter -= 1
             constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
-            constraint = get_variable_for_program_point(vertex.program_point,
+            constraint = get_variable_for_program_point(vertex.vertex_id,
                                                         self._variables)
             constraint += ' = '
             counter = vertex.number_of_predecessors()
             for pred_edge in vertex.predecessor_edge_iterator():
                 pred_vertex = instrumentation_point_graph.get_vertex \
                     (pred_edge.vertex_id)
-                constraint += get_variable_for_edge_between_program_points(pred_vertex.program_point,
-                                                                           vertex.program_point,
+                constraint += get_variable_for_edge_between_program_points(pred_vertex.vertex_id,
+                                                                           vertex.vertex_id,
                                                                            self._variables)
                 if counter > 1:
                     constraint += ' + '
                 counter -= 1
             constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
     def __create_capacity_constraints(self,
                                       instrumentation_point_graph,
                                       transition_max_freqs):
         for vertex in instrumentation_point_graph:
-            constraint = ''
             for succ_edge in vertex.successor_edge_iterator():
                 succ_vertex = instrumentation_point_graph.get_vertex(succ_edge.vertex_id)
-                key = (vertex, succ_vertex)
-                freq_of_edge = (0 if key not in transition_max_freqs else transition_max_freqs[key])
-                constraint = '{} {} {};'.format(get_variable_for_edge_between_program_points(vertex.program_point,
-                                                                                             succ_vertex.program_point,
-                                                                                             self._variables),
-                                                '<=',
-                                                freq_of_edge)
-                self._constraints.add(constraint)
+                if (vertex, succ_vertex) in transition_max_freqs:
+                    constraint = '{} {} {};'.format(get_variable_for_edge_between_program_points(vertex.vertex_id,
+                                                                                                 succ_vertex.vertex_id,
+                                                                                                 self._variables),
+                                                    '<=',
+                                                    transition_max_freqs[(vertex, succ_vertex)])
+                    self._constraints.append(constraint)
+                elif succ_edge.backedge:
+                    capacity = (1 if vertex == instrumentation_point_graph.exit_vertex and
+                                     succ_vertex == instrumentation_point_graph.entry_vertex
+                                else 0)
+                    constraint = '{} = {};'.format(get_variable_for_edge_between_program_points(vertex.vertex_id,
+                                                                                                succ_vertex.vertex_id,
+                                                                                                self._variables),
+                                                   capacity)
+                    self._constraints.append(constraint)
+
 
 
 class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
@@ -467,7 +487,7 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                     constraint += get_variable_for_program_point \
                         (pred_vertex.program_point, self._variables)
                     constraint += ';'
-                    self._constraints.add(constraint)
+                    self._constraints.append(constraint)
             else:
                 vertex_variable = get_variable_for_program_point \
                     (vertex.program_point,
@@ -486,7 +506,7 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
             if vertex.number_of_successors() > 1:
                 vertex_variable = get_variable_for_program_point \
@@ -506,7 +526,7 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
     def __create_loop_bound_constraints(self,
                                         control_flow_graph,
@@ -546,7 +566,7 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
         def create_global_loop_bound_constraint(abstract_vertex):
             constraint = get_variable_for_program_point(abstract_vertex.program_point,
@@ -555,7 +575,7 @@ class IntegerLinearProgramForControlFlowGraph(IntegerLinearProgram):
             constraint += '{};'.format(sum
                                        (program_point_data.get_loop_bound
                                         (abstract_vertex.program_point)))
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
         for level, tree_vertices in loop_nesting_tree. \
                 level_by_level_iterator \
@@ -667,7 +687,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                         (super_vertex.representative.program_point,
                          self._variables)
                     constraint += ';'
-                    self._constraints.add(constraint)
+                    self._constraints.append(constraint)
 
     def __create_predecessor_super_block_constraints(self,
                                                      subgraph,
@@ -705,7 +725,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                 constraint += ' + '
             counter -= 1
         constraint += ';'
-        self._constraints.add(constraint)
+        self._constraints.append(constraint)
 
     def __create_successor_super_block_constraints(self,
                                                    control_flow_graph,
@@ -730,7 +750,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
     def __create_loop_bound_constraints(self,
                                         control_flow_graph,
@@ -787,7 +807,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
         def create_global_loop_bound_constraint(abstract_vertex):
             loop_bound_tuple = program_point_data.get_loop_bound(abstract_vertex.
@@ -796,7 +816,7 @@ class IntegerLinearProgramForSuperBlockGraph(IntegerLinearProgram):
                                                         self._variables)
             constraint += ' <= '
             constraint += '{};'.format(sum(loop_bound_tuple))
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
         create_local_loop_bound_constraint(abstract_vertex)
         if level > 1:
@@ -917,7 +937,7 @@ class IntegerLinearProgramForSuperBlockGraphWithFolding(IntegerLinearProgram):
                 constraint += ' + '
             counter -= 1
         constraint += ';'
-        self._constraints.add(constraint)
+        self._constraints.append(constraint)
 
     def __create_successor_super_block_constraints(self,
                                                    control_flow_graph,
@@ -942,7 +962,7 @@ class IntegerLinearProgramForSuperBlockGraphWithFolding(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
     def __create_loop_bound_constraints(self,
                                         control_flow_graph,
@@ -1002,7 +1022,7 @@ class IntegerLinearProgramForSuperBlockGraphWithFolding(IntegerLinearProgram):
                         constraint += ' + '
                     counter -= 1
                 constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
             # We need intra super block constraints on loop-exit edges.
             for super_vertex_one, super_vertex_two in loop_exit_edge_in_parent_subgraph.items():
@@ -1014,7 +1034,7 @@ class IntegerLinearProgramForSuperBlockGraphWithFolding(IntegerLinearProgram):
                                                              representative.
                                                              program_point, self._variables)
                 constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
         def create_global_loop_bound_constraint(abstract_vertex):
             loop_bound_tuple = program_point_data.get_loop_bound \
@@ -1029,7 +1049,7 @@ class IntegerLinearProgramForSuperBlockGraphWithFolding(IntegerLinearProgram):
                                                         self._variables)
             constraint += ' <= '
             constraint += '{};'.format(sum(loop_bound_tuple))
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
         create_local_loop_bound_constraint(abstract_vertex)
         if level > 1:
@@ -1140,7 +1160,7 @@ class IntegerLinearProgramForInstrumentationPointGraph(IntegerLinearProgram):
                     constraint += ' + '
                 counter -= 1
             constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
             constraint = get_variable_for_program_point(vertex.program_point,
                                                         self._variables)
@@ -1156,7 +1176,7 @@ class IntegerLinearProgramForInstrumentationPointGraph(IntegerLinearProgram):
                     constraint += ' + '
                 counter -= 1
             constraint += ';'
-            self._constraints.add(constraint)
+            self._constraints.append(constraint)
 
     def __create_loop_bound_constraints(self,
                                         instrumentation_point_graph,
@@ -1170,7 +1190,7 @@ class IntegerLinearProgramForInstrumentationPointGraph(IntegerLinearProgram):
                     constraint = get_variable_for_program_point(vertex.program_point,
                                                                 self._variables)
                     constraint += ' = 1;'
-                    self._constraints.add(constraint)
+                    self._constraints.append(constraint)
             else:
                 loop_entry_destinations = instrumentation_point_graph.get_loop_entry_destinations(abstract_vertex)
                 for vertex in loop_entry_destinations:
@@ -1197,7 +1217,7 @@ class IntegerLinearProgramForInstrumentationPointGraph(IntegerLinearProgram):
                             constraint += ' + '
                         counter -= 1
                     constraint += ';'
-                self._constraints.add(constraint)
+                self._constraints.append(constraint)
 
         def create_global_loop_bound_constraint(abstract_vertex):
             pass

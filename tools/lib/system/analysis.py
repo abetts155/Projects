@@ -165,6 +165,7 @@ def build_instrumentation_point_graphs(program : Program):
         caller_ipg = InstrumentationPointGraph.instrument_as_per_user_instruction\
             (program[call_vertex.name])
         instrumentation_point_graphs[call_vertex.name] = caller_ipg
+
         # Process every call made by this function
         for call_edge in call_vertex.successor_edge_iterator():
             callee_vertex = program.call_graph.get_vertex(call_edge.vertex_id)
@@ -215,10 +216,15 @@ def build_instrumentation_point_graphs(program : Program):
                 edges_to_purge = set()
                 call_site_vertex = caller_ipg.get_vertex_for_program_point(call_site)
                 for pred_vertex in inlined_exit_program_points:
-                    for succ_edge in call_site_vertex.successor_edge_iterator():
-                        succ_vertex = caller_ipg.get_vertex(succ_edge.vertex_id)
+                    for redundant_succ_edge in call_site_vertex.successor_edge_iterator():
+                        succ_vertex = caller_ipg.get_vertex(redundant_succ_edge.vertex_id)
                         caller_ipg.add_edge(pred_vertex, succ_vertex, None)
                         edges_to_purge.add((call_site_vertex, succ_vertex))
+                        if redundant_succ_edge.backedge:
+                            pred_edge = succ_vertex.get_predecessor_edge(pred_vertex.vertex_id)
+                            succ_edge = pred_vertex.get_successor_edge(succ_vertex.vertex_id)
+                            pred_edge.backedge = True
+                            succ_edge.backedge = True
 
                 for edge in edges_to_purge:
                     caller_ipg.remove_edge(*edge)

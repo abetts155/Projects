@@ -5,6 +5,7 @@ import argparse
 import typing
 import re
 import collections
+import os
 
 assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
 
@@ -123,6 +124,11 @@ def parse_the_command_line():
     globals.args = vars(parser.parse_args())
     globals.set_filename_prefix(globals.args['program_file'])
 
+    if os.path.getmtime(globals.args['program_file']) > os.path.getmtime(globals.args['trace_file']):
+        debug.exit_message("Program file '{}' was created AFTER the trace file '{}', "
+                           "which is probably an error".format(globals.args['program_file'],
+                                                               globals.args['trace_file']))
+
 
 def do_wcet_calculation(program : analysis.Program,
                         instrumentation_point_graphs,
@@ -141,7 +147,7 @@ def do_wcet_calculation(program : analysis.Program,
                                                                                 transition_max_freqs,
                                                                                 call_execution_times)
         call_execution_times[call_vertex.name] = wcet
-        print('WCET of {} = {}'.format(call_vertex.name, wcet))
+        print('{}: {:,}'.format(call_vertex.name, wcet))
         if call_vertex == depth_first_search_tree.post_order[-1]:
             return wcet
 
@@ -155,8 +161,9 @@ if __name__ == '__main__':
     wcet = do_wcet_calculation(program, instrumentation_point_graphs, transition_execution_times, transition_max_freqs)
     hwmt = max(end_to_end_execution_times)
     assert wcet >= hwmt
-    print('WCET = {}'.format(wcet))
-    print('HWMT = {}'.format(hwmt))
+    print('WCET = {:,}'.format(wcet))
+    print('HWMT = {:,}'.format(hwmt))
+    print('WCET is higher than HWMT by factor of {:,}'.format(round(wcet/(hwmt * 1.0))))
 
 
 

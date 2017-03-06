@@ -97,8 +97,8 @@ def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
         color = 'white'
         if vertex.abstract:
             color = 'yellow'
-        dot_file.write('{} [label="{}", style=filled, fillcolor={}];\n'.format
-                       (vertex.vertex_id, vertex.program_point, color))
+        dot_file.write('{} [label="{}\n__{}__", style=filled, fillcolor={}];\n'.format
+                       (vertex.vertex_id, vertex.program_point, vertex.vertex_id, color))
         
         for succ_edge in vertex.successor_edge_iterator():
             if succ_edge.backedge:
@@ -108,12 +108,12 @@ def write_instrumentation_point_graph(dot_file, instrumentation_point_graph):
                 penwidth = 1
                 color = 'black'
             dot_file.write('{} -> {} [label ="{}", penwidth={}, color={}];\n'.\
-                           format(vertex.vertex_id, 
+                           format(vertex.vertex_id,
                                   succ_edge.vertex_id,
                                   succ_edge.path_expression,
                                   penwidth,
                                   color))
-    
+
     write_vertex(instrumentation_point_graph.entry_vertex)
     for vertex in instrumentation_point_graph:
         if vertex != instrumentation_point_graph.entry_vertex:
