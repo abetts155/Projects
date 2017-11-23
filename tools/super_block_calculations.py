@@ -18,7 +18,7 @@ from lib.system import calculations
 def parse_the_command_line(): 
     parser = argparse.ArgumentParser(description=
                                      'Do WCET calculation using super blocks '
-                                     'analysis')
+                                     'lib')
     
     parser.add_argument('program_file',
                         help='a file containing program information'

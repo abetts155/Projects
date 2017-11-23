@@ -25,7 +25,7 @@ def generate_program():
         start_vertex_id += control_flow_graph.number_of_vertices()
         dot.make_file(control_flow_graph)
 
-    # For each control flow graph, work out which basic blocks can legitimately 
+    # For each control flow graph, work out which basic blocks can legitimately
     #  make calls.
     call_site_candidates = {}
     for control_flow_graph in program:
@@ -60,7 +60,7 @@ def generate_program():
             level += 1
 
     #  Add acyclic call graph edges by finding a caller that is at a lower level
-    # than the callee.       
+    # than the callee.
     for level in sorted(levels_in_call_graph.keys(), reverse=True):
         if level > 0:
             for callee in levels_in_call_graph[level]:

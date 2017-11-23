@@ -86,7 +86,7 @@ def parse_trace(call_graph: CallGraph,
                             # Stay here.
                             vertex = function.entry_vertex
                         else:
-                            # The entry point of the function was added for analysis only.
+                            # The entry point of the function was added for lib only.
                             # Find the program point where we should be
                             vertex = transition(function, function.entry_vertex, program_point)
 

@@ -281,7 +281,7 @@ class IntegerLinearProgram(ConstraintSystem):
     def solve(self):
         self._write_to_file()
         # Launch lp_solve with the created file
-        command = 'lp_solve -s -presolve {}'.format(self._filename)
+        command = 'lp_solve -s -preso {}'.format(self._filename)
         start = timeit.default_timer()
         process = subprocess.Popen(command.split(),
                                    stdout=subprocess.PIPE,

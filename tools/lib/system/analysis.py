@@ -97,7 +97,7 @@ class Program:
     Models a program as a set of graphs.  These graphs always include the
     control flow graphs of each function and a call graph.  Other graphs,
     like a call-context graph, may be included as well, but it depends on
-    the purpose of the analysis.
+    the purpose of the lib.
     """
 
     def __init__(self):
