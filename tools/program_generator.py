@@ -241,7 +241,7 @@ def add_calls(prog: program.Program):
                 (v,) = random.sample(call_site_candidates[caller], 1)
                 call_site_candidates[caller].remove(v)
                 if len(call_site_candidates[caller]) == 0:
-                    call_site_candidates.remove(caller)
+                    del call_site_candidates[caller]
 
                 call_graph_edges.setdefault((caller, callee), []).append(v)
 
@@ -260,7 +260,7 @@ def add_calls(prog: program.Program):
                             (v,) = random.sample(call_site_candidates[caller], 1)
                             call_site_candidates[caller].remove(v)
                             if len(call_site_candidates[caller]) == 0:
-                                call_site_candidates.remove(caller)
+                                del call_site_candidates[caller]
                             call_graph_edges.setdefault((caller, callee), []).append(v)
                         else:
                             break

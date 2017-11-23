@@ -4,6 +4,8 @@ import subprocess
 
 from ..utils import messages
 from ..graphs import graph
+from ..graphs import vertex
+from ..graphs import edge
 
 
 def clean_up(program):
@@ -68,38 +70,18 @@ def visualise_instrumentation_point_graph(program, ipg, suffix=''):
 
 def write_instrumentation_point_graph(data, ipg):
     for v in ipg.vertices:
-        label = []
-        label.append('<<TABLE BORDER="0">')
-        label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.inlined if v.inlined else ''))
-        label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
-        for i in v.instructions:
-            label.append('<TR>')
-            label.append('<TD ALIGN="LEFT" BORDER="2">{}</TD>'.format(i.id))
-            label.append('<TD ALIGN="LEFT">{}</TD>'.format(hex(i.address)))
-            label.append('<TD ALIGN="LEFT">{}</TD>'.format(i.opcode))
-            for o in i.operands:
-                label.append('<TD ALIGN="LEFT">{}</TD>'.format(o))
-            label.append('</TR>')
+        label = ['<<TABLE BORDER="0">']
+        if v.program_point is not None:
+            if isinstance(v.program_point, edge.Edge):
+                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor().id, v.program_point.successor().id))
+            else:
+                label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
+        else:
+            label.append('<TR><TD></TD></TR>')
         label.append('</TABLE>>')
-
         data.append('{} [tooltip={}, label={}, shape=box];\n'.format(v.id, v.id, ''.join(label)))
-
-        bg_color = 'cyan'
         for e in ipg.successors(v):
-            edge_label = []
-            edge_label.append('<<TABLE BORDER="0">')
-            for i in e.instructions:
-                edge_label.append('<TR>')
-                edge_label.append('<TD ALIGN="LEFT" BORDER="2">{}</TD>'.format(i.id))
-                edge_label.append('<TD ALIGN="LEFT" BGCOLOR="{}">{}</TD>'.format(bg_color, hex(i.address)))
-                edge_label.append('<TD ALIGN="LEFT" BGCOLOR="{}">{}</TD>'.format(bg_color, i.opcode))
-                for o in i.operands:
-                    edge_label.append('<TD ALIGN="LEFT" BGCOLOR="{}">{}</TD>'.format(bg_color, o))
-                edge_label.append('</TR>')
-            if not e.instructions:
-                edge_label.append('<TR><TD></TD></TR>')
-            edge_label.append('</TABLE>>')
-            data.append('{}->{} [label={}];\n'.format(v.id, e.successor().id, ''.join(edge_label)))
+            data.append('{}->{};\n'.format(v.id, e.successor().id))
 
 
 def visualise_flow_graph(program, flow_g, suffix):
@@ -112,19 +94,20 @@ def visualise_flow_graph(program, flow_g, suffix):
 
 def write_flow_graph(data, flow_g):
     def write_vertex(v):
-        label = []
-        label.append('<<TABLE BORDER="0">')
-        if isinstance(v, vertex.ProgramPoint):
-            label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.edge.predecessor().id, v.edge.successor().id))
+        label = ['<<TABLE BORDER="0">']
+        if v.program_point is not None:
+            if isinstance(v.program_point, edge.Edge):
+                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor().id, v.program_point.successor().id))
+            else:
+                label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
         else:
-            label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
+            label.append('<TR><TD></TD></TR>')
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(v.id, ''.join(label)))
         for e in flow_g.successors(v):
             data.append('{}->{};\n'.format(v.id, e.successor().id))
 
-    write_vertex(flow_g.entry)
-    for v in (_ for _ in flow_g.vertices if _ != flow_g.entry):
+    for v in flow_g.vertices:
         write_vertex(v)
 
 
@@ -138,8 +121,7 @@ def visualise_dominator_tree(program, cfg, t, suffix):
 
 def write_dominator_tree(data, t):
     for v in t.vertices:
-        label = []
-        label.append('<<TABLE BORDER="0">')
+        label = ['<<TABLE BORDER="0">']
         label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(v.id, ''.join(label)))

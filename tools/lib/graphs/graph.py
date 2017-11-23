@@ -1,4 +1,5 @@
 import abc
+import random
 
 from ..utils import messages
 from . import vertex
@@ -209,11 +210,12 @@ class ProgramPointGraph(FlowGraph):
     def __build(self, cfg):
         # Add a vertex per basic block
         for v in cfg.vertices:
-            self.add_vertex(v)
-
-        # Set entry and exit
-        self._entry = cfg.entry
-        self._exit = cfg.exit
+            program_point_v = vertex.ProgramPoint(v.id, v)
+            self.add_vertex(program_point_v)
+            if v == cfg.entry:
+                self.entry = program_point_v
+            if v == cfg.exit:
+                self.exit = program_point_v
 
         # Add a vertex per control flow transition, and join the control flow
         # transition to its end points on both sides
@@ -221,16 +223,17 @@ class ProgramPointGraph(FlowGraph):
             for e in cfg.successors(v):
                 program_point_v = vertex.ProgramPoint(self.get_vertex_id(), e)
                 self.add_vertex(program_point_v)
-                self.add_edge(edge.ControlFlowEdge(e.predecessor(), program_point_v, e.direction))
-                self.add_edge(
-                    edge.ControlFlowEdge(program_point_v, e.successor(), edge.ControlFlowEdge.Direction.CONTINUE))
+                p = self.get_vertex_data(e.predecessor().id).v
+                s = self.get_vertex_data(e.successor().id).v
+                self.add_edge(edge.Edge(p, program_point_v))
+                self.add_edge(edge.Edge(program_point_v, s))
 
-        # Add dummy edge
-        e = edge.Edge(self._exit, self._entry)
-        program_point_v = vertex.ProgramPoint(self.get_vertex_id(), e)
-        self.add_vertex(program_point_v)
-        self.add_edge(edge.ControlFlowEdge(self._exit, program_point_v, edge.ControlFlowEdge.Direction.CONTINUE))
-        self.add_edge(edge.ControlFlowEdge(program_point_v, self._entry, edge.ControlFlowEdge.Direction.CONTINUE))
+    def filter(self, dead):
+        for v in dead:
+            for pred_e in self.predecessors(v):
+                for succ_e in self.successors(v):
+                    self.add_edge(edge.Edge(pred_e.predecessor(), succ_e.successor()))
+            self.remove_vertex(v)
 
 
 class InstrumentationPointGraph(FlowGraph):
@@ -256,73 +259,31 @@ class InstrumentationPointGraph(FlowGraph):
         (self.entry,) = [v for v in self.vertices if len(self.predecessors(v)) == 0]
 
     @staticmethod
-    def create(cfg: ControlFlowGraph):
-        def split_basic_blocks_on_instrumentation(v):
-            splits = [[]]
-            for i in v.instructions:
-                if i.is_instrumentation_point():
-                    if splits[-1]:
-                        # End last sequence and create a sequence that only contains the instrumentation point
-                        splits.append([i])
-                    else:
-                        # Last sequence is still empty, so add instrumentation point
-                        splits[-1].append(i)
-                    if i != v.instructions[-1]:
-                        # Not the last instruction, so continue splitting
-                        splits.append([])
-                else:
-                    # Add instruction to end of current sequence
-                    splits[-1].append(i)
-            return splits
+    def create(ppg: ProgramPointGraph):
+        ipg = InstrumentationPointGraph(ppg.name)
 
-        # Split basic blocks using instrumentation as delimiters
-        instruction_sequences = {v: split_basic_blocks_on_instrumentation(v) for v in cfg.vertices}
+        for v in ppg.vertices:
+            ipg.add_vertex(v)
 
-        # Create basic blocks based on the split
-        ipg = InstrumentationPointGraph(cfg.name)
-        sub_vertices = {v: [] for v in cfg.vertices}
-        for v, splits in instruction_sequences.items():
-            for s in splits:
-                sub_v = vertex.BasicBlock(ipg.get_vertex_id())
-                ipg.add_vertex(sub_v)
-                sub_vertices[v].append(sub_v)
-                for i in s:
-                    sub_v.instructions.add_instruction(i)
+        for v in ppg.vertices:
+            for e in ppg.successors(v):
+                ipg.add_edge(e)
 
-        # Add edges between the basic sub-blocks
-        for v, subs in sub_vertices.items():
-            for i in range(1, len(subs)):
-                ipg.add_edge(edge.TransitionEdge(subs[i - 1], subs[i]))
-
-        # Add control flow edges across basic sub-block boundaries
-        for p in sub_vertices.keys():
-            sub_p = sub_vertices[p][-1]
-            for e in cfg.successors(p):
-                sub_s = sub_vertices[e.successor()][0]
-                ipg.add_edge(edge.TransitionEdge(sub_p, sub_s))
-
-        # Mirror the entry vertex of the CFG
-        (ipg.entry,) = [v for v in ipg.vertices if len(ipg.predecessors(v)) == 0]
-
-        # Assume the entry vertex has instructions
-        assert len(ipg.entry.instructions) > 0
-
-        # Add a new dummy entry vertex
-        new_entry = vertex.BasicBlock(ipg.get_vertex_id())
-        ipg.add_vertex(new_entry)
-        ipg.add_edge(edge.TransitionEdge(new_entry, ipg.entry))
-        ipg.entry = new_entry
-
-        # Mirror the exit vertex of the CFG
-        (ipg.exit,) = [v for v in ipg.vertices if len(ipg.successors(v)) == 0]
-
-        if ipg.exit.instructions:
-            # Add a dummy exit vertex, but only if we have not done so while constructing the CFG
-            new_exit = vertex.BasicBlock(ipg.get_vertex_id())
-            ipg.add_vertex(new_exit)
-            ipg.add_edge(edge.TransitionEdge(ipg.exit, new_exit))
-            ipg.exit = new_exit
-
+        changed = True
+        while changed:
+            changed = False
+            candidates = [v for v in ipg.vertices if not (len(ipg.predecessors(v)) == 0 or len(ipg.successors(v)) == 0)]
+            random.shuffle(candidates)
+            for v in candidates:
+                keep = sum([1 for pred_e in ipg.predecessors(v) for succ_e in ipg.successors(v)
+                            if ipg.has_successor(pred_e.predecessor(), succ_e.successor())])
+                print(v.program_point, keep)
+                if not keep:
+                    changed = True
+                    for pred_e in ipg.predecessors(v):
+                        for succ_e in ipg.successors(v):
+                            ipg.add_edge(edge.Edge(pred_e.predecessor(), succ_e.successor()))
+                    ipg.remove_vertex(v)
         return ipg
 
 

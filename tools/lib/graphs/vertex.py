@@ -23,6 +23,9 @@ class Vertex:
     def id(self, id):
         self._id = id
 
+    def __str__(self):
+        return str(self._id)
+
     def __hash__(self):
         return self.id
 
@@ -38,13 +41,13 @@ class SubprogramVertex(Vertex):
 
 
 class ProgramPoint(Vertex):
-    def __init__(self, id, e: edge.Edge):
+    def __init__(self, id, pp):
         Vertex.__init__(self, id)
-        self._edge = e
+        self._pp = pp
 
     @property
-    def edge(self) -> edge.Edge:
-        return self._edge
+    def program_point(self):
+        return self._pp
 
 
 class SuperBlock(Vertex):

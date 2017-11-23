@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
 import sys
-assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
-
 import argparse
+import random
+import collections
 
-from collections import Counter
-
-from lib.utils import debug
-from lib.utils import globals
-from lib.system import environment
-from lib.system.directed_graphs import InstrumentationPointGraph
-from lib.system.directed_graphs import DepthFirstSearch
-from lib.system.vertices import is_basic_block
+from lib.utils import messages
+from lib.utils import dot
+from lib.system import program
+from lib.graphs import graph
+from lib.graphs import vertex
+from lib.graphs import edge
 
 
 def do_super_block_instrumentation(control_flow_graph,
@@ -129,78 +127,95 @@ def do_instrumentation_point_graph_instrumentation(control_flow_graph,
                   inferred_execution_counts[key])
 
 
-def parse_the_command_line(): 
-    parser = argparse.ArgumentParser(description=
-                                     'Instrument program to collect execution '
-                                     'profiles at run time')
-    
-    parser.add_argument('program_file',
-                        help='a file containing program information'
-                        ' (with .txt extension)')
-    
+def generate_trace(ppg: graph.ProgramPointGraph, executions=1):
+    count = 0
+    trace = []
+    v = ppg.entry
+    while count < executions:
+        trace.append(v)
+        if v == ppg.exit:
+            count += 1
+            v = ppg.entry
+        else:
+            (e,) = random.sample(ppg.successors(v), 1)
+            v = e.successor()
+    return trace
+
+
+def main(**kwargs):
+    prog = program.Program.IO.read(kwargs['filename'])
+
+    for cfg in prog:
+        messages.debug_message('Analysing subprogram {}'.format(cfg.name))
+        dot.visualise_control_flow_graph(prog, cfg)
+        ppg = graph.ProgramPointGraph(cfg)
+        true_count = collections.Counter(generate_trace(ppg, 10))
+
+        if kwargs['instrument'] == 'vertices':
+            dead = [v for v in ppg.vertices if isinstance(v.program_point, edge.Edge)]
+            ppg.filter(dead)
+        elif kwargs['instrument'] == 'edges':
+            dead = [v for v in ppg.vertices if isinstance(v.program_point, vertex.Vertex)]
+            ppg.filter(dead)
+
+            entry_points = [v for v in ppg.vertices if len(ppg.predecessors(v)) == 0]
+            if len(entry_points) > 1:
+                p = vertex.ProgramPoint(ppg.get_vertex_id(), None)
+                ppg.add_vertex(p)
+                for s in entry_points:
+                    ppg.add_edge(edge.Edge(p, s))
+
+            exit_points = [v for v in ppg.vertices if len(ppg.successors(v)) == 0]
+            if len(exit_points) > 1:
+                s = vertex.ProgramPoint(ppg.get_vertex_id(), None)
+                ppg.add_vertex(s)
+                for p in exit_points:
+                    ppg.add_edge(edge.Edge(p, s))
+
+        dot.visualise_flow_graph(prog, ppg, '.ppg')
+
+        ipg = graph.InstrumentationPointGraph.create(ppg)
+        dot.visualise_instrumentation_point_graph(prog, ipg)
+
+
+
+        # for _ in range(1, kwargs['repeat']+1):
+        #     trace = control_flow_graph.generate_trace(executions=10)
+        #     debug.debug_message('Pre-filter: {}'.format(trace),
+        #                         __name__)
+        #     actual_execution_counts = Counter(trace)
+        #     if globals.args['super_blocks']:
+        #         do_super_block_instrumentation(control_flow_graph,
+        #                                        trace,
+        #                                        actual_execution_counts)
+        #     if globals.args['ipg']:
+        #         do_instrumentation_point_graph_instrumentation(control_flow_graph,
+        #                                                        trace,
+        #                                                        actual_execution_counts)
+        #
+
+
+
+def parse_the_command_line():
+    parser = argparse.ArgumentParser(description='Instrument program to collect execution profiles at run time')
+
+    parser.add_argument('filename',
+                        help='a file containing program information')
+
     parser.add_argument('--instrument',
                         choices=['vertices', 'edges', 'mixed'],
                         required=True,
-                        help='instrument vertices, edges, or both')
-    
+                        help='instrument vertices, edges or both')
+
     parser.add_argument('--repeat',
                         type=int,
-                        help='repeat the calculation this many times',
+                        help='repeat the computation this many times',
                         default=1,
                         metavar='<INT>')
-    
-    parser.add_argument('--functions',
-                        nargs='*',
-                        help='analyse these functions only')
-    
-    parser.add_argument('--super-blocks',
-                        action='store_true',
-                        help='use super blocks to work out where to place ' 
-                        'instrumentaton',
-                        default=False)
-    
-    parser.add_argument('--ipg',
-                        action='store_true',
-                        help='use instrumentation point graph to work out '
-                        'where to place instrumentaton',
-                        default=False)
-    
-    globals.add_common_command_line_arguments(parser)
-    globals.args = vars(parser.parse_args())
-    globals.set_filename_prefix(globals.args['program_file'])
+
+    return parser.parse_args()
 
 
-if __name__ == '__main__': 
-    parse_the_command_line()
-    program = environment.create_program_from_input_file()
-
-    for control_flow_graph in program:
-        debug.debug_message('======> function {}'.format(control_flow_graph.name),
-                            __name__)
-        if globals.args['instrument'] == 'vertices':
-            control_flow_graph.instrument_all_basic_blocks()
-        elif globals.args['instrument'] == 'edges':
-            control_flow_graph.instrument_all_control_flow_edges()
-        elif globals.args['instrument'] == 'mixed':
-            control_flow_graph.instrument_all_basic_blocks()
-            control_flow_graph.instrument_all_control_flow_edges()
-        else:
-            assert False
-    
-        for repetition in range(1, globals.args['repeat']+1):
-            trace = control_flow_graph.generate_trace(executions=10)
-            debug.debug_message('Pre-filter: {}'.format(trace), 
-                                __name__)
-            actual_execution_counts = Counter(trace)
-            if globals.args['super_blocks']:
-                do_super_block_instrumentation(control_flow_graph, 
-                                               trace,
-                                               actual_execution_counts)
-            if globals.args['ipg']:
-                do_instrumentation_point_graph_instrumentation(control_flow_graph, 
-                                                               trace,
-                                                               actual_execution_counts)
-                
-
-        
-    
+if __name__ == '__main__':
+    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
+    main(**vars(parse_the_command_line()))

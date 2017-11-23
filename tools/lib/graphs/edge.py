@@ -10,7 +10,7 @@ class Edge:
         return self._successor
 
     def __str__(self):
-        return "({}, {})".format(self._predecessor.id, self._successor.id)
+        return "{}->{}".format(self._predecessor.id, self._successor.id)
 
 
 class CallGraphEdge(Edge):
