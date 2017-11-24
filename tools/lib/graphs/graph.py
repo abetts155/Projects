@@ -1,5 +1,6 @@
 import abc
 import random
+import enum
 
 from ..utils import messages
 from . import vertex
@@ -228,15 +229,14 @@ class ProgramPointGraph(FlowGraph):
                 self.add_edge(edge.Edge(p, program_point_v))
                 self.add_edge(edge.Edge(program_point_v, s))
 
-    def filter(self, dead):
-        for v in dead:
-            for pred_e in self.predecessors(v):
-                for succ_e in self.successors(v):
-                    self.add_edge(edge.Edge(pred_e.predecessor(), succ_e.successor()))
-            self.remove_vertex(v)
-
 
 class InstrumentationPointGraph(FlowGraph):
+    class Policy(enum.Enum):
+        VERTICES = 'vertices'
+        EDGES = 'edges'
+        MIXED = 'mixed'
+        USER = 'user'
+
     def __init__(self, name):
         FlowGraph.__init__(self, name)
 
@@ -256,19 +256,48 @@ class InstrumentationPointGraph(FlowGraph):
                             e.instructions.add_instruction(i)
                         self.add_edge(e)
             self.remove_vertex(v)
-        (self.entry,) = [v for v in self.vertices if len(self.predecessors(v)) == 0]
 
     @staticmethod
-    def create(ppg: ProgramPointGraph):
+    def create_from_policy(ppg: ProgramPointGraph, policy):
+        # Copy the program point graph
         ipg = InstrumentationPointGraph(ppg.name)
-
         for v in ppg.vertices:
             ipg.add_vertex(v)
-
         for v in ppg.vertices:
             for e in ppg.successors(v):
-                ipg.add_edge(e)
+                ipg.add_edge(edge.PathEdge(v, e.successor()))
 
+        entry_points = [v for v in ipg.vertices if len(ipg.predecessors(v)) == 0]
+        ipg.entry = vertex.ProgramPoint(ipg.get_vertex_id(), None)
+        ipg.add_vertex(ipg.entry)
+        for s in entry_points:
+            ipg.add_edge(edge.PathEdge(ipg.entry, s))
+
+        exit_points = [v for v in ipg.vertices if len(ipg.successors(v)) == 0]
+        ipg.exit = vertex.ProgramPoint(ipg.get_vertex_id(), None)
+        ipg.add_vertex(ipg.exit)
+        for p in exit_points:
+            ipg.add_edge(edge.PathEdge(p, ipg.exit))
+
+        # Filter out program points we cannot instrument
+        def filter(dead):
+            for v in dead:
+                for pred_e in ipg.predecessors(v):
+                    for succ_e in ipg.successors(v):
+                        e = edge.PathEdge(pred_e.predecessor(), succ_e.successor())
+                        e.extend(pred_e.path)
+                        e.extend([v])
+                        e.extend(succ_e.path)
+                        ipg.add_edge(e)
+                ipg.remove_vertex(v)
+
+        if policy == 'vertices':
+            filter([v for v in ipg.vertices if isinstance(v.program_point, edge.Edge)])
+        elif policy == 'edges':
+            filter([v for v in ipg.vertices if isinstance(v.program_point, vertex.Vertex)])
+
+        # Remove program points until any further reduction would violate
+        # capability to reproduce path
         changed = True
         while changed:
             changed = False
@@ -277,12 +306,15 @@ class InstrumentationPointGraph(FlowGraph):
             for v in candidates:
                 keep = sum([1 for pred_e in ipg.predecessors(v) for succ_e in ipg.successors(v)
                             if ipg.has_successor(pred_e.predecessor(), succ_e.successor())])
-                print(v.program_point, keep)
                 if not keep:
                     changed = True
                     for pred_e in ipg.predecessors(v):
                         for succ_e in ipg.successors(v):
-                            ipg.add_edge(edge.Edge(pred_e.predecessor(), succ_e.successor()))
+                            e = edge.PathEdge(pred_e.predecessor(), succ_e.successor())
+                            e.extend(pred_e.path)
+                            e.extend([v])
+                            e.extend(succ_e.path)
+                            ipg.add_edge(e)
                     ipg.remove_vertex(v)
         return ipg
 
@@ -558,7 +590,15 @@ class LoopNests(DirectedGraph):
         self._ppg = ppg
         self._containment = {}
         self._headers = []
-        self.__compute()
+        try:
+            loop_e = edge.Edge(ppg.exit, ppg.entry)
+            program_point_v = vertex.ProgramPoint(ppg.get_vertex_id(), loop_e)
+            ppg.add_vertex(program_point_v)
+            ppg.add_edge(edge.Edge(ppg.exit, program_point_v))
+            ppg.add_edge(edge.Edge(program_point_v, ppg.entry))
+            self.__compute()
+        finally:
+            ppg.remove_vertex(program_point_v)
 
     @property
     def root(self):
@@ -611,7 +651,7 @@ class LoopNests(DirectedGraph):
                                                                                           back_edge.successor().id,
                                                                                           self._ppg.name))
 
-                    messages.debug_message("Edge {} in CFG '{}' is a back edge".format(back_edge.predecessor().edge,
+                    messages.debug_message("Edge {} in CFG '{}' is a back edge".format(back_edge.predecessor().program_point,
                                                                                        self._ppg.name))
                     # Loop detected
                     loop = vertex.LoopBody(self.get_vertex_id(), v)
@@ -656,8 +696,8 @@ class LoopNests(DirectedGraph):
         # Add links to reflect entries into and exits out of loops
         for loop in list(self.vertices):
             for v in list(loop.vertices):
-                if isinstance(v, vertex.ProgramPoint):
-                    if v.edge.predecessor() in loop.vertices and v.edge.successor() not in loop.vertices:
+                if isinstance(v.program_point, edge.Edge):
+                    if v.program_point.predecessor() in loop.vertices and v.program_point.successor() not in loop.vertices:
                         bridge = vertex.SuperBlock(self.get_vertex_id())
                         bridge.vertices.add(v)
                         loop.vertices.remove(v)
@@ -666,7 +706,7 @@ class LoopNests(DirectedGraph):
                         inner_loop = self._containment[v.edge.successor()]
                         self.add_edge(edge.Edge(bridge, inner_loop))
 
-                    elif v.edge.predecessor() not in loop.vertices and v.edge.successor() in loop.vertices:
+                    elif v.program_point.predecessor() not in loop.vertices and v.program_point.successor() in loop.vertices:
                         bridge = vertex.SuperBlock(self.get_vertex_id())
                         bridge.vertices.add(v)
                         loop.vertices.remove(v)

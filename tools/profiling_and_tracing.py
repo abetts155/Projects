@@ -3,14 +3,11 @@
 import sys
 import argparse
 import random
-import collections
 
 from lib.utils import messages
 from lib.utils import dot
 from lib.system import program
 from lib.graphs import graph
-from lib.graphs import vertex
-from lib.graphs import edge
 
 
 def do_super_block_instrumentation(control_flow_graph,
@@ -74,126 +71,64 @@ def do_super_block_instrumentation(control_flow_graph,
                 for super_vertex in subgraph:
                     for induced_vertex in super_vertex.vertices:
                         inferred_execution_counts[induced_vertex.program_point] = super_vertex.count
-    
-    
-    
-    
+
     for key in actual_execution_counts.keys():
         if inferred_execution_counts[key] != actual_execution_counts[key]:
             print(key, 
                   actual_execution_counts[key], 
                   inferred_execution_counts[key])
-        
 
 
-def do_instrumentation_point_graph_instrumentation(control_flow_graph,
-                                                   trace,
-                                                   actual_execution_counts):    
-    instrumentation_point_graph = InstrumentationPointGraph.\
-                                    instrument_but_maintain_path_reconstructibility\
-                                        (control_flow_graph)
-    instrumentation_points = set({vertex.program_point 
-                                  for vertex in instrumentation_point_graph})
-    
-    # Add a sentinel value to the end of the trace so that we transition to a final
-    # state and count correctly.
-    filtered_trace = [program_point for program_point in trace 
-                      if program_point in instrumentation_points] +\
-                      [None]
-    debug.debug_message('Post-filter: {}'.format(filtered_trace), 
-                        __name__)
-    inferred_execution_counts = {}
-    
-    vertex = instrumentation_point_graph.get_entry_vertex()
-    for program_point in filtered_trace:
-        inferred_execution_counts[program_point] = 1 + inferred_execution_counts.\
-                                                        setdefault(program_point, 0)
-        for succ_edge in vertex.successor_edge_iterator():
-            succ_vertex = instrumentation_point_graph.get_vertex(succ_edge.vertex_id)
-            if succ_vertex.program_point == program_point:
-                for tree_succ_edge in succ_edge.path_expression.root_vertex.successor_edge_iterator():
-                    program_point_vertex = succ_edge.path_expression.get_vertex(tree_succ_edge.vertex_id)
-                    inferred_execution_counts[program_point_vertex.
-                                              program_point] = 1 + inferred_execution_counts.\
-                                                                setdefault(program_point_vertex.program_point, 0)
-                vertex = succ_vertex
-                break
-    
-    for key in actual_execution_counts.keys():
-        if inferred_execution_counts[key] != actual_execution_counts[key]:
-            print('MISMATCH:',
-                  key, 
-                  actual_execution_counts[key], 
-                  inferred_execution_counts[key])
-
-
-def generate_trace(ppg: graph.ProgramPointGraph, executions=1):
-    count = 0
+def generate_trace(ppg: graph.ProgramPointGraph):
     trace = []
     v = ppg.entry
-    while count < executions:
+    while v != ppg.exit:
         trace.append(v)
-        if v == ppg.exit:
-            count += 1
-            v = ppg.entry
-        else:
-            (e,) = random.sample(ppg.successors(v), 1)
-            v = e.successor()
+        (e,) = random.sample(ppg.successors(v), 1)
+        v = e.successor()
+    trace.append(ppg.exit)
     return trace
+
+
+def intra_procedural_analysis(prog, cfg, instrumentation_policy, traces):
+    messages.debug_message('Analysing subprogram {}'.format(cfg.name))
+    dot.visualise_control_flow_graph(prog, cfg)
+    ppg = graph.ProgramPointGraph(cfg)
+    dot.visualise_flow_graph(prog, ppg, '.ppg')
+    ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, instrumentation_policy)
+    dot.visualise_instrumentation_point_graph(prog, ipg)
+
+    for i in range(traces+1):
+        messages.debug_message('Trace #{}'.format(i))
+        trace = generate_trace(ppg)
+        messages.debug_message(' '.join(str(v.program_point) for v in trace))
+        true_count = {v: 0 for v in ppg.vertices}
+        for v in trace:
+            true_count[v] += 1
+
+        filtered_trace = [v for v in trace if v in ipg.vertices]
+        ipg_count = {v: 0 for v in ppg.vertices}
+        state = ipg.entry
+        for v in filtered_trace + [ipg.exit]:
+            if v != ipg.exit:
+                ipg_count[v] += 1
+
+            for e in ipg.successors(state):
+                if e.successor().program_point == v.program_point:
+                    for p in e.path:
+                        ipg_count[p] += 1
+                    state = e.successor()
+                    break
+
+        for v in ppg.vertices:
+            assert true_count[v] == ipg_count[v]
 
 
 def main(**kwargs):
     prog = program.Program.IO.read(kwargs['filename'])
 
     for cfg in prog:
-        messages.debug_message('Analysing subprogram {}'.format(cfg.name))
-        dot.visualise_control_flow_graph(prog, cfg)
-        ppg = graph.ProgramPointGraph(cfg)
-        true_count = collections.Counter(generate_trace(ppg, 10))
-
-        if kwargs['instrument'] == 'vertices':
-            dead = [v for v in ppg.vertices if isinstance(v.program_point, edge.Edge)]
-            ppg.filter(dead)
-        elif kwargs['instrument'] == 'edges':
-            dead = [v for v in ppg.vertices if isinstance(v.program_point, vertex.Vertex)]
-            ppg.filter(dead)
-
-            entry_points = [v for v in ppg.vertices if len(ppg.predecessors(v)) == 0]
-            if len(entry_points) > 1:
-                p = vertex.ProgramPoint(ppg.get_vertex_id(), None)
-                ppg.add_vertex(p)
-                for s in entry_points:
-                    ppg.add_edge(edge.Edge(p, s))
-
-            exit_points = [v for v in ppg.vertices if len(ppg.successors(v)) == 0]
-            if len(exit_points) > 1:
-                s = vertex.ProgramPoint(ppg.get_vertex_id(), None)
-                ppg.add_vertex(s)
-                for p in exit_points:
-                    ppg.add_edge(edge.Edge(p, s))
-
-        dot.visualise_flow_graph(prog, ppg, '.ppg')
-
-        ipg = graph.InstrumentationPointGraph.create(ppg)
-        dot.visualise_instrumentation_point_graph(prog, ipg)
-
-
-
-        # for _ in range(1, kwargs['repeat']+1):
-        #     trace = control_flow_graph.generate_trace(executions=10)
-        #     debug.debug_message('Pre-filter: {}'.format(trace),
-        #                         __name__)
-        #     actual_execution_counts = Counter(trace)
-        #     if globals.args['super_blocks']:
-        #         do_super_block_instrumentation(control_flow_graph,
-        #                                        trace,
-        #                                        actual_execution_counts)
-        #     if globals.args['ipg']:
-        #         do_instrumentation_point_graph_instrumentation(control_flow_graph,
-        #                                                        trace,
-        #                                                        actual_execution_counts)
-        #
-
+        intra_procedural_analysis(prog, cfg, kwargs['instrument'], kwargs['traces'])
 
 
 def parse_the_command_line():
@@ -203,13 +138,14 @@ def parse_the_command_line():
                         help='a file containing program information')
 
     parser.add_argument('--instrument',
-                        choices=['vertices', 'edges', 'mixed'],
+                        type=graph.InstrumentationPointGraph.Policy,
+                        choices=list(graph.InstrumentationPointGraph.Policy),
                         required=True,
                         help='instrument vertices, edges or both')
 
-    parser.add_argument('--repeat',
+    parser.add_argument('--traces',
                         type=int,
-                        help='repeat the computation this many times',
+                        help='number of traces to generate',
                         default=1,
                         metavar='<INT>')
 

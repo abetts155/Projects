@@ -10,7 +10,20 @@ class Edge:
         return self._successor
 
     def __str__(self):
-        return "{}->{}".format(self._predecessor.id, self._successor.id)
+        return "({},{})".format(self._predecessor.id, self._successor.id)
+
+
+class PathEdge(Edge):
+    def __init__(self, predecessor, successor):
+        Edge.__init__(self, predecessor, successor)
+        self._path = []
+
+    def extend(self, path):
+        self._path.extend(path)
+
+    @property
+    def path(self):
+        return self._path
 
 
 class CallGraphEdge(Edge):

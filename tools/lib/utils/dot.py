@@ -81,7 +81,13 @@ def write_instrumentation_point_graph(data, ipg):
         label.append('</TABLE>>')
         data.append('{} [tooltip={}, label={}, shape=box];\n'.format(v.id, v.id, ''.join(label)))
         for e in ipg.successors(v):
-            data.append('{}->{};\n'.format(v.id, e.successor().id))
+            edge_label = ['<<TABLE BORDER="0">']
+            for p in e.path:
+                edge_label.append('<TR><TD>{}</TD></TR>'.format(str(p.program_point)))
+            if not e.path:
+                edge_label.append('<TR><TD></TD></TR>')
+            edge_label.append('</TABLE>>')
+            data.append('{}->{} [label={}];\n'.format(v.id, e.successor().id, ''.join(edge_label)))
 
 
 def visualise_flow_graph(program, flow_g, suffix):
@@ -143,17 +149,14 @@ def write_loop_nest_tree(data, t):
         label.append('<<TABLE BORDER="0">')
         label.append('<TR><TD ALIGN="LEFT" BGCOLOR="RED">ID={}</TD></TR>'.format(loop.id))
         for v in loop.vertices:
-            if isinstance(v, vertex.ProgramPoint):
-                label.append('<TR><TD ALIGN="LEFT">({}, {})</TD></TR>'.format(v.edge.predecessor().id, v.edge.successor().id))
-            else:
-                label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
+            label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.program_point))
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(loop.id, ''.join(label)))
         for e in t.successors(loop):
             data.append('{}->{};\n'.format(loop.id, e.successor().id))
 
     dfs = graph.DepthFirstSearch(t, t.root)
-    for v in reversed(dfs.post_order()):
+    for v in t.vertices:
         write_vertex(v)
 
 
