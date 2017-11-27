@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
-import collections
 import random
+import sys
 
-from lib.utils import messages
-from lib.utils import dot
-from lib.system import program
+from lib.graphs import edge
 from lib.graphs import graph
 from lib.graphs import vertex
-from lib.graphs import edge
+from lib.system import program
+from lib.utils import dot
+from lib.utils import messages
 
 
 class ArtificialLoopBody:
     def __init__(self, fan_out, cfg, number_of_vertices, nested_loops: list, outermost_loop):
         self._header = None
         self._exits = set()
-        self._vertices = self.add_vertices(cfg, number_of_vertices)
+        self._vertices = set()
+        self.add_vertices(cfg, number_of_vertices)
         self._level_to_vertices = {}
         self._vertex_to_level = {}
         self.position_vertices(fan_out, len(nested_loops), outermost_loop)
@@ -36,13 +36,11 @@ class ArtificialLoopBody:
         return self._exits
 
     def add_vertices(self, cfg, number_of_vertices):
-        vertices = set()
         while number_of_vertices > 0:
             v = vertex.Vertex(cfg.get_vertex_id())
             cfg.add_vertex(v)
-            vertices.add(v)
+            self._vertices.add(v)
             number_of_vertices -= 1
-        return vertices
 
     def position_vertices(self, fan_out, number_of_nested_loops, outermost_loop):
         level = 0
@@ -202,9 +200,19 @@ def add_subprograms(prog: program.Program, subprograms: int, loops: int, nesting
         dot.visualise_control_flow_graph(prog, cfg)
 
 
-def add_calls(prog: program.Program):
-    call_site_candidates = {}
+def add_calls(prog: program.Program, recursion_enabled):
+    class Subprogram:
+        __slots__ = ['name', 'candidates', 'level']
+
+        def __init__(self, name):
+            self.name = name
+            self.candidates = []
+            self.level = None
+
+    data = []
     for cfg in prog:
+        subprogram_view = Subprogram(cfg.name)
+        data.append(subprogram_view)
         # Work out which basic blocks can legitimately make calls
         dfs = graph.DepthFirstSearch(cfg, cfg.entry)
         for v in cfg.vertices:
@@ -212,61 +220,65 @@ def add_calls(prog: program.Program):
                 (e,) = cfg.successors(v)
                 # Check that the sole successor is not a loop header
                 if e not in dfs.back_edges:
-                    call_site_candidates.setdefault(cfg.name, []).append(v)
+                    subprogram_view.candidates.append(v)
 
-    # Sort the subprograms by the number of call sites
-    subprogram_order = collections.OrderedDict(sorted(call_site_candidates.items(), key=lambda t: len(t[1]), reverse=True))
+    # Sort the subprograms by the number of call sites, greatest number first
+    data.sort(key=lambda t: len(t.candidates), reverse=True)
 
-    # Assign each subprogram a level in the call graph
-    levels_in_call_graph = {}
-    level = 0
-    for subprg_name in subprogram_order.keys():
-        levels_in_call_graph.setdefault(level, []).append(subprg_name)
-        if level == 0:
-            level += 1
-        elif bool(random.getrandbits(1)) and len(call_site_candidates[subprg_name]) > 0:
-            level += 1
+    frontier = 0
+    for subprogram_view in data:
+        subprogram_view.level = frontier
+        if frontier == 0 or (len(subprogram_view.candidates) > 0 and bool(random.getrandbits(1))):
+            frontier += 1
 
-    # Add calls by finding a caller that is at a lower level than the callee
+    # Add calls
+    def add_call():
+        (caller,) = random.sample(callers, 1)
+        (v,) = random.sample(caller.candidates, 1)
+        call_graph_edges.setdefault((caller, callee), []).append(v)
+
+        # Clean up
+        caller.candidates.remove(v)
+        if not caller.candidates:
+            data.remove(caller)
+
     call_graph_edges = {}
-    for level in sorted(levels_in_call_graph.keys(), reverse=True):
-        if level > 0:
-            for callee in levels_in_call_graph[level]:
-                if random.random() < 0.2:
-                    lower_level = random.randint(0, level-1)
-                else:
-                    lower_level = level-1
+    for level in reversed(range(1, frontier + 1)):
+        callees = [subprogram_view for subprogram_view in data if subprogram_view.level == level]
+        for callee in callees:
+            if random.random() < 0.2:
+                lower_level = random.randint(0, level - 1)
+            else:
+                lower_level = level - 1
 
-                (caller,) = random.sample(levels_in_call_graph[lower_level], 1)
-                (v,) = random.sample(call_site_candidates[caller], 1)
-                call_site_candidates[caller].remove(v)
-                if len(call_site_candidates[caller]) == 0:
-                    del call_site_candidates[caller]
+            callers = [subprogram_view for subprogram_view in data if subprogram_view.level == lower_level]
+            if callers:
+                add_call()
 
-                call_graph_edges.setdefault((caller, callee), []).append(v)
+    for level in reversed(range(1, frontier + 1)):
+        callees = [subprogram_view for subprogram_view in data if subprogram_view.level == level]
+        for callee in callees:
+            if bool(random.getrandbits(1)):
+                while True:
+                    lower_level = random.randint(0, level - 1)
+                    callers = [subprogram_view for subprogram_view in data if subprogram_view.level == lower_level]
+                    if callers and random.random() < 0.75:
+                        add_call()
+                    else:
+                        break
 
-    # We have tried to ensure there is a path from a chosen root subprogram
-    # to every subprogram. Now add calls indiscriminately, while ensuring
-    # no recursion
-    for level in sorted(levels_in_call_graph.keys(), reverse=True):
-        if level > 0:
-            for callee in levels_in_call_graph[level]:
-                if bool(random.getrandbits(1)):
-                    while True:
-                        lower_level = random.randint(0, level - 1)
-                        candidates = levels_in_call_graph[lower_level]
-                        if candidates and random.random() < 0.75:
-                            (caller,) = random.sample(candidates, 1)
-                            (v,) = random.sample(call_site_candidates[caller], 1)
-                            call_site_candidates[caller].remove(v)
-                            if len(call_site_candidates[caller]) == 0:
-                                del call_site_candidates[caller]
-                            call_graph_edges.setdefault((caller, callee), []).append(v)
-                        else:
-                            break
+    if recursion_enabled:
+        for level in reversed(range(1, frontier + 1)):
+            callers = [subprogram_view for subprogram_view in data if subprogram_view.level == level]
+            if callers and bool(random.getrandbits(1)):
+                lower_level = random.randint(0, level - 1)
+                callees = [subprogram_view for subprogram_view in data if subprogram_view.level == lower_level]
+                if callees and random.random() < 0.25:
+                    (callee,) = random.sample(callees, 1)
+                    add_call()
 
     for (caller, callee), sites in call_graph_edges.items():
-        e = edge.CallGraphEdge(prog.call_graph[caller], prog.call_graph[callee], sites)
+        e = edge.CallGraphEdge(prog.call_graph[caller.name], prog.call_graph[callee.name], sites)
         prog.call_graph.add_edge(e)
 
     dot.visualise_call_graph(prog)
@@ -284,7 +296,7 @@ def main(**kwargs):
                     kwargs['nesting_depth'],
                     kwargs['vertices'],
                     kwargs['fan_out'])
-    add_calls(prog)
+    add_calls(prog, kwargs['recursion'])
     program.Program.IO.write(prog, kwargs['filename'])
 
 
@@ -334,6 +346,11 @@ def parse_the_command_line():
                         help='maximum number of basic blocks in a control flow graph',
                         metavar='<INT>',
                         default=10)
+
+    parser.add_argument('--recursion',
+                        action='store_true',
+                        help='allow recursive calls',
+                        default=False)
 
     return parser.parse_args()
 
