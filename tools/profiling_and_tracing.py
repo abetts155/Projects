@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
 import random
+import sys
 
-from lib.utils import messages
-from lib.utils import dot
-from lib.system import program
 from lib.graphs import graph
+from lib.system import program
+from lib.utils import dot
+from lib.utils import messages
 
 
 def do_super_block_instrumentation(control_flow_graph,
@@ -90,45 +90,51 @@ def generate_trace(ppg: graph.ProgramPointGraph):
     return trace
 
 
-def intra_procedural_analysis(prog, cfg, instrumentation_policy, traces):
+def intra_procedural_analysis(prog, cfg, policy, reinstrument, traces):
     messages.debug_message('Analysing subprogram {}'.format(cfg.name))
     dot.visualise_control_flow_graph(prog, cfg)
     ppg = graph.ProgramPointGraph(cfg)
     dot.visualise_flow_graph(prog, ppg, '.ppg')
-    ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, instrumentation_policy)
-    dot.visualise_instrumentation_point_graph(prog, ipg)
 
-    for i in range(traces+1):
-        messages.debug_message('Trace #{}'.format(i))
-        trace = generate_trace(ppg)
-        messages.debug_message(' '.join(str(v.program_point) for v in trace))
-        true_count = {v: 0 for v in ppg.vertices}
-        for v in trace:
-            true_count[v] += 1
+    for i in range(reinstrument + 1):
+        ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+        dot.visualise_instrumentation_point_graph(prog, ipg)
 
-        filtered_trace = [v for v in trace if v in ipg.vertices]
-        ipg_count = {v: 0 for v in ppg.vertices}
-        state = ipg.entry
-        for v in filtered_trace + [ipg.exit]:
-            if v != ipg.exit:
-                ipg_count[v] += 1
+        for j in range(traces + 1):
+            messages.debug_message('Trace #{}'.format(j))
+            trace = generate_trace(ppg)
+            messages.debug_message(' '.join(str(v.program_point) for v in trace))
+            true_count = {v: 0 for v in ppg.vertices}
+            for v in trace:
+                true_count[v] += 1
 
-            for e in ipg.successors(state):
-                if e.successor().program_point == v.program_point:
-                    for p in e.path:
-                        ipg_count[p] += 1
-                    state = e.successor()
-                    break
+            filtered_trace = [v for v in trace if v in ipg.vertices]
+            ipg_count = {v: 0 for v in ppg.vertices}
+            state = ipg.entry
+            for v in filtered_trace + [ipg.exit]:
+                if v != ipg.exit:
+                    ipg_count[v] += 1
 
-        for v in ppg.vertices:
-            assert true_count[v] == ipg_count[v]
+                for e in ipg.successors(state):
+                    if e.successor().program_point == v.program_point:
+                        for p in e.path:
+                            ipg_count[p] += 1
+                        state = e.successor()
+                        break
+
+            for v in ppg.vertices:
+                assert true_count[v] == ipg_count[v]
 
 
 def main(**kwargs):
     prog = program.Program.IO.read(kwargs['filename'])
 
     for cfg in prog:
-        intra_procedural_analysis(prog, cfg, kwargs['instrument'], kwargs['traces'])
+        intra_procedural_analysis(prog,
+                                  cfg,
+                                  kwargs['policy'],
+                                  kwargs['reinstrument'],
+                                  kwargs['traces'])
 
 
 def parse_the_command_line():
@@ -137,11 +143,17 @@ def parse_the_command_line():
     parser.add_argument('filename',
                         help='a file containing program information')
 
-    parser.add_argument('--instrument',
+    parser.add_argument('--policy',
                         type=graph.InstrumentationPointGraph.Policy,
                         choices=list(graph.InstrumentationPointGraph.Policy),
                         required=True,
                         help='instrument vertices, edges or both')
+
+    parser.add_argument('--reinstrument',
+                        type=int,
+                        help='number of times to reinstrument a subprogram',
+                        default=1,
+                        metavar='<INT>')
 
     parser.add_argument('--traces',
                         type=int,
