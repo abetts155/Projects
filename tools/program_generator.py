@@ -149,7 +149,7 @@ def create_control_flow_graph(loops, nesting_depth, vertices, fan_out, subprg_na
                     ancestor_v = parent_v
                     while True:
                         (e,) = lnt.predecessors(ancestor_v)
-                        ancestor_v = e.predecessor()
+                        ancestor_v = e.predecessor
                         if bool(random.getrandbits(1)) or ancestor_v == root_v:
                             break
                     parent_v = ancestor_v
@@ -175,16 +175,16 @@ def create_control_flow_graph(loops, nesting_depth, vertices, fan_out, subprg_na
 
     def create_loop_body(v):
         for e in lnt.successors(v):
-            create_loop_body(e.successor())
+            create_loop_body(e.successor)
 
         # Post-order actions
-        nested_loops = [loops[e.successor()] for e in lnt.successors(v)]
+        nested_loops = [loops[e.successor] for e in lnt.successors(v)]
         loops[v] = ArtificialLoopBody(fan_out, cfg, v.size, nested_loops, len(lnt.predecessors(v)) == 0)
 
         if len(lnt.predecessors(v)) == 0:
             (e,) = cfg.predecessors(loops[v].header)
-            cfg.entry = e.successor()
-            cfg.exit = e.predecessor()
+            cfg.entry = e.successor
+            cfg.exit = e.predecessor
 
     cfg = graph.ControlFlowGraph(subprg_name)
     lnt, root_v = create_artificial_loop_hierarchy()

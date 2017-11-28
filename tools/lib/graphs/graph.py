@@ -62,25 +62,25 @@ class DirectedGraph(metaclass=abc.ABCMeta):
         return self.get_vertex_data(v.id).successors
 
     def has_predecessor(self, v, p):
-        return [e for e in self.predecessors(v) if e.predecessor().id == p.id]
+        return [e for e in self.predecessors(v) if e.predecessor.id == p.id]
 
     def has_successor(self, v, s):
-        return [e for e in self.successors(v) if e.successor().id == s.id]
+        return [e for e in self.successors(v) if e.successor.id == s.id]
 
     def add_edge(self, e: edge.Edge):
-        p_info = self.get_vertex_data(e.predecessor().id)
-        if self.has_successor(e.predecessor(), e.successor()):
-            raise MultiEdgeError('Vertex {} already has successor {}'.format(e.predecessor().id, e.successor().id))
+        p_info = self.get_vertex_data(e.predecessor.id)
+        if self.has_successor(e.predecessor, e.successor):
+            raise MultiEdgeError('Vertex {} already has successor {}'.format(e.predecessor.id, e.successor.id))
         p_info.successors.append(e)
 
-        s_info = self.get_vertex_data(e.successor().id)
-        if self.has_predecessor(e.successor(), e.predecessor()):
-            raise MultiEdgeError('Vertex {} already has predecessor {}'.format(e.successor().id, e.predecessor().id))
+        s_info = self.get_vertex_data(e.successor.id)
+        if self.has_predecessor(e.successor, e.predecessor):
+            raise MultiEdgeError('Vertex {} already has predecessor {}'.format(e.successor.id, e.predecessor.id))
         s_info.predecessors.append(e)
 
     def remove_predecessor(self, v, p):
         v_info = self.get_vertex_data(v.id)
-        updated_predecessors = [e for e in v_info.predecessors if e.predecessor() != p]
+        updated_predecessors = [e for e in v_info.predecessors if e.predecessor != p]
         if len(updated_predecessors) == len(v_info.predecessors):
             raise InvalidVertexError(
                 'Vertex {} has no predecessor edge with source {} to remove'.format(v.id, p.id))
@@ -88,22 +88,22 @@ class DirectedGraph(metaclass=abc.ABCMeta):
 
     def remove_successor(self, v, s):
         v_info = self.get_vertex_data(v.id)
-        updated_successors = [e for e in v_info.successors if e.successor() != s]
+        updated_successors = [e for e in v_info.successors if e.successor != s]
         if len(updated_successors) == len(v_info.successors):
             raise InvalidVertexError(
                 'Vertex {} has no successor edge with destination {} to remove'.format(v.id, s.id))
         v_info.successors = updated_successors
 
     def remove_edge(self, e: edge.Edge):
-        self.remove_successor(e.predecessor(), e.successor())
-        self.remove_predecessor(e.successor(), e.predecessor())
+        self.remove_successor(e.predecessor, e.successor)
+        self.remove_predecessor(e.successor, e.predecessor)
 
     def remove_vertex(self, v: vertex.Vertex):
         v_info = self.get_vertex_data(v.id)
         for e in v_info.predecessors:
-            self.remove_successor(e.predecessor(), v)
+            self.remove_successor(e.predecessor, v)
         for e in v_info.successors:
-            self.remove_predecessor(e.successor(), v)
+            self.remove_predecessor(e.successor, v)
         del self._vertices[v.id]
 
 
@@ -122,6 +122,7 @@ class CallGraph(DirectedGraph):
 
     @property
     def root(self):
+        assert self._root is not None, 'Root of call graph is not set'
         return self._root
 
     @root.setter
@@ -146,8 +147,8 @@ class CallGraph(DirectedGraph):
                 if v not in reachable:
                     reachable.append(v)
                 for e in self.successors(v):
-                    if e.successor() not in reachable:
-                        stack.append(e.successor())
+                    if e.successor not in reachable:
+                        stack.append(e.successor)
             return reversed(reachable)
         else:
             return [data.v for data in self._vertices.values()]
@@ -224,8 +225,8 @@ class ProgramPointGraph(FlowGraph):
             for e in cfg.successors(v):
                 program_point_v = vertex.ProgramPoint(self.get_vertex_id(), e)
                 self.add_vertex(program_point_v)
-                p = self.get_vertex_data(e.predecessor().id).v
-                s = self.get_vertex_data(e.successor().id).v
+                p = self.get_vertex_data(e.predecessor.id).v
+                s = self.get_vertex_data(e.successor.id).v
                 self.add_edge(edge.Edge(p, program_point_v))
                 self.add_edge(edge.Edge(program_point_v, s))
 
@@ -241,21 +242,26 @@ class InstrumentationPointGraph(FlowGraph):
         FlowGraph.__init__(self, name)
 
     def reduce(self):
-        candidates = [v for v in self.vertices
-                      if not (len(v.instructions) == 1 and v.instructions[0].is_instrumentation_point())]
-        for v in candidates:
-            for pred_e in self.predecessors(v):
-                for succ_e in self.successors(v):
-                    if not self.has_successor(pred_e.predecessor(), succ_e.successor()):
-                        e = edge.TransitionEdge(pred_e.predecessor(), succ_e.successor())
-                        for i in pred_e.instructions:
-                            e.instructions.add_instruction(i)
-                        for i in v.instructions:
-                            e.instructions.add_instruction(i)
-                        for i in succ_e.instructions:
-                            e.instructions.add_instruction(i)
-                        self.add_edge(e)
-            self.remove_vertex(v)
+        # Remove program points until any further reduction would violate
+        # capability to reproduce path
+        changed = True
+        while changed:
+            changed = False
+            candidates = [v for v in self.vertices if not (len(self.predecessors(v)) == 0 or len(self.successors(v)) == 0)]
+            random.shuffle(candidates)
+            for v in candidates:
+                keep = sum([1 for pred_e in self.predecessors(v) for succ_e in self.successors(v)
+                            if self.has_successor(pred_e.predecessor, succ_e.successor)])
+                if not keep:
+                    changed = True
+                    for pred_e in self.predecessors(v):
+                        for succ_e in self.successors(v):
+                            e = edge.PathEdge(pred_e.predecessor, succ_e.successor)
+                            e.extend(pred_e.path)
+                            e.extend([v])
+                            e.extend(succ_e.path)
+                            self.add_edge(e)
+                    self.remove_vertex(v)
 
     @staticmethod
     def create_from_policy(ppg: ProgramPointGraph, policy):
@@ -265,7 +271,7 @@ class InstrumentationPointGraph(FlowGraph):
             ipg.add_vertex(v)
         for v in ppg.vertices:
             for e in ppg.successors(v):
-                ipg.add_edge(edge.PathEdge(v, e.successor()))
+                ipg.add_edge(edge.PathEdge(v, e.successor))
 
         entry_points = [v for v in ipg.vertices if len(ipg.predecessors(v)) == 0]
         ipg.entry = vertex.ProgramPoint(ipg.get_vertex_id(), None)
@@ -284,7 +290,7 @@ class InstrumentationPointGraph(FlowGraph):
             for v in dead:
                 for pred_e in ipg.predecessors(v):
                     for succ_e in ipg.successors(v):
-                        e = edge.PathEdge(pred_e.predecessor(), succ_e.successor())
+                        e = edge.PathEdge(pred_e.predecessor, succ_e.successor)
                         e.extend(pred_e.path)
                         e.extend([v])
                         e.extend(succ_e.path)
@@ -295,27 +301,6 @@ class InstrumentationPointGraph(FlowGraph):
             filter([v for v in ipg.vertices if isinstance(v.program_point, edge.Edge)])
         if policy == InstrumentationPointGraph.Policy.EDGES:
             filter([v for v in ipg.vertices if isinstance(v.program_point, vertex.Vertex)])
-
-        # Remove program points until any further reduction would violate
-        # capability to reproduce path
-        changed = True
-        while changed:
-            changed = False
-            candidates = [v for v in ipg.vertices if not (len(ipg.predecessors(v)) == 0 or len(ipg.successors(v)) == 0)]
-            random.shuffle(candidates)
-            for v in candidates:
-                keep = sum([1 for pred_e in ipg.predecessors(v) for succ_e in ipg.successors(v)
-                            if ipg.has_successor(pred_e.predecessor(), succ_e.successor())])
-                if not keep:
-                    changed = True
-                    for pred_e in ipg.predecessors(v):
-                        for succ_e in ipg.successors(v):
-                            e = edge.PathEdge(pred_e.predecessor(), succ_e.successor())
-                            e.extend(pred_e.path)
-                            e.extend([v])
-                            e.extend(succ_e.path)
-                            ipg.add_edge(e)
-                    ipg.remove_vertex(v)
         return ipg
 
 
@@ -333,10 +318,10 @@ class Tree(DirectedGraph):
             return False
         else:
             (predecessor_e,) = self.predecessors(v)
-            if predecessor_e.predecessor() == a:
+            if predecessor_e.predecessor == a:
                 return True
             else:
-                return self.is_proper_ancestor(a, predecessor_e.predecessor())
+                return self.is_proper_ancestor(a, predecessor_e.predecessor)
 
     def is_ancestor(self, a: vertex.Vertex, v: vertex.Vertex):
         return a == v or self.is_proper_ancestor(a, v)
@@ -495,13 +480,13 @@ class DominanceFrontiers:
         for v in g.vertices:
             if len(backward_transitions(g, v)) > 1:
                 (parent_e,) = t.predecessors(v)
-                immediate_dominator = parent_e.predecessor()
+                immediate_dominator = parent_e.predecessor
                 for e in backward_transitions(g, v):
                     runner = backward_transition(e)
                     while runner != immediate_dominator:
                         self._frontier[runner].add(v)
                         (parent_e,) = t.predecessors(runner)
-                        runner = parent_e.predecessor()
+                        runner = parent_e.predecessor
 
 
 class StrongComponents:
@@ -521,11 +506,11 @@ class StrongComponents:
             stack.append(v)
 
             for e in flow_g.successors(v):
-                if pre_order[e.successor()] == 0:
-                    explore(e.successor())
-                    low_link[v] = min(low_link[v], low_link[e.successor()])
-                elif e.successor() in stack:
-                    low_link[v] = min(low_link[v], pre_order[e.successor()])
+                if pre_order[e.successor] == 0:
+                    explore(e.successor)
+                    low_link[v] = min(low_link[v], low_link[e.successor])
+                elif e.successor in stack:
+                    low_link[v] = min(low_link[v], pre_order[e.successor])
 
             if low_link[v] == pre_order[v]:
                 nonlocal scc_id
@@ -567,12 +552,12 @@ class DepthFirstSearch:
             pre_id += 1
             self._pre_order[v] = pre_id
             for e in g.successors(v):
-                if e.successor() not in self._pre_order:
+                if e.successor not in self._pre_order:
                     # Not yet visited
-                    explore(e.successor())
-                elif self._pre_order[v] < self._pre_order[e.successor()]:
+                    explore(e.successor)
+                elif self._pre_order[v] < self._pre_order[e.successor]:
                     pass
-                elif e.successor() not in self._post_order:
+                elif e.successor not in self._post_order:
                     self._back_edges.append(e)
 
             nonlocal post_id
@@ -615,17 +600,17 @@ class LoopNests(DirectedGraph):
         def find_loop_body():
             # Now move up the graph from the tail until the header and add
             # vertices as we go
-            work_list = [back_edge.predecessor()]
+            work_list = [back_edge.predecessor]
             while work_list:
                 v = work_list.pop()
                 loop.vertices.add(v)
                 visited[v] = True
 
-                if v != back_edge.successor():
+                if v != back_edge.successor:
                     # Continue the search only if we have not reached the header
                     for e in self._ppg.predecessors(v):
                         if e not in dfs.back_edges:
-                            representative = parent[e.predecessor()]
+                            representative = parent[e.predecessor]
                             while representative != parent[representative]:
                                 representative = parent[representative]
                             if not (representative in work_list
@@ -645,13 +630,13 @@ class LoopNests(DirectedGraph):
             if back_edges:
                 loops = set()
                 for back_edge in back_edges:
-                    if not dominators.is_ancestor(back_edge.successor(), back_edge.predecessor()):
+                    if not dominators.is_ancestor(back_edge.successor, back_edge.predecessor):
                         messages.error_message(
-                            'Edge {}=>{} in CFG {} identifies an irreducible loop'.format(back_edge.predecessor().id,
-                                                                                          back_edge.successor().id,
+                            'Edge {}=>{} in CFG {} identifies an irreducible loop'.format(back_edge.predecessor.id,
+                                                                                          back_edge.successor.id,
                                                                                           self._ppg.name))
 
-                    messages.debug_message("Edge {} in CFG '{}' is a back edge".format(back_edge.predecessor().program_point,
+                    messages.debug_message("Edge {} in CFG '{}' is a back edge".format(back_edge.predecessor.program_point,
                                                                                        self._ppg.name))
                     # Loop detected
                     loop = vertex.LoopBody(self.get_vertex_id(), v)
@@ -697,20 +682,20 @@ class LoopNests(DirectedGraph):
         for loop in list(self.vertices):
             for v in list(loop.vertices):
                 if isinstance(v.program_point, edge.Edge):
-                    if v.program_point.predecessor() in loop.vertices and v.program_point.successor() not in loop.vertices:
+                    if v.program_point.predecessor in loop.vertices and v.program_point.successor not in loop.vertices:
                         bridge = vertex.SuperBlock(self.get_vertex_id())
                         bridge.vertices.add(v)
                         loop.vertices.remove(v)
                         self.add_vertex(bridge)
                         self.add_edge(edge.Edge(loop, bridge))
-                        inner_loop = self._containment[v.edge.successor()]
+                        inner_loop = self._containment[v.edge.successor]
                         self.add_edge(edge.Edge(bridge, inner_loop))
 
-                    elif v.program_point.predecessor() not in loop.vertices and v.program_point.successor() in loop.vertices:
+                    elif v.program_point.predecessor not in loop.vertices and v.program_point.successor in loop.vertices:
                         bridge = vertex.SuperBlock(self.get_vertex_id())
                         bridge.vertices.add(v)
                         loop.vertices.remove(v)
                         self.add_vertex(bridge)
                         self.add_edge(edge.Edge(bridge, loop))
-                        inner_loop = self._containment[v.edge.predecessor()]
+                        inner_loop = self._containment[v.edge.predecessor]
                         self.add_edge(edge.Edge(inner_loop, bridge))

@@ -30,7 +30,7 @@ def write_call_graph(data, g):
         data.append('{} [label={}, shape=record];\n'.format(v.id, ''.join(label)))
         for e in g.successors(v):
             data.append('{}->{} [label="{}"];\n'.format(v.id,
-                                                        e.successor().id,
+                                                        e.successor.id,
                                                         ','.join(repr(v.id) for v in e.call_sites)))
 
 
@@ -50,7 +50,7 @@ def write_control_flow_graph(data, g):
 
         data.append('{} [label={}, shape=box];\n'.format(v.id, ''.join(label)))
         for e in g.successors(v):
-            data.append('{}->{};\n'.format(v.id, e.successor().id))
+            data.append('{}->{};\n'.format(v.id, e.successor.id))
 
     dfs = graph.DepthFirstSearch(g, g.entry)
     for v in reversed(dfs.post_order()):
@@ -69,7 +69,7 @@ def write_instrumentation_point_graph(data, ipg):
         label = ['<<TABLE BORDER="0">']
         if v.program_point is not None:
             if isinstance(v.program_point, edge.Edge):
-                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor().id, v.program_point.successor().id))
+                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor.id, v.program_point.successor.id))
             else:
                 label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
         else:
@@ -83,7 +83,7 @@ def write_instrumentation_point_graph(data, ipg):
             if not e.path:
                 edge_label.append('<TR><TD></TD></TR>')
             edge_label.append('</TABLE>>')
-            data.append('{}->{} [label={}];\n'.format(v.id, e.successor().id, ''.join(edge_label)))
+            data.append('{}->{} [label={}];\n'.format(v.id, e.successor.id, ''.join(edge_label)))
 
 
 def visualise_flow_graph(program, flow_g, suffix):
@@ -98,7 +98,7 @@ def write_flow_graph(data, flow_g):
         label = ['<<TABLE BORDER="0">']
         if v.program_point is not None:
             if isinstance(v.program_point, edge.Edge):
-                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor().id, v.program_point.successor().id))
+                label.append('<TR><TD ALIGN="LEFT">({},{})</TD></TR>'.format(v.program_point.predecessor.id, v.program_point.successor.id))
             else:
                 label.append('<TR><TD ALIGN="LEFT">{}</TD></TR>'.format(v.id))
         else:
@@ -106,7 +106,7 @@ def write_flow_graph(data, flow_g):
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(v.id, ''.join(label)))
         for e in flow_g.successors(v):
-            data.append('{}->{};\n'.format(v.id, e.successor().id))
+            data.append('{}->{};\n'.format(v.id, e.successor.id))
 
     for v in flow_g.vertices:
         write_vertex(v)
@@ -126,7 +126,7 @@ def write_dominator_tree(data, t):
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(v.id, ''.join(label)))
         for e in t.successors(v):
-            data.append('{}->{};\n'.format(v.id, e.successor().id))
+            data.append('{}->{};\n'.format(v.id, e.successor.id))
 
 
 def visualise_loop_nest_tree(program, cfg, t):
@@ -146,7 +146,7 @@ def write_loop_nest_tree(data, t):
         label.append('</TABLE>>')
         data.append('{} [label={}, shape=record];\n'.format(loop.id, ''.join(label)))
         for e in t.successors(loop):
-            data.append('{}->{};\n'.format(loop.id, e.successor().id))
+            data.append('{}->{};\n'.format(loop.id, e.successor.id))
 
     dfs = graph.DepthFirstSearch(t, t.root)
     for v in t.vertices:

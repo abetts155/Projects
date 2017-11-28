@@ -85,57 +85,74 @@ def generate_trace(ppg: graph.ProgramPointGraph):
     while v != ppg.exit:
         trace.append(v)
         (e,) = random.sample(ppg.successors(v), 1)
-        v = e.successor()
+        v = e.successor
     trace.append(ppg.exit)
     return trace
 
 
-def intra_procedural_analysis(prog, cfg, policy, reinstrument, traces):
-    messages.debug_message('Analysing subprogram {}'.format(cfg.name))
-    dot.visualise_control_flow_graph(prog, cfg)
-    ppg = graph.ProgramPointGraph(cfg)
-    dot.visualise_flow_graph(prog, ppg, '.ppg')
+def check_traces(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGraph, traces):
+    for j in range(traces):
+        trace = generate_trace(ppg)
+        true_count = {v: 0 for v in ppg.vertices}
+        for v in trace:
+            true_count[v] += 1
 
-    ipgs = {}
-    for i in range(reinstrument + 1):
-        ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
-        dot.visualise_instrumentation_point_graph(prog, ipg, '.{}'.format(i))
-        ipgs.setdefault(ipg.name, []).append(ipg)
+        filtered_trace = [v for v in trace if v in ipg.vertices]
+        ipg_count = {v: 0 for v in ppg.vertices}
+        state = ipg.entry
+        for v in filtered_trace + [ipg.exit]:
+            if v != ipg.exit:
+                ipg_count[v] += 1
 
-        for j in range(traces + 1):
-            trace = generate_trace(ppg)
-            true_count = {v: 0 for v in ppg.vertices}
-            for v in trace:
-                true_count[v] += 1
+            for e in ipg.successors(state):
+                if e.successor.program_point == v.program_point:
+                    for p in e.path:
+                        ipg_count[p] += 1
+                    state = e.successor
+                    break
 
-            filtered_trace = [v for v in trace if v in ipg.vertices]
-            ipg_count = {v: 0 for v in ppg.vertices}
-            state = ipg.entry
-            for v in filtered_trace + [ipg.exit]:
-                if v != ipg.exit:
-                    ipg_count[v] += 1
+        for v in ppg.vertices:
+            assert true_count[v] == ipg_count[v]
 
-                for e in ipg.successors(state):
-                    if e.successor().program_point == v.program_point:
-                        for p in e.path:
-                            ipg_count[p] += 1
-                        state = e.successor()
-                        break
 
-            for v in ppg.vertices:
-                assert true_count[v] == ipg_count[v]
+def inter_procedural_analysis(prog: program.Program, policy, reinstrument, traces):
+    dfs = graph.DepthFirstSearch(prog.call_graph, prog.call_graph.root)
+    for call_v in dfs.post_order():
+        print(call_v.name)
 
-    for k, v in ipgs.items():
-        best = min(v, key=lambda ipg: ipg.number_of_vertices())
-        print(k, ','.join(str(ipg.number_of_vertices()) for ipg in v), best.number_of_vertices())
+
+def intra_procedural_analysis(prog, policy, reinstrument, traces):
+    for cfg in prog:
+        messages.debug_message('Analysing subprogram {}'.format(cfg.name))
+        dot.visualise_control_flow_graph(prog, cfg)
+        ppg = graph.ProgramPointGraph(cfg)
+        dot.visualise_flow_graph(prog, ppg, '.ppg')
+
+        ipgs = {}
+        for i in range(reinstrument):
+            ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+            ipg.reduce()
+            dot.visualise_instrumentation_point_graph(prog, ipg, '.{}'.format(i))
+            ipgs.setdefault(ppg.name, []).append(ipg)
+            check_traces(ppg, ipg, traces)
+
+        for k, v in ipgs.items():
+            v.sort(key=lambda ipg: ipg.number_of_vertices())
+            print('{}: best={} worst={} [data={}]'.format(k,
+                                                          v[0].name,
+                                                          v[-1].name,
+                                                          ','.join(str(ipg.number_of_vertices()) for ipg in v)))
 
 
 def main(**kwargs):
     prog = program.Program.IO.read(kwargs['filename'])
-
-    for cfg in prog:
+    if kwargs['interprocedural']:
+        inter_procedural_analysis(prog,
+                                  kwargs['policy'],
+                                  kwargs['reinstrument'],
+                                  kwargs['traces'])
+    else:
         intra_procedural_analysis(prog,
-                                  cfg,
                                   kwargs['policy'],
                                   kwargs['reinstrument'],
                                   kwargs['traces'])
@@ -164,6 +181,11 @@ def parse_the_command_line():
                         help='number of traces to generate',
                         default=1,
                         metavar='<INT>')
+
+    parser.add_argument('--interprocedural',
+                        action='store_true',
+                        help='do interprocedural analysis',
+                        default=False)
 
     return parser.parse_args()
 

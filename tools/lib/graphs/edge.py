@@ -1,29 +1,19 @@
 class Edge:
     def __init__(self, predecessor, successor):
-        self._predecessor = predecessor
-        self._successor = successor
-
-    def predecessor(self):
-        return self._predecessor
-
-    def successor(self):
-        return self._successor
+        self.predecessor = predecessor
+        self.successor = successor
 
     def __str__(self):
-        return "({},{})".format(self._predecessor.id, self._successor.id)
+        return "({},{})".format(self.predecessor.id, self.successor.id)
 
 
 class PathEdge(Edge):
     def __init__(self, predecessor, successor):
         Edge.__init__(self, predecessor, successor)
-        self._path = []
+        self.path = []
 
     def extend(self, path):
-        self._path.extend(path)
-
-    @property
-    def path(self):
-        return self._path
+        self.path.extend(path)
 
 
 class CallGraphEdge(Edge):

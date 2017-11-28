@@ -61,10 +61,10 @@ class Program:
         return self._instrumentation_point_graphs[name]
 
     class IO:
-        SUBPROGRAM = "subprogram"
-        VERTEX = "vertex"
-        INTRA_PROCEDURAL = "intra"
-        INTER_PROCEDURAL = "inter"
+        SUBPROGRAM = "SUBPROGRAM"
+        VERTEX = "VERTEX"
+        INTRA_PROCEDURAL = "INTRA"
+        INTER_PROCEDURAL = "CALLS"
 
         @staticmethod
         def write(prog, filename):
@@ -76,10 +76,10 @@ class Program:
                     for v in cfg.vertices:
                         wd.write('{} {}'.format(Program.IO.VERTEX, str(v.id)))
                         wd.write('\n')
-                        transitions = [str(e.successor().id) for e in cfg.successors(v) if e.successor() != cfg.entry]
+                        transitions = [str(e.successor.id) for e in cfg.successors(v) if e.successor != cfg.entry]
                         wd.write('{} {}'.format(Program.IO.INTRA_PROCEDURAL, ' '.join(transitions)))
                         wd.write('\n')
-                        callees = [e.successor().name for e in prog.call_graph.successors(call_v) if v in e.call_sites]
+                        callees = [e.successor.name for e in prog.call_graph.successors(call_v) if v in e.call_sites]
                         wd.write('{} {}'.format(Program.IO.INTER_PROCEDURAL, ' '.join(callees)))
                         wd.write('\n' * 2)
                     wd.write('\n' * 3)
@@ -145,6 +145,8 @@ class Program:
             for cfg in prog:
                 (cfg.entry,) = [v for v in cfg.vertices if len(cfg.predecessors(v)) == 0]
                 (cfg.exit,) = [v for v in cfg.vertices if len(cfg.successors(v)) == 0]
+
+            (prog.call_graph.root,) = [v for v in prog.call_graph.vertices if len(cfg.predecessors(v)) == 0]
 
             return prog
 
