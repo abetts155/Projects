@@ -1,10 +1,10 @@
 import abc
-import random
 import enum
+import random
 
-from ..utils import messages
-from . import vertex
 from . import edge
+from . import vertex
+from ..utils import messages
 
 
 class InvalidVertexError(ValueError):
@@ -291,9 +291,9 @@ class InstrumentationPointGraph(FlowGraph):
                         ipg.add_edge(e)
                 ipg.remove_vertex(v)
 
-        if policy == 'vertices':
+        if policy == InstrumentationPointGraph.Policy.VERTICES:
             filter([v for v in ipg.vertices if isinstance(v.program_point, edge.Edge)])
-        elif policy == 'edges':
+        if policy == InstrumentationPointGraph.Policy.EDGES:
             filter([v for v in ipg.vertices if isinstance(v.program_point, vertex.Vertex)])
 
         # Remove program points until any further reduction would violate

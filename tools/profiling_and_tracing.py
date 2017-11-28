@@ -96,14 +96,14 @@ def intra_procedural_analysis(prog, cfg, policy, reinstrument, traces):
     ppg = graph.ProgramPointGraph(cfg)
     dot.visualise_flow_graph(prog, ppg, '.ppg')
 
+    ipgs = {}
     for i in range(reinstrument + 1):
         ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
-        dot.visualise_instrumentation_point_graph(prog, ipg)
+        dot.visualise_instrumentation_point_graph(prog, ipg, '.{}'.format(i))
+        ipgs.setdefault(ipg.name, []).append(ipg)
 
         for j in range(traces + 1):
-            messages.debug_message('Trace #{}'.format(j))
             trace = generate_trace(ppg)
-            messages.debug_message(' '.join(str(v.program_point) for v in trace))
             true_count = {v: 0 for v in ppg.vertices}
             for v in trace:
                 true_count[v] += 1
@@ -124,6 +124,10 @@ def intra_procedural_analysis(prog, cfg, policy, reinstrument, traces):
 
             for v in ppg.vertices:
                 assert true_count[v] == ipg_count[v]
+
+    for k, v in ipgs.items():
+        best = min(v, key=lambda ipg: ipg.number_of_vertices())
+        print(k, ','.join(str(ipg.number_of_vertices()) for ipg in v), best.number_of_vertices())
 
 
 def main(**kwargs):

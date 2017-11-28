@@ -2,10 +2,9 @@ import atexit
 import os
 import subprocess
 
-from ..utils import messages
-from ..graphs import graph
-from ..graphs import vertex
 from ..graphs import edge
+from ..graphs import graph
+from ..utils import messages
 
 
 def clean_up(program):
@@ -20,7 +19,6 @@ def visualise_call_graph(program):
     write_call_graph(data, program.call_graph)
     filename = program.basename() + 'call.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_call_graph(data, g):
@@ -41,7 +39,6 @@ def visualise_control_flow_graph(program, cfg):
     write_control_flow_graph(data, cfg)
     filename = program.basename() + cfg.name + '.cfg.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_control_flow_graph(data, g):
@@ -65,7 +62,6 @@ def visualise_instrumentation_point_graph(program, ipg, suffix=''):
     write_instrumentation_point_graph(data, ipg)
     filename = program.basename() + ipg.name + suffix + '.ipg.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_instrumentation_point_graph(data, ipg):
@@ -95,7 +91,6 @@ def visualise_flow_graph(program, flow_g, suffix):
     write_flow_graph(data, flow_g)
     filename = program.basename() + flow_g.name + suffix + '.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_flow_graph(data, flow_g):
@@ -122,7 +117,6 @@ def visualise_dominator_tree(program, cfg, t, suffix):
     write_dominator_tree(data, t)
     filename = program.basename() + cfg.name + suffix + '.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_dominator_tree(data, t):
@@ -140,7 +134,6 @@ def visualise_loop_nest_tree(program, cfg, t):
     write_loop_nest_tree(data, t)
     filename = program.basename() + cfg.name + '.lnt.dot'
     generate(filename, data)
-    os.remove(filename)
 
 
 def write_loop_nest_tree(data, t):
@@ -162,39 +155,38 @@ def write_loop_nest_tree(data, t):
 
 child_processes = []
 def generate(dot_filename, data):
-    def launch_dot(ext):
-        filename = os.path.splitext(dot_filename)[0] + '.' + ext
-        messages.debug_message("Generating file '{}'".format(filename))
-        try:
-            with open(filename, 'w') as out_file:
-                cmd = ["dot", "-T", ext, dot_filename]
-                p = subprocess.Popen(cmd, stdout=out_file)
-                child_processes.append(p)
-                _, _ = p.communicate()
-                if p.returncode != 0:
-                    messages.error_message("Running '{}' failed".format(' '.join(cmd)))
-                else:
-                    messages.debug_message("Done with '{}'".format(' '.join(cmd)))
-        except FileNotFoundError as e:
-            messages.debug_message(e)
-
-    with open(dot_filename, 'w') as dot_file:
-        dot_file.write('digraph')
-        dot_file.write('{\n')
-        dot_file.write('nslimit=2;\n')
-        dot_file.write('ordering=out;\n')
-        dot_file.write('ranksep=0.3;\n')
-        dot_file.write('nodesep=0.25;\n')
-        dot_file.write('fontsize=8;\n')
-        dot_file.write('fontname="Times new roman"\n')
-        for d in data:
-            dot_file.write(d)
-        dot_file.write('}\n')
-
     if __debug__:
+        def launch_dot(ext):
+            filename = os.path.splitext(dot_filename)[0] + '.' + ext
+            messages.debug_message("Generating file '{}'".format(filename))
+            try:
+                with open(filename, 'w') as out_file:
+                    cmd = ["dot", "-T", ext, dot_filename]
+                    p = subprocess.Popen(cmd, stdout=out_file)
+                    child_processes.append(p)
+                    _, _ = p.communicate()
+                    if p.returncode != 0:
+                        messages.error_message("Running '{}' failed".format(' '.join(cmd)))
+                    else:
+                        messages.debug_message("Done with '{}'".format(' '.join(cmd)))
+            except FileNotFoundError as e:
+                messages.debug_message(e)
+
+        with open(dot_filename, 'w') as dot_file:
+            dot_file.write('digraph')
+            dot_file.write('{\n')
+            dot_file.write('nslimit=2;\n')
+            dot_file.write('ordering=out;\n')
+            dot_file.write('ranksep=0.3;\n')
+            dot_file.write('nodesep=0.25;\n')
+            dot_file.write('fontsize=8;\n')
+            dot_file.write('fontname="Times new roman"\n')
+            for d in data:
+                dot_file.write(d)
+            dot_file.write('}\n')
+
         launch_dot('png')
-    else:
-        launch_dot('svg')
+        os.remove(dot_filename)
 
 
 def kill_child_processes():
