@@ -118,7 +118,18 @@ def check_traces(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGr
 def inter_procedural_analysis(prog: program.Program, policy, reinstrument, traces):
     dfs = graph.DepthFirstSearch(prog.call_graph, prog.call_graph.root)
     for call_v in dfs.post_order():
-        print(call_v.name)
+        cfg = prog[call_v.name]
+        messages.debug_message('Analysing subprogram {}'.format(cfg.name))
+        dot.visualise_control_flow_graph(prog, cfg)
+        ppg = graph.ProgramPointGraph(cfg)
+        dot.visualise_flow_graph(prog, ppg, '.ppg')
+        ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+        ipg.reduce()
+        dot.visualise_instrumentation_point_graph(prog, ipg)
+        prog.add_ipg(ipg)
+        for call_e in prog.call_graph.successors(call_v):
+            for site in call_e.call_sites:
+                print(call_v.name, call_e.successor.name, site)
 
 
 def intra_procedural_analysis(prog, policy, reinstrument, traces):

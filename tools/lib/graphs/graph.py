@@ -247,7 +247,9 @@ class InstrumentationPointGraph(FlowGraph):
         changed = True
         while changed:
             changed = False
-            candidates = [v for v in self.vertices if not (len(self.predecessors(v)) == 0 or len(self.successors(v)) == 0)]
+            candidates = [v for v in self.vertices if not (len(self.predecessors(v)) == 0 or
+                                                           len(self.successors(v)) == 0 or
+                                                           v.inlined)]
             random.shuffle(candidates)
             for v in candidates:
                 keep = sum([1 for pred_e in self.predecessors(v) for succ_e in self.successors(v)

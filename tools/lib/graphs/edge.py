@@ -19,8 +19,4 @@ class PathEdge(Edge):
 class CallGraphEdge(Edge):
     def __init__(self, predecessor, successor, call_sites):
         Edge.__init__(self, predecessor, successor)
-        self._call_sites = call_sites
-
-    @property
-    def call_sites(self):
-        return self._call_sites
+        self.call_sites = call_sites
