@@ -157,13 +157,9 @@ class CallGraph(DirectedGraph):
 class FlowGraph(DirectedGraph):
     def __init__(self, name):
         DirectedGraph.__init__(self)
-        self._name = name
+        self.name = name
         self._entry = None
         self._exit = None
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def entry(self):
@@ -240,30 +236,37 @@ class InstrumentationPointGraph(FlowGraph):
 
     def __init__(self, name):
         FlowGraph.__init__(self, name)
+        self.removal_order = []
 
     def reduce(self):
         # Remove program points until any further reduction would violate
         # capability to reproduce path
-        changed = True
-        while changed:
-            changed = False
-            candidates = [v for v in self.vertices if not (len(self.predecessors(v)) == 0 or
-                                                           len(self.successors(v)) == 0 or
-                                                           v.inlined)]
-            random.shuffle(candidates)
-            for v in candidates:
-                keep = sum([1 for pred_e in self.predecessors(v) for succ_e in self.successors(v)
-                            if self.has_successor(pred_e.predecessor, succ_e.successor)])
-                if not keep:
-                    changed = True
-                    for pred_e in self.predecessors(v):
-                        for succ_e in self.successors(v):
-                            e = edge.PathEdge(pred_e.predecessor, succ_e.successor)
-                            e.extend(pred_e.path)
-                            e.extend([v])
-                            e.extend(succ_e.path)
-                            self.add_edge(e)
-                    self.remove_vertex(v)
+        def do_it():
+            changed = True
+            while changed:
+                changed = False
+                candidates = [v for v in self.vertices if self.predecessors(v) and self.successors(v) and predicate(v)]
+                random.shuffle(candidates)
+                for v in candidates:
+                    keep = sum([1 for pred_e in self.predecessors(v) for succ_e in self.successors(v)
+                                if self.has_successor(pred_e.predecessor, succ_e.successor)])
+                    if not keep:
+                        changed = True
+                        for pred_e in self.predecessors(v):
+                            for succ_e in self.successors(v):
+                                e = edge.PathEdge(pred_e.predecessor, succ_e.successor)
+                                e.extend(pred_e.path)
+                                e.extend([v])
+                                e.extend(succ_e.path)
+                                self.add_edge(e)
+                        self.remove_vertex(v)
+                        self.removal_order.append(v)
+
+        predicate = lambda v: not (len(self.predecessors(v)) > 1 or len(self.successors(v)) > 1)
+        do_it()
+
+        predicate = lambda v: True
+        do_it()
 
     @staticmethod
     def create_from_policy(ppg: ProgramPointGraph, policy):

@@ -146,8 +146,6 @@ class Program:
                 (cfg.entry,) = [v for v in cfg.vertices if len(cfg.predecessors(v)) == 0]
                 (cfg.exit,) = [v for v in cfg.vertices if len(cfg.successors(v)) == 0]
 
-            (prog.call_graph.root,) = [v for v in prog.call_graph.vertices if len(cfg.predecessors(v)) == 0]
-
             return prog
 
 

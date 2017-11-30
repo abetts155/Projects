@@ -3,6 +3,7 @@
 import argparse
 import random
 import sys
+import collections
 
 from lib.graphs import graph
 from lib.system import program
@@ -134,7 +135,7 @@ def inter_procedural_analysis(prog: program.Program, policy, reinstrument, trace
 
 def intra_procedural_analysis(prog, policy, reinstrument, traces):
     for cfg in prog:
-        messages.debug_message('Analysing subprogram {}'.format(cfg.name))
+        messages.verbose_message('Analysing subprogram {}'.format(cfg.name))
         dot.visualise_control_flow_graph(prog, cfg)
         ppg = graph.ProgramPointGraph(cfg)
         dot.visualise_flow_graph(prog, ppg, '.ppg')
@@ -142,17 +143,22 @@ def intra_procedural_analysis(prog, policy, reinstrument, traces):
         ipgs = {}
         for i in range(reinstrument):
             ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+            ipg.name = '{}.{}'.format(ipg.name, i)
             ipg.reduce()
-            dot.visualise_instrumentation_point_graph(prog, ipg, '.{}'.format(i))
+            #dot.visualise_instrumentation_point_graph(prog, ipg)
             ipgs.setdefault(ppg.name, []).append(ipg)
-            check_traces(ppg, ipg, traces)
 
-        for k, v in ipgs.items():
-            v.sort(key=lambda ipg: ipg.number_of_vertices())
-            print('{}: best={} worst={} [data={}]'.format(k,
-                                                          v[0].name,
-                                                          v[-1].name,
-                                                          ','.join(str(ipg.number_of_vertices()) for ipg in v)))
+        for name, ipgs in ipgs.items():
+            ipgs.sort(key=lambda ipg: ipg.number_of_vertices())
+            ipgs.sort(key=lambda ipg: ipg.number_of_edges())
+            print("=====================>", name)
+            counts = collections.Counter(ipg.number_of_vertices() for ipg in ipgs)
+            print(counts)
+            for ipg in ipgs:
+                print('{}: n={} m={}    [{}]'.format(ipg.name, ipg.number_of_vertices(), ipg.number_of_edges(),
+                                                     ' '.join(str(v.program_point) for v in ipg.removal_order)))
+            print('best: {}'.format(ipgs[0].name))
+            print('worst: {}'.format(ipgs[-1].name))
 
 
 def main(**kwargs):
