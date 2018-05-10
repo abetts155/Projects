@@ -2,14 +2,13 @@
 This module includes all directed graphs used in different types of analyses. 
 """
 
-import collections
 import abc
+import collections
 import random
+
 import numpy
 
-from lib.utils import dot
-from lib.utils import debug
-from lib.utils import globals
+from lib.system import analysis
 from lib.system.edges import (Edge,
                               TransitionEdge,
                               CallGraphEdge)
@@ -18,7 +17,9 @@ from lib.system.vertices import (Vertex,
                                  RegularExpressionVertex,
                                  SuperBlock,
                                  is_basic_block)
-from lib.system import analysis
+from lib.utils import debug
+from lib.utils import globals
+from utils import dot
 
 
 class NoValidVertexError(Exception):

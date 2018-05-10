@@ -1,118 +1,61 @@
-#!/usr/bin/env python3
-
-import sys
 import argparse
-import typing
-import re
-import collections
 import os
+import sys
+import shutil
+import threading
 
-assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
-
-from lib.utils import globals
-from lib.utils import debug
-from lib.system import environment
-from lib.system import analysis
-from lib.system.directed_graphs import InstrumentationPointGraph, CallGraph, DepthFirstSearch
-from lib.system import calculations
-
-
-State = collections.namedtuple('State', ['ipg', 'vertex'])
+from programs import program
+from calculations import database
+from calculations import calculations
+from graphs import graph
+from utils import messages
 
 
-def parse_trace(call_graph: CallGraph,
-                instrumentation_point_graphs : typing.Dict[str, InstrumentationPointGraph]):
-    def parse_trace_event(line):
-        line = line.replace('(', '').replace(')', '').replace(',', '').strip()
-        lexemes = line.split(' ')
-        try:
-            assert 2 <= len(lexemes) <= 3
-            time = lexemes[-1]
-            if len(lexemes) == 3:
-                program_point = (int(lexemes[0]), int(lexemes[1]))
-            else:
-                program_point = int(lexemes[0])
-            return program_point, int(lexemes[-1])
-        except ValueError:
-            print("Unable to convert string into integer on line '{}'".format(line))
-            sys.exit(1)
+def main(**kwargs):
+    messages.verbose_message("Reading program from '{}'".format(kwargs['filename']))
+    prog = program.IO.read(kwargs['filename'])
+    prog.cleanup()
 
-    def transition(function, vertex, program_point):
-        for idx in range(0, vertex.number_of_successors()):
-            succ_edge = vertex.get_ith_successor_edge(idx)
-            succ_vertex = function.get_vertex(succ_edge.vertex_id)
-            if succ_vertex.program_point == program_point:
-                return succ_vertex
-        assert False, ('Unable to transition from {} to {} in function {}'.
-                       format(vertex.program_point, program_point, function.name))
+    failures = set()
+    with database.Database(kwargs['database']) as db:
+        messages.verbose_message("Using database '{}'".format(kwargs['database']))
+        for subprogram in prog:
+            if not kwargs['subprograms'] or (kwargs['subprograms'] and subprogram.name in kwargs['subprograms']):
+                subprogram.cfg.dotify()
+                ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+                ppg.dotify()
+                lnt = graph.LoopNests.create(ppg)
+                lnt.dotify()
 
-    end_to_end_execution_times = []
-    transition_execution_times = {}
-    transition_max_freqs = collections.Counter()
-    root_function = instrumentation_point_graphs[call_graph.root_function.name]
-    with open(globals.args['trace_file'], 'r') as in_file:
-        for line in in_file:
-            if re.match(r'\S', line):
-                program_point, time = parse_trace_event(line)
-                if program_point == root_function.entry_vertex.program_point:
-                    debug.verbose_message('Parsing new trace', __name__)
-                    # New trace: reset everything
-                    function = root_function
-                    vertex = root_function.entry_vertex
-                    call_stack = []
-                    start_time = time
-                    pred_time = time
-                    transition_freqs = collections.Counter()
-                else:
-                    # Inch forward one transition
-                    pred_vertex = vertex
-                    vertex = transition(function, vertex, program_point)
-                    transition_execution_times.setdefault((pred_vertex, vertex), []).append(time-pred_time)
-                    transition_freqs[(pred_vertex, vertex)] += 1
-                    pred_time = time
+                ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)
+                ilp_for_ppg.solve('{}{}.ppg.ilp'.format(prog.basename(), ppg.name))
 
-                    if vertex.abstract:
-                        # Moved to a vertex that has been inlined from a callee
-                        # Find where the call is going
-                        call_vertex = program.call_graph.get_vertex_with_name(function.name)
-                        call_edges = [succ_edge for succ_edge in call_vertex.successor_edge_iterator()
-                                      if pred_vertex.program_point in succ_edge.call_sites]
-                        assert len(call_edges) == 1
-                        call_stack.append(State(function, vertex))
-                        callee_vertex = call_graph.get_vertex(call_edges.pop().vertex_id)
-                        function = instrumentation_point_graphs[callee_vertex.name]
-                        if not function.entry_vertex.abstract:
-                            # The entry point of the function represents a call.
-                            # Stay here.
-                            vertex = function.entry_vertex
-                        else:
-                            # The entry point of the function was added for lib only.
-                            # Find the program point where we should be
-                            vertex = transition(function, function.entry_vertex, program_point)
+                ipg = graph.InstrumentationPointGraph.create(ppg, lnt, db)
+                ipg.dotify()
 
-                    if vertex == function.exit_vertex:
-                        if function.name != call_graph.root_function.name:
-                            state = call_stack.pop()
-                            function = state.ipg
-                            vertex = transition(function, state.vertex, vertex.program_point)
-                        else:
-                            end_to_end_execution_times.append(time-start_time)
-                            for k, v in transition_freqs.items():
-                                transition_max_freqs[k] = max(transition_max_freqs[k], v)
+                ilp_for_ipg = calculations.create_ilp_for_instrumentation_point_graph(ipg, lnt, db)
+                ilp_for_ipg.solve('{}{}.ipg.ilp'.format(prog.basename(), ipg.name))
 
-    return transition_execution_times, transition_max_freqs, end_to_end_execution_times
+                if ilp_for_ppg.wcet != ilp_for_ipg.wcet:
+                    messages.verbose_message('>>>>>', ppg.name, 'FAILED')
+                    failures.add(ppg.name)
+                    messages.verbose_message(ilp_for_ppg)
+                    messages.verbose_message(ilp_for_ipg, new_lines=2)
+
+    if len(failures) > 0:
+        messages.verbose_message('The following subprograms failed: {}'.format(', '.join(failures)))
 
 
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Do WCET calculation using instrumentation point graphs')
 
-    parser.add_argument('program_file',
-                        help='a file containing program information'
-                             ' (with .txt extension)')
+    parser.add_argument('--filename',
+                        help='read the program from this file',
+                        required=True)
 
-    parser.add_argument('trace_file',
-                        help='a file containing timestamped execution traces'
-                             ' (with .txt extension)')
+    parser.add_argument('--database',
+                        help='use the WCET data in this file',
+                        required=True)
 
     parser.add_argument('--repeat',
                         type=int,
@@ -120,50 +63,17 @@ def parse_the_command_line():
                         default=1,
                         metavar='<INT>')
 
-    globals.add_common_command_line_arguments(parser)
-    globals.args = vars(parser.parse_args())
-    globals.set_filename_prefix(globals.args['program_file'])
+    parser.add_argument('--subprograms',
+                        nargs='+',
+                        help='only do the calculation for these subprograms',
+                        metavar='<NAME>')
 
-    if os.path.getmtime(globals.args['program_file']) > os.path.getmtime(globals.args['trace_file']):
-        debug.exit_message("Program file '{}' was created AFTER the trace file '{}', "
-                           "which is probably an error".format(globals.args['program_file'],
-                                                               globals.args['trace_file']))
-
-
-def do_wcet_calculation(program : analysis.Program,
-                        instrumentation_point_graphs,
-                        transition_execution_times,
-                        transition_max_freqs):
-    depth_first_search_tree = DepthFirstSearch(program.call_graph,
-                                               program.call_graph.root_function,
-                                               False)
-    call_execution_times = {}
-    # Traverse call graph in reverse topological order to process callees before callers
-    for call_vertex in depth_first_search_tree.post_order:
-        instrumentation_point_graph = instrumentation_point_graphs[call_vertex.name]
-        wcet = calculations.do_wcet_calculation_for_instrumentation_point_graph(program,
-                                                                                instrumentation_point_graph,
-                                                                                transition_execution_times,
-                                                                                transition_max_freqs,
-                                                                                call_execution_times)
-        call_execution_times[call_vertex.name] = wcet
-        print('{}: {:,}'.format(call_vertex.name, wcet))
-        if call_vertex == depth_first_search_tree.post_order[-1]:
-            return wcet
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    parse_the_command_line()
-    program = environment.create_program_from_input_file()
-    analysis.instrument_branches(program)
-    instrumentation_point_graphs = analysis.build_instrumentation_point_graphs(program)
-    transition_execution_times, transition_max_freqs, end_to_end_execution_times = parse_trace(program.call_graph, instrumentation_point_graphs)
-    wcet = do_wcet_calculation(program, instrumentation_point_graphs, transition_execution_times, transition_max_freqs)
-    hwmt = max(end_to_end_execution_times)
-    assert wcet >= hwmt
-    print('WCET = {:,}'.format(wcet))
-    print('HWMT = {:,}'.format(hwmt))
-    print('WCET is higher than HWMT by factor of {:,}'.format(round(wcet/(hwmt * 1.0))))
-
-
-
+    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
+    assert shutil.which('lp_solve', mode=os.X_OK), 'Script requires lp_solve to be in your path'
+    threading.stack_size(2 ** 26)
+    sys.setrecursionlimit(2 ** 20)
+    main(**vars(parse_the_command_line()))

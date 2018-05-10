@@ -3,12 +3,12 @@
 import argparse
 import random
 import sys
-import collections
 
-from lib.graphs import graph
-from lib.system import program
 from lib.utils import dot
-from lib.utils import messages
+
+from graphs import graph
+from programs import program
+from utils import messages
 
 
 def do_super_block_instrumentation(control_flow_graph,
@@ -134,32 +134,58 @@ def inter_procedural_analysis(prog: program.Program, policy, reinstrument, trace
 
 
 def intra_procedural_analysis(prog, policy, reinstrument, traces):
+    generated_ipgs = {cfg.name: [] for cfg in prog}
     for cfg in prog:
         messages.verbose_message('Analysing subprogram {}'.format(cfg.name))
         dot.visualise_control_flow_graph(prog, cfg)
         ppg = graph.ProgramPointGraph(cfg)
         dot.visualise_flow_graph(prog, ppg, '.ppg')
 
-        ipgs = {}
         for i in range(reinstrument):
             ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
-            ipg.name = '{}.{}'.format(ipg.name, i)
-            ipg.reduce()
+            ipg.name = '{}.{}'.format(ipg.name, len(generated_ipgs[cfg.name]))
+            generated_ipgs[cfg.name].append(ipg)
+            filters = [lambda v: ipg.predecessors(v) and
+                                 ipg.successors(v) and
+                                 len(ipg.predecessors(v)) == 1 and
+                                 len(ipg.successors(v)) == 1,
+                       lambda v: ipg.predecessors(v) and
+                                 ipg.successors(v)]
+            ipg.reduce(filters)
             #dot.visualise_instrumentation_point_graph(prog, ipg)
-            ipgs.setdefault(ppg.name, []).append(ipg)
 
-        for name, ipgs in ipgs.items():
-            ipgs.sort(key=lambda ipg: ipg.number_of_vertices())
-            ipgs.sort(key=lambda ipg: ipg.number_of_edges())
-            print("=====================>", name)
-            counts = collections.Counter(ipg.number_of_vertices() for ipg in ipgs)
-            print(counts)
-            for ipg in ipgs:
-                print('{}: n={} m={}    [{}]'.format(ipg.name, ipg.number_of_vertices(), ipg.number_of_edges(),
-                                                     ' '.join(str(v.program_point) for v in ipg.removal_order)))
-            print('best: {}'.format(ipgs[0].name))
-            print('worst: {}'.format(ipgs[-1].name))
+        for i in range(reinstrument):
+            ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+            ipg.name = '{}.{}'.format(ipg.name, len(generated_ipgs[cfg.name]))
+            generated_ipgs[cfg.name].append(ipg)
+            filters = [lambda v: True]
+            ipg.reduce(filters)
+            # dot.visualise_instrumentation_point_graph(prog, ipg)
 
+    for name, ipgs in generated_ipgs.items():
+        ipgs.sort(key=lambda ipg: ipg.number_of_vertices())
+        ipgs.sort(key=lambda ipg: ipg.number_of_edges())
+        print("===========================> {} candidates: {}".format(name, len(ipgs)))
+        basic_ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+        print('n={} m={}'.format(basic_ipg.number_of_vertices(), basic_ipg.number_of_edges()))
+        smallest_instrumentation = min(ipgs, key=lambda ipg: ipg.number_of_vertices())
+        print('min(|V|): {} n={} m={}'.format(smallest_instrumentation.name,
+                                              smallest_instrumentation.number_of_vertices(),
+                                              smallest_instrumentation.number_of_edges()))
+        largest_instrumentation = max(ipgs, key=lambda ipg: ipg.number_of_vertices())
+        print('max(|V|): {} n={} m={}'.format(largest_instrumentation.name,
+                                              largest_instrumentation.number_of_vertices(),
+                                              largest_instrumentation.number_of_edges()))
+
+        smallest_footprint = min(ipgs, key=lambda ipg: ipg.number_of_edges())
+        print('min(|E|): {} n={} m={}'.format(smallest_footprint.name,
+                                              smallest_footprint.number_of_vertices(),
+                                              smallest_footprint.number_of_edges()))
+
+        largest_footprint = max(ipgs, key=lambda ipg: ipg.number_of_edges())
+        print('max(|E|): {} n={} m={}'.format(largest_footprint.name,
+                                              largest_footprint.number_of_vertices(),
+                                              largest_footprint.number_of_edges()))
 
 def main(**kwargs):
     prog = program.Program.IO.read(kwargs['filename'])

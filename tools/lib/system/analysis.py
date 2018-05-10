@@ -1,17 +1,17 @@
 import collections
-import numpy
 import random
-
 from concurrent.futures import ThreadPoolExecutor
 
-from lib.system.vertices import SubprogramVertex, is_basic_block
+import numpy
+from lib.utils.debug import verbose_message
+
 from lib.system.directed_graphs import (DepthFirstSearch,
                                         CallGraph,
                                         InstrumentationPointGraph)
 from lib.system.vertices import ProgramPointVertex
+from lib.system.vertices import SubprogramVertex, is_basic_block
 from lib.utils import globals
-from lib.utils import dot
-from lib.utils.debug import verbose_message
+from utils import dot
 
 
 class ProgramPointData:

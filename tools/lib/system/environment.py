@@ -1,13 +1,14 @@
 import collections
-import re
-import numpy
 import random
+import re
 
-from lib.system.vertices import ProgramPointVertex
+import numpy
+
 from lib.system import analysis
 from lib.system import directed_graphs
-from lib.utils import dot
+from lib.system.vertices import ProgramPointVertex
 from lib.utils import globals
+from utils import dot
 
 INSTRUMENT = 'instrument'
 WCET = 'wcet'
