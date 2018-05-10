@@ -1,11 +1,11 @@
-import sys
 import argparse
 import random
+import sys
 import threading
 
-from programs import program
-from graphs import graph
 from calculations import database
+from graphs import graph
+from system import program
 from utils import messages
 
 
@@ -23,12 +23,12 @@ def add_automatic_wfreq(db: database.Database, v, lnt, maximum_value):
 
 
 def main(**kwargs):
-    prog = program.IO.read(kwargs['filename'])
+    the_program = program.IO.read(kwargs['filename'])
     properties = program.IO.read_properties(kwargs['filename'])
 
     with database.Database(kwargs['database']) as db:
         db.reset()
-        for subprogram in prog:
+        for subprogram in the_program:
             messages.debug_message('Creating data for {}'.format(subprogram.name))
             ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()

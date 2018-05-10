@@ -3,7 +3,7 @@ import random
 import sys
 
 from graphs import graph
-from programs import program
+from system import program
 from utils import messages
 
 

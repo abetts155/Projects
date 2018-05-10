@@ -704,7 +704,7 @@ class CallGraph(DirectedGraph):
             for e in sorted([e for e in self.successors(v)], key=lambda e: e.successor().name):
                 data.append(e.dotify())
 
-        filename = self.program.basename() + 'call.dot'
+        filename = '{}.call.dot'.format(self.program.basename())
         dot.generate(filename, data)
 
 
@@ -816,7 +816,10 @@ class ControlFlowGraph(FlowGraph):
                 if not (e.successor() in visited or e.successor() in queue):
                     queue.insert(0, e.successor())
 
-        filename = self.program.basename() + self.name + suffix + '.cfg.dot'
+        if suffix:
+            filename = '{}.{}.cfg.{}.dot'.format(self.program.basename(), self.name, suffix)
+        else:
+            filename = '{}.{}.cfg.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
 
@@ -908,7 +911,12 @@ class ProgramPointGraph(FlowGraph):
                 data.append(v.dotify())
                 for e in self.successors(v):
                     data.append(e.dotify())
-        dot.generate(self.program.basename() + self.name + suffix + '.ppg.dot', data)
+
+        if suffix:
+            filename = '{}.{}.ppg.{}.dot'.format(self.program.basename(), self.name, suffix)
+        else:
+            filename = '{}.{}.ppg.dot'.format(self.program.basename(), self.name)
+        dot.generate(filename, data)
 
 
 class DominatorGraph(FlowGraph):
@@ -935,7 +943,9 @@ class DominatorGraph(FlowGraph):
             data.append(v.dotify())
             for succ_edge in self.successors(v):
                 data.append(succ_edge.dotify())
-        dot.generate(self.program.basename() + self.name + '.dominator.dot', data)
+
+        filename = '{}.{}.dominator.dot'.format(self.program.basename(), self.name)
+        dot.generate(filename, data)
 
 
 class DependenceGraph(DirectedGraph):
@@ -1031,11 +1041,13 @@ class DominatorTree(Tree, ProgramData):
             data.append(v.dotify())
             for e in self.successors(v):
                 data.append(e.dotify())
+
         if self._type == DominatorTree.Type.PRE:
-            suffix = '.pre'
+            suffix = 'pre'
         else:
-            suffix = '.post'
-        dot.generate(self.program.basename() + self.name + suffix + '.dot', data)
+            suffix = 'post'
+        filename = '{}.{}.{}.dot'.format(self.program.basename(), self.name, suffix)
+        dot.generate(filename, data)
 
     def __compute(self, flow_graph):
         # This is an implementation of the Lengauer-Tarjan algorithm
@@ -1498,7 +1510,10 @@ class LoopNests(FlowGraph):
                     if not(e.successor() in queue or e.successor() in visited):
                         queue.insert(0, e.successor())
 
-        filename = self.program.basename() + self.name + '.lnt' + suffix + '.dot'
+        if suffix:
+            filename = '{}.{}.lnt.{}.dot'.format(self.program.basename(), self.name, suffix)
+        else:
+            filename = '{}.{}.lnt.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
 
@@ -1560,7 +1575,10 @@ class InstrumentationPointGraph(FlowGraph):
             for e in self.successors(v):
                 data.append(e.dotify())
 
-        filename = self.program.basename() + self.name + '.ipg' + suffix + '.dot'
+        if suffix:
+            filename = '{}.{}.ipg.{}.dot'.format(self.program.basename(), self.name, suffix)
+        else:
+            filename = '{}.{}.ipg.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
 
@@ -1641,12 +1659,13 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
             data.append(v.dotify())
             for e in self.successors(v):
                 data.append(e.dotify())
-        dot.generate(self.program.basename() + self.name + '.super.dot', data)
+        filename = '{}.{}.super.dot'.format(self.program.basename, self.name)
+        dot.generate(filename, data)
 
 
 class SyntaxTree(Tree):
     def __init__(self, g: FlowGraph):
-        Tree.__init__(self, g.program)
+        Tree.__init__(self)
         self.g = g
         self._cache = {}
         self._post_dominance_frontier = DominanceFrontiers(g, g.post_dominator_tree())
@@ -1702,5 +1721,6 @@ class SyntaxTree(Tree):
             data.append(v.dotify())
             for e in self.successors(v):
                 data.append(e.dotify())
-        dot.generate(self.program.basename() + self.g.name + '.ast.dot', data)
+        filename = '{}.{}.ast.dot'.format(self.g.program, self.g.name)
+        dot.generate(filename, data)
 

@@ -7,7 +7,7 @@ import sys
 from lib.utils import dot
 
 from graphs import graph
-from programs import program
+from system import program
 from utils import messages
 
 

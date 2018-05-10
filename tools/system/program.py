@@ -66,12 +66,13 @@ class Program:
     def call_graph(self) -> graph.CallGraph:
         return self.__call_graph
 
+    @property
+    def filename(self):
+        return self._filename
+
     def basename(self):
         base, _ = os.path.splitext(os.path.abspath(self._filename))
-        path = os.path.dirname(base) + os.sep
-        if not os.path.exists(path):
-            os.mkdir(path)
-        return path
+        return base
 
     def cleanup(self):
         for root, dirs, files in os.walk(self.basename()):
@@ -236,7 +237,6 @@ class IO:
                         s = graph.Vertex.id_pool[succ_id]
                         program_point = graph.ControlFlowEdge(p, s)
                         properties[program_point] = Properties()
-                        print(program_point)
                     set_properties(suffix, properties[program_point])
 
         return properties

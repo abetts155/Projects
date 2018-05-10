@@ -1,14 +1,14 @@
-import sys
+import argparse
 import os
 import shutil
-import argparse
+import sys
 import threading
 import timeit
 
-from programs import program
-from graphs import graph
 from calculations import calculations
 from calculations import database
+from graphs import graph
+from system import program
 from utils import messages
 
 

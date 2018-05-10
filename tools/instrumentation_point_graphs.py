@@ -1,13 +1,13 @@
 import argparse
 import os
-import sys
 import shutil
+import sys
 import threading
 
-from programs import program
-from calculations import database
 from calculations import calculations
+from calculations import database
 from graphs import graph
+from system import program
 from utils import messages
 
 
@@ -28,13 +28,13 @@ def main(**kwargs):
                 lnt.dotify()
 
                 ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)
-                ilp_for_ppg.solve('{}{}.ppg.ilp'.format(prog.basename(), ppg.name))
+                ilp_for_ppg.solve('{}.{}.ppg.ilp'.format(prog.basename(), ppg.name))
 
                 ipg = graph.InstrumentationPointGraph.create(ppg, lnt, db)
                 ipg.dotify()
 
                 ilp_for_ipg = calculations.create_ilp_for_instrumentation_point_graph(ipg, lnt, db)
-                ilp_for_ipg.solve('{}{}.ipg.ilp'.format(prog.basename(), ipg.name))
+                ilp_for_ipg.solve('{}.{}.ipg.ilp'.format(prog.basename(), ipg.name))
 
                 if ilp_for_ppg.wcet != ilp_for_ipg.wcet:
                     messages.verbose_message('>>>>>', ppg.name, 'FAILED')
@@ -54,7 +54,7 @@ def parse_the_command_line():
                         required=True)
 
     parser.add_argument('--database',
-                        help='use the WCET data in this file',
+                        help='use the data in this file',
                         required=True)
 
     parser.add_argument('--repeat',
