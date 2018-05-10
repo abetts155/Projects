@@ -3,9 +3,8 @@ import random
 import sys
 import threading
 
-from calculations import database
 from graphs import graph
-from system import program
+from system import program, database
 from utils import messages
 
 
@@ -32,7 +31,7 @@ def main(**kwargs):
             messages.debug_message('Creating data for {}'.format(subprogram.name))
             ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
-            lnt = graph.LoopNests.create(ppg)
+            lnt = graph.LoopNests(ppg)
             lnt.dotify()
 
             for v in ppg:

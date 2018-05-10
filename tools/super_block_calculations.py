@@ -6,9 +6,8 @@ import threading
 import timeit
 
 from calculations import calculations
-from calculations import database
 from graphs import graph
-from system import program
+from system import program, database
 from utils import messages
 
 

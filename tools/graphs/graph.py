@@ -828,33 +828,31 @@ class ProgramPointGraph(FlowGraph):
     def create_from_control_flow_graph(cls, cfg: ControlFlowGraph):
         ppg = ProgramPointGraph(cfg.program, cfg.name)
         # Add a vertex per basic block
-        for v in cfg:
-            program_point = ProgramPointVertex(Vertex.get_vertex_id(), v)
-            ppg.add_vertex(program_point)
-            ppg.__program_point_to_vertex[v] = program_point
-            if v == cfg.entry:
-                ppg._entry = program_point
-            if v == cfg.exit:
-                ppg._exit = program_point
+        for basic_block in cfg:
+            v = ProgramPointVertex(Vertex.get_vertex_id(), basic_block)
+            ppg.add_vertex(v)
+            if v.program_point == cfg.entry:
+                ppg._entry = v
+            if v.program_point == cfg.exit:
+                ppg._exit = v
 
-        def add_edge():
-            program_point = ProgramPointVertex(Vertex.get_vertex_id(), e)
-            ppg.add_vertex(program_point)
-            ppg.__program_point_to_vertex[e] = program_point
-            p = ppg.__program_point_to_vertex[e.predecessor()]
-            s = ppg.__program_point_to_vertex[e.successor()]
-            ppg.add_edge(ControlFlowEdge(p, program_point, e.direction))
-            ppg.add_edge(ControlFlowEdge(program_point, s, Direction.CONTINUE))
+        def add_edge(edge):
+            v = ProgramPointVertex(Vertex.get_vertex_id(), edge)
+            ppg.add_vertex(v)
+            p = ppg.__program_point_to_vertex[edge.predecessor()]
+            s = ppg.__program_point_to_vertex[edge.successor()]
+            ppg.add_edge(TransitionEdge(p, v))
+            ppg.add_edge(TransitionEdge(v, s))
 
         # Add a vertex per control flow transition, and join the control flow
         # transition to its end points on both sides
         for v in cfg:
-            for e in cfg.successors(v):
-                add_edge()
+            for edge in cfg.successors(v):
+                add_edge(edge)
 
         # Add dummy edge
-        e = ControlFlowEdge(cfg.exit, cfg.entry, Direction.CONTINUE)
-        add_edge()
+        edge = TransitionEdge(cfg.exit, cfg.entry)
+        add_edge(edge)
 
         return ppg
 
@@ -862,11 +860,22 @@ class ProgramPointGraph(FlowGraph):
         FlowGraph.__init__(self, program, name)
         self.__program_point_to_vertex = {}
 
-    def get_vertex(self, program_point: Edge or Vertex):
+    def add_vertex(self, v: ProgramPointVertex):
+        FlowGraph.add_vertex(self, v)
+        self.__program_point_to_vertex[v.program_point] = v
+
+    def remove_vertex(self, v: ProgramPointVertex):
+        FlowGraph.remove_vertex(self, v)
+        del self.__program_point_to_vertex[v.program_point]
+
+    def __getitem__(self, item: Edge or Vertex):
         try:
-            return self.__program_point_to_vertex[program_point]
+            return self.__program_point_to_vertex[item]
         except KeyError:
-            messages.error_message('No vertex in program point graph for program point {}'.format(str(program_point)))
+            messages.error_message('No vertex in program point graph for program point {}'.format(str(item)))
+
+    def trace_filename(self):
+        return '{}.{}.ppg.trace'.format(self.program.basename(), self.name)
 
     def choose_instrumentation(self):
         def attempt_removal():
@@ -876,7 +885,7 @@ class ProgramPointGraph(FlowGraph):
                 for successor_edge in self.successors(predecessor_edge.predecessor()):
                     existing_edges.add(successor_edge)
                 for successor_edge in self.successors(v):
-                    new_edges.add(Edge(predecessor_edge.predecessor(), successor_edge.successor()))
+                    new_edges.add(TransitionEdge(predecessor_edge.predecessor(), successor_edge.successor()))
 
             if existing_edges.intersection(new_edges):
                 return False
@@ -1298,72 +1307,32 @@ class DepthFirstSearch:
 
 
 class LoopNests(FlowGraph):
-    @staticmethod
-    def create(ppg: ProgramPointGraph, unify_shared_loops=True):
-        lnt = LoopNests(ppg)
-        lnt.discover_loop_bodies(ppg, unify_shared_loops)
-        lnt.set_entry(ppg)
-        lnt.set_exit(ppg)
-
-        edges = {}
-        for v in ppg:
-            if isinstance(v.program_point, Edge):
-                loop = lnt.find_loop(v)
-                loop_of_predecessor = lnt.find_loop(ppg.get_vertex(v.program_point.predecessor()))
-                loop_of_successor = lnt.find_loop(ppg.get_vertex(v.program_point.successor()))
-                if loop != loop_of_predecessor:
-                    if not lnt.has_edge(loop_of_predecessor, loop):
-                        edge = LoopTransition(loop_of_predecessor, loop, LoopTransition.Direction.EXIT)
-                        lnt.add_edge(edge)
-                        edges[(loop_of_predecessor, loop)] = edge
-                    edge = edges[(loop_of_predecessor, loop)]
-                    edge.add(Edge(ppg.get_vertex(v.program_point.predecessor()), v))
-                if loop != loop_of_successor:
-                    if not lnt.has_edge(loop, loop_of_successor):
-                        edge = LoopTransition(loop, loop_of_successor, LoopTransition.Direction.ENTRY)
-                        lnt.add_edge(edge)
-                        edges[(loop, loop_of_successor)] = edge
-                    edge = edges[(loop, loop_of_successor)]
-                    edge.add(Edge(v, ppg.get_vertex(v.program_point.successor())))
-
-                if lnt.is_tail(v):
-                    loop = lnt.find_loop(v)
-                    if not lnt.has_edge(loop, loop):
-                        edge = LoopTransition(loop, loop, LoopTransition.Direction.BACK)
-                        lnt.add_edge(edge)
-                        edges[(loop, loop)] = edge
-                    edge = edges[(loop, loop)]
-                    edge.add(Edge(v, ppg.get_vertex(v.program_point.successor())))
-        return lnt
-
-    def __init__(self, flow_graph):
-        FlowGraph.__init__(self, flow_graph.program, flow_graph.name)
+    def __init__(self, ppg, unify_shared_loops=True):
+        FlowGraph.__init__(self, ppg.program, ppg.name)
         self._loops = []
         self._headers = set()
         self._tails = set()
-        self._program_point_to_loop = {v: None for v in flow_graph}
+        self._program_point_to_loop = {v: None for v in ppg}
+        self.__discover_loop_bodies(ppg, unify_shared_loops)
+        self.__model_control_flow_into_and_out_of_loop(ppg)
+        (self.entry,) = [loop for loop in self if ppg.entry in loop]
+        (self.exit,) = [loop for loop in self if ppg.exit in loop]
 
-    def set_entry(self, flow_graph):
-        (self.entry,) = [loop for loop in self if flow_graph.entry in loop]
-
-    def set_exit(self, flow_graph):
-        (self.exit,) = [loop for loop in self if flow_graph.exit in loop]
-
-    def discover_loop_bodies(self, flow_graph, unify_shared_loops):
+    def __discover_loop_bodies(self, ppg, unify_shared_loops):
         def do_search(v):
             visited.add(v)
             if v != header:
-                for e in flow_graph.predecessors(v):
+                for e in ppg.predecessors(v):
                     where_next = containment[e.predecessor()]
                     if where_next not in visited:
                         do_search(where_next)
             order.append(v)
 
-        containment = {v: v for v in flow_graph}
-        data = {v: set() for v in flow_graph}
-        dfs = DepthFirstSearch(flow_graph, flow_graph.entry)
+        containment = {v: v for v in ppg}
+        data = {v: set() for v in ppg}
+        dfs = DepthFirstSearch(ppg, ppg.entry)
         for v in reversed(dfs.pre_order()):
-            back_edges = [e for e in flow_graph.predecessors(v) if e in dfs.back_edges]
+            back_edges = [e for e in ppg.predecessors(v) if e in dfs.back_edges]
             if back_edges:
                 # Sort back edges according to their post-order numbering, then reverse, so that we visit all successors
                 # of a vertex before the vertex itself
@@ -1373,9 +1342,9 @@ class LoopNests(FlowGraph):
                 header = v
                 tails = set()
                 for e in back_edges:
-                    if not flow_graph.pre_dominator_tree().is_ancestor(e.successor(), e.predecessor()):
+                    if not ppg.pre_dominator_tree().is_ancestor(e.successor(), e.predecessor()):
                         messages.error_message(
-                            "Edge {} in '{}' identifies an irreducible loop".format(str(e.predecessor()), flow_graph.name))
+                            "Edge {} in '{}' identifies an irreducible loop".format(str(e.predecessor()), ppg.name))
                     do_search(e.predecessor())
                     tails.add(e.predecessor())
 
@@ -1389,7 +1358,7 @@ class LoopNests(FlowGraph):
                     if w != header:
                         # Propagate reachability information concerning loop tails to immediate predecessors.
                         # We ignore the loop header so that the information does not spill out to enclosing loop.
-                        for e in flow_graph.predecessors(w):
+                        for e in ppg.predecessors(w):
                             data[containment[e.predecessor()]].update(data[w])
 
                 loop_vertices = {}
@@ -1406,6 +1375,39 @@ class LoopNests(FlowGraph):
 
                 # Clear the reachability information in readiness for enclosing loops.
                 data[header].clear()
+
+    def __model_control_flow_into_and_out_of_loop(self, ppg):
+        edges = {}
+        for v in ppg:
+            if isinstance(v.program_point, Edge):
+                loop = self.find_loop(v)
+                loop_of_predecessor = self.find_loop(ppg[v.program_point.predecessor()])
+                loop_of_successor = self.find_loop(ppg[v.program_point.successor()])
+
+                if loop != loop_of_predecessor:
+                    if not self.has_edge(loop_of_predecessor, loop):
+                        edge = LoopTransition(loop_of_predecessor, loop, LoopTransition.Direction.EXIT)
+                        self.add_edge(edge)
+                        edges[(loop_of_predecessor, loop)] = edge
+                    edge = edges[(loop_of_predecessor, loop)]
+                    edge.add(TransitionEdge(ppg[v.program_point.predecessor()], v))
+
+                if loop != loop_of_successor:
+                    if not self.has_edge(loop, loop_of_successor):
+                        edge = LoopTransition(loop, loop_of_successor, LoopTransition.Direction.ENTRY)
+                        self.add_edge(edge)
+                        edges[(loop, loop_of_successor)] = edge
+                    edge = edges[(loop, loop_of_successor)]
+                    edge.add(TransitionEdge(v, ppg[v.program_point.successor()]))
+
+                if self.is_tail(v):
+                    loop = self.find_loop(v)
+                    if not self.has_edge(loop, loop):
+                        edge = LoopTransition(loop, loop, LoopTransition.Direction.BACK)
+                        self.add_edge(edge)
+                        edges[(loop, loop)] = edge
+                    edge = edges[(loop, loop)]
+                    edge.add(TransitionEdge(v, ppg[v.program_point.successor()]))
 
     def add_vertex(self, v: Vertex):
         FlowGraph.add_vertex(self, v)
@@ -1445,10 +1447,10 @@ class LoopNests(FlowGraph):
                     self._program_point_to_loop[v] = loop
         return self._program_point_to_loop[v]
 
-    def induce(self, flow_graph, header, guarantee_single_exit=False):
+    def induce(self, ppg, header, guarantee_single_exit=False):
         messages.debug_message('Inducing loop subgraph for header {}'.format(header))
 
-        induced_graph = ProgramPointGraph(flow_graph.program, flow_graph.name)
+        induced_graph = ProgramPointGraph(ppg.program, ppg.name)
         loop = self.find_loop(header)
 
         # Add program points in the loop body.
@@ -1457,7 +1459,7 @@ class LoopNests(FlowGraph):
 
         # Add edges between program points in the loop body.
         for v in loop:
-            for succcessor_edge in flow_graph.successors(v):
+            for succcessor_edge in ppg.successors(v):
                 if succcessor_edge.successor() in induced_graph and succcessor_edge.successor() != header:
                     induced_graph.add_edge(succcessor_edge)
 
@@ -1478,7 +1480,7 @@ class LoopNests(FlowGraph):
         for transition_edge in self.predecessors(loop):
             if transition_edge.direction == LoopTransition.Direction.EXIT:
                 for edge in transition_edge:
-                    induced_graph.add_edge(Edge(transition_edge.predecessor().header, edge.successor()))
+                    induced_graph.add_edge(TransitionEdge(transition_edge.predecessor().header, edge.successor()))
 
         # Set the entry of the induced graph.
         induced_graph.entry = header
@@ -1493,7 +1495,7 @@ class LoopNests(FlowGraph):
                 induced_graph.add_vertex(dummy_program_point)
                 induced_graph.exit = dummy_program_point
                 for exit_program_point in exits:
-                    induced_graph.add_edge(ControlFlowEdge(exit_program_point, dummy_program_point))
+                    induced_graph.add_edge(TransitionEdge(exit_program_point, dummy_program_point))
         return induced_graph
 
     def dotify(self, suffix=''):
@@ -1517,7 +1519,7 @@ class LoopNests(FlowGraph):
         dot.generate(filename, data)
 
 
-class InstrumentationPointGraph(FlowGraph):
+class InstrumentationPointGraph(ProgramPointGraph):
     @staticmethod
     def create(ppg: ProgramPointGraph, lnt: LoopNests, db):
         # Add selected instrumented program points.
@@ -1527,7 +1529,7 @@ class InstrumentationPointGraph(FlowGraph):
 
         for v in ppg:
             for successor_edge in ppg.successors(v):
-                ipg.add_edge(TransitionEdge(v, successor_edge.successor()))
+                ipg.add_edge(successor_edge)
 
         def disconnect(ipg, v, back_edge, loop):
             for predecessor_edge in ipg.predecessors(v):
@@ -1566,6 +1568,9 @@ class InstrumentationPointGraph(FlowGraph):
             for v in to_remove:
                 if v in ipg:
                     disconnect(ipg, v, True, union)
+
+        (ipg.entry,) = [v for v in ipg if v == ppg.entry]
+        (ipg.exit,) = [v for v in ipg if v == ppg.exit]
         return ipg
 
     def dotify(self, suffix=''):
@@ -1580,6 +1585,9 @@ class InstrumentationPointGraph(FlowGraph):
         else:
             filename = '{}.{}.ipg.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
+
+    def trace_filename(self):
+        return '{}.{}.ipg.trace'.format(self.program.basename(), self.name)
 
 
 class SuperBlockGraph(DirectedGraph, ProgramData):

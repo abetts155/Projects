@@ -4,10 +4,8 @@ import shutil
 import sys
 import threading
 
-from calculations import calculations
-from calculations import database
 from graphs import graph
-from system import program
+from system import (program, database, calculations)
 from utils import messages
 
 
@@ -24,7 +22,7 @@ def main(**kwargs):
                 subprogram.cfg.dotify()
                 ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
                 ppg.dotify()
-                lnt = graph.LoopNests.create(ppg)
+                lnt = graph.LoopNests(ppg)
                 lnt.dotify()
 
                 ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)

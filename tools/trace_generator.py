@@ -35,7 +35,7 @@ def main(**kwargs):
         for trace_number in range(1, kwargs['number_of_runs'] + 1):
             trace = generate_trace(ppg, **kwargs)
             all_traces.append(trace)
-        all_traces.write(traces.TraceFile.create(the_program, ppg))
+        all_traces.write(ppg.trace_filename())
 
 
 def parse_the_command_line():

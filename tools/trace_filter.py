@@ -1,9 +1,8 @@
 import argparse
 import sys
 
-from calculations import database
 from graphs import graph
-from system import traces, program
+from system import traces, program, database
 from utils import messages
 
 
@@ -35,26 +34,24 @@ def filter_trace(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGr
 def main(**kwargs):
     the_program = program.IO.read(kwargs['filename'])
 
-    subprogram_trace_files = {}
+    subprogram_trace = {}
     for trace_file in kwargs['traces']:
         name = traces.TraceFile.extract_subprogram(the_program, trace_file)
-        subprogram_trace_files.setdefault(name, set()).add(trace_file)
+        subprogram_trace[name] = trace_file
 
     for subprogram in the_program:
-        if subprogram.name in subprogram_trace_files:
+        if subprogram.name in subprogram_trace:
             messages.debug_message('Filtering traces for {}'.format(subprogram.name))
             ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
-            lnt = graph.LoopNests.create(ppg)
+            lnt = graph.LoopNests(ppg)
             lnt.dotify()
 
             with database.Database(kwargs['database']) as db:
                 ipg = graph.InstrumentationPointGraph.create(ppg, lnt, db)
                 ipg.dotify()
-                all_traces = traces.Traces()
-                for trace_file in subprogram_trace_files[subprogram.name]:
-                    all_traces.extend(filter_trace(ppg, ipg, trace_file))
-                all_traces.write(traces.TraceFile.create(the_program, ipg))
+                all_traces = filter_trace(ppg, ipg, subprogram_trace[subprogram.name])
+                all_traces.write(ipg.trace_filename())
 
 
 def parse_the_command_line():

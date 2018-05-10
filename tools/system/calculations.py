@@ -1,12 +1,12 @@
-import os
-import timeit
-import subprocess
 import decimal
+import os
 import re
+import subprocess
+import timeit
 
-from utils import messages
 from graphs import graph
-from calculations import database
+from system import database
+from utils import messages
 
 
 class Variable:

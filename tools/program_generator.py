@@ -188,13 +188,13 @@ def create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, sub
     return cfg
 
 
-def add_subprograms(prog: program.Program, subprograms: int, loops: int, nesting_depth: int, vertices: int, fan_out: int):
+def add_subprograms(the_program: program.Program, subprograms: int, loops: int, nesting_depth: int, vertices: int, fan_out: int):
     for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms+1)]:
         messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
-        cfg = create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, subprogram_name)
+        cfg = create_control_flow_graph(the_program, loops, nesting_depth, vertices, fan_out, subprogram_name)
         cfg.dotify()
         call_vertex = graph.SubprogramVertex(graph.Vertex.get_vertex_id(), subprogram_name)
-        prog.add_subprogram(program.Subprogram(cfg, call_vertex))
+        the_program.add_subprogram(program.Subprogram(cfg, call_vertex))
 
 
 def add_calls(prog: program.Program, recursion_enabled):

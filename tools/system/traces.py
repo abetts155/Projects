@@ -19,6 +19,20 @@ class TraceElement:
                                      str(self.v.program_point.successor()),
                                      self.time)
 
+    @classmethod
+    def parse(cls, line):
+        lexemes = line.split()
+        if lexemes:
+            time = int(lexemes[-1])
+            if len(lexemes) == 2:
+                v = graph.Vertex.id_pool[int(lexemes[0])]
+                return v, time
+            else:
+                p = graph.Vertex.id_pool[int(lexemes[0])]
+                s = graph.Vertex.id_pool[int(lexemes[1])]
+                edge = graph.ControlFlowEdge(p, s)
+                return edge, time
+
 
 class Trace(list):
     pass
@@ -35,21 +49,24 @@ class Traces(list):
 
 
 class TraceFile:
-    EXT = 'trace'
-
     @classmethod
-    def create(cls, the_program: program.Program, g: graph.ProgramPointGraph or graph.InstrumentationPointGraph):
-        if isinstance(g, graph.ProgramPointGraph):
-            return '{}.{}.ppg.{}'.format(the_program.basename(), g.name, cls.EXT)
-        else:
-            assert isinstance(g, graph.InstrumentationPointGraph)
-            return '{}.{}.ipg.{}'.format(the_program.basename(), g.name, cls.EXT)
-
-    @classmethod
-    def extract_subprogram(cls, the_program: program.Program, trace_file: str):
+    def tokenize(cls, the_program: program.Program, filename: str):
         _, prefix = os.path.split(the_program.basename())
-        _, trace_file = os.path.split(trace_file)
-        trace_file = trace_file[len(prefix):]
-        lexemes = trace_file.split('.')
+        _, filename = os.path.split(filename)
+        filename = filename[len(prefix):]
+        lexemes = filename.split('.')
         assert len(lexemes) == 4
-        return lexemes[1]
+        return lexemes[1:-1]
+
+    @classmethod
+    def extract_subprogram(cls, the_program: program.Program, filename: str):
+        lexemes = cls.tokenize(the_program, filename)
+        return lexemes[0]
+
+    @classmethod
+    def extract_type(cls, the_program: program.Program, filename: str):
+        lexemes = cls.tokenize(the_program, filename)
+        if lexemes[1] == 'ppg':
+            return graph.ProgramPointGraph
+        else:
+            return graph.InstrumentationPointGraph
