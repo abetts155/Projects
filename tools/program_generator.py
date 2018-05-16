@@ -2,7 +2,7 @@ import argparse
 import random
 import sys
 
-from graphs import graph
+from graphs import (edges, graphs, vertices)
 from system import program
 from utils import messages
 
@@ -32,7 +32,7 @@ class ArtificialLoopBody:
 
     def add_vertices(self, cfg, number_of_vertices):
         while number_of_vertices > 0:
-            v = graph.Vertex(graph.Vertex.get_vertex_id())
+            v = vertices.Vertex(vertices.Vertex.get_vertex_id())
             cfg.add_vertex(v)
             self._vertices.add(v)
             number_of_vertices -= 1
@@ -77,7 +77,7 @@ class ArtificialLoopBody:
                 for s in self._level_to_vertices[level]:
                     candidates = [v for v in self._level_to_vertices[level-1] if len(cfg.successors(v)) < fan_out]
                     (p,) = random.sample(candidates, 1)
-                    cfg.add_edge(graph.ControlFlowEdge(p, s))
+                    cfg.add_edge(edges.ControlFlowEdge(p, s))
                     if len(cfg.successors(p)) == fan_out:
                         candidates.remove(p)
 
@@ -86,12 +86,12 @@ class ArtificialLoopBody:
         candidate_entry_sources = [v for v in self._vertices if 0 < self._vertex_to_level[v] < highest_level]
         for loop in nested_loops:
             (p,) = random.sample(candidate_entry_sources, 1)
-            cfg.add_edge(graph.ControlFlowEdge(p, loop.header))
+            cfg.add_edge(edges.ControlFlowEdge(p, loop.header))
             for exit_source in loop.exits:
                 higher_level = random.randint(self._vertex_to_level[p] + 1, highest_level)
                 candidate_exit_destinations = self._level_to_vertices[higher_level]
                 (s,) = random.sample(candidate_exit_destinations, 1)
-                cfg.add_edge(graph.ControlFlowEdge(exit_source, s))
+                cfg.add_edge(edges.ControlFlowEdge(exit_source, s))
 
     def connect_terminal_vertices(self, cfg):
         highest_level = max(self._level_to_vertices.keys())
@@ -102,12 +102,12 @@ class ArtificialLoopBody:
                 candidate_successors = self._level_to_vertices[higher_level]
                 for p in candidate_predecessors:
                     (s,) = random.sample(candidate_successors, 1)
-                    cfg.add_edge(graph.ControlFlowEdge(p, s))
+                    cfg.add_edge(edges.ControlFlowEdge(p, s))
 
     def add_backedges(self, cfg):
         highest_level = max(self._level_to_vertices.keys())
         for v in self._level_to_vertices[highest_level]:
-            cfg.add_edge(graph.ControlFlowEdge(v, self._header))
+            cfg.add_edge(edges.ControlFlowEdge(v, self._header))
 
     def set_exits(self, cfg):
         selection_probability = 1.0
@@ -120,13 +120,13 @@ class ArtificialLoopBody:
             self._exits.add(self._header)
 
 
-def create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, subprg_name):
+def create_control_flow_graph(prog, loops, nesting_depth, number_of_vertices, fan_out, subprg_name):
     def create_artificial_loop_hierarchy():
         # Add abstract vertices to the tree, including an extra one
         # for the dummy outer loop
-        lnt = graph.DirectedGraph()
+        lnt = graphs.DirectedGraph()
         for _ in range(1, loops+2):
-            lnt.add_vertex(graph.Vertex(graph.Vertex.get_vertex_id()))
+            lnt.add_vertex(vertices.Vertex(vertices.Vertex.get_vertex_id()))
 
         # Add edges to the tree
         vertex_to_level = {v: 0 for v in lnt}
@@ -136,7 +136,7 @@ def create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, sub
             if v != root_v:
                 new_level = vertex_to_level[parent_v] + 1
                 if new_level <= nesting_depth:
-                    lnt.add_edge(graph.Edge(parent_v, v))
+                    lnt.add_edge(edges.Edge(parent_v, v))
                     vertex_to_level[v] = new_level
                 else:
                     # The height of the tree now exceeds the maximum depth, so
@@ -148,12 +148,12 @@ def create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, sub
                         if bool(random.getrandbits(1)) or ancestor_v == root_v:
                             break
                     parent_v = ancestor_v
-                    lnt.add_edge(graph.Edge(parent_v, v))
+                    lnt.add_edge(edges.Edge(parent_v, v))
                     vertex_to_level[v] = vertex_to_level[parent_v] + 1
                 parent_v = v
 
         # Compute number of vertices in each loop
-        number_of_vertices_remaining = vertices
+        number_of_vertices_remaining = number_of_vertices
         for v in lnt:
             # Guarantee each loop has at least 2 vertices plus vertices needed
             # to connect inner nested loops
@@ -181,23 +181,28 @@ def create_control_flow_graph(prog, loops, nesting_depth, vertices, fan_out, sub
             cfg.entry = e.successor()
             cfg.exit = e.predecessor()
 
-    cfg = graph.ControlFlowGraph(prog, subprg_name)
+    cfg = graphs.ControlFlowGraph(prog, subprg_name)
     lnt, root_v = create_artificial_loop_hierarchy()
     loops = {}
     create_loop_body(root_v)
     return cfg
 
 
-def add_subprograms(the_program: program.Program, subprograms: int, loops: int, nesting_depth: int, vertices: int, fan_out: int):
+def add_subprograms(the_program: program.Program,
+                    subprograms: int,
+                    loops: int,
+                    nesting_depth: int,
+                    number_of_vertices: int,
+                    fan_out: int):
     for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms+1)]:
         messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
-        cfg = create_control_flow_graph(the_program, loops, nesting_depth, vertices, fan_out, subprogram_name)
+        cfg = create_control_flow_graph(the_program, loops, nesting_depth, number_of_vertices, fan_out, subprogram_name)
         cfg.dotify()
-        call_vertex = graph.SubprogramVertex(graph.Vertex.get_vertex_id(), subprogram_name)
+        call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
         the_program.add_subprogram(program.Subprogram(cfg, call_vertex))
 
 
-def add_calls(prog: program.Program, recursion_enabled):
+def add_calls(the_program: program.Program, recursion_enabled):
     class Subprogram:
         __slots__ = ['name', 'candidates', 'level']
 
@@ -207,11 +212,11 @@ def add_calls(prog: program.Program, recursion_enabled):
             self.level = None
 
     data = []
-    for subprogram in prog:
+    for subprogram in the_program:
         subprogram_view = Subprogram(subprogram.cfg.name)
         data.append(subprogram_view)
         # Work out which basic blocks can legitimately make calls
-        dfs = graph.DepthFirstSearch(subprogram.cfg, subprogram.cfg.entry)
+        dfs = graphs.DepthFirstSearch(subprogram.cfg, subprogram.cfg.entry)
         for v in subprogram.cfg:
             if len(subprogram.cfg.successors(v)) == 1:
                 (e,) = subprogram.cfg.successors(v)
@@ -276,30 +281,30 @@ def add_calls(prog: program.Program, recursion_enabled):
 
     for (caller, callee), sites in call_graph_edges.items():
         for site in sites:
-            e = graph.CallGraphEdge(prog[caller.name].call_vertex, prog[callee.name].call_vertex, site)
-            prog.call_graph.add_edge(e)
+            e = edges.CallGraphEdge(the_program[caller.name].call_vertex, the_program[callee.name].call_vertex, site)
+            the_program.call_graph.add_edge(e)
 
-    prog.call_graph.dotify()
+    the_program.call_graph.dotify()
 
 
-def annotate_control_flow_edges(prog: program.Program):
-    for subprogram in prog:
+def annotate_control_flow_edges(the_program: program.Program):
+    for subprogram in the_program:
         for v in subprogram.cfg:
             if len(subprogram.cfg.successors(v)) == 1:
                 (e,) = subprogram.cfg.successors(v)
-                callee = prog.call_graph.is_call_site(subprogram.call_vertex, v)
+                callee = the_program.call_graph.is_call_site(subprogram.call_vertex, v)
                 if callee:
                     e.set_return(callee)
                 elif e.successor() == subprogram.cfg.entry:
-                    e.direction = graph.Direction.UNREACHABLE
+                    e.direction = edges.Direction.UNREACHABLE
                 else:
-                    e.direction = graph.Direction.CONTINUE
+                    e.direction = edges.Direction.CONTINUE
             elif len(subprogram.cfg.successors(v)) == 2:
-                for e, direction in zip(subprogram.cfg.successors(v), [graph.Direction.THEN, graph.Direction.ELSE]):
+                for e, direction in zip(subprogram.cfg.successors(v), [edges.Direction.THEN, edges.Direction.ELSE]):
                     e.direction = direction
             elif len(subprogram.cfg.successors(v)) > 2:
                 for e in subprogram.cfg.successors(v):
-                    e.direction = graph.Direction.CASE
+                    e.direction = edges.Direction.CASE
 
 
 def main(**kwargs):

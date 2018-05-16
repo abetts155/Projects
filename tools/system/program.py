@@ -1,12 +1,12 @@
 import collections
 import os
 
-from graphs import graph
+from graphs import (edges, graphs, vertices)
 from utils import messages
 
 
 class Subprogram:
-    def __init__(self, cfg: graph.ControlFlowGraph, call_vertex: graph.SubprogramVertex):
+    def __init__(self, cfg: graphs.ControlFlowGraph, call_vertex: vertices.SubprogramVertex):
         if not cfg.name == call_vertex.name:
             raise ValueError('Subprogram name mismatch: Found {} and {}'.format(cfg.name, call_vertex.name))
         self.__cfg = cfg
@@ -18,11 +18,11 @@ class Subprogram:
         return self.__cfg.name
 
     @property
-    def cfg(self) -> graph.ControlFlowGraph:
+    def cfg(self) -> graphs.ControlFlowGraph:
         return self.__cfg
 
     @property
-    def call_vertex(self) -> graph.SubprogramVertex:
+    def call_vertex(self) -> vertices.SubprogramVertex:
         return self.__call_vertex
 
     @property
@@ -39,7 +39,7 @@ class Program:
     def __init__(self, filename):
         self._filename = filename
         self.__subprograms = collections.OrderedDict()
-        self.__call_graph = graph.CallGraph(self)
+        self.__call_graph = graphs.CallGraph(self)
 
     def add_subprogram(self, subprogram: Subprogram):
         assert subprogram.name not in self.__subprograms, 'Already have information on subprogram {}'.format(
@@ -63,7 +63,7 @@ class Program:
             yield subprogram
 
     @property
-    def call_graph(self) -> graph.CallGraph:
+    def call_graph(self) -> graphs.CallGraph:
         return self.__call_graph
 
     @property
@@ -86,12 +86,14 @@ class Program:
 class Properties:
     INSTRUMENTATION = 'instrumentation'
     WCET = 'wcet'
-    BOUND = 'bound'
+    LOCAL_WFREQ = 'local'
+    GLOBAL_WFREQ = 'global'
 
     def __init__(self):
         self.INSTRUMENTATION = None
         self.WCET = None
-        self.BOUND = None
+        self.LOCAL_WFREQ = None
+        self.GLOBAL = None
 
     @property
     def instrumentation(self):
@@ -102,8 +104,12 @@ class Properties:
         return self.WCET
 
     @property
-    def bound(self):
-        return self.BOUND
+    def local_wfreq(self):
+        return self.LOCAL_WFREQ
+
+    @property
+    def global_wfreq(self):
+        return self.GLOBAL_WFREQ
 
 
 class IO:
@@ -116,9 +122,9 @@ class IO:
         return '\n' * number
 
     @classmethod
-    def write(cls, prog: Program, filename: str):
+    def write(cls, the_program: Program, filename: str):
         with open(filename, 'w') as wd:
-            for subprogram in prog:
+            for subprogram in the_program:
                 wd.write('{} {}'.format(cls.SUBPROGRAM, subprogram.name))
                 wd.write(cls.new_lines())
 
@@ -129,9 +135,9 @@ class IO:
                         if e.successor() != subprogram.cfg.entry:
                             wd.write('{} {} => {}'.format(cls.EDGE, e.predecessor(), e.successor()))
                             wd.write(cls.new_lines())
-                    callee = prog.call_graph.is_call_site(subprogram.call_vertex, v)
+                    callee = the_program.call_graph.is_call_site(subprogram.call_vertex, v)
                     if callee:
-                        wd.write('{} {} => {}'.format(cls.EDGE, v, prog[callee.name].cfg.entry))
+                        wd.write('{} {} => {}'.format(cls.EDGE, v, the_program[callee.name].cfg.entry))
                         wd.write(cls.new_lines())
                     wd.write(cls.new_lines())
 
@@ -149,11 +155,11 @@ class IO:
                 if lexemes:
                     if lexemes[0] == cls.SUBPROGRAM:
                         name = lexemes[1]
-                        cfg = graph.ControlFlowGraph(prog, name)
+                        cfg = graphs.ControlFlowGraph(prog, name)
                         cfgs[name] = cfg
                     elif lexemes[0] == cls.VERTEX:
                         id_ = int(lexemes[1])
-                        v = graph.Vertex(id_)
+                        v = vertices.Vertex(id_)
                         cfg.add_vertex(v)
                         vertex_data[id_] = Data(v, cfg)
 
@@ -163,7 +169,7 @@ class IO:
                 if lexemes:
                     if lexemes[0] == cls.SUBPROGRAM:
                         name = lexemes[1]
-                        call = graph.SubprogramVertex(graph.Vertex.get_vertex_id(), name)
+                        call = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), name)
                         subprogram = Subprogram(cfgs[name], call)
                         prog.add_subprogram(subprogram)
 
@@ -177,11 +183,11 @@ class IO:
                         succ_id = int(lexemes[3])
                         succ_v, succ_cfg = vertex_data[succ_id]
                         if pred_cfg == succ_cfg:
-                            pred_cfg.add_edge(graph.ControlFlowEdge(pred_v, succ_v))
+                            pred_cfg.add_edge(edges.ControlFlowEdge(pred_v, succ_v))
                         else:
                             caller = prog[pred_cfg.name].call_vertex
                             callee = prog[succ_cfg.name].call_vertex
-                            prog.call_graph.add_edge(graph.CallGraphEdge(caller, callee, pred_v))
+                            prog.call_graph.add_edge(edges.CallGraphEdge(caller, callee, pred_v))
 
         for subprogram in prog:
             (subprogram.cfg.entry,) = [v for v in subprogram.cfg if len(subprogram.cfg.predecessors(v)) == 0]
@@ -209,9 +215,14 @@ class IO:
                         program_point_properties.WCET = int(value)
                     except ValueError:
                         messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
-                elif name == Properties.BOUND:
+                elif name == Properties.LOCAL_WFREQ:
                     try:
-                        program_point_properties.BOUND = int(value)
+                        program_point_properties.LOCAL_WFREQ = int(value)
+                    except ValueError:
+                        messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
+                elif name == Properties.GLOBAL_WFREQ:
+                    try:
+                        program_point_properties.GLOBAL_WFREQ = int(value)
                     except ValueError:
                         messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
 
@@ -227,15 +238,15 @@ class IO:
                     lexemes = prefix.split()
                     if lexemes[0] == cls.VERTEX:
                         id_ = int(lexemes[1])
-                        program_point = graph.Vertex.id_pool[id_]
+                        program_point = vertices.Vertex.id_pool[id_]
                         properties[program_point] = Properties()
                     else:
                         assert lexemes[0] == cls.EDGE
                         pred_id = int(lexemes[1])
-                        p = graph.Vertex.id_pool[pred_id]
+                        p = vertices.Vertex.id_pool[pred_id]
                         succ_id = int(lexemes[3])
-                        s = graph.Vertex.id_pool[succ_id]
-                        program_point = graph.ControlFlowEdge(p, s)
+                        s = vertices.Vertex.id_pool[succ_id]
+                        program_point = edges.ControlFlowEdge(p, s)
                         properties[program_point] = Properties()
                     set_properties(suffix, properties[program_point])
 

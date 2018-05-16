@@ -1,12 +1,12 @@
 import argparse
 import sys
 
-from graphs import graph
+from graphs import edges, graphs, vertices
 from system import traces, program, database
 from utils import messages
 
 
-def filter_trace(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGraph, trace_file):
+def filter_trace(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPointGraph, trace_file):
     all_traces = traces.Traces()
     trace = traces.Trace()
     with open(trace_file, 'r') as rd:
@@ -14,13 +14,13 @@ def filter_trace(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGr
             lexemes = line.split()
             if lexemes:
                 if len(lexemes) == 2:
-                    program_point = graph.Vertex.id_pool[int(lexemes[0])]
-                    v = ppg.get_vertex(program_point)
+                    program_point = vertices.Vertex.id_pool[int(lexemes[0])]
+                    v = ppg[program_point]
                 else:
-                    p = graph.Vertex.id_pool[int(lexemes[0])]
-                    s = graph.Vertex.id_pool[int(lexemes[1])]
-                    program_point = graph.ControlFlowEdge(p, s)
-                    v = ppg.get_vertex(program_point)
+                    p = vertices.Vertex.id_pool[int(lexemes[0])]
+                    s = vertices.Vertex.id_pool[int(lexemes[1])]
+                    program_point = edges.ControlFlowEdge(p, s)
+                    v = ppg[program_point]
 
                 time = lexemes[-1]
                 if v in ipg:
@@ -42,13 +42,13 @@ def main(**kwargs):
     for subprogram in the_program:
         if subprogram.name in subprogram_trace:
             messages.debug_message('Filtering traces for {}'.format(subprogram.name))
-            ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+            ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
-            lnt = graph.LoopNests(ppg)
+            lnt = graphs.LoopNests(ppg)
             lnt.dotify()
 
             with database.Database(kwargs['database']) as db:
-                ipg = graph.InstrumentationPointGraph.create(ppg, lnt, db)
+                ipg = graphs.InstrumentationPointGraph.create(ppg, lnt, db)
                 ipg.dotify()
                 all_traces = filter_trace(ppg, ipg, subprogram_trace[subprogram.name])
                 all_traces.write(ipg.trace_filename())

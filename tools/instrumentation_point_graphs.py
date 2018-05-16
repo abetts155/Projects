@@ -4,7 +4,7 @@ import shutil
 import sys
 import threading
 
-from graphs import graph
+from graphs import graphs
 from system import (program, database, calculations)
 from utils import messages
 
@@ -20,25 +20,29 @@ def main(**kwargs):
         for subprogram in prog:
             if not kwargs['subprograms'] or (kwargs['subprograms'] and subprogram.name in kwargs['subprograms']):
                 subprogram.cfg.dotify()
-                ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+                ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
                 ppg.dotify()
-                lnt = graph.LoopNests(ppg)
+                lnt = graphs.LoopNests(ppg)
                 lnt.dotify()
 
                 ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)
                 ilp_for_ppg.solve('{}.{}.ppg.ilp'.format(prog.basename(), ppg.name))
 
-                ipg = graph.InstrumentationPointGraph.create(ppg, lnt, db)
+                ipg = graphs.InstrumentationPointGraph.create(ppg, lnt, db)
                 ipg.dotify()
 
                 ilp_for_ipg = calculations.create_ilp_for_instrumentation_point_graph(ipg, lnt, db)
                 ilp_for_ipg.solve('{}.{}.ipg.ilp'.format(prog.basename(), ipg.name))
 
                 if ilp_for_ppg.wcet != ilp_for_ipg.wcet:
-                    messages.verbose_message('>>>>>', ppg.name, 'FAILED')
+                    messages.verbose_message('>>>>>', ppg.name, 'FAILED' * 2)
                     failures.add(ppg.name)
                     messages.verbose_message(ilp_for_ppg)
                     messages.verbose_message(ilp_for_ipg, new_lines=2)
+                else:
+                    messages.verbose_message('>>>>> {} passed {:.5f} {:.5f}'.format(ppg.name,
+                                                                                    ilp_for_ppg.solve_time,
+                                                                                    ilp_for_ipg.solve_time))
 
     if len(failures) > 0:
         messages.verbose_message('The following subprograms failed: {}'.format(', '.join(failures)))

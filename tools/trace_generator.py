@@ -2,12 +2,12 @@ import argparse
 import random
 import sys
 
-from graphs import graph
+from graphs import graphs
 from system import traces, program
 from utils import messages
 
 
-def generate_trace(ppg: graph.ProgramPointGraph, **kwargs):
+def generate_trace(ppg: graphs.ProgramPointGraph, **kwargs):
     trace = traces.Trace()
     stack = [ppg.entry]
     time = 0
@@ -28,7 +28,7 @@ def main(**kwargs):
     the_program = program.IO.read(kwargs['filename'])
     for subprogram in the_program:
         messages.debug_message('Creating traces for {}'.format(subprogram.name))
-        ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+        ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
         ppg.dotify()
 
         all_traces = traces.Traces()

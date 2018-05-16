@@ -4,17 +4,18 @@ import re
 import subprocess
 import timeit
 
-from graphs import graph
+from graphs import (edges, graphs, vertices)
 from system import database
 from utils import messages
 
 
-class Variable:
-    def __init__(self, program_point: graph.Vertex or graph.Edge):
-        self._program_point = program_point
+class ProgramPointVariable:
+    def __init__(self, vertex: vertices.ProgramPointVertex):
+        assert isinstance(vertex, vertices.ProgramPointVertex)
+        self._vertex = vertex
 
     def __hash__(self):
-        return hash(self._program_point)
+        return hash(self._vertex.program_point)
 
     def __eq__(self, other):
         if type(other) is type(self):
@@ -25,23 +26,42 @@ class Variable:
         return not self == other
 
     def __str__(self):
-        if isinstance(self._program_point, graph.Edge):
-            if isinstance(self._program_point, graph.TransitionEdge):
-                if isinstance(self._program_point.predecessor().program_point, graph.Vertex):
-                    source = '{}'.format(self._program_point.predecessor().program_point)
-                else:
-                    source = '{}_{}'.format(self._program_point.predecessor().program_point.predecessor(),
-                                            self._program_point.predecessor().program_point.successor())
-                if isinstance(self._program_point.successor().program_point, graph.Vertex):
-                    destination = '{}'.format(self._program_point.successor().program_point)
-                else:
-                    destination = '{}_{}'.format(self._program_point.successor().program_point.predecessor(),
-                                                 self._program_point.successor().program_point.successor())
-                return 't__{}__{}'.format(source, destination)
-            else:
-                return 'e__{}_{}'.format(self._program_point.predecessor(), self._program_point.successor())
+        if isinstance(self._vertex.program_point, vertices.Vertex):
+            return 'v__{}'.format(self._vertex.program_point)
         else:
-            return 'v__{}'.format(self._program_point)
+            return 'e__{}_{}'.format(self._vertex.program_point.predecessor(), self._vertex.program_point.successor())
+
+
+class TransitionVariable:
+    def __init__(self, transition: edges.TransitionEdge):
+        assert isinstance(transition, edges.TransitionEdge)
+        self._transition = transition
+
+    def __hash__(self):
+        return hash(self._transition)
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __str__(self):
+        if isinstance(self._transition.predecessor().program_point, vertices.Vertex):
+            source = '{}'.format(self._transition.predecessor().program_point)
+        else:
+            source = '{}_{}'.format(self._transition.predecessor().program_point.predecessor(),
+                                    self._transition.predecessor().program_point.successor())
+
+        if isinstance(self._transition.successor().program_point, vertices.Vertex):
+            destination = '{}'.format(self._transition.successor().program_point)
+        else:
+            destination = '{}_{}'.format(self._transition.successor().program_point.predecessor(),
+                                         self._transition.successor().program_point.successor())
+
+        return 't__{}__{}'.format(source, destination)
 
 
 class Term:
@@ -88,6 +108,10 @@ class ConstraintSystem:
     @property
     def wcet(self):
         return self._wcet
+
+    @property
+    def solve_time(self):
+        return self._solve_time
 
     def add_to_construction_time(self, time):
         self._construction_time.append(time)
@@ -168,38 +192,38 @@ class IntegerLinearProgram(ConstraintSystem):
                                        self._variable_execution_counts[variable]))
 
 
-def create_ilp_for_program_point_graph(ppg: graph.ProgramPointGraph, lnt: graph.LoopNests, db: database.Database):
+def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graphs.LoopNests, db: database.Database):
     def add_variables():
         for v in ppg:
-            ilp.add_variable(Variable(v.program_point))
+            ilp.add_variable(ProgramPointVariable(v))
 
     def create_objective_function():
         for v in ppg:
-            term = Term(db.get_wcet(v.program_point), Variable(v.program_point))
+            term = Term(db.get_wcet(v), ProgramPointVariable(v))
             ilp.add_to_objective(term)
 
     def create_structural_constraints():
         for v in ppg:
-            if isinstance(v.program_point, graph.Vertex):
+            if isinstance(v.program_point, vertices.Vertex):
                 flow_in_lhs = LinearExpr()
                 for pred_e in ppg.predecessors(v):
-                    variable = Variable(pred_e.predecessor().program_point)
+                    variable = ProgramPointVariable(pred_e.predecessor())
                     flow_in_lhs.append(variable)
 
                 flow_in_rhs = LinearExpr()
-                flow_in_rhs.append(Variable(v.program_point))
+                flow_in_rhs.append(ProgramPointVariable(v))
 
                 flow_in_constraint = Constraint(flow_in_lhs, flow_in_rhs, Constraint.EQUALITY)
                 ilp.add_constraint(flow_in_constraint)
 
                 flow_out_lhs = LinearExpr()
                 for pred_e in ppg.predecessors(v):
-                    variable = Variable(pred_e.predecessor().program_point)
+                    variable = ProgramPointVariable(pred_e.predecessor())
                     flow_out_lhs.append(variable)
 
                 flow_out_rhs = LinearExpr()
                 for succ_e in ppg.successors(v):
-                    variable = Variable(succ_e.successor().program_point)
+                    variable = ProgramPointVariable(succ_e.successor())
                     flow_out_rhs.append(variable)
 
                 flow_out_constraint = Constraint(flow_out_lhs, flow_out_rhs, Constraint.EQUALITY)
@@ -207,19 +231,20 @@ def create_ilp_for_program_point_graph(ppg: graph.ProgramPointGraph, lnt: graph.
 
     def create_loop_bound_constraints():
         for loop in lnt:
-            coefficient = db.get_wfreq(loop.header.program_point)
             lhs = LinearExpr()
-            lhs.append(Variable(loop.header.program_point))
+            lhs.append(ProgramPointVariable(loop.header))
 
             rhs = LinearExpr()
             if lnt.is_outermost_loop(loop):
+                coefficient = db.get_global_wfreq(loop.header)
                 rhs.append(str(coefficient))
                 constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
             else:
+                coefficient = db.get_local_wfreq(loop.header)
                 (loop_transition,) = [predecessor_edge for predecessor_edge in lnt.predecessors(loop)
-                                      if predecessor_edge.direction == graph.LoopTransition.Direction.ENTRY]
+                                      if predecessor_edge.direction == edges.LoopTransition.Direction.ENTRY]
                 for transition in loop_transition:
-                    rhs.append(Term(str(coefficient), Variable(transition.predecessor().program_point)))
+                    rhs.append(Term(str(coefficient), ProgramPointVariable(transition.predecessor())))
                 constraint = Constraint(lhs, rhs, Constraint.LESS_OR_EQUAL)
 
             ilp.add_constraint(constraint)
@@ -235,136 +260,142 @@ def create_ilp_for_program_point_graph(ppg: graph.ProgramPointGraph, lnt: graph.
     return ilp
 
 
-def create_ilp_for_super_block_graph(super_graph: graph.SuperBlockGraph, lnt: graph.LoopNests, db: database.Database):
-    def add_variables():
+def create_ilp_for_super_block_graph(super_graph: graphs.SuperBlockGraph, lnt: graphs.LoopNests, db: database.Database):
+    def add_variables(super_graph, lnt):
         for super_block in super_graph.super_blocks():
-            ilp.add_variable(Variable(super_block.representative.program_point))
+            ilp.add_variable(ProgramPointVariable(super_block.representative))
             for v in super_block:
-                if isinstance(v.program_point, graph.Vertex):
-                    ilp.add_variable(Variable(v.program_point))
+                if isinstance(v.program_point, vertices.Vertex):
+                    if not lnt.is_header(v) or v == super_block[0]:
+                        ilp.add_variable(ProgramPointVariable(v))
 
-    def create_objective_function():
-        for super_block in super_graph.super_blocks():
-            for v in super_block:
-                if isinstance(v.program_point, graph.Vertex):
-                    term = Term(db.get_wcet(v.program_point), Variable(v.program_point))
-                    ilp.add_to_objective(term)
-
-    def create_intra_super_block_constraints():
+    def create_objective_function(super_graph, lnt, db):
         for super_block in super_graph.super_blocks():
             for v in super_block:
-                if isinstance(v.program_point, graph.Vertex):
-                    if v != super_block.representative:
-                        lhs = LinearExpr()
-                        lhs.append(Variable(v.program_point))
-                        rhs = LinearExpr()
-                        rhs.append(Variable(super_block.representative.program_point))
-                        constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
-                        ilp.add_constraint(constraint)
-                else:
-                    if lnt.is_loop_transition(v):
-                        lhs = LinearExpr()
-                        lhs.append(Variable(v.program_point))
-                        rhs = LinearExpr()
-                        rhs.append(Variable(super_block.representative.program_point))
-                        constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
-                        ilp.add_constraint(constraint)
+                if isinstance(v.program_point, vertices.Vertex):
+                    if not lnt.is_header(v) or v == super_block[0]:
+                        term = Term(db.get_wcet(v), ProgramPointVariable(v))
+                        ilp.add_to_objective(term)
 
-    def create_junction_constraints():
+    def create_intra_super_block_constraints(super_graph, lnt):
+        for super_block in super_graph.super_blocks():
+            for v in super_block:
+                if isinstance(v.program_point, vertices.Vertex):
+                    if not lnt.is_header(v) or v == super_block[0]:
+                        if v != super_block.representative:
+                            lhs = LinearExpr()
+                            lhs.append(ProgramPointVariable(v))
+                            rhs = LinearExpr()
+                            rhs.append(ProgramPointVariable(super_block.representative))
+                            constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
+                            ilp.add_constraint(constraint)
+
+    def create_junction_constraints(super_graph):
         for junction in super_graph.junctions():
             lhs = LinearExpr()
-            lhs.append(Variable(junction.representative.program_point))
+            (super_block,) = [predecessor_edge.predecessor() for predecessor_edge in super_graph.predecessors(junction)]
+            lhs.append(ProgramPointVariable(super_block.representative))
             rhs = LinearExpr()
-            for succ_edge in super_graph.successors(junction):
-                rhs.append(Variable(succ_edge.successor().representative.program_point))
+            for successor_edge in super_graph.successors(junction):
+                rhs.append(ProgramPointVariable(successor_edge.successor().representative))
             constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
             ilp.add_constraint(constraint)
 
-    def create_merge_constraints():
+    def create_merge_constraints(super_graph):
         for super_block in super_graph.super_blocks():
-            if len(super_graph.predecessors(super_block)) > 1:
+            predecessors = [predecessor_edge for predecessor_edge in super_graph.predecessors(super_block)
+                            if not isinstance(predecessor_edge, edges.LoopTransition)]
+            if len(predecessors) > 1:
                 lhs = LinearExpr()
-                lhs.append(Variable(super_block.representative.program_point))
+                lhs.append(ProgramPointVariable(super_block.representative))
                 rhs = LinearExpr()
-                for pred_edge in super_graph.predecessors(super_block):
-                    rhs.append(Variable(pred_edge.predecessor().representative.program_point))
+                for predecessor_edge in predecessors:
+                    rhs.append(ProgramPointVariable(predecessor_edge.predecessor().representative))
                 constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
                 ilp.add_constraint(constraint)
 
-    def create_loop_bound_constraints():
-        for super_block in super_graph.super_blocks():
-            if len(super_graph.predecessors(super_block)) == 0:
-                for v in super_block:
-                    if v in lnt.headers:
-                        coefficient = db.get_wfreq(v.program_point)
-                        lhs = LinearExpr()
-                        lhs.append(Variable(v.program_point))
-                        rhs = LinearExpr()
-                        rhs.append(str(coefficient))
-                        constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
-                        ilp.add_constraint(constraint)
+    def create_loop_bound_constraints(super_graph, lnt, db):
+        for loop in lnt:
+            lhs = LinearExpr()
+            lhs.append(ProgramPointVariable(loop.header))
+
+            rhs = LinearExpr()
+            if lnt.is_outermost_loop(loop):
+                coefficient = db.get_global_wfreq(loop.header)
+                rhs.append(str(coefficient))
+                constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
+            else:
+                coefficient = db.get_local_wfreq(loop.header)
+                (loop_transition,) = [successor_edge for successor_edge in lnt.successors(loop)
+                                      if successor_edge.direction == edges.LoopTransition.Direction.EXIT]
+                for transition in loop_transition:
+                    super_block = super_graph[transition.successor()]
+                    rhs.append(Term(str(coefficient), ProgramPointVariable(super_block.representative)))
+                constraint = Constraint(lhs, rhs, Constraint.LESS_OR_EQUAL)
+
+            ilp.add_constraint(constraint)
 
     ilp = IntegerLinearProgram()
     start = timeit.default_timer()
-    add_variables()
-    create_objective_function()
-    create_intra_super_block_constraints()
-    create_junction_constraints()
-    create_merge_constraints()
-    create_loop_bound_constraints()
+    add_variables(super_graph, lnt)
+    create_objective_function(super_graph, lnt, db)
+    create_intra_super_block_constraints(super_graph, lnt)
+    create_junction_constraints(super_graph)
+    create_merge_constraints(super_graph)
+    create_loop_bound_constraints(super_graph, lnt, db)
     end = timeit.default_timer()
     ilp.add_to_construction_time(end - start)
     return ilp
 
 
-def create_ilp_for_instrumentation_point_graph(ipg: graph.InstrumentationPointGraph,
-                                               lnt: graph.LoopNests,
+def create_ilp_for_instrumentation_point_graph(ipg: graphs.InstrumentationPointGraph,
+                                               lnt: graphs.LoopNests,
                                                db: database.Database):
     def add_variables():
         for v in ipg:
-            ilp.add_variable(Variable(v.program_point))
+            ilp.add_variable(ProgramPointVariable(v))
             for successor_edge in ipg.successors(v):
-                ilp.add_variable(Variable(successor_edge))
+                ilp.add_variable(TransitionVariable(successor_edge))
 
     def create_objective_function():
         # Bring data into memory from the database so that this stage is not memory bound.
         wcets = {}
         for v in ipg:
-            wcets[v.program_point] = db.get_wcet(v.program_point)
+            wcets[v] = db.get_wcet(v)
             for successor_edge in ipg.successors(v):
                 for w in successor_edge:
-                    if w.program_point not in wcets:
-                        wcets[w.program_point] = db.get_wcet(w.program_point)
+                    if w not in wcets:
+                        wcets[w] = db.get_wcet(w)
 
         for v in ipg:
-            term = Term(wcets[v.program_point], Variable(v.program_point))
+            term = Term(wcets[v], ProgramPointVariable(v))
             ilp.add_to_objective(term)
             for successor_edge in ipg.successors(v):
-                wcet = sum([wcets[w.program_point] for w in successor_edge])
-                term = Term(wcet, Variable(successor_edge))
+                wcet = sum([wcets[w] for w in successor_edge])
+                term = Term(wcet, TransitionVariable(successor_edge))
                 ilp.add_to_objective(term)
 
     def create_structural_constraints():
         for v in ipg:
             flow_in_lhs = LinearExpr()
             for predecessor_edge in ipg.predecessors(v):
-                variable = Variable(predecessor_edge)
+                variable = TransitionVariable(predecessor_edge)
                 flow_in_lhs.append(variable)
 
             flow_in_rhs = LinearExpr()
-            flow_in_rhs.append(Variable(v.program_point))
+            flow_in_rhs.append(ProgramPointVariable(v))
 
             flow_in_constraint = Constraint(flow_in_lhs, flow_in_rhs, Constraint.EQUALITY)
             ilp.add_constraint(flow_in_constraint)
 
             flow_out_lhs = LinearExpr()
             for predecessor_edge in ipg.predecessors(v):
-                variable = Variable(predecessor_edge)
+                variable = TransitionVariable(predecessor_edge)
                 flow_out_lhs.append(variable)
 
             flow_out_rhs = LinearExpr()
             for successor_edge in ipg.successors(v):
-                variable = Variable(successor_edge)
+                variable = TransitionVariable(successor_edge)
                 flow_out_rhs.append(variable)
 
             flow_out_constraint = Constraint(flow_out_lhs, flow_out_rhs, Constraint.EQUALITY)
@@ -376,34 +407,41 @@ def create_ilp_for_instrumentation_point_graph(ipg: graph.InstrumentationPointGr
             program_point_mapping[loop.header] = set()
             if not lnt.is_outermost_loop(loop):
                 (loop_transition,) = [predecessor_edge for predecessor_edge in lnt.predecessors(loop)
-                                      if predecessor_edge.direction == graph.LoopTransition.Direction.ENTRY]
+                                      if predecessor_edge.direction == edges.LoopTransition.Direction.ENTRY]
                 for transition in loop_transition:
                     program_point_mapping[transition.predecessor()] = set()
 
         for v in ipg:
             if v in program_point_mapping:
-                program_point_mapping[v].add(v.program_point)
+                program_point_mapping[v].add(v)
             for successor_edge in ipg.successors(v):
                 for w in successor_edge:
                     if w in program_point_mapping:
                         program_point_mapping[w].add(successor_edge)
 
         for loop in lnt:
-            coefficient = db.get_wfreq(loop.header.program_point)
             lhs = LinearExpr()
             for program_point in program_point_mapping[loop.header]:
-                lhs.append(Variable(program_point))
+                if isinstance(program_point, edges.TransitionEdge):
+                    lhs.append(TransitionVariable(program_point))
+                else:
+                    lhs.append(ProgramPointVariable(program_point))
 
             rhs = LinearExpr()
             if lnt.is_outermost_loop(loop):
+                coefficient = db.get_global_wfreq(loop.header)
                 rhs.append(str(coefficient))
                 constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
             else:
+                coefficient = db.get_local_wfreq(loop.header)
                 (loop_transition,) = [predecessor_edge for predecessor_edge in lnt.predecessors(loop)
-                                      if predecessor_edge.direction == graph.LoopTransition.Direction.ENTRY]
+                                      if predecessor_edge.direction == edges.LoopTransition.Direction.ENTRY]
                 for transition in loop_transition:
                     for program_point in program_point_mapping[transition.predecessor()]:
-                        rhs.append(Term(str(coefficient), Variable(program_point)))
+                        if isinstance(program_point, edges.TransitionEdge):
+                            rhs.append(Term(str(coefficient), TransitionVariable(program_point)))
+                        else:
+                            rhs.append(Term(str(coefficient), ProgramPointVariable(program_point)))
 
                 constraint = Constraint(lhs, rhs, Constraint.LESS_OR_EQUAL)
 

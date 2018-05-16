@@ -6,7 +6,7 @@ import sys
 
 from lib.utils import dot
 
-from graphs import graph
+from graphs import graphs
 from system import program
 from utils import messages
 
@@ -80,7 +80,7 @@ def do_super_block_instrumentation(control_flow_graph,
                   inferred_execution_counts[key])
 
 
-def generate_trace(ppg: graph.ProgramPointGraph):
+def generate_trace(ppg: graphs.ProgramPointGraph):
     trace = []
     v = ppg.entry
     while v != ppg.exit:
@@ -91,7 +91,7 @@ def generate_trace(ppg: graph.ProgramPointGraph):
     return trace
 
 
-def check_traces(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGraph, traces):
+def check_traces(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPointGraph, traces):
     for j in range(traces):
         trace = generate_trace(ppg)
         true_count = {v: 0 for v in ppg.vertices}
@@ -117,14 +117,14 @@ def check_traces(ppg: graph.ProgramPointGraph, ipg: graph.InstrumentationPointGr
 
 
 def inter_procedural_analysis(prog: program.Program, policy, reinstrument, traces):
-    dfs = graph.DepthFirstSearch(prog.call_graph, prog.call_graph.root)
+    dfs = graphs.DepthFirstSearch(prog.call_graph, prog.call_graph.root)
     for call_v in dfs.post_order():
         cfg = prog[call_v.name]
         messages.debug_message('Analysing subprogram {}'.format(cfg.name))
         dot.visualise_control_flow_graph(prog, cfg)
-        ppg = graph.ProgramPointGraph(cfg)
+        ppg = graphs.ProgramPointGraph(cfg)
         dot.visualise_flow_graph(prog, ppg, '.ppg')
-        ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+        ipg = graphs.InstrumentationPointGraph.create_from_policy(ppg, policy)
         ipg.reduce()
         dot.visualise_instrumentation_point_graph(prog, ipg)
         prog.add_ipg(ipg)
@@ -138,11 +138,11 @@ def intra_procedural_analysis(prog, policy, reinstrument, traces):
     for cfg in prog:
         messages.verbose_message('Analysing subprogram {}'.format(cfg.name))
         dot.visualise_control_flow_graph(prog, cfg)
-        ppg = graph.ProgramPointGraph(cfg)
+        ppg = graphs.ProgramPointGraph(cfg)
         dot.visualise_flow_graph(prog, ppg, '.ppg')
 
         for i in range(reinstrument):
-            ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+            ipg = graphs.InstrumentationPointGraph.create_from_policy(ppg, policy)
             ipg.name = '{}.{}'.format(ipg.name, len(generated_ipgs[cfg.name]))
             generated_ipgs[cfg.name].append(ipg)
             filters = [lambda v: ipg.predecessors(v) and
@@ -155,7 +155,7 @@ def intra_procedural_analysis(prog, policy, reinstrument, traces):
             #dot.visualise_instrumentation_point_graph(prog, ipg)
 
         for i in range(reinstrument):
-            ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+            ipg = graphs.InstrumentationPointGraph.create_from_policy(ppg, policy)
             ipg.name = '{}.{}'.format(ipg.name, len(generated_ipgs[cfg.name]))
             generated_ipgs[cfg.name].append(ipg)
             filters = [lambda v: True]
@@ -166,7 +166,7 @@ def intra_procedural_analysis(prog, policy, reinstrument, traces):
         ipgs.sort(key=lambda ipg: ipg.number_of_vertices())
         ipgs.sort(key=lambda ipg: ipg.number_of_edges())
         print("===========================> {} candidates: {}".format(name, len(ipgs)))
-        basic_ipg = graph.InstrumentationPointGraph.create_from_policy(ppg, policy)
+        basic_ipg = graphs.InstrumentationPointGraph.create_from_policy(ppg, policy)
         print('n={} m={}'.format(basic_ipg.number_of_vertices(), basic_ipg.number_of_edges()))
         smallest_instrumentation = min(ipgs, key=lambda ipg: ipg.number_of_vertices())
         print('min(|V|): {} n={} m={}'.format(smallest_instrumentation.name,
@@ -208,8 +208,8 @@ def parse_the_command_line():
                         help='a file containing program information')
 
     parser.add_argument('--policy',
-                        type=graph.InstrumentationPointGraph.Policy,
-                        choices=list(graph.InstrumentationPointGraph.Policy),
+                        type=graphs.InstrumentationPointGraph.Policy,
+                        choices=list(graphs.InstrumentationPointGraph.Policy),
                         required=True,
                         help='instrument vertices, edges or both')
 

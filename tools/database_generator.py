@@ -3,22 +3,38 @@ import random
 import sys
 import threading
 
-from graphs import graph
+from graphs import (edges, graphs, vertices)
 from system import program, database
 from utils import messages
 
 
 def add_automatic_wcet(db: database.Database, v, maximum_value):
-    db.add_wcet(v.program_point, random.randint(0, maximum_value))
+    db.add_wcet(v, random.randint(0, maximum_value))
 
 
-def add_automatic_wfreq(db: database.Database, v, lnt, maximum_value):
+def add_automatic_local_wfreq(db: database.Database, v, lnt, maximum_value):
     if lnt.is_header(v):
         loop = lnt.find_loop(v)
         if lnt.is_outermost_loop(loop):
-            db.add_wfreq(v.program_point, 1)
+            db.add_local_wfreq(v, 1)
         else:
-            db.add_wfreq(v.program_point, random.randint(1, maximum_value))
+            db.add_local_wfreq(v, random.randint(1, maximum_value))
+
+
+def add_automatic_global_wfreq(db: database.Database, v, lnt, maximum_value):
+    if lnt.is_header(v):
+        loop = lnt.find_loop(v)
+        if lnt.is_outermost_loop(loop):
+            db.add_global_wfreq(v, 1)
+        else:
+            (loop_transition,) = [predecessor_edge for predecessor_edge in lnt.predecessors(loop)
+                                  if predecessor_edge.direction == edges.LoopTransition.Direction.ENTRY]
+
+            local_wfreq = db.get_local_wfreq(v)
+            if loop_transition.predecessor() == lnt.entry:
+                db.add_global_wfreq(v, local_wfreq)
+            else:
+                db.add_global_wfreq(v, random.randint(local_wfreq, maximum_value))
 
 
 def main(**kwargs):
@@ -29,38 +45,44 @@ def main(**kwargs):
         db.reset()
         for subprogram in the_program:
             messages.debug_message('Creating data for {}'.format(subprogram.name))
-            ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+            ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
-            lnt = graph.LoopNests(ppg)
+            lnt = graphs.LoopNests(ppg)
             lnt.dotify()
 
             for v in ppg:
                 if not kwargs['manual_properties'] or v.program_point not in properties:
-                    if isinstance(v.program_point, graph.Vertex):
+                    if isinstance(v.program_point, vertices.Vertex):
                         add_automatic_wcet(db, v, kwargs['max_wcet'])
                     else:
-                        db.add_wcet(v.program_point, 0)
-                    add_automatic_wfreq(db, v, lnt, kwargs['max_loop_bound'])
+                        db.add_wcet(v, 0)
+                    add_automatic_local_wfreq(db, v, lnt, kwargs['max_loop_bound'])
+                    add_automatic_global_wfreq(db, v, lnt, kwargs['max_loop_bound'])
                 else:
                     if properties[v.program_point].wcet is not None:
-                        db.add_wcet(v.program_point, properties[v.program_point].wcet)
+                        db.add_wcet(v, properties[v.program_point].wcet)
                     else:
                         add_automatic_wcet(db, v, kwargs['max_wcet'])
 
-                    if properties[v.program_point].bound is not None:
-                        db.add_wfreq(v.program_point, properties[v.program_point].bound)
+                    if properties[v].local_wfreq is not None:
+                        db.add_local_wfreq(v, properties[v].local_wfreq)
                     else:
-                        add_automatic_wfreq(db, v, lnt, kwargs['max_loop_bound'])
+                        add_automatic_local_wfreq(db, v, lnt, kwargs['max_loop_bound'])
+
+                    if properties[v].global_wfreq is not None:
+                        db.add_global_wfreq(v, properties[v].global_wfreq)
+                    else:
+                        add_automatic_global_wfreq(db, v, lnt, kwargs['max_loop_bound'])
 
             if not kwargs['manual_properties']:
                 ppg.choose_instrumentation()
                 for v in ppg:
-                    db.set_instrumentation(v.program_point)
+                    db.set_instrumentation(v)
             else:
                 for v in ppg:
-                    if v.program_point in properties:
-                        if properties[v.program_point].instrumentation:
-                            db.set_instrumentation(v.program_point)
+                    if v in properties:
+                        if properties[v].instrumentation:
+                            db.set_instrumentation(v)
 
 
 def parse_the_command_line():

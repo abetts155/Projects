@@ -1,574 +1,11 @@
 import enum
-import re
 import random
 
-from low_level import instructions
+
 from utils import messages
 from utils import dot
-
-
-class VertexPool:
-    """Manage allocation and deallocation of vertices."""
-
-    CUTOFF = 0
-
-    def __init__(self):
-        self._max = VertexPool.CUTOFF
-        self._min = VertexPool.CUTOFF
-        self._allocation = {}
-
-    def negative(self):
-        self._min -= 1
-        return self._min
-
-    def positive(self):
-        self._max += 1
-        return self._max
-
-    def register(self, v):
-        if not isinstance(v.id_, int):
-            raise TypeError('Vertex ID {} is not an integer'.format(v.id_))
-        if v.id_ in self._allocation:
-            raise ValueError('Vertex ID {} already taken'.format(v.id_))
-        if v.id_ > VertexPool.CUTOFF:
-            self._max = max(self._max, v.id_)
-        elif v.id_ < VertexPool.CUTOFF:
-            self._min = min(self._min, v.id_)
-        self._allocation[v.id_] = v
-
-    def deregister(self, v):
-        del self._allocation[v.id_]
-
-    def __getitem__(self, id_):
-        return self._allocation[id_]
-
-
-class Vertex:
-    """Base vertex class"""
-
-    # Used to generate IDs of vertices and keep track of allocation.
-    id_pool = VertexPool()
-
-    @classmethod
-    def get_vertex_id(cls, dummy=False):
-        if dummy:
-            return Vertex.id_pool.negative()
-        else:
-            return Vertex.id_pool.positive()
-
-    def __init__(self, id_: int):
-        try:
-            self.id_ = id_
-            self.id_pool.register(self)
-        except ValueError as e:
-            messages.error_message(e)
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __hash__(self):
-        # Two vertices with the same ID are considered equivalent.
-        return self.id_
-
-    def __str__(self):
-        return str(self.id_)
-
-    def set_id(self, id_):
-        self.id_ = id_
-
-    def __lt__(self, other):
-        return self.id_ < other.id_
-
-    def __del__(self):
-        self.id_pool.deregister(self)
-
-    def is_dummy(self):
-        return self.id_ < 0
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell())
-        label.append(str(self))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=record];\n'.format(self, ''.join(label))
-
-
-class NamedVertex(Vertex):
-    """Models a vertex that carries a name, usually identifying a subprogram"""
-
-    def __init__(self, id_, name):
-        if not re.match(r'\w+', name):
-            raise ValueError('Vertex name must not be empty and must only contain characters in the set [a-zA-Z0-9_]')
-        Vertex.__init__(self, id_)
-        self.__name = name
-
-    @property
-    def name(self):
-        return self.__name
-
-
-class SubprogramVertex(NamedVertex):
-    """Models subprograms in a call graph"""
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell())
-        label.append(self.name)
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=record];\n'.format(self, ''.join(label))
-
-
-class BasicBlock(NamedVertex, instructions.Instructions):
-    """Models a sequence of instructions and control into and out of that sequence"""
-
-    def change_review_status_of_instructions(self,
-                                             current_status: instructions.ReviewStatus,
-                                             new_status: instructions.ReviewStatus):
-        for instruction in self:
-            for field in instruction:
-                if field.status == current_status:
-                    field.status = new_status
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        column_span = 2
-        if self:
-            column_span += len(max(self, key=lambda instruction: len(instruction)))
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(column_span=column_span))
-        label.append(self.name)
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        if __debug__:
-            label.append(dot.HTML.open_row)
-            label.append(dot.HTML.open_cell(color=dot.Colors.cyan, border=5, column_span=column_span))
-            label.append('id={}'.format(self))
-            label.append(dot.HTML.close_cell)
-            label.append(dot.HTML.close_row)
-
-        for i in self:
-            label.extend(i.dotify())
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=box];\n'.format(self, ''.join(label))
-
-
-class InstructionVertex(Vertex, set):
-    """Models an instruction in a dependency graph of instruction scheduling. The set component contains all
-    instructions on which this instruction depends inside a basic block"""
-
-    def __init__(self, id_, instruction: instructions.Instruction):
-        Vertex.__init__(self, id_)
-        self.__instruction = instruction
-
-    @property
-    def instruction(self) -> instructions.Instruction:
-        return self.__instruction
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-        label.extend(self.__instruction.dotify())
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-        return '{} [label={}, shape=record]'.format(self, ''.join(label))
-
-
-class Edge:
-    """Base edge class"""
-
-    def __init__(self, predecessor, successor):
-        self._predecessor = predecessor
-        self._successor = successor
-
-    def predecessor(self):
-        return self._predecessor
-
-    def successor(self):
-        return self._successor
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __hash__(self):
-        # Hash on vertex identifiers that compose the edge.
-        # Not collision resistant, but probably good enough for the vast majority of graphs.
-        return hash((self.predecessor(), self.successor()))
-
-    def __str__(self):
-        return "({}, {})".format(self._predecessor, self._successor)
-
-    def dotify(self):
-        return '{}->{};\n'.format(self._predecessor.id_, self._successor.id_)
-
-
-class Direction(enum.Enum):
-    """Direction of control flow of an edge P => S:
-    NONE means there is no direction information for P => S.
-    RETURN means P only has one successor, S, but P transfers control to another subprogram.
-    CONTINUE means P only has one successor, S, and the first instruction of S immediately follows the last instruction
-    of P.
-    ELSE means P is a 2-way branch and P => S is the false arm.
-    THEN means P is a 2-way branch and P => S is the true arm.
-    CASE means P is an n-way branch and P => S is one arm of the branch.
-    UNREACHABLE means control flow can never traverse P => S"""
-
-    NONE = 0
-    RETURN = 1
-    CONTINUE = 2
-    ELSE = 3
-    THEN = 4
-    CASE = 5
-    UNREACHABLE = 6
-
-
-class ControlFlowEdge(Edge):
-    """Models a transfer of control between basic blocks"""
-
-    def __init__(self, predecessor, successor, direction=Direction.NONE):
-        Edge.__init__(self, predecessor, successor)
-        self.__direction = direction
-        self.__callee = None
-
-    @property
-    def direction(self):
-        return self.__direction
-
-    @direction.setter
-    def direction(self, value: Direction):
-        self.__direction = value
-
-    def set_return(self, callee: SubprogramVertex):
-        self.__direction = Direction.RETURN
-        self.__callee = callee
-
-    def dotify(self):
-        if not(self.direction == Direction.NONE or self.direction == Direction.CONTINUE):
-            label = self.direction.name.lower()
-        else:
-            label = ''
-        color = dot.Colors.black
-        style = dot.Styles.solid
-
-        if self.direction == Direction.RETURN:
-            label = '{} ({})'.format(self.direction.name.lower(), self.__callee.name if self.__callee else '?')
-            color = dot.Colors.blue
-            style = dot.Styles.bold
-        elif self.direction == Direction.UNREACHABLE:
-            color = dot.Colors.red
-            style = dot.Styles.dotted
-        return '{}->{} [label="{}", fontcolor={}, color={}, style={}];\n'.format(self._predecessor.id_,
-                                                                                 self._successor.id_,
-                                                                                 label,
-                                                                                 color,
-                                                                                 color,
-                                                                                 style)
-
-
-class TransitionEdge(Edge, list):
-    """Models a transition between two program points and the sequence of instructions executed during the transition"""
-
-    def __init__(self, predecessor, successor):
-        Edge.__init__(self, predecessor, successor)
-        self._back_edge = False
-
-    @property
-    def back_edge(self):
-        return self._back_edge
-
-    def set_back_edge(self):
-        self._back_edge = True
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        for arg in self:
-            label.append(dot.HTML.open_row)
-            label.append(dot.HTML.open_cell(color=dot.Colors.red, border=2))
-            label.append(str(arg.program_point))
-            label.append(dot.HTML.close_cell)
-            label.append(dot.HTML.close_row)
-
-        if not self:
-            label.extend(dot.HTML.dummy_row())
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{}->{} [label={}, style={}];\n'.format(self._predecessor.id_,
-                                                       self._successor.id_,
-                                                       ''.join(label),
-                                                       dot.Styles.dotted if self._back_edge else dot.Styles.bold)
-
-
-class LoopTransition(Edge, set):
-    class Direction(enum.Enum):
-        ENTRY = 0
-        EXIT = 1
-        BACK = 2
-
-    """Models the transitions that execute when control passes into and out of loops"""
-    def __init__(self, predecessor, successor, direction):
-        Edge.__init__(self, predecessor, successor)
-        self._direction = direction
-
-    @property
-    def direction(self):
-        return self._direction
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        if self._direction == LoopTransition.Direction.ENTRY:
-            color = dot.Colors.red
-        elif self._direction == LoopTransition.Direction.EXIT:
-            color = dot.Colors.cyan
-        else:
-            color = dot.Colors.light_grey
-
-        if self:
-            for transition in self:
-                label.append(dot.HTML.open_row)
-                label.append(dot.HTML.open_cell(color=color, border=2))
-                label.append('{} to {}'.format(str(transition.predecessor()), str(transition.successor())))
-                label.append(dot.HTML.close_cell)
-                label.append(dot.HTML.close_row)
-        else:
-            label.extend(dot.HTML.dummy_row())
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{}->{} [label={}, color={}];\n'.format(self._predecessor.id_,
-                                                       self._successor.id_,
-                                                       ''.join(label),
-                                                       color)
-
-
-class CallGraphEdge(Edge):
-    def __init__(self, predecessor, successor, call_site):
-        Edge.__init__(self, predecessor, successor)
-        self.__call_site = call_site
-
-    @property
-    def call_site(self):
-        return self.__call_site
-
-    def dotify(self):
-        return '{}->{} [label="{}"];\n'.format(self._predecessor, self._successor, self.__call_site)
-
-
-class ProgramPointVertex(Vertex):
-    """A program point is either a vertex or an edge"""
-
-    def __init__(self, id_, program_point: Edge or Vertex):
-        if not isinstance(program_point, (Edge, Vertex)):
-            raise TypeError('Program point must be a vertex or an edge')
-        Vertex.__init__(self, id_)
-        self.__program_point = program_point
-
-    @property
-    def program_point(self) -> Edge or Vertex:
-        return self.__program_point
-
-    def __str__(self):
-        return str(self.__program_point)
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(color=dot.Colors.cyan, border=5))
-        label.append('id={}'.format(self.id_))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell())
-        label.append(str(self.__program_point))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=record];\n'.format(self.id_, ''.join(label))
-
-
-class Junction(Vertex):
-    def __init__(self, id_, representative):
-        Vertex.__init__(self, id_)
-        self._representative = representative
-
-    @property
-    def representative(self):
-        return self._representative
-
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell())
-        label.append(str(self.representative.program_point))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=circle];\n'.format(self, ''.join(label))
-
-
-class SuperBlock(Vertex, list):
-    """A super block is a set of program points"""
-
-    def __init__(self, id_):
-        Vertex.__init__(self, id_)
-        self.__representative = None
-
-    def append(self, element):
-        if not isinstance(element, ProgramPointVertex):
-            raise TypeError('Only program points can be added to super blocks')
-        list.append(self, element)
-
-    @property
-    def representative(self):
-        return self.__representative
-
-    @representative.setter
-    def representative(self, v):
-        self.__representative = v
-
-    def _label(self, *args):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(color=dot.Colors.cyan, border=5))
-        label.append('id={}'.format(self))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        for arg in args:
-            label.append(dot.HTML.open_row)
-            label.append(dot.HTML.open_cell(color=dot.Colors.red, border=2))
-            label.append(arg)
-            label.append(dot.HTML.close_cell)
-            label.append(dot.HTML.close_row)
-
-        for v in self:
-            label.append(dot.HTML.open_row)
-            label.append(dot.HTML.open_cell())
-            label.append(str(v.program_point))
-            label.append(dot.HTML.close_cell)
-            label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-        return label
-
-    def dotify(self):
-        return '{} [label={}, shape=record];\n'.format(self, ''.join(self._label()))
-
-
-class LoopBody(SuperBlock):
-    """Models a loop body"""
-
-    def __init__(self, id_, header: Vertex):
-        SuperBlock.__init__(self, id_)
-        self.__header = header
-        self.__tails = set()
-
-    @property
-    def header(self) -> Vertex:
-        return self.__header
-
-    @property
-    def tails(self):
-        return self.__tails
-
-    @tails.setter
-    def tails(self, value):
-        self.__tails.update(value)
-
-
-class Sequence(Vertex):
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(color=dot.Colors.yellow, border=5))
-        label.append('SEQ')
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-        return '{} [label={}]'.format(self, ''.join(label))
-
-
-class Alternative(Vertex):
-    def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(color=dot.Colors.red, border=5))
-        label.append('ALT')
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-        return '{} [label={}]'.format(self, ''.join(label))
-
-
-class Loop(Vertex):
-    pass
+from graphs import vertices
+from graphs import edges
 
 
 class InvalidVertexError(ValueError):
@@ -590,7 +27,7 @@ class VertexData:
 
     __slots__ = ['v', 'predecessors', 'successors']
 
-    def __init__(self, v: Vertex):
+    def __init__(self, v: vertices.Vertex):
         self.v = v
         self.predecessors = []
         self.successors = []
@@ -602,18 +39,18 @@ class DirectedGraph:
     def __init__(self):
         self._data = {}
 
-    def add_vertex(self, v: Vertex):
+    def add_vertex(self, v: vertices.Vertex):
         if v.id_ in self._data:
             raise DuplicateVertexError('Graph already contains a vertex with ID {}'.format(v.id_))
         self._data[v.id_] = VertexData(v)
 
-    def _get_vertex_data(self, v: Vertex) -> VertexData:
+    def _get_vertex_data(self, v: vertices.Vertex) -> VertexData:
         try:
             return self._data[v.id_]
         except KeyError:
             messages.error_message("No data for vertex with ID {}".format(v.id_))
 
-    def remove_vertex(self, v: Vertex):
+    def remove_vertex(self, v: vertices.Vertex):
         v_info = self._get_vertex_data(v)
         for e in v_info.predecessors:
             self.remove_successor(e.predecessor(), v)
@@ -621,7 +58,7 @@ class DirectedGraph:
             self.remove_predecessor(e.successor(), v)
         del self._data[v.id_]
 
-    def __contains__(self, v: Vertex):
+    def __contains__(self, v: vertices.Vertex):
         return v.id_ in self._data
 
     def __iter__(self):
@@ -634,19 +71,19 @@ class DirectedGraph:
     def number_of_edges(self):
         return sum([len(self.successors(v)) for v in self])
 
-    def predecessors(self, v: Vertex):
+    def predecessors(self, v: vertices.Vertex):
         return self._get_vertex_data(v).predecessors
 
-    def successors(self, v: Vertex):
+    def successors(self, v: vertices.Vertex):
         return self._get_vertex_data(v).successors
 
-    def add_edge(self, e: Edge) -> None:
+    def add_edge(self, e: edges.Edge) -> None:
         p_info = self._get_vertex_data(e.predecessor())
         p_info.successors.append(e)
         s_info = self._get_vertex_data(e.successor())
         s_info.predecessors.append(e)
 
-    def has_edge(self, p: Vertex, s: Vertex):
+    def has_edge(self, p: vertices.Vertex, s: vertices.Vertex):
         return self.has_successor(p, s) and self.has_predecessor(s, p)
 
     def remove_predecessor(self, v, p):
@@ -659,7 +96,7 @@ class DirectedGraph:
         updated_successors = [e for e in v_info.successors if e.successor() != s]
         v_info.successors = updated_successors
 
-    def remove_edge(self, e: Edge):
+    def remove_edge(self, e: edges.Edge):
         self.remove_successor(e.predecessor(), e.successor())
         self.remove_predecessor(e.successor(), e.predecessor())
 
@@ -691,7 +128,7 @@ class CallGraph(DirectedGraph):
         DirectedGraph.__init__(self)
         self.program = program
 
-    def is_call_site(self, call_vertex: SubprogramVertex, basic_block: BasicBlock):
+    def is_call_site(self, call_vertex: vertices.SubprogramVertex, basic_block: vertices.BasicBlock):
         for e in self.successors(call_vertex):
             if e.call_site == basic_block:
                 return e.successor()
@@ -753,7 +190,7 @@ class FlowGraph(DirectedGraph, ProgramData):
     def exit(self, value):
         self._exit = value
 
-    def remove_vertex(self, v: Vertex):
+    def remove_vertex(self, v: vertices.Vertex):
         DirectedGraph.remove_vertex(self, v)
         if v == self._entry:
             self._entry = None
@@ -784,7 +221,7 @@ class ControlFlowGraph(FlowGraph):
         # Remove edges known to be unreachable.
         for v in self:
             for e in self.successors(v):
-                if e.direction == Direction.UNREACHABLE:
+                if e.direction == edges.Direction.UNREACHABLE:
                     messages.debug_message("Edge {} is unreachable in subprogram '{}'".format(e, self.name))
                     self.remove_edge(e)
 
@@ -799,8 +236,8 @@ class ControlFlowGraph(FlowGraph):
         for v in self:
             if len(self.successors(v)) == 1:
                 (sole_e,) = self.successors(v)
-                if sole_e.direction == Direction.ELSE or sole_e.direction == Direction.THEN:
-                    sole_e.direction = Direction.CONTINUE
+                if sole_e.direction == edges.Direction.ELSE or sole_e.direction == edges.Direction.THEN:
+                    sole_e.direction = edges.Direction.CONTINUE
 
     def dotify(self, suffix=''):
         assert self.entry
@@ -829,7 +266,7 @@ class ProgramPointGraph(FlowGraph):
         ppg = ProgramPointGraph(cfg.program, cfg.name)
         # Add a vertex per basic block
         for basic_block in cfg:
-            v = ProgramPointVertex(Vertex.get_vertex_id(), basic_block)
+            v = vertices.ProgramPointVertex(vertices.Vertex.get_vertex_id(), basic_block)
             ppg.add_vertex(v)
             if v.program_point == cfg.entry:
                 ppg._entry = v
@@ -837,12 +274,12 @@ class ProgramPointGraph(FlowGraph):
                 ppg._exit = v
 
         def add_edge(edge):
-            v = ProgramPointVertex(Vertex.get_vertex_id(), edge)
+            v = vertices.ProgramPointVertex(vertices.Vertex.get_vertex_id(), edge)
             ppg.add_vertex(v)
             p = ppg.__program_point_to_vertex[edge.predecessor()]
             s = ppg.__program_point_to_vertex[edge.successor()]
-            ppg.add_edge(TransitionEdge(p, v))
-            ppg.add_edge(TransitionEdge(v, s))
+            ppg.add_edge(edges.TransitionEdge(p, v))
+            ppg.add_edge(edges.TransitionEdge(v, s))
 
         # Add a vertex per control flow transition, and join the control flow
         # transition to its end points on both sides
@@ -851,7 +288,7 @@ class ProgramPointGraph(FlowGraph):
                 add_edge(edge)
 
         # Add dummy edge
-        edge = TransitionEdge(cfg.exit, cfg.entry)
+        edge = edges.TransitionEdge(cfg.exit, cfg.entry)
         add_edge(edge)
 
         return ppg
@@ -860,15 +297,15 @@ class ProgramPointGraph(FlowGraph):
         FlowGraph.__init__(self, program, name)
         self.__program_point_to_vertex = {}
 
-    def add_vertex(self, v: ProgramPointVertex):
+    def add_vertex(self, v: vertices.ProgramPointVertex):
         FlowGraph.add_vertex(self, v)
         self.__program_point_to_vertex[v.program_point] = v
 
-    def remove_vertex(self, v: ProgramPointVertex):
+    def remove_vertex(self, v: vertices.ProgramPointVertex):
         FlowGraph.remove_vertex(self, v)
         del self.__program_point_to_vertex[v.program_point]
 
-    def __getitem__(self, item: Edge or Vertex):
+    def __getitem__(self, item: edges.Edge or vertices.Vertex):
         try:
             return self.__program_point_to_vertex[item]
         except KeyError:
@@ -885,7 +322,7 @@ class ProgramPointGraph(FlowGraph):
                 for successor_edge in self.successors(predecessor_edge.predecessor()):
                     existing_edges.add(successor_edge)
                 for successor_edge in self.successors(v):
-                    new_edges.add(TransitionEdge(predecessor_edge.predecessor(), successor_edge.successor()))
+                    new_edges.add(edges.TransitionEdge(predecessor_edge.predecessor(), successor_edge.successor()))
 
             if existing_edges.intersection(new_edges):
                 return False
@@ -941,10 +378,10 @@ class DominatorGraph(FlowGraph):
     def __add_edges(self, flow_graph):
         for v in flow_graph.pre_dominator_tree():
             for succ_edge in flow_graph.pre_dominator_tree().successors(v):
-                self.add_edge(Edge(v, succ_edge.successor()))
+                self.add_edge(edges.Edge(v, succ_edge.successor()))
         for v in flow_graph.post_dominator_tree():
             for succ_edge in flow_graph.post_dominator_tree().successors(v):
-                self.add_edge(Edge(v, succ_edge.successor()))
+                self.add_edge(edges.Edge(v, succ_edge.successor()))
 
     def dotify(self):
         data = []
@@ -958,7 +395,7 @@ class DominatorGraph(FlowGraph):
 
 
 class DependenceGraph(DirectedGraph):
-    def __init__(self, program, cfg, basic_block: BasicBlock):
+    def __init__(self, program, cfg, basic_block: vertices.BasicBlock):
         DirectedGraph.__init__(self, program)
         self._cfg = cfg
         self._basic_block = basic_block
@@ -975,11 +412,11 @@ class DependenceGraph(DirectedGraph):
 
     def reduce_transitively(self):
         # Set up a dummy entry vertex to satisfy the depth-first search contract
-        entry_v = InstructionVertex(Vertex.get_vertex_id(), None)
+        entry_v = vertices.InstructionVertex(vertices.Vertex.get_vertex_id(), None)
         self.add_vertex(entry_v)
         for v in self:
             if v != entry_v and len(self.predecessors(v)) == 0:
-                self.add_edge(Edge(entry_v, v))
+                self.add_edge(edges.Edge(entry_v, v))
 
         # Compute
         dfs = DepthFirstSearch(self, entry_v)
@@ -1014,7 +451,7 @@ class Tree(DirectedGraph):
     def root(self):
         return self._root
 
-    def is_proper_ancestor(self, a: Vertex, v: Vertex):
+    def is_proper_ancestor(self, a: vertices.Vertex, v: vertices.Vertex):
         if v == self.root:
             return False
         else:
@@ -1024,7 +461,7 @@ class Tree(DirectedGraph):
             else:
                 return self.is_proper_ancestor(a, predecessor_e.predecessor())
 
-    def is_ancestor(self, a: Vertex, v: Vertex):
+    def is_ancestor(self, a: vertices.Vertex, v: vertices.Vertex):
         return a == v or self.is_proper_ancestor(a, v)
 
 
@@ -1033,7 +470,7 @@ class DominatorTree(Tree, ProgramData):
         PRE = 0
         POST = 1
 
-    def __init__(self, flow_graph: FlowGraph, root: Vertex):
+    def __init__(self, flow_graph: FlowGraph, root: vertices.Vertex):
         Tree.__init__(self)
         ProgramData.__init__(self, flow_graph.program, flow_graph.name)
         self._root = root
@@ -1095,7 +532,7 @@ class DominatorTree(Tree, ProgramData):
                 else:
                     return label[ancestor[v]]
 
-        def do_search(v: Vertex):
+        def do_search(v: vertices.Vertex):
             nonlocal pre_id
             pre_id += 1
             semi[v] = pre_id
@@ -1127,14 +564,14 @@ class DominatorTree(Tree, ProgramData):
 
         if self._root == flow_graph.entry:
             forward_transitions = DirectedGraph.successors
-            forward_transition = Edge.successor
+            forward_transition = edges.Edge.successor
             backward_transitions = DirectedGraph.predecessors
-            backward_transition = Edge.predecessor
+            backward_transition = edges.Edge.predecessor
         else:
             forward_transitions = DirectedGraph.predecessors
-            forward_transition = Edge.predecessor
+            forward_transition = edges.Edge.predecessor
             backward_transitions = DirectedGraph.successors
-            backward_transition = Edge.successor
+            backward_transition = edges.Edge.successor
 
         label = {}
         parent = {}
@@ -1182,7 +619,7 @@ class DominatorTree(Tree, ProgramData):
 
         # All done: Add edges to the tree data structure
         for child, parent in idom.items():
-            self.add_edge(Edge(parent, child))
+            self.add_edge(edges.Edge(parent, child))
 
 
 class DominanceFrontiers:
@@ -1196,10 +633,10 @@ class DominanceFrontiers:
     def __compute(self, g, t):
         if t.root == g.entry:
             backward_transitions = DirectedGraph.predecessors
-            backward_transition = Edge.predecessor
+            backward_transition = edges.Edge.predecessor
         else:
             backward_transitions = DirectedGraph.successors
-            backward_transition = Edge.successor
+            backward_transition = edges.Edge.successor
 
         for v in g:
             if len(backward_transitions(g, v)) > 1:
@@ -1260,7 +697,7 @@ class StrongComponents:
 
 
 class DepthFirstSearch:
-    def __init__(self, g: DirectedGraph, root: Vertex):
+    def __init__(self, g: DirectedGraph, root: vertices.Vertex):
         self._pre_order = {}
         self._post_order = {}
         self._back_edges = []
@@ -1272,10 +709,10 @@ class DepthFirstSearch:
     def post_order(self):
         return list(e[0] for e in sorted(self._post_order.items(), key=lambda e: e[1]))
 
-    def pre_order_number(self, v: Vertex):
+    def pre_order_number(self, v: vertices.Vertex):
         return self._pre_order[v]
 
-    def post_order_number(self, v: Vertex):
+    def post_order_number(self, v: vertices.Vertex):
         return self._post_order[v]
 
     @property
@@ -1307,18 +744,20 @@ class DepthFirstSearch:
 
 
 class LoopNests(FlowGraph):
-    def __init__(self, ppg, unify_shared_loops=True):
+    def __init__(self, ppg):
         FlowGraph.__init__(self, ppg.program, ppg.name)
         self._loops = []
-        self._headers = set()
-        self._tails = set()
+        self._headers = {}
+        self._tails = {}
+        self._loop_entries = {}
+        self._loop_exits = {}
         self._program_point_to_loop = {v: None for v in ppg}
-        self.__discover_loop_bodies(ppg, unify_shared_loops)
+        self.__discover_loop_bodies(ppg)
         self.__model_control_flow_into_and_out_of_loop(ppg)
         (self.entry,) = [loop for loop in self if ppg.entry in loop]
         (self.exit,) = [loop for loop in self if ppg.exit in loop]
 
-    def __discover_loop_bodies(self, ppg, unify_shared_loops):
+    def __discover_loop_bodies(self, ppg):
         def do_search(v):
             visited.add(v)
             if v != header:
@@ -1329,7 +768,7 @@ class LoopNests(FlowGraph):
             order.append(v)
 
         containment = {v: v for v in ppg}
-        data = {v: set() for v in ppg}
+        data = {v: None for v in ppg}
         dfs = DepthFirstSearch(ppg, ppg.entry)
         for v in reversed(dfs.pre_order()):
             back_edges = [e for e in ppg.predecessors(v) if e in dfs.back_edges]
@@ -1350,66 +789,71 @@ class LoopNests(FlowGraph):
 
                 for w in reversed(order):
                     containment[w] = header
-                    if unify_shared_loops:
-                        data[w].add(header)
-                    elif w in tails:
-                        data[w].add(w)
+                    data[w] = header
 
                     if w != header:
                         # Propagate reachability information concerning loop tails to immediate predecessors.
                         # We ignore the loop header so that the information does not spill out to enclosing loop.
                         for e in ppg.predecessors(w):
-                            data[containment[e.predecessor()]].update(data[w])
+                            data[containment[e.predecessor()]] = data[w]
 
                 loop_vertices = {}
                 for w in order:
                     # Do not add an inner loop header to the partition for this header.
                     if w not in [loop.header for loop in self._loops]:
-                        if frozenset(data[w]) not in loop_vertices:
-                            loop = LoopBody(Vertex.get_vertex_id(), header)
-                            loop.tails = tails
-                            loop_vertices[frozenset(data[w])] = loop
+                        if data[w] not in loop_vertices:
+                            loop = vertices.LoopBody(vertices.Vertex.get_vertex_id(), header)
+                            loop_vertices[data[w]] = loop
                             self.add_vertex(loop)
-                        loop = loop_vertices[frozenset(data[w])]
+                            self._headers[header] = loop
+                            for tail in tails:
+                                self._tails[tail] = loop
+                        loop = loop_vertices[data[w]]
                         loop.append(w)
 
                 # Clear the reachability information in readiness for enclosing loops.
-                data[header].clear()
+                data[header] = None
 
     def __model_control_flow_into_and_out_of_loop(self, ppg):
-        edges = {}
+        transitions = {}
         for v in ppg:
-            if isinstance(v.program_point, Edge):
+            if isinstance(v.program_point, edges.Edge):
                 loop = self.find_loop(v)
                 loop_of_predecessor = self.find_loop(ppg[v.program_point.predecessor()])
                 loop_of_successor = self.find_loop(ppg[v.program_point.successor()])
 
                 if loop != loop_of_predecessor:
                     if not self.has_edge(loop_of_predecessor, loop):
-                        edge = LoopTransition(loop_of_predecessor, loop, LoopTransition.Direction.EXIT)
-                        self.add_edge(edge)
-                        edges[(loop_of_predecessor, loop)] = edge
-                    edge = edges[(loop_of_predecessor, loop)]
-                    edge.add(TransitionEdge(ppg[v.program_point.predecessor()], v))
+                        transition = edges.LoopTransition(loop_of_predecessor,
+                                                          loop,
+                                                          edges.LoopTransition.Direction.EXIT)
+                        self.add_edge(transition)
+                        transitions[(loop_of_predecessor, loop)] = transition
+                    transition = transitions[(loop_of_predecessor, loop)]
+                    transition.add(edges.TransitionEdge(ppg[v.program_point.predecessor()], v))
+                    self._loop_exits[v] = loop_of_predecessor
 
                 if loop != loop_of_successor:
                     if not self.has_edge(loop, loop_of_successor):
-                        edge = LoopTransition(loop, loop_of_successor, LoopTransition.Direction.ENTRY)
-                        self.add_edge(edge)
-                        edges[(loop, loop_of_successor)] = edge
-                    edge = edges[(loop, loop_of_successor)]
-                    edge.add(TransitionEdge(v, ppg[v.program_point.successor()]))
+                        transition = edges.LoopTransition(loop,
+                                                          loop_of_successor,
+                                                          edges.LoopTransition.Direction.ENTRY)
+                        self.add_edge(transition)
+                        transitions[(loop, loop_of_successor)] = transition
+                    transition = transitions[(loop, loop_of_successor)]
+                    transition.add(edges.TransitionEdge(v, ppg[v.program_point.successor()]))
+                    self._loop_entries[v] = loop_of_successor
 
                 if self.is_tail(v):
                     loop = self.find_loop(v)
                     if not self.has_edge(loop, loop):
-                        edge = LoopTransition(loop, loop, LoopTransition.Direction.BACK)
-                        self.add_edge(edge)
-                        edges[(loop, loop)] = edge
-                    edge = edges[(loop, loop)]
-                    edge.add(TransitionEdge(v, ppg[v.program_point.successor()]))
+                        transition = edges.LoopTransition(loop, loop, edges.LoopTransition.Direction.BACK)
+                        self.add_edge(transition)
+                        transitions[(loop, loop)] = transition
+                    transition = transitions[(loop, loop)]
+                    transition.add(edges.TransitionEdge(v, ppg[v.program_point.successor()]))
 
-    def add_vertex(self, v: Vertex):
+    def add_vertex(self, v: vertices.Vertex):
         FlowGraph.add_vertex(self, v)
         self._loops.append(v)
 
@@ -1421,26 +865,24 @@ class LoopNests(FlowGraph):
         return loop == self._loops[-1]
 
     def is_header(self, v):
-        if v in self._headers:
-            return True
-        elif len(self._headers) != self.number_of_vertices():
-            for loop in self:
-                if v == loop.header:
-                    self._headers.add(v)
-                    return True
-        return False
+        return v in self._headers
 
     def is_tail(self, v):
-        if v in self._tails:
-            return True
-        else:
-            for loop in self:
-                if v in loop.tails:
-                    self._tails.add(v)
-                    return True
-        return False
+        return v in self._tails
 
-    def find_loop(self, v: ProgramPointVertex):
+    def loop_entries(self, loop):
+        return [v for v in self._loop_entries if self._loop_entries[v] == loop]
+
+    def is_loop_entry(self, v):
+        return v in self._loop_entries
+
+    def loop_exits(self, loop):
+        return [v for v in self._loop_entries if self._loop_exits[v] == loop]
+
+    def is_loop_exit(self, v):
+        return v in self._loop_exits
+
+    def find_loop(self, v: vertices.ProgramPointVertex):
         if self._program_point_to_loop[v] is None:
             for loop in self:
                 if v in loop:
@@ -1465,12 +907,12 @@ class LoopNests(FlowGraph):
 
         # Add program points and edges that model control flow out of loop.
         for transition_edge in self.successors(loop):
-            if transition_edge.direction == LoopTransition.Direction.EXIT:
+            if transition_edge.direction == edges.LoopTransition.Direction.EXIT:
                 for edge in transition_edge:
                     if edge.successor() not in induced_graph:
                         induced_graph.add_vertex(edge.successor())
                     induced_graph.add_edge(edge)
-            elif transition_edge.direction == LoopTransition.Direction.ENTRY:
+            elif transition_edge.direction == edges.LoopTransition.Direction.ENTRY:
                 for edge in transition_edge:
                     if edge.successor() not in induced_graph:
                         induced_graph.add_vertex(edge.successor())
@@ -1478,24 +920,25 @@ class LoopNests(FlowGraph):
 
         # Add program points and edges that model control flow into the loop from inner loops.
         for transition_edge in self.predecessors(loop):
-            if transition_edge.direction == LoopTransition.Direction.EXIT:
+            if transition_edge.direction == edges.LoopTransition.Direction.EXIT:
                 for edge in transition_edge:
-                    induced_graph.add_edge(TransitionEdge(transition_edge.predecessor().header, edge.successor()))
+                    induced_graph.add_edge(edges.TransitionEdge(transition_edge.predecessor().header, edge.successor()))
 
         # Set the entry of the induced graph.
         induced_graph.entry = header
 
         if guarantee_single_exit:
             # Set the exit of the induced graph, if instructed.
-            exits = [v for v in induced_graph if len(induced_graph.successors(v)) == 0 or self.is_tail(v)]
+            exits = [v for v in induced_graph if len(induced_graph.successors(v)) == 0]
             if len(exits) == 1:
                 (induced_graph.exit,) = exits
             else:
-                dummy_program_point = ProgramPointVertex(Vertex.get_vertex_id(True), Vertex(Vertex.get_vertex_id()))
+                dummy_program_point = vertices.ProgramPointVertex(vertices.Vertex.get_vertex_id(True),
+                                                                  vertices.Vertex(vertices.Vertex.get_vertex_id()))
                 induced_graph.add_vertex(dummy_program_point)
                 induced_graph.exit = dummy_program_point
                 for exit_program_point in exits:
-                    induced_graph.add_edge(TransitionEdge(exit_program_point, dummy_program_point))
+                    induced_graph.add_edge(edges.TransitionEdge(exit_program_point, dummy_program_point))
         return induced_graph
 
     def dotify(self, suffix=''):
@@ -1536,15 +979,15 @@ class InstrumentationPointGraph(ProgramPointGraph):
                 if predecessor_edge.predecessor() != v:
                     for successor_edge in ipg.successors(v):
                         if successor_edge.successor() != v:
-                            edge = TransitionEdge(predecessor_edge.predecessor(), successor_edge.successor())
+                            edge = edges.TransitionEdge(predecessor_edge.predecessor(), successor_edge.successor())
                             edge.extend(predecessor_edge)
                             edge.extend([v])
                             edge.extend(successor_edge)
                             ipg.add_edge(edge)
 
                             if (back_edge and
-                                    db.is_instrumentation(predecessor_edge.predecessor().program_point) and
-                                    db.is_instrumentation(successor_edge.successor().program_point) and
+                                    db.is_instrumentation(predecessor_edge.predecessor()) and
+                                    db.is_instrumentation(successor_edge.successor()) and
                                     predecessor_edge.predecessor() in loop and
                                     successor_edge.successor() in loop):
                                 edge.set_back_edge()
@@ -1555,11 +998,11 @@ class InstrumentationPointGraph(ProgramPointGraph):
             union = loop[:]
             loop_union[loop] = union
             for successor_edge in lnt.successors(loop):
-                if successor_edge.direction == LoopTransition.Direction.ENTRY:
+                if successor_edge.direction == edges.LoopTransition.Direction.ENTRY:
                     nested_loop = successor_edge.successor()
                     union.extend(loop_union[nested_loop])
 
-            to_remove = [v for v in loop if not db.is_instrumentation(v.program_point)]
+            to_remove = [v for v in loop if not db.is_instrumentation(v)]
 
             for v in to_remove:
                 if v != loop.header and not lnt.is_tail(v):
@@ -1591,23 +1034,41 @@ class InstrumentationPointGraph(ProgramPointGraph):
 
 
 class SuperBlockGraph(DirectedGraph, ProgramData):
-    def __init__(self, lnt: LoopNests):
+    def __init__(self, ppg: ProgramPointGraph, lnt: LoopNests):
         DirectedGraph.__init__(self)
-        ProgramData.__init__(self, lnt.program, lnt.name)
-        self.__create(lnt)
+        ProgramData.__init__(self, ppg.program, ppg.name)
+        self.__program_point_to_vertex = {v: [] for v in ppg}
+        self.__create(ppg, lnt)
 
-    def __create(self, lnt):
-        for induced_subgraph in lnt.induce():
+    def __create(self, ppg: ProgramPointGraph, lnt: LoopNests):
+        for loop in lnt:
+            induced_subgraph = lnt.induce(ppg, loop.header, True)
+            induced_subgraph.dotify(loop.header)
             dominator_graph = DominatorGraph(induced_subgraph)
-            dominator_graph.dotify()
             strong_components = StrongComponents(dominator_graph)
-            scc_to_super_block, junctions = self._add_vertices(induced_subgraph, strong_components)
+            scc_to_super_block, junctions = self._add_vertices(lnt, loop, induced_subgraph, strong_components)
             self.__add_edges(induced_subgraph, strong_components, scc_to_super_block, junctions)
 
-    def _add_vertices(self, induced_subgraph, strong_components):
+            for entry_transition in [loop_transition for loop_transition in lnt.successors(loop)
+                                     if loop_transition.direction == edges.LoopTransition.Direction.ENTRY]:
+                nested_loop = entry_transition.successor()
+                (exit_transition,) = [loop_transition for loop_transition in lnt.successors(nested_loop)
+                                      if loop_transition.successor() == loop]
+                for transition in exit_transition:
+                    super_blocks = self.__program_point_to_vertex[transition.successor()]
+                    assert len(super_blocks) == 2
+                    dead_super_block = super_blocks[0]
+                    live_super_block = super_blocks[1]
+                    (junction,) = [predecessor_edge.predecessor()
+                                   for predecessor_edge in self.predecessors(dead_super_block)]
+                    self.add_edge(edges.LoopTransition(junction, live_super_block, edges.LoopTransition.Direction.EXIT))
+                    self.__program_point_to_vertex[transition.successor()] = [live_super_block]
+                    self.remove_vertex(dead_super_block)
+
+    def _add_vertices(self, lnt, loop, induced_subgraph, strong_components):
         scc_to_super_block = {}
         for scc_id in strong_components:
-            super_block = SuperBlock(Vertex.get_vertex_id())
+            super_block = vertices.SuperBlock(vertices.Vertex.get_vertex_id())
             scc_to_super_block[scc_id] = super_block
             self.add_vertex(super_block)
 
@@ -1617,57 +1078,62 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
                 scc_id = strong_components[v]
                 super_block = scc_to_super_block[scc_id]
                 super_block.append(v)
-                if isinstance(v.program_point, Vertex):
+                self.__program_point_to_vertex[v].append(super_block)
+                if isinstance(v.program_point, vertices.Vertex):
+                    if not lnt.is_header(v) or v == loop.header:
+                        super_block.representative = v
+                elif not super_block.representative:
+                    # No representative yet so pick an edge.
                     super_block.representative = v
 
-        for super_block in scc_to_super_block.values():
-            if not super_block.representative:
-                # No representative, so pick the first
-                super_block.representative = super_block[0]
-
         junctions = {}
-        edges = set()
         for super_block in scc_to_super_block.values():
             for v in super_block:
                 if len(induced_subgraph.successors(v)) > 1:
-                    junctions[v] = Junction(Vertex.get_vertex_id(), v)
-                    edges.add(Edge(super_block, junctions[v]))
-
-        for edge in edges:
-            self.add_vertex(edge.successor())
-            self.add_edge(edge)
+                    junctions[v] = vertices.Junction(vertices.Vertex.get_vertex_id(), v)
+                    self.add_vertex(junctions[v])
 
         return scc_to_super_block, junctions
 
     def __add_edges(self, induced_subgraph, strong_components, scc_to_super_block, junctions):
+        for v in junctions:
+            self.add_edge(edges.Edge(self.__program_point_to_vertex[v][-1], junctions[v]))
+
         for super_block in scc_to_super_block.values():
             v = super_block[0]
-            if not isinstance(v.program_point, Vertex):
-                (pred_edge,) = induced_subgraph.predecessors(v)
-                predecessor = junctions[pred_edge.predecessor()]
-                self.add_edge(Edge(predecessor, super_block))
+            if not isinstance(v.program_point, vertices.Vertex):
+                (predecessor_edge,) = induced_subgraph.predecessors(v)
+                predecessor = junctions[predecessor_edge.predecessor()]
+                self.add_edge(edges.Edge(predecessor, super_block))
             else:
-                for pred_edge in induced_subgraph.predecessors(v):
-                    predecessor = scc_to_super_block[strong_components[pred_edge.predecessor()]]
-                    self.add_edge(Edge(predecessor, super_block))
+                for predecessor_edge in induced_subgraph.predecessors(v):
+                    predecessor = scc_to_super_block[strong_components[predecessor_edge.predecessor()]]
+                    self.add_edge(edges.Edge(predecessor, super_block))
 
     def super_blocks(self):
         for v in self:
-            if isinstance(v, SuperBlock):
+            if isinstance(v, vertices.SuperBlock):
                 yield v
 
     def junctions(self):
         for v in self:
-            if isinstance(v, Junction):
+            if isinstance(v, vertices.Junction):
                 yield v
 
-    def dotify(self):
+    def __getitem__(self, v: vertices.ProgramPointVertex):
+        return self.__program_point_to_vertex[v][-1]
+
+    def dotify(self, suffix=''):
         data = []
         for v in self:
             data.append(v.dotify())
             for e in self.successors(v):
                 data.append(e.dotify())
-        filename = '{}.{}.super.dot'.format(self.program.basename, self.name)
+
+        if suffix:
+            filename = '{}.{}.super.{}.dot'.format(self.program.basename(), self.name, suffix)
+        else:
+            filename = '{}.{}.super.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
 
@@ -1679,8 +1145,8 @@ class SyntaxTree(Tree):
         self._post_dominance_frontier = DominanceFrontiers(g, g.post_dominator_tree())
         self._root = self.__make_sequence_subtree(g.entry, g.exit, True)
 
-    def __make_sequence_subtree(self, source: Vertex, target: Vertex, inclusive: bool):
-        seq = Sequence(Vertex.get_vertex_id())
+    def __make_sequence_subtree(self, source: vertices.Vertex, target: vertices.Vertex, inclusive: bool):
+        seq = vertices.Sequence(vertices.Vertex.get_vertex_id())
         self.add_vertex(seq)
 
         walker = source
@@ -1692,34 +1158,34 @@ class SyntaxTree(Tree):
                         self._cache[walker] = subroot
                     else:
                         subroot = self._cache[walker]
-                    self.add_edge(Edge(seq, subroot))
+                    self.add_edge(edges.Edge(seq, subroot))
                 walker = target
             else:
                 self.add_vertex(walker)
-                self.add_edge(Edge(seq, walker))
+                self.add_edge(edges.Edge(seq, walker))
                 if len(self.g.successors(walker)) == 1:
                     print(self.g.name, source, target, walker)
                     (e,) = self.g.successors(walker)
                     walker = e.successor()
                 else:
-                    self.add_edge(Edge(seq, self.__make_alternative_subtree(walker)))
+                    self.add_edge(edges.Edge(seq, self.__make_alternative_subtree(walker)))
                     (dominator_e,) = self.g.post_dominator_tree().predecessors(walker)
                     walker = dominator_e.predecessor()
 
         if inclusive:
             self.add_vertex(target)
-            self.add_edge(Edge(seq, target))
+            self.add_edge(edges.Edge(seq, target))
 
         return seq
 
-    def __make_alternative_subtree(self, branch: Vertex):
-        alt = Alternative(Vertex.get_vertex_id())
+    def __make_alternative_subtree(self, branch: vertices.Vertex):
+        alt = vertices.Alternative(vertices.Vertex.get_vertex_id())
         self.add_vertex(alt)
 
         (dominator_e,) = self.g.post_dominator_tree().predecessors(branch)
         for e in self.g.successors(branch):
             seq = self.__make_sequence_subtree(e.successor(), dominator_e.predecessor(), False)
-            self.add_edge(Edge(alt, seq))
+            self.add_edge(edges.Edge(alt, seq))
 
         return alt
 

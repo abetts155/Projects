@@ -5,40 +5,65 @@ import sys
 import threading
 import timeit
 
-from calculations import calculations
-from graphs import graph
-from system import program, database
+from graphs import graphs
+from system import (program, database, calculations)
 from utils import messages
 
 
 def main(**kwargs):
-    prog = program.IO.read(kwargs['filename'])
-    prog.cleanup()
+    messages.verbose_message("Reading program from '{}'".format(kwargs['filename']))
+    the_program = program.IO.read(kwargs['filename'])
+    the_program.cleanup()
+
+    failures = set()
     with database.Database(kwargs['database']) as db:
-        for subprogram in prog:
+        messages.verbose_message("Using database '{}'".format(kwargs['database']))
+        for subprogram in the_program:
             subprogram.cfg.dotify()
-            ppg = graph.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
+            ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
+            lnt = graphs.LoopNests(ppg)
+            lnt.dotify()
 
-            for i in range(0, kwargs['repeat']):
-                lnt = graph.LoopNests(ppg)
-                lnt.dotify()
+            ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)
+            ilp_for_ppg.solve('{}.{}.ppg.ilp'.format(the_program.basename(), ppg.name))
 
-                ilp_for_ppg = calculations.create_ilp_for_program_point_graph(ppg, lnt, db)
-                ilp_for_ppg.solve('{}{}.ppg.ilp'.format(prog.basename(), ppg.name))
+            start = timeit.default_timer()
+            super_graph = graphs.SuperBlockGraph(ppg, lnt)
+            super_graph.dotify()
+            end = timeit.default_timer()
 
-                start = timeit.default_timer()
-                super_graph = graph.SuperBlockGraph(lnt)
-                super_graph.dotify()
-                end = timeit.default_timer()
+            ilp_for_super = calculations.create_ilp_for_super_block_graph(super_graph, lnt, db)
+            ilp_for_super.solve('{}.{}.super.ilp'.format(the_program.basename(), ppg.name))
+            ilp_for_super.add_to_construction_time(end - start)
 
-                ilp_for_super = calculations.create_ilp_for_super_block_graph(super_graph, lnt, db)
-                ilp_for_super.solve('{}{}.super.ilp'.format(prog.basename(), ppg.name))
-                ilp_for_super.add_to_construction_time(end - start)
-
-                messages.verbose_message('>>>>>', ppg.name, "PASSED" if ilp_for_ppg.wcet == ilp_for_super.wcet else "FAILED " * 10)
+            if ilp_for_ppg.wcet != ilp_for_super.wcet:
+                messages.verbose_message('>>>>>', ppg.name, 'FAILED' * 2)
+                failures.add(ppg.name)
                 messages.verbose_message(ilp_for_ppg)
                 messages.verbose_message(ilp_for_super, new_lines=2)
+            else:
+                ppg_solve_times = []
+                super_solve_times = []
+
+                for i in range(0, kwargs['repeat']):
+                    ilp_for_ppg.solve('{}.{}.ppg.ilp'.format(the_program.basename(), ppg.name))
+                    ppg_solve_times.append(ilp_for_ppg.solve_time)
+                    ilp_for_super.solve('{}.{}.super.ilp'.format(the_program.basename(), ppg.name))
+                    super_solve_times.append(ilp_for_super.solve_time)
+
+                ppg_solve_time = sum(ppg_solve_times)/len(ppg_solve_times)
+                super_solve_time = sum(super_solve_times)/len(super_solve_times)
+
+                factor = ppg_solve_time/super_solve_time
+                if factor > 1:
+                    message = '{:.2}X speed up'.format(factor)
+                else:
+                    message = '{:.2}X slow down'.format(1/factor)
+                messages.verbose_message('>>>>> {} passed {:.5f} {:.5f} {}'.format(ppg.name,
+                                                                                   ppg_solve_time,
+                                                                                   super_solve_time,
+                                                                                   message))
 
 
 def parse_the_command_line():

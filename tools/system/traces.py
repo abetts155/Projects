@@ -1,6 +1,8 @@
 import os
 
-from graphs import graph
+from graphs import edges
+from graphs import vertices
+from graphs import graphs
 from system import program
 
 
@@ -12,7 +14,7 @@ class TraceElement:
         self.time = time
 
     def __str__(self):
-        if isinstance(self.v.program_point, graph.Vertex):
+        if isinstance(self.v.program_point, vertices.Vertex):
             return '{} {}'.format(str(self.v.program_point), self.time)
         else:
             return '{} {} {}'.format(str(self.v.program_point.predecessor()),
@@ -25,12 +27,12 @@ class TraceElement:
         if lexemes:
             time = int(lexemes[-1])
             if len(lexemes) == 2:
-                v = graph.Vertex.id_pool[int(lexemes[0])]
+                v = vertices.Vertex.id_pool[int(lexemes[0])]
                 return v, time
             else:
-                p = graph.Vertex.id_pool[int(lexemes[0])]
-                s = graph.Vertex.id_pool[int(lexemes[1])]
-                edge = graph.ControlFlowEdge(p, s)
+                p = vertices.Vertex.id_pool[int(lexemes[0])]
+                s = vertices.Vertex.id_pool[int(lexemes[1])]
+                edge = edges.ControlFlowEdge(p, s)
                 return edge, time
 
 
@@ -40,7 +42,7 @@ class Trace(list):
 
 class Traces(list):
     def write(self, filename):
-        with open(filename, 'a') as wd:
+        with open(filename, 'w') as wd:
             for trace in self:
                 for element in trace:
                     wd.write(str(element))
@@ -67,6 +69,6 @@ class TraceFile:
     def extract_type(cls, the_program: program.Program, filename: str):
         lexemes = cls.tokenize(the_program, filename)
         if lexemes[1] == 'ppg':
-            return graph.ProgramPointGraph
+            return graphs.ProgramPointGraph
         else:
-            return graph.InstrumentationPointGraph
+            return graphs.InstrumentationPointGraph
