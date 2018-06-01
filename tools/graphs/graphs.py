@@ -1137,40 +1137,36 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
         dot.generate(filename, data)
 
 
-class SyntaxTree(Tree):
-    def __init__(self, g: FlowGraph):
+class SyntaxTree(Tree, ProgramData):
+    def __init__(self, ppg: ProgramPointGraph):
         Tree.__init__(self)
-        self.g = g
+        ProgramData.__init__(self, ppg.program, ppg.name)
         self._cache = {}
-        self._post_dominance_frontier = DominanceFrontiers(g, g.post_dominator_tree())
-        self._root = self.__make_sequence_subtree(g.entry, g.exit, True)
+        self._post_dominator_tree = DominatorTree(ppg, ppg.exit)
+        self._post_dominance_frontier = DominanceFrontiers(ppg, self._post_dominator_tree)
+        self._root = self.__make_sequence_subtree(ppg, ppg.entry, ppg.exit, True)
 
-    def __make_sequence_subtree(self, source: vertices.Vertex, target: vertices.Vertex, inclusive: bool):
+    def __make_sequence_subtree(self, ppg, source: vertices.Vertex, target: vertices.Vertex, inclusive: bool):
         seq = vertices.Sequence(vertices.Vertex.get_vertex_id())
         self.add_vertex(seq)
 
         walker = source
         while walker != target:
-            if len(self.g.predecessors(walker)) > 1 and len(self._post_dominance_frontier[walker]) > 1:
-                if walker != source:
-                    if walker not in self._cache:
-                        subroot = self.__make_sequence_subtree(walker, target, False)
-                        self._cache[walker] = subroot
-                    else:
-                        subroot = self._cache[walker]
-                    self.add_edge(edges.Edge(seq, subroot))
+            if walker != source and len(ppg.predecessors(walker)) > 1 and len(self._post_dominance_frontier[walker]) > 1:
+                if walker not in self._cache:
+                    self._cache[walker] = self.__make_sequence_subtree(ppg, walker, target, False)
+                self.add_edge(edges.Edge(seq, self._cache[walker]))
                 walker = target
             else:
                 self.add_vertex(walker)
                 self.add_edge(edges.Edge(seq, walker))
-                if len(self.g.successors(walker)) == 1:
-                    print(self.g.name, source, target, walker)
-                    (e,) = self.g.successors(walker)
-                    walker = e.successor()
+                if len(ppg.successors(walker)) == 1:
+                    (edge,) = ppg.successors(walker)
+                    walker = edge.successor()
                 else:
-                    self.add_edge(edges.Edge(seq, self.__make_alternative_subtree(walker)))
-                    (dominator_e,) = self.g.post_dominator_tree().predecessors(walker)
-                    walker = dominator_e.predecessor()
+                    self.add_edge(edges.Edge(seq, self.__make_alternative_subtree(ppg, walker)))
+                    (dominator_edge,) = ppg.post_dominator_tree().predecessors(walker)
+                    walker = dominator_edge.predecessor()
 
         if inclusive:
             self.add_vertex(target)
@@ -1178,13 +1174,13 @@ class SyntaxTree(Tree):
 
         return seq
 
-    def __make_alternative_subtree(self, branch: vertices.Vertex):
+    def __make_alternative_subtree(self, ppg, branch: vertices.Vertex):
         alt = vertices.Alternative(vertices.Vertex.get_vertex_id())
         self.add_vertex(alt)
 
-        (dominator_e,) = self.g.post_dominator_tree().predecessors(branch)
-        for e in self.g.successors(branch):
-            seq = self.__make_sequence_subtree(e.successor(), dominator_e.predecessor(), False)
+        (dominator_edge,) = self._post_dominator_tree.predecessors(branch)
+        for e in ppg.successors(branch):
+            seq = self.__make_sequence_subtree(ppg, e.successor(), dominator_edge.predecessor(), False)
             self.add_edge(edges.Edge(alt, seq))
 
         return alt
@@ -1195,6 +1191,6 @@ class SyntaxTree(Tree):
             data.append(v.dotify())
             for e in self.successors(v):
                 data.append(e.dotify())
-        filename = '{}.{}.ast.dot'.format(self.g.program, self.g.name)
+        filename = '{}.{}.ast.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
