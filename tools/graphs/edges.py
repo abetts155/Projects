@@ -1,6 +1,7 @@
 import enum
 
 from graphs import vertices
+from graphs import instrumentation
 from utils import dot
 
 
@@ -98,6 +99,32 @@ class ControlFlowEdge(Edge):
                                                                                  color,
                                                                                  color,
                                                                                  style)
+
+
+class InstrumentationEdge(ControlFlowEdge, instrumentation.Instrumentation):
+    def __init__(self, predecessor, successor, number, direction=Direction.NONE):
+        ControlFlowEdge.__init__(self, predecessor, successor, direction)
+        instrumentation.Instrumentation.__init__(self, number)
+
+    def dotify(self):
+        label = []
+        label.append(dot.HTML.open_html)
+        label.append(dot.HTML.open_table)
+
+        label.append(dot.HTML.open_row)
+        label.append(dot.HTML.open_cell(border=2))
+        label.append('id:{}'.format(self.number))
+        label.append(dot.HTML.close_cell)
+        label.append(dot.HTML.close_row)
+
+        label.append(dot.HTML.close_table)
+        label.append(dot.HTML.close_html)
+
+        return '{}->{} [label={}, color={}, style={}];\n'.format(self._predecessor.id_,
+                                                                 self._successor.id_,
+                                                                 ''.join(label),
+                                                                 dot.Colors.blue,
+                                                                 dot.Styles.bold)
 
 
 class TransitionEdge(Edge, list):

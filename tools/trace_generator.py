@@ -13,7 +13,8 @@ def generate_trace(ppg: graphs.ProgramPointGraph, **kwargs):
     time = 0
     while stack:
         v = stack.pop()
-        trace.append(traces.TraceElement(v, time))
+        if not v.is_dummy():
+            trace.append(traces.TraceElement(v, time))
 
         if v != ppg.exit:
             index = random.randint(0, len(ppg.successors(v)) - 1)
@@ -25,9 +26,10 @@ def generate_trace(ppg: graphs.ProgramPointGraph, **kwargs):
 
 def main(**kwargs):
     kwargs['number_of_runs'] = max(kwargs['number_of_runs'], 1)
-    the_program = program.IO.read(kwargs['filename'])
+    the_program = program.IO.read(kwargs['program'])
     for subprogram in the_program:
         messages.debug_message('Creating traces for {}'.format(subprogram.name))
+        subprogram.cfg.dotify()
         ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
         ppg.dotify()
 
@@ -41,7 +43,7 @@ def main(**kwargs):
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Create a set of traces for a program')
 
-    parser.add_argument('--filename',
+    parser.add_argument('--program',
                         help='read the program from this file',
                         required=True)
 

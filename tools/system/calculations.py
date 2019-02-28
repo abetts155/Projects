@@ -1,5 +1,6 @@
 import decimal
 import os
+import random
 import re
 import subprocess
 import timeit
@@ -113,16 +114,26 @@ class ConstraintSystem:
     def solve_time(self):
         return self._solve_time
 
+    def number_of_constraints(self):
+        return len(self._constraints)
+
+    def number_of_variables(self):
+        return len(self._variables)
+
+    @property
+    def construction_time(self):
+        return sum(self._construction_time)
+
     def add_to_construction_time(self, time):
         self._construction_time.append(time)
 
-    def add_to_objective(self, expr):
-        self._objective.append(expr)
+    def add_to_objective(self, term: Term):
+        self._objective.append(term)
 
-    def add_variable(self, variable):
+    def add_variable(self, variable: ProgramPointVariable):
         self._variables.add(variable)
 
-    def add_constraint(self, constraint):
+    def add_constraint(self, constraint: Constraint):
         self._constraints.append(constraint)
 
     def __str__(self):
@@ -132,12 +143,12 @@ variables:    {}
 constraints:  {}
 construction: {}
 solve:        {}
-total:        {}""".format(self._wcet,
-                    len(self._variables),
-                    len(self._constraints),
-                    sum(self._construction_time),
-                    self._solve_time,
-                    sum(self._construction_time) + self._solve_time)
+total:        {}""".format(self.wcet,
+                           len(self._variables),
+                           len(self._constraints),
+                           self.construction_time,
+                           self.solve_time,
+                           self.construction_time + self.solve_time)
 
 
 class IntegerLinearProgram(ConstraintSystem):
@@ -148,6 +159,9 @@ class IntegerLinearProgram(ConstraintSystem):
     def solve(self, filename):
         def get_new_line(num=1):
             return '\n' * num
+
+        random.shuffle(self._objective)
+        random.shuffle(self._constraints)
 
         with open(filename, 'w') as wd:
             wd.write('max:\n{};'.format(' +\n'.join(str(term) for term in self._objective)))
@@ -206,8 +220,8 @@ def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graph
         for v in ppg:
             if isinstance(v.program_point, vertices.Vertex):
                 flow_in_lhs = LinearExpr()
-                for pred_e in ppg.predecessors(v):
-                    variable = ProgramPointVariable(pred_e.predecessor())
+                for predecessor_edge in ppg.predecessors(v):
+                    variable = ProgramPointVariable(predecessor_edge.predecessor())
                     flow_in_lhs.append(variable)
 
                 flow_in_rhs = LinearExpr()
@@ -217,13 +231,13 @@ def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graph
                 ilp.add_constraint(flow_in_constraint)
 
                 flow_out_lhs = LinearExpr()
-                for pred_e in ppg.predecessors(v):
-                    variable = ProgramPointVariable(pred_e.predecessor())
+                for predecessor_edge in ppg.predecessors(v):
+                    variable = ProgramPointVariable(predecessor_edge.predecessor())
                     flow_out_lhs.append(variable)
 
                 flow_out_rhs = LinearExpr()
-                for succ_e in ppg.successors(v):
-                    variable = ProgramPointVariable(succ_e.successor())
+                for successor_edge in ppg.successors(v):
+                    variable = ProgramPointVariable(successor_edge.successor())
                     flow_out_rhs.append(variable)
 
                 flow_out_constraint = Constraint(flow_out_lhs, flow_out_rhs, Constraint.EQUALITY)
@@ -260,28 +274,40 @@ def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graph
     return ilp
 
 
-def create_ilp_for_super_block_graph(super_graph: graphs.SuperBlockGraph, lnt: graphs.LoopNests, db: database.Database):
-    def add_variables(super_graph, lnt):
+def create_ilp_for_super_block_graph(ppg:                    graphs.ProgramPointGraph,
+                                     lnt:                    graphs.LoopNests,
+                                     db:                     database.Database,
+                                     fold_optimisation:      bool,
+                                     dominator_optimisation: bool):
+
+    def add_variables(super_graph):
         for super_block in super_graph.super_blocks():
             ilp.add_variable(ProgramPointVariable(super_block.representative))
-            for v in super_block:
-                if isinstance(v.program_point, vertices.Vertex):
-                    if not lnt.is_header(v) or v == super_block[0]:
+            if not fold_optimisation:
+                for v in super_block:
+                    if isinstance(v.program_point, vertices.Vertex):
                         ilp.add_variable(ProgramPointVariable(v))
 
-    def create_objective_function(super_graph, lnt, db):
+    def create_objective_function(super_graph):
         for super_block in super_graph.super_blocks():
-            for v in super_block:
-                if isinstance(v.program_point, vertices.Vertex):
-                    if not lnt.is_header(v) or v == super_block[0]:
+            if fold_optimisation:
+                wcet = 0
+                for v in super_block:
+                    if isinstance(v.program_point, vertices.Vertex):
+                        wcet += db.get_wcet(v)
+                term = Term(wcet, ProgramPointVariable(super_block.representative))
+                ilp.add_to_objective(term)
+            else:
+                for v in super_block:
+                    if isinstance(v.program_point, vertices.Vertex):
                         term = Term(db.get_wcet(v), ProgramPointVariable(v))
                         ilp.add_to_objective(term)
 
-    def create_intra_super_block_constraints(super_graph, lnt):
-        for super_block in super_graph.super_blocks():
-            for v in super_block:
-                if isinstance(v.program_point, vertices.Vertex):
-                    if not lnt.is_header(v) or v == super_block[0]:
+    def create_intra_super_block_constraints(super_graph):
+        if not fold_optimisation:
+            for super_block in super_graph.super_blocks():
+                for v in super_block:
+                    if isinstance(v.program_point, vertices.Vertex):
                         if v != super_block.representative:
                             lhs = LinearExpr()
                             lhs.append(ProgramPointVariable(v))
@@ -290,34 +316,43 @@ def create_ilp_for_super_block_graph(super_graph: graphs.SuperBlockGraph, lnt: g
                             constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
                             ilp.add_constraint(constraint)
 
-    def create_junction_constraints(super_graph):
-        for junction in super_graph.junctions():
+    def create_fork_constraints(super_graph):
+        for fork in super_graph.forks():
             lhs = LinearExpr()
-            (super_block,) = [predecessor_edge.predecessor() for predecessor_edge in super_graph.predecessors(junction)]
+            (super_block,) = [predecessor_edge.predecessor() for predecessor_edge in super_graph.predecessors(fork)]
             lhs.append(ProgramPointVariable(super_block.representative))
             rhs = LinearExpr()
-            for successor_edge in super_graph.successors(junction):
+            for successor_edge in super_graph.successors(fork):
                 rhs.append(ProgramPointVariable(successor_edge.successor().representative))
             constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
             ilp.add_constraint(constraint)
 
     def create_merge_constraints(super_graph):
-        for super_block in super_graph.super_blocks():
-            predecessors = [predecessor_edge for predecessor_edge in super_graph.predecessors(super_block)
-                            if not isinstance(predecessor_edge, edges.LoopTransition)]
-            if len(predecessors) > 1:
+        for merge in super_graph.merges():
+            redundant_constraint = False
+            if dominator_optimisation and not lnt.is_header(merge.program_point):
+                (parent_edge,) = super_graph.pre_dominator_tree.predecessors(merge.program_point)
+                immediate_pre_dominator = parent_edge.predecessor()
+                (parent_edge,) = super_graph.post_dominator_tree.predecessors(immediate_pre_dominator)
+                immediate_post_dominator = parent_edge.predecessor()
+                # This merge immediately post-dominates the branch.
+                redundant_constraint = immediate_post_dominator == merge.program_point
+
+            if not redundant_constraint:
                 lhs = LinearExpr()
+                (super_block,) = [successor_edge.successor() for successor_edge in super_graph.successors(merge)]
                 lhs.append(ProgramPointVariable(super_block.representative))
                 rhs = LinearExpr()
-                for predecessor_edge in predecessors:
+                for predecessor_edge in super_graph.predecessors(merge):
                     rhs.append(ProgramPointVariable(predecessor_edge.predecessor().representative))
                 constraint = Constraint(lhs, rhs, Constraint.EQUALITY)
                 ilp.add_constraint(constraint)
 
-    def create_loop_bound_constraints(super_graph, lnt, db):
+    def create_loop_bound_constraints(super_graph):
         for loop in lnt:
             lhs = LinearExpr()
-            lhs.append(ProgramPointVariable(loop.header))
+            super_block = super_graph[loop.header]
+            lhs.append(ProgramPointVariable(super_block.representative))
 
             rhs = LinearExpr()
             if lnt.is_outermost_loop(loop):
@@ -337,14 +372,16 @@ def create_ilp_for_super_block_graph(super_graph: graphs.SuperBlockGraph, lnt: g
 
     ilp = IntegerLinearProgram()
     start = timeit.default_timer()
-    add_variables(super_graph, lnt)
-    create_objective_function(super_graph, lnt, db)
-    create_intra_super_block_constraints(super_graph, lnt)
-    create_junction_constraints(super_graph)
+    super_graph = graphs.SuperBlockGraph(ppg, lnt)
+    add_variables(super_graph)
+    create_objective_function(super_graph)
+    create_intra_super_block_constraints(super_graph)
+    create_fork_constraints(super_graph)
     create_merge_constraints(super_graph)
-    create_loop_bound_constraints(super_graph, lnt, db)
+    create_loop_bound_constraints(super_graph)
     end = timeit.default_timer()
     ilp.add_to_construction_time(end - start)
+    super_graph.dotify()
     return ilp
 
 

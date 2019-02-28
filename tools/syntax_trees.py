@@ -24,7 +24,7 @@ def main(**kwargs):
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Construct an abstract syntax tree for each control flow graph')
 
-    parser.add_argument('--filename',
+    parser.add_argument('--program',
                         help='read the program from this file',
                         required=True)
 

@@ -1,5 +1,6 @@
 import collections
 import os
+import re
 
 from graphs import (edges, graphs, vertices)
 from utils import messages
@@ -11,6 +12,7 @@ class Subprogram:
             raise ValueError('Subprogram name mismatch: Found {} and {}'.format(cfg.name, call_vertex.name))
         self.__cfg = cfg
         self.__call_vertex = call_vertex
+        self.__lnt = None
         self.__ipg = None
 
     @property
@@ -20,6 +22,13 @@ class Subprogram:
     @property
     def cfg(self) -> graphs.ControlFlowGraph:
         return self.__cfg
+
+    @property
+    def lnt(self) -> graphs.LoopNests:
+        if self.__lnt is None:
+            ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(self.__cfg)
+            self.__lnt = graphs.LoopNests(ppg)
+        return self.__lnt
 
     @property
     def call_vertex(self) -> vertices.SubprogramVertex:
@@ -83,39 +92,15 @@ class Program:
                     os.remove(filename)
 
 
-class Properties:
-    INSTRUMENTATION = 'instrumentation'
-    WCET = 'wcet'
-    LOCAL_WFREQ = 'local'
-    GLOBAL_WFREQ = 'global'
-
-    def __init__(self):
-        self.INSTRUMENTATION = None
-        self.WCET = None
-        self.LOCAL_WFREQ = None
-        self.GLOBAL = None
-
-    @property
-    def instrumentation(self):
-        return self.INSTRUMENTATION
-
-    @property
-    def wcet(self):
-        return self.WCET
-
-    @property
-    def local_wfreq(self):
-        return self.LOCAL_WFREQ
-
-    @property
-    def global_wfreq(self):
-        return self.GLOBAL_WFREQ
-
-
 class IO:
     SUBPROGRAM = 'subprogram'
     VERTEX = 'vertex'
     EDGE = 'edge'
+    WCET = 'wcet'
+    LOCAL_BOUND = 'local_bound'
+    GLOBAL_BOUND = 'global_bound'
+    CALL = 'call'
+    INSTRUMENTATION = 'instrumentation'
 
     @classmethod
     def new_lines(cls, number=1):
@@ -123,131 +108,161 @@ class IO:
 
     @classmethod
     def write(cls, the_program: Program, filename: str):
+        separator = ':'
         with open(filename, 'w') as wd:
             for subprogram in the_program:
-                wd.write('{} {}'.format(cls.SUBPROGRAM, subprogram.name))
+                wd.write('{}{}{}'.format(cls.SUBPROGRAM, separator, subprogram.name))
                 wd.write(cls.new_lines())
 
                 for v in subprogram.cfg:
-                    wd.write('{} {}'.format(cls.VERTEX, v))
-                    wd.write(cls.new_lines())
-                    for e in subprogram.cfg.successors(v):
-                        if e.successor() != subprogram.cfg.entry:
-                            wd.write('{} {} => {}'.format(cls.EDGE, e.predecessor(), e.successor()))
+                    if isinstance(v, vertices.Vertex):
+                        wd.write('{}{}{}'.format(cls.VERTEX, separator, v))
+                        callee = the_program.call_graph.is_call_site(subprogram.call_vertex, v)
+                        if callee:
+                            wd.write(' {}{}{}'.format(cls.CALL, separator, callee.name))
+                        elif isinstance(v, vertices.InstrumentationVertex):
+                            wd.write(' {}{}{}'.format(cls.INSTRUMENTATION, separator, v.number))
+                        wd.write(cls.new_lines())
+
+                for v in subprogram.cfg:
+                    for edge in subprogram.cfg.successors(v):
+                        if edge.successor() != subprogram.cfg.entry:
+                            wd.write('{}{}{} => {}'.format(cls.EDGE, separator, edge.predecessor(), edge.successor()))
+
+                            if isinstance(edge, edges.InstrumentationEdge):
+                                wd.write(' {}{}{}'.format(cls.INSTRUMENTATION, separator, edge.number))
+
                             wd.write(cls.new_lines())
+
                     callee = the_program.call_graph.is_call_site(subprogram.call_vertex, v)
                     if callee:
-                        wd.write('{} {} => {}'.format(cls.EDGE, v, the_program[callee.name].cfg.entry))
+                        wd.write('{}{}{} => {}'.format(cls.EDGE,
+                                                       separator,
+                                                       v,
+                                                       the_program[callee.name].cfg.entry))
                         wd.write(cls.new_lines())
-                    wd.write(cls.new_lines())
-
                 wd.write(cls.new_lines(2))
 
     @classmethod
     def read(cls, filename: str) -> Program:
+        messages.verbose_message("Reading program from '{}'".format(filename))
+
+        def parse():
+            lines = []
+            with open(filename, 'r') as rd:
+                for line in rd:
+                    if not re.match('\s+', line):
+                        lexemes = re.split('\W+', line)
+                        if lexemes:
+                            lines.append(lexemes[:-1])
+            return lines
+
         Data = collections.namedtuple('Data', ['v', 'cfg'])
         cfgs = {}
-        prog = Program(filename)
         vertex_data = {}
-        with open(filename, 'r') as rd:
-            for line in rd:
-                lexemes = line.split()
-                if lexemes:
-                    if lexemes[0] == cls.SUBPROGRAM:
-                        name = lexemes[1]
-                        cfg = graphs.ControlFlowGraph(prog, name)
-                        cfgs[name] = cfg
-                    elif lexemes[0] == cls.VERTEX:
-                        id_ = int(lexemes[1])
-                        v = vertices.Vertex(id_)
-                        cfg.add_vertex(v)
-                        vertex_data[id_] = Data(v, cfg)
+        the_program = Program(filename)
+        lines = parse()
 
-        with open(filename, 'r') as rd:
-            for line in rd:
-                lexemes = line.split()
-                if lexemes:
-                    if lexemes[0] == cls.SUBPROGRAM:
-                        name = lexemes[1]
-                        call = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), name)
-                        subprogram = Subprogram(cfgs[name], call)
-                        prog.add_subprogram(subprogram)
+        for lexemes in lines:
+            if lexemes[0] == cls.SUBPROGRAM:
+                name = lexemes[1]
+                cfg = graphs.ControlFlowGraph(the_program, name)
+                cfgs[name] = cfg
+            elif lexemes[0] == cls.VERTEX:
+                id_ = int(lexemes[1])
+                if cls.CALL in lexemes:
+                    callee = lexemes[-1]
+                    v = vertices.CallVertex(id_, cfg.name, callee)
+                elif cls.INSTRUMENTATION in lexemes:
+                    number = int(lexemes[-1])
+                    v = vertices.InstrumentationVertex(id_, cfg.name, number)
+                else:
+                    v = vertices.Vertex(id_)
+                cfg.add_vertex(v)
+                vertex_data[id_] = Data(v, cfg)
 
-        with open(filename, 'r') as rd:
-            for line in rd:
-                lexemes = line.split()
-                if lexemes:
-                    if lexemes[0] == cls.EDGE:
-                        pred_id = int(lexemes[1])
-                        pred_v, pred_cfg = vertex_data[pred_id]
-                        succ_id = int(lexemes[3])
-                        succ_v, succ_cfg = vertex_data[succ_id]
-                        if pred_cfg == succ_cfg:
-                            pred_cfg.add_edge(edges.ControlFlowEdge(pred_v, succ_v))
-                        else:
-                            caller = prog[pred_cfg.name].call_vertex
-                            callee = prog[succ_cfg.name].call_vertex
-                            prog.call_graph.add_edge(edges.CallGraphEdge(caller, callee, pred_v))
+        for name, cfg in cfgs.items():
+            call = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), name)
+            subprogram = Subprogram(cfgs[name], call)
+            the_program.add_subprogram(subprogram)
 
-        for subprogram in prog:
+        for lexemes in lines:
+            if lexemes[0] == cls.EDGE:
+                predecessor, predecessor_cfg = vertex_data[int(lexemes[1])]
+                successor, successor_cfg = vertex_data[int(lexemes[2])]
+                if predecessor_cfg == successor_cfg:
+                    if cls.INSTRUMENTATION in lexemes:
+                        number = int(lexemes[-1])
+                        predecessor_cfg.add_edge(edges.InstrumentationEdge(predecessor, successor, number))
+                    else:
+                        predecessor_cfg.add_edge(edges.ControlFlowEdge(predecessor, successor))
+                else:
+                    caller = the_program[predecessor_cfg.name].call_vertex
+                    callee = the_program[successor_cfg.name].call_vertex
+                    the_program.call_graph.add_edge(edges.CallGraphEdge(caller, callee, predecessor))
+
+        for subprogram in the_program:
             (subprogram.cfg.entry,) = [v for v in subprogram.cfg if len(subprogram.cfg.predecessors(v)) == 0]
-            (subprogram.cfg.exit,) = [v for v in subprogram.cfg if len(subprogram.cfg.successors(v)) == 0]
-        return prog
+            try:
+                (subprogram.cfg.exit,) = [v for v in subprogram.cfg if len(subprogram.cfg.successors(v)) == 0]
+            except ValueError:
+                exit_vertex = vertices.Vertex(vertices.Vertex.get_vertex_id(True))
+                subprogram.cfg.add_vertex(exit_vertex)
+                subprogram.cfg.exit = exit_vertex
+                for v in subprogram.cfg:
+                    if len(subprogram.cfg.successors(v)) == 0 and v != exit_vertex:
+                        subprogram.cfg.add_edge(edges.ControlFlowEdge(v, exit_vertex))
+
+        return the_program
 
     @classmethod
-    def read_properties(cls, filename: str):
+    def read_properties(cls, the_program: Program, filename: str):
+        def parse():
+            lines = []
+            with open(filename, 'r') as rd:
+                for line in rd:
+                    if not re.match('\s+', line):
+                        lexemes = re.split('\W+', line)
+                        if lexemes:
+                            lines.append(lexemes[:-1])
+            return lines
 
-        def set_properties(property_string, program_point_properties):
-            property_string = property_string.strip()
-            property_string = property_string.lower()
-            properties = property_string.split(',')
-            properties = [l.split('=') for l in properties]
-            for a_property in properties:
-                assert len(a_property) == 2
-                name, value = a_property
-                if name == Properties.INSTRUMENTATION:
-                    try:
-                        program_point_properties.INSTRUMENTATION = int(value) == 1
-                    except ValueError:
-                        messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
-                elif name == Properties.WCET:
-                    try:
-                        program_point_properties.WCET = int(value)
-                    except ValueError:
-                        messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
-                elif name == Properties.LOCAL_WFREQ:
-                    try:
-                        program_point_properties.LOCAL_WFREQ = int(value)
-                    except ValueError:
-                        messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
-                elif name == Properties.GLOBAL_WFREQ:
-                    try:
-                        program_point_properties.GLOBAL_WFREQ = int(value)
-                    except ValueError:
-                        messages.error_message('Value of {} for property {} is invalid'.format(value, name.lower()))
+        def set_properties(p: vertices.Vertex or edges.Edge, lexemes):
+            i = 0
+            while i < len(lexemes):
+                if lexemes[i] == cls.INSTRUMENTATION:
+                    setattr(p, cls.INSTRUMENTATION, int(lexemes[i + 1]))
+                    i += 2
+                elif lexemes[i] == cls.WCET:
+                    setattr(p, cls.WCET, int(lexemes[i + 1]))
+                    i += 2
+                elif lexemes[i] == cls.LOCAL_BOUND:
+                    setattr(p, cls.LOCAL_BOUND, int(lexemes[i + 1]))
+                    i += 2
+                elif lexemes[i] == cls.GLOBAL_BOUND:
+                    setattr(p, cls.GLOBAL_BOUND, int(lexemes[i + 1]))
+                    i += 2
+                else:
+                    assert False
 
-        properties = {}
-        with open(filename, 'r') as rd:
-            for line in rd:
-                l_index = line.find('[')
-                r_index = line.rfind(']')
-                if l_index > -1 and r_index > -1:
-                    prefix = line[:l_index]
-                    suffix = line[l_index+1:r_index]
-
-                    lexemes = prefix.split()
-                    if lexemes[0] == cls.VERTEX:
-                        id_ = int(lexemes[1])
-                        program_point = vertices.Vertex.id_pool[id_]
-                        properties[program_point] = Properties()
-                    else:
-                        assert lexemes[0] == cls.EDGE
-                        pred_id = int(lexemes[1])
-                        p = vertices.Vertex.id_pool[pred_id]
-                        succ_id = int(lexemes[3])
-                        s = vertices.Vertex.id_pool[succ_id]
-                        program_point = edges.ControlFlowEdge(p, s)
-                        properties[program_point] = Properties()
-                    set_properties(suffix, properties[program_point])
-
-        return properties
+        lines = parse()
+        subprogram = None
+        for lexemes in lines:
+            if lexemes[0] == cls.SUBPROGRAM:
+                name = lexemes[1]
+                subprogram = the_program[name]
+            elif lexemes[0] == cls.VERTEX:
+                assert subprogram is not None
+                id_ = int(lexemes[1])
+                p = vertices.Vertex.id_pool[id_]
+                set_properties(p, lexemes[2:])
+            else:
+                assert subprogram is not None
+                assert lexemes[0] == cls.EDGE
+                predecessor_id = int(lexemes[1])
+                predecessor = vertices.Vertex.id_pool[predecessor_id]
+                successor_id = int(lexemes[2])
+                successor = vertices.Vertex.id_pool[successor_id]
+                if predecessor in subprogram.cfg and successor in subprogram.cfg:
+                    (p,) = [edge for edge in subprogram.cfg.successors(predecessor) if edge.successor() == successor]
+                    set_properties(p, lexemes[3:])

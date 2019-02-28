@@ -1,7 +1,8 @@
 import re
 
 from low_level import instructions
-from utils import dot
+from utils import (dot, messages)
+from graphs import instrumentation
 
 
 class VertexPool:
@@ -38,6 +39,9 @@ class VertexPool:
 
     def __getitem__(self, id_):
         return self._allocation[id_]
+
+    def __contains__(self, v):
+        return v.id_ in self._allocation
 
 
 class Vertex:
@@ -82,7 +86,8 @@ class Vertex:
         return self.id_ < other.id_
 
     def __del__(self):
-        self.id_pool.deregister(self)
+        if self in self.id_pool:
+            self.id_pool.deregister(self)
 
     def is_dummy(self):
         return self.id_ < 0
@@ -101,7 +106,13 @@ class Vertex:
         label.append(dot.HTML.close_table)
         label.append(dot.HTML.close_html)
 
-        return '{} [label={}, shape=record];\n'.format(self, ''.join(label))
+        if self.is_dummy():
+            return '{} [label={}, shape=record, fillcolor={}, style={}];\n'.format(self,
+                                                                                   ''.join(label),
+                                                                                   dot.Colors.red,
+                                                                                   dot.Styles.filled)
+        else:
+            return '{} [label={}, shape=record];\n'.format(self, ''.join(label))
 
 
 class NamedVertex(Vertex):
@@ -116,6 +127,72 @@ class NamedVertex(Vertex):
     @property
     def name(self):
         return self.__name
+
+
+class InstrumentationVertex(NamedVertex, instrumentation.Instrumentation):
+    def __init__(self, id_, name, number):
+        NamedVertex.__init__(self, id_, name)
+        instrumentation.Instrumentation.__init__(self, number)
+
+    def dotify(self):
+        label = []
+        label.append(dot.HTML.open_html)
+        label.append(dot.HTML.open_table)
+
+        label.append(dot.HTML.open_row)
+        label.append(dot.HTML.open_cell())
+        label.append(str(self))
+        label.append(dot.HTML.close_cell)
+        label.append(dot.HTML.close_row)
+
+        label.append(dot.HTML.open_row)
+        label.append(dot.HTML.open_cell())
+        label.append('id:{}'.format(self.number))
+        label.append(dot.HTML.close_cell)
+        label.append(dot.HTML.close_row)
+
+        label.append(dot.HTML.close_table)
+        label.append(dot.HTML.close_html)
+
+        return '{} [label={}, shape=circle, fillcolor={}, style={}];\n'.format(self,
+                                                                               ''.join(label),
+                                                                               dot.Colors.blue,
+                                                                               dot.Styles.filled)
+
+
+class CallVertex(NamedVertex):
+    def __init__(self, id_, name, callee):
+        NamedVertex.__init__(self, id_, name)
+        self.__callee = callee
+
+    @property
+    def callee(self):
+        return self.__callee
+
+    def dotify(self):
+        label = []
+        label.append(dot.HTML.open_html)
+        label.append(dot.HTML.open_table)
+
+        label.append(dot.HTML.open_row)
+        label.append(dot.HTML.open_cell())
+        label.append(str(self))
+        label.append(dot.HTML.close_cell)
+        label.append(dot.HTML.close_row)
+
+        label.append(dot.HTML.open_row)
+        label.append(dot.HTML.open_cell())
+        label.append('call:{}'.format(self.callee))
+        label.append(dot.HTML.close_cell)
+        label.append(dot.HTML.close_row)
+
+        label.append(dot.HTML.close_table)
+        label.append(dot.HTML.close_html)
+
+        return '{} [label={}, shape=record, fillcolor={}, style={}];\n'.format(self,
+                                                                               ''.join(label),
+                                                                               dot.Colors.cyan,
+                                                                               dot.Styles.filled)
 
 
 class BasicBlock(NamedVertex, instructions.Instructions):
@@ -143,13 +220,6 @@ class BasicBlock(NamedVertex, instructions.Instructions):
         label.append(self.name)
         label.append(dot.HTML.close_cell)
         label.append(dot.HTML.close_row)
-
-        if __debug__:
-            label.append(dot.HTML.open_row)
-            label.append(dot.HTML.open_cell(color=dot.Colors.cyan, border=5, column_span=column_span))
-            label.append('id={}'.format(self))
-            label.append(dot.HTML.close_cell)
-            label.append(dot.HTML.close_row)
 
         for i in self:
             label.extend(i.dotify())
@@ -213,6 +283,10 @@ class ProgramPointVertex(Vertex):
     def program_point(self):
         return self.__program_point
 
+    @program_point.setter
+    def program_point(self, value):
+        self.__program_point = value
+
     def __str__(self):
         return str(self.__program_point)
 
@@ -239,30 +313,40 @@ class ProgramPointVertex(Vertex):
         return '{} [label={}, shape=record];\n'.format(self.id_, ''.join(label))
 
 
-class Junction(Vertex):
-    def __init__(self, id_, branch):
+class ControlPoint(Vertex):
+    def __init__(self, id_, program_point):
         Vertex.__init__(self, id_)
-        self.__branch = branch
+        self._program_point = program_point
 
     @property
-    def branch(self):
-        return self.__branch
+    def program_point(self):
+        return self._program_point
 
-    def dotify(self):
+    def _dotify(self, color):
         label = []
         label.append(dot.HTML.open_html)
         label.append(dot.HTML.open_table)
 
         label.append(dot.HTML.open_row)
         label.append(dot.HTML.open_cell())
-        label.append(str(self.__branch))
+        label.append(str(self._program_point))
         label.append(dot.HTML.close_cell)
         label.append(dot.HTML.close_row)
 
         label.append(dot.HTML.close_table)
         label.append(dot.HTML.close_html)
 
-        return '{} [label={}, shape=circle];\n'.format(self, ''.join(label))
+        return '{} [label={}, shape=circle, fillcolor={}, style=filled];\n'.format(self, ''.join(label), color)
+
+
+class Fork(ControlPoint):
+    def dotify(self):
+        return self._dotify(dot.Colors.blue)
+
+
+class Merge(ControlPoint):
+    def dotify(self):
+        return self._dotify(dot.Colors.lawn_green)
 
 
 class SuperBlock(Vertex, list):

@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from graphs import edges, graphs, vertices
-from system import traces, program, database
+from graphs import (edges, graphs, vertices)
+from system import (traces, program)
 from utils import messages
 
 
@@ -19,7 +19,7 @@ def filter_trace(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPoint
                 else:
                     p = vertices.Vertex.id_pool[int(lexemes[0])]
                     s = vertices.Vertex.id_pool[int(lexemes[1])]
-                    program_point = edges.ControlFlowEdge(p, s)
+                    program_point = edges.Edge(p, s)
                     v = ppg[program_point]
 
                 time = lexemes[-1]
@@ -32,7 +32,7 @@ def filter_trace(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPoint
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['filename'])
+    the_program = program.IO.read(kwargs['program'])
 
     subprogram_trace = {}
     for trace_file in kwargs['traces']:
@@ -42,27 +42,24 @@ def main(**kwargs):
     for subprogram in the_program:
         if subprogram.name in subprogram_trace:
             messages.debug_message('Filtering traces for {}'.format(subprogram.name))
+            subprogram.cfg.dotify()
             ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
             ppg.dotify()
+
             lnt = graphs.LoopNests(ppg)
             lnt.dotify()
 
-            with database.Database(kwargs['database']) as db:
-                ipg = graphs.InstrumentationPointGraph.create(ppg, lnt, db)
-                ipg.dotify()
-                all_traces = filter_trace(ppg, ipg, subprogram_trace[subprogram.name])
-                all_traces.write(ipg.trace_filename())
+            ipg = graphs.InstrumentationPointGraph.create(ppg, lnt)
+            ipg.dotify()
+            all_traces = filter_trace(ppg, ipg, subprogram_trace[subprogram.name])
+            all_traces.write(ipg.trace_filename())
 
 
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Filter a set of traces to instrumented program points')
 
-    parser.add_argument('--filename',
+    parser.add_argument('--program',
                         help='read the program from this file',
-                        required=True)
-
-    parser.add_argument('--database',
-                        help='use the instrumentation indicated in this file',
                         required=True)
 
     parser.add_argument('--traces',

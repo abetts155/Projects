@@ -120,7 +120,7 @@ class ArtificialLoopBody:
             self._exits.add(self._header)
 
 
-def create_control_flow_graph(prog, loops, nesting_depth, number_of_vertices, fan_out, subprg_name):
+def create_control_flow_graph(the_program, loops, nesting_depth, number_of_vertices, fan_out, subprg_name):
     def create_artificial_loop_hierarchy():
         # Add abstract vertices to the tree, including an extra one
         # for the dummy outer loop
@@ -181,7 +181,7 @@ def create_control_flow_graph(prog, loops, nesting_depth, number_of_vertices, fa
             cfg.entry = e.successor()
             cfg.exit = e.predecessor()
 
-    cfg = graphs.ControlFlowGraph(prog, subprg_name)
+    cfg = graphs.ControlFlowGraph(the_program, subprg_name)
     lnt, root_v = create_artificial_loop_hierarchy()
     loops = {}
     create_loop_body(root_v)
@@ -198,6 +198,9 @@ def add_subprograms(the_program: program.Program,
         messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
         cfg = create_control_flow_graph(the_program, loops, nesting_depth, number_of_vertices, fan_out, subprogram_name)
         cfg.dotify()
+        ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(cfg)
+        lnt = graphs.LoopNests(ppg)
+        lnt.dotify()
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
         the_program.add_subprogram(program.Subprogram(cfg, call_vertex))
 
@@ -312,16 +315,16 @@ def main(**kwargs):
         messages.error_message(
             'The number of vertices in a control flow graph must be at least twice the number of loops')
 
-    prog = program.Program(kwargs['filename'])
-    add_subprograms(prog,
+    the_program = program.Program(kwargs['program'])
+    add_subprograms(the_program,
                     kwargs['subprograms'],
                     kwargs['loops'],
                     kwargs['nesting_depth'],
                     kwargs['vertices'],
                     kwargs['fan_out'])
     if not kwargs['no_calls']:
-        add_calls(prog, kwargs['recursion'])
-    program.IO.write(prog, kwargs['filename'])
+        add_calls(the_program, kwargs['recursion'])
+    program.IO.write(the_program, kwargs['program'])
 
 
 class CheckForPositiveValue(argparse.Action):
@@ -334,7 +337,7 @@ class CheckForPositiveValue(argparse.Action):
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Generate a random program')
 
-    parser.add_argument('--filename',
+    parser.add_argument('--program',
                         help='write the program to this file',
                         required=True)
 

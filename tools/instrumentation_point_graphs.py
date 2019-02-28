@@ -51,7 +51,7 @@ def main(**kwargs):
 def parse_the_command_line():
     parser = argparse.ArgumentParser(description='Do WCET calculation using instrumentation point graphs')
 
-    parser.add_argument('--filename',
+    parser.add_argument('--program',
                         help='read the program from this file',
                         required=True)
 

@@ -1,11 +1,10 @@
 import enum
 import random
-
+import collections
 
 from utils import messages
 from utils import dot
-from graphs import vertices
-from graphs import edges
+from graphs import (vertices, edges, instrumentation)
 
 
 class InvalidVertexError(ValueError):
@@ -128,9 +127,9 @@ class CallGraph(DirectedGraph):
         DirectedGraph.__init__(self)
         self.program = program
 
-    def is_call_site(self, call_vertex: vertices.SubprogramVertex, basic_block: vertices.BasicBlock):
+    def is_call_site(self, call_vertex: vertices.SubprogramVertex, v: vertices.Vertex):
         for e in self.successors(call_vertex):
-            if e.call_site == basic_block:
+            if v == e.call_site:
                 return e.successor()
         return None
 
@@ -266,7 +265,8 @@ class ProgramPointGraph(FlowGraph):
         ppg = ProgramPointGraph(cfg.program, cfg.name)
         # Add a vertex per basic block
         for basic_block in cfg:
-            v = vertices.ProgramPointVertex(vertices.Vertex.get_vertex_id(), basic_block)
+            id_ = vertices.Vertex.get_vertex_id(basic_block.is_dummy())
+            v = vertices.ProgramPointVertex(id_, basic_block)
             ppg.add_vertex(v)
             if v.program_point == cfg.entry:
                 ppg._entry = v
@@ -274,7 +274,8 @@ class ProgramPointGraph(FlowGraph):
                 ppg._exit = v
 
         def add_edge(edge):
-            v = vertices.ProgramPointVertex(vertices.Vertex.get_vertex_id(), edge)
+            id_ = vertices.Vertex.get_vertex_id(edge.predecessor().is_dummy() or edge.successor().is_dummy())
+            v = vertices.ProgramPointVertex(id_, edge)
             ppg.add_vertex(v)
             p = ppg.__program_point_to_vertex[edge.predecessor()]
             s = ppg.__program_point_to_vertex[edge.successor()]
@@ -287,9 +288,7 @@ class ProgramPointGraph(FlowGraph):
             for edge in cfg.successors(v):
                 add_edge(edge)
 
-        # Add dummy edge
-        edge = edges.TransitionEdge(cfg.exit, cfg.entry)
-        add_edge(edge)
+        ppg.add_dummy_loop_edge()
 
         return ppg
 
@@ -299,15 +298,27 @@ class ProgramPointGraph(FlowGraph):
 
     def add_vertex(self, v: vertices.ProgramPointVertex):
         FlowGraph.add_vertex(self, v)
-        self.__program_point_to_vertex[v.program_point] = v
+        if isinstance(v.program_point, vertices.Vertex):
+            self.__program_point_to_vertex[v.program_point] = v
+        else:
+            self.__program_point_to_vertex[(v.program_point.predecessor(), v.program_point.successor())] = v
 
     def remove_vertex(self, v: vertices.ProgramPointVertex):
         FlowGraph.remove_vertex(self, v)
-        del self.__program_point_to_vertex[v.program_point]
+        if isinstance(v.program_point, vertices.Vertex):
+            del self.__program_point_to_vertex[v.program_point]
+        else:
+            del self.__program_point_to_vertex[(v.program_point.predecessor(), v.program_point.successor())]
+
+    def add_dummy_loop_edge(self):
+        self.add_edge(edges.TransitionEdge(self.exit, self.entry))
 
     def __getitem__(self, item: edges.Edge or vertices.Vertex):
         try:
-            return self.__program_point_to_vertex[item]
+            if isinstance(item, vertices.Vertex):
+                return self.__program_point_to_vertex[item]
+            else:
+                return self.__program_point_to_vertex[(item.predecessor(), item.successor())]
         except KeyError:
             messages.error_message('No vertex in program point graph for program point {}'.format(str(item)))
 
@@ -335,7 +346,8 @@ class ProgramPointGraph(FlowGraph):
         changed = True
         while changed:
             changed = False
-            candidates = [v for v in self if v != self.entry and v != self.exit]
+            candidates = [v for v in self
+                          if v != self.entry and v != self.exit and not isinstance(v, vertices.CallVertex)]
             random.shuffle(candidates)
             for v in candidates:
                 if attempt_removal():
@@ -362,35 +374,6 @@ class ProgramPointGraph(FlowGraph):
             filename = '{}.{}.ppg.{}.dot'.format(self.program.basename(), self.name, suffix)
         else:
             filename = '{}.{}.ppg.dot'.format(self.program.basename(), self.name)
-        dot.generate(filename, data)
-
-
-class DominatorGraph(FlowGraph):
-    def __init__(self, flow_graph):
-        FlowGraph.__init__(self, flow_graph.program, flow_graph.name)
-        self.__add_vertices(flow_graph)
-        self.__add_edges(flow_graph)
-
-    def __add_vertices(self, flow_graph):
-        for v in flow_graph.pre_dominator_tree():
-            self.add_vertex(v)
-
-    def __add_edges(self, flow_graph):
-        for v in flow_graph.pre_dominator_tree():
-            for succ_edge in flow_graph.pre_dominator_tree().successors(v):
-                self.add_edge(edges.Edge(v, succ_edge.successor()))
-        for v in flow_graph.post_dominator_tree():
-            for succ_edge in flow_graph.post_dominator_tree().successors(v):
-                self.add_edge(edges.Edge(v, succ_edge.successor()))
-
-    def dotify(self):
-        data = []
-        for v in self:
-            data.append(v.dotify())
-            for succ_edge in self.successors(v):
-                data.append(succ_edge.dotify())
-
-        filename = '{}.{}.dominator.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
 
@@ -480,20 +463,6 @@ class DominatorTree(Tree, ProgramData):
             self._type = DominatorTree.Type.PRE
         else:
             self._type = DominatorTree.Type.POST
-
-    def dotify(self):
-        data = []
-        for v in self:
-            data.append(v.dotify())
-            for e in self.successors(v):
-                data.append(e.dotify())
-
-        if self._type == DominatorTree.Type.PRE:
-            suffix = 'pre'
-        else:
-            suffix = 'post'
-        filename = '{}.{}.{}.dot'.format(self.program.basename(), self.name, suffix)
-        dot.generate(filename, data)
 
     def __compute(self, flow_graph):
         # This is an implementation of the Lengauer-Tarjan algorithm
@@ -621,6 +590,46 @@ class DominatorTree(Tree, ProgramData):
         for child, parent in idom.items():
             self.add_edge(edges.Edge(parent, child))
 
+    def dotify(self):
+        data = []
+        for v in self:
+            data.append(v.dotify())
+            for e in self.successors(v):
+                data.append(e.dotify())
+
+        if self._type == DominatorTree.Type.PRE:
+            suffix = 'pre'
+        else:
+            suffix = 'post'
+        filename = '{}.{}.{}.dot'.format(self.program.basename(), self.name, suffix)
+        dot.generate(filename, data)
+
+
+class DominatorGraph(FlowGraph):
+    def __init__(self, pre_dominator_tree: DominatorTree, post_dominator_tree: DominatorTree):
+        FlowGraph.__init__(self, pre_dominator_tree.program, pre_dominator_tree.name)
+
+        for v in pre_dominator_tree:
+            self.add_vertex(v)
+
+        for v in pre_dominator_tree:
+            for edge in pre_dominator_tree.successors(v):
+                self.add_edge(edges.Edge(v, edge.successor()))
+
+        for v in post_dominator_tree:
+            for edge in post_dominator_tree.successors(v):
+                self.add_edge(edges.Edge(v, edge.successor()))
+
+    def dotify(self):
+        data = []
+        for v in self:
+            data.append(v.dotify())
+            for edge in self.successors(v):
+                data.append(edge.dotify())
+
+        filename = '{}.{}.dominator.dot'.format(self.program.basename(), self.name)
+        dot.generate(filename, data)
+
 
 class DominanceFrontiers:
     def __init__(self, g: FlowGraph, t: DominatorTree):
@@ -650,17 +659,11 @@ class DominanceFrontiers:
                         runner = parent_e.predecessor()
 
 
-class StrongComponents:
+class StrongComponents(set):
     def __init__(self, directed_graph: DirectedGraph):
+        set.__init__(self)
         self._scc = {v: None for v in directed_graph}
         self.__compute(directed_graph)
-
-    def __getitem__(self, item):
-        return self._scc[item]
-
-    def __iter__(self):
-        for scc_id in set(self._scc.values()):
-            yield scc_id
 
     def __compute(self, directed_graph):
         def explore(v):
@@ -678,15 +681,15 @@ class StrongComponents:
                     low_link[v] = min(low_link[v], pre_order[e.successor()])
 
             if low_link[v] == pre_order[v]:
-                nonlocal scc_id
-                scc_id += 1
+                scc = set()
                 while True:
                     z = stack.pop()
-                    self._scc[z] = scc_id
+                    scc.add(z)
+                    self._scc[z] = scc
                     if z == v:
                         break
+                self.add(frozenset(scc))
 
-        scc_id = 0
         pre_id = 0
         stack = []
         pre_order = {v: 0 for v in directed_graph}
@@ -870,6 +873,10 @@ class LoopNests(FlowGraph):
     def is_tail(self, v):
         return v in self._tails
 
+    def tails(self):
+        for v in self._tails.keys():
+            yield v
+
     def loop_entries(self, loop):
         return [v for v in self._loop_entries if self._loop_entries[v] == loop]
 
@@ -964,7 +971,11 @@ class LoopNests(FlowGraph):
 
 class InstrumentationPointGraph(ProgramPointGraph):
     @staticmethod
-    def create(ppg: ProgramPointGraph, lnt: LoopNests, db):
+    def create(ppg: ProgramPointGraph, lnt: LoopNests):
+        def in_ipg(v: vertices.ProgramPointVertex):
+            return (isinstance(v.program_point, instrumentation.Instrumentation) or
+                    isinstance(v.program_point, vertices.CallVertex))
+
         # Add selected instrumented program points.
         ipg = InstrumentationPointGraph(ppg.program, ppg.name)
         for v in ppg:
@@ -986,8 +997,8 @@ class InstrumentationPointGraph(ProgramPointGraph):
                             ipg.add_edge(edge)
 
                             if (back_edge and
-                                    db.is_instrumentation(predecessor_edge.predecessor()) and
-                                    db.is_instrumentation(successor_edge.successor()) and
+                                    in_ipg(predecessor_edge.predecessor()) and
+                                    in_ipg(predecessor_edge.successor()) and
                                     predecessor_edge.predecessor() in loop and
                                     successor_edge.successor() in loop):
                                 edge.set_back_edge()
@@ -1002,7 +1013,7 @@ class InstrumentationPointGraph(ProgramPointGraph):
                     nested_loop = successor_edge.successor()
                     union.extend(loop_union[nested_loop])
 
-            to_remove = [v for v in loop if not db.is_instrumentation(v)]
+            to_remove = [v for v in loop if not in_ipg(v)]
 
             for v in to_remove:
                 if v != loop.header and not lnt.is_tail(v):
@@ -1012,8 +1023,39 @@ class InstrumentationPointGraph(ProgramPointGraph):
                 if v in ipg:
                     disconnect(ipg, v, True, union)
 
-        (ipg.entry,) = [v for v in ipg if v == ppg.entry]
-        (ipg.exit,) = [v for v in ipg if v == ppg.exit]
+        class Successor:
+            __slots__ = ['code', 'number']
+
+            def __init__(self, code, number):
+                self.code = code
+                self.number = number
+
+        # If a vertex has multiple edges to the same successor, flatten these into a single edge.
+        successors = {}
+        for v in ipg:
+            successors[v] = {}
+            for edge in ipg.successors(v):
+                if edge.successor() not in successors[v]:
+                    successors[v][edge.successor()] = Successor(edge, 1)
+                else:
+                    data = successors[v][edge.successor()]
+                    data.code.extend(edge)
+                    data.number += 1
+
+        for v in ipg:
+            ipg.wipe_edges(v)
+
+        for v in ipg:
+            for s in successors[v]:
+                data = successors[v][s]
+                edge = edges.TransitionEdge(v, s)
+                if data.number == 1:
+                    edge.extend(data.code)
+                else:
+                    edge.extend(list(set(data.code)))
+                ipg.add_edge(edge)
+
+        (ipg.entry,) = [v for v in ipg if len(ipg.predecessors(v)) == 0]
         return ipg
 
     def dotify(self, suffix=''):
@@ -1037,91 +1079,89 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
     def __init__(self, ppg: ProgramPointGraph, lnt: LoopNests):
         DirectedGraph.__init__(self)
         ProgramData.__init__(self, ppg.program, ppg.name)
-        self.__program_point_to_vertex = {v: [] for v in ppg}
-        self.__create(ppg, lnt)
+        self.__pre_dominator_tree = None
+        self.__post_dominator_tree = None
+        self.__create_dominator_trees(ppg, lnt)
+        self.__program_point_to_vertex = {v: None for v in ppg}
+        self.__add_super_blocks(lnt)
+        self.__forks = []
+        self.__merges = []
+        self.__add_edges(ppg)
 
-    def __create(self, ppg: ProgramPointGraph, lnt: LoopNests):
-        for loop in lnt:
-            induced_subgraph = lnt.induce(ppg, loop.header, True)
-            induced_subgraph.dotify(loop.header)
-            dominator_graph = DominatorGraph(induced_subgraph)
-            strong_components = StrongComponents(dominator_graph)
-            scc_to_super_block, junctions = self._add_vertices(lnt, loop, induced_subgraph, strong_components)
-            self.__add_edges(induced_subgraph, strong_components, scc_to_super_block, junctions)
+    def __create_dominator_trees(self, ppg: ProgramPointGraph, lnt: LoopNests):
+        added = set()
+        for v in lnt.tails():
+            edge = edges.Edge(v, ppg.exit)
+            ppg.add_edge(edge)
+            added.add(edge)
 
-            for entry_transition in [loop_transition for loop_transition in lnt.successors(loop)
-                                     if loop_transition.direction == edges.LoopTransition.Direction.ENTRY]:
-                nested_loop = entry_transition.successor()
-                (exit_transition,) = [loop_transition for loop_transition in lnt.successors(nested_loop)
-                                      if loop_transition.successor() == loop]
-                for transition in exit_transition:
-                    super_blocks = self.__program_point_to_vertex[transition.successor()]
-                    assert len(super_blocks) == 2
-                    dead_super_block = super_blocks[0]
-                    live_super_block = super_blocks[1]
-                    (junction,) = [predecessor_edge.predecessor()
-                                   for predecessor_edge in self.predecessors(dead_super_block)]
-                    self.add_edge(edges.LoopTransition(junction, live_super_block, edges.LoopTransition.Direction.EXIT))
-                    self.__program_point_to_vertex[transition.successor()] = [live_super_block]
-                    self.remove_vertex(dead_super_block)
+        self.__pre_dominator_tree = DominatorTree(ppg, ppg.entry)
+        self.__post_dominator_tree = DominatorTree(ppg, ppg.exit)
 
-    def _add_vertices(self, lnt, loop, induced_subgraph, strong_components):
-        scc_to_super_block = {}
-        for scc_id in strong_components:
-            super_block = vertices.SuperBlock(vertices.Vertex.get_vertex_id())
-            scc_to_super_block[scc_id] = super_block
-            self.add_vertex(super_block)
+        for edge in added:
+            ppg.remove_edge(edge)
 
-        dfs = DepthFirstSearch(induced_subgraph, induced_subgraph.entry)
-        for v in reversed(dfs.post_order()):
-            if not v.is_dummy():
-                scc_id = strong_components[v]
-                super_block = scc_to_super_block[scc_id]
+    def __add_super_blocks(self, lnt: LoopNests):
+        dominator_graph = DominatorGraph(self.__pre_dominator_tree, self.__post_dominator_tree)
+        strong_components = StrongComponents(dominator_graph)
+
+        for scc in strong_components:
+            loop_to_super_block = {loop: None for loop in lnt}
+            for v in scc:
+                loop = lnt.find_loop(v)
+                if loop_to_super_block[loop] is None:
+                    super_block = vertices.SuperBlock(vertices.Vertex.get_vertex_id())
+                    self.add_vertex(super_block)
+                    loop_to_super_block[loop] = super_block
+                super_block = loop_to_super_block[loop]
                 super_block.append(v)
-                self.__program_point_to_vertex[v].append(super_block)
+                self.__program_point_to_vertex[v] = super_block
                 if isinstance(v.program_point, vertices.Vertex):
-                    if not lnt.is_header(v) or v == loop.header:
-                        super_block.representative = v
+                    super_block.representative = v
                 elif not super_block.representative:
-                    # No representative yet so pick an edge.
                     super_block.representative = v
 
-        junctions = {}
-        for super_block in scc_to_super_block.values():
-            for v in super_block:
-                if len(induced_subgraph.successors(v)) > 1:
-                    junctions[v] = vertices.Junction(vertices.Vertex.get_vertex_id(), v)
-                    self.add_vertex(junctions[v])
+    def __add_edges(self, ppg: ProgramPointGraph):
+        for v in ppg:
+            if len(ppg.successors(v)) > 1:
+                fork = vertices.Fork(vertices.Vertex.get_vertex_id(), v)
+                self.__forks.append(fork)
+                self.add_vertex(fork)
+                self.add_edge(edges.Edge(self[v], fork))
+                for successor_edge in ppg.successors(v):
+                    self.add_edge(edges.Edge(fork, self[successor_edge.successor()]))
 
-        return scc_to_super_block, junctions
-
-    def __add_edges(self, induced_subgraph, strong_components, scc_to_super_block, junctions):
-        for v in junctions:
-            self.add_edge(edges.Edge(self.__program_point_to_vertex[v][-1], junctions[v]))
-
-        for super_block in scc_to_super_block.values():
-            v = super_block[0]
-            if not isinstance(v.program_point, vertices.Vertex):
-                (predecessor_edge,) = induced_subgraph.predecessors(v)
-                predecessor = junctions[predecessor_edge.predecessor()]
-                self.add_edge(edges.Edge(predecessor, super_block))
-            else:
-                for predecessor_edge in induced_subgraph.predecessors(v):
-                    predecessor = scc_to_super_block[strong_components[predecessor_edge.predecessor()]]
-                    self.add_edge(edges.Edge(predecessor, super_block))
+            if len(ppg.predecessors(v)) > 1:
+                merge = vertices.Merge(vertices.Vertex.get_vertex_id(), v)
+                self.__merges.append(merge)
+                self.add_vertex(merge)
+                self.add_edge(edges.Edge(merge, self[v]))
+                for predecessor_edge in ppg.predecessors(v):
+                    self.add_edge(edges.Edge(self[predecessor_edge.predecessor()], merge))
 
     def super_blocks(self):
         for v in self:
             if isinstance(v, vertices.SuperBlock):
                 yield v
 
-    def junctions(self):
-        for v in self:
-            if isinstance(v, vertices.Junction):
-                yield v
+    def forks(self):
+        for v in self.__forks:
+            yield v
+
+    def merges(self):
+        for v in self.__merges:
+            yield v
+
+    @property
+    def pre_dominator_tree(self):
+        return self.__pre_dominator_tree
+
+    @property
+    def post_dominator_tree(self):
+        return self.__post_dominator_tree
 
     def __getitem__(self, v: vertices.ProgramPointVertex):
-        return self.__program_point_to_vertex[v][-1]
+        return self.__program_point_to_vertex[v]
 
     def dotify(self, suffix=''):
         data = []

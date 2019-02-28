@@ -30,6 +30,7 @@ class Styles:
     dotted = 'dotted'
     dashed = 'dashed'
     bold = 'bold'
+    filled = 'filled'
 
 
 class HTML:

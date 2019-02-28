@@ -10,10 +10,15 @@ class Table:
         self._columns = {'source_id': 'int',
                          'destination_id': 'int',
                          'value': 'int'}
+        self._rows = []
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def rows(self):
+        return self._rows
 
     def key(self, index):
         return self._key[index]
@@ -25,7 +30,7 @@ class Table:
 
 def get_key(v: vertices.ProgramPointVertex):
     if isinstance(v.program_point, vertices.Vertex):
-        return [v.program_point.id_, 0]
+        return [v.program_point.id_, None]
     else:
         return [v.program_point.predecessor().id_, v.program_point.successor().id_]
 
@@ -36,8 +41,7 @@ class Database:
         self._wcet = Table('wcet')
         self._local_wfreq = Table('local_wfreq')
         self._global_wfreq = Table('global_wfreq')
-        self._instrumentation = Table('instrumentation')
-        self._tables = [self._wcet, self._local_wfreq, self._global_wfreq, self._instrumentation]
+        self._tables = [self._wcet, self._local_wfreq, self._global_wfreq]
 
     def __enter__(self):
         self.__connection = sqlite3.connect(self.__filename)
@@ -69,52 +73,23 @@ class Database:
         row.append(wfreq)
         self.__cursor.execute('INSERT INTO {} VALUES (?, ?, ?)'.format(self._global_wfreq.name), row)
 
-    def set_instrumentation(self, v: vertices.ProgramPointVertex):
-        row = get_key(v)
-        row.append(1)
-        self.__cursor.execute('INSERT INTO {} VALUES (?, ?, ?)'.format(self._instrumentation.name), row)
+    def load_into_memory(self):
+        for table in self._tables:
+            query = "SELECT * from {}".format(table.name)
+            self.__cursor.execute(query)
+            table.rows.extend(self.__cursor.fetchall())
 
     def get_wcet(self, v: vertices.ProgramPointVertex):
         key = get_key(v)
-        query = "SELECT * from {} where {}='{}' and {}='{}'".format(self._wcet.name,
-                                                                    self._wcet.key(0),
-                                                                    key[0],
-                                                                    self._wcet.key(1),
-                                                                    key[1])
-        self.__cursor.execute(query)
-        (row,) = self.__cursor.fetchall()
+        (row,) = [row for row in self._wcet.rows if row[0] == key[0] and row[1] == key[1]]
         return row[2]
 
     def get_local_wfreq(self, v: vertices.ProgramPointVertex):
         key = get_key(v)
-        query = "SELECT * from {} where {}='{}' and {}='{}'".format(self._local_wfreq.name,
-                                                                    self._local_wfreq.key(0),
-                                                                    key[0],
-                                                                    self._local_wfreq.key(1),
-                                                                    key[1])
-        self.__cursor.execute(query)
-        (row,) = self.__cursor.fetchall()
+        (row,) = [row for row in self._local_wfreq.rows if row[0] == key[0] and row[1] == key[1]]
         return row[2]
 
     def get_global_wfreq(self, v: vertices.ProgramPointVertex):
         key = get_key(v)
-        query = "SELECT * from {} where {}='{}' and {}='{}'".format(self._global_wfreq.name,
-                                                                    self._global_wfreq.key(0),
-                                                                    key[0],
-                                                                    self._global_wfreq.key(1),
-                                                                    key[1])
-        self.__cursor.execute(query)
-        (row,) = self.__cursor.fetchall()
+        (row,) = [row for row in self._global_wfreq.rows if row[0] == key[0] and row[1] == key[1]]
         return row[2]
-
-    def is_instrumentation(self, v: vertices.ProgramPointVertex):
-        key = get_key(v)
-        query = "SELECT * from {} where {}='{}' and {}='{}'".format(self._instrumentation.name,
-                                                                    self._instrumentation.key(0),
-                                                                    key[0],
-                                                                    self._instrumentation.key(1),
-                                                                    key[1])
-        self.__cursor.execute(query)
-        rows = self.__cursor.fetchall()
-        return len(rows) != 0
-
