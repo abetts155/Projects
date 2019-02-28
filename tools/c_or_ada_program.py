@@ -258,7 +258,6 @@ class Subprogram:
                 if not subset:
                     return subprograms
                 else:
-                    print([s.name.unparse() for s in subset])
                     return subset
             else:
                 return subprograms
