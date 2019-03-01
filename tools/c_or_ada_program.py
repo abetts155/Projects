@@ -1,6 +1,7 @@
 import argparse
 import enum
 import random
+import string
 import sys
 
 
@@ -65,6 +66,10 @@ class ParameterDecl:
         self._base_type = base_type
         self._name = name
         self._initialiser = None
+
+    @property
+    def base_type(self):
+        return self._base_type
 
     @property
     def name(self):
@@ -236,10 +241,16 @@ class Subprogram:
         dfs = graphs.DepthFirstSearch(self._cfg, self._cfg.entry)
         indent = 2
         for v in reversed(dfs.post_order()):
+            body_text += blanks(indent)
+            body_text += '{'
+            body_text += '\n'
+            indent += 2
             for stmt in v.statements:
                 body_text += '{}{}'.format(blanks(indent), stmt.unparse())
-                if stmt != v.statements[-1]:
-                    body_text += '\n'
+                body_text += '\n'
+            indent -= 2
+            body_text += blanks(indent)
+            body_text += '}'
         body_text += '\n'
         body_text += '}'
         return signature_text + '\n' + body_text + '\n'
@@ -316,7 +327,11 @@ class SubprogramDecl:
     def __init__(self, subprogram: Subprogram):
         self._name = subprogram.name
         self._return_type = subprogram.return_type
-        self._arguments = subprogram.arguments
+        self._arguments = []
+        prefix = random.choice(string.ascii_lowercase)
+        for i, arg in enumerate(subprogram.arguments, start=1):
+            identifier = Identifier('{}_{}'.format(prefix, i))
+            self._arguments.append(ParameterDecl(arg.base_type, identifier))
 
     def unparse(self):
         return '{} {} ({});'.format(self._return_type.unparse(),
@@ -350,6 +365,16 @@ class InstrumentAnnotation:
                                                             "TRUE" if self._on else "FALSE")
 
 
+class BlackBoxAnnotation:
+    def __init__(self, subprogram: Subprogram, inline: bool):
+        self._subprogram = subprogram
+        self._inline = inline
+
+    def unparse(self):
+        return '#pragma RVS {} ("{}");'.format('BLACK_BOX_INLINE' if self._inline else 'BLACK_BOX',
+                                               self._subprogram.name.unparse())
+
+
 def generate(required_number, formal_parameter_limit, expression_depth, block_length):
     annotation = DefaultInstrumentAnnotation(InstrumentationProfile.TIME_FULL, decide())
     file_annotations.append(annotation)
@@ -360,7 +385,7 @@ def generate(required_number, formal_parameter_limit, expression_depth, block_le
                                     0)
             subprogram.main = True
         else:
-            name = 'f{}'.format(subprogram_id)
+            name = 'func{}'.format(subprogram_id)
             subprogram = Subprogram(Identifier(name),
                                     IntegerType(),
                                     random.randint(1, formal_parameter_limit))
@@ -368,6 +393,10 @@ def generate(required_number, formal_parameter_limit, expression_depth, block_le
                 # Override the default instrumentation profile
                 annotation = InstrumentAnnotation(subprogram, decide())
                 annotations.setdefault(subprogram, []).append(annotation)
+            if decide():
+                annotation = BlackBoxAnnotation(subprogram, decide())
+                annotations.setdefault(subprogram, []).append(annotation)
+
         subprogram.generate_control_flow()
         subprogram.generate_body(expression_depth, block_length)
         subprograms.append(subprogram)
@@ -381,9 +410,10 @@ def write(filename, repeat_annotations):
 
         wd.write('\n')
         for s in subprograms:
-            decl = SubprogramDecl(s)
-            wd.write(decl.unparse())
-            wd.write('\n')
+            for i in range(random.randint(2, 5)):
+                decl = SubprogramDecl(s)
+                wd.write(decl.unparse())
+                wd.write('\n')
 
         wd.write('\n')
         for s in subprograms:
