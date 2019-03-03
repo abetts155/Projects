@@ -742,9 +742,13 @@ def generate(analysis: Analysis, required_number, formal_parameter_limit, expres
         assert False
 
     if analysis == Analysis.TIMING:
-        profile = random.choice(InstrumentationProfile.timing_profiles())
+        choices = [profile for profile in InstrumentationProfile.timing_profiles()
+                   if profile != InstrumentationProfile.DEFAULT]
+        profile = random.choice(choices)
     else:
-        profile = random.choice(InstrumentationProfile.coverage_profiles())
+        choices = [profile for profile in InstrumentationProfile.coverage_profiles()
+                   if profile != InstrumentationProfile.DEFAULT]
+        profile = random.choice(choices)
     annotation = InstrumentAnnotation(profile, top_level_subprogram)
     top_level_subprogram.add_annotation(annotation)
 
