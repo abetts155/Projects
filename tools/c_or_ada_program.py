@@ -665,6 +665,11 @@ class SubprogramDecl:
                                     ', '.join(f.unparse() for f in self._formals))
 
 
+class Analysis(enum.Enum):
+    TIMING = 0
+    COVERAGE = 1
+
+
 class InstrumentationProfile(enum.Enum):
     DEFAULT = 0
     TIME_FULL = 1
@@ -672,6 +677,14 @@ class InstrumentationProfile(enum.Enum):
     COV_DAL_A = 3
     COV_DAL_B = 4
     COV_DAL_C = 5
+
+    @classmethod
+    def timing_profiles(cls):
+        return [cls.DEFAULT, cls.TIME_FULL, cls.TIME_FUNCTIONS]
+
+    @classmethod
+    def coverage_profiles(cls):
+        return [cls.DEFAULT, cls.COV_DAL_A, cls.COV_DAL_B, cls.COV_DAL_C]
 
 
 class InstrumentAnnotation:
@@ -692,7 +705,7 @@ class InstrumentAnnotation:
                                                                 self._on)
 
 
-def generate(required_number, formal_parameter_limit, expression_depth, block_length):
+def generate(analysis, required_number, formal_parameter_limit, expression_depth, block_length):
     if language == C_language:
         top_level_subprogram = Subprogram(None)
     else:
@@ -714,8 +727,8 @@ def generate(required_number, formal_parameter_limit, expression_depth, block_le
 
             if decide():
                 # Override the default instrumentation profile
-                choices =
-                annotation = InstrumentAnnotation(InstrumentationProfile.DEFAULT, subprogram, decide())
+                choice = random.randint(0, len(InstrumentationProfile) - 1)
+                annotation = InstrumentAnnotation(InstrumentationProfile(choice), subprogram, decide())
                 subprogram.add_annotation(annotation)
 
         subprogram.generate_control_flow()
@@ -753,7 +766,8 @@ def write(filename, repeat_annotations, top_level_subprogram: Subprogram):
 def main(**kwargs):
     global language
     language = kwargs['language']
-    top_level_subprogram = generate(kwargs['subprograms'],
+    top_level_subprogram = generate(kwargs['analysis'],
+                                    kwargs['subprograms'],
                                     kwargs['formal_parameter_limit'],
                                     kwargs['expression_depth'],
                                     kwargs['block_length'])
@@ -770,8 +784,11 @@ def parse_the_command_line():
     parser.add_argument('--language',
                         choices=[C_language, Ada_language],
                         help='output language',
-                        dest=language,
                         required=True)
+
+    parser.add_argument('--analysis',
+                        choices=[analysis.name for analysis in Analysis],
+                        help='the type of program analysis')
 
     parser.add_argument('--subprograms',
                         type=int,
