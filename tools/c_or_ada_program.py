@@ -735,7 +735,7 @@ class InstrumentAnnotation:
                                                                 self._on)
 
 
-def generate(analysis, required_number, formal_parameter_limit, expression_depth, block_length):
+def generate(analysis: Analysis, required_number, formal_parameter_limit, expression_depth, block_length):
     if language == C_language:
         top_level_subprogram = Subprogram(None)
     else:
@@ -803,7 +803,7 @@ def write(filename, repeat_annotations, top_level_subprogram: Subprogram):
 def main(**kwargs):
     global language
     language = kwargs['language']
-    top_level_subprogram = generate(kwargs['analysis'],
+    top_level_subprogram = generate(Analysis[kwargs['analysis']],
                                     kwargs['subprograms'],
                                     kwargs['formal_parameter_limit'],
                                     kwargs['expression_depth'],
