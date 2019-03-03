@@ -674,9 +674,9 @@ class InstrumentationProfile(enum.Enum):
     DEFAULT = 0
     TIME_FULL = 1
     TIME_FUNCTIONS = 2
-    COV_DAL_A = 3
-    COV_DAL_B = 4
-    COV_DAL_C = 5
+    COV_178_DAL_A = 3
+    COV_178_DAL_B = 4
+    COV_178_DAL_C = 5
 
     @classmethod
     def timing_profiles(cls):
