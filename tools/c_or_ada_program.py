@@ -671,24 +671,24 @@ class Analysis(enum.Enum):
 
 
 class InstrumentationProfile(enum.Enum):
-    DEFAULT = enum.auto()
-    MANUAL = enum.auto()
-    TIME_FULL = enum.auto()
-    TIME_FUNCTIONS = enum.auto()
-    TIME_START_OF_SCOPES = enum.auto()
-    COV_178_DAL_A = enum.auto()
-    COV_178_DAL_B = enum.auto()
-    COV_178_DAL_C = enum.auto()
-    COV_MCDC = enum.auto()
-    COV_STATEMENTS = enum.auto()
-    COV_CALLS = enum.auto()
-    COV_BRANCHES = enum.auto()
-    COV_DECISIONS = enum.auto()
-    COV_FUNCTIONS = enum.auto()
-    COV_FUNCTION_EXITS = enum.auto()
-    COV_26262_HR_ASIL_A = enum.auto()
-    COV_26262_HR_ASIL_B = enum.auto()
-    COV_26262_HR_ASIL_C = enum.auto()
+    DEFAULT = 0
+    MANUAL = 1
+    TIME_FULL = 2
+    TIME_FUNCTIONS = 3
+    TIME_START_OF_SCOPES = 4
+    COV_178_DAL_A = 5
+    COV_178_DAL_B = 6
+    COV_178_DAL_C = 7
+    COV_MCDC = 8
+    COV_STATEMENTS = 9
+    COV_CALLS = 10
+    COV_BRANCHES = 11
+    COV_DECISIONS = 12
+    COV_FUNCTIONS = 13
+    COV_FUNCTION_EXITS = 14
+    COV_26262_HR_ASIL_A = 15
+    COV_26262_HR_ASIL_B = 16
+    COV_26262_HR_ASIL_C = 17
 
     @classmethod
     def timing_profiles(cls):
