@@ -671,20 +671,50 @@ class Analysis(enum.Enum):
 
 
 class InstrumentationProfile(enum.Enum):
-    DEFAULT = 0
-    TIME_FULL = 1
-    TIME_FUNCTIONS = 2
-    COV_178_DAL_A = 3
-    COV_178_DAL_B = 4
-    COV_178_DAL_C = 5
+    DEFAULT = enum.auto()
+    MANUAL = enum.auto()
+    TIME_FULL = enum.auto()
+    TIME_FUNCTIONS = enum.auto()
+    TIME_START_OF_SCOPES = enum.auto()
+    COV_178_DAL_A = enum.auto()
+    COV_178_DAL_B = enum.auto()
+    COV_178_DAL_C = enum.auto()
+    COV_MCDC = enum.auto()
+    COV_STATEMENTS = enum.auto()
+    COV_CALLS = enum.auto()
+    COV_BRANCHES = enum.auto()
+    COV_DECISIONS = enum.auto()
+    COV_FUNCTIONS = enum.auto()
+    COV_FUNCTION_EXITS = enum.auto()
+    COV_26262_HR_ASIL_A = enum.auto()
+    COV_26262_HR_ASIL_B = enum.auto()
+    COV_26262_HR_ASIL_C = enum.auto()
 
     @classmethod
     def timing_profiles(cls):
-        return [cls.DEFAULT, cls.TIME_FULL, cls.TIME_FUNCTIONS]
+        return [cls.DEFAULT,
+                cls.MANUAL,
+                cls.TIME_FULL,
+                cls.TIME_FUNCTIONS,
+                cls.TIME_START_OF_SCOPES]
 
     @classmethod
     def coverage_profiles(cls):
-        return [cls.DEFAULT, cls.COV_DAL_A, cls.COV_DAL_B, cls.COV_DAL_C]
+        return [cls.DEFAULT,
+                cls.MANUAL,
+                cls.COV_178_DAL_A,
+                cls.COV_178_DAL_B,
+                cls.COV_178_DAL_C,
+                cls.COV_MCDC,
+                cls.COV_STATEMENTS,
+                cls.COV_CALLS,
+                cls.COV_BRANCHES,
+                cls.COV_DECISIONS,
+                cls.COV_FUNCTIONS,
+                cls.COV_FUNCTION_EXITS,
+                cls.COV_26262_HR_ASIL_A,
+                cls.COV_26262_HR_ASIL_B,
+                cls.COV_26262_HR_ASIL_C]
 
 
 class InstrumentAnnotation:
@@ -694,7 +724,7 @@ class InstrumentAnnotation:
         self._on = on
 
     def unparse(self):
-        if self._subprogram.is_fake():
+        if self._subprogram.is_fake() or (language == Ada_language and self._subprogram.main):
             return '#pragma RVS default_instrument("{}", "{}");'.format(True, self._profile.name)
         elif self._profile != InstrumentationProfile.DEFAULT:
             return '#pragma RVS instrument("{}", "{}", "{}");'.format(self._subprogram.name.unparse(),
@@ -711,7 +741,11 @@ def generate(analysis, required_number, formal_parameter_limit, expression_depth
     else:
         assert False
 
-    annotation = InstrumentAnnotation(InstrumentationProfile.TIME_FULL, top_level_subprogram)
+    if analysis == Analysis.TIMING:
+        profile = random.choice(InstrumentationProfile.timing_profiles())
+    else:
+        profile = random.choice(InstrumentationProfile.coverage_profiles())
+    annotation = InstrumentAnnotation(profile, top_level_subprogram)
     top_level_subprogram.add_annotation(annotation)
 
     for subprogram_id in range(1, required_number+1):
@@ -727,8 +761,11 @@ def generate(analysis, required_number, formal_parameter_limit, expression_depth
 
             if decide():
                 # Override the default instrumentation profile
-                choice = random.randint(0, len(InstrumentationProfile) - 1)
-                annotation = InstrumentAnnotation(InstrumentationProfile(choice), subprogram, decide())
+                if analysis == Analysis.TIMING:
+                    profile = random.choice(InstrumentationProfile.timing_profiles())
+                else:
+                    profile = random.choice(InstrumentationProfile.coverage_profiles())
+                annotation = InstrumentAnnotation(profile, subprogram, decide())
                 subprogram.add_annotation(annotation)
 
         subprogram.generate_control_flow()
@@ -788,7 +825,8 @@ def parse_the_command_line():
 
     parser.add_argument('--analysis',
                         choices=[analysis.name for analysis in Analysis],
-                        help='the type of program analysis')
+                        help='the type of program analysis',
+                        required=True)
 
     parser.add_argument('--subprograms',
                         type=int,
