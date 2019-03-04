@@ -5,6 +5,17 @@ import enum
 import random
 
 
+def decide():
+    return bool(random.getrandbits(1))
+
+
+def pick_element(a_list, remove=False):
+    element = a_list[random.randint(0, len(a_list) - 1)]
+    if remove:
+        a_list.remove(element)
+    return element
+
+
 class VertexPool:
     """Manage allocation and deallocation of vertices."""
 
@@ -122,6 +133,22 @@ class Edge:
 
     def __str__(self):
         return "({}, {})".format(self._predecessor, self._successor)
+
+
+class Direction(enum.Enum):
+    FORWARD = 0
+    THEN = 1
+    ELSE = 2
+
+
+class ControlFlowEdge(Edge):
+    def __init__(self, predecessor, successor, direction: Direction):
+        Edge.__init__(self, predecessor, successor)
+        self._direction = direction
+
+    @property
+    def direction(self):
+        return self._direction
 
 
 class VertexData:
@@ -293,7 +320,14 @@ class DepthFirstSearch:
             pre_id += 1
             self._pre_order[v] = pre_id
 
+            visit_order = []
             for e in g.successors(v):
+                if e.direction == Direction.ELSE:
+                    visit_order.insert(0, e)
+                else:
+                    visit_order.append(e)
+
+            for e in visit_order:
                 if e.successor() not in self._pre_order:
                     # Not yet visited
                     explore(e.successor())
@@ -311,17 +345,61 @@ class DepthFirstSearch:
         explore(root)
 
 
-def decide():
-    return bool(random.getrandbits(1))
+class SingleEntrySingleExit:
+    __slots__ = ['the_entry', 'the_exit']
+
+    def __init__(self, the_entry, the_exit):
+        self.the_entry = the_entry
+        self.the_exit = the_exit
+
+
+def generate_control_flow_graph(basic_block_limit: int) -> FlowGraph:
+    cfg = FlowGraph()
+    subgraphs = []
+    for _ in range(random.randint(1, basic_block_limit)):
+        v = Vertex(Vertex.get_vertex_id())
+        cfg.add_vertex(v)
+        subgraphs.append(SingleEntrySingleExit(v, v))
+
+    while len(subgraphs) > 1:
+        if len(subgraphs) > 3 and decide():
+            # Create an if-statement with a then-statement and an else-statement.
+            branch = pick_element(subgraphs, True)
+            merge = pick_element(subgraphs, True)
+            then_side = pick_element(subgraphs, True)
+            else_side = pick_element(subgraphs, True)
+            cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, Direction.THEN))
+            cfg.add_edge(ControlFlowEdge(branch.the_exit, else_side.the_entry, Direction.ELSE))
+            cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, Direction.FORWARD))
+            cfg.add_edge(ControlFlowEdge(else_side.the_exit, merge.the_entry, Direction.FORWARD))
+            subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
+        else:
+            before = pick_element(subgraphs, True)
+            after = pick_element(subgraphs, True)
+            cfg.add_edge(ControlFlowEdge(before.the_exit, after.the_entry, Direction.FORWARD))
+            subgraphs.append(SingleEntrySingleExit(before.the_entry, after.the_exit))
+
+    cfg.entry = subgraphs[0].the_entry
+    for v in cfg:
+        if len(cfg.predecessors(v)) == 0:
+            assert v == cfg.entry
+    return cfg
+
+
 
 
 def blanks(length):
     return ' ' * length
 
 
-language = None
-C_language = 'C'
-Ada_language = 'Ada'
+class Language(enum.Enum):
+    C = 0
+    Ada = 1
+
+
+class Analysis(enum.Enum):
+    TIMING = 0
+    COVERAGE = 1
 
 
 class RelationalOperator(enum.Enum):
@@ -517,6 +595,14 @@ def false_expr():
     return BinaryExpr(Literal(1), Operator(RelationalOperator.EQUALITY), Literal(0))
 
 
+class IfStmt:
+    def __init__(self, expr):
+        self._expr = expr
+
+    def unparse(self):
+        return 'if ({})'.format(self._expr.unparse())
+
+
 class ReturnStmt:
     def __init__(self, expr):
         self._expr = expr
@@ -526,7 +612,8 @@ class ReturnStmt:
 
 
 class Subprogram:
-    def __init__(self, name):
+    def __init__(self, language: Language, name):
+        self._language = language
         self._name = name
         self._return_type = None
         self._formals = []
@@ -543,27 +630,44 @@ class Subprogram:
         body_text = '{'
         body_text += '\n'
         dfs = DepthFirstSearch(self._cfg, self._cfg.entry)
-        indent = 2
+        indent_width = 2
+        blank_columns = indent_width
         for v in reversed(dfs.post_order()):
-            body_text += blanks(indent)
-            body_text += '{'
-            body_text += '\n'
-            indent += 2
-            for stmt in v.statements:
-                body_text += '{}{}'.format(blanks(indent), stmt.unparse())
+            if len(self._cfg.predecessors(v)) == 1:
+                (e,) = self._cfg.predecessors(v)
+                if e.direction == Direction.ELSE:
+                    body_text += blanks(blank_columns)
+                    body_text += 'else'
+                    body_text += '\n'
+                    body_text += blanks(blank_columns)
+                    body_text += '{'
+                    body_text += '\n'
+                    blank_columns += indent_width
+
+            if len(self._cfg.successors(v)) == 2:
+                (stmt,) = v.statements
+                body_text += '{}{}'.format(blanks(blank_columns), stmt.unparse())
                 body_text += '\n'
-            indent -= 2
-            body_text += blanks(indent)
-            body_text += '}'
+                body_text += blanks(blank_columns)
+                body_text += '{'
+                body_text += '\n'
+                blank_columns += indent_width
+            else:
+                for stmt in v.statements:
+                    body_text += '{}{}'.format(blanks(blank_columns), stmt.unparse())
+                    body_text += '\n'
+
+            if len(self._cfg.successors(v)) == 1:
+                (e,) = self._cfg.successors(v)
+                if len(self._cfg.predecessors(e.successor())) == 2:
+                    blank_columns -= indent_width
+                    body_text += blanks(blank_columns)
+                    body_text += '}'
+                    body_text += '\n'
         body_text += '\n'
         body_text += '}'
+        body_text += '\n'
         return signature_text + '\n' + body_text + '\n'
-
-    def generate_control_flow(self):
-        self._cfg = FlowGraph()
-        v = Vertex(Vertex.get_vertex_id())
-        self._cfg.add_vertex(v)
-        self._cfg.entry = v
 
     def generate_body(self, expression_depth, block_length, subprograms):
         def subprogram_subset():
@@ -580,15 +684,12 @@ class Subprogram:
         dfs = DepthFirstSearch(self._cfg, self._cfg.entry)
         for v in reversed(dfs.post_order()):
             v.statements = []
-            if len(self._cfg.successors(v)) == 0:
-                if decide():
-                    for i in range(1, block_length):
-                        decl_stmt = VariableDecl(IntegerType(), Identifier('i{}_{}'.format(v, i)))
-                        decl_stmt.initialiser = random_expr(random.randint(1, expression_depth),
-                                                            subprogram_subset(),
-                                                            self._formals)
-                        v.statements.append(decl_stmt)
-
+            if len(self._cfg.successors(v)) == 2:
+                if_stmt = IfStmt(random_expr(random.randint(1, expression_depth),
+                                             subprogram_subset(),
+                                             self._formals))
+                v.statements.append(if_stmt)
+            elif len(self._cfg.successors(v)) == 0:
                 if self.main:
                     return_stmt = ReturnStmt(false_expr())
                     v.statements.append(return_stmt)
@@ -597,6 +698,15 @@ class Subprogram:
                                                          subprogram_subset(),
                                                          self._formals))
                     v.statements.append(return_stmt)
+            else:
+                for i in range(1, block_length):
+                    decl_stmt = VariableDecl(IntegerType(), Identifier('i{}_{}'.format(v, i)))
+                    decl_stmt.initialiser = random_expr(random.randint(1, expression_depth),
+                                                        subprogram_subset(),
+                                                        self._formals)
+                    v.statements.append(decl_stmt)
+
+
 
     @property
     def name(self):
@@ -652,6 +762,14 @@ class Subprogram:
     def is_fake(self):
         return self._name is None
 
+    @property
+    def cfg(self):
+        return self._cfg
+
+    @cfg.setter
+    def cfg(self, cfg):
+        self._cfg = cfg
+
 
 class SubprogramDecl:
     def __init__(self, subprogram: Subprogram):
@@ -663,11 +781,6 @@ class SubprogramDecl:
         return '{} {} ({});'.format(self._return_type.unparse(),
                                     self._name.unparse(),
                                     ', '.join(f.unparse() for f in self._formals))
-
-
-class Analysis(enum.Enum):
-    TIMING = 0
-    COVERAGE = 1
 
 
 class InstrumentationProfile(enum.Enum):
@@ -718,13 +831,14 @@ class InstrumentationProfile(enum.Enum):
 
 
 class InstrumentAnnotation:
-    def __init__(self, profile: InstrumentationProfile, subprogram: Subprogram, on: bool = True):
+    def __init__(self, language: Language, profile: InstrumentationProfile, subprogram: Subprogram, on: bool = True):
+        self._language = language
         self._profile = profile
         self._subprogram = subprogram
         self._on = on
 
     def unparse(self):
-        if self._subprogram.is_fake() or (language == Ada_language and self._subprogram.main):
+        if self._subprogram.is_fake() or (self._language == Language.Ada and self._subprogram.main):
             return '#pragma RVS default_instrument("{}", "{}");'.format(True, self._profile.name)
         elif self._profile != InstrumentationProfile.DEFAULT:
             return '#pragma RVS instrument("{}", "{}", "{}");'.format(self._subprogram.name.unparse(),
@@ -735,12 +849,25 @@ class InstrumentAnnotation:
                                                                 self._on)
 
 
-def generate(analysis: Analysis, required_number, formal_parameter_limit, expression_depth, block_length):
-    if language == C_language:
-        top_level_subprogram = Subprogram(None)
+def generate(language: Language,
+             analysis: Analysis,
+             number_of_subprograms: int,
+             formal_parameter_limit: int,
+             expression_depth: int,
+             block_length: int,
+             basic_block_limit: int):
+    # Declare a top-level subprogram in which we will nest all created subprograms and annotations.
+    # In C this top-level subprogram is fake, as we cannot nest subprograms.
+    # In Ada this top-level subprogram is the main subprogram, where execution begins.
+    name_of_main = 'main'
+    if language == Language.C:
+        top_level_subprogram = Subprogram(language, None)
     else:
+        top_level_subprogram = Subprogram(language, name_of_main)
+        top_level_subprogram.main = True
         assert False
 
+    # A default instrumentation profile is required by RVS.
     if analysis == Analysis.TIMING:
         choices = [profile for profile in InstrumentationProfile.timing_profiles()
                    if profile != InstrumentationProfile.DEFAULT]
@@ -749,17 +876,17 @@ def generate(analysis: Analysis, required_number, formal_parameter_limit, expres
         choices = [profile for profile in InstrumentationProfile.coverage_profiles()
                    if profile != InstrumentationProfile.DEFAULT]
         profile = random.choice(choices)
-    annotation = InstrumentAnnotation(profile, top_level_subprogram)
+    annotation = InstrumentAnnotation(language, profile, top_level_subprogram)
     top_level_subprogram.add_annotation(annotation)
 
-    for subprogram_id in range(1, required_number+1):
-        if subprogram_id == required_number and language == C_language:
-            subprogram = Subprogram(Identifier('main'))
+    for subprogram_id in range(1, number_of_subprograms + 1):
+        if subprogram_id == number_of_subprograms and language == Language.C:
+            subprogram = Subprogram(language, Identifier(name_of_main))
             subprogram.return_type = IntegerType()
             subprogram.main = True
         else:
             name = 'func{}'.format(subprogram_id)
-            subprogram = Subprogram(Identifier(name))
+            subprogram = Subprogram(language, Identifier(name))
             subprogram.return_type = IntegerType()
             subprogram.create_formals(random.randint(1, formal_parameter_limit))
 
@@ -769,10 +896,10 @@ def generate(analysis: Analysis, required_number, formal_parameter_limit, expres
                     profile = random.choice(InstrumentationProfile.timing_profiles())
                 else:
                     profile = random.choice(InstrumentationProfile.coverage_profiles())
-                annotation = InstrumentAnnotation(profile, subprogram, decide())
+                annotation = InstrumentAnnotation(language, profile, subprogram, decide())
                 subprogram.add_annotation(annotation)
 
-        subprogram.generate_control_flow()
+        subprogram.cfg = generate_control_flow_graph(basic_block_limit)
         subprogram.generate_body(expression_depth, block_length, top_level_subprogram.subprograms)
         top_level_subprogram.add_subprogram(subprogram)
 
@@ -805,13 +932,13 @@ def write(filename, repeat_annotations, top_level_subprogram: Subprogram):
 
 
 def main(**kwargs):
-    global language
-    language = kwargs['language']
-    top_level_subprogram = generate(Analysis[kwargs['analysis']],
+    top_level_subprogram = generate(Language[kwargs['language']],
+                                    Analysis[kwargs['analysis']],
                                     kwargs['subprograms'],
                                     kwargs['formal_parameter_limit'],
                                     kwargs['expression_depth'],
-                                    kwargs['block_length'])
+                                    kwargs['block_length'],
+                                    kwargs['basic_blocks'])
     write(kwargs['filename'], kwargs['repeat_annotations'], top_level_subprogram)
 
 
@@ -823,7 +950,7 @@ def parse_the_command_line():
                         required=True)
 
     parser.add_argument('--language',
-                        choices=[C_language, Ada_language],
+                        choices=[language.name for language in Language],
                         help='output language',
                         required=True)
 
@@ -863,8 +990,14 @@ def parse_the_command_line():
 
     parser.add_argument('--block-length',
                         type=int,
-                        help='maximum number of statements in a block',
+                        help='maximum number of statements in a basic block',
                         default=5,
+                        metavar='<INT>')
+
+    parser.add_argument('--basic-blocks',
+                        type=int,
+                        help='maximum number of basic blocks in a subprograms',
+                        default=10,
                         metavar='<INT>')
 
     return parser.parse_args()
