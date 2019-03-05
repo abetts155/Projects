@@ -1,12 +1,16 @@
 import sys
-
+import inspect
 import argparse
 import enum
 import random
+import typing
 
 
-def decide():
-    return bool(random.getrandbits(1))
+def go_ahead(weight=None):
+    if weight:
+        return random.random() < weight
+    else:
+        return bool(random.getrandbits(1))
 
 
 def pick_element(a_list, remove=False):
@@ -135,20 +139,23 @@ class Edge:
         return "({}, {})".format(self._predecessor, self._successor)
 
 
-class Direction(enum.Enum):
+class ControlFlow(enum.Enum):
     FORWARD = 0
     THEN = 1
     ELSE = 2
+    CASE = 3
+    BREAK = 4
+    MERGE = 5
 
 
 class ControlFlowEdge(Edge):
-    def __init__(self, predecessor, successor, direction: Direction):
+    def __init__(self, predecessor, successor, flow: ControlFlow):
         Edge.__init__(self, predecessor, successor)
-        self._direction = direction
+        self._flow = flow
 
     @property
-    def direction(self):
-        return self._direction
+    def flow(self):
+        return self._flow
 
 
 class VertexData:
@@ -322,7 +329,7 @@ class DepthFirstSearch:
 
             visit_order = []
             for e in g.successors(v):
-                if e.direction == Direction.ELSE:
+                if e.flow == ControlFlow.ELSE:
                     visit_order.insert(0, e)
                 else:
                     visit_order.append(e)
@@ -345,6 +352,83 @@ class DepthFirstSearch:
         explore(root)
 
 
+class Loop(Vertex):
+    def __init__(self, id_):
+        Vertex.__init__(self, id_)
+        self._size = 0
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, value):
+        self._size = value
+
+
+class LoopNest(DirectedGraph):
+    def __init__(self):
+        DirectedGraph.__init__(self)
+        self._root = None
+
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, v):
+        self._root = v
+
+
+def create_loop_hierarchy(basic_blocks:    int,
+                          number_of_loops: int,
+                          nesting_depth:   int) -> LoopNest:
+    # Add abstract vertices to the tree, including an extra one for the dummy outer loop.
+    lnt = LoopNest()
+    for _ in range(1, number_of_loops+2):
+        v = Loop(Vertex.get_vertex_id())
+        lnt.add_vertex(v)
+
+    # Add edges to the tree.
+    vertex_to_level = {v: 0 for v in lnt}
+    (lnt.root,) = random.sample(vertex_to_level.keys(), 1)
+    parent = lnt.root
+    for v in lnt:
+        if v != lnt.root:
+            new_level = vertex_to_level[parent] + 1
+            if new_level <= nesting_depth:
+                lnt.add_edge(Edge(parent, v))
+                vertex_to_level[v] = new_level
+            else:
+                # The height of the tree now exceeds the maximum depth, so backtrack to an arbitrary proper ancestor.
+                ancestor = parent
+                while True:
+                    (e,) = lnt.predecessors(ancestor)
+                    ancestor = e.predecessor()
+                    if go_ahead() or ancestor == lnt.root:
+                        break
+                parent = ancestor
+                lnt.add_edge(Edge(parent, v))
+                vertex_to_level[v] = vertex_to_level[parent] + 1
+            parent = v
+
+    # Compute number of basic blocks in each loop.
+    basic_blocks_remaining = basic_blocks
+    for v in lnt:
+        # Guarantee each loop has at least 2 basic blocks plus basic blocks needed to connect inner nested loops.
+        v.size = 2 + len(lnt.successors(v))
+        basic_blocks_remaining -= v.size
+
+    # Arbitrarily distribute any remaining basic blocks to the loop bodies.
+    while basic_blocks_remaining > 0:
+        for v in lnt:
+            additional_basic_blocks = random.randint(0, basic_blocks_remaining)
+            v.size += additional_basic_blocks
+            basic_blocks_remaining -= additional_basic_blocks
+
+    return lnt
+
+
 class SingleEntrySingleExit:
     __slots__ = ['the_entry', 'the_exit']
 
@@ -353,43 +437,72 @@ class SingleEntrySingleExit:
         self.the_exit = the_exit
 
 
-def generate_control_flow_graph(basic_block_limit: int) -> FlowGraph:
+def generate_control_flow_graph(lnt: LoopNest) -> FlowGraph:
+
+    def create_loop_body(loop: Loop):
+        subgraphs = []
+        for _ in range(random.randint(1, loop.size)):
+            v = Vertex(Vertex.get_vertex_id())
+            cfg.add_vertex(v)
+            subgraphs.append(SingleEntrySingleExit(v, v))
+
+        while len(subgraphs) > 1:
+            if len(subgraphs) > 3 and go_ahead():
+                # Create an if-statement with a then-statement and an else-statement.
+                branch = pick_element(subgraphs, True)
+                merge = pick_element(subgraphs, True)
+                then_side = pick_element(subgraphs, True)
+                else_side = pick_element(subgraphs, True)
+                cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, ControlFlow.THEN))
+                cfg.add_edge(ControlFlowEdge(branch.the_exit, else_side.the_entry, ControlFlow.ELSE))
+                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.MERGE))
+                cfg.add_edge(ControlFlowEdge(else_side.the_exit, merge.the_entry, ControlFlow.MERGE))
+                subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
+            elif len(subgraphs) > 2 and go_ahead():
+                # Create an if-statement with a then-statement but no else-statement.
+                branch = pick_element(subgraphs, True)
+                merge = pick_element(subgraphs, True)
+                then_side = pick_element(subgraphs, True)
+                cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, ControlFlow.THEN))
+                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.MERGE))
+                cfg.add_edge(ControlFlowEdge(branch.the_exit, merge.the_entry, ControlFlow.FORWARD))
+                subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
+            elif len(subgraphs) > 4 and go_ahead():
+                # Create a switch-statement
+                switch = pick_element(subgraphs, True)
+                merge = pick_element(subgraphs, True)
+                arms = random.randint(3, len(subgraphs))
+                for _ in range(arms):
+                    arm = pick_element(subgraphs, True)
+                    cfg.add_edge(ControlFlowEdge(switch.the_exit, arm.the_entry, ControlFlow.CASE))
+                    cfg.add_edge(ControlFlowEdge(arm.the_exit, merge.the_entry, ControlFlow.BREAK))
+                subgraphs.append(SingleEntrySingleExit(switch.the_entry, merge.the_exit))
+            else:
+                before = pick_element(subgraphs, True)
+                after = pick_element(subgraphs, True)
+                cfg.add_edge(ControlFlowEdge(before.the_exit, after.the_entry, ControlFlow.FORWARD))
+                subgraphs.append(SingleEntrySingleExit(before.the_entry, after.the_exit))
+
     cfg = FlowGraph()
-    subgraphs = []
-    for _ in range(random.randint(1, basic_block_limit)):
-        v = Vertex(Vertex.get_vertex_id())
-        cfg.add_vertex(v)
-        subgraphs.append(SingleEntrySingleExit(v, v))
+    for loop in sorted([loop for loop in lnt], key=lambda loop: len(lnt.predecessors(loop)), reverse=True):
+        create_loop_body(loop)
 
-    while len(subgraphs) > 1:
-        if len(subgraphs) > 3 and decide():
-            # Create an if-statement with a then-statement and an else-statement.
-            branch = pick_element(subgraphs, True)
-            merge = pick_element(subgraphs, True)
-            then_side = pick_element(subgraphs, True)
-            else_side = pick_element(subgraphs, True)
-            cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, Direction.THEN))
-            cfg.add_edge(ControlFlowEdge(branch.the_exit, else_side.the_entry, Direction.ELSE))
-            cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, Direction.FORWARD))
-            cfg.add_edge(ControlFlowEdge(else_side.the_exit, merge.the_entry, Direction.FORWARD))
-            subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
-        else:
-            before = pick_element(subgraphs, True)
-            after = pick_element(subgraphs, True)
-            cfg.add_edge(ControlFlowEdge(before.the_exit, after.the_entry, Direction.FORWARD))
-            subgraphs.append(SingleEntrySingleExit(before.the_entry, after.the_exit))
-
-    cfg.entry = subgraphs[0].the_entry
-    for v in cfg:
-        if len(cfg.predecessors(v)) == 0:
-            assert v == cfg.entry
+    (cfg.entry,) = [v for v in cfg if len(cfg.predecessors(v)) == 0]
     return cfg
 
 
+class Unparser:
+    @staticmethod
+    def blanks(length):
+        return ' ' * length
 
+    @staticmethod
+    def newlines(length=1):
+        return '\n' * length
 
-def blanks(length):
-    return ' ' * length
+    open_block = '{'
+    close_block = '}'
+    statement_terminator = ';'
 
 
 class Language(enum.Enum):
@@ -402,28 +515,147 @@ class Analysis(enum.Enum):
     COVERAGE = 1
 
 
-class RelationalOperator(enum.Enum):
-    EQUALITY = '=='
-    INEQUALITY = '!='
-    LESS_THAN = '<'
-    GREATER_THAN = '>'
-    LESS_THAN_OR_EQUAL = '<='
-    GREATER_THAN_OR_EQUAL = '>='
+class Keywords(enum.Enum):
+    IF = 0
+    ELSE = 1
+    SWITCH = 2
+    CASE = 3
+    RETURN = 4
+    BREAK = 5
+    DEFAULT = 6
 
 
-class ArithmeticOperator(enum.Enum):
-    PLUS = '+'
-    MINUS = '-'
-    MULTIPLY = '*'
-    DIVIDE = '/'
+class UnaryOperator:
+    pass
 
 
-class LogicalOperator(enum.Enum):
-    NEGATION = '!'
+class BinaryOperator:
+    pass
 
 
-class BitwiseOperator(enum.Enum):
-    NEGATION = '~'
+class Operator:
+    pass
+
+
+class RelationalOperator(Operator):
+    pass
+
+
+class ArithmeticOperator(Operator):
+    pass
+
+
+class LogicalOperator(Operator):
+    pass
+
+
+class BitwiseOperator(Operator):
+    pass
+
+
+class Equality(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '=='
+
+
+class Inequality(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '!='
+
+
+class LessThan(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '<'
+
+
+class LessThanEqual(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '<='
+
+
+class GreaterThan(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '>'
+
+
+class GreaterThanEqual(RelationalOperator, BinaryOperator):
+    def unparse(self):
+        return '>='
+
+
+class Add(ArithmeticOperator, BinaryOperator):
+    def unparse(self):
+        return '+'
+
+
+class Subtract(ArithmeticOperator, BinaryOperator):
+    def unparse(self):
+        return '-'
+
+
+class Multiply(ArithmeticOperator, BinaryOperator):
+    def unparse(self):
+        return '*'
+
+
+class Divide(ArithmeticOperator, BinaryOperator):
+    def unparse(self):
+        return '/'
+
+
+class Modulus(ArithmeticOperator, BinaryOperator):
+    def unparse(self):
+        return '%'
+
+
+class Plus(ArithmeticOperator, UnaryOperator):
+    def unparse(self):
+        return '+'
+
+
+class Minus(ArithmeticOperator, UnaryOperator):
+    def unparse(self):
+        return '-'
+
+
+class Negation(LogicalOperator, UnaryOperator):
+    def unparse(self):
+        return '!'
+
+
+class And(LogicalOperator, BinaryOperator):
+    def unparse(self):
+        return '&&'
+
+
+class Or(LogicalOperator, BinaryOperator):
+    def unparse(self):
+        return '||'
+
+
+class Xor(LogicalOperator, BinaryOperator):
+    def unparse(self):
+        return '^'
+
+
+class Complement(BitwiseOperator, UnaryOperator):
+    def unparse(self):
+        return '~'
+
+
+class ShiftLeft(BitwiseOperator, BinaryOperator):
+    def unparse(self):
+        return '<<'
+
+
+class ShiftRight(BitwiseOperator, BinaryOperator):
+    def unparse(self):
+        return '>>'
+
+
+def get_operators(predicate):
+    ops = inspect.getmembers(sys.modules[__name__], lambda member: inspect.isclass(member) and predicate(member))
+    return [op[1] for op in ops]
 
 
 class Identifier:
@@ -439,12 +671,9 @@ class IntegerType:
         return 'int'
 
 
-class Operator:
-    def __init__(self, op: RelationalOperator or ArithmeticOperator):
-        self._op = op
-
+class VoidType:
     def unparse(self):
-        return '{}'.format(self._op.value)
+        return 'void'
 
 
 class ParameterDecl:
@@ -480,7 +709,7 @@ class ParameterDecl:
 
 class VariableDecl(ParameterDecl):
     def unparse(self):
-        return '{};'.format(super().unparse())
+        return '{}{}'.format(super().unparse(), Unparser.statement_terminator)
 
 
 class Literal:
@@ -488,7 +717,10 @@ class Literal:
         self._value = value
 
     def unparse(self):
-        return '{}'.format(self._value)
+        if self._value < 0:
+            return '({})'.format(self._value)
+        else:
+            return '{}'.format(self._value)
 
 
 class VariableReference:
@@ -509,7 +741,7 @@ class CallExpr:
 
 
 class UnaryExpr:
-    def __init__(self, op, child):
+    def __init__(self, op: UnaryOperator, child):
         self._op = op
         self._child = child
 
@@ -518,7 +750,7 @@ class UnaryExpr:
 
 
 class BinaryExpr:
-    def __init__(self, left, op, right):
+    def __init__(self, left, op: BinaryOperator, right):
         self._left = left
         self._op = op
         self._right = right
@@ -527,39 +759,49 @@ class BinaryExpr:
         return '({}{}{})'.format(self._left.unparse(), self._op.unparse(), self._right.unparse())
 
 
-def random_expr(number_of_operations, subprograms, variables):
+def is_strict_subclass(candidate, base_class):
+    return issubclass(candidate, base_class) and candidate != base_class
+
+
+def random_expr(language: Language, number_of_operations, ignore_operators, subprograms, variables):
     def random_arithmetic_op():
-        choices = [ArithmeticOperator.PLUS,
-                   ArithmeticOperator.MINUS,
-                   ArithmeticOperator.MULTIPLY,
-                   ArithmeticOperator.DIVIDE]
-        op = choices[random.randint(0, len(choices) - 1)]
-        return Operator(op)
+        if language == Language.C:
+            def is_arithmetic(a_class):
+                return is_strict_subclass(a_class, ArithmeticOperator)
+
+            choices = [op for op in get_operators(is_arithmetic) if op not in ignore_operators]
+            op = random.choice(choices)
+            return op()
 
     def random_unary_op():
-        choices = [ArithmeticOperator.MINUS,
-                   LogicalOperator.NEGATION,
-                   BitwiseOperator.NEGATION]
-        op = choices[random.randint(0, len(choices) - 1)]
-        return Operator(op)
+        if language == Language.C:
+            def is_unary(a_class):
+                return is_strict_subclass(a_class, UnaryOperator)
+
+            choices = [op for op in get_operators(is_unary)]
+            op = random.choice(choices)
+            return op()
+
+    def random_8_bit_integer():
+        return random.randint(-2**4, 2**4-1)
 
     def random_leaf():
-        if variables and decide():
-            variable = variables[random.randint(0, len(variables) - 1)]
+        if variables and go_ahead():
+            variable = random.choice(variables)
             return VariableReference(variable.name)
-        elif subprograms and decide():
-            subprogram = subprograms[random.randint(0, len(subprograms) - 1)]
+        elif subprograms and go_ahead():
+            subprogram = random.choice(subprograms)
             subprogram.called = True
             arguments = []
             for i in range(len(subprogram.formals)):
-                if not variables or decide():
-                    arguments.append(Literal(random.randint(1, 10)))
+                if not variables or go_ahead():
+                    arguments.append(Literal(random_8_bit_integer()))
                 else:
-                    variable = variables[random.randint(0, len(variables) - 1)]
+                    variable = random.choice(variables)
                     arguments.append(VariableReference(variable.name))
             return CallExpr(subprogram.name, arguments)
         else:
-            return Literal(random.randint(1, 10))
+            return Literal(random_8_bit_integer())
 
     root_level = 1
     height = number_of_operations
@@ -570,11 +812,11 @@ def random_expr(number_of_operations, subprograms, variables):
                               random_arithmetic_op(),
                               random_leaf())
         else:
-            if decide():
+            if go_ahead():
                 root = UnaryExpr(random_unary_op(),
                                  subtrees[height + 1])
             else:
-                if decide():
+                if go_ahead():
                     root = BinaryExpr(random_leaf(),
                                       random_arithmetic_op(),
                                       subtrees[height + 1])
@@ -588,11 +830,11 @@ def random_expr(number_of_operations, subprograms, variables):
 
 
 def true_expr():
-    return BinaryExpr(Literal(1), Operator(RelationalOperator.EQUALITY), Literal(1))
+    return BinaryExpr(Literal(1), Equality(), Literal(1))
 
 
 def false_expr():
-    return BinaryExpr(Literal(1), Operator(RelationalOperator.EQUALITY), Literal(0))
+    return BinaryExpr(Literal(1), Equality(), Literal(0))
 
 
 class IfStmt:
@@ -600,7 +842,15 @@ class IfStmt:
         self._expr = expr
 
     def unparse(self):
-        return 'if ({})'.format(self._expr.unparse())
+        return '{} ({})'.format(Keywords.IF.name.lower(), self._expr.unparse())
+
+
+class SwitchStmt:
+    def __init__(self, expr):
+        self._expr = expr
+
+    def unparse(self):
+        return '{} ({})'.format(Keywords.SWITCH.name.lower(), self._expr.unparse())
 
 
 class ReturnStmt:
@@ -608,7 +858,21 @@ class ReturnStmt:
         self._expr = expr
 
     def unparse(self):
-        return 'return {};'.format(self._expr.unparse())
+        return '{} {}{}'.format(Keywords.RETURN.name.lower(), self._expr.unparse(), Unparser.statement_terminator)
+
+
+class NullStmt:
+    def unparse(self):
+        return '{}'.format(Unparser.statement_terminator)
+
+
+class AssignStmt:
+    def __init__(self, lhs, rhs):
+        self._lhs = lhs
+        self._rhs = rhs
+
+    def unparse(self):
+        return '{} = {}{}'.format(self._lhs.unparse(), self._rhs.unparse(), Unparser.statement_terminator)
 
 
 class Subprogram:
@@ -623,53 +887,91 @@ class Subprogram:
         self._annotations = []
         self._subprograms = []
 
-    def unparse(self):
+    def unparse_signature_and_body(self):
         signature_text = '{} {} ({})'.format(self._return_type.unparse(),
                                              self.name.unparse(),
                                              ', '.join(f.unparse() for f in self._formals))
-        body_text = '{'
-        body_text += '\n'
+        body_text = Unparser.open_block
+        body_text += Unparser.newlines()
         dfs = DepthFirstSearch(self._cfg, self._cfg.entry)
         indent_width = 2
         blank_columns = indent_width
         for v in reversed(dfs.post_order()):
             if len(self._cfg.predecessors(v)) == 1:
                 (e,) = self._cfg.predecessors(v)
-                if e.direction == Direction.ELSE:
-                    body_text += blanks(blank_columns)
-                    body_text += 'else'
-                    body_text += '\n'
-                    body_text += blanks(blank_columns)
-                    body_text += '{'
-                    body_text += '\n'
+                if e.flow in [ControlFlow.THEN, ControlFlow.ELSE, ControlFlow.CASE]:
+                    if e.flow == ControlFlow.ELSE:
+                        body_text += Unparser.blanks(blank_columns)
+                        body_text += Keywords.ELSE.name.lower()
+                        body_text += Unparser.newlines()
+                    elif e.flow == ControlFlow.CASE:
+                        body_text += Unparser.blanks(blank_columns)
+                        if e.expr:
+                            body_text += '{} {}:'.format(Keywords.CASE.name.lower(), e.expr.unparse())
+                        else:
+                            body_text += '{}:'.format(Keywords.DEFAULT.name.lower())
+                        body_text += Unparser.newlines()
+
+                    body_text += Unparser.blanks(blank_columns)
+                    body_text += Unparser.open_block
+                    body_text += Unparser.newlines()
                     blank_columns += indent_width
+            elif len(self._cfg.predecessors(v)) > 2:
+                blank_columns -= indent_width
+                body_text += Unparser.blanks(blank_columns)
+                body_text += Unparser.close_block
+                body_text += Unparser.newlines()
 
             if len(self._cfg.successors(v)) == 2:
                 (stmt,) = v.statements
-                body_text += '{}{}'.format(blanks(blank_columns), stmt.unparse())
-                body_text += '\n'
-                body_text += blanks(blank_columns)
-                body_text += '{'
-                body_text += '\n'
+                body_text += '{}{}'.format(Unparser.blanks(blank_columns), stmt.unparse())
+                body_text += Unparser.newlines()
+            elif len(self._cfg.successors(v)) > 2:
+                (stmt,) = v.statements
+                body_text += '{}{}'.format(Unparser.blanks(blank_columns), stmt.unparse())
+                body_text += Unparser.newlines()
+                body_text += Unparser.blanks(blank_columns)
+                body_text += Unparser.open_block
+                body_text += Unparser.newlines()
                 blank_columns += indent_width
             else:
                 for stmt in v.statements:
-                    body_text += '{}{}'.format(blanks(blank_columns), stmt.unparse())
-                    body_text += '\n'
+                    body_text += '{}{}'.format(Unparser.blanks(blank_columns), stmt.unparse())
+                    if len(self._cfg.successors(v)) > 0 or stmt != v.statements[-1]:
+                        body_text += Unparser.newlines()
 
             if len(self._cfg.successors(v)) == 1:
                 (e,) = self._cfg.successors(v)
-                if len(self._cfg.predecessors(e.successor())) == 2:
-                    blank_columns -= indent_width
-                    body_text += blanks(blank_columns)
-                    body_text += '}'
-                    body_text += '\n'
-        body_text += '\n'
-        body_text += '}'
-        body_text += '\n'
-        return signature_text + '\n' + body_text + '\n'
+                if e.flow in [ControlFlow.MERGE, ControlFlow.BREAK]:
+                    if e.flow == ControlFlow.BREAK:
+                        if go_ahead():
+                            body_text += Unparser.blanks(blank_columns)
+                            body_text += Keywords.BREAK.name.lower()
+                            body_text += Unparser.statement_terminator
+                            body_text += Unparser.newlines()
 
-    def generate_body(self, expression_depth, block_length, subprograms):
+                    blank_columns -= indent_width
+                    body_text += Unparser.blanks(blank_columns)
+                    body_text += Unparser.close_block
+                    body_text += Unparser.newlines()
+
+        body_text += Unparser.newlines()
+        body_text += Unparser.close_block
+        body_text += Unparser.newlines()
+        return signature_text + Unparser.newlines() + body_text
+
+    def unparse(self):
+        text = ''.join(a.unparse() for a in self.annotations)
+        if self.subprograms:
+            text += Unparser.newlines() + ''.join(SubprogramDecl(s).unparse() for s in self.subprograms)
+            text += Unparser.newlines() + ''.join(s.unparse() for s in self.subprograms)
+
+        if self.is_fake():
+            return text
+        else:
+            return text + self.unparse_signature_and_body() + Unparser.newlines()
+
+    def generate_body(self, expression_depth, ignore_operators, block_length, subprograms, call_graph):
         def subprogram_subset():
             if self.main:
                 # If any call expressions are generated, try to use as yet uncalled subprograms.
@@ -679,34 +981,65 @@ class Subprogram:
                 else:
                     return subset
             else:
-                return subprograms
+                return [e.successor().subprogram for e in call_graph.successors(call_vertex)]
 
+        (call_vertex,) = [v for v in call_graph if v.subprogram == self]
         dfs = DepthFirstSearch(self._cfg, self._cfg.entry)
         for v in reversed(dfs.post_order()):
             v.statements = []
             if len(self._cfg.successors(v)) == 2:
-                if_stmt = IfStmt(random_expr(random.randint(1, expression_depth),
-                                             subprogram_subset(),
-                                             self._formals))
+                expr = random_expr(self._language,
+                                   random.randint(1, expression_depth),
+                                   ignore_operators,
+                                   subprogram_subset(),
+                                   self._formals)
+                if_stmt = IfStmt(expr)
                 v.statements.append(if_stmt)
+            elif len(self._cfg.successors(v)) > 2:
+                expr = random_expr(self._language,
+                                   random.randint(1, expression_depth),
+                                   ignore_operators,
+                                   subprogram_subset(),
+                                   self._formals)
+                switch_stmt = SwitchStmt(expr)
+                v.statements.append(switch_stmt)
+
+                default = False
+                # We need as many 32-bit integers as there are case arms, so pick an upper bound for the random
+                # number generator that will not exceed a 32-bit representation.
+                upper_bound = 2**32 - 1 - len(self._cfg.successors(v))
+                for idx, e in enumerate(self._cfg.successors(v), start=random.randint(0, upper_bound)):
+                    if not default and go_ahead():
+                        default = True
+                        e.expr = None
+                    else:
+                        # Use the value of the enumerator to guarantee case arms have unique values.
+                        e.expr = Literal(idx)
+
             elif len(self._cfg.successors(v)) == 0:
                 if self.main:
                     return_stmt = ReturnStmt(false_expr())
                     v.statements.append(return_stmt)
                 else:
-                    return_stmt = ReturnStmt(random_expr(random.randint(1, expression_depth),
-                                                         subprogram_subset(),
-                                                         self._formals))
+                    expr = random_expr(self._language,
+                                       random.randint(1, expression_depth),
+                                       ignore_operators,
+                                       subprogram_subset(),
+                                       self._formals)
+                    return_stmt = ReturnStmt(expr)
                     v.statements.append(return_stmt)
             else:
-                for i in range(1, block_length):
-                    decl_stmt = VariableDecl(IntegerType(), Identifier('i{}_{}'.format(v, i)))
-                    decl_stmt.initialiser = random_expr(random.randint(1, expression_depth),
-                                                        subprogram_subset(),
-                                                        self._formals)
-                    v.statements.append(decl_stmt)
-
-
+                for i in range(random.randint(1,block_length)):
+                    if go_ahead(0.8):
+                        stmt = VariableDecl(IntegerType(), Identifier('i{}_{}'.format(v, i)))
+                        stmt.initialiser = random_expr(self._language,
+                                                       random.randint(1, expression_depth),
+                                                       ignore_operators,
+                                                       subprogram_subset(),
+                                                       self._formals)
+                    else:
+                        stmt = NullStmt()
+                    v.statements.append(stmt)
 
     @property
     def name(self):
@@ -726,7 +1059,7 @@ class Subprogram:
 
     def create_formals(self, number_of_formals):
         for i in range(1, number_of_formals):
-            identifier = Identifier('{}_{}'.format(self._name.unparse(), i))
+            identifier = Identifier('formal_{}'.format(i))
             self._formals.append(ParameterDecl(IntegerType(), identifier))
 
     @property
@@ -778,9 +1111,10 @@ class SubprogramDecl:
         self._formals = subprogram.formals
 
     def unparse(self):
-        return '{} {} ({});'.format(self._return_type.unparse(),
-                                    self._name.unparse(),
-                                    ', '.join(f.unparse() for f in self._formals))
+        return '{} {} ({});{}'.format(self._return_type.unparse(),
+                                      self._name.unparse(),
+                                      ', '.join(f.unparse() for f in self._formals),
+                                      Unparser.newlines())
 
 
 class InstrumentationProfile(enum.Enum):
@@ -839,107 +1173,119 @@ class InstrumentAnnotation:
 
     def unparse(self):
         if self._subprogram.is_fake() or (self._language == Language.Ada and self._subprogram.main):
-            return '#pragma RVS default_instrument("{}", "{}");'.format(True, self._profile.name)
+            return '#pragma RVS default_instrument("{}", "{}");{}'.format(True, self._profile.name, Unparser.newlines())
         elif self._profile != InstrumentationProfile.DEFAULT:
-            return '#pragma RVS instrument("{}", "{}", "{}");'.format(self._subprogram.name.unparse(),
-                                                                      self._on,
-                                                                      self._profile.name)
+            return '#pragma RVS instrument("{}", "{}", "{}");{}'.format(self._subprogram.name.unparse(),
+                                                                        self._on,
+                                                                        self._profile.name,
+                                                                        Unparser.newlines())
         else:
-            return '#pragma RVS instrument("{}", "{}");'.format(self._subprogram.name.unparse(),
-                                                                self._on)
+            return '#pragma RVS instrument("{}", "{}");{}'.format(self._subprogram.name.unparse(),
+                                                                  self._on,
+                                                                  Unparser.newlines())
 
 
-def generate(language: Language,
-             analysis: Analysis,
-             number_of_subprograms: int,
-             formal_parameter_limit: int,
-             expression_depth: int,
-             block_length: int,
-             basic_block_limit: int):
-    # Declare a top-level subprogram in which we will nest all created subprograms and annotations.
-    # In C this top-level subprogram is fake, as we cannot nest subprograms.
-    # In Ada this top-level subprogram is the main subprogram, where execution begins.
-    name_of_main = 'main'
-    if language == Language.C:
-        top_level_subprogram = Subprogram(language, None)
-    else:
-        top_level_subprogram = Subprogram(language, name_of_main)
-        top_level_subprogram.main = True
-        assert False
 
-    # A default instrumentation profile is required by RVS.
-    if analysis == Analysis.TIMING:
-        choices = [profile for profile in InstrumentationProfile.timing_profiles()
-                   if profile != InstrumentationProfile.DEFAULT]
-        profile = random.choice(choices)
-    else:
-        choices = [profile for profile in InstrumentationProfile.coverage_profiles()
-                   if profile != InstrumentationProfile.DEFAULT]
-        profile = random.choice(choices)
-    annotation = InstrumentAnnotation(language, profile, top_level_subprogram)
+def create_call_graph(call_depth:      int,
+                      main_subprogram: Subprogram,
+                      subprograms:     typing.List[Subprogram]):
+    call_graph = DirectedGraph()
+    root = None
+    for subprogram in subprograms:
+        v = Vertex(Vertex.get_vertex_id())
+        v.subprogram = subprogram
+        call_graph.add_vertex(v)
+        if subprogram == main_subprogram:
+            root = v
+
+    vertex_to_level = {v: 0 for v in call_graph}
+    parent = root
+    for v in call_graph:
+        if v != root:
+            new_level = vertex_to_level[parent] + 1
+            if new_level <= call_depth:
+                call_graph.add_edge(Edge(parent, v))
+                vertex_to_level[v] = new_level
+            else:
+                # The height of the tree now exceeds the maximum depth, so backtrack to an arbitrary proper ancestor.
+                ancestor = parent
+                while True:
+                    (e,) = call_graph.predecessors(ancestor)
+                    ancestor = e.predecessor()
+                    if go_ahead() or ancestor == root:
+                        break
+                parent = ancestor
+                call_graph.add_edge(Edge(parent, v))
+                vertex_to_level[v] = vertex_to_level[parent] + 1
+            parent = v
+
+    return call_graph
+
+
+def create_subprogram_artifacts(language:               Language,
+                                analysis:               Analysis,
+                                default_profile:        InstrumentationProfile,
+                                formal_parameter_limit: int,
+                                expression_depth:       int,
+                                ignore_operators:       typing.List[ArithmeticOperator],
+                                block_length:           int,
+                                basic_block_limit:      int,
+                                number_of_loops:        int,
+                                nesting_depth:          int,
+                                top_level_subprogram:   Subprogram,
+                                subprograms:            typing.List[Subprogram],
+                                call_graph:             DirectedGraph):
+    annotation = InstrumentAnnotation(language, default_profile, top_level_subprogram)
     top_level_subprogram.add_annotation(annotation)
 
-    for subprogram_id in range(1, number_of_subprograms + 1):
-        if subprogram_id == number_of_subprograms and language == Language.C:
-            subprogram = Subprogram(language, Identifier(name_of_main))
-            subprogram.return_type = IntegerType()
-            subprogram.main = True
-        else:
-            name = 'func{}'.format(subprogram_id)
-            subprogram = Subprogram(language, Identifier(name))
-            subprogram.return_type = IntegerType()
+    for subprogram in subprograms:
+        if go_ahead(0.1):
+            # Override the default instrumentation profile
+            if analysis == Analysis.TIMING:
+                profile = random.choice(InstrumentationProfile.timing_profiles())
+            else:
+                profile = random.choice(InstrumentationProfile.coverage_profiles())
+            annotation = InstrumentAnnotation(language, profile, subprogram, go_ahead())
+            subprogram.add_annotation(annotation)
+
+        subprogram.return_type = IntegerType()
+        if not subprogram.main:
             subprogram.create_formals(random.randint(1, formal_parameter_limit))
-
-            if decide():
-                # Override the default instrumentation profile
-                if analysis == Analysis.TIMING:
-                    profile = random.choice(InstrumentationProfile.timing_profiles())
-                else:
-                    profile = random.choice(InstrumentationProfile.coverage_profiles())
-                annotation = InstrumentAnnotation(language, profile, subprogram, decide())
-                subprogram.add_annotation(annotation)
-
-        subprogram.cfg = generate_control_flow_graph(basic_block_limit)
-        subprogram.generate_body(expression_depth, block_length, top_level_subprogram.subprograms)
+        lnt = create_loop_hierarchy(basic_block_limit, number_of_loops, nesting_depth)
+        subprogram.cfg = generate_control_flow_graph(lnt)
+        subprogram.generate_body(expression_depth,
+                                 ignore_operators,
+                                 block_length,
+                                 top_level_subprogram.subprograms,
+                                 call_graph)
         top_level_subprogram.add_subprogram(subprogram)
 
-    return top_level_subprogram
+
+def create_empty_subprograms(language:              Language,
+                             number_of_subprograms: int):
+    subprograms = []
+    main_subprogram = None
+    for subprogram_id in range(1, number_of_subprograms + 1):
+        if subprogram_id == number_of_subprograms:
+            main_subprogram = Subprogram(language, Identifier('main'))
+            main_subprogram.main = True
+            subprograms.append(main_subprogram)
+        else:
+            subprogram = Subprogram(language, Identifier('subprogram_{}'.format(subprogram_id)))
+            subprograms.append(subprogram)
+
+    if language == Language.C:
+        # Create a fake subprogram, as we cannot nest subprograms in C.
+        top_level_subprogram = Subprogram(language, None)
+    else:
+        # This is the subprogram where execution begins in Ada.
+        top_level_subprogram = main_subprogram
+
+    return top_level_subprogram, main_subprogram, subprograms
 
 
-def write(filename, repeat_annotations, top_level_subprogram: Subprogram):
-    with open(filename, 'w') as wd:
-        for a in top_level_subprogram.annotations:
-            wd.write(a.unparse())
-            wd.write('\n')
-
-        wd.write('\n')
-        for s in top_level_subprogram.subprograms:
-            for i in range(random.randint(1, 5)):
-                decl = SubprogramDecl(s)
-                wd.write(decl.unparse())
-                wd.write('\n')
-
-        wd.write('\n')
-        for s in top_level_subprogram.subprograms:
-            for a in s.annotations:
-                for i in range(0, repeat_annotations):
-                    wd.write(a.unparse())
-                    wd.write('\n')
-            wd.write(s.unparse())
-            wd.write('\n')
-
-        wd.write('\n')
-
-
-def main(**kwargs):
-    top_level_subprogram = generate(Language[kwargs['language']],
-                                    Analysis[kwargs['analysis']],
-                                    kwargs['subprograms'],
-                                    kwargs['formal_parameter_limit'],
-                                    kwargs['expression_depth'],
-                                    kwargs['block_length'],
-                                    kwargs['basic_blocks'])
-    write(kwargs['filename'], kwargs['repeat_annotations'], top_level_subprogram)
+def is_arithmetic_and_binary(a_class):
+    return issubclass(a_class, ArithmeticOperator) and issubclass(a_class, BinaryOperator)
 
 
 def parse_the_command_line():
@@ -955,7 +1301,7 @@ def parse_the_command_line():
                         required=True)
 
     parser.add_argument('--analysis',
-                        choices=[analysis.name for analysis in Analysis],
+                        choices=[analysis.name.lower() for analysis in Analysis],
                         help='the type of program analysis',
                         required=True)
 
@@ -965,16 +1311,11 @@ def parse_the_command_line():
                         default=1,
                         metavar='<INT>')
 
-    parser.add_argument('--repeat-annotations',
-                        type=int,
-                        help='repeat an annotation this many times',
-                        default=1,
-                        metavar='<INT>')
-
     parser.add_argument('--default-instrumentation',
-                        choices=[profile.name for profile in InstrumentationProfile],
+                        choices=[profile.name.lower() for profile in InstrumentationProfile
+                                 if profile != InstrumentationProfile.DEFAULT],
                         help='choose the default instrumentation profile annotation',
-                        default=InstrumentationProfile.TIME_FULL.name)
+                        default=None)
 
     parser.add_argument('--formal-parameter-limit',
                         type=int,
@@ -988,9 +1329,15 @@ def parse_the_command_line():
                         default=1,
                         metavar='<INT>')
 
+    parser.add_argument('--ignore-operators',
+                        choices=[a_class.__name__ for a_class in get_operators(is_arithmetic_and_binary)],
+                        help='do not use these binary arithmetic operators in expressions',
+                        nargs='+',
+                        default=[])
+
     parser.add_argument('--block-length',
                         type=int,
-                        help='maximum number of statements in a basic block',
+                        help='maximum number of statements in a basic block (excluding nested basic blocks)',
                         default=5,
                         metavar='<INT>')
 
@@ -1000,9 +1347,101 @@ def parse_the_command_line():
                         default=10,
                         metavar='<INT>')
 
-    return parser.parse_args()
+    parser.add_argument('--loops',
+                        type=int,
+                        help='maximum number of loops in a subprogram',
+                        metavar='<INT>',
+                        default=0)
+
+    parser.add_argument('--loop-depth',
+                        type=int,
+                        help='maximum nesting depth of loops',
+                        metavar='<INT>',
+                        default=1)
+
+    parser.add_argument('--call-depth',
+                        type=int,
+                        help='maximum nesting depth of calls',
+                        metavar='<INT>',
+                        default=1)
+
+    args = vars(parser.parse_args())
+    return args
+
+
+def standardise_arguments(args):
+    # The raw argument is a list, but we really want a set.
+    ignore_operators = set(args['ignore_operators'])
+    # Create an operator class for each operator name.
+    args['ignore_operators'] = [getattr(sys.modules[__name__], op) for op in ignore_operators]
+
+    args['language'] = Language[args['language'].upper()]
+    args['analysis'] = Analysis[args['analysis'].upper()]
+
+    if args['default_instrumentation']:
+        args['default_instrumentation'] = InstrumentationProfile[args['default_instrumentation'].upper()]
+    else:
+        # A default instrumentation profile is required by RVS.
+        if args['analysis'] == Analysis.TIMING:
+            choices = [profile for profile in InstrumentationProfile.timing_profiles()
+                       if profile != InstrumentationProfile.DEFAULT]
+            args['default_instrumentation'] = random.choice(choices)
+        else:
+            choices = [profile for profile in InstrumentationProfile.coverage_profiles()
+                       if profile != InstrumentationProfile.DEFAULT]
+            args['default_instrumentation'] = random.choice(choices)
+
+
+def error_message(*args):
+    print('ERROR:', *args, file=sys.stderr, flush=True)
+    sys.exit(1)
+
+
+def check_arguments(args):
+    # Error handling.
+    if args['basic_blocks'] < args['loops'] * 2:
+        error_message('The number of basic blocks in a subprogram must be at least twice the number of loops')
+
+    if len(args['ignore_operators']) == len(get_operators(is_arithmetic_and_binary)):
+        error_message('All binary arithmetic operators are ignored: The program generator needs at least one to create '
+                      'expressions')
+
+    if args['default_instrumentation']:
+        analysis = args['analysis']
+        default = args['default_instrumentation']
+        if ((analysis == Analysis.COVERAGE and default not in InstrumentationProfile.coverage_profiles()) or
+                (analysis == Analysis.TIMING and default not in InstrumentationProfile.timing_profiles())):
+            error_message("Invalid default instrumentation profile '{}' for analysis '{}'".format(default.name,
+                                                                                                  analysis.name))
+
+    return args
 
 
 if __name__ == '__main__':
-    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
-    main(**vars(parse_the_command_line()))
+    args = parse_the_command_line()
+    standardise_arguments(args)
+    check_arguments(args)
+
+    top_level_subprogram, main_subprogram, subprograms = create_empty_subprograms(args['language'],
+                                                                                  args['subprograms'])
+
+    call_graph = create_call_graph(args['call_depth'],
+                                   main_subprogram,
+                                   subprograms)
+
+    create_subprogram_artifacts(args['language'],
+                                args['analysis'],
+                                args['default_instrumentation'],
+                                args['formal_parameter_limit'],
+                                args['expression_depth'],
+                                args['ignore_operators'],
+                                args['block_length'],
+                                args['basic_blocks'],
+                                args['loops'],
+                                args['loop_depth'],
+                                top_level_subprogram,
+                                subprograms,
+                                call_graph)
+
+    with open(args['filename'], 'w') as wd:
+        wd.write(top_level_subprogram.unparse())

@@ -44,7 +44,7 @@ def main(**kwargs):
                         minutes = int(time_string[:minute_marker])
                         seconds = float(time_string[minute_marker+1:second_marker])
                         time += (minutes * 60) + seconds
-                    if count == 3:
+                    if count == 4:
                         values[state].append(time)
                         time = 0.0
                         count = 0
