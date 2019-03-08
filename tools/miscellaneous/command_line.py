@@ -10,6 +10,20 @@ def is_arithmetic_and_binary(a_class):
     return issubclass(a_class, ast.ArithmeticOperator) and issubclass(a_class, ast.BinaryOperator)
 
 
+class CheckForNonnegativeValue(argparse.Action):
+    def __call__(self, parser, namespace, value, option_string=None):
+        if value < 0:
+            raise argparse.ArgumentError(self, 'the parameter must be a non-negative number')
+        setattr(namespace, self.dest, value)
+
+
+class CheckForPositiveValue(argparse.Action):
+    def __call__(self, parser, namespace, value, option_string=None):
+        if value <= 0:
+            raise argparse.ArgumentError(self, 'the parameter must be a positive number')
+        setattr(namespace, self.dest, value)
+
+
 def parse():
     parser = argparse.ArgumentParser(description='Generate a C or Ada program',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -32,6 +46,7 @@ def parse():
 
     parser.add_argument('--subprograms',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='number of subprograms',
                         default=1,
                         metavar='<INT>')
@@ -50,12 +65,14 @@ def parse():
 
     parser.add_argument('--formal-parameter-limit',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum number of formal parameters in a subprogram',
                         default=10,
                         metavar='<INT>')
 
     parser.add_argument('--expression-depth',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum number of operations in an expression',
                         default=1,
                         metavar='<INT>')
@@ -69,30 +86,35 @@ def parse():
 
     parser.add_argument('--block-length',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum number of statements in a basic block (excluding nested basic blocks)',
                         default=5,
                         metavar='<INT>')
 
     parser.add_argument('--basic-blocks',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum number of basic blocks in a subprograms',
                         default=10,
                         metavar='<INT>')
 
     parser.add_argument('--loops',
                         type=int,
+                        action=CheckForNonnegativeValue,
                         help='maximum number of loops in a subprogram',
                         metavar='<INT>',
                         default=0)
 
     parser.add_argument('--loop-depth',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum nesting depth of loops',
                         metavar='<INT>',
                         default=sys.maxsize)
 
     parser.add_argument('--call-depth',
                         type=int,
+                        action=CheckForPositiveValue,
                         help='maximum nesting depth of calls',
                         metavar='<INT>',
                         default=sys.maxsize)

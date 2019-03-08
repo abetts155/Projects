@@ -18,9 +18,8 @@ def pick_element(a_list: typing.List,
     return element
 
 
-def error_message(*args):
-    print('ERROR:', *args, file=sys.stderr, flush=True)
-    sys.exit(1)
+def random_8_bit_integer():
+    return random.randint(-2 ** 4, 2 ** 4 - 1)
 
 
 def is_strict_subclass(candidate, base_class):
@@ -33,3 +32,12 @@ def blanks(length):
 
 def newlines(length=1):
     return '\n' * length
+
+
+def verbose_message(*args):
+    print(*args, flush=True)
+
+
+def error_message(*args):
+    print('ERROR:', *args, file=sys.stderr, flush=True)
+    sys.exit(1)

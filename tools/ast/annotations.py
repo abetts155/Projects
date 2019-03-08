@@ -68,11 +68,11 @@ class InstrumentAnnotation:
     def __init__(self,
                  language: ast.Language,
                  profile: InstrumentationProfile,
-                 subprogram_declaration: ast.SubprogramDecl,
+                 subprogram: ast.Subprogram,
                  on: bool = True):
         self._language = language
         self._profile = profile
-        self._subprogram_declaration = subprogram_declaration
+        self._subprogram = subprogram
         self._on = on
 
     def unparse(self, stream: typing.TextIO):
@@ -82,7 +82,10 @@ class InstrumentAnnotation:
         stream.write(RVS_DIRECTIVE)
         stream.write(ast.Punctuation.SPACE.value)
 
-        if not self._subprogram_declaration.name:
+        if self._language == ast.Language.ADA:
+            stream.write(ast.Punctuation.OPEN_PARENTHESIS.value)
+
+        if self._subprogram.fake or (self._language == ast.Language.ADA and self._subprogram.main):
             stream.write(Annotation.DEFAULT_INSTRUMENT.name.lower())
             stream.write(ast.Punctuation.OPEN_PARENTHESIS.value)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
@@ -93,13 +96,11 @@ class InstrumentAnnotation:
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
             stream.write(self._profile.name)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
-            stream.write(ast.Punctuation.CLOSE_PARENTHESIS.value)
-            stream.write(ast.Punctuation.SEMI_COLON.value)
         elif self._profile != InstrumentationProfile.DEFAULT:
             stream.write(Annotation.INSTRUMENT.name.lower())
             stream.write(ast.Punctuation.OPEN_PARENTHESIS.value)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
-            self._subprogram_declaration.name.unparse(stream)
+            self._subprogram.subprogram_declaration.name.unparse(stream)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
             stream.write(ast.Punctuation.COMMA.value)
             stream.write(ast.Punctuation.SPACE.value)
@@ -111,18 +112,20 @@ class InstrumentAnnotation:
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
             stream.write(self._profile.name)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
-            stream.write(ast.Punctuation.CLOSE_PARENTHESIS.value)
-            stream.write(ast.Punctuation.SEMI_COLON.value)
         else:
             stream.write(Annotation.INSTRUMENT.name.lower())
             stream.write(ast.Punctuation.OPEN_PARENTHESIS.value)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
-            self._subprogram_declaration.name.unparse()
+            self._subprogram.subprogram_declaration.name.unparse(stream)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
             stream.write(ast.Punctuation.COMMA.value)
             stream.write(ast.Punctuation.SPACE.value)
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
             stream.write(str(self._on))
             stream.write(ast.Punctuation.DOUBLE_QUOTES.value)
+
+        if self._language == ast.Language.ADA:
             stream.write(ast.Punctuation.CLOSE_PARENTHESIS.value)
-            stream.write(ast.Punctuation.SEMI_COLON.value)
+
+        stream.write(ast.Punctuation.CLOSE_PARENTHESIS.value)
+        stream.write(ast.Punctuation.SEMI_COLON.value)

@@ -1,3 +1,4 @@
+import concurrent.futures
 import random
 import sys
 import typing
@@ -13,7 +14,7 @@ def create_annotations(language:             ast.Language,
                        can_override_default: bool,
                        subprogram:           ast.Subprogram):
     if subprogram.fake or (subprogram.main and language == ast.Language.ADA):
-        annotation = annotations.InstrumentAnnotation(language, default_profile, subprogram.subprogram_declaration)
+        annotation = annotations.InstrumentAnnotation(language, default_profile, subprogram)
         subprogram.add_annotation(annotation)
     else:
         if can_override_default and helpful.go_ahead(0.1):
@@ -23,12 +24,28 @@ def create_annotations(language:             ast.Language,
                 profile = random.choice(annotations.InstrumentationProfile.coverage_profiles())
             annotation = annotations.InstrumentAnnotation(language,
                                                           profile,
-                                                          subprogram.subprogram_declaration,
+                                                          subprogram,
                                                           helpful.go_ahead())
             subprogram.add_annotation(annotation)
 
     for nested_subprogram in subprogram.subprograms:
         create_annotations(language, analysis, default_profile, can_override_default, nested_subprogram)
+
+
+def create_subprogram(subprogram:        ast.Subprogram,
+                      expression_depth:  int,
+                      ignore_operators:  typing.List[ast.ArithmeticOperator],
+                      block_length:      int,
+                      basic_block_limit: int,
+                      number_of_loops:   int,
+                      nesting_depth:     int,
+                      call_graph:        graph.DirectedGraph):
+    loop_hierarchy = graph.random_loop_hierarchy(basic_block_limit, number_of_loops, nesting_depth)
+    subprogram.cfg = graph.random_control_flow_graph(loop_hierarchy)
+    subprogram.generate_body(expression_depth,
+                             ignore_operators,
+                             block_length,
+                             call_graph)
 
 
 def create_subprogram_definitions(language:                ast.Language,
@@ -47,25 +64,37 @@ def create_subprogram_definitions(language:                ast.Language,
     else:
         top_level_subprogram = ast.Subprogram(language, main_declaration)
 
+    subprograms = []
     for subprogram_declaration in subprogram_declarations:
         if subprogram_declaration == main_declaration:
             if language == ast.Language.C:
                 subprogram = ast.Subprogram(language, subprogram_declaration)
-                subprogram.main = True
                 top_level_subprogram.add_subprogram(subprogram)
             else:
                 subprogram = top_level_subprogram
+            subprogram.main = True
         else:
             subprogram = ast.Subprogram(language, subprogram_declaration)
             top_level_subprogram.add_subprogram(subprogram)
+        subprograms.append(subprogram)
 
-        loop_hierarchy = graph.random_loop_hierarchy(basic_block_limit, number_of_loops, nesting_depth)
-        subprogram.cfg = graph.random_control_flow_graph(loop_hierarchy)
-        subprogram.generate_body(expression_depth,
-                                 ignore_operators,
-                                 block_length,
-                                 call_graph)
-
+    cutoff = 50
+    count = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        future = {executor.submit(create_subprogram,
+                                  subprogram,
+                                  expression_depth,
+                                  ignore_operators,
+                                  block_length,
+                                  basic_block_limit,
+                                  number_of_loops,
+                                  nesting_depth,
+                                  call_graph) for subprogram in subprograms}
+        for done in concurrent.futures.as_completed(future):
+            count += 1
+            if count % cutoff == 0:
+                percentage = 100 * (float(count)/len(subprograms))
+                helpful.verbose_message('...{:.2f}% complete'.format(percentage))
     return top_level_subprogram
 
 
@@ -100,15 +129,18 @@ if __name__ == '__main__':
     command_line.standardise_arguments(args)
     command_line.check_arguments(args)
 
+    helpful.verbose_message('Generating subprogram declarations')
     main_declaration, subprogram_declarations = create_subprogram_declarations(args['language'],
                                                                                args['subprograms'],
                                                                                args['formal_parameter_limit'])
 
+    helpful.verbose_message('Generating call graph')
     call_graph = graph.random_call_graph(main_declaration,
                                          subprogram_declarations,
                                          args['call_depth'],
                                          args['allow_recursion'])
 
+    helpful.verbose_message('Generating subprogram definitions')
     top_level_subprogram = create_subprogram_definitions(args['language'],
                                                          args['expression_depth'],
                                                          args['ignore_operators'],
@@ -120,14 +152,16 @@ if __name__ == '__main__':
                                                          main_declaration,
                                                          call_graph)
 
+    helpful.verbose_message('Generating annotations')
     create_annotations(args['language'],
                        args['analysis'],
                        args['default_instrumentation'],
                        not args['no_instrumentation_override'],
                        top_level_subprogram)
 
+    helpful.verbose_message('Writing to output')
     if args['filename']:
-        with open(args['filename'], 'w') as wd:
-            top_level_subprogram.unparse(wd)
+        with open(args['filename'], 'w') as stream:
+            top_level_subprogram.unparse(stream)
     else:
         top_level_subprogram.unparse(sys.stdout)

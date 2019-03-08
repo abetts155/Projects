@@ -86,11 +86,16 @@ class BasicBlock(Vertex):
     def __init__(self, id_):
         Vertex.__init__(self, id_)
         self._statements = []
+        self._declarations = []
         self._control = []
 
     @property
     def statements(self):
         return self._statements
+
+    @property
+    def declarations(self):
+        return self._declarations
 
     @property
     def control(self):
@@ -162,12 +167,13 @@ class ControlFlow(enum.Enum):
     FORWARD = 0
     THEN = 1
     ELSE = 2
-    CASE = 3
-    BREAK = 4
-    MERGE = 5
-    ENTER_LOOP = 6
-    EXIT_LOOP = 7
-    ITERATE_LOOP = 8
+    END_IF = 3
+    BEGIN_CASE = 4
+    END_CASE = 5
+    MERGE = 6
+    ENTER_LOOP = 7
+    EXIT_LOOP = 8
+    ITERATE_LOOP = 9
 
 
 class ControlFlowEdge(Edge):
@@ -404,8 +410,8 @@ def random_control_flow_graph(loop_nest: DirectedGraph) -> FlowGraph:
                 merge.the_entry.control.append(ControlPoint.IF_MERGE)
                 cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, ControlFlow.THEN))
                 cfg.add_edge(ControlFlowEdge(branch.the_exit, else_side.the_entry, ControlFlow.ELSE))
-                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.MERGE))
-                cfg.add_edge(ControlFlowEdge(else_side.the_exit, merge.the_entry, ControlFlow.MERGE))
+                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.END_IF))
+                cfg.add_edge(ControlFlowEdge(else_side.the_exit, merge.the_entry, ControlFlow.END_IF))
                 acyclic_subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
             elif len(acyclic_subgraphs) > 2 and helpful.go_ahead():
                 # Create an if-statement with a then-statement but no else-statement.
@@ -415,7 +421,7 @@ def random_control_flow_graph(loop_nest: DirectedGraph) -> FlowGraph:
                 branch.the_exit.control.append(ControlPoint.IF_BRANCH)
                 merge.the_entry.control.append(ControlPoint.IF_MERGE)
                 cfg.add_edge(ControlFlowEdge(branch.the_exit, then_side.the_entry, ControlFlow.THEN))
-                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.MERGE))
+                cfg.add_edge(ControlFlowEdge(then_side.the_exit, merge.the_entry, ControlFlow.END_IF))
                 cfg.add_edge(ControlFlowEdge(branch.the_exit, merge.the_entry, ControlFlow.FORWARD))
                 acyclic_subgraphs.append(SingleEntrySingleExit(branch.the_entry, merge.the_exit))
             elif len(acyclic_subgraphs) > 4 and helpful.go_ahead():
@@ -427,8 +433,8 @@ def random_control_flow_graph(loop_nest: DirectedGraph) -> FlowGraph:
                 arms = random.randint(3, len(acyclic_subgraphs))
                 for _ in range(arms):
                     arm = helpful.pick_element(acyclic_subgraphs, True)
-                    cfg.add_edge(ControlFlowEdge(switch.the_exit, arm.the_entry, ControlFlow.CASE))
-                    cfg.add_edge(ControlFlowEdge(arm.the_exit, merge.the_entry, ControlFlow.BREAK))
+                    cfg.add_edge(ControlFlowEdge(switch.the_exit, arm.the_entry, ControlFlow.BEGIN_CASE))
+                    cfg.add_edge(ControlFlowEdge(arm.the_exit, merge.the_entry, ControlFlow.END_CASE))
                 acyclic_subgraphs.append(SingleEntrySingleExit(switch.the_entry, merge.the_exit))
             else:
                 before = helpful.pick_element(acyclic_subgraphs, True)
@@ -478,6 +484,7 @@ def random_call_graph(main_declaration,
             root = v
 
     depth = random.randint(1, call_depth)
+    helpful.verbose_message('Chosen call graph depth is {}'.format(depth))
     vertex_to_level = create_tree(call_graph, root, depth)
 
     # The call graph is currently a tree. Now decide whether to add edges to make it into a graph.
@@ -497,6 +504,7 @@ def random_call_graph(main_declaration,
                         call_graph.add_edge(Edge(caller, callee))
 
     if recursion_allowed:
+        helpful.verbose_message('Attempting to introduce recursion into the call graph')
         # The lowest level to where a recursive call is headed is one above that of the main subprogram.
         # We probably do not want a subprogram to call the main subprogram.
         lowest_level = min(level_to_vertices.keys()) + 1
