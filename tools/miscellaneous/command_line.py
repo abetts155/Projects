@@ -1,6 +1,7 @@
+import sys
+
 import argparse
 import random
-import sys
 
 from ast import (annotations, ast)
 from miscellaneous import helpful
@@ -124,6 +125,18 @@ def parse():
                         help='allow calls to be recursive',
                         default=False)
 
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true',
+                        help='be verbose',
+                        default=False)
+
+    parser.add_argument('-d',
+                        '--debug',
+                        action='store_true',
+                        help='extra debugging output',
+                        default=False)
+
     return vars(parser.parse_args())
 
 
@@ -170,3 +183,6 @@ def standardise_arguments(args):
             choices = [profile for profile in annotations.InstrumentationProfile.coverage_profiles()
                        if profile != annotations.InstrumentationProfile.DEFAULT]
             args['default_instrumentation'] = random.choice(choices)
+
+    helpful.verbose = args['verbose']
+    helpful.debug = args['debug']

@@ -1,5 +1,8 @@
-import random
 import sys
+
+import datetime
+import inspect
+import random
 import typing
 
 
@@ -26,16 +29,22 @@ def is_strict_subclass(candidate, base_class):
     return issubclass(candidate, base_class) and candidate != base_class
 
 
-def blanks(length):
-    return ' ' * length
-
-
-def newlines(length=1):
-    return '\n' * length
-
-
+verbose = False
 def verbose_message(*args):
-    print(*args, flush=True)
+    if verbose:
+        print(*args, flush=True)
+
+
+debug = False
+
+
+def debug_message(*args):
+    if debug:
+        caller_frame = inspect.stack()[1]
+        info = inspect.getframeinfo(caller_frame[0])
+        print('[{:%H:%M:%S}: {}@{}]'.format(datetime.datetime.now(), info.function, info.lineno),
+              *args,
+              flush=True)
 
 
 def error_message(*args):

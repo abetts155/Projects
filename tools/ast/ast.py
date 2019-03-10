@@ -1,7 +1,8 @@
+import sys
+
 import enum
 import inspect
 import random
-import sys
 import typing
 
 from graphs import graph
@@ -29,6 +30,11 @@ class Punctuation(enum.Enum):
     EQUALS = '='
     OPEN_ANGLE = '<'
     CLOSE_ANGLE = '>'
+    NEW_LINE = '\n'
+
+    @classmethod
+    def blanks(cls, number):
+        return number * cls.SPACE.value
 
 
 class Keywords(enum.Enum):
@@ -339,19 +345,11 @@ class BinaryExpr:
         self._op = op
         self._rhs = rhs
 
-    @property
-    def left_hand_side(self):
-        return self._lhs
-
-    @property
-    def right_hand_side(self):
-        return self._rhs
-
     def unparse(self, stream: typing.TextIO):
         stream.write(Punctuation.OPEN_PARENTHESIS.value)
-        self.left_hand_side.unparse(stream)
+        self._lhs.unparse(stream)
         self._op.unparse(stream)
-        self.right_hand_side.unparse(stream)
+        self._rhs.unparse(stream)
         stream.write(Punctuation.CLOSE_PARENTHESIS.value)
 
 
@@ -475,16 +473,8 @@ class AssignStmt(Stmt):
         self._lhs = lhs
         self._rhs = rhs
 
-    @property
-    def left_hand_side(self):
-        return self._lhs
-
-    @property
-    def right_hand_side(self):
-        return self._rhs
-
     def unparse(self, stream: typing.TextIO):
-        self.left_hand_side.unparse(stream)
+        self._lhs.unparse(stream)
         stream.write(Punctuation.SPACE.value)
         if self._language == Language.C:
             stream.write(Punctuation.EQUALS.value)
@@ -492,7 +482,7 @@ class AssignStmt(Stmt):
             stream.write(Punctuation.COLON.value)
             stream.write(Punctuation.EQUALS.value)
         stream.write(Punctuation.SPACE.value)
-        self.right_hand_side.unparse(stream)
+        self._rhs.unparse(stream)
 
 
 class CompoundAssignStmt(AssignStmt):
@@ -501,7 +491,7 @@ class CompoundAssignStmt(AssignStmt):
         self._operator = operator
 
     def unparse(self, stream: typing.TextIO):
-        self.left_hand_side.unparse(stream)
+        self._lhs.unparse(stream)
         stream.write(Punctuation.SPACE.value)
         if self._language == Language.C:
             self._operator.unparse(stream)
@@ -510,11 +500,11 @@ class CompoundAssignStmt(AssignStmt):
             stream.write(Punctuation.COLON.value)
             stream.write(Punctuation.EQUALS.value)
             stream.write(Punctuation.SPACE.value)
-            self.left_hand_side.unparse(stream)
+            self._lhs.unparse(stream)
             stream.write(Punctuation.SPACE.value)
             self._operator.unparse(stream)
         stream.write(Punctuation.SPACE.value)
-        self.right_hand_side.unparse(stream)
+        self._rhs.unparse(stream)
 
 
 class BreakStmt(Stmt):
@@ -647,6 +637,7 @@ class Subprogram:
         self._subprogram_declaration = subprogram_declaration
         self._main = False
         self._cfg = None
+        self._dfs = None
         self._annotations = []
         self._subprograms = []
 
@@ -691,6 +682,7 @@ class Subprogram:
     @cfg.setter
     def cfg(self, cfg):
         self._cfg = cfg
+        self._dfs = graph.DepthFirstSearch(self._cfg, self._cfg.entry)
 
     def _subprogram_candidates(self,
                                call_graph: graph.DirectedGraph,
@@ -788,8 +780,8 @@ class Subprogram:
         n = 8
         weights = [n ** x for x in reversed(range(len(choices)))]
 
-        for i in range(random.randint(1, block_length)):
-            (chosen_class,) = random.choices(population=choices, weights=weights)
+        chosen = random.choices(population=choices, weights=weights, k=random.randint(1, block_length))
+        for chosen_class in chosen:
             if chosen_class is AssignStmt:
                 decl = random.choice(symbol_table.in_scope(False))
                 expr = random_expr(self.language,
@@ -831,11 +823,10 @@ class Subprogram:
         for formal in self.subprogram_declaration.formals:
             symbol_table.add_declaration(formal, formal == self.subprogram_declaration.formals[-1])
 
-        dfs = graph.DepthFirstSearch(self.cfg, self.cfg.entry)
         v: graph.BasicBlock
-        for v in reversed(dfs.post_order()):
-            if len(self.cfg.predecessors(v)) == 1:
-                (e,) = self.cfg.predecessors(v)
+        for v in reversed(self._dfs.post_order()):
+            if len(self._cfg.predecessors(v)) == 1:
+                (e,) = self._cfg.predecessors(v)
                 if e.flow in [graph.ControlFlow.BEGIN_CASE,
                               graph.ControlFlow.THEN,
                               graph.ControlFlow.ELSE,
@@ -897,8 +888,8 @@ class Subprogram:
             if graph.ControlPoint.LOOP_HEADER in v.control:
                 control_stack.append(graph.ControlPoint.LOOP_HEADER)
 
-            if len(self.cfg.successors(v)) == 1:
-                (e,) = self.cfg.successors(v)
+            if len(self._cfg.successors(v)) == 1:
+                (e,) = self._cfg.successors(v)
                 if e.flow in [graph.ControlFlow.END_IF,
                               graph.ControlFlow.END_CASE,
                               graph.ControlFlow.ITERATE_LOOP]:
@@ -909,41 +900,50 @@ class Subprogram:
         assert len(control_stack) == 1 and control_stack[0] == graph.ControlPoint.NONE
 
     def unparse_ada_definition(self, stream: typing.TextIO, indent_width):
-        stream.write(helpful.blanks(indent_width))
-        stream.write(Keywords.BEGIN.name.lower())
-        stream.write(helpful.newlines())
-
         indent_width += 2
         blank_columns = indent_width
 
-        dfs = graph.DepthFirstSearch(self.cfg, self.cfg.entry)
+        blank_columns += indent_width
         v: graph.BasicBlock
-        for v in reversed(dfs.post_order()):
+        for v in reversed(self._dfs.post_order()):
+            for decl in v.declarations:
+                stream.write(Punctuation.blanks(blank_columns))
+                decl.unparse(stream)
+                stream.write(Punctuation.SEMI_COLON.value)
+                stream.write(Punctuation.NEW_LINE.value)
+        blank_columns -= indent_width
+
+        stream.write(Punctuation.blanks(indent_width))
+        stream.write(Keywords.BEGIN.name.lower())
+        stream.write(Punctuation.NEW_LINE.value)
+
+        v: graph.BasicBlock
+        for v in reversed(self._dfs.post_order()):
             if graph.ControlPoint.SWITCH_MERGE in v.control:
                 blank_columns -= indent_width
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stream.write(Keywords.END.name.lower())
                 stream.write(Punctuation.SPACE.value)
                 stream.write(Keywords.CASE.name.lower())
                 stream.write(Punctuation.SEMI_COLON.value)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
 
             if graph.ControlPoint.IF_MERGE in v.control:
                 blank_columns -= indent_width
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stream.write(Keywords.END.name.lower())
                 stream.write(Punctuation.SPACE.value)
                 stream.write(Keywords.IF.name.lower())
                 stream.write(Punctuation.SEMI_COLON.value)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
 
             if len(self.cfg.predecessors(v)) == 1:
                 (e,) = self.cfg.predecessors(v)
                 if e.flow == graph.ControlFlow.ELSE:
                     blank_columns -= indent_width
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     stream.write(Keywords.ELSE.name.lower())
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
                     blank_columns += indent_width
 
                 if e.flow == graph.ControlFlow.THEN:
@@ -953,7 +953,7 @@ class Subprogram:
                     blank_columns += indent_width
 
                 if e.flow == graph.ControlFlow.BEGIN_CASE:
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     if e.expr:
                         stream.write(Keywords.WHEN.name.lower())
                         stream.write(Punctuation.SPACE.value)
@@ -968,7 +968,7 @@ class Subprogram:
                         stream.write(Punctuation.SPACE.value)
                         stream.write(Punctuation.EQUALS.value)
                         stream.write(Punctuation.CLOSE_ANGLE.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
                     blank_columns += indent_width
 
             if len(self.cfg.successors(v)) == 1:
@@ -978,183 +978,165 @@ class Subprogram:
 
             if graph.ControlPoint.IF_BRANCH in v.control:
                 (stmt,) = v.statements
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stmt.unparse(stream)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
             elif graph.ControlPoint.LOOP_HEADER in v.control:
                 (stmt,) = v.statements
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stmt.unparse(stream)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
             elif graph.ControlPoint.SWITCH_BRANCH in v.control:
                 (stmt,) = v.statements
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stmt.unparse(stream)
-                stream.write(helpful.newlines())
-                stream.write(helpful.blanks(blank_columns))
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
+                stream.write(Punctuation.blanks(blank_columns))
+                stream.write(Punctuation.NEW_LINE.value)
             else:
-                if v.declarations:
-                    stream.write(helpful.blanks(blank_columns))
-                    stream.write(Keywords.DECLARE.name.lower())
-                    stream.write(helpful.newlines())
-                    blank_columns += indent_width
-                    for decl in v.declarations:
-                        stream.write(helpful.blanks(blank_columns))
-                        decl.unparse(stream)
-                        stream.write(Punctuation.SEMI_COLON.value)
-                        stream.write(helpful.newlines())
-                    blank_columns -= indent_width
-
-                    stream.write(helpful.blanks(blank_columns))
-                    stream.write(Keywords.BEGIN.name.lower())
-                    stream.write(helpful.newlines())
-                    blank_columns += indent_width
-
                 for stmt in v.statements:
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     stmt.unparse(stream)
                     stream.write(Punctuation.SEMI_COLON.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
 
-                if v.declarations:
-                    blank_columns -= indent_width
-                    stream.write(helpful.blanks(blank_columns))
-                    stream.write(Keywords.END.name.lower())
-                    stream.write(Punctuation.SEMI_COLON.value)
+                if len(self._cfg.successors(v)) > 0:
+                    stream.write(Punctuation.NEW_LINE.value)
 
-                if len(self.cfg.successors(v)) > 0:
-                    stream.write(helpful.newlines())
-
-            if len(self.cfg.successors(v)) == 1:
-                (e,) = self.cfg.successors(v)
+            if len(self._cfg.successors(v)) == 1:
+                (e,) = self._cfg.successors(v)
                 if e.flow == graph.ControlFlow.ITERATE_LOOP:
                     blank_columns -= indent_width
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     stream.write(Keywords.END.name.lower())
                     stream.write(Punctuation.SPACE.value)
                     stream.write(Keywords.LOOP.name.lower())
                     stream.write(Punctuation.SEMI_COLON.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
 
         indent_width -= 2
-        stream.write(helpful.newlines())
-        stream.write(helpful.blanks(indent_width))
+        stream.write(Punctuation.NEW_LINE.value)
+        stream.write(Punctuation.blanks(indent_width))
         stream.write(Keywords.END.name.lower())
         stream.write(Punctuation.SPACE.value)
         self.subprogram_declaration.name.unparse(stream)
         stream.write(Punctuation.SEMI_COLON.value)
 
     def unparse_c_definition(self, stream: typing.TextIO, indent_width):
-        stream.write(helpful.blanks(indent_width))
+        stream.write(Punctuation.blanks(indent_width))
         stream.write(Punctuation.OPEN_BRACE.value)
-        stream.write(helpful.newlines())
+        stream.write(Punctuation.NEW_LINE.value)
 
         indent_width += 2
         blank_columns = indent_width
 
-        dfs = graph.DepthFirstSearch(self.cfg, self.cfg.entry)
         v: graph.BasicBlock
-        for v in reversed(dfs.post_order()):
+        for v in reversed(self._dfs.post_order()):
             if len(self._cfg.predecessors(v)) == 1:
                 (e,) = self._cfg.predecessors(v)
-                if e.flow in [graph.ControlFlow.THEN,
-                              graph.ControlFlow.ELSE,
-                              graph.ControlFlow.BEGIN_CASE,
-                              graph.ControlFlow.ENTER_LOOP]:
-                    if e.flow == graph.ControlFlow.ELSE:
-                        stream.write(helpful.blanks(blank_columns))
-                        stream.write(Keywords.ELSE.name.lower())
-                        stream.write(helpful.newlines())
-                    elif e.flow == graph.ControlFlow.BEGIN_CASE:
-                        stream.write(helpful.blanks(blank_columns))
-                        if e.expr:
-                            stream.write(Keywords.CASE.name.lower())
-                            stream.write(Punctuation.SPACE.value)
-                            e.expr.unparse(stream)
-                            stream.write(Punctuation.COLON.value)
-                        else:
-                            stream.write(Keywords.DEFAULT.name.lower())
-                            stream.write(Punctuation.COLON.value)
-                        stream.write(helpful.newlines())
-
-                    stream.write(helpful.blanks(blank_columns))
+                if e.flow == graph.ControlFlow.ELSE:
+                    stream.write(Punctuation.blanks(blank_columns))
+                    stream.write(Keywords.ELSE.name.lower())
+                    stream.write(Punctuation.NEW_LINE.value)
+                    stream.write(Punctuation.blanks(blank_columns))
                     stream.write(Punctuation.OPEN_BRACE.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
+                    blank_columns += indent_width
+                elif e.flow == graph.ControlFlow.BEGIN_CASE:
+                    stream.write(Punctuation.blanks(blank_columns))
+                    if e.expr:
+                        stream.write(Keywords.CASE.name.lower())
+                        stream.write(Punctuation.SPACE.value)
+                        e.expr.unparse(stream)
+                        stream.write(Punctuation.COLON.value)
+                    else:
+                        stream.write(Keywords.DEFAULT.name.lower())
+                        stream.write(Punctuation.COLON.value)
+                    stream.write(Punctuation.NEW_LINE.value)
+                    stream.write(Punctuation.blanks(blank_columns))
+                    stream.write(Punctuation.OPEN_BRACE.value)
+                    stream.write(Punctuation.NEW_LINE.value)
+                    blank_columns += indent_width
+                elif e.flow == graph.ControlFlow.THEN or e.flow == graph.ControlFlow.ENTER_LOOP:
+                    stream.write(Punctuation.blanks(blank_columns))
+                    stream.write(Punctuation.OPEN_BRACE.value)
+                    stream.write(Punctuation.NEW_LINE.value)
                     blank_columns += indent_width
             elif graph.ControlPoint.SWITCH_MERGE in v.control:
                 blank_columns -= indent_width
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stream.write(Punctuation.CLOSE_BRACE.value)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
 
             if graph.ControlPoint.IF_BRANCH in v.control or graph.ControlPoint.LOOP_HEADER in v.control:
                 (stmt,) = v.statements
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stmt.unparse(stream)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
             elif graph.ControlPoint.SWITCH_BRANCH in v.control:
                 (stmt,) = v.statements
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.blanks(blank_columns))
                 stmt.unparse(stream)
-                stream.write(helpful.newlines())
-                stream.write(helpful.blanks(blank_columns))
+                stream.write(Punctuation.NEW_LINE.value)
+                stream.write(Punctuation.blanks(blank_columns))
                 stream.write(Punctuation.OPEN_BRACE.value)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
                 blank_columns += indent_width
             else:
                 for decl in v.declarations:
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     decl.unparse(stream)
                     stream.write(Punctuation.SEMI_COLON.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
 
                 for stmt in v.statements:
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     stmt.unparse(stream)
                     stream.write(Punctuation.SEMI_COLON.value)
                     if self.cfg.successors(v) or stmt != v.statements[-1]:
-                        stream.write(helpful.newlines())
+                        stream.write(Punctuation.NEW_LINE.value)
 
             if len(self._cfg.successors(v)) == 1:
                 (e,) = self._cfg.successors(v)
                 if e.flow in [graph.ControlFlow.END_IF, graph.ControlFlow.END_CASE, graph.ControlFlow.ITERATE_LOOP]:
                     blank_columns -= indent_width
-                    stream.write(helpful.blanks(blank_columns))
+                    stream.write(Punctuation.blanks(blank_columns))
                     stream.write(Punctuation.CLOSE_BRACE.value)
-                    stream.write(helpful.newlines())
+                    stream.write(Punctuation.NEW_LINE.value)
 
         indent_width -= 2
-        stream.write(helpful.newlines())
-        stream.write(helpful.blanks(indent_width))
+        stream.write(Punctuation.NEW_LINE.value)
+        stream.write(Punctuation.blanks(indent_width))
         stream.write(Punctuation.CLOSE_BRACE.value)
 
     def unparse(self, stream: typing.TextIO, indent_width=0):
+        helpful.debug_message("Unparsing subprogram '{}'".format(self.subprogram_declaration.name))
+
         for annotation in self.annotations:
-            stream.write(helpful.blanks(indent_width))
+            stream.write(Punctuation.blanks(indent_width))
             annotation.unparse(stream)
-            stream.write(helpful.newlines())
+            stream.write(Punctuation.NEW_LINE.value)
 
         if not self.fake:
-            stream.write(helpful.blanks(indent_width))
+            stream.write(Punctuation.blanks(indent_width))
             self.subprogram_declaration.unparse(stream)
-            stream.write(helpful.newlines())
+            stream.write(Punctuation.NEW_LINE.value)
 
             if self.language == Language.ADA:
-                stream.write(helpful.blanks(indent_width))
+                stream.write(Punctuation.blanks(indent_width))
                 stream.write(Keywords.IS.name.lower())
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
 
             indent_width += 2
 
         if self.subprograms:
             for subprogram in self.subprograms:
-                stream.write(helpful.blanks(indent_width))
+                stream.write(Punctuation.blanks(indent_width))
                 subprogram.subprogram_declaration.unparse(stream)
                 stream.write(Punctuation.SEMI_COLON.value)
-                stream.write(helpful.newlines())
+                stream.write(Punctuation.NEW_LINE.value)
 
-            stream.write(helpful.newlines())
+            stream.write(Punctuation.NEW_LINE.value)
 
             for subprogram in self.subprograms:
                 subprogram.unparse(stream, indent_width)
@@ -1165,7 +1147,8 @@ class Subprogram:
                 self.unparse_c_definition(stream, indent_width)
             else:
                 self.unparse_ada_definition(stream, indent_width)
-            stream.write(helpful.newlines(2))
+            stream.write(Punctuation.NEW_LINE.value)
+            stream.write(Punctuation.NEW_LINE.value)
 
 
 def true_expr():

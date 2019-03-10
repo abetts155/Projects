@@ -1,6 +1,7 @@
-import concurrent.futures
-import random
 import sys
+
+import multiprocessing
+import random
 import typing
 
 from ast import (annotations, ast)
@@ -40,12 +41,14 @@ def create_subprogram(subprogram:        ast.Subprogram,
                       number_of_loops:   int,
                       nesting_depth:     int,
                       call_graph:        graph.DirectedGraph):
+    helpful.debug_message("Creating subprogram definition '{}'".format(subprogram.subprogram_declaration.name))
     loop_hierarchy = graph.random_loop_hierarchy(basic_block_limit, number_of_loops, nesting_depth)
     subprogram.cfg = graph.random_control_flow_graph(loop_hierarchy)
     subprogram.generate_body(expression_depth,
                              ignore_operators,
                              block_length,
                              call_graph)
+    return subprogram
 
 
 def create_subprogram_definitions(language:                ast.Language,
@@ -58,43 +61,35 @@ def create_subprogram_definitions(language:                ast.Language,
                                   subprogram_declarations: typing.List[ast.SubprogramDecl],
                                   main_declaration:        ast.SubprogramDecl,
                                   call_graph:              graph.DirectedGraph) -> ast.Subprogram:
+    subprograms = []
+    for subprogram_declaration in subprogram_declarations:
+        subprogram = ast.Subprogram(language, subprogram_declaration)
+        subprogram.main = subprogram_declaration == main_declaration
+        subprograms.append(subprogram)
+
+    parallel_data = [(subprogram,
+                      expression_depth,
+                      ignore_operators,
+                      block_length,
+                      basic_block_limit,
+                      number_of_loops,
+                      nesting_depth,
+                      call_graph) for subprogram in subprograms]
+
+    max_workers = 8
+    subprograms = []
+    with multiprocessing.Pool(max_workers) as executor:
+        subprograms.extend(executor.starmap(create_subprogram, parallel_data))
 
     if language == ast.Language.C:
         top_level_subprogram = ast.Subprogram(language, ast.SubprogramDecl(language, None))
     else:
-        top_level_subprogram = ast.Subprogram(language, main_declaration)
+        (top_level_subprogram,) = [subprogram for subprogram in subprograms if subprogram.main]
 
-    subprograms = []
-    for subprogram_declaration in subprogram_declarations:
-        if subprogram_declaration == main_declaration:
-            if language == ast.Language.C:
-                subprogram = ast.Subprogram(language, subprogram_declaration)
-                top_level_subprogram.add_subprogram(subprogram)
-            else:
-                subprogram = top_level_subprogram
-            subprogram.main = True
-        else:
-            subprogram = ast.Subprogram(language, subprogram_declaration)
+    for subprogram in subprograms:
+        if language == ast.Language.C or (language == ast.Language.ADA and not subprogram.main):
             top_level_subprogram.add_subprogram(subprogram)
-        subprograms.append(subprogram)
 
-    cutoff = 50
-    count = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        future = {executor.submit(create_subprogram,
-                                  subprogram,
-                                  expression_depth,
-                                  ignore_operators,
-                                  block_length,
-                                  basic_block_limit,
-                                  number_of_loops,
-                                  nesting_depth,
-                                  call_graph) for subprogram in subprograms}
-        for done in concurrent.futures.as_completed(future):
-            count += 1
-            if count % cutoff == 0:
-                percentage = 100 * (float(count)/len(subprograms))
-                helpful.verbose_message('...{:.2f}% complete'.format(percentage))
     return top_level_subprogram
 
 
