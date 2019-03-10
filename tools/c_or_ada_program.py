@@ -76,9 +76,8 @@ def create_subprogram_definitions(language:                ast.Language,
                       nesting_depth,
                       call_graph) for subprogram in subprograms]
 
-    max_workers = 8
     subprograms = []
-    with multiprocessing.Pool(max_workers) as executor:
+    with multiprocessing.Pool() as executor:
         subprograms.extend(executor.starmap(create_subprogram, parallel_data))
 
     if language == ast.Language.C:
