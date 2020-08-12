@@ -1,7 +1,0 @@
---cpu-type=detailed
---caches
---cacheline_size=32
---l1d_size=128B
---l1i_size=128B
---l1d_assoc=1
---l1i_assoc=1

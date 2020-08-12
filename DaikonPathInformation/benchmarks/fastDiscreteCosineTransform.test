@@ -1,4 +1,0 @@
-type=int
-length=64
-lower=1
-upper=65535

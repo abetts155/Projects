@@ -1,4 +1,0 @@
-type=int
-length=400
-lower=-32,768
-upper=32,767
