@@ -4,6 +4,14 @@ from graphs import vertices
 from graphs import instrumentation
 from utils import dot
 
+edge_id = 0
+
+
+def get_edge_id():
+    global edge_id
+    edge_id += 1
+    return edge_id
+
 
 class Edge:
     """Base edge class"""
@@ -11,6 +19,7 @@ class Edge:
     def __init__(self, predecessor, successor):
         self._predecessor = predecessor
         self._successor = successor
+        self._id = get_edge_id()
 
     def predecessor(self):
         return self._predecessor
@@ -27,9 +36,7 @@ class Edge:
         return not self == other
 
     def __hash__(self):
-        # Hash on vertex identifiers that compose the edge.
-        # Not collision resistant, but probably good enough for the vast majority of graphs.
-        return hash((self.predecessor(), self.successor()))
+        return self._id
 
     def __str__(self):
         return "({}, {})".format(self._predecessor, self._successor)

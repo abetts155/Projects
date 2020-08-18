@@ -7,13 +7,20 @@ from system import program
 from utils import messages
 
 
+def go_ahead(weight=None):
+    if weight:
+        return random.random() < weight
+    else:
+        return bool(random.getrandbits(1))
+
+
 class ArtificialLoopBody:
     def __init__(self, fan_out, cfg, number_of_vertices, nested_loops: list, outermost_loop):
         self._header = None
         self._exits = set()
         self._vertices = set()
         self.add_vertices(cfg, number_of_vertices)
-        self._level_to_vertices = {}
+        self.level_to_vertices = {}
         self._vertex_to_level = {}
         self.position_vertices(fan_out, len(nested_loops), outermost_loop)
         self.add_edges(cfg, fan_out)
@@ -41,7 +48,7 @@ class ArtificialLoopBody:
         level = 0
         for v in self._vertices:
             self._vertex_to_level[v] = level
-            self._level_to_vertices.setdefault(level, []).append(v)
+            self.level_to_vertices.setdefault(level, []).append(v)
 
             if level == 0:
                 self._header = v
@@ -49,13 +56,13 @@ class ArtificialLoopBody:
             elif number_of_nested_loops > 0:
                 number_of_nested_loops -= 1
                 level += 1
-            elif len(self._level_to_vertices[level]) == fan_out * len(self._level_to_vertices[level - 1]):
+            elif len(self.level_to_vertices[level]) == fan_out * len(self.level_to_vertices[level - 1]):
                 level += 1
-            elif random.random() < 0.25:
+            elif go_ahead(0.25):
                 level += 1
 
-        highest_level = max(self._level_to_vertices.keys())
-        loop_tails = self._level_to_vertices[highest_level]
+        highest_level = max(self.level_to_vertices.keys())
+        loop_tails = self.level_to_vertices[highest_level]
 
         # Does this loop body have too many loop tails?
         # Yes if either
@@ -67,46 +74,46 @@ class ArtificialLoopBody:
                 # Promote a random vertex to be the unique loop tail
                 new_highest_level = highest_level + 1
                 v = loop_tails[random.randint(0, len(loop_tails)-1)]
-                self._level_to_vertices.setdefault(new_highest_level, []).append(v)
-                self._level_to_vertices[highest_level].remove(v)
+                self.level_to_vertices.setdefault(new_highest_level, []).append(v)
+                self.level_to_vertices[highest_level].remove(v)
                 self._vertex_to_level[v] = new_highest_level
 
     def add_edges(self, cfg, fan_out):
-        for level in sorted(self._level_to_vertices.keys(), reverse=True):
+        for level in sorted(self.level_to_vertices.keys(), reverse=True):
             if level > 0:
-                for s in self._level_to_vertices[level]:
-                    candidates = [v for v in self._level_to_vertices[level-1] if len(cfg.successors(v)) < fan_out]
+                for s in self.level_to_vertices[level]:
+                    candidates = [v for v in self.level_to_vertices[level-1] if len(cfg.successors(v)) < fan_out]
                     (p,) = random.sample(candidates, 1)
                     cfg.add_edge(edges.ControlFlowEdge(p, s))
                     if len(cfg.successors(p)) == fan_out:
                         candidates.remove(p)
 
     def connect_nested_loops(self, cfg, nested_loops):
-        highest_level = max(self._level_to_vertices.keys())
+        highest_level = max(self.level_to_vertices.keys())
         candidate_entry_sources = [v for v in self._vertices if 0 < self._vertex_to_level[v] < highest_level]
         for loop in nested_loops:
             (p,) = random.sample(candidate_entry_sources, 1)
             cfg.add_edge(edges.ControlFlowEdge(p, loop.header))
             for exit_source in loop.exits:
                 higher_level = random.randint(self._vertex_to_level[p] + 1, highest_level)
-                candidate_exit_destinations = self._level_to_vertices[higher_level]
+                candidate_exit_destinations = self.level_to_vertices[higher_level]
                 (s,) = random.sample(candidate_exit_destinations, 1)
                 cfg.add_edge(edges.ControlFlowEdge(exit_source, s))
 
     def connect_terminal_vertices(self, cfg):
-        highest_level = max(self._level_to_vertices.keys())
-        for level in sorted(self._level_to_vertices.keys(), reverse=True):
+        highest_level = max(self.level_to_vertices.keys())
+        for level in sorted(self.level_to_vertices.keys(), reverse=True):
             if 0 < level < highest_level:
-                candidate_predecessors = [v for v in self._level_to_vertices[level] if len(cfg.successors(v)) == 0]
+                candidate_predecessors = [v for v in self.level_to_vertices[level] if len(cfg.successors(v)) == 0]
                 higher_level = random.randint(level + 1, highest_level)
-                candidate_successors = self._level_to_vertices[higher_level]
+                candidate_successors = self.level_to_vertices[higher_level]
                 for p in candidate_predecessors:
                     (s,) = random.sample(candidate_successors, 1)
                     cfg.add_edge(edges.ControlFlowEdge(p, s))
 
     def add_backedges(self, cfg):
-        highest_level = max(self._level_to_vertices.keys())
-        for v in self._level_to_vertices[highest_level]:
+        highest_level = max(self.level_to_vertices.keys())
+        for v in self.level_to_vertices[highest_level]:
             cfg.add_edge(edges.ControlFlowEdge(v, self._header))
 
     def set_exits(self, cfg):
@@ -120,7 +127,14 @@ class ArtificialLoopBody:
             self._exits.add(self._header)
 
 
-def create_control_flow_graph(the_program, loops, nesting_depth, number_of_vertices, fan_out, subprg_name):
+def create_control_flow_graph(the_program,
+                              loops,
+                              nesting_depth,
+                              dense,
+                              irreducible,
+                              number_of_vertices,
+                              fan_out,
+                              subprg_name):
     def create_artificial_loop_hierarchy():
         # Add abstract vertices to the tree, including an extra one
         # for the dummy outer loop
@@ -145,7 +159,7 @@ def create_control_flow_graph(the_program, loops, nesting_depth, number_of_verti
                     while True:
                         (e,) = lnt.predecessors(ancestor_v)
                         ancestor_v = e.predecessor()
-                        if bool(random.getrandbits(1)) or ancestor_v == root_v:
+                        if go_ahead() or ancestor_v == root_v:
                             break
                     parent_v = ancestor_v
                     lnt.add_edge(edges.Edge(parent_v, v))
@@ -182,25 +196,66 @@ def create_control_flow_graph(the_program, loops, nesting_depth, number_of_verti
             cfg.exit = e.predecessor()
 
     cfg = graphs.ControlFlowGraph(the_program, subprg_name)
-    lnt, root_v = create_artificial_loop_hierarchy()
-    loops = {}
-    create_loop_body(root_v)
+    if not irreducible:
+        lnt, root_v = create_artificial_loop_hierarchy()
+        loops = {}
+        create_loop_body(root_v)
+    else:
+        loop = ArtificialLoopBody(fan_out, cfg, number_of_vertices, [], True)
+        (e,) = cfg.predecessors(loop.header)
+        cfg.entry = e.successor()
+        cfg.exit = e.predecessor()
+        candidates = [v for v in cfg if v != cfg.entry and v != cfg.exit]
+
+        min_level = min(loop.level_to_vertices.keys())
+        max_level = max(loop.level_to_vertices.keys())
+        candidate_levels = [level for level in range(min_level+1, max_level)]
+
+        if dense:
+            max_edges = len(candidates) * len(candidates) * len(candidates)
+        else:
+            max_edges = len(candidates) + int(len(candidates)/2)
+
+        level_edges = random.randint(1, max_edges)
+        anywhere_edges = max_edges - level_edges
+
+        if len(candidate_levels) > 2:
+            for _ in range(level_edges):
+                p_level = random.choice(candidate_levels[2:])
+                s_level = random.choice(candidate_levels[:p_level-1])
+                p = random.choice(loop.level_to_vertices[p_level])
+                s = random.choice(loop.level_to_vertices[s_level])
+                if not cfg.has_edge(p, s):
+                    cfg.add_edge(edges.ControlFlowEdge(p, s))
+
+        for _ in range(anywhere_edges):
+            p = random.choice(candidates)
+            s = random.choice(candidates)
+            if not cfg.has_edge(p, s):
+                cfg.add_edge(edges.ControlFlowEdge(p, s))
+
     return cfg
 
 
-def add_subprograms(the_program: program.Program,
-                    subprograms: int,
-                    loops: int,
-                    nesting_depth: int,
+def add_subprograms(the_program:        program.Program,
+                    subprograms:        int,
+                    loops:              int,
+                    nesting_depth:      int,
+                    dense:              bool,
+                    irreducible:        bool,
                     number_of_vertices: int,
-                    fan_out: int):
+                    fan_out:            int):
     for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms+1)]:
         messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
-        cfg = create_control_flow_graph(the_program, loops, nesting_depth, number_of_vertices, fan_out, subprogram_name)
+        cfg = create_control_flow_graph(the_program,
+                                        loops,
+                                        nesting_depth,
+                                        dense,
+                                        irreducible,
+                                        number_of_vertices,
+                                        fan_out,
+                                        subprogram_name)
         cfg.dotify()
-        ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(cfg)
-        lnt = graphs.LoopNests(ppg)
-        lnt.dotify()
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
         the_program.add_subprogram(program.Subprogram(cfg, call_vertex))
 
@@ -320,8 +375,11 @@ def main(**kwargs):
                     kwargs['subprograms'],
                     kwargs['loops'],
                     kwargs['nesting_depth'],
+                    kwargs['dense'],
+                    kwargs['irreducible'],
                     kwargs['vertices'],
                     kwargs['fan_out'])
+
     if not kwargs['no_calls']:
         add_calls(the_program, kwargs['recursion'])
     program.IO.write(the_program, kwargs['program'])
@@ -373,6 +431,16 @@ def parse_the_command_line():
                         help='maximum number of basic blocks in a control flow graph',
                         metavar='<INT>',
                         default=10)
+
+    parser.add_argument('--dense',
+                        action='store_true',
+                        help='allow dense graphs',
+                        default=False)
+
+    parser.add_argument('--irreducible',
+                        action='store_true',
+                        help='create arbitrary looping structures',
+                        default=False)
 
     parser.add_argument('--recursion',
                         action='store_true',

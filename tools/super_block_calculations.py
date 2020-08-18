@@ -26,7 +26,8 @@ def main(program_filename:       str,
 
         analysable_subprograms = [subprogram for subprogram in the_program
                                   if not subprogram_names or (subprogram_names and subprogram.name in subprogram_names)]
-
+        all_ppg_solve_times = []
+        all_super_solve_times = []
         for subprogram in analysable_subprograms:
             subprogram.cfg.dotify()
             ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(subprogram.cfg)
@@ -68,7 +69,7 @@ def main(program_filename:       str,
                                                                                   db,
                                                                                   fold_optimisation,
                                                                                   dominator_optimisation)
-                    ilp_for_super.solve('{}.{}.super.ilp'.format(the_program.basename(), ppg.name))
+                    ilp_for_super.solve('{}.{}.{}.super.ilp'.format(the_program.basename(), i, ppg.name))
                     super_construction_times.append(ilp_for_super.construction_time)
                     super_solve_times.append(ilp_for_super.solve_time)
 
@@ -76,6 +77,9 @@ def main(program_filename:       str,
                 ppg_construction_time = sum(ppg_construction_times)/repeat
                 super_solve_time = sum(super_solve_times)/repeat
                 super_construction_time = sum(super_construction_times)/repeat
+
+                all_ppg_solve_times.extend(ppg_solve_times)
+                all_super_solve_times.extend(super_solve_times)
 
                 factor = ppg_solve_time/super_solve_time
                 if factor > 1:
@@ -111,6 +115,16 @@ def main(program_filename:       str,
                                                           super_solve_time + super_construction_time,
                                                           ilp_for_super.number_of_variables(),
                                                           ilp_for_super.number_of_constraints()))
+
+        total_trials = repeat * len(analysable_subprograms)
+        factor = sum(all_ppg_solve_times) / sum(all_super_solve_times)
+        if factor > 1:
+            solve_message = '{:.2}X speed up'.format(factor)
+        else:
+            solve_message = '{:.2}X slow down'.format(1 / factor)
+        messages.verbose_message('Average solve [PPG]={:.5f}'.format(sum(all_ppg_solve_times) / total_trials))
+        messages.verbose_message('Average solve [SUPER]={:.5f}'.format(sum(all_super_solve_times) / total_trials))
+        messages.verbose_message('solve={}'.format(solve_message))
 
 
 def parse_the_command_line():

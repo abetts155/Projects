@@ -1,6 +1,7 @@
 import enum
 import random
-import collections
+import time
+import cProfile
 
 from utils import messages
 from utils import dot
@@ -70,6 +71,12 @@ class DirectedGraph:
     def number_of_edges(self):
         return sum([len(self.successors(v)) for v in self])
 
+    def number_of_branches(self):
+        return len([v for v in self if len(self.successors(v)) > 1])
+
+    def number_of_merges(self):
+        return len([v for v in self if len(self.predecessors(v)) > 1])
+
     def predecessors(self, v: vertices.Vertex):
         return self._get_vertex_data(v).predecessors
 
@@ -109,6 +116,12 @@ class DirectedGraph:
         v_info = self._get_vertex_data(v)
         v_info.predecessors = []
         v_info.successors = []
+
+    def shuffle_edges(self):
+        for v in self:
+            v_info = self._get_vertex_data(v)
+            random.shuffle(v_info.predecessors)
+            random.shuffle(v_info.successors)
 
     def __str__(self):
         value = ''
@@ -198,12 +211,12 @@ class FlowGraph(DirectedGraph, ProgramData):
 
     def pre_dominator_tree(self):
         if self._pre_dominator_tree is None:
-            self._pre_dominator_tree = DominatorTree(self, self.entry)
+            self._pre_dominator_tree = LengauerTarjan(self, self.entry)
         return self._pre_dominator_tree
 
     def post_dominator_tree(self):
         if self._post_dominator_tree is None:
-            self._post_dominator_tree = DominatorTree(self, self.exit)
+            self._post_dominator_tree = LengauerTarjan(self, self.exit)
         return self._post_dominator_tree
 
 
@@ -425,6 +438,63 @@ class DependenceGraph(DirectedGraph):
         self.remove_vertex(entry_v)
 
 
+class DepthFirstSearch:
+    def __init__(self, g: DirectedGraph, root: vertices.Vertex):
+        self._vertex_to_pre = {}
+        self._vertex_to_post = {}
+        self._pre_to_vertex = {}
+        self._post_to_vertex = {}
+        self._back_edges = []
+        self.__search(g, root)
+
+    def pre_order(self):
+        return list(e[0] for e in sorted(self._vertex_to_pre.items(), key=lambda e: e[1]))
+
+    def post_order(self):
+        return list(e[0] for e in sorted(self._vertex_to_post.items(), key=lambda e: e[1]))
+
+    def pre_order_number(self, v: vertices.Vertex):
+        return self._vertex_to_pre[v]
+
+    def post_order_number(self, v: vertices.Vertex):
+        return self._vertex_to_post[v]
+
+    def pre_order_vertex(self, i: int):
+        return self._post_to_vertex[i]
+
+    def post_order_vertex(self, i: int):
+        return self._post_to_vertex[i]
+
+    @property
+    def back_edges(self):
+        return self._back_edges
+
+    def __search(self, g, root):
+        def explore(v):
+            nonlocal pre_id
+            pre_id += 1
+            self._vertex_to_pre[v] = pre_id
+            self._pre_to_vertex[pre_id] = v
+
+            for e in g.successors(v):
+                if e.successor() not in self._vertex_to_pre:
+                    # Not yet visited
+                    explore(e.successor())
+                elif self._vertex_to_pre[v] < self._vertex_to_pre[e.successor()]:
+                    pass
+                elif e.successor() not in self._vertex_to_post:
+                    self._back_edges.append(e)
+
+            nonlocal post_id
+            post_id += 1
+            self._vertex_to_post[v] = post_id
+            self._post_to_vertex[post_id] = v
+
+        pre_id = 0
+        post_id = 0
+        explore(root)
+
+
 class Tree(DirectedGraph):
     def __init__(self):
         DirectedGraph.__init__(self)
@@ -448,7 +518,7 @@ class Tree(DirectedGraph):
         return a == v or self.is_proper_ancestor(a, v)
 
 
-class DominatorTree(Tree, ProgramData):
+class LengauerTarjan(Tree, ProgramData):
     class Type(enum.Enum):
         PRE = 0
         POST = 1
@@ -460,9 +530,9 @@ class DominatorTree(Tree, ProgramData):
         self.__compute(flow_graph)
         assert len(self.predecessors(self._root)) == 0
         if self._root == flow_graph.entry:
-            self._type = DominatorTree.Type.PRE
+            self._type = LengauerTarjan.Type.PRE
         else:
-            self._type = DominatorTree.Type.POST
+            self._type = LengauerTarjan.Type.POST
 
     def __compute(self, flow_graph):
         # This is an implementation of the Lengauer-Tarjan algorithm
@@ -597,7 +667,7 @@ class DominatorTree(Tree, ProgramData):
             for e in self.successors(v):
                 data.append(e.dotify())
 
-        if self._type == DominatorTree.Type.PRE:
+        if self._type == LengauerTarjan.Type.PRE:
             suffix = 'pre'
         else:
             suffix = 'post'
@@ -606,7 +676,7 @@ class DominatorTree(Tree, ProgramData):
 
 
 class DominatorGraph(FlowGraph):
-    def __init__(self, pre_dominator_tree: DominatorTree, post_dominator_tree: DominatorTree):
+    def __init__(self, pre_dominator_tree: LengauerTarjan, post_dominator_tree: LengauerTarjan):
         FlowGraph.__init__(self, pre_dominator_tree.program, pre_dominator_tree.name)
 
         for v in pre_dominator_tree:
@@ -632,7 +702,7 @@ class DominatorGraph(FlowGraph):
 
 
 class DominanceFrontiers:
-    def __init__(self, g: FlowGraph, t: DominatorTree):
+    def __init__(self, g: FlowGraph, t: LengauerTarjan):
         self._frontier = {v: set() for v in g}
         self.__compute(g, t)
 
@@ -682,12 +752,12 @@ class StrongComponents(set):
 
             if low_link[v] == pre_order[v]:
                 scc = set()
-                while True:
+                done = False
+                while not done:
                     z = stack.pop()
                     scc.add(z)
                     self._scc[z] = scc
-                    if z == v:
-                        break
+                    done = z == v
                 self.add(frozenset(scc))
 
         pre_id = 0
@@ -699,51 +769,203 @@ class StrongComponents(set):
                 explore(v)
 
 
-class DepthFirstSearch:
-    def __init__(self, g: DirectedGraph, root: vertices.Vertex):
-        self._pre_order = {}
-        self._post_order = {}
-        self._back_edges = []
-        self.__search(g, root)
+class Cooper(Tree):
+    def __init__(self, g: FlowGraph):
+        Tree.__init__(self)
+        idom = self._solve(g)
+        self._add_edges(g, idom)
 
-    def pre_order(self):
-        return list(e[0] for e in sorted(self._pre_order.items(), key=lambda e: e[1]))
+    def _intersect(self, dfs, idom, b1, b2):
+        finger1 = dfs.post_order_number(b1)
+        finger2 = dfs.post_order_number(b2)
 
-    def post_order(self):
-        return list(e[0] for e in sorted(self._post_order.items(), key=lambda e: e[1]))
+        while finger1 != finger2:
+            while finger1 < finger2:
+                n = idom[dfs.post_order_vertex(finger1)]
+                finger1 = dfs.post_order_number(n)
 
-    def pre_order_number(self, v: vertices.Vertex):
-        return self._pre_order[v]
+            while finger2 < finger1:
+                n = idom[dfs.post_order_vertex(finger2)]
+                finger2 = dfs.post_order_number(n)
 
-    def post_order_number(self, v: vertices.Vertex):
-        return self._post_order[v]
+        return dfs.post_order_vertex(finger1)
 
-    @property
-    def back_edges(self):
-        return self._back_edges
+    def _solve(self, g: FlowGraph):
+        dfs = DepthFirstSearch(g, g.entry)
+        idom = {}
+        for v in g:
+            idom[v] = None
+            self.add_vertex(v)
+        idom[g.entry] = g.entry
 
-    def __search(self, g, root):
-        def explore(v):
-            nonlocal pre_id
-            pre_id += 1
-            self._pre_order[v] = pre_id
+        changed = True
+        while changed:
+            changed = False
+            for v in reversed(dfs.post_order()[:-1]):
+                chosen = None
+                i = 0
+                while not chosen and i < len(g.predecessors(v)):
+                    e = g.predecessors(v)[i]
+                    if idom[e.predecessor()]:
+                        chosen = e
+                    i += 1
 
-            for e in g.successors(v):
-                if e.successor() not in self._pre_order:
-                    # Not yet visited
-                    explore(e.successor())
-                elif self._pre_order[v] < self._pre_order[e.successor()]:
-                    pass
-                elif e.successor() not in self._post_order:
-                    self._back_edges.append(e)
+                if chosen:
+                    current_idom = chosen.predecessor()
+                    for e in g.predecessors(v):
+                        if e != chosen and idom[e.predecessor()]:
+                            current_idom = self._intersect(dfs, idom, e.predecessor(), current_idom)
 
-            nonlocal post_id
-            post_id += 1
-            self._post_order[v] = post_id
+                    if current_idom != idom[v]:
+                        idom[v] = current_idom
+                        changed = True
 
-        pre_id = 0
-        post_id = 0
-        explore(root)
+        return idom
+
+    def _add_edges(self, g, idom):
+        for child, parent in idom.items():
+            if child != g.entry:
+                self.add_edge(edges.Edge(parent, child))
+
+
+class Betts(Tree, ProgramData):
+    def __init__(self, g: FlowGraph):
+        Tree.__init__(self)
+        ProgramData.__init__(self, g.program, g.name)
+        #pr = cProfile.Profile()
+        #pr.enable()
+        self._compute(g)
+        #pr.disable()
+        #pr.print_stats(sort='cumtime')
+
+    def _compute(self, g):
+        data = {}
+        idom = {}
+        dfs = DepthFirstSearch(g, g.entry)
+        predecessors = {}
+        unexplored_edges = []
+        for vertex in g:
+            self.add_vertex(vertex)
+            predecessors[vertex] = set()
+            data[vertex] = []
+
+        headers = {edge.successor() for edge in dfs.back_edges}
+        closed = set()
+        open = [g.entry]
+
+        while open or unexplored_edges:
+            while unexplored_edges:
+                edge = unexplored_edges.pop()
+                print(edge)
+                predecessor = edge.predecessor()
+                successor = edge.successor()
+                predecessors[successor].add(edge)
+
+                if len(g.predecessors(successor)) == 1:
+                    idom[successor] = predecessor
+                    data[successor] = data[edge][:]
+
+                    if len(g.successors(predecessor)) == 1:
+                        data[successor].pop()
+
+                    for edge in g.successors(successor):
+                        data[edge] = data[successor][:] + [successor]
+                        unexplored_edges.append(edge)
+
+                else:
+                    if len(predecessors[successor]) == len(g.predecessors(successor)):
+                        open.append(successor)
+                    elif successor in headers:
+                        closed.add(successor)
+
+            articulation = not closed and not unexplored_edges and len(open) == 1
+            while open:
+                vertex = open.pop()
+                changed = True
+
+                if data[vertex]:
+                    old = data[vertex][:]
+                    for counter, edge in enumerate(predecessors[vertex]):
+                        if counter == 0:
+                            data[vertex] = data[edge][:]
+                        else:
+                            min_length = min(len(data[edge]), len(data[vertex]))
+                            data[vertex] = data[vertex][:min_length]
+                            i = min_length - 1
+                            print(vertex, edge, ','.join(str(x) for x in data[edge]))
+                            while data[vertex][i] != data[edge][i]:
+                                data[vertex].pop()
+                                i -= 1
+
+                        if len(data[vertex]) == 1:
+                            break
+
+                    changed = old != data[vertex]
+                else:
+                    for counter, edge in enumerate(predecessors[vertex]):
+                        if counter == 0:
+                            data[vertex] = data[edge][:]
+                        else:
+                            min_length = min(len(data[edge]), len(data[vertex]))
+                            data[vertex] = data[vertex][:min_length]
+                            i = min_length - 1
+                            while data[vertex][i] != data[edge][i]:
+                                data[vertex].pop()
+                                i -= 1
+
+                        if len(data[vertex]) == 1:
+                            break
+
+                if vertex != g.entry:
+                    idom[vertex] = data[vertex][-1]
+
+                if changed:
+                    for edge in g.successors(vertex):
+                        if articulation:
+                            data[edge] = [vertex]
+                        else:
+                            data[edge] = data[vertex][:] + [vertex]
+                        unexplored_edges.append(edge)
+
+            if not open and not unexplored_edges and closed:
+                (vertex,) = random.sample(closed, 1)
+                closed.remove(vertex)
+
+                for counter, edge in enumerate(predecessors[vertex]):
+                    if counter == 0:
+                        data[vertex] = data[edge][:]
+                    else:
+                        min_length = min(len(data[edge]), len(data[vertex]))
+                        data[vertex] = data[vertex][:min_length]
+                        i = min_length - 1
+                        while data[vertex][i] != data[edge][i]:
+                            data[vertex].pop()
+                            i -= 1
+
+                    if len(data[vertex]) == 1:
+                        break
+
+                for edge in g.successors(vertex):
+                    if articulation:
+                        data[edge] = [vertex]
+                    else:
+                        data[edge] = data[vertex][:] + [vertex]
+                    unexplored_edges.append(edge)
+
+
+
+        for child, parent in idom.items():
+            self.add_edge(edges.Edge(parent, child))
+
+    def dotify(self):
+        data = []
+        for v in self:
+            data.append(v.dotify())
+            for edge in self.successors(v):
+                data.append(edge.dotify())
+
+        filename = '{}.{}.betts.dot'.format(self.program.basename(), self.name)
+        dot.generate(filename, data)
 
 
 class LoopNests(FlowGraph):
@@ -1095,8 +1317,8 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
             ppg.add_edge(edge)
             added.add(edge)
 
-        self.__pre_dominator_tree = DominatorTree(ppg, ppg.entry)
-        self.__post_dominator_tree = DominatorTree(ppg, ppg.exit)
+        self.__pre_dominator_tree = LengauerTarjan(ppg, ppg.entry)
+        self.__post_dominator_tree = LengauerTarjan(ppg, ppg.exit)
 
         for edge in added:
             ppg.remove_edge(edge)

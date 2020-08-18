@@ -174,7 +174,7 @@ class IntegerLinearProgram(ConstraintSystem):
             wd.write(get_new_line())
 
         # Launch lp_solve with the created file
-        args = ['lp_solve', '-s', '-presolve', filename]
+        args = ['lp_solve', filename]
         start = timeit.default_timer()
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, _ = process.communicate()
@@ -182,7 +182,7 @@ class IntegerLinearProgram(ConstraintSystem):
         self._solve_time = end - start
 
         if process.returncode != 0:
-            messages.error_message("Running '{}' failed".format(' '.join(args)))
+            messages.error_message("Running '{}' failed with {}".format(' '.join(args), process.returncode))
 
         # Grab the WCET estimate and the execution counts of variables.
         stdout = stdout.decode()
@@ -207,13 +207,11 @@ class IntegerLinearProgram(ConstraintSystem):
 
 
 def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graphs.LoopNests, db: database.Database):
-    def add_variables():
-        for v in ppg:
-            ilp.add_variable(ProgramPointVariable(v))
-
     def create_objective_function():
         for v in ppg:
-            term = Term(db.get_wcet(v), ProgramPointVariable(v))
+            variable = ProgramPointVariable(v)
+            ilp.add_variable(variable)
+            term = Term(db.get_wcet(v), variable)
             ilp.add_to_objective(term)
 
     def create_structural_constraints():
@@ -265,7 +263,6 @@ def create_ilp_for_program_point_graph(ppg: graphs.ProgramPointGraph, lnt: graph
 
     ilp = IntegerLinearProgram()
     start = timeit.default_timer()
-    add_variables()
     create_objective_function()
     create_structural_constraints()
     create_loop_bound_constraints()
@@ -280,16 +277,9 @@ def create_ilp_for_super_block_graph(ppg:                    graphs.ProgramPoint
                                      fold_optimisation:      bool,
                                      dominator_optimisation: bool):
 
-    def add_variables(super_graph):
-        for super_block in super_graph.super_blocks():
-            ilp.add_variable(ProgramPointVariable(super_block.representative))
-            if not fold_optimisation:
-                for v in super_block:
-                    if isinstance(v.program_point, vertices.Vertex):
-                        ilp.add_variable(ProgramPointVariable(v))
-
     def create_objective_function(super_graph):
         for super_block in super_graph.super_blocks():
+            ilp.add_variable(ProgramPointVariable(super_block.representative))
             if fold_optimisation:
                 wcet = 0
                 for v in super_block:
@@ -300,7 +290,9 @@ def create_ilp_for_super_block_graph(ppg:                    graphs.ProgramPoint
             else:
                 for v in super_block:
                     if isinstance(v.program_point, vertices.Vertex):
-                        term = Term(db.get_wcet(v), ProgramPointVariable(v))
+                        variable = ProgramPointVariable(v)
+                        ilp.add_variable(variable)
+                        term = Term(db.get_wcet(v), variable)
                         ilp.add_to_objective(term)
 
     def create_intra_super_block_constraints(super_graph):
@@ -373,7 +365,6 @@ def create_ilp_for_super_block_graph(ppg:                    graphs.ProgramPoint
     ilp = IntegerLinearProgram()
     start = timeit.default_timer()
     super_graph = graphs.SuperBlockGraph(ppg, lnt)
-    add_variables(super_graph)
     create_objective_function(super_graph)
     create_intra_super_block_constraints(super_graph)
     create_fork_constraints(super_graph)
