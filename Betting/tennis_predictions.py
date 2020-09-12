@@ -6,9 +6,7 @@ import sqlite3
 import sys
 import os
 import re
-from lib.betting.utils import get_betting_directory
-
-assert sys.version_info >= (3,0), 'Script requires Python 3.0 or greater to run'
+from lib.utils import get_betting_directory
 
 
 class args:
@@ -114,7 +112,8 @@ def apply_handicap(player1_total, player2_total, handicap):
 
 
 HANDICAPS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
-            
+
+
 def head_to_head_analysis(all_rows, pair):
     if all_rows:
         player1_won_data = {key:0 for key in HANDICAPS}
@@ -179,6 +178,7 @@ def player_analysis(all_rows, p):
         print('{} lost {} out of {} matches'.format(p, len(lost_games), len(all_rows)))
         print_data(p, won_data, len(all_rows), -1)
         print_data(p, lost_data, len(all_rows), 1)
+
 
 def favourites_analysis(all_rows):
     if all_rows:
@@ -293,8 +293,7 @@ def do_query(filename):
 def main():
     filename = '{}{}{}'.format(get_betting_directory(), os.sep, 'tennis.db')
     if not os.path.exists(filename):
-        print("""Tennis database '{}' does not exist.
-First run Python script: create_tennis_database.py.""".format(filename))
+        print("Tennis database '{}' does not exist. First run Python script: create_tennis_database.py.".format(filename))
         sys.exit(1)
     parse_command_line()
     do_query(filename)
@@ -303,4 +302,3 @@ First run Python script: create_tennis_database.py.""".format(filename))
 
 if __name__ == '__main__': 
     sys.exit(main())
-            

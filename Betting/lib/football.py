@@ -2,7 +2,7 @@ import collections
 import tabulate
 import enum
 
-from lib.betting import utils
+from lib import utils
 
 
 class Result(enum.Enum):

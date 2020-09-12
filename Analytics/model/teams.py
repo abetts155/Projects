@@ -32,6 +32,7 @@ class Player:
         self._date_of_birth = date_of_birth
         self._position = position
         self._foot = foot
+        Player.inventory[self.id] = self
 
     @property
     def date_of_birth(self) -> datetime.date:
@@ -90,11 +91,16 @@ def create_player_from_json(data: typing.Dict):
     foot = data[wyscout.JSON_Keys.foot]
     if foot == 'null' or foot == '':
         foot = None
-    Player.inventory[id_] = Player(id_,
-                                   name,
-                                   date_of_birth,
-                                   PlayerPosition[position],
-                                   Foot(foot))
+    Player(id_, name, date_of_birth, PlayerPosition[position], Foot(foot))
+
+
+def create_player_from_row(row: typing.List):
+    id_ = int(row[0])
+    name = row[1]
+    date_of_birth = datetime.datetime.strptime(row[2], '%Y-%m-%d')
+    position = row[3]
+    foot = row[4]
+    Player(id_, name, date_of_birth, PlayerPosition(position), Foot(foot))
 
 
 class Team:
@@ -104,6 +110,7 @@ class Team:
     def __init__(self, id_: int, name: str):
         self._id = id_
         self._name = name
+        Team.inventory[self.id] = self
 
     @property
     def id(self) -> int:
@@ -139,7 +146,13 @@ class Team:
 def create_team_from_json(data: typing.Dict):
     id_ = int(data[wyscout.JSON_Keys.wyId])
     name = wyscout.decode_json_string(data[wyscout.JSON_Keys.name])
-    Team.inventory[id_] = Team(id_, name)
+    Team(id_, name)
+
+
+def create_team_from_row(row: typing.List):
+    id_ = int(row[0])
+    name = row[1]
+    Team(id_, name)
 
 
 class Coach:
@@ -150,6 +163,7 @@ class Coach:
         self._id = id_
         self._name = name
         self._date_of_birth = date_of_birth
+        Coach.inventory[self.id] = self
 
     @property
     def date_of_birth(self) -> datetime.date:
@@ -195,4 +209,13 @@ def create_coach_from_json(data: typing.Dict):
     date_of_birth = None
     if data[wyscout.JSON_Keys.birthDate] is not None:
         date_of_birth = datetime.datetime.strptime(data[wyscout.JSON_Keys.birthDate], '%Y-%m-%d')
-    Coach.inventory[id_] = Coach(id_, name, date_of_birth)
+    Coach(id_, name, date_of_birth)
+
+
+def create_coach_from_row(row: typing.List):
+    id_ = int(row[0])
+    name = row[1]
+    date_of_birth = None
+    if row[2] is not None:
+        date_of_birth = datetime.datetime.strptime(row[2], '%Y-%m-%d')
+    Coach(id_, name, date_of_birth)

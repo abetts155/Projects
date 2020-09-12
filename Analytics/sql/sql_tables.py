@@ -1,7 +1,7 @@
 import sqlite3
 import typing
 
-from miscellaneous import messages
+from miscellaneous.messages import verbose_message
 from sql.sql_columns import Column
 from sql.sql_language import Keywords
 
@@ -45,7 +45,7 @@ class Table:
                                             Keywords.IF.name,
                                             Keywords.EXISTS.name,
                                             self.name)
-        messages.verbose_message('SQL: {}'.format(statement))
+        verbose_message(statement)
         cursor.execute(statement)
 
     def create(self, cursor: sqlite3.Cursor):
@@ -67,7 +67,7 @@ class Table:
                                            Keywords.TABLE.name,
                                            self.name,
                                            ', '.join(columns_text))
-        messages.verbose_message('SQL: {}'.format(statement))
+        verbose_message(statement)
         cursor.execute(statement)
 
     def insert_rows(self, cursor: sqlite3.Cursor):
@@ -76,5 +76,5 @@ class Table:
                                               self.name,
                                               Keywords.VALUES.name,
                                               ','.join('?' for _ in self.columns))
-        messages.verbose_message('SQL: {}'.format(statement))
+        verbose_message(statement)
         cursor.executemany(statement, self.rows)

@@ -1,5 +1,5 @@
 
-from lib.betting.football import Fixture
+from lib.football import Fixture
 
 
 def draw(fixture):

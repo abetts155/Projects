@@ -5,10 +5,10 @@ import math
 import argparse
 import inspect
 
-from lib.betting import scraper
-from lib.betting import utils
-from lib.betting.football import Fixture, LeagueTable, Result
-import lib.betting.events
+from lib import scraper
+from lib import utils
+from lib.football import Fixture, LeagueTable, Result
+import lib.events
 
 
 class Prediction:
@@ -133,7 +133,6 @@ def league_table_analysis(table):
                      min(valid_positions),
                      max(valid_positions)))
 
-
     print(table)
     print('-' * 80)
     total_midtable_teams = math.floor(len(table)* (2/3))
@@ -201,7 +200,6 @@ def make_predictions(events, season, previous_seasons, probability_threshold, hi
                                                               venues))
 
     return predictions
-
 
 
 def compute_league_tables(league, previous_seasons):
@@ -272,7 +270,7 @@ def parse_command_line():
                         metavar='<INT>')
 
     parser.add_argument('--events',
-                        choices=['%s' % f[0] for f in inspect.getmembers(lib.betting.events, inspect.isfunction)],
+                        choices=['{}'.format(f[0]) for f in inspect.getmembers(lib.events, inspect.isfunction)],
                         type=str.lower,
                         nargs='+',
                         help='choose betting events')
@@ -326,7 +324,6 @@ def parse_command_line():
        
 
 if __name__ == '__main__':
-    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
     args = parse_command_line()
     sys.exit(main(**args))
 

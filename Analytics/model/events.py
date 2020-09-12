@@ -1,14 +1,16 @@
-import enum
-import pickle
-import typing
-
+from enum import auto, Enum
+from functools import total_ordering
 from miscellaneous import wyscout
-from model import teams
+from model.matches import Match
+from model.teams import Player, Team
+from pickle import dumps, loads
 from sql.sql_columns import Affinity, Column, ColumnNames
 from sql import sql_columns, sql_tables
+from typing import Dict, List
 
 
-class Period(enum.Enum):
+@total_ordering
+class Period(Enum):
     FIRST_HALF = '1st'
     SECOND_HALF = '2nd'
     FIRST_HALF_ET = '1ET'
@@ -28,19 +30,18 @@ class Period(enum.Enum):
         elif mnemonic == 'P':
             return Period.PENALTIES
 
+    def __lt__(self, other):
+        if type(other) == type(self):
+            return self.value < other.value
+        return NotImplemented
+
 
 class Position:
-    def __init__(self, x: str, y: str):
-        self._x = max(0, int(x))
-        self._y = max(0, int(y))
+    __slots__ = ['x', 'y']
 
-    @property
-    def x(self) -> int:
-        return self._x
-
-    @property
-    def y(self) -> int:
-        return self._y
+    def __init__(self, x: int, y: int):
+        self.x = max(0, x)
+        self.y = max(0, y)
 
     def __str__(self):
         return '({},{})'.format(self.x, self.y)
@@ -54,28 +55,33 @@ class Timestamp:
     def time(self) -> float:
         return self._time
 
+    def __lt__(self, other):
+        if type(other) == type(self):
+            return self.time < other.time
+        return NotImplemented
+
     def __str__(self):
         return '{:2f}'.format(self.time)
 
 
-class EventID(enum.Enum):
-    DUEL = enum.auto()
-    FOUL = enum.auto()
-    FREE_KICK = enum.auto()
-    OFF_LINE = enum.auto()
-    INTERRUPTION = enum.auto()
-    OFFSIDE = enum.auto()
-    ON_BALL = enum.auto()
-    PASS = enum.auto()
-    SAVE_ATTEMPT = enum.auto()
-    SHOT = enum.auto()
+class EventID(Enum):
+    DUEL = auto()
+    FOUL = auto()
+    FREE_KICK = auto()
+    OFF_LINE = auto()
+    INTERRUPTION = auto()
+    OFFSIDE = auto()
+    ON_BALL = auto()
+    PASS = auto()
+    SAVE_ATTEMPT = auto()
+    SHOT = auto()
 
 
-class SubEventID(enum.Enum):
-    AIR = enum.auto()
-    GROUND_ATTACKING = enum.auto()
-    GROUND_DEFENDING = enum.auto()
-    GROUND_LOOSE_BALL = enum.auto()
+class SubEventID(Enum):
+    AIR = auto()
+    GROUND_ATTACKING = auto()
+    GROUND_DEFENDING = auto()
+    GROUND_LOOSE_BALL = auto()
 
 
 events_table = {(EventID.DUEL, 10): 'Air duel',
@@ -208,23 +214,27 @@ class Event:
 
     def __init__(self,
                  id_: int,
+                 match: Match,
+                 player: Player,
+                 team: Team,
                  period: Period,
-                 timestamp: Timestamp,
-                 player: teams.Player,
-                 team: teams.Team,
+                 timestamp: float,
                  event_id: int,
                  sub_event_id: int,
-                 tags: typing.List[int],
-                 positions: typing.List[Position]):
+                 tags: List[int],
+                 position_one: Position,
+                 position_two: Position):
         self._id = id_
-        self._period = period
-        self._timestamp = timestamp
+        self._match = match
         self._player = player
         self._team = team
+        self._period = period
+        self._timestamp = timestamp
         self._event_id = event_id
         self._sub_event_id = sub_event_id
         self._tags = tags
-        self._positions = positions
+        self._position_one = position_one
+        self._position_two = position_two
         assert self.id not in Event.inventory
         Event.inventory[self.id] = self
 
@@ -237,78 +247,92 @@ class Event:
         return self._event_id
 
     @property
+    def match(self) -> Match:
+        return self._match
+
+    @property
     def period(self) -> Period:
         return self._period
 
     @property
-    def player(self) -> teams.Player:
+    def player(self) -> Player:
         return self._player
 
     @property
-    def positions(self) -> typing.List[Position]:
-        return self._positions
+    def position_one(self) -> Position:
+        return self._position_one
+
+    @property
+    def position_two(self) -> Position:
+        return self._position_two
 
     @property
     def sub_event_id(self) -> int:
         return self._sub_event_id
 
     @property
-    def team(self) -> teams.Team:
+    def team(self) -> Team:
         return self._team
 
     @property
-    def tags(self) -> typing.List[int]:
+    def tags(self) -> List[int]:
         return self._tags
 
     @property
-    def timestamp(self) -> Timestamp:
+    def timestamp(self) -> float:
         return self._timestamp
 
     def sql_values(self):
         values = [self.id,
-                  self.period.value,
-                  self.timestamp.time,
+                  self.match.id,
                   self.player.id if self.player else None,
                   self.team.id,
+                  self.period.value,
+                  self.timestamp,
                   self.event_id,
                   self.sub_event_id,
-                  pickle.dumps(self.tags),
-                  pickle.dumps(self.positions[0]),
-                  pickle.dumps(self.positions[1])]
+                  dumps(self.tags),
+                  dumps([self.position_one.x, self.position_one.y]),
+                  dumps([self.position_two.x, self.position_two.y])]
         assert len(values) == len(self.__class__.table.columns)
         return values
 
     @classmethod
     def sql_table(cls) -> sql_tables.Table:
         if cls.table is None:
+            match_column = Column(ColumnNames.Match_ID.name, Affinity.INTEGER)
             player_column = Column(ColumnNames.Player_ID.name, Affinity.INTEGER)
             team_column = Column(ColumnNames.Team_ID.name, Affinity.INTEGER)
             cls.table = sql_tables.Table(cls.__name__,
                                          sql_columns.id_column(),
                                          [sql_columns.id_column(),
-                                          Column(ColumnNames.Period.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Timestamp.name, Affinity.REAL),
+                                          match_column,
                                           player_column,
                                           team_column,
+                                          Column(ColumnNames.Period.name, Affinity.INTEGER),
+                                          Column(ColumnNames.Timestamp.name, Affinity.REAL),
                                           Column(ColumnNames.Event_ID.name, Affinity.INTEGER),
                                           Column(ColumnNames.Sub_Event_ID.name, Affinity.INTEGER),
                                           Column(ColumnNames.Tags.name, Affinity.BLOB),
                                           Column(ColumnNames.From_Position.name, Affinity.BLOB),
                                           Column(ColumnNames.To_Position.name, Affinity.BLOB)])
-            cls.table.add_foreign_key(player_column, teams.Player.sql_table())
-            cls.table.add_foreign_key(team_column, teams.Team.sql_table())
+            cls.table.add_foreign_key(match_column, Match.sql_table())
+            cls.table.add_foreign_key(player_column, Player.sql_table())
+            cls.table.add_foreign_key(team_column, Team.sql_table())
         return cls.table
 
     def __str__(self):
-        value = '[{}:{}]'.format(self.period.value, self.timestamp)
-        value += '[{:<22}] '.format(' to '.join(str(position) for position in self._positions))
+        print(self.position_one)
+        value = '[{}:{:.2f}][{:<22}]'.format(self.period.value,
+                                             self.timestamp,
+                                             ' to '.join(str(pos) for pos in [self.position_one, self.position_two]))
         if self.player:
-            value += '{} for {}. '.format(self.player, self.team)
+            value += ' {} for {}. '.format(self.player, self.team)
         else:
-            value += '{}. '.format(str(self.team))
+            value += ' {}. '.format(str(self.team))
         value += what_happened(self.event_id, self.sub_event_id)
         if self.tags:
-            value += ': ' + ','.join(str(tags_table[id_]) for id_ in self._tags)
+            value += ': ' + ','.join(str(tags_table[id_]) for id_ in self.tags)
         value += '.'
         return value
 
@@ -325,36 +349,49 @@ def is_corner(event: Event):
     return event.event_id == EventID.FREE_KICK.value and event.sub_event_id == 30
 
 
-def create_event_from_json(data: typing.Dict):
+def create_event_from_json(data: Dict):
     id_ = int(data[wyscout.JSON_Keys.id_])
-    period = Period.from_mnemonic(data[wyscout.JSON_Keys.matchPeriod])
-    timestamp = Timestamp(data[wyscout.JSON_Keys.eventSec])
+    match_id = int(data[wyscout.JSON_Keys.matchId])
+    match = Match.inventory[match_id]
     player_id = int(data[wyscout.JSON_Keys.playerId])
-    if player_id in teams.Player.inventory:
-        player = teams.Player.inventory[player_id]
-    else:
-        player = None
+    player = Player.inventory[player_id] if player_id in Player.inventory else None
     team_id = int(data[wyscout.JSON_Keys.teamId])
-    team = teams.Team.inventory[team_id]
+    team = Team.inventory[team_id]
+    period = Period.from_mnemonic(data[wyscout.JSON_Keys.matchPeriod])
+    timestamp = float(data[wyscout.JSON_Keys.eventSec])
     event_id = int(data[wyscout.JSON_Keys.eventId])
-    if data[wyscout.JSON_Keys.subEventId]:
-        sub_event_id = int(data[wyscout.JSON_Keys.subEventId])
-    else:
-        sub_event_id = 0
+    sub_event_id = int(data[wyscout.JSON_Keys.subEventId]) if data[wyscout.JSON_Keys.subEventId] else 0
     tags = []
     for tag in data[wyscout.JSON_Keys.tags]:
         tags.append(int(tag[wyscout.JSON_Keys.id_]))
-    positions = []
     if len(data[wyscout.JSON_Keys.positions]) == 2:
-        position_one, position_two = data[wyscout.JSON_Keys.positions]
-        coordinates_one = Position(position_one[wyscout.JSON_Keys.x], position_two[wyscout.JSON_Keys.y])
-        coordinates_two = Position(position_two[wyscout.JSON_Keys.x], position_two[wyscout.JSON_Keys.y])
+        position_one_data, position_two_data = data[wyscout.JSON_Keys.positions]
+        position_one = Position(int(position_one_data[wyscout.JSON_Keys.x]),
+                                int(position_one_data[wyscout.JSON_Keys.y]))
+        position_two = Position(int(position_two_data[wyscout.JSON_Keys.x]),
+                                int(position_two_data[wyscout.JSON_Keys.y]))
     else:
-        (position,) = data[wyscout.JSON_Keys.positions]
-        coordinates_one = Position(position[wyscout.JSON_Keys.x], position[wyscout.JSON_Keys.y])
-        coordinates_two = Position(position[wyscout.JSON_Keys.x], position[wyscout.JSON_Keys.y])
-    positions.append(coordinates_one)
-    positions.append(coordinates_two)
-    event = Event(id_, period, timestamp, player, team, event_id, sub_event_id, tags, positions)
-    match_id = int(data[wyscout.JSON_Keys.matchId])
-    return match_id, event
+        (position_data,) = data[wyscout.JSON_Keys.positions]
+        position_one = Position(int(position_data[wyscout.JSON_Keys.x]), int(position_data[wyscout.JSON_Keys.y]))
+        position_two = position_one
+    Event(id_, match, player, team, period, timestamp, event_id, sub_event_id, tags, position_one, position_two)
+
+
+def create_event_from_row(row: List):
+    id_ = int(row[0])
+    if id_ not in Event.inventory:
+        match = Match.inventory[int(row[1])]
+        player = None if row[2] is None else Player.inventory[int(row[2])]
+        team = Team.inventory[int(row[3])]
+        period = Period(row[4])
+        timestamp = float(row[5])
+        event_id = int(row[6])
+        sub_event_id = int(row[7])
+        tags = loads(row[8])
+        position_one = Position(*loads(row[9]))
+        position_two = Position(*loads(row[10]))
+        event = Event(id_, match, player, team, period, timestamp, event_id, sub_event_id, tags, position_one,
+                      position_two)
+    else:
+        event = Event.inventory[id_]
+    return event

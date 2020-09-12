@@ -30,6 +30,8 @@ def is_strict_subclass(candidate, base_class):
 
 
 verbose = False
+
+
 def verbose_message(*args):
     if verbose:
         print(*args, flush=True)

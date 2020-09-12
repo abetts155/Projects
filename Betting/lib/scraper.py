@@ -8,8 +8,8 @@ from concurrent import futures
 import bs4
 import requests
 
-from lib.betting import utils
-from lib.betting.football import Fixture, Team
+from lib import utils
+from lib.football import Fixture, Team
 
 
 TRANSFERMARKT = 'http://www.transfermarkt.com'
