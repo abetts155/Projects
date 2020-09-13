@@ -2,8 +2,7 @@ from argparse import ArgumentParser, Namespace
 from collections import Counter
 from lib import messages
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
-from model.competitions import league_register, League, Season, Team, Venue
+from model.competitions import league_register, Fixture, Season, Team, Venue
 from sql.sql import load_database, extract_picked_team
 from typing import List
 
@@ -34,6 +33,12 @@ def parse_command_line():
                         metavar='<NAME>',
                         type=str.capitalize,
                         required=True)
+
+    event_choices = [Fixture.is_draw.__name__, Fixture.is_loss.__name__, Fixture.is_win.__name__]
+    parser.add_argument('--game-state',
+                        help='analyse assuming this game state at half time',
+                        choices=event_choices,
+                        type=str.lower)
 
     parser.add_argument('--history',
                         help='only consider this number of completed seasons',
@@ -76,7 +81,13 @@ class Statistics(object):
                                                           self.bts)
 
 
-def compute_statistics(season: Season, team: Team, venue: Venue, stats: Statistics):
+def compute_statistics(season: Season,
+                       team: Team,
+                       venue: Venue,
+                       game_state: str,
+                       first_half: Statistics,
+                       second_half: Statistics,
+                       both_halves: Statistics):
     fixtures = []
     for fixture in season.fixtures():
         if fixture.full_time_home is not None and fixture.full_time_away is not None:
@@ -91,46 +102,142 @@ def compute_statistics(season: Season, team: Team, venue: Venue, stats: Statisti
                     fixtures.append(fixture)
 
     for fixture in fixtures:
-        if fixture.is_win(team):
-            stats.wins += 1
-        elif fixture.is_loss(team):
-            stats.losses += 1
-        else:
-            stats.draws += 1
-
+        analyse = True
         if fixture.home_team == team:
-            stats.goals_for += fixture.full_time_home
-            stats.goals_against += fixture.full_time_away
+            if game_state:
+                if game_state == Fixture.is_loss.__name__:
+                    analyse = True if fixture.half_time_home < fixture.half_time_away else False
+                elif game_state == Fixture.is_win.__name__:
+                    analyse = True if fixture.half_time_home > fixture.half_time_away else False
+                elif game_state == Fixture.is_draw.__name__:
+                    analyse = True if fixture.half_time_home == fixture.half_time_away else False
+                else:
+                    assert False
+
+            if analyse:
+                first_half.goals_for += fixture.half_time_home
+                first_half.goals_against += fixture.half_time_away
+                second_half.goals_for += fixture.full_time_home - fixture.half_time_home
+                second_half.goals_against += fixture.full_time_away - fixture.half_time_away
+                both_halves.goals_for += fixture.full_time_home
+                both_halves.goals_against += fixture.full_time_away
+
+                if fixture.half_time_home > fixture.half_time_away:
+                    first_half.wins += 1
+                elif fixture.half_time_away > fixture.half_time_home:
+                    first_half.losses += 1
+                else:
+                    first_half.draws += 1
+
+                if fixture.full_time_home - fixture.half_time_home > fixture.full_time_away - fixture.half_time_away:
+                    second_half.wins += 1
+                elif fixture.full_time_away - fixture.half_time_away > fixture.full_time_home - fixture.half_time_home:
+                    second_half.losses += 1
+                else:
+                    second_half.draws += 1
+
+                if fixture.full_time_home > fixture.full_time_away:
+                    both_halves.wins += 1
+                elif fixture.full_time_away > fixture.full_time_home:
+                    both_halves.losses += 1
+                else:
+                    both_halves.draws += 1
 
         if fixture.away_team == team:
-            stats.goals_for += fixture.full_time_away
-            stats.goals_against += fixture.full_time_home
+            if game_state:
+                if game_state == Fixture.is_loss.__name__:
+                    analyse = True if fixture.half_time_home > fixture.half_time_away else False
+                elif game_state == Fixture.is_win.__name__:
+                    analyse = True if fixture.half_time_home < fixture.half_time_away else False
+                elif game_state == Fixture.is_draw.__name__:
+                    analyse = True if fixture.half_time_home == fixture.half_time_away else False
+                else:
+                    assert False
 
-        if fixture.full_time_home > 0 and fixture.full_time_away > 0:
-            stats.bts += 1
+            if analyse:
+                first_half.goals_for += fixture.half_time_away
+                first_half.goals_against += fixture.half_time_home
+                second_half.goals_for += fixture.full_time_away - fixture.half_time_away
+                second_half.goals_against += fixture.full_time_home - fixture.half_time_home
+                both_halves.goals_for += fixture.full_time_away
+                both_halves.goals_against += fixture.full_time_home
 
-        total_goals = fixture.full_time_home + fixture.full_time_away
-        stats.goals[total_goals] += 1
+                if fixture.half_time_away > fixture.half_time_home:
+                    first_half.wins += 1
+                elif fixture.half_time_home > fixture.half_time_away:
+                    first_half.losses += 1
+                else:
+                    first_half.draws += 1
+
+                if fixture.full_time_away - fixture.half_time_away > fixture.full_time_home - fixture.half_time_home:
+                    second_half.wins += 1
+                elif fixture.full_time_home - fixture.half_time_home > fixture.full_time_away - fixture.half_time_away:
+                    second_half.losses += 1
+                else:
+                    second_half.draws += 1
+
+                if fixture.full_time_away > fixture.full_time_home:
+                    both_halves.wins += 1
+                elif fixture.full_time_home > fixture.full_time_away:
+                    both_halves.losses += 1
+                else:
+                    both_halves.draws += 1
+
+        if analyse:
+            if fixture.half_time_home > 0 and fixture.half_time_away > 0:
+                first_half.bts += 1
+
+            if fixture.full_time_home - fixture.half_time_home > 0 and fixture.full_time_away - fixture.half_time_away > 0:
+                second_half.bts += 1
+
+            if fixture.full_time_home > 0 and fixture.full_time_away > 0:
+                both_halves.bts += 1
+
+            first_half.goals[fixture.half_time_home + fixture.half_time_away] += 1
+            second_half.goals[(fixture.full_time_home - fixture.half_time_home) +
+                              (fixture.full_time_away - fixture.half_time_away)] += 1
+            both_halves.goals[fixture.full_time_home + fixture.full_time_away] += 1
 
 
-def display_bar_graph(team: Team, stats: Statistics):
-    fig, ax = plt.subplots(1, figsize=(20, 10))
+def reduce(stats: Statistics):
+    return [stats.wins,
+            stats.draws,
+            stats.losses,
+            stats.goals_for,
+            stats.goals_against,
+            stats.bts,
+            stats.goals[0],
+            stats.goals[1],
+            stats.goals[2],
+            stats.goals[3],
+            sum([stats.goals[k] for k, v in stats.goals.items() if k >= 4])]
+
+
+def display_bar_graphs(team: Team, first_half: Statistics, second_half: Statistics, both_halves: Statistics):
+    fig, axes = plt.subplots(3, figsize=(20, 10))
+    total_games = both_halves.wins + both_halves.draws + both_halves.losses
+    fig.suptitle('{}: {} games'.format(team.name, total_games))
     x_values = ['wins', 'draws', 'losses', 'GF', 'GA', 'BTS', '0 goals', '1 goal', '2 goals', '3 goals', '4+ goals']
-    y_values = [stats.wins,
-                stats.draws,
-                stats.losses,
-                stats.goals_for,
-                stats.goals_against,
-                stats.bts,
-                stats.goals[0],
-                stats.goals[1],
-                stats.goals[2],
-                stats.goals[3],
-                sum([stats.goals[k] for k, v in stats.goals.items() if k >= 4])]
+
+    y_values = reduce(first_half)
     for x, y in zip(x_values, y_values):
-        ax.text(x, y, str(y), ha='center', fontsize=8)
-    ax.bar(x_values, y_values)
-    plt.title('{}: {} games'.format(team.name, stats.wins + stats.draws + stats.losses))
+        axes[0].text(x, y, str(y), ha='center', fontsize=8)
+    axes[0].bar(x_values, y_values)
+    axes[0].set_title('First half')
+
+    y_values = reduce(second_half)
+    for x, y in zip(x_values, y_values):
+        axes[1].text(x, y, str(y), ha='center', fontsize=8)
+    axes[1].bar(x_values, y_values)
+    axes[1].set_title('Second half')
+
+    y_values = reduce(both_halves)
+    for x, y in zip(x_values, y_values):
+        axes[2].text(x, y, str(y), ha='center', fontsize=8)
+    axes[2].bar(x_values, y_values)
+    axes[2].set_title('Both halves')
+
+    plt.subplots_adjust(hspace=0.5)
     plt.show()
 
 
@@ -153,10 +260,18 @@ def main(arguments: Namespace):
         seasons = seasons[-arguments.history:]
 
     selected_team = extract_picked_team(arguments.database, arguments.team, league)
-    stats = Statistics()
+    first_half = Statistics()
+    second_half = Statistics()
+    both_halves = Statistics()
     for season in seasons:
-        compute_statistics(season, selected_team, arguments.venue, stats)
-    display_bar_graph(selected_team, stats)
+        compute_statistics(season,
+                           selected_team,
+                           arguments.venue,
+                           arguments.game_state,
+                           first_half,
+                           second_half,
+                           both_halves)
+    display_bar_graphs(selected_team, first_half, second_half, both_halves)
 
 
 if __name__ == '__main__':
