@@ -9,16 +9,6 @@ json_fixtures_directory = json_directory.joinpath('fixtures')
 json_fixtures_directory.mkdir(parents=True, exist_ok=True)
 
 
-headers = {'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'}
-api_key = hidden_directory.joinpath('api_key.txt')
-with api_key.open() as file:
-    (line,) = file.readlines()
-    headers['x-rapidapi-key'] = line.strip()
-
-
-base_url = 'https://api-football-v1.p.rapidapi.com/v2'
-
-
 def get_seasons_json():
     return json_directory.joinpath('seasons.json')
 
@@ -29,3 +19,8 @@ def get_teams_json(country: str):
 
 def get_fixtures_json(season: int):
     return json_fixtures_directory.joinpath('{}.json'.format(season))
+
+
+def store(path: Path, response):
+    with path.open('w') as out_file:
+        out_file.write(response.text)

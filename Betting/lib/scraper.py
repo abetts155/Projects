@@ -13,7 +13,7 @@ from lib.football import Fixture, Team
 
 
 TRANSFERMARKT = 'http://www.transfermarkt.com'
-STRAINER = bs4.SoupStrainer('div', {'class':'responsive-table'})
+STRAINER = bs4.SoupStrainer('div', {'class': 'responsive-table'})
 
 
 def get_betting_directory():
@@ -25,10 +25,10 @@ def get_betting_directory():
 
 def have_connection():
     try:
-        google_co_uk = 'http://216.58.206.3' 
+        google_co_uk = 'http://216.58.206.3'
         requests.get(google_co_uk, timeout=1)
         return True
-    except requests.ConnectionError: 
+    except requests.ConnectionError:
         return False
 
 
@@ -37,17 +37,17 @@ def read_url(url):
         try:
             sleep_duration = 10 * random.uniform(0.01, 0.1)
             time.sleep(sleep_duration)
-            response = requests.get(url, 
-                                    headers={'User-Agent': 'Mozilla/5.0'}, 
+            response = requests.get(url,
+                                    headers={'User-Agent': 'Mozilla/5.0'},
                                     timeout=5)
             if response.status_code == 200:
-                return bs4.BeautifulSoup(response.text, 
-                                         'lxml', 
+                return bs4.BeautifulSoup(response.text,
+                                         'lxml',
                                          parse_only=STRAINER)
         except requests.ConnectionError:
             print('No internet connection...')
             sys.exit(1)
-                
+
 
 def __parse_page(season, filename, url):
     def create_from_web():
@@ -55,18 +55,18 @@ def __parse_page(season, filename, url):
         with open(filename, 'wb') as the_file:
             the_file.write(soup.prettify('utf-8'))
         return soup
-    
+
     if season == utils.this_season() and have_connection():
         return create_from_web()
     else:
         if os.path.exists(filename):
             with open(filename, 'r') as the_file:
-                return bs4.BeautifulSoup(the_file.read(), 
-                                         'lxml', 
+                return bs4.BeautifulSoup(the_file.read(),
+                                         'lxml',
                                          parse_only=STRAINER)
-        else:   
+        else:
             return create_from_web()
-        
+
 
 def parse_league_season_page(league, season):
     filename = '{}{}{}_{}'.format(get_betting_directory(),
@@ -77,15 +77,15 @@ def parse_league_season_page(league, season):
                                                                     league,
                                                                     season)
     return __parse_page(season, filename, url)
-    
+
 
 def parse_team_season_page(league, team, season):
-    filename ='{}{}{}_{}_{}'.format(get_betting_directory(),
-                                    os.sep,
-                                    league,
-                                    season,
-                                    team.id_)
-    url = '{}/_/spielplandatum/verein/{}/_/0?saison_id={}'.format(TRANSFERMARKT, 
+    filename = '{}{}{}_{}_{}'.format(get_betting_directory(),
+                                     os.sep,
+                                     league,
+                                     season,
+                                     team.id_)
+    url = '{}/_/spielplandatum/verein/{}/_/0?saison_id={}'.format(TRANSFERMARKT,
                                                                   team.id_,
                                                                   season)
     return __parse_page(season, filename, url)
@@ -98,7 +98,7 @@ played_regex = re.compile(r'\d+\:\d+')
 def rip_out_fixtures(args):
     league, team, season, max_games = args
     soup = parse_team_season_page(league, team, season)
-    tables = soup.findChildren('div', {'class':'responsive-table'})
+    tables = soup.findChildren('div', {'class': 'responsive-table'})
     results_body = tables[0].findChild('tbody')
     table_rows = results_body.findChildren('tr', {'style': True})
 
@@ -142,13 +142,13 @@ def collect_data(league, season):
         return ' '.join([lex.lower() for lex in lexemes])
 
     soup = parse_league_season_page(league, season)
-    tables = soup.findChildren('div', {'class':'responsive-table'})
+    tables = soup.findChildren('div', {'class': 'responsive-table'})
     league_table = tables[-1]
     results_body = league_table.findChild('tbody')
     table_rows = results_body.findChildren('tr')
     max_games = 0
     teams = set()
-    
+
     for row in table_rows:
         cells = row.findChildren('td')
         team_cell = cells[2]
@@ -158,8 +158,8 @@ def collect_data(league, season):
             if c == '/':
                 divider_indices.append(idx)
         assert len(divider_indices) == 6
-        team_name = team_href[divider_indices[0]+1:divider_indices[1]]
-        team_id = utils.parse_int(team_href[divider_indices[3]+1:divider_indices[4]])
+        team_name = team_href[divider_indices[0] + 1:divider_indices[1]]
+        team_id = utils.parse_int(team_href[divider_indices[3] + 1:divider_indices[4]])
         team = Team(sanitise_team_name(), team_id, season)
         teams.add(team)
         games_played = utils.parse_int(cells[3].string)
@@ -169,7 +169,7 @@ def collect_data(league, season):
     max_workers = 10
     workers = min(max_workers, len(teams))
     with futures.ThreadPoolExecutor(workers) as executor:
-        results = executor.map(rip_out_fixtures, 
+        results = executor.map(rip_out_fixtures,
                                [(league, team, season, max_games) for team in teams])
     list(results)
     return teams

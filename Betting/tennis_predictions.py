@@ -6,7 +6,6 @@ import sqlite3
 import sys
 import os
 import re
-from lib.utils import get_betting_directory
 
 
 class args:
