@@ -20,6 +20,18 @@ class Venue(Enum):
             messages.error_message("Venue '{}' is not valid".format(string))
 
 
+class Half(Enum):
+    first = auto()
+    second = auto()
+
+    @staticmethod
+    def from_string(string: str):
+        try:
+            return Half[string.lower()]
+        except KeyError:
+            messages.error_message("Half '{}' is not valid".format(string))
+
+
 class Result:
     __slots__ = ['left', 'right']
 
@@ -44,6 +56,18 @@ class Result:
 
     def not_drawn(self):
         return self.left != self.right
+
+    def scored(self):
+        return self.left > 0
+
+    def not_scored(self):
+        return self.left == 0
+
+    def conceded(self):
+        return self.right > 0
+
+    def not_conceded(self):
+        return self.right == 0
 
     def reverse(self) -> "Result":
         return Result(self.right, self.left)

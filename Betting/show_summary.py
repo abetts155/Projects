@@ -76,16 +76,25 @@ def main(arguments: Namespace):
             ax = axes[col_id]
         else:
             ax = axes[row_id, col_id]
-        x_values = ['HW', 'D', 'AW', 'HG', 'AG']
+
+        x_values_results = ['HW', 'D', 'AW']
+        x_values_goals = ['HG', 'AG']
+        x_values = x_values_results + x_values_goals
         stats = season_to_stats[season]
         y_values = [stats.home_wins, stats.draws, stats.away_wins, stats.home_goals, stats.away_goals]
         ax.bar(x_values, y_values)
         ax.set_ylim(0, ylim)
         ax.set_yticks([])
-        ax.set_title('{}: {} games'.format(season.year, stats.home_wins + stats.draws + stats.away_wins))
+        total_games = stats.home_wins + stats.draws + stats.away_wins
+        ax.set_title('{}: {} games'.format(season.year, total_games))
 
         for k, v in zip(x_values, y_values):
-            ax.text(k, v, str(v), ha='center', fontsize=8)
+            if k in x_values_results:
+                percentage = round((v/total_games) * 100)
+                text = '{} ({}%)'.format(v, percentage)
+            else:
+                text = str(v)
+            ax.text(k, v, text, ha='center', fontsize=6)
 
         if col_id == ncols - 1:
             row_id += 1

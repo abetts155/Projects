@@ -1,6 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from cli.cli import (add_database_option,
                      add_events_option,
+                     add_half_option,
                      add_history_option,
                      add_league_option,
                      add_team_option,
@@ -13,7 +14,7 @@ from collections import Counter
 from lib import messages
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import Result, Venue
+from model.fixtures import Half, Result, Venue
 from model.leagues import League, league_register
 from model.seasons import Season
 from model.sequences import count_events, BarChart
@@ -24,6 +25,7 @@ from typing import Callable, List
 def parse_command_line():
     parser = ArgumentParser(description='Show sequence data in bar charts')
     add_database_option(parser)
+    add_half_option(parser)
     add_events_option(parser)
     add_history_option(parser)
     add_league_option(parser)
@@ -36,6 +38,7 @@ def parse_command_line():
 def display_bar_graphs(event_function: Callable,
                        venue: Venue,
                        league: League,
+                       half: Half,
                        charts: List[BarChart]):
     x_limit = 0
     for chart in charts:
@@ -52,6 +55,9 @@ def display_bar_graphs(event_function: Callable,
         prologue = '{} ({} or {})'.format(Result.event_name(event_function), Venue.home.name, Venue.away.name)
     else:
         prologue = '{} ({} only)'.format(Result.event_name(event_function), venue.name)
+
+    if half:
+        prologue += ' ({} half)'.format(half.name)
 
     fig.suptitle('{} in {} {}'.format(prologue, league.country, league.name), fontweight='bold', fontsize=14)
 
@@ -137,6 +143,7 @@ def main(arguments: Namespace):
             count_events(season,
                          team,
                          arguments.venue,
+                         arguments.half,
                          event_function,
                          aggregated_history)
 
@@ -147,6 +154,7 @@ def main(arguments: Namespace):
             count_events(season,
                          team_history.team,
                          arguments.venue,
+                         arguments.half,
                          event_function,
                          team_history)
 
@@ -157,6 +165,7 @@ def main(arguments: Namespace):
             count_events(this_season,
                          team,
                          arguments.venue,
+                         arguments.half,
                          event_function,
                          aggregated_now)
 
@@ -166,10 +175,11 @@ def main(arguments: Namespace):
             count_events(this_season,
                          team_now.team,
                          arguments.venue,
+                         arguments.half,
                          event_function,
                          team_now)
 
-    display_bar_graphs(event_function, arguments.venue, league, charts)
+    display_bar_graphs(event_function, arguments.venue, league, arguments.half, charts)
 
 
 if __name__ == '__main__':

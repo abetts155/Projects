@@ -1,8 +1,7 @@
 from argparse import ArgumentParser, Namespace
-from cli.cli import add_database_option, add_events_option, add_logging_options, set_logging_options
+from cli.cli import add_database_option, add_events_option, add_logging_options, set_logging_options, add_half_option
 from datetime import date, datetime, timedelta
-from lib import messages
-from model.fixtures import Fixture
+from model.fixtures import Half, Fixture
 from model.leagues import league_register, League
 from model.seasons import Season
 from model.teams import create_team_from_row, Team
@@ -16,6 +15,7 @@ from typing import List
 
 def parse_command_line():
     parser = ArgumentParser(description='Show fixtures for today')
+    add_half_option(parser)
     add_database_option(parser)
     add_logging_options(parser)
     add_events_option(parser, False)
@@ -80,14 +80,15 @@ def output_fixtures(league: League, fixture_rows: List):
     return matches
 
 
-def analyse_sequences(db: Database, league_code: str, teams: List[Team], events: List[str]):
+def analyse_sequences(db: Database, league_code: str, teams: List[Team], events: List[str], half: Half):
     analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
     arguments = ['python3', str(analyse_script),
                  '--database', db.name,
                  '--no-header',
                  '-T', ':'.join([team.name for team in teams]),
                  '-E', *events,
-                 '-L', league_code]
+                 '-L', league_code,
+                 '--half', half.name]
     run(arguments)
 
 
@@ -111,7 +112,7 @@ def main(arguments: Namespace):
                         teams.append(away_team)
 
             if arguments.event and teams:
-                analyse_sequences(db, league_code, teams, arguments.event)
+                analyse_sequences(db, league_code, teams, arguments.event, arguments.half)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 from collections import Counter
-from model.fixtures import Venue
+from model.fixtures import Half, Venue
 from model.seasons import Season
 from model.teams import Team
 from typing import Callable, List
@@ -15,7 +15,7 @@ class BarChart:
         self.last = None
 
 
-def count_events(season: Season, team: Team, venue: Venue, event_function: Callable, chart: BarChart):
+def count_events(season: Season, team: Team, venue: Venue, half: Half, event_function: Callable, chart: BarChart):
     fixtures = []
     for fixture in season.fixtures():
         if fixture.first_half() is not None and fixture.second_half() is not None:
@@ -31,10 +31,16 @@ def count_events(season: Season, team: Team, venue: Venue, event_function: Calla
 
     sequence = []
     for fixture in fixtures:
-        if fixture.home_team == team:
-            result = fixture.full_time()
+        if half is not None:
+            if half == Half.first:
+                result = fixture.first_half()
+            else:
+                result = fixture.second_half()
         else:
-            result = fixture.full_time().reverse()
+            result = fixture.full_time()
+
+        if fixture.home_team != team:
+            result = result.reverse()
 
         if event_function(result):
             sequence.append(fixture)

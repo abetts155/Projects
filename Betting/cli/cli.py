@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from lib import messages
-from model.fixtures import Result, Venue
+from model.fixtures import Half, Result, Venue
 from model.leagues import country_register, league_register
 from typing import List
 
@@ -20,6 +20,14 @@ def add_venue_option(parser: ArgumentParser):
                         metavar='{{{}}}'.format(','.join(venue.name for venue in Venue)),
                         help='filter fixtures according to the venue',
                         default=Venue.any)
+
+
+def add_half_option(parser: ArgumentParser):
+    parser.add_argument('--half',
+                        choices=Half,
+                        type=Half.from_string,
+                        metavar='{{{}}}'.format(','.join(half.name for half in Half)),
+                        help='filter fixtures according to the half')
 
 
 def add_league_option(parser: ArgumentParser):
@@ -66,7 +74,11 @@ def add_events_option(parser: ArgumentParser, required: bool = True):
                      Result.won.__name__,
                      Result.not_drawn.__name__,
                      Result.not_lost.__name__,
-                     Result.not_won.__name__]
+                     Result.not_won.__name__,
+                     Result.scored.__name__,
+                     Result.not_scored.__name__,
+                     Result.conceded.__name__,
+                     Result.not_conceded.__name__]
 
     parser.add_argument('-E',
                         '--event',

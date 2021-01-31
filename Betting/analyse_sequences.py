@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from cli.cli import (add_database_option,
+                     add_half_option,
                      add_history_option,
                      add_league_option,
                      add_team_option,
@@ -11,7 +12,7 @@ from cli.cli import (add_database_option,
 from collections import Counter
 from datetime import date, datetime, timedelta
 from lib import messages
-from model.fixtures import Fixture, Result
+from model.fixtures import Half, Fixture, Result
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -25,6 +26,7 @@ from typing import Callable
 def parse_command_line():
     parser = ArgumentParser(description='Analyse sequence data and predict outcomes')
     add_database_option(parser)
+    add_half_option(parser)
     add_history_option(parser)
     add_league_option(parser)
     add_team_option(parser)
@@ -62,6 +64,7 @@ def probability(current_run: int, counter: Counter) -> float:
 def output_prediction(database_name: str,
                       season: Season,
                       team: Team,
+                      half: Half,
                       aggregated_history: BarChart,
                       team_history: BarChart,
                       team_now: BarChart,
@@ -107,6 +110,8 @@ def output_prediction(database_name: str,
                                                                   Result.event_name(event_function).upper(),
                                                                   team_now.last,
                                                                   'games' if team_now.last > 1 else 'game')
+                    if half:
+                        header += ' ({} half)'.format(half.name)
                     next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
                                                                            home_team.name,
                                                                            away_team.name)
@@ -152,7 +157,7 @@ def main(arguments: Namespace):
                 histories[event] = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
                 for season in seasons:
                     for team in season.teams():
-                        count_events(season, team, arguments.venue, event, histories[event])
+                        count_events(season, team, arguments.venue, arguments.half, event, histories[event])
 
             if not arguments.no_header:
                 messages.vanilla_message("{} Analysing sequences for {} {} {}".format('*' * 80 + '\n',
@@ -164,15 +169,16 @@ def main(arguments: Namespace):
                 for event in events:
                     team_history = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
                     for season in seasons:
-                        count_events(season, team, arguments.venue, event, team_history)
+                        count_events(season, team, arguments.venue, arguments.half, event, team_history)
 
                     team_now = BarChart(Counter(), [this_season.year], team)
-                    count_events(this_season, team, arguments.venue, event, team_now)
+                    count_events(this_season, team, arguments.venue, arguments.half, event, team_now)
 
                     if team_now.last:
                         output_prediction(arguments.database,
                                           this_season,
                                           team,
+                                          arguments.half,
                                           histories[event],
                                           team_history,
                                           team_now,
