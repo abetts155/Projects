@@ -36,6 +36,7 @@ def parse_command_line():
 
 
 def display_bar_graphs(event_function: Callable,
+                       negate: bool,
                        venue: Venue,
                        league: League,
                        half: Half,
@@ -51,10 +52,12 @@ def display_bar_graphs(event_function: Callable,
     else:
         fig, axes = plt.subplots(2, figsize=(20, 10))
 
+    event = Result.event_name(event_function, negate)
+
     if venue == Venue.any:
-        prologue = '{} ({} or {})'.format(Result.event_name(event_function), Venue.home.name, Venue.away.name)
+        prologue = '{} ({} or {})'.format(event, Venue.home.name, Venue.away.name)
     else:
-        prologue = '{} ({} only)'.format(Result.event_name(event_function), venue.name)
+        prologue = '{} ({} only)'.format(event, venue.name)
 
     if half:
         prologue += ' ({} half)'.format(half.name)
@@ -145,6 +148,7 @@ def main(arguments: Namespace):
                          arguments.venue,
                          arguments.half,
                          event_function,
+                         arguments.negate,
                          aggregated_history)
 
     if selected_team is not None:
@@ -156,6 +160,7 @@ def main(arguments: Namespace):
                          arguments.venue,
                          arguments.half,
                          event_function,
+                         arguments.negate,
                          team_history)
 
     if this_season is not None:
@@ -167,6 +172,7 @@ def main(arguments: Namespace):
                          arguments.venue,
                          arguments.half,
                          event_function,
+                         arguments.negate,
                          aggregated_now)
 
         if selected_team is not None:
@@ -177,9 +183,10 @@ def main(arguments: Namespace):
                          arguments.venue,
                          arguments.half,
                          event_function,
+                         arguments.negate,
                          team_now)
 
-    display_bar_graphs(event_function, arguments.venue, league, arguments.half, charts)
+    display_bar_graphs(event_function, arguments.negate, arguments.venue, league, arguments.half, charts)
 
 
 if __name__ == '__main__':

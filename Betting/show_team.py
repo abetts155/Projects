@@ -74,12 +74,12 @@ def update_stats(stats: Statistics, result: Result):
     stats.goals_for += result.left
     stats.goals_against += result.right
 
-    if result.won():
+    if result.win():
         stats.wins += 1
-    elif result.lost():
+    elif result.defeat():
         stats.losses += 1
     else:
-        assert result.drawn()
+        assert result.draw()
         stats.draws += 1
 
     if result.left > 0 and result.right > 0:

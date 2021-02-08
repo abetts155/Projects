@@ -69,16 +69,18 @@ def add_team_option(parser: ArgumentParser):
 
 
 def add_events_option(parser: ArgumentParser, required: bool = True):
-    event_choices = [Result.drawn.__name__,
-                     Result.lost.__name__,
-                     Result.won.__name__,
-                     Result.not_drawn.__name__,
-                     Result.not_lost.__name__,
-                     Result.not_won.__name__,
-                     Result.scored.__name__,
-                     Result.not_scored.__name__,
-                     Result.conceded.__name__,
-                     Result.not_conceded.__name__]
+    event_choices = [Result.draw.__name__,
+                     Result.defeat.__name__,
+                     Result.win.__name__,
+                     Result.goals_for.__name__,
+                     Result.goals_against.__name__,
+                     Result.more_than_0.__name__,
+                     Result.more_than_1.__name__,
+                     Result.more_than_2.__name__,
+                     Result.more_than_3.__name__,
+                     Result.more_than_4.__name__,
+                     Result.more_than_5.__name__,
+                     Result.btts.__name__]
 
     parser.add_argument('-E',
                         '--event',
@@ -87,6 +89,19 @@ def add_events_option(parser: ArgumentParser, required: bool = True):
                         type=str.lower,
                         help='choose event to analyse',
                         required=required)
+
+    parser.add_argument('-n',
+                        '--negate',
+                        action='store_true',
+                        help='negate the event',
+                        default=False)
+
+
+def add_minimum_option(parser: ArgumentParser):
+    parser.add_argument('--minimum',
+                        type=int,
+                        help='the minimum sequence length threshold',
+                        default=1)
 
 
 def add_logging_options(parser: ArgumentParser):
@@ -102,10 +117,17 @@ def add_logging_options(parser: ArgumentParser):
                         help='print verbose messages',
                         default=False)
 
+    parser.add_argument('--no-warnings',
+                        action='store_true',
+                        help='suppress warning messages',
+                        default=False)
+
 
 def set_logging_options(arguments: Namespace):
     messages.verbose = arguments.verbose
     messages.debug = arguments.debug
+    if arguments.no_warnings:
+        messages.warnings = False
 
 
 def get_unique_league(arguments: Namespace) -> str:

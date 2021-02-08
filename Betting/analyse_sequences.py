@@ -4,6 +4,7 @@ from cli.cli import (add_database_option,
                      add_history_option,
                      add_league_option,
                      add_team_option,
+                     add_minimum_option,
                      add_logging_options,
                      add_venue_option,
                      add_events_option,
@@ -29,6 +30,7 @@ def parse_command_line():
     add_half_option(parser)
     add_history_option(parser)
     add_league_option(parser)
+    add_minimum_option(parser)
     add_team_option(parser)
     add_venue_option(parser)
     add_events_option(parser)
@@ -61,6 +63,15 @@ def probability(current_run: int, counter: Counter) -> float:
         return numerator / sum(counter.values())
 
 
+class Text:
+    BLUE = '\033[94m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+
 def output_prediction(database_name: str,
                       season: Season,
                       team: Team,
@@ -69,6 +80,7 @@ def output_prediction(database_name: str,
                       team_history: BarChart,
                       team_now: BarChart,
                       event_function: Callable,
+                      negate: bool,
                       threshold: float,
                       show_match: bool):
     aggregated_probability = probability(team_now.last, aggregated_history.counter)
@@ -98,20 +110,31 @@ def output_prediction(database_name: str,
             fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
             fixture_rows.sort(key=lambda row: row[1])
             fixture_rows = [row for row in fixture_rows if datetime.fromisoformat(row[1]).date() >= date.today()]
+
             if fixture_rows:
                 row = fixture_rows[0]
                 match_date = datetime.fromisoformat(row[1])
-                match_date = match_date + timedelta(hours=1)
                 window = datetime.now() + timedelta(hours=12)
+
                 if match_date.date() <= window.date() or show_match:
+                    event = Result.event_name(event_function, negate)
+                    header = '{} {}{}{} in the last {}{}{} {}'.format('>' * 10,
+                                                                      Text.BLUE,
+                                                                      event,
+                                                                      Text.END,
+                                                                      Text.BOLD,
+                                                                      team_now.last,
+                                                                      Text.END,
+                                                                      'games' if team_now.last > 1 else 'game')
+
+                    if half:
+                        header = '{} ({}{} half{})'.format(header, Text.UNDERLINE, half.name, Text.END)
+
+                    header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
+
                     home_team = Team.inventory[row[3]]
                     away_team = Team.inventory[row[4]]
-                    header = '{} {} has {} the last {} {}'.format('>' * 10, team.name,
-                                                                  Result.event_name(event_function).upper(),
-                                                                  team_now.last,
-                                                                  'games' if team_now.last > 1 else 'game')
-                    if half:
-                        header += ' ({} half)'.format(half.name)
+
                     next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
                                                                            home_team.name,
                                                                            away_team.name)
@@ -147,17 +170,20 @@ def main(arguments: Namespace):
             else:
                 teams = this_season.teams()
 
-            if arguments.event:
-                events = [getattr(Result, event) for event in arguments.event]
-            else:
-                events = [Result.not_drawn, Result.not_lost, Result.not_won]
+            events = [getattr(Result, event) for event in arguments.event]
 
             histories = {}
             for event in events:
                 histories[event] = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
                 for season in seasons:
                     for team in season.teams():
-                        count_events(season, team, arguments.venue, arguments.half, event, histories[event])
+                        count_events(season,
+                                     team,
+                                     arguments.venue,
+                                     arguments.half,
+                                     event,
+                                     arguments.negate,
+                                     histories[event])
 
             if not arguments.no_header:
                 messages.vanilla_message("{} Analysing sequences for {} {} {}".format('*' * 80 + '\n',
@@ -169,12 +195,24 @@ def main(arguments: Namespace):
                 for event in events:
                     team_history = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
                     for season in seasons:
-                        count_events(season, team, arguments.venue, arguments.half, event, team_history)
+                        count_events(season,
+                                     team,
+                                     arguments.venue,
+                                     arguments.half,
+                                     event,
+                                     arguments.negate,
+                                     team_history)
 
                     team_now = BarChart(Counter(), [this_season.year], team)
-                    count_events(this_season, team, arguments.venue, arguments.half, event, team_now)
+                    count_events(this_season,
+                                 team,
+                                 arguments.venue,
+                                 arguments.half,
+                                 event,
+                                 arguments.negate,
+                                 team_now)
 
-                    if team_now.last:
+                    if team_now.last is not None and team_now.last >= arguments.minimum:
                         output_prediction(arguments.database,
                                           this_season,
                                           team,
@@ -183,6 +221,7 @@ def main(arguments: Namespace):
                                           team_history,
                                           team_now,
                                           event,
+                                          arguments.negate,
                                           arguments.probability,
                                           arguments.show_match)
         else:

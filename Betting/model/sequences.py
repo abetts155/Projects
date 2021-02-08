@@ -15,7 +15,13 @@ class BarChart:
         self.last = None
 
 
-def count_events(season: Season, team: Team, venue: Venue, half: Half, event_function: Callable, chart: BarChart):
+def count_events(season: Season,
+                 team: Team,
+                 venue: Venue,
+                 half: Half,
+                 event_function: Callable,
+                 negate: bool,
+                 chart: BarChart):
     fixtures = []
     for fixture in season.fixtures():
         if fixture.first_half() is not None and fixture.second_half() is not None:
@@ -42,7 +48,12 @@ def count_events(season: Season, team: Team, venue: Venue, half: Half, event_fun
         if fixture.home_team != team:
             result = result.reverse()
 
-        if event_function(result):
+        if negate:
+            outcome = not event_function(result)
+        else:
+            outcome = event_function(result)
+
+        if outcome:
             sequence.append(fixture)
         else:
             chart.last = len(sequence)

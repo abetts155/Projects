@@ -39,35 +39,41 @@ class Result:
         self.left = left
         self.right = right
 
-    def won(self):
+    def win(self):
         return self.left > self.right
 
-    def not_won(self):
-        return self.left <= self.right
-
-    def lost(self):
+    def defeat(self):
         return self.left < self.right
 
-    def not_lost(self):
-        return self.left >= self.right
-
-    def drawn(self):
+    def draw(self):
         return self.left == self.right
 
-    def not_drawn(self):
-        return self.left != self.right
-
-    def scored(self):
+    def goals_for(self):
         return self.left > 0
 
-    def not_scored(self):
-        return self.left == 0
-
-    def conceded(self):
+    def goals_against(self):
         return self.right > 0
 
-    def not_conceded(self):
-        return self.right == 0
+    def more_than_0(self):
+        return self.left + self.right > 0
+
+    def more_than_1(self):
+        return self.left + self.right > 1
+
+    def more_than_2(self):
+        return self.left + self.right > 2
+
+    def more_than_3(self):
+        return self.left + self.right > 3
+    
+    def more_than_4(self):
+        return self.left + self.right > 4
+
+    def more_than_5(self):
+        return self.left + self.right > 5
+
+    def btts(self):
+        return self.left > 0 and self.right > 0
 
     def reverse(self) -> "Result":
         return Result(self.right, self.left)
@@ -76,10 +82,13 @@ class Result:
         return '{}-{}'.format(self.left, self.right)
 
     @staticmethod
-    def event_name(function: Callable) -> str:
+    def event_name(function: Callable, negate: bool) -> str:
         tokens = function.__name__.split('_')
-        tokens[0] = tokens[0].capitalize()
-        return ' '.join(tokens)
+        if negate:
+            return 'No {}'.format(' '.join(tokens))
+        else:
+            tokens[0] = tokens[0].capitalize()
+            return ' '.join(tokens)
 
 
 class Fixture:

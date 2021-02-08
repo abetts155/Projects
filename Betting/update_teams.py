@@ -13,12 +13,19 @@ def parse_command_line():
     add_database_option(parser)
     add_logging_options(parser)
     add_country_option(parser)
+
+    parser.add_argument('-f',
+                        '--force',
+                        action='store_true',
+                        help='force an update',
+                        default=False)
+
     return parser.parse_args()
 
 
-def create_teams_json(country: str):
+def create_teams_json(country: str, force: bool):
     teams_json = get_teams_json(country)
-    if not teams_json.exists():
+    if not teams_json.exists() or force:
         messages.verbose_message("Extracting teams JSON for '{}'".format(country))
         store(teams_json, get_teams(country))
 
@@ -33,7 +40,7 @@ def load_team_data(country: str):
 
 def main(arguments: Namespace):
     for country in arguments.country:
-        create_teams_json(country)
+        create_teams_json(country, arguments.force)
         load_team_data(country)
 
     with Database(arguments.database) as db:

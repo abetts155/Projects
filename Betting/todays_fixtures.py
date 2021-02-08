@@ -1,7 +1,13 @@
 from argparse import ArgumentParser, Namespace
-from cli.cli import add_database_option, add_events_option, add_logging_options, set_logging_options, add_half_option
+from cli.cli import (add_database_option,
+                     add_venue_option,
+                     add_events_option,
+                     add_minimum_option,
+                     add_logging_options,
+                     set_logging_options,
+                     add_half_option)
 from datetime import date, datetime, timedelta
-from model.fixtures import Half, Fixture
+from model.fixtures import Half, Fixture, Venue
 from model.leagues import league_register, League
 from model.seasons import Season
 from model.teams import create_team_from_row, Team
@@ -16,7 +22,9 @@ from typing import List
 def parse_command_line():
     parser = ArgumentParser(description='Show fixtures for today')
     add_half_option(parser)
+    add_venue_option(parser)
     add_database_option(parser)
+    add_minimum_option(parser)
     add_logging_options(parser)
     add_events_option(parser, False)
     return parser.parse_args()
@@ -70,7 +78,7 @@ def output_fixtures(league: League, fixture_rows: List):
     for row in fixture_rows:
         home_team = Team.inventory[row[3]]
         away_team = Team.inventory[row[4]]
-        match_date = datetime.fromisoformat(row[1]) + timedelta(hours=1)
+        match_date = datetime.fromisoformat(row[1])
         next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
                                                                home_team.name,
                                                                away_team.name)
@@ -80,15 +88,32 @@ def output_fixtures(league: League, fixture_rows: List):
     return matches
 
 
-def analyse_sequences(db: Database, league_code: str, teams: List[Team], events: List[str], half: Half):
+def analyse_sequences(db: Database,
+                      league_code:
+                      str, teams: List[Team],
+                      events: List[str],
+                      negate: bool,
+                      venue: Venue,
+                      half: Half,
+                      minimum: int):
     analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
     arguments = ['python3', str(analyse_script),
                  '--database', db.name,
                  '--no-header',
+                 '--no-warnings',
                  '-T', ':'.join([team.name for team in teams]),
                  '-E', *events,
                  '-L', league_code,
-                 '--half', half.name]
+                 '--minimum', str(minimum)]
+
+    if negate:
+        arguments.append('--negate')
+
+    if venue:
+        arguments.extend(['--venue', venue.name])
+
+    if half:
+        arguments.extend(['--half', half.name])
     run(arguments)
 
 
@@ -100,7 +125,8 @@ def main(arguments: Namespace):
 
         for league_code, league in league_register.items():
             season = get_current_season(db, league)
-            teams = []
+            home_teams = []
+            away_teams = []
 
             if season is not None:
                 season_id = season[0]
@@ -108,11 +134,18 @@ def main(arguments: Namespace):
                 if fixtures_rows:
                     team_pairs = output_fixtures(league, fixtures_rows)
                     for home_team, away_team in team_pairs:
-                        teams.append(home_team)
-                        teams.append(away_team)
+                        home_teams.append(home_team)
+                        away_teams.append(away_team)
 
-            if arguments.event and teams:
-                analyse_sequences(db, league_code, teams, arguments.event, arguments.half)
+            if arguments.event and home_teams and away_teams:
+                analyse_sequences(db,
+                                  league_code,
+                                  home_teams + away_teams,
+                                  arguments.event,
+                                  arguments.negate,
+                                  arguments.venue,
+                                  arguments.half,
+                                  arguments.minimum)
 
 
 if __name__ == '__main__':
