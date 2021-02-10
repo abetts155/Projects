@@ -1,10 +1,12 @@
 from enum import Enum, auto
+from functools import wraps
 from lib import messages
 from model.teams import Team
 from sql import sql_columns, sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
 from typing import Callable, Dict, List
 import datetime
+import re
 
 
 class Venue(Enum):
@@ -32,6 +34,17 @@ class Half(Enum):
             messages.error_message("Half '{}' is not valid".format(string))
 
 
+def prettify(description: str):
+    def outer_decorator(func):
+        @wraps(func)
+        def inner_decorator(*args, **kwargs):
+            response = func(*args, **kwargs)
+            func.description = description
+            return response
+        return inner_decorator
+    return outer_decorator
+
+
 class Result:
     __slots__ = ['left', 'right']
 
@@ -39,41 +52,57 @@ class Result:
         self.left = left
         self.right = right
 
+    @prettify('W')
     def win(self):
         return self.left > self.right
 
+    @prettify('L')
     def defeat(self):
         return self.left < self.right
 
+    @prettify('D')
     def draw(self):
         return self.left == self.right
 
+    @prettify('GF')
     def goals_for(self):
         return self.left > 0
 
+    @prettify('GA')
     def goals_against(self):
         return self.right > 0
 
+    @prettify('>0')
     def more_than_0(self):
         return self.left + self.right > 0
 
+    @prettify('>1')
     def more_than_1(self):
         return self.left + self.right > 1
 
+    @prettify('>2')
     def more_than_2(self):
         return self.left + self.right > 2
 
+    @prettify('>3')
     def more_than_3(self):
         return self.left + self.right > 3
-    
+
+    @prettify('>4')
     def more_than_4(self):
         return self.left + self.right > 4
 
+    @prettify('>5')
     def more_than_5(self):
         return self.left + self.right > 5
 
-    def btts(self):
+    @prettify('BTS')
+    def bts(self):
         return self.left > 0 and self.right > 0
+
+    @prettify('0')
+    def blank(self):
+        return self.left == 0 and self.right == 0
 
     def reverse(self) -> "Result":
         return Result(self.right, self.left)
@@ -82,8 +111,8 @@ class Result:
         return '{}-{}'.format(self.left, self.right)
 
     @staticmethod
-    def event_name(function: Callable, negate: bool) -> str:
-        tokens = function.__name__.split('_')
+    def event_name(func: Callable, negate: bool) -> str:
+        tokens = func.__name__.split('_')
         if negate:
             return 'No {}'.format(' '.join(tokens))
         else:
@@ -150,6 +179,12 @@ class Fixture:
             return Result(self.full_time().left - self.first_half().left,
                           self.full_time().right - self.first_half().right)
 
+    def canonicalise_result(self, team: Team) -> Result:
+        if self.home_team == team:
+            return self.full_time()
+        else:
+            return self.full_time().reverse()
+
     @property
     def finished(self) -> int:
         return self._finished
@@ -198,26 +233,53 @@ class Fixture:
                                                             self.away_team.name if self.away_team else None)
 
 
+round_regexes = [re.compile(r'Regular Season - \d+'),
+                 re.compile(r'Girone [A-C] - \d+'),
+                 re.compile(r'Clausura - \d+'),
+                 re.compile(r'Apertura - \d+'),
+                 re.compile(r'Liguilla - \d+'),
+                 re.compile(r'1st Stage - \d+'),
+                 re.compile(r'2nd Stage - \d+'),
+                 re.compile(r'1st Phase - \d+'),
+                 re.compile(r'2nd Phase - \d+'),
+                 re.compile(r'K-League Challenge - Round \d+'),
+                 re.compile(r'Women Bundesliga - Round \d+'),
+                 re.compile(r'Serie A Women - Round \d+'),
+                 re.compile(r'Feminine Division 1 - Round \d+'),
+                 re.compile(r'Primera Division Women - Round \d+'),
+                 re.compile(r'FA WSL \(Women Super League\) - Round \d+')]
+
+
+def is_regular_fixture(round: str):
+    for regex in round_regexes:
+        if regex.match(round):
+            return True
+    return False
+
+
 def create_fixture_from_json(data: Dict):
-    id_ = int(data['fixture_id'])
-    date = datetime.datetime.fromisoformat(data['event_date'])
-    season_id = int(data['league_id'])
-    home_id = int(data['homeTeam']['team_id'])
-    home_team = Team.inventory[home_id]
-    away_id = int(data['awayTeam']['team_id'])
-    away_team = Team.inventory[away_id]
-    half_time = data['score']['halftime']
-    full_time = data['score']['fulltime']
-    finished = True if data['status'] == 'Match Finished' else False
-    fixture = Fixture(id_,
-                      date,
-                      season_id,
-                      home_team,
-                      away_team,
-                      half_time,
-                      full_time,
-                      finished)
-    Fixture.inventory[fixture.id] = fixture
+    if is_regular_fixture(data['round']):
+        id_ = int(data['fixture_id'])
+        date = datetime.datetime.fromisoformat(data['event_date'])
+        season_id = int(data['league_id'])
+        home_id = int(data['homeTeam']['team_id'])
+        home_team = Team.inventory[home_id]
+        away_id = int(data['awayTeam']['team_id'])
+        away_team = Team.inventory[away_id]
+        half_time = data['score']['halftime']
+        full_time = data['score']['fulltime']
+        finished = True if data['status'] == 'Match Finished' else False
+        fixture = Fixture(id_,
+                          date,
+                          season_id,
+                          home_team,
+                          away_team,
+                          half_time,
+                          full_time,
+                          finished)
+        Fixture.inventory[fixture.id] = fixture
+    else:
+        messages.warning_message('Ignoring fixture. Round is {}.'.format(data['round']))
 
 
 def create_fixture_from_row(row: List):

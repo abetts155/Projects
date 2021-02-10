@@ -70,7 +70,6 @@ def get_fixtures(db: Database, season_id: int):
 
 
 def output_fixtures(league: League, fixture_rows: List):
-    matches = []
     print("{} Fixtures in {} {} {}".format('*' * 80 + '\n',
                                            league.country,
                                            league.name,
@@ -82,10 +81,8 @@ def output_fixtures(league: League, fixture_rows: List):
         next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
                                                                home_team.name,
                                                                away_team.name)
-        matches.append((home_team, away_team))
         print(next_match_message)
     print()
-    return matches
 
 
 def analyse_sequences(db: Database,
@@ -99,7 +96,6 @@ def analyse_sequences(db: Database,
     analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
     arguments = ['python3', str(analyse_script),
                  '--database', db.name,
-                 '--no-header',
                  '--no-warnings',
                  '-T', ':'.join([team.name for team in teams]),
                  '-E', *events,
@@ -114,6 +110,7 @@ def analyse_sequences(db: Database,
 
     if half:
         arguments.extend(['--half', half.name])
+
     run(arguments)
 
 
@@ -125,27 +122,28 @@ def main(arguments: Namespace):
 
         for league_code, league in league_register.items():
             season = get_current_season(db, league)
-            home_teams = []
-            away_teams = []
 
             if season is not None:
                 season_id = season[0]
-                fixtures_rows = get_fixtures(db, season_id)
-                if fixtures_rows:
-                    team_pairs = output_fixtures(league, fixtures_rows)
-                    for home_team, away_team in team_pairs:
-                        home_teams.append(home_team)
-                        away_teams.append(away_team)
+                fixture_rows = get_fixtures(db, season_id)
 
-            if arguments.event and home_teams and away_teams:
-                analyse_sequences(db,
-                                  league_code,
-                                  home_teams + away_teams,
-                                  arguments.event,
-                                  arguments.negate,
-                                  arguments.venue,
-                                  arguments.half,
-                                  arguments.minimum)
+                if fixture_rows:
+                    if arguments.event:
+                        teams = []
+                        for row in fixture_rows:
+                            teams.append(Team.inventory[row[3]])
+                            teams.append(Team.inventory[row[4]])
+
+                        analyse_sequences(db,
+                                          league_code,
+                                          teams,
+                                          arguments.event,
+                                          arguments.negate,
+                                          arguments.venue,
+                                          arguments.half,
+                                          arguments.minimum)
+                    else:
+                        output_fixtures(league, fixture_rows)
 
 
 if __name__ == '__main__':

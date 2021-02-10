@@ -41,6 +41,12 @@ def add_league_option(parser: ArgumentParser):
                         required=True)
 
 
+def get_country(value: str):
+    delimiter = '-'
+    lexemes = value.split(delimiter)
+    return delimiter.join(lex.capitalize() for lex in lexemes)
+
+
 def add_country_option(parser: ArgumentParser):
     parser.add_argument('-C',
                         '--country',
@@ -48,7 +54,7 @@ def add_country_option(parser: ArgumentParser):
                         metavar='<NAME>',
                         nargs='+',
                         choices=country_register,
-                        type=str.capitalize,
+                        type=get_country,
                         required=True)
 
 
@@ -80,7 +86,7 @@ def add_events_option(parser: ArgumentParser, required: bool = True):
                      Result.more_than_3.__name__,
                      Result.more_than_4.__name__,
                      Result.more_than_5.__name__,
-                     Result.btts.__name__]
+                     Result.bts.__name__]
 
     parser.add_argument('-E',
                         '--event',

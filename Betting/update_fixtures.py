@@ -8,9 +8,11 @@ from model.fixtures import Fixture, create_fixture_from_json
 from model.leagues import league_register
 from model.seasons import Season, create_season_from_json
 from model.teams import Team, create_team_from_row
+from os import EX_OK
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
 from sql.sql import Database
+from sys import exit
 
 
 def parse_command_line():
@@ -82,6 +84,7 @@ def main(arguments: Namespace):
                 load_fixture_data(row[0])
                 db.create_table(Fixture)
                 db.create_rows(Fixture)
+    exit(EX_OK)
 
 
 if __name__ == '__main__':

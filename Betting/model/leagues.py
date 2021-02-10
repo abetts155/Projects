@@ -13,7 +13,9 @@ class League:
         return '{} {}'.format(self.country, self.name)
 
 
-country_register = {
+country_register = [
+    'Algeria',
+    'Australia',
     'Austria',
     'Azerbaidjan',
     'Belarus',
@@ -24,6 +26,7 @@ country_register = {
     'Canada',
     'Chile',
     'Colombia',
+    'Costa-Rica',
     'Croatia',
     'Cyprus',
     'Czech-Republic',
@@ -36,6 +39,8 @@ country_register = {
     'France',
     'Germany',
     'Greece',
+    'Guatemala',
+    'Honduras',
     'Hungary',
     'Iran',
     'Ireland',
@@ -53,7 +58,10 @@ country_register = {
     'Mexico',
     'Montenegro',
     'Netherlands',
+    'New-Zealand',
+    'Northern-Ireland',
     'Norway',
+    'Oman',
     'Panama',
     'Paraguay',
     'Peru',
@@ -75,14 +83,15 @@ country_register = {
     'Thailand',
     'Turkey',
     'Ukraine',
+    'United-Arab-Emirates',
     'USA',
     'Venezuela',
     'Vietnam',
-    'Wales'
-}
-
+    'Wales']
 
 league_register = OrderedDict({
+    'ALG1': League('Algeria', 'Ligue 1'),
+    'AUS1': League('Australia', 'A-League'),
     'AUT1': League('Austria', 'Tipp3 Bundesliga'),
     'AUT2': League('Austria', 'Erste Liga'),
     'AZE1': League('Azerbaidjan', 'Premyer Liqa'),
@@ -94,19 +103,20 @@ league_register = OrderedDict({
     'BGR2': League('Bulgaria', 'B PFG'),
     'BIH1': League('Bosnia', 'Premijer Liga'),
     'BLR1': League('Belarus', 'Vysshaya Liga'),
-    'CAN1': League('Canada', 'Canadian Premier League'),
     'CHE1': League('Switzerland', 'Super League'),
     'CHE2': League('Switzerland', 'Challenge League'),
     'CHL1': League('Chile', 'Primera Division'),
     'CHL2': League('Chile', 'Primera B'),
     'COL1': League('Colombia', 'Primera A'),
     'COL2': League('Colombia', 'Primera B'),
+    'CRI1': League('Costa-Rica', 'Primera Division'),
+    'CRI2': League('Costa-Rica', 'Liga De Ascenso'),
     'CYP1': League('Cyprus', '1. Division'),
-    'CYP2': League('Cyprus', '2. Division'),
     'CZE1': League('Czech-Republic', 'Czech Liga'),
     'CZE2': League('Czech-Republic', 'FNL'),
     'DEU1': League('Germany', 'Bundesliga 1'),
     'DEU2': League('Germany', 'Bundesliga 2'),
+    'DEU3': League('Germany', 'Liga 3'),
     'DEU1W': League('Germany', 'Women Bundesliga'),
     'DNK1': League('Denmark', 'Superligaen'),
     'DNK2': League('Denmark', 'Viasat Divisionen'),
@@ -133,8 +143,10 @@ league_register = OrderedDict({
     'FRA1': League('France', 'Ligue 1'),
     'FRA2': League('France', 'Ligue 2'),
     'FRA3': League('France', 'National'),
-    'GER3': League('Germany', 'Liga 3'),
+    'FRA1W': League('France', 'Feminine Division 1'),
     'GRC1': League('Greece', 'Super League'),
+    'GTM1': League('Guatemala', 'Primera Division'),
+    'HND1': League('Honduras', 'Liga Nacional de Fútbol'),
     'HRV1': League('Croatia', 'Prva HNL'),
     'HRV2': League('Croatia', 'Druga HNL'),
     'HUN1': League('Hungary', 'NB I'),
@@ -167,10 +179,13 @@ league_register = OrderedDict({
     'MNE2': League('Montenegro', 'Second League'),
     'MYS1': League('Malaysia', 'Super League'),
     'MYS2': League('Malaysia', 'Premier League'),
+    'NI1': League('Northern-Ireland', 'Premiership'),
+    'NI2': League('Northern-Ireland', 'Championship'),
     'NLD1': League('Netherlands', 'Eredivisie'),
     'NLD2': League('Netherlands', 'Eerste Divisie'),
     'NOR1': League('Norway', 'Eliteserien'),
     'NOR2': League('Norway', 'OBOS-ligaen'),
+    'OMN': League('Oman', 'Professional League'),
     'PAN1': League('Panama', 'Liga Panameña de Fútbol'),
     'PAR1': League('Paraguay', 'Primera Division - Apertura'),
     'PER1': League('Peru', 'Primera Division'),
@@ -202,17 +217,19 @@ league_register = OrderedDict({
     'TUR1': League('Turkey', 'Super Lig'),
     'TUR2': League('Turkey', 'TFF 1. Lig'),
     'TUR3': League('Turkey', 'TFF 2. Lig'),
+    'UAE1': League('United-Arab-Emirates', 'Arabian Gulf League'),
+    'UAE2': League('United-Arab-Emirates', 'Division 1'),
     'UKR1': League('Ukraine', 'Premier League'),
     'UKR2': League('Ukraine', 'Persha League'),
     'USA1': League('USA', 'Major League Soccer'),
     'VEN1': League('Venezuela', 'Primera Division'),
+    'VEN2': League('Venezuela', 'Segunda Division'),
     'VIE1': League('Vietnam', 'V.League 1'),
     'WAL1': League('Wales', 'Premier'),
     'XXK1': League('Kosovo', 'Superliga'),
     'ZAF1': League('South-Africa', 'Premier Soccer League'),
     'ZAF2': League('South-Africa', '1st Division')
 })
-
 
 for league in league_register.values():
     if league.country not in country_register:

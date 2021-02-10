@@ -5,7 +5,9 @@ from football_api.structure import get_teams_json, store
 from json import load
 from lib import messages
 from model.teams import Team, create_team_from_json
+from os import EX_OK
 from sql.sql import Database
+from sys import exit
 
 
 def parse_command_line():
@@ -46,6 +48,8 @@ def main(arguments: Namespace):
     with Database(arguments.database) as db:
         db.create_table(Team)
         db.create_rows(Team)
+
+    exit(EX_OK)
 
 
 if __name__ == '__main__':
