@@ -10,12 +10,14 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from collections import OrderedDict
 from enum import auto, Enum
+from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message, warning_message
+from math import ceil
 from matplotlib import pyplot as plt
-from model.fixtures import Result
-from model.leagues import league_register
+from model.fixtures import Half, Result
+from model.leagues import league_register, League
 from model.seasons import Season
-from model.tables import LeagueTable
+from model.tables import LeagueTable, TableMap
 from seaborn import heatmap
 from sql.sql import load_database
 from typing import List
@@ -25,7 +27,8 @@ import pandas as pd
 
 
 class Analysis(Enum):
-    RESULTS = auto()
+    RESULT = auto()
+    SCORED = auto()
     GOALS = auto()
 
     @staticmethod
@@ -34,6 +37,32 @@ class Analysis(Enum):
             return Analysis[string.upper()]
         except KeyError:
             error_message("Analysis '{}' is not valid".format(string))
+
+
+class Predicates:
+    __slots__ = ['functions', 'labels', 'mutual_exclusion']
+
+    def __init__(self, functions, labels, mutual_exclusion: bool):
+        assert len(functions) == len(labels)
+        self.functions = functions
+        self.labels = labels
+        self.mutual_exclusion = mutual_exclusion
+
+
+predicate_table = {
+    Analysis.RESULT: Predicates([Result.win, Result.draw, Result.defeat],
+                                ['W', 'D', 'L'],
+                                False),
+
+    Analysis.SCORED: Predicates([Result.bts, Result.goals_for, Result.goals_against, Result.blank],
+                                ['BTS', 'GF', 'GA', 'Z'],
+                                True),
+
+    Analysis.GOALS: Predicates([Result.more_than_5, Result.exactly_5, Result.exactly_4, Result.exactly_3,
+                                Result.exactly_2, Result.exactly_1, Result.exactly_0],
+                               ['>5', '5', '4', '3', '2', '1', '0'],
+                               False)
+}
 
 
 def parse_command_line():
@@ -69,67 +98,47 @@ def create_numpy_matrix(rows: int, columns: int):
     return array
 
 
-class ResultsMatrix:
-    def __init__(self):
-        self._predicates = [Result.win, Result.draw, Result.defeat]
+def fill_matrix(matrix: np.ndarray, table_map: TableMap, tables: List[LeagueTable], predicates: Predicates, half: Half):
+    for table in tables:
+        team_fixtures = table.season.fixtures_per_team()
 
-    def number_of_columns(self) -> int:
-        return len(self._predicates)
+        for position, row in enumerate(table):
+            fixtures = team_fixtures[row.TEAM]
+            results = []
+            for fixture in fixtures:
+                if half:
+                    if half == Half.first:
+                        result = fixture.first_half()
+                    else:
+                        result = fixture.second_half()
+                else:
+                    result = fixture.full_time()
 
-    def column_ticks(self) -> List[str]:
-        return ['{}'.format(p.__name__.capitalize()) for p in self._predicates]
+                if result:
+                    result = fixture.canonicalise_result(row.TEAM, result)
+                    results.append(result)
+                else:
+                    warning_message('Ignoring {}'.format(fixture))
 
-    def fill_matrix(self, matrix: np.ndarray, row_to_chunk, tables: List[LeagueTable]):
-        for table in tables:
-            team_fixtures = table.season.fixtures_per_team()
+            totals = {func: 0 for func in predicates.functions}
+            for result in results:
+                satisfied = False
+                for func in predicates.functions:
+                    if func(result):
+                        totals[func] += 1
+                        satisfied = True
+                    if predicates.mutual_exclusion and satisfied:
+                        break
 
-            for position, row in enumerate(table):
-                fixtures = team_fixtures[row.TEAM]
-                results = []
-                for fixture in fixtures:
-                    results.append(fixture.canonicalise_result(row.TEAM))
-
-                for j, predicate in enumerate(self._predicates):
-                    total = [result for result in results if predicate(result)]
-                    matrix[row_to_chunk[position], j] += len(total)
-
-
-class GoalsMatrix:
-    def __init__(self):
-        self._predicates = [Result.blank, Result.goals_for, Result.goals_against, Result.bts]
-
-    def number_of_columns(self) -> int:
-        return len(self._predicates)
-
-    def column_ticks(self) -> List[str]:
-        ticks = []
-        for p in self._predicates:
-            lexemes = p.__name__.split('_')
-            if len(lexemes) == 2:
-                first, second = lexemes
-                ticks.append('{}{}'.format(first[0].capitalize(), second[0].capitalize()))
-            else:
-                ticks.append(lexemes[0].upper())
-        return ticks
-
-    def fill_matrix(self, matrix: np.ndarray, row_to_chunk, tables: List[LeagueTable]):
-        for table in tables:
-            team_fixtures = table.season.fixtures_per_team()
-
-            for position, row in enumerate(table):
-                fixtures = team_fixtures[row.TEAM]
-                results = []
-                for fixture in fixtures:
-                    results.append(fixture.canonicalise_result(row.TEAM))
-
-                for j, predicate in enumerate(self._predicates):
-                    total = [result for result in results if predicate(result)]
-                    matrix[row_to_chunk[position], j] += len(total)
+            for j, func in enumerate(predicates.functions):
+                i = table_map.get_chunk(position)
+                matrix[i, j] += totals[func]
 
 
-def create_chunk_labels(chunk_to_rows):
+def create_chunk_labels(table_map: TableMap):
     row_names = []
-    for chunk in chunk_to_rows.values():
+    for chunk_id in range(table_map.number_of_chunks()):
+        chunk = table_map.get_rows(chunk_id)
         if chunk[0] == chunk[-1]:
             row_names.append('{}'.format(chunk[0] + 1))
         else:
@@ -137,57 +146,82 @@ def create_chunk_labels(chunk_to_rows):
     return row_names
 
 
-def check_chunk_size(chunk_size: int, table_size: int):
-    if chunk_size == 0 or table_size % chunk_size != 0:
-        error_message('Chunk size {} is not a valid divisor for tables of size {}.'.format(chunk_size, table_size))
-
-
-def create_indices(chunk_size: int, table_size: int):
-    chunks = table_size//chunk_size
-    row_to_chunk = {}
-    chunk_to_rows = OrderedDict()
-    for chunk in range(chunks):
-        chunk_to_rows[chunk] = []
-        for index in range(chunk_size):
-            row = index + (chunk * chunk_size)
-            row_to_chunk[row] = chunk
-            chunk_to_rows[chunk].append(row)
-    return row_to_chunk, chunk_to_rows
-
-
-def filter_tables(seasons: List[Season], table_size: int) -> List[LeagueTable]:
+def filter_tables(seasons: List[Season], head_table: LeagueTable) -> List[LeagueTable]:
     tables = []
     for season in seasons:
         table = LeagueTable(season)
-        if table_size == len(table):
+        if len(head_table) == len(table):
             tables.append(table)
         else:
             warning_message('Ignoring season {} because it had {} teams'.format(season.year, len(table)))
     return tables
 
 
-def create_heatmap(tables: List[LeagueTable], row_to_chunk, chunk_to_rows, analysis: Analysis) -> pd.DataFrame:
-    if analysis == Analysis.RESULTS:
-        matrix = ResultsMatrix()
-    elif analysis == Analysis.GOALS:
-        matrix = GoalsMatrix()
-    else:
-        assert False
-
-    raw_matrix = create_numpy_matrix(len(chunk_to_rows), matrix.number_of_columns())
-    matrix.fill_matrix(raw_matrix, row_to_chunk, tables)
-    data = pd.DataFrame(raw_matrix)
-    data.columns = matrix.column_ticks()
-    data.index = create_chunk_labels(chunk_to_rows)
+def create_heatmap(tables: List[LeagueTable], chunk_size: int, analysis: Analysis, half: Half) -> pd.DataFrame:
+    head_table = tables[0]
+    table_map = head_table.group(chunk_size)
+    predicates = predicate_table[analysis]
+    matrix = create_numpy_matrix(table_map.number_of_chunks(), len(predicates.labels))
+    fill_matrix(matrix, table_map, tables, predicates, half)
+    data = pd.DataFrame(matrix)
+    data.columns = predicates.labels
+    data.index = create_chunk_labels(table_map)
     return data
 
 
-def show(data: pd.DataFrame, title: str):
-    fig, _ = plt.subplots(figsize=(8, 10))
-    heatmap(data, cmap='coolwarm', linewidth=0.5, annot=True, fmt='d')
-    plt.yticks(rotation=0)
-    plt.ylabel('Positions')
+class DataUnit:
+    __slots__ = ['tables', 'heatmap']
+
+    def __init__(self):
+        self.tables = []
+
+    def size(self):
+        return len(self.tables[0])
+
+
+def show(league: League, data: List[DataUnit], analysis: Analysis, half: Half):
+    if len(data) <= 2:
+        nrows = 1
+        ncols = len(data)
+    else:
+        nrows = 2
+        ncols = ceil(len(data) / nrows)
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
+
+    row_id = 0
+    col_id = 0
+    for datum in data:
+        if nrows == 1:
+            if ncols == 1:
+                ax = axes
+            else:
+                ax = axes[col_id]
+        else:
+            ax = axes[row_id, col_id]
+
+        heatmap(datum.heatmap, cmap='coolwarm', linewidth=0.5, annot=True, fmt='d', ax=ax)
+        ax.set_ylabel('Positions')
+        ax.set_xlabel(analysis.name.capitalize())
+        sublists = split_into_contiguous_groups([table.season.year for table in datum.tables])
+        ax.set_title('Seasons: {}'.format(to_string(sublists)))
+
+        if col_id == ncols - 1:
+            row_id += 1
+            col_id = 0
+        else:
+            col_id += 1
+
+    if 0 < col_id:
+        for i in range(col_id, ncols):
+            fig.delaxes(axes[row_id][col_id])
+
+    title = '{} {}'.format(league.country, league.name)
+    if half is not None:
+        title = '{} ({} half)'.format(title, half.name)
     fig.suptitle(title, fontweight='bold', fontsize=14)
+
+    plt.tight_layout()
     plt.show()
 
 
@@ -199,19 +233,18 @@ def main(arguments: Namespace):
     if arguments.history:
         seasons = seasons[-arguments.history:]
 
-    table = LeagueTable(seasons[-1])
-    table_size = len(table)
-    check_chunk_size(arguments.chunks, table_size)
-    row_to_chunk, chunk_to_rows = create_indices(arguments.chunks, table_size)
-    tables = filter_tables(seasons, table_size)
+    table_split = OrderedDict()
+    for season in seasons:
+        table = LeagueTable(season)
+        table_size = len(table)
+        table_split.setdefault(table_size, DataUnit())
+        datum = table_split[table_size]
+        datum.tables.append(table)
 
-    data = create_heatmap(tables, row_to_chunk, chunk_to_rows, arguments.analysis)
-    if len(tables) == 1:
-        (table,) = tables
-        title = 'Season: {}'.format(table.season.year)
-    else:
-        title = 'Seasons: {}-{}'.format(tables[0].season.year, tables[-1].season.year)
-    show(data, title)
+    for table_size, datum in table_split.items():
+        datum.heatmap = create_heatmap(datum.tables, arguments.chunks, arguments.analysis, arguments.half)
+
+    show(league, list(table_split.values()), arguments.analysis, arguments.half)
 
 
 if __name__ == '__main__':

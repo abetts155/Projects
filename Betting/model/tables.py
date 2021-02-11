@@ -1,10 +1,10 @@
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 from enum import auto, Enum
 from lib.messages import error_message
 from model.fixtures import Fixture
 from model.seasons import Season
 from model.teams import Team
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 
 class Data:
@@ -59,6 +59,44 @@ class Position(Enum):
 
 
 TableRow = namedtuple('TableRow', 'TEAM P HW HD HL HF HA AW AD AL AF AA W D L F A PTS')
+
+
+class TableMap:
+    def __init__(self, chunk_size: int, table_size: int):
+        self._row_to_chunk = OrderedDict()
+        self._chunk_to_rows = OrderedDict()
+        self.__compute(chunk_size, table_size)
+
+    def __compute(self, chunk_size: int, table_size: int):
+        number_of_chunks = table_size // chunk_size
+        chunk_to_capacity = {}
+        for chunk_id in range(number_of_chunks):
+            chunk_to_capacity[chunk_id] = chunk_size
+
+        slack = table_size % chunk_size
+        if slack / chunk_size > 0.5:
+            chunk_id = number_of_chunks
+            chunk_to_capacity[chunk_id] = slack
+        else:
+            for i in range(slack):
+                chunk_id = i % number_of_chunks
+                chunk_to_capacity[chunk_id] += 1
+
+        chunk_id = 0
+        for row_id in range(table_size):
+            self._row_to_chunk[row_id] = chunk_id
+            self._chunk_to_rows.setdefault(chunk_id, []).append(row_id)
+            if len(self._chunk_to_rows[chunk_id]) == chunk_to_capacity[chunk_id]:
+                chunk_id += 1
+
+    def get_chunk(self, row_id: int) -> int:
+        return self._row_to_chunk[row_id]
+
+    def get_rows(self, chunk_id: int) -> List[int]:
+        return self._chunk_to_rows[chunk_id]
+
+    def number_of_chunks(self) -> int:
+        return len(self._chunk_to_rows)
 
 
 class LeagueTable(list):
@@ -163,32 +201,42 @@ class LeagueTable(list):
     def season(self) -> Season:
         return self._season
 
+    def group(self, chunk_size: int) -> TableMap:
+        if chunk_size <= 0 or chunk_size > len(self):
+            error_message('Chunk size {} is not for tables of size {}.'.format(chunk_size, len(self)))
+        return TableMap(chunk_size, len(self))
+
     def __str__(self):
         team_column_length = 0
         for row in self:
             team_column_length = max(len(row.TEAM.name), team_column_length)
 
-        top = '{}|{:^16}|{:^16}|{:^18}|'.format(' ' * (team_column_length + 3), 'Home', 'Away', 'Overall')
-        bottom = '{:<{}} {:>2}|  ' \
+        top = '|{}|{}|{:^16}|{:^16}|{:^18}|{}|'.format(' ' * (team_column_length + 1),
+                                                       ' ' * 2,
+                                                       'Home',
+                                                       'Away',
+                                                       'Overall',
+                                                       ' ' * 5)
+        bottom = '|{:<{}} |{:>2}|  ' \
                  '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                  '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                  '{:>2} {:>2} {:>2} {:>3} {:>3}|  ' \
-                 '{:>3}'.format('Team', team_column_length, 'P',
+                 '{:>3}|'.format('Team', team_column_length, 'P',
                                 'W', 'D', 'L', 'F', 'A',
                                 'W', 'D', 'L', 'F', 'A',
                                 'W', 'D', 'L', 'F', 'A', 'PTS')
 
         rows = []
         for row in self:
-            data = '{:<{}} {:>2}|  ' \
+            data = '|{:<{}} |{:>2}|  ' \
                    '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                    '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                    '{:>2} {:>2} {:>2} {:>3} {:>3}|  ' \
-                   '{:>3}'.format(row.TEAM.name, team_column_length, row.P,
+                   '{:>3}|'.format(row.TEAM.name, team_column_length, row.P,
                                   row.HW, row.HD, row.HL, row.HF, row.HA,
                                   row.AW, row.AD, row.AL, row.AF, row.AA,
                                   row.W, row.D, row.L, row.F, row.A, row.PTS)
             rows.append(data)
 
         divider = '-' * len(bottom)
-        return '{}\n{}\n{}\n{}\n{}\n'.format(divider, top, bottom, divider, '\n'.join(rows))
+        return '{}\n{}\n{}\n{}\n{}\n{}\n{}\n'.format(divider, top, divider, bottom, divider, '\n'.join(rows), divider)

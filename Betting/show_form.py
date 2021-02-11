@@ -11,6 +11,7 @@ from cli.cli import (add_database_option,
                      get_unique_league,
                      get_multiple_teams,
                      get_unique_team)
+from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message
 from math import floor
 from matplotlib import pyplot as plt
@@ -279,26 +280,6 @@ class Color:
         return self.choices[self.index - 1]
 
 
-def create_positions_label(positions: List[int]) -> str:
-    positions.sort()
-    sublists = [[positions[0]]]
-    for pos in positions[1:]:
-        current = sublists[-1]
-        if pos - current[-1] == 1:
-            current.append(pos)
-        else:
-            sublists.append([pos])
-
-    position_label = ''
-    for sublist in sublists:
-        if len(sublist) == 1:
-            position_label = '{}{}{}'.format(position_label, ',' if position_label else '', sublist[0])
-        else:
-            position_label = '{}{}{}-{}'.format(position_label, ',' if position_label else '', sublist[0], sublist[-1])
-
-    return position_label
-
-
 def compute_relative_performance(arguments: Namespace,
                                  league: League,
                                  seasons: List[Season],
@@ -328,7 +309,8 @@ def compute_relative_performance(arguments: Namespace,
             combined_summary[week].append(stat)
 
     color = Color()
-    label = 'Positions: {}'.format(create_positions_label(positions))
+    sublists = split_into_contiguous_groups(positions)
+    label = 'Positions: {}'.format(to_string(sublists))
     label = '{} ({}-{})'.format(label, seasons[0].year, seasons[-2].year)
     average_summary = compute_average(combined_summary)
     data = [Datum(average_summary, label, color.next())]

@@ -1,3 +1,4 @@
+from lib.messages import warning_message
 from sql import sql_columns, sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
 from typing import Dict, List
@@ -55,6 +56,13 @@ class Team:
 
     def __str__(self):
         return '{}={}'.format(self.id, self.name)
+
+    @classmethod
+    def find_team(cls, id_: int, name: str) -> "Team" or None:
+        try:
+            return cls.inventory[id_]
+        except KeyError:
+            warning_message("No team '{}' with ID {} in the team inventory.".format(name, id_))
 
 
 def create_team_from_json(data: Dict):

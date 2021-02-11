@@ -30,7 +30,7 @@ def add_half_option(parser: ArgumentParser):
                         help='filter fixtures according to the half')
 
 
-def add_league_option(parser: ArgumentParser):
+def add_league_option(parser: ArgumentParser, required: bool = True):
     parser.add_argument('-L',
                         '--league',
                         help='choose the league to analyse',
@@ -38,13 +38,13 @@ def add_league_option(parser: ArgumentParser):
                         nargs='+',
                         choices=league_register.keys(),
                         type=str.upper,
-                        required=True)
+                        required=required)
 
 
 def get_country(value: str):
     delimiter = '-'
     lexemes = value.split(delimiter)
-    return delimiter.join(lex.capitalize() for lex in lexemes)
+    return delimiter.join(lex.lower() for lex in lexemes)
 
 
 def add_country_option(parser: ArgumentParser):
@@ -53,7 +53,7 @@ def add_country_option(parser: ArgumentParser):
                         help='choose the country to analyse',
                         metavar='<NAME>',
                         nargs='+',
-                        choices=country_register,
+                        choices=list(map(str.lower, country_register)),
                         type=get_country,
                         required=True)
 

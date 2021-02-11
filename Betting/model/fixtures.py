@@ -96,6 +96,30 @@ class Result:
     def more_than_5(self):
         return self.left + self.right > 5
 
+    @prettify('0')
+    def exactly_0(self):
+        return self.left + self.right == 0
+
+    @prettify('1')
+    def exactly_1(self):
+        return self.left + self.right == 1
+
+    @prettify('2')
+    def exactly_2(self):
+        return self.left + self.right == 2
+
+    @prettify('3')
+    def exactly_3(self):
+        return self.left + self.right == 3
+
+    @prettify('4')
+    def exactly_4(self):
+        return self.left + self.right == 4
+
+    @prettify('5')
+    def exactly_5(self):
+        return self.left + self.right == 5
+
     @prettify('BTS')
     def bts(self):
         return self.left > 0 and self.right > 0
@@ -132,7 +156,8 @@ class Fixture:
                  away_team: Team,
                  half_time: str,
                  full_time: str,
-                 finished: bool):
+                 finished: bool,
+                 updated: datetime.date):
         self._id = id_
         self._date = date
         self._season_id = season_id
@@ -141,6 +166,7 @@ class Fixture:
         self._half_time = half_time
         self._full_time = full_time
         self._finished = finished
+        self._updated = updated
 
     @property
     def id(self) -> int:
@@ -179,15 +205,19 @@ class Fixture:
             return Result(self.full_time().left - self.first_half().left,
                           self.full_time().right - self.first_half().right)
 
-    def canonicalise_result(self, team: Team) -> Result:
-        if self.home_team == team:
-            return self.full_time()
-        else:
-            return self.full_time().reverse()
-
     @property
     def finished(self) -> int:
         return self._finished
+
+    @property
+    def updated(self) -> datetime.date:
+        return self._updated
+
+    def canonicalise_result(self, team: Team, result: Result) -> Result:
+        if self.home_team == team:
+            return result
+        else:
+            return result.reverse()
 
     def sql_values(self):
         values = [self.id,
@@ -197,7 +227,8 @@ class Fixture:
                   self.away_team.id,
                   self._half_time,
                   self._full_time,
-                  self.finished]
+                  self.finished,
+                  self.updated]
         assert len(values) == len(self.__class__.sql_table().columns)
         return values
 
@@ -213,7 +244,8 @@ class Fixture:
                                           Column(ColumnNames.Away_ID.name, Affinity.INTEGER),
                                           Column(ColumnNames.Half_Time.name, Affinity.TEXT),
                                           Column(ColumnNames.Full_Time.name, Affinity.TEXT),
-                                          Column(ColumnNames.Finished.name, Affinity.INTEGER)])
+                                          Column(ColumnNames.Finished.name, Affinity.INTEGER),
+                                          Column(ColumnNames.Updated.name, Affinity.TEXT)])
         return cls.table
 
     def __eq__(self, other):
@@ -263,21 +295,26 @@ def create_fixture_from_json(data: Dict):
         date = datetime.datetime.fromisoformat(data['event_date'])
         season_id = int(data['league_id'])
         home_id = int(data['homeTeam']['team_id'])
-        home_team = Team.inventory[home_id]
+        home_name = data['homeTeam']['team_name']
+        home_team = Team.find_team(home_id, home_name)
         away_id = int(data['awayTeam']['team_id'])
-        away_team = Team.inventory[away_id]
+        away_name = data['awayTeam']['team_name']
+        away_team = Team.find_team(away_id, away_name)
         half_time = data['score']['halftime']
         full_time = data['score']['fulltime']
         finished = True if data['status'] == 'Match Finished' else False
-        fixture = Fixture(id_,
-                          date,
-                          season_id,
-                          home_team,
-                          away_team,
-                          half_time,
-                          full_time,
-                          finished)
-        Fixture.inventory[fixture.id] = fixture
+
+        if home_team and away_team:
+            fixture = Fixture(id_,
+                              date,
+                              season_id,
+                              home_team,
+                              away_team,
+                              half_time,
+                              full_time,
+                              finished,
+                              datetime.datetime.now())
+            Fixture.inventory[fixture.id] = fixture
     else:
         messages.warning_message('Ignoring fixture. Round is {}.'.format(data['round']))
 
@@ -293,13 +330,16 @@ def create_fixture_from_row(row: List):
     half_time = row[5]
     full_time = row[6]
     finished = bool(row[7])
-    fixture = Fixture(id_,
-                      date,
-                      season_id,
-                      home_team,
-                      away_team,
-                      half_time,
-                      full_time,
-                      finished)
-    Fixture.inventory[fixture.id] = fixture
-    return fixture
+    updated = datetime.datetime.fromisoformat(row[8])
+    if full_time:
+        fixture = Fixture(id_,
+                          date,
+                          season_id,
+                          home_team,
+                          away_team,
+                          half_time,
+                          full_time,
+                          finished,
+                          updated)
+        Fixture.inventory[fixture.id] = fixture
+        return fixture
