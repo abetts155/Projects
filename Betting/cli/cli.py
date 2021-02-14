@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from lib import messages
-from model.fixtures import Half, Result, Venue
+from model.fixtures import Half, Venue, Event
 from model.leagues import country_register, league_register
 from typing import List
 
@@ -74,25 +74,16 @@ def add_team_option(parser: ArgumentParser):
                         type=str)
 
 
-def add_events_option(parser: ArgumentParser, required: bool = True):
-    event_choices = [Result.draw.__name__,
-                     Result.defeat.__name__,
-                     Result.win.__name__,
-                     Result.goals_for.__name__,
-                     Result.goals_against.__name__,
-                     Result.more_than_0.__name__,
-                     Result.more_than_1.__name__,
-                     Result.more_than_2.__name__,
-                     Result.more_than_3.__name__,
-                     Result.more_than_4.__name__,
-                     Result.more_than_5.__name__,
-                     Result.bts.__name__]
+def add_event(value: str):
+    Event.add(value)
+    return value
 
+
+def add_events_option(parser: ArgumentParser, required: bool = True, number: int = 2):
     parser.add_argument('-E',
                         '--event',
-                        choices=event_choices,
-                        nargs='+',
-                        type=str.lower,
+                        nargs='+' if number > 1 else 1,
+                        type=add_event,
                         help='choose event to analyse',
                         required=required)
 
@@ -108,6 +99,15 @@ def add_minimum_option(parser: ArgumentParser):
                         type=int,
                         help='the minimum sequence length threshold',
                         default=1)
+
+
+def add_chunk_option(parser: ArgumentParser):
+    parser.add_argument('-C',
+                        '--chunks',
+                        help='divide the table into chunks of this size',
+                        metavar='<INT>',
+                        type=int,
+                        default=0)
 
 
 def add_logging_options(parser: ArgumentParser):

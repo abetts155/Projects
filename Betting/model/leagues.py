@@ -2,6 +2,15 @@ from collections import OrderedDict
 from lib import messages
 
 
+def prettify(country_name: str) -> str:
+    sep = '-'
+    if sep in country_name:
+        lexemes = country_name.split(sep)
+        return ' '.join(lex.capitalize() for lex in lexemes)
+    else:
+        return country_name
+
+
 class League:
     __slots__ = ['country', 'name']
 
@@ -10,12 +19,13 @@ class League:
         self.name = name
 
     def __str__(self):
-        return '{} {}'.format(self.country, self.name)
+        return '{} {}'.format(prettify(self.country), self.name)
 
 
 country_register = [
     'Albania',
     'Algeria',
+    'Argentina',
     'Australia',
     'Austria',
     'Azerbaidjan',
@@ -44,6 +54,8 @@ country_register = [
     'Guatemala',
     'Honduras',
     'Hungary',
+    'Iceland',
+    'India',
     'Iran',
     'Ireland',
     'Israel',
@@ -57,6 +69,7 @@ country_register = [
     'Latvia',
     'Liechtenstein',
     'Lithuania',
+    'Luxembourg',
     'Malaysia',
     'Malta',
     'Mexico',
@@ -65,6 +78,7 @@ country_register = [
     'Netherlands',
     'New-Zealand',
     'Nicaragua',
+    'Nigeria',
     'Northern-Ireland',
     'Norway',
     'Oman',
@@ -87,10 +101,12 @@ country_register = [
     'Sweden',
     'Switzerland',
     'Thailand',
+    'Tunisia',
     'Turkey',
     'Ukraine',
     'United-Arab-Emirates',
     'USA',
+    'Uganda',
     'Uzbekistan',
     'Venezuela',
     'Vietnam',
@@ -99,7 +115,12 @@ country_register = [
 league_register = OrderedDict({
     'ALB1': League('Albania', 'Superliga'),
     'ALG1': League('Algeria', 'Ligue 1'),
+    'ARG1': League('Argentina', 'Primera Division'),
+    'ARG2A': League('Argentina', 'Primera B Nacional'),
+    'ARG2B': League('Argentina', 'Primera B Metropolitana'),
+    'ARG3': League('Argentina', 'Primera C'),
     'AUS1': League('Australia', 'A-League'),
+    'AUS1W': League('Australia', 'W-League'),
     'AUT1': League('Austria', 'Tipp3 Bundesliga'),
     'AUT2': League('Austria', 'Erste Liga'),
     'AZE1': League('Azerbaidjan', 'Premyer Liqa'),
@@ -111,6 +132,7 @@ league_register = OrderedDict({
     'BGR2': League('Bulgaria', 'B PFG'),
     'BIH1': League('Bosnia', 'Premijer Liga'),
     'BLR1': League('Belarus', 'Vysshaya Liga'),
+    'BLR2': League('Belarus', '1. Division'),
     'CHE1': League('Switzerland', 'Super League'),
     'CHE2': League('Switzerland', 'Challenge League'),
     'CHN1': League('China', 'Super League'),
@@ -138,6 +160,8 @@ league_register = OrderedDict({
     'ENG3': League('England', 'League One'),
     'ENG4': League('England', 'League Two'),
     'ENG5': League('England', 'National League'),
+    'ENG6A': League('England', 'National League - North'),
+    'ENG6B': League('England', 'National League - South'),
     'ENG1W': League('England', 'FA WSL'),
     'ESP1': League('Spain', 'Primera Division'),
     'ESP2': League('Spain', 'Segunda Division'),
@@ -148,8 +172,10 @@ league_register = OrderedDict({
     'ESP3E': League('Spain', 'Segunda Division - Group 5'),
     'ESP1W': League('Spain', 'Primera Division Women'),
     'EST1': League('Estonia', 'Meistriliiga'),
+    'EST2': League('Estonia', 'Esiliiga A'),
     'FIN1': League('Finland', 'Veikkausliiga'),
     'FIN2': League('Finland', 'Ykkonen'),
+    'FIN1W': League('Finland', 'Naisten Liiga'),
     'FRA1': League('France', 'Ligue 1'),
     'FRA2': League('France', 'Ligue 2'),
     'FRA3': League('France', 'National'),
@@ -161,11 +187,17 @@ league_register = OrderedDict({
     'HRV2': League('Croatia', 'Druga HNL'),
     'HUN1': League('Hungary', 'NB I'),
     'HUN2': League('Hungary', 'NB II'),
+    'IND1': League('India', 'Indian Super League'),
+    'IND2': League('India', 'I-League'),
     'IRL1': League('Ireland', 'Premier Division'),
-    'IRN1': League('Iran', 'Azadegan League'),
+    'IRN1': League('Iran', 'Persian Gulf Cup'),
+    'IRN2': League('Iran', 'Azadegan League'),
+    'ISL1': League('Iceland', 'Premier'),
+    'ISL2': League('Iceland', 'Division 1'),
+    'ISL3': League('Iceland', 'Division 2'),
+    'ISL1W': League('Iceland', 'Úrvalsdeild Women'),
     'ISR1': League('Israel', "Ligat ha''Al"),
     'ISR2': League('Israel', 'Liga Leumit'),
-    'IRA1': League('Iran', 'Persian Gulf Cup'),
     'ITA1': League('Italy', 'Serie A'),
     'ITA2': League('Italy', 'Serie B'),
     'ITA3': League('Italy', 'Serie C'),
@@ -181,6 +213,7 @@ league_register = OrderedDict({
     'KWT1': League('Kuwait', 'Premier League'),
     'LTU1': League('Lithuania', 'A Lyga'),
     'LTU2': League('Lithuania', '1 Lyga'),
+    'LUX1': League('Luxembourg', 'National Division'),
     'LVA1': League('Latvia', 'Virsliga'),
     'LVA2': League('Latvia', '1. Liga'),
     'MEX1': League('Mexico', 'Liga MX'),
@@ -198,6 +231,7 @@ league_register = OrderedDict({
     'NLD2': League('Netherlands', 'Eerste Divisie'),
     'NLD1W': League('Netherlands', 'Eredivisie Women'),
     'NIC1': League('Nicaragua', 'Primera Division'),
+    'NIG1': League('Nigeria', 'NPFL'),
     'NOR1': League('Norway', 'Eliteserien'),
     'NOR2': League('Norway', 'OBOS-ligaen'),
     'OMN1': League('Oman', 'Professional League'),
@@ -228,13 +262,18 @@ league_register = OrderedDict({
     'SVN2': League('Slovenia', '2. SNL'),
     'SWE1': League('Sweden', 'Allsvenskan'),
     'SWE2': League('Sweden', 'Superettan'),
+    'SWE3A': League('Sweden', 'Ettan - Norra'),
+    'SWE3B': League('Sweden', 'Ettan - Södra'),
+    'SWE1W': League('Sweden', 'Damallsvenskan'),
     'THA1': League('Thailand', 'Thai Premier League'),
     'THA2': League('Thailand', 'Thai League 2'),
+    'TUN1': League('Tunisia', 'Ligue Professionnelle 1'),
     'TUR1': League('Turkey', 'Super Lig'),
     'TUR2': League('Turkey', 'TFF 1. Lig'),
     'TUR3': League('Turkey', 'TFF 2. Lig'),
     'UAE1': League('United-Arab-Emirates', 'Arabian Gulf League'),
     'UAE2': League('United-Arab-Emirates', 'Division 1'),
+    'UGA1': League('Uganda', 'Premier League'),
     'UKR1': League('Ukraine', 'Premier League'),
     'UKR2': League('Ukraine', 'Persha League'),
     'USA1': League('USA', 'Major League Soccer'),

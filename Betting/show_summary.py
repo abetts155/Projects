@@ -1,8 +1,12 @@
 from argparse import ArgumentParser, Namespace
-from cli.cli import add_database_option, add_league_option, add_logging_options, set_logging_options, get_unique_league
+from cli.cli import (add_database_option,
+                     add_league_option,
+                     add_logging_options,
+                     set_logging_options,
+                     get_unique_league)
 from collections import OrderedDict
 from lib import messages
-from math import ceil
+from lib.helpful import DisplayGrid
 from matplotlib import pyplot as plt
 from model.leagues import league_register
 from model.seasons import Season
@@ -28,20 +32,74 @@ class Summary:
         self.away_goals = 0
 
 
-def compute_line_graph_data(season: Season):
-    stats = Summary()
+def compute_summary(season: Season):
+    summary = Summary()
     for fixture in season.fixtures():
         result = fixture.full_time()
         if result is not None:
-            stats.home_goals += result.left
-            stats.away_goals += result.right
+            summary.home_goals += result.left
+            summary.away_goals += result.right
             if result.left > result.right:
-                stats.home_wins += 1
+                summary.home_wins += 1
             elif result.left < result.right:
-                stats.away_wins += 1
+                summary.away_wins += 1
             else:
-                stats.draws += 1
-    return stats
+                summary.draws += 1
+    return summary
+
+
+def show(title: str, season_to_summary, ylim: int):
+    display = DisplayGrid(len(season_to_summary), 3)
+    fig, axs = plt.subplots(nrows=display.nrows, ncols=display.ncols, figsize=(20, 10), squeeze=False)
+
+    for i, (season, summary) in enumerate(season_to_summary.items()):
+        x_values_results = ['HW', 'D', 'AW']
+        x_values_goals = ['HG', 'AG']
+        x_values = x_values_results + x_values_goals
+        y_values_results = [summary.home_wins, summary.draws, summary.away_wins]
+        y_values_goals = [summary.home_goals, summary.away_goals]
+        y_values = y_values_results + y_values_goals
+
+        cell_x, cell_y = display.index(i)
+        ax = axs[cell_x, cell_y]
+        bar = ax.bar(x_values, y_values)
+        ax.set_ylim(0, ylim + 20)
+        ax.set_yticks([])
+        total_games = summary.home_wins + summary.draws + summary.away_wins
+        ax.set_title('{}: {} games'.format(season.year, total_games))
+
+        results_copy = y_values_results[:]
+        results_copy.sort()
+        colors = ['white', 'silver', 'gold']
+        for x, y_value in enumerate(results_copy):
+            index = y_values_results.index(y_value)
+            bar[index].set_color(colors[x])
+            bar[index].set_edgecolor('black')
+
+        goals_copy = y_values_goals[:]
+        goals_copy.sort()
+        colors = ['white', 'dodgerblue']
+        for x, y_value in enumerate(goals_copy):
+            index = y_values_goals.index(y_value) + len(y_values_results)
+            bar[index].set_color(colors[x])
+            bar[index].set_edgecolor('black')
+
+        for k, v in zip(x_values, y_values):
+            if k in x_values_results:
+                percentage = round((v/total_games) * 100)
+                text = '{} ({}%)'.format(v, percentage)
+            else:
+                text = str(v)
+            ax.text(k, v + 5, text, ha='center', fontsize=8)
+
+    for i in range(len(season_to_summary), display.nrows * display.ncols):
+        cell_x, cell_y = display.index(i)
+        ax = axs[cell_x][cell_y]
+        fig.delaxes(ax)
+
+    fig.suptitle(title, fontweight='bold', fontsize=14)
+    plt.tight_layout()
+    plt.show()
 
 
 def main(arguments: Namespace):
@@ -52,61 +110,15 @@ def main(arguments: Namespace):
     if not seasons:
         messages.error_message("No season data found")
 
-    season_to_stats = OrderedDict()
+    season_to_summary = OrderedDict()
     ylim = 0
     for season in seasons:
-        season_to_stats[season] = compute_line_graph_data(season)
-        ylim = max(ylim, season_to_stats[season].home_goals, season_to_stats[season].away_goals)
+        season_to_summary[season] = compute_summary(season)
+        ylim = max(ylim, season_to_summary[season].home_goals, season_to_summary[season].away_goals)
     ylim += 25
 
-    if len(seasons) <= 3:
-        nrows = 1
-        ncols = len(seasons)
-    else:
-        nrows = 2
-        ncols = ceil(len(seasons) / nrows)
-
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 10))
-    fig.suptitle('{} {}'.format(league.country, league.name), fontweight='bold', fontsize=14)
-
-    row_id = 0
-    col_id = 0
-    for season in seasons:
-        if nrows == 1:
-            ax = axes[col_id]
-        else:
-            ax = axes[row_id, col_id]
-
-        x_values_results = ['HW', 'D', 'AW']
-        x_values_goals = ['HG', 'AG']
-        x_values = x_values_results + x_values_goals
-        stats = season_to_stats[season]
-        y_values = [stats.home_wins, stats.draws, stats.away_wins, stats.home_goals, stats.away_goals]
-        ax.bar(x_values, y_values)
-        ax.set_ylim(0, ylim)
-        ax.set_yticks([])
-        total_games = stats.home_wins + stats.draws + stats.away_wins
-        ax.set_title('{}: {} games'.format(season.year, total_games))
-
-        for k, v in zip(x_values, y_values):
-            if k in x_values_results:
-                percentage = round((v/total_games) * 100)
-                text = '{} ({}%)'.format(v, percentage)
-            else:
-                text = str(v)
-            ax.text(k, v, text, ha='center', fontsize=6)
-
-        if col_id == ncols - 1:
-            row_id += 1
-            col_id = 0
-        else:
-            col_id += 1
-
-    if 0 < col_id:
-        for i in range(col_id, ncols):
-            fig.delaxes(axes[row_id][col_id])
-    plt.tight_layout()
-    plt.show()
+    title = '{} {}'.format(league.country, league.name)
+    show(title, season_to_summary, ylim)
 
 
 if __name__ == '__main__':

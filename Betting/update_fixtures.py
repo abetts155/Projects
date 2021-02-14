@@ -94,8 +94,9 @@ def fixtures_played(database: str, season: Season) -> bool:
         fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
         for row in fixture_rows:
             fixture = create_fixture_from_row(row)
-            if not fixture.finished:
+            if fixture.home_team is not None and fixture.away_team is not None and not fixture.finished:
                 if canonicalise(fixture.updated) <= canonicalise(fixture.date) <= canonicalise(datetime.now()):
+                    messages.debug_message('Must update: {}'.format(fixture))
                     played = True
     return played
 
@@ -103,6 +104,10 @@ def fixtures_played(database: str, season: Season) -> bool:
 def update_all(database: str, past: bool, force: bool):
     codes = []
     with Database(database) as db:
+        team_rows = db.fetch_all_rows(Team.sql_table())
+        for row in team_rows:
+            create_team_from_row(row)
+
         for code, league in league_register.items():
             constraints = ["{}='{}'".format(ColumnNames.Country.name, league.country),
                            "{}='{}'".format(ColumnNames.Code.name, league.name)]
@@ -118,9 +123,6 @@ def update_all(database: str, past: bool, force: bool):
 
 def main(arguments: Namespace):
     check_database_exists(arguments.database)
-
-    if not arguments.past:
-        arguments.force = True
 
     if arguments.league:
         update_leagues(arguments.database, arguments.league, arguments.past, arguments.force)

@@ -1,4 +1,5 @@
 from collections import Counter
+from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import warning_message
 from model.fixtures import Half, Venue
 from model.seasons import Season
@@ -6,23 +7,52 @@ from model.teams import Team
 from typing import Callable, List
 
 
-class BarChart:
-    __slots__ = ['counter', 'team', 'years', 'team', 'last']
+class DataUnit:
+    __slots__ = ['counter', 'team', 'seasons', 'team', 'positions', 'highlight', 'last']
 
-    def __init__(self, counter: Counter, years: List[int], team: Team = None):
+    def __init__(self,
+                 counter: Counter,
+                 seasons: List[Season],
+                 team: Team = None,
+                 positions: List[int] = None,
+                 highlight: bool = False):
         self.counter = counter
-        self.years = years
+        self.seasons = seasons
         self.team = team
+        self.positions = positions
+        self.highlight = highlight
         self.last = None
+
+    def title(self):
+        years = split_into_contiguous_groups([season.year for season in self.seasons])
+        title = '{}:{}'.format(self.team.name if self.team else 'Aggregated', to_string(years))
+
+        if self.positions:
+            positions = split_into_contiguous_groups([position + 1 for position in self.positions])
+            title = '{}  Position{}:{}'.format(title, 's' if len(self.positions) > 1 else '', to_string(positions))
+
+        return title
+
+    def values(self, x_limit: int):
+        x_values = []
+        y_values = []
+        for key in range(0, x_limit + 1):
+            x_values.append(key)
+            if key in self.counter:
+                y_values.append(self.counter[key])
+            else:
+                y_values.append(0)
+
+        return x_values, y_values
 
 
 def count_events(season: Season,
                  team: Team,
                  venue: Venue,
                  half: Half,
-                 event_function: Callable,
+                 func: Callable,
                  negate: bool,
-                 chart: BarChart):
+                 data: DataUnit):
     fixtures = []
     for fixture in season.fixtures():
         if venue == Venue.any:
@@ -57,19 +87,19 @@ def count_events(season: Season,
                 result = result.reverse()
 
             if negate:
-                outcome = not event_function(result)
+                outcome = not func(result)
             else:
-                outcome = event_function(result)
+                outcome = func(result)
 
             if outcome:
                 sequence.append(fixture)
             else:
-                chart.last = len(sequence)
-                chart.counter[len(sequence)] += 1
+                data.last = len(sequence)
+                data.counter[len(sequence)] += 1
                 sequence = []
 
     if sequence:
-        chart.last = len(sequence)
-        chart.counter[len(sequence)] += 1
+        data.last = len(sequence)
+        data.counter[len(sequence)] += 1
     else:
-        chart.last = None
+        data.last = None

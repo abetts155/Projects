@@ -13,11 +13,11 @@ from cli.cli import (add_database_option,
 from collections import Counter
 from datetime import date, datetime, timedelta
 from lib import messages
-from model.fixtures import Half, Fixture, Result
-from model.leagues import league_register
+from model.fixtures import Half, Fixture, Event
+from model.leagues import league_register, prettify
 from model.seasons import Season
 from model.teams import Team
-from model.sequences import count_events, BarChart
+from model.sequences import count_events, DataUnit
 from sql.sql import extract_picked_team, load_database, Database
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
@@ -61,6 +61,8 @@ def probability(current_run: int, counter: Counter) -> float:
         for i in range(current_run + 1, len(counter) + 1):
             numerator += counter[i]
         return numerator / sum(counter.values())
+    else:
+        return 1
 
 
 class Text:
@@ -76,9 +78,9 @@ def output_prediction(database_name: str,
                       season: Season,
                       team: Team,
                       half: Half,
-                      aggregated_history: BarChart,
-                      team_history: BarChart,
-                      team_now: BarChart,
+                      aggregated_history: DataUnit,
+                      team_history: DataUnit,
+                      team_now: DataUnit,
                       event_function: Callable,
                       negate: bool,
                       threshold: float,
@@ -97,54 +99,53 @@ def output_prediction(database_name: str,
     else:
         team_message = None
 
-    if aggregated_message is not None or team_message is not None:
-        with Database(database_name) as db:
-            season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
-            team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
-                                                        team.id,
-                                                        Keywords.OR.name,
-                                                        ColumnNames.Away_ID.name,
-                                                        team.id)
-            finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
-            constraints = [season_constraint, team_constraint, finished_constraint]
-            fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
-            fixture_rows.sort(key=lambda row: row[1])
-            fixture_rows = [row for row in fixture_rows if datetime.fromisoformat(row[1]).date() >= date.today()]
+    with Database(database_name) as db:
+        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
+        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                    team.id,
+                                                    Keywords.OR.name,
+                                                    ColumnNames.Away_ID.name,
+                                                    team.id)
+        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
+        constraints = [season_constraint, team_constraint, finished_constraint]
+        fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
+        fixture_rows.sort(key=lambda row: row[1])
+        fixture_rows = [row for row in fixture_rows if datetime.fromisoformat(row[1]).date() >= date.today()]
 
-            if fixture_rows:
-                row = fixture_rows[0]
-                match_date = datetime.fromisoformat(row[1])
-                window = datetime.now() + timedelta(hours=12)
+        if fixture_rows:
+            row = fixture_rows[0]
+            match_date = datetime.fromisoformat(row[1])
+            window = datetime.now() + timedelta(hours=12)
 
-                if match_date.date() <= window.date() or show_match:
-                    event = Result.event_name(event_function, negate)
-                    header = '{} {}{}{} in the last {}{}{} {}'.format('>' * 10,
-                                                                      Text.BLUE,
-                                                                      event,
-                                                                      Text.END,
-                                                                      Text.BOLD,
-                                                                      team_now.last,
-                                                                      Text.END,
-                                                                      'games' if team_now.last > 1 else 'game')
+            if match_date.date() <= window.date() or show_match:
+                event = Event.name(event_function, negate)
+                header = '{} {}{}{} in the last {}{}{} {}'.format('>' * 10,
+                                                                  Text.BLUE,
+                                                                  event,
+                                                                  Text.END,
+                                                                  Text.BOLD,
+                                                                  team_now.last,
+                                                                  Text.END,
+                                                                  'games' if team_now.last > 1 else 'game')
 
-                    if half:
-                        header = '{} ({}{} half{})'.format(header, Text.UNDERLINE, half.name, Text.END)
+                if half:
+                    header = '{} ({}{} half{})'.format(header, Text.UNDERLINE, half.name, Text.END)
 
-                    header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
+                header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
 
-                    home_team = Team.inventory[row[3]]
-                    away_team = Team.inventory[row[4]]
+                home_team = Team.inventory[row[3]]
+                away_team = Team.inventory[row[4]]
 
-                    next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
-                                                                           home_team.name,
-                                                                           away_team.name)
-                    remaining_matches_message = '{} matches remaining'.format(len(fixture_rows))
-                    message = '{}\n{}{}{}\n{}\n'.format(header,
-                                                        aggregated_message + '\n' if aggregated_message else '',
-                                                        team_message + '\n' if team_message else '',
-                                                        next_match_message,
-                                                        remaining_matches_message)
-                    print(message)
+                next_match_message = 'Next match: {} {} vs. {}'.format(match_date.strftime('%Y-%m-%d %H.%M'),
+                                                                       home_team.name,
+                                                                       away_team.name)
+                remaining_matches_message = '{} matches remaining'.format(len(fixture_rows))
+                message = '{}\n{}{}{}\n{}\n'.format(header,
+                                                    aggregated_message + '\n' if aggregated_message else '',
+                                                    team_message + '\n' if team_message else '',
+                                                    next_match_message,
+                                                    remaining_matches_message)
+                print(message)
 
 
 def main(arguments: Namespace):
@@ -170,11 +171,10 @@ def main(arguments: Namespace):
             else:
                 teams = this_season.teams()
 
-            events = [getattr(Result, event) for event in arguments.event]
-
+            events = [Event.get(event) for event in arguments.event]
             histories = {}
             for event in events:
-                histories[event] = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
+                histories[event] = DataUnit(Counter(), seasons)
                 for season in seasons:
                     for team in season.teams():
                         count_events(season,
@@ -185,15 +185,15 @@ def main(arguments: Namespace):
                                      arguments.negate,
                                      histories[event])
 
-            if not arguments.no_header:
-                messages.vanilla_message("{} Analysing sequences for {} {} {}".format('*' * 80 + '\n',
-                                                                                      league.country,
-                                                                                      league.name,
-                                                                                      '\n' + '*' * 80))
+            header = "{} Analysing sequences in {} {} {}".format('*' * 80 + '\n',
+                                                                 prettify(league.country),
+                                                                 league.name,
+                                                                 '\n' + '*' * 80)
+            header_emitted = False
 
             for team in teams:
                 for event in events:
-                    team_history = BarChart(Counter(), [seasons[0].year, seasons[-1].year])
+                    team_history = DataUnit(Counter(), seasons)
                     for season in seasons:
                         count_events(season,
                                      team,
@@ -203,7 +203,7 @@ def main(arguments: Namespace):
                                      arguments.negate,
                                      team_history)
 
-                    team_now = BarChart(Counter(), [this_season.year], team)
+                    team_now = DataUnit(Counter(), [this_season], team=team)
                     count_events(this_season,
                                  team,
                                  arguments.venue,
@@ -213,17 +213,25 @@ def main(arguments: Namespace):
                                  team_now)
 
                     if team_now.last is not None and team_now.last >= arguments.minimum:
-                        output_prediction(arguments.database,
-                                          this_season,
-                                          team,
-                                          arguments.half,
-                                          histories[event],
-                                          team_history,
-                                          team_now,
-                                          event,
-                                          arguments.negate,
-                                          arguments.probability,
-                                          arguments.show_match)
+                        aggregated_history = histories[event]
+                        aggregated_probability = probability(team_now.last, aggregated_history.counter)
+                        team_probability = probability(team_now.last, team_history.counter)
+                        if aggregated_probability <= arguments.probability or team_probability <= arguments.probability:
+                            if not arguments.no_header and not header_emitted:
+                                header_emitted = True
+                                messages.vanilla_message(header)
+
+                            output_prediction(arguments.database,
+                                              this_season,
+                                              team,
+                                              arguments.half,
+                                              aggregated_history,
+                                              team_history,
+                                              team_now,
+                                              event,
+                                              arguments.negate,
+                                              arguments.probability,
+                                              arguments.show_match)
         else:
             messages.error_message("The current season has not yet started")
 

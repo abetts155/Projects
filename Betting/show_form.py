@@ -16,7 +16,7 @@ from lib.messages import error_message
 from math import floor
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import Half, Venue
+from model.fixtures import Half, Venue, win, defeat, draw
 from model.leagues import league_register, League
 from model.seasons import Season
 from model.tables import LeagueTable, Position
@@ -117,13 +117,14 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
             result = result.reverse()
 
         stats = Statistics()
-        if result.win():
+        if win(result):
             stats.wins += 1
             stats.points += 3
-        elif result.draw():
+        elif draw(result):
             stats.draws += 1
             stats.points += 1
         else:
+            assert defeat(result)
             stats.losses += 1
 
         stats.goals_for = result.left
@@ -199,8 +200,10 @@ def display(title: str, data: List[Datum]):
         wins_subplot.add_line(x_values, wins_line, datum.label, datum.color, datum.line_width, datum.marker_size)
         draws_subplot.add_line(x_values, draws_line, datum.label, datum.color, datum.line_width, datum.marker_size)
         losses_subplot.add_line(x_values, losses_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-        goals_for_subplot.add_line(x_values, goals_for_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-        goals_against_subplot.add_line(x_values, goals_against_line, datum.label, datum.color, datum.line_width, datum.marker_size)
+        goals_for_subplot.add_line(x_values, goals_for_line, datum.label, datum.color, datum.line_width,
+                                   datum.marker_size)
+        goals_against_subplot.add_line(x_values, goals_against_line, datum.label, datum.color, datum.line_width,
+                                       datum.marker_size)
         points_subplot.add_line(x_values, points_line, datum.label, datum.color, datum.line_width, datum.marker_size)
 
     max_ylabels = 10
@@ -219,7 +222,7 @@ def display(title: str, data: List[Datum]):
         if subplot.ylim <= max_ylabels:
             yticks = [i for i in range(0, subplot.ylim)] + [subplot.ylim]
         else:
-            step = subplot.ylim//10
+            step = subplot.ylim // 10
             yticks = [i for i in range(subplot.ylim, 0, -step)]
         subplot.ax.set_yticks(yticks)
 
@@ -280,7 +283,7 @@ class Color:
         return self.choices[self.index - 1]
 
 
-def compute_relative_performance(arguments: Namespace,
+def compute_relative_performance(args: Namespace,
                                  league: League,
                                  seasons: List[Season],
                                  team_names: List[str],
@@ -288,8 +291,8 @@ def compute_relative_performance(arguments: Namespace,
     this_season = seasons[-1]
     team_summaries = {}
     for name in team_names:
-        team = extract_picked_team(arguments.database, name, league)
-        team_summaries[team] = compute_summary(team, [this_season], arguments.venue, arguments.half)
+        team = extract_picked_team(args.database, name, league)
+        team_summaries[team] = compute_summary(team, [this_season], args.venue, args.half)
 
     summaries = []
     for season in seasons:
@@ -299,7 +302,7 @@ def compute_relative_performance(arguments: Namespace,
             for team in teams:
                 summary = []
                 summaries.append(summary)
-                compute_statistics(season, team, arguments.venue, arguments.half, summary)
+                compute_statistics(season, team, args.venue, args.half, summary)
 
     combined_summary = []
     for summary in summaries:
@@ -316,18 +319,18 @@ def compute_relative_performance(arguments: Namespace,
     data = [Datum(average_summary, label, color.next())]
 
     for name in team_names:
-        team = extract_picked_team(arguments.database, name, league)
+        team = extract_picked_team(args.database, name, league)
         summary = team_summaries[team][this_season]
         data.append(Datum(summary, team.name, color.next()))
 
     title = 'Relative performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
-    title = add_venue_and_half_to_title(title, arguments.venue, arguments.half)
+    title = add_venue_and_half_to_title(title, args.venue, args.half)
     display(title, data)
 
 
-def compute_average_performance(arguments: Namespace, league: League, seasons: List[Season], team_name: str):
-    team = extract_picked_team(arguments.database, team_name, league)
-    team_summary = compute_summary(team, seasons, arguments.venue, arguments.half)
+def compute_average_performance(args: Namespace, league: League, seasons: List[Season], team_name: str):
+    team = extract_picked_team(args.database, team_name, league)
+    team_summary = compute_summary(team, seasons, args.venue, args.half)
 
     this_season = seasons[-1]
     combined_summary = []
@@ -344,14 +347,14 @@ def compute_average_performance(arguments: Namespace, league: League, seasons: L
             Datum(team_summary[this_season], '{}:{}'.format(team.name, this_season.year), color.next())]
 
     title = 'Average performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
-    title = add_venue_and_half_to_title(title, arguments.venue, arguments.half)
+    title = add_venue_and_half_to_title(title, args.venue, args.half)
     display(title, data)
 
 
-def compute_individual_performance(arguments: Namespace, league: League, seasons: List[Season]):
-    name = get_unique_team(arguments)
-    team = extract_picked_team(arguments.database, name, league)
-    team_summary = compute_summary(team, seasons, arguments.venue, arguments.half)
+def compute_individual_performance(args: Namespace, league: League, seasons: List[Season]):
+    name = get_unique_team(args)
+    team = extract_picked_team(args.database, name, league)
+    team_summary = compute_summary(team, seasons, args.venue, args.half)
 
     color = Color(True)
     linewidth = 3
@@ -365,35 +368,35 @@ def compute_individual_performance(arguments: Namespace, league: League, seasons
             marker_size -= 1
 
     title = 'Team performance comparison {}-{}: {}'.format(seasons[0].year, seasons[-2].year, team.name)
-    title = add_venue_and_half_to_title(title, arguments.venue, arguments.half)
+    title = add_venue_and_half_to_title(title, args.venue, args.half)
     display(title, data)
 
 
-def main(arguments: Namespace):
-    league = league_register[get_unique_league(arguments)]
-    load_database(arguments.database, league)
+def main(args: Namespace):
+    league = league_register[get_unique_league(args)]
+    load_database(args.database, league)
 
     seasons = Season.seasons()
-    if arguments.history:
-        seasons = seasons[-arguments.history:]
+    if args.history:
+        seasons = seasons[-args.history:]
 
-    if arguments.relative:
-        team_names = get_multiple_teams(arguments)
+    if args.relative:
+        team_names = get_multiple_teams(args)
         table = LeagueTable(seasons[-1])
-        lower, upper = table.positions(arguments.relative)
+        lower, upper = table.positions(args.relative)
         positions = [i for i in range(lower, upper)]
-        compute_relative_performance(arguments, league, seasons, team_names, positions)
-    elif arguments.position:
-        team_names = get_multiple_teams(arguments)
-        compute_relative_performance(arguments, league, seasons, team_names, arguments.position)
-    elif arguments.average:
-        team_name = get_unique_team(arguments)
-        compute_average_performance(arguments, league, seasons, team_name)
+        compute_relative_performance(args, league, seasons, team_names, positions)
+    elif args.position:
+        team_names = get_multiple_teams(args)
+        compute_relative_performance(args, league, seasons, team_names, args.position)
+    elif args.average:
+        team_name = get_unique_team(args)
+        compute_average_performance(args, league, seasons, team_name)
     else:
-        compute_individual_performance(arguments, league, seasons)
+        compute_individual_performance(args, league, seasons)
 
 
 if __name__ == '__main__':
-    arguments = parse_command_line()
-    set_logging_options(arguments)
-    main(arguments)
+    args = parse_command_line()
+    set_logging_options(args)
+    main(args)

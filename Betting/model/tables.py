@@ -1,10 +1,10 @@
 from collections import OrderedDict, namedtuple
 from enum import auto, Enum
 from lib.messages import error_message
-from model.fixtures import Fixture
+from model.fixtures import Fixture, draw, win, defeat
 from model.seasons import Season
 from model.teams import Team
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 
 class Data:
@@ -111,28 +111,29 @@ class LeagueTable(list):
         home_data = {}
         away_data = {}
         for fixture in fixtures:
-            if fixture.home_team not in home_data:
-                home_data[fixture.home_team] = Data()
+            if fixture.full_time():
+                if fixture.home_team not in home_data:
+                    home_data[fixture.home_team] = Data()
 
-            if fixture.away_team not in away_data:
-                away_data[fixture.away_team] = Data()
+                if fixture.away_team not in away_data:
+                    away_data[fixture.away_team] = Data()
 
-            home = home_data[fixture.home_team]
-            away = away_data[fixture.away_team]
-            if fixture.full_time().win():
-                home.wins += 1
-                away.losses += 1
-            elif fixture.full_time().defeat():
-                home.losses += 1
-                away.wins += 1
-            else:
-                home.draws += 1
-                away.draws += 1
+                home = home_data[fixture.home_team]
+                away = away_data[fixture.away_team]
+                if win(fixture.full_time()):
+                    home.wins += 1
+                    away.losses += 1
+                elif defeat(fixture.full_time()):
+                    home.losses += 1
+                    away.wins += 1
+                else:
+                    home.draws += 1
+                    away.draws += 1
 
-            home.goals_for += fixture.full_time().left
-            home.goals_against += fixture.full_time().right
-            away.goals_for += fixture.full_time().right
-            away.goals_against += fixture.full_time().left
+                home.goals_for += fixture.full_time().left
+                home.goals_against += fixture.full_time().right
+                away.goals_for += fixture.full_time().right
+                away.goals_against += fixture.full_time().left
 
         assert home_data.keys() == away_data.keys()
 
@@ -196,6 +197,13 @@ class LeagueTable(list):
     def teams_by_position(self, positions: List[int]) -> List[Team]:
         teams = [self[i-1].TEAM for i in positions]
         return teams
+
+    def team_position(self, team: Team) -> int:
+        for i, row in enumerate(self):
+            if row.TEAM == team:
+                return i
+
+        error_message("Unable to find team '{}' in the table".format(team.name))
 
     @property
     def season(self) -> Season:

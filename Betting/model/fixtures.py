@@ -1,11 +1,13 @@
 from enum import Enum, auto
-from functools import wraps
+from functools import partial
 from lib import messages
 from model.teams import Team
 from sql import sql_columns, sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
 from typing import Callable, Dict, List
+
 import datetime
+import operator
 import re
 
 
@@ -34,17 +36,6 @@ class Half(Enum):
             messages.error_message("Half '{}' is not valid".format(string))
 
 
-def prettify(description: str):
-    def outer_decorator(func):
-        @wraps(func)
-        def inner_decorator(*args, **kwargs):
-            response = func(*args, **kwargs)
-            func.description = description
-            return response
-        return inner_decorator
-    return outer_decorator
-
-
 class Result:
     __slots__ = ['left', 'right']
 
@@ -52,96 +43,126 @@ class Result:
         self.left = left
         self.right = right
 
-    @prettify('W')
-    def win(self):
-        return self.left > self.right
-
-    @prettify('L')
-    def defeat(self):
-        return self.left < self.right
-
-    @prettify('D')
-    def draw(self):
-        return self.left == self.right
-
-    @prettify('GF')
-    def goals_for(self):
-        return self.left > 0
-
-    @prettify('GA')
-    def goals_against(self):
-        return self.right > 0
-
-    @prettify('>0')
-    def more_than_0(self):
-        return self.left + self.right > 0
-
-    @prettify('>1')
-    def more_than_1(self):
-        return self.left + self.right > 1
-
-    @prettify('>2')
-    def more_than_2(self):
-        return self.left + self.right > 2
-
-    @prettify('>3')
-    def more_than_3(self):
-        return self.left + self.right > 3
-
-    @prettify('>4')
-    def more_than_4(self):
-        return self.left + self.right > 4
-
-    @prettify('>5')
-    def more_than_5(self):
-        return self.left + self.right > 5
-
-    @prettify('0')
-    def exactly_0(self):
-        return self.left + self.right == 0
-
-    @prettify('1')
-    def exactly_1(self):
-        return self.left + self.right == 1
-
-    @prettify('2')
-    def exactly_2(self):
-        return self.left + self.right == 2
-
-    @prettify('3')
-    def exactly_3(self):
-        return self.left + self.right == 3
-
-    @prettify('4')
-    def exactly_4(self):
-        return self.left + self.right == 4
-
-    @prettify('5')
-    def exactly_5(self):
-        return self.left + self.right == 5
-
-    @prettify('BTS')
-    def bts(self):
-        return self.left > 0 and self.right > 0
-
-    @prettify('0')
-    def blank(self):
-        return self.left == 0 and self.right == 0
-
     def reverse(self) -> "Result":
         return Result(self.right, self.left)
 
     def __str__(self):
         return '{}-{}'.format(self.left, self.right)
 
-    @staticmethod
-    def event_name(func: Callable, negate: bool) -> str:
-        tokens = func.__name__.split('_')
-        if negate:
-            return 'No {}'.format(' '.join(tokens))
+
+def win(result: Result):
+    return operator.gt(result.left, result.right)
+
+
+def defeat(result: Result):
+    return operator.lt(result.left, result.right)
+
+
+def draw(result: Result):
+    return operator.eq(result.left, result.right)
+
+
+def bts(result: Result):
+    return operator.gt(result.left, 0) and operator.gt(result.right, 0)
+
+
+def gf(op: Callable, bound: int, result: Result):
+    return op(result.left, bound)
+
+
+def ga(op: Callable, bound: int, result: Result):
+    return op(result.right, bound)
+
+
+def gfa(op: Callable, bound: int, result: Result):
+    return op(result.left + result.right, bound)
+
+
+class Event:
+    inventory = {func.__name__: func for func in {win, draw, defeat, bts}}
+    stems = {func.__name__: func for func in {gf, ga, gfa}}
+
+    op_table = {(operator.eq, True): '!=',
+                (operator.eq, False): '=',
+                (operator.gt, True): '<=',
+                (operator.gt, False): '>',
+                (operator.ge, True): '<',
+                (operator.ge, False): '>=',
+                (operator.lt, True): '>=',
+                (operator.lt, False): '<',
+                (operator.le, True): '>',
+                (operator.le, False): '<='}
+
+    long_table = {gf: 'Goals for',
+                  ga: 'Goals against',
+                  gfa: 'Goals scored',
+                  win: 'Win',
+                  draw: 'Draw',
+                  defeat: 'Loss',
+                  bts: 'BTS'}
+
+    short_table = {gf: 'GF',
+                   ga: 'GA',
+                   gfa: 'GFA',
+                   win: 'W',
+                   draw: 'D',
+                   defeat: 'L',
+                   bts: 'BTS'}
+
+    @classmethod
+    def decode(cls, name: str):
+        lexemes = name.split('_')
+        return lexemes[0], lexemes[1], int(lexemes[2])
+
+    @classmethod
+    def add(cls, name: str):
+        if name not in cls.inventory:
+            stem, op, bound = Event.decode(name)
+            if stem in cls.stems:
+                cls.inventory[name] = partial(cls.stems[stem], getattr(operator, op), bound)
+            else:
+                messages.error_message("Event '{}' is not valid".format(name))
+
+    @classmethod
+    def get(cls, name: str):
+        if name not in cls.inventory:
+            cls.add(name)
+        return cls.inventory[name]
+
+    @classmethod
+    def name(cls, func: Callable or partial, negate: bool, short: bool = False) -> str:
+        if type(func) is partial:
+            op_table = {(operator.eq, True): '!=',
+                        (operator.eq, False): '=',
+                        (operator.gt, True): '<=',
+                        (operator.gt, False): '>',
+                        (operator.ge, True): '<',
+                        (operator.ge, False): '>=',
+                        (operator.lt, True): '>=',
+                        (operator.lt, False): '<',
+                        (operator.le, True): '>',
+                        (operator.le, False): '<='}
+
+            try:
+                if short:
+                    func_name = Event.short_table[func.func]
+                else:
+                    func_name = Event.long_table[func.func]
+                (op, arg) = func.args
+                op_name = op_table[(op, negate)]
+                return '{} {} {}'.format(func_name, op_name, arg)
+            except KeyError:
+                messages.error_message("Unable to construct name for '{}'".format(func.func.__name__, op.__name__))
         else:
-            tokens[0] = tokens[0].capitalize()
-            return ' '.join(tokens)
+            if short:
+                func_name = Event.short_table[func]
+            else:
+                func_name = Event.long_table[func]
+
+            if negate:
+                return 'No {}'.format(func_name if short else func_name.capitalize())
+            else:
+                return func_name
 
 
 class Fixture:
@@ -266,25 +287,24 @@ class Fixture:
 
 
 round_regexes = [re.compile(r'Regular Season - \d+'),
+                 re.compile(r'Regular Season'),
                  re.compile(r'Girone [A-C] - \d+'),
-                 re.compile(r'Clausura - \d+'),
-                 re.compile(r'Apertura - \d+'),
-                 re.compile(r'Liguilla - \d+'),
-                 re.compile(r'1st Stage - \d+'),
-                 re.compile(r'2nd Stage - \d+'),
-                 re.compile(r'1st Phase - \d+'),
-                 re.compile(r'2nd Phase - \d+'),
-                 re.compile(r'K-League Challenge - Round \d+'),
-                 re.compile(r'Women Bundesliga - Round \d+'),
-                 re.compile(r'Serie A Women - Round \d+'),
-                 re.compile(r'Feminine Division 1 - Round \d+'),
-                 re.compile(r'Primera Division Women - Round \d+'),
+                 re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
+                 re.compile(r'(1st|2nd) (Stage|Phase) - \d+'),
+                 re.compile(r'(South|North) - \d+'),
+                 re.compile(r'(National First Division|'
+                            r'K-League Challenge|'
+                            r'Women Bundesliga|'
+                            r'Serie A Women|'
+                            r'Feminine Division 1|'
+                            r'Primera Division Women|'
+                            r'W-League) - Round \d+'),
                  re.compile(r'FA WSL \(Women Super League\) - Round \d+')]
 
 
-def is_regular_fixture(round: str):
+def is_regular_fixture(data: str):
     for regex in round_regexes:
-        if regex.match(round):
+        if regex.match(data):
             return True
     return False
 
@@ -331,15 +351,14 @@ def create_fixture_from_row(row: List):
     full_time = row[6]
     finished = bool(row[7])
     updated = datetime.datetime.fromisoformat(row[8])
-    if full_time:
-        fixture = Fixture(id_,
-                          date,
-                          season_id,
-                          home_team,
-                          away_team,
-                          half_time,
-                          full_time,
-                          finished,
-                          updated)
-        Fixture.inventory[fixture.id] = fixture
-        return fixture
+    fixture = Fixture(id_,
+                      date,
+                      season_id,
+                      home_team,
+                      away_team,
+                      half_time,
+                      full_time,
+                      finished,
+                      updated)
+    Fixture.inventory[fixture.id] = fixture
+    return fixture

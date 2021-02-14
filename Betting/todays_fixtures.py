@@ -6,9 +6,9 @@ from cli.cli import (add_database_option,
                      add_logging_options,
                      set_logging_options,
                      add_half_option)
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from model.fixtures import Half, Fixture, Venue
-from model.leagues import league_register, League
+from model.leagues import league_register, League, prettify
 from model.seasons import Season
 from model.teams import create_team_from_row, Team
 from pathlib import Path
@@ -27,6 +27,21 @@ def parse_command_line():
     add_minimum_option(parser)
     add_logging_options(parser)
     add_events_option(parser, False)
+
+    parser.add_argument('-l',
+                        '--left',
+                        help='time difference to the left',
+                        metavar='<INT>',
+                        type=int,
+                        default=-2)
+
+    parser.add_argument('-r',
+                        '--right',
+                        help='time difference to the right',
+                        metavar='<INT>',
+                        type=int,
+                        default=12)
+
     return parser.parse_args()
 
 
@@ -48,30 +63,27 @@ def get_current_season(db: Database, league: League):
         return season
 
 
-def get_fixtures(db: Database, season_id: int):
+def get_fixtures(db: Database, season_id: int, left: int, right: int):
     season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season_id)
     finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
     constraints = [season_constraint, finished_constraint]
     fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
-    todays_rows = []
-    tomorrow = datetime.today() + timedelta(days=1)
+
+    filtered_rows = []
+    lower_bound = datetime.today() + timedelta(hours=left)
+    upper_bound = datetime.today() + timedelta(hours=right)
     for row in fixture_rows:
-        match_date = datetime.fromisoformat(row[1])
-        if match_date.date() == date.today():
-            cutoff = datetime.now() - timedelta(hours=1)
-            if cutoff.time().hour <= match_date.time().hour:
-                todays_rows.append(row)
-        elif match_date.date() == tomorrow.date():
-            cutoff = 10
-            if match_date.time().hour <= cutoff:
-                todays_rows.append(row)
-    todays_rows.sort(key=lambda row: (datetime.fromisoformat(row[1]).date(), datetime.fromisoformat(row[1]).time()))
-    return todays_rows
+        match_date = datetime.fromisoformat(row[1]).replace(tzinfo=None)
+        if lower_bound <= match_date <= upper_bound:
+            filtered_rows.append(row)
+    filtered_rows.sort(key=lambda row: (datetime.fromisoformat(row[1]).date(),
+                                        datetime.fromisoformat(row[1]).time()))
+    return filtered_rows
 
 
 def output_fixtures(league: League, fixture_rows: List):
     print("{} Fixtures in {} {} {}".format('*' * 80 + '\n',
-                                           league.country,
+                                           prettify(league.country),
                                            league.name,
                                            '\n' + '*' * 80))
     for row in fixture_rows:
@@ -94,28 +106,28 @@ def analyse_sequences(db: Database,
                       half: Half,
                       minimum: int):
     analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
-    arguments = ['python3', str(analyse_script),
-                 '--database', db.name,
-                 '--no-warnings',
-                 '-T', ':'.join([team.name for team in teams]),
-                 '-E', *events,
-                 '-L', league_code,
-                 '--minimum', str(minimum)]
+    args = ['python3', str(analyse_script),
+            '--database', db.name,
+            '--no-warnings',
+            '-T', ':'.join([team.name for team in teams]),
+            '-E', *events,
+            '-L', league_code,
+            '--minimum', str(minimum)]
 
     if negate:
-        arguments.append('--negate')
+        args.append('--negate')
 
     if venue:
-        arguments.extend(['--venue', venue.name])
+        args.extend(['--venue', venue.name])
 
     if half:
-        arguments.extend(['--half', half.name])
+        args.extend(['--half', half.name])
 
-    run(arguments)
+    run(args)
 
 
-def main(arguments: Namespace):
-    with Database(arguments.database) as db:
+def main(args: Namespace):
+    with Database(args.database) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())
         for row in team_rows:
             create_team_from_row(row)
@@ -125,10 +137,10 @@ def main(arguments: Namespace):
 
             if season is not None:
                 season_id = season[0]
-                fixture_rows = get_fixtures(db, season_id)
+                fixture_rows = get_fixtures(db, season_id, args.left, args.right)
 
                 if fixture_rows:
-                    if arguments.event:
+                    if args.event:
                         teams = []
                         for row in fixture_rows:
                             teams.append(Team.inventory[row[3]])
@@ -137,16 +149,16 @@ def main(arguments: Namespace):
                         analyse_sequences(db,
                                           league_code,
                                           teams,
-                                          arguments.event,
-                                          arguments.negate,
-                                          arguments.venue,
-                                          arguments.half,
-                                          arguments.minimum)
+                                          args.event,
+                                          args.negate,
+                                          args.venue,
+                                          args.half,
+                                          args.minimum)
                     else:
                         output_fixtures(league, fixture_rows)
 
 
 if __name__ == '__main__':
-    arguments = parse_command_line()
-    set_logging_options(arguments)
-    main(arguments)
+    args = parse_command_line()
+    set_logging_options(args)
+    main(args)

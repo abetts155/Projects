@@ -331,7 +331,7 @@ def main(arguments: Namespace):
         messages.error_message("No season data found")
 
     if arguments.history:
-        seasons = seasons[-arguments.history-1:]
+        seasons = seasons[-arguments.history:]
 
     selected_team = extract_picked_team(arguments.database, get_unique_team(arguments), league)
 
