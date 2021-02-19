@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from cli.cli import add_database_option, add_logging_options, add_league_option, set_logging_options
-from datetime import datetime
+from datetime import datetime, timedelta
 from football_api.football_api import get_fixtures
 from football_api.structure import get_fixtures_json, store
 from json import load
@@ -14,7 +14,7 @@ from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
 from sql.sql import Database, check_database_exists
 from sys import exit
-from typing import List, Tuple
+from typing import List
 
 
 def parse_command_line():
@@ -83,10 +83,6 @@ def update_leagues(database: str, leagues: List[str], past: bool, force: bool):
                 db.create_rows(Fixture)
 
 
-def canonicalise(date: datetime.date) -> Tuple[int, int, int, int, int]:
-    return date.day, date.month, date.year, date.hour, date.minute
-
-
 def fixtures_played(database: str, season: Season) -> bool:
     played = False
     with Database(database) as db:
@@ -95,8 +91,10 @@ def fixtures_played(database: str, season: Season) -> bool:
         for row in fixture_rows:
             fixture = create_fixture_from_row(row)
             if fixture.home_team is not None and fixture.away_team is not None and not fixture.finished:
-                if canonicalise(fixture.updated) <= canonicalise(fixture.date) <= canonicalise(datetime.now()):
-                    messages.debug_message('Must update: {}'.format(fixture))
+                lower_bound = datetime.today() + timedelta(days=-3)
+                upper_bound = datetime.today()
+                match_date = fixture.date.replace(tzinfo=None)
+                if lower_bound <= match_date <= upper_bound:
                     played = True
     return played
 
@@ -118,7 +116,7 @@ def update_all(database: str, past: bool, force: bool):
                     if force or fixtures_played(database, season):
                         codes.append(code)
 
-    update_leagues(database, codes, past, force)
+    update_leagues(database, codes, past, force or codes)
 
 
 def main(arguments: Namespace):

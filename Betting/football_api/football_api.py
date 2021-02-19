@@ -31,3 +31,10 @@ def get_fixtures(season: int):
                        '{}/fixtures/league/{}'.format(base_url, season),
                        headers=headers)
     return response
+
+
+def get_events(fixture: int):
+    response = request('GET',
+                       '{}/events/{}'.format(base_url, fixture),
+                       headers=headers)
+    return response

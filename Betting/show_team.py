@@ -5,13 +5,14 @@ from cli.cli import (add_database_option,
                      add_team_option,
                      add_logging_options,
                      add_venue_option,
+                     add_block_option,
                      set_logging_options,
                      get_unique_league,
                      get_unique_team)
 from collections import Counter
 from lib import messages
 from matplotlib import pyplot as plt
-from model.fixtures import Result, Venue
+from model.fixtures import Result, Venue, win, defeat, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -27,6 +28,7 @@ def parse_command_line():
     add_league_option(parser)
     add_team_option(parser)
     add_venue_option(parser)
+    add_block_option(parser)
     add_logging_options(parser)
 
     parser.add_argument('--game-states',
@@ -74,18 +76,20 @@ def update_stats(stats: Statistics, result: Result):
     stats.goals_for += result.left
     stats.goals_against += result.right
 
-    if result.win():
+    if win(result):
         stats.wins += 1
-    elif result.defeat():
+    elif defeat(result):
         stats.losses += 1
     else:
-        assert result.draw()
+        assert draw(result)
         stats.draws += 1
 
-    if result.left > 0 and result.right > 0:
+    if bts(result):
         stats.bts += 1
+
     if result.left > 0:
         stats.scored += 1
+
     if result.right > 0:
         stats.conceded += 1
 
@@ -170,7 +174,7 @@ def create_dual_bars(ax, left: Statistics, right: Statistics, title: str):
                 left.goals[4], sum([left.goals[k] for k, v in left.goals.items() if k >= 5])]
 
     for x, y in enumerate(y_values):
-        ax.text(x, y, str(y),  ha='center', fontsize=8)
+        ax.text(x, y, str(y), ha='center', fontsize=8)
 
     attach_scorelines(ax, x_values, y_values, left, int.__gt__)
     ax.axvline((width + 2 * len(x_values) - 1) / 2, color='red', ls='-', lw=1)
@@ -211,8 +215,9 @@ def display_averages(team: Team,
                      venue: Venue,
                      seasons: List[Season],
                      team_stats: MatchStatistics,
-                     all_stats: MatchStatistics):
-    fig, axes = plt.subplots(3, figsize=(25, 13))
+                     all_stats: MatchStatistics,
+                     block: bool):
+    fig, axes = plt.subplots(3, figsize=(25, 13), constrained_layout=True)
 
     if len(seasons) > 1:
         year_string = '{}-{}'.format(seasons[0].year, seasons[-1].year)
@@ -230,9 +235,7 @@ def display_averages(team: Team,
     create_dual_bars(axes[0], team_stats.first_half, all_stats.first_half, 'First half')
     create_dual_bars(axes[1], team_stats.second_half, all_stats.second_half, 'Second half')
     create_dual_bars(axes[2], team_stats.both_halves, all_stats.both_halves, 'Both halves')
-
-    plt.tight_layout()
-    plt.show()
+    plt.show(block=block)
 
 
 def create_single_bar(ax, stats: Statistics, title: str):
@@ -240,7 +243,7 @@ def create_single_bar(ax, stats: Statistics, title: str):
     y_values = [stats.wins, stats.draws, stats.losses, stats.goals_for, stats.goals_against,
                 stats.bts, stats.scored, stats.conceded]
     for x, y in enumerate(y_values):
-        ax.text(x, y, str(y),  ha='center', fontsize=8)
+        ax.text(x, y, str(y), ha='center', fontsize=8)
 
     x_values.extend(['0 goals', '1 goal', '2 goals', '3 goals', '4 goals', '5+ goals'])
     goals = [stats.goals[0], stats.goals[1], stats.goals[2], stats.goals[3], stats.goals[4],
@@ -249,7 +252,7 @@ def create_single_bar(ax, stats: Statistics, title: str):
     max_colors = [len(y_values) + i for i, j in enumerate(goals) if j == maximum]
     denominator = sum(goals)
     for x, y in enumerate(goals):
-        percentage = round(100 * (y/denominator))
+        percentage = round(100 * (y / denominator))
         ax.text(x + len(y_values), y, '{} ({}%)'.format(y, percentage), ha='center', fontsize=8)
     y_values.extend(goals)
 
@@ -276,8 +279,8 @@ def create_single_bar(ax, stats: Statistics, title: str):
     ax.set_yticks([])
 
 
-def display_summations(team: Team, venue: Venue, seasons: List[Season], team_stats: MatchStatistics):
-    fig, axes = plt.subplots(3, figsize=(25, 13))
+def display_summations(team: Team, venue: Venue, seasons: List[Season], team_stats: MatchStatistics, block: bool):
+    fig, axes = plt.subplots(3, figsize=(25, 13), constrained_layout=True)
 
     if len(seasons) > 1:
         year_string = '{}-{}'.format(seasons[0].year, seasons[-1].year)
@@ -296,9 +299,7 @@ def display_summations(team: Team, venue: Venue, seasons: List[Season], team_sta
     create_single_bar(axes[0], team_stats.first_half, 'First half')
     create_single_bar(axes[1], team_stats.second_half, 'Second half')
     create_single_bar(axes[2], team_stats.both_halves, 'Both halves')
-
-    plt.tight_layout()
-    plt.show()
+    plt.show(block=block)
 
 
 def reduce(individuals: List[MatchStatistics], func: Callable, scale: int = 1) -> MatchStatistics:
@@ -322,20 +323,20 @@ def reduce(individuals: List[MatchStatistics], func: Callable, scale: int = 1) -
     return reduced_stats
 
 
-def main(arguments: Namespace):
-    league = league_register[get_unique_league(arguments)]
-    load_database(arguments.database, league)
+def main(args: Namespace):
+    league = league_register[get_unique_league(args)]
+    load_database(args.database, league)
 
-    seasons = Season.seasons()
+    seasons = Season.seasons(league)
     if not seasons:
         messages.error_message("No season data found")
 
-    if arguments.history:
-        seasons = seasons[-arguments.history:]
+    if args.history:
+        seasons = seasons[-args.history:]
 
-    selected_team = extract_picked_team(arguments.database, get_unique_team(arguments), league)
+    selected_team = extract_picked_team(args.database, get_unique_team(args), league)
 
-    if arguments.averages:
+    if args.averages:
         if seasons[-1].current:
             seasons.pop()
 
@@ -343,7 +344,7 @@ def main(arguments: Namespace):
             team_season_stats = []
             collective_season_stats = []
             for season in seasons:
-                stats = compute_statistics(season, selected_team, arguments.venue, arguments.game_states)
+                stats = compute_statistics(season, selected_team, args.venue, args.game_states)
                 team_season_stats.append(stats)
 
                 teams = season.teams()
@@ -351,26 +352,26 @@ def main(arguments: Namespace):
                     this_season_stats = []
                     for team in teams:
                         if team != selected_team:
-                            stats = compute_statistics(season, team, arguments.venue, arguments.game_states)
+                            stats = compute_statistics(season, team, args.venue, args.game_states)
                             this_season_stats.append(stats)
                     collective_season_stats.append(reduce(this_season_stats, median))
 
             team_stats = reduce(team_season_stats, median, len(collective_season_stats))
             collective_stats = reduce(collective_season_stats, sum)
-            display_averages(selected_team, arguments.venue, seasons, team_stats, collective_stats)
+            display_averages(selected_team, args.venue, seasons, team_stats, collective_stats, args.block)
         else:
-            messages.error_message("No historical data to analyse")
+            messages.error_message('No historical data to analyse')
     else:
         team_season_stats = []
         for season in seasons:
-            stats = compute_statistics(season, selected_team, arguments.venue, arguments.game_states)
+            stats = compute_statistics(season, selected_team, args.venue, args.game_states)
             team_season_stats.append(stats)
 
         team_stats = reduce(team_season_stats, sum)
-        display_summations(selected_team, arguments.venue, seasons, team_stats)
+        display_summations(selected_team, args.venue, seasons, team_stats, args.block)
 
 
 if __name__ == '__main__':
-    arguments = parse_command_line()
-    set_logging_options(arguments)
-    main(arguments)
+    args = parse_command_line()
+    set_logging_options(args)
+    main(args)

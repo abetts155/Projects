@@ -16,6 +16,10 @@ echo
 sleep $timeout
 echo
 echo
+./todays_fixtures.sh -E gfa_le_2 --minimum 8
+sleep $timeout
+echo
+echo
 ./todays_fixtures.sh -E win defeat --minimum 8
 sleep $timeout
 echo
@@ -24,22 +28,16 @@ echo
 sleep $timeout
 echo
 echo
-./todays_fixtures.sh -E bts --minimum 5
-sleep $timeout
-echo
-echo
-./todays_fixtures.sh -E draw win defeat --minimum 5 --half first
-sleep $timeout
-echo
-echo
-./todays_fixtures.sh -E draw win defeat --minimum 5 --half second
+./todays_fixtures.sh -E gfa_le_0 --minimum 7 --half first
 sleep $timeout
 echo 
 echo
-./todays_fixtures.sh -E gfa_le_0 --minimum 8 --half first
-sleep $timeout
+./todays_fixtures.sh -E gfa_le_0 --minimum 5 --half second
 echo 
 echo
-./todays_fixtures.sh -E gfa_le_0 --minimum 8 --half second
-echo 
+./todays_fixtures.sh -E gf_le_0 --minimum 4 --half first --venue home
+echo
+echo
+./todays_fixtures.sh -E gf_le_0 --minimum 4 --half second --venue home
+echo
 echo

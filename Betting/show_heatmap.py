@@ -14,12 +14,11 @@ from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message, warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Event, win, defeat, draw, bts
-from model.leagues import league_register, League
+from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap
 from sql.sql import load_database
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -36,28 +35,6 @@ class Analysis(Enum):
             return Analysis[string.upper()]
         except KeyError:
             error_message("Analysis '{}' is not valid".format(string))
-
-
-class Predicates:
-    __slots__ = ['functions', 'mutual_exclusion']
-
-    def __init__(self, functions, mutual_exclusion: bool):
-        self.functions = functions
-        self.mutual_exclusion = mutual_exclusion
-
-
-predicate_table = {
-    Analysis.RESULT: Predicates([win, draw, defeat],
-                                False),
-
-    Analysis.SCORED: Predicates([bts, Event.get('gf_gt_0'), Event.get('ga_gt_0'), Event.get('gfa_eq_0')],
-                                True),
-
-    Analysis.GOALS: Predicates([Event.get('gfa_gt_5'), Event.get('gfa_eq_5'), Event.get('gfa_eq_4'),
-                                Event.get('gfa_eq_3'), Event.get('gfa_eq_2'), Event.get('gfa_eq_1'),
-                                Event.get('gfa_eq_0')],
-                               False)
-}
 
 
 def parse_command_line():
@@ -80,6 +57,28 @@ def parse_command_line():
                         required=True)
 
     return parser.parse_args()
+
+
+class Predicates:
+    __slots__ = ['functions', 'mutual_exclusion']
+
+    def __init__(self, functions, mutual_exclusion: bool):
+        self.functions = functions
+        self.mutual_exclusion = mutual_exclusion
+
+
+predicate_table = {
+    Analysis.RESULT: Predicates([win, draw, defeat],
+                                False),
+
+    Analysis.SCORED: Predicates([bts, Event.get('gf_gt_0'), Event.get('ga_gt_0'), Event.get('gfa_eq_0')],
+                                True),
+
+    Analysis.GOALS: Predicates([Event.get('gfa_gt_5'), Event.get('gfa_eq_5'), Event.get('gfa_eq_4'),
+                                Event.get('gfa_eq_3'), Event.get('gfa_eq_2'), Event.get('gfa_eq_1'),
+                                Event.get('gfa_eq_0')],
+                               False)
+}
 
 
 def fill_matrix(matrix: np.ndarray, table_map: TableMap, table: LeagueTable, predicates: Predicates, half: Half):
@@ -128,27 +127,11 @@ def create_chunk_labels(table_map: TableMap):
     return row_names
 
 
-def show(league: League, seasons: List[Season], datum: pd.DataFrame, analysis: Analysis, half: Half):
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    heatmap(datum, cmap='coolwarm', linewidth=0.5, annot=True, fmt='d', ax=ax)
-    ax.set_ylabel('Positions')
-    ax.set_xlabel(analysis.name.capitalize())
-
-    sublists = split_into_contiguous_groups([season.year for season in seasons])
-    title = '{} {} Seasons:{}'.format(league.country, league.name, to_string(sublists))
-    if half is not None:
-        title = '{} ({} half)'.format(title, half.name)
-    fig.suptitle(title, fontweight='bold', fontsize=14)
-
-    plt.tight_layout()
-    plt.show()
-
-
 def main(args: Namespace):
     league = league_register[get_unique_league(args)]
     load_database(args.database, league)
 
-    seasons = Season.seasons()
+    seasons = Season.seasons(league)
     if args.history:
         seasons = seasons[-args.history:]
 
@@ -168,7 +151,17 @@ def main(args: Namespace):
     datum.columns = [Event.name(func, negate=False, short=True) for func in predicates.functions]
     datum.index = create_chunk_labels(table_map)
 
-    show(league, seasons, datum, args.analysis, args.half)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10), constrained_layout=True)
+    heatmap(datum, cmap='coolwarm', linewidth=0.5, annot=True, fmt='d', ax=ax)
+    ax.set_ylabel('Positions')
+    ax.set_xlabel(args.analysis.name.capitalize())
+
+    sublists = split_into_contiguous_groups([season.year for season in seasons])
+    title = '{} {} Seasons:{}'.format(league.country, league.name, to_string(sublists))
+    if args.half is not None:
+        title = '{} ({} half)'.format(title, args.half.name)
+    fig.suptitle(title, fontweight='bold', fontsize=14)
+    plt.show(block=args.block)
 
 
 if __name__ == '__main__':

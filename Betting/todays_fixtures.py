@@ -30,17 +30,17 @@ def parse_command_line():
 
     parser.add_argument('-l',
                         '--left',
-                        help='time difference to the left',
+                        help='left-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
                         default=-2)
 
     parser.add_argument('-r',
                         '--right',
-                        help='time difference to the right',
+                        help='right-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=12)
+                        default=18)
 
     return parser.parse_args()
 

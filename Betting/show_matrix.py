@@ -8,6 +8,7 @@ from cli.cli import (add_database_option,
                      set_logging_options,
                      add_events_option,
                      add_chunk_option,
+                     add_block_option,
                      get_unique_league)
 from lib.helpful import split_into_contiguous_groups, to_string
 from matplotlib import pyplot as plt
@@ -24,7 +25,7 @@ import pandas as pd
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Show heatmap of data')
+    parser = ArgumentParser(description='Show matrix of data')
     add_database_option(parser)
     add_history_option(parser)
     add_league_option(parser)
@@ -33,6 +34,7 @@ def parse_command_line():
     add_logging_options(parser)
     add_chunk_option(parser)
     add_events_option(parser, True, 1)
+    add_block_option(parser)
 
     parser.add_argument('-S',
                         '--symmetry',
@@ -95,7 +97,7 @@ def main(args: Namespace):
     league = league_register[get_unique_league(args)]
     load_database(args.database, league)
 
-    seasons = Season.seasons()
+    seasons = Season.seasons(league)
     if args.history:
         seasons = seasons[-args.history:]
 
@@ -129,7 +131,7 @@ def main(args: Namespace):
     if args.half is not None:
         title = '{} ({} half)'.format(title, args.half.name)
     fig.suptitle(title, fontweight='bold', fontsize=14)
-    plt.show()
+    plt.show(block=args.block)
 
 
 if __name__ == '__main__':

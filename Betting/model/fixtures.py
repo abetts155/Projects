@@ -78,9 +78,16 @@ def gfa(op: Callable, bound: int, result: Result):
     return op(result.left + result.right, bound)
 
 
+def gd(op: Callable, bound: int, result: Result):
+    if result.left > result.right:
+        return op(result.left - result.right, bound)
+    else:
+        return op(result.right - result.left, bound)
+
+
 class Event:
     inventory = {func.__name__: func for func in {win, draw, defeat, bts}}
-    stems = {func.__name__: func for func in {gf, ga, gfa}}
+    stems = {func.__name__: func for func in {gf, ga, gfa, gd}}
 
     op_table = {(operator.eq, True): '!=',
                 (operator.eq, False): '=',
@@ -96,6 +103,7 @@ class Event:
     long_table = {gf: 'Goals for',
                   ga: 'Goals against',
                   gfa: 'Goals scored',
+                  gd: 'Goal difference',
                   win: 'Win',
                   draw: 'Draw',
                   defeat: 'Loss',
@@ -104,6 +112,7 @@ class Event:
     short_table = {gf: 'GF',
                    ga: 'GA',
                    gfa: 'GFA',
+                   gd: 'GD',
                    win: 'W',
                    draw: 'D',
                    defeat: 'L',
@@ -132,24 +141,13 @@ class Event:
     @classmethod
     def name(cls, func: Callable or partial, negate: bool, short: bool = False) -> str:
         if type(func) is partial:
-            op_table = {(operator.eq, True): '!=',
-                        (operator.eq, False): '=',
-                        (operator.gt, True): '<=',
-                        (operator.gt, False): '>',
-                        (operator.ge, True): '<',
-                        (operator.ge, False): '>=',
-                        (operator.lt, True): '>=',
-                        (operator.lt, False): '<',
-                        (operator.le, True): '>',
-                        (operator.le, False): '<='}
-
             try:
                 if short:
                     func_name = Event.short_table[func.func]
                 else:
                     func_name = Event.long_table[func.func]
                 (op, arg) = func.args
-                op_name = op_table[(op, negate)]
+                op_name = Event.op_table[(op, negate)]
                 return '{} {} {}'.format(func_name, op_name, arg)
             except KeyError:
                 messages.error_message("Unable to construct name for '{}'".format(func.func.__name__, op.__name__))
@@ -160,7 +158,7 @@ class Event:
                 func_name = Event.long_table[func]
 
             if negate:
-                return 'No {}'.format(func_name if short else func_name.capitalize())
+                return 'No {}'.format(func_name)
             else:
                 return func_name
 
@@ -235,10 +233,11 @@ class Fixture:
         return self._updated
 
     def canonicalise_result(self, team: Team, result: Result) -> Result:
-        if self.home_team == team:
-            return result
-        else:
-            return result.reverse()
+        if result:
+            if self.home_team == team:
+                return result
+            else:
+                return result.reverse()
 
     def sql_values(self):
         values = [self.id,
@@ -290,6 +289,7 @@ round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Regular Season'),
                  re.compile(r'Girone [A-C] - \d+'),
                  re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
+                 re.compile(r'(Clausura|Apertura)'),
                  re.compile(r'(1st|2nd) (Stage|Phase) - \d+'),
                  re.compile(r'(South|North) - \d+'),
                  re.compile(r'(National First Division|'

@@ -66,15 +66,17 @@ def add_history_option(parser: ArgumentParser):
                         type=int)
 
 
-def add_team_option(parser: ArgumentParser):
+def add_team_option(parser: ArgumentParser, required: bool = False):
     parser.add_argument('-T',
                         '--team',
                         help='choose the team to analyse',
                         metavar='<NAME>',
-                        type=str)
+                        type=str,
+                        required=required)
 
 
 def add_event(value: str):
+    value = value.lower()
     Event.add(value)
     return value
 
@@ -134,6 +136,13 @@ def set_logging_options(arguments: Namespace):
     messages.debug = arguments.debug
     if arguments.no_warnings:
         messages.warnings = False
+
+
+def add_block_option(parser: ArgumentParser):
+    parser.add_argument('--block',
+                        action='store_true',
+                        help='block when the application generates charts and graphs',
+                        default=True)
 
 
 def get_unique_league(arguments: Namespace) -> str:

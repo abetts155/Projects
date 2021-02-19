@@ -29,8 +29,10 @@ country_register = [
     'Australia',
     'Austria',
     'Azerbaidjan',
+    'Bahrain',
     'Belarus',
     'Belgium',
+    'Bolivia',
     'Bosnia',
     'Brazil',
     'Bulgaria',
@@ -49,6 +51,7 @@ country_register = [
     'Estonia',
     'Finland',
     'France',
+    'Georgia',
     'Germany',
     'Greece',
     'Guatemala',
@@ -125,11 +128,13 @@ league_register = OrderedDict({
     'AUT2': League('Austria', 'Erste Liga'),
     'AZE1': League('Azerbaidjan', 'Premyer Liqa'),
     'BEL1': League('Belgium', 'Jupiler Pro League'),
+    'BHR1': League('Bahrain', 'Premier League'),
     'BRA1': League('Brazil', 'Serie A'),
     'BRA2': League('Brazil', 'Serie B'),
     'BRA3': League('Brazil', 'Serie C'),
     'BGR1': League('Bulgaria', 'A PFG'),
     'BGR2': League('Bulgaria', 'B PFG'),
+    'BOL1': League('Bolivia', 'Primera División'),
     'BIH1': League('Bosnia', 'Premijer Liga'),
     'BLR1': League('Belarus', 'Vysshaya Liga'),
     'BLR2': League('Belarus', '1. Division'),
@@ -143,6 +148,8 @@ league_register = OrderedDict({
     'COL2': League('Colombia', 'Primera B'),
     'CRI1': League('Costa-Rica', 'Primera Division'),
     'CRI2': League('Costa-Rica', 'Liga De Ascenso'),
+    'HRV1': League('Croatia', 'Prva HNL'),
+    'HRV2': League('Croatia', 'Druga HNL'),
     'CYP1': League('Cyprus', '1. Division'),
     'CZE1': League('Czech-Republic', 'Czech Liga'),
     'CZE2': League('Czech-Republic', 'FNL'),
@@ -180,11 +187,10 @@ league_register = OrderedDict({
     'FRA2': League('France', 'Ligue 2'),
     'FRA3': League('France', 'National'),
     'FRA1W': League('France', 'Feminine Division 1'),
+    'GEO1': League('Georgia', 'Erovnuli Liga'),
     'GRC1': League('Greece', 'Super League'),
     'GTM1': League('Guatemala', 'Primera Division'),
     'HND1': League('Honduras', 'Liga Nacional de Fútbol'),
-    'HRV1': League('Croatia', 'Prva HNL'),
-    'HRV2': League('Croatia', 'Druga HNL'),
     'HUN1': League('Hungary', 'NB I'),
     'HUN2': League('Hungary', 'NB II'),
     'IND1': League('India', 'Indian Super League'),
@@ -248,8 +254,8 @@ league_register = OrderedDict({
     'ROU2': League('Romania', 'Liga II'),
     'RUS1': League('Russia', 'Premier League'),
     'RUS2': League('Russia', 'Football National League'),
-    'SAU1': League('Saudi-Arabia', 'Division 1'),
-    'SAU2': League('Saudi-Arabia', 'Division 2'),
+    'SAU1': League('Saudi-Arabia', 'Pro League'),
+    'SAU2': League('Saudi-Arabia', 'Division 1'),
     'SCO1': League('Scotland', 'Premiership'),
     'SCO2': League('Scotland', 'Championship'),
     'SCO3': League('Scotland', 'League One'),
@@ -290,3 +296,9 @@ league_register = OrderedDict({
 for league in league_register.values():
     if league.country not in country_register:
         messages.error_message("Unrecognised country '{}' for league".format(league.country))
+
+
+def get_league_code(league: League) -> str:
+    for key, candidate in league_register.items():
+        if candidate.name == league.name and candidate.country == league.country:
+            return key

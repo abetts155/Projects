@@ -8,6 +8,7 @@ from cli.cli import (add_database_option,
                      add_logging_options,
                      add_venue_option,
                      add_chunk_option,
+                     add_block_option,
                      set_logging_options,
                      get_unique_league,
                      get_unique_event)
@@ -25,6 +26,8 @@ from model.teams import Team
 from sql.sql import load_database, extract_picked_team
 from typing import Callable, List
 
+import numpy as np
+
 
 def parse_command_line():
     parser = ArgumentParser(description='Show sequence data in bar charts')
@@ -37,6 +40,7 @@ def parse_command_line():
     add_venue_option(parser)
     add_logging_options(parser)
     add_chunk_option(parser)
+    add_block_option(parser)
 
     parser.add_argument('-l',
                         '--lines',
@@ -146,24 +150,27 @@ def plot(ax, datum: DataUnit, x_limit: int, lines_only: bool):
 
     if sum(y_values):
         if lines_only:
-            ax.plot(x_values, y_values, color='gold', linewidth=2, marker='o', ms=3)
+            ax.plot(x_values, y_values, color='red', linewidth=2, marker='o', ms=3)
         else:
+            cmap = plt.get_cmap('Blues')
+            min_y = np.min(y_values)
+            max_y = np.max(y_values)
+            scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
             ax.set_yticks([])
             offset = 0.5
             ax.set_xlim([-1 * offset, x_limit + offset])
-            bar = ax.bar(x_values, y_values, color='dodgerblue', edgecolor='black')
+            bar = ax.bar(x_values, y_values, color=cmap(scaled), edgecolor='black')
 
             if datum.team is not None and datum.last is not None and datum.highlight:
-                bar[datum.last].set_color('black')
-
-            ax.plot(x_values, y_values, color='gold', ls='dashed')
+                bar[datum.last].set_color('gold')
+                bar[datum.last].set_edgecolor('black')
 
 
 def main(args: Namespace):
     league = league_register[get_unique_league(args)]
     load_database(args.database, league)
 
-    seasons = Season.seasons()
+    seasons = Season.seasons(league)
     if not seasons:
         messages.error_message("No season data found")
 
@@ -190,7 +197,7 @@ def main(args: Namespace):
         else:
             ncols = 1
 
-        fig, axes = plt.subplots(nrows=len(data), ncols=ncols, figsize=(20, 13), squeeze=False)
+        fig, axes = plt.subplots(nrows=len(data), ncols=ncols, figsize=(20, 13), squeeze=False, constrained_layout=True)
 
         x_limit, _ = find_limits(data)
         for i, datum in enumerate(data):
@@ -282,9 +289,7 @@ def main(args: Namespace):
 
     title = construct_title(league, func, args.negate, args.venue, args.half)
     fig.suptitle(title, fontweight='bold', fontsize=14)
-    plt.subplots_adjust(hspace=0.5)
-    plt.tight_layout()
-    plt.show()
+    plt.show(block=args.block)
 
 
 if __name__ == '__main__':

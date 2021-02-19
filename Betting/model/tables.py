@@ -1,7 +1,7 @@
 from collections import OrderedDict, namedtuple
 from enum import auto, Enum
 from lib.messages import error_message
-from model.fixtures import Fixture, draw, win, defeat
+from model.fixtures import Fixture, Half, draw, win, defeat
 from model.seasons import Season
 from model.teams import Team
 from typing import List, Tuple
@@ -33,16 +33,16 @@ def combine(left: Data, right: Data) -> Data:
 
 class Position(Enum):
     top = auto()
-    mid = auto()
+    middle = auto()
     bottom = auto()
-    top_not_best = auto()
-    bottom_not_worst = auto()
+    top_but_not_best = auto()
+    bottom_but_not_worst = auto()
     best = auto()
     worst = auto()
     top_half = auto()
     bottom_half = auto()
-    top_half_others = auto()
-    bottom_half_others = auto()
+    worst_of_top_half = auto()
+    best_of_bottom_half = auto()
 
     @staticmethod
     def pretty(position: "Position"):
@@ -100,14 +100,14 @@ class TableMap:
 
 
 class LeagueTable(list):
-    def __init__(self, season: Season):
+    def __init__(self, season: Season, half: Half = None):
         list.__init__(self)
         self._season = season
-        self.__fill(season.fixtures())
+        self.__fill(season.fixtures(), half)
         self.sort(key=lambda row: (row.PTS, row.F - row.A, row.F), reverse=True)
         self.__compute_slices()
 
-    def __fill(self, fixtures: List[Fixture]):
+    def __fill(self, fixtures: List[Fixture], half: Half = None):
         home_data = {}
         away_data = {}
         for fixture in fixtures:
@@ -120,20 +120,30 @@ class LeagueTable(list):
 
                 home = home_data[fixture.home_team]
                 away = away_data[fixture.away_team]
-                if win(fixture.full_time()):
-                    home.wins += 1
-                    away.losses += 1
-                elif defeat(fixture.full_time()):
-                    home.losses += 1
-                    away.wins += 1
-                else:
-                    home.draws += 1
-                    away.draws += 1
 
-                home.goals_for += fixture.full_time().left
-                home.goals_against += fixture.full_time().right
-                away.goals_for += fixture.full_time().right
-                away.goals_against += fixture.full_time().left
+                if half:
+                    if half == half.first:
+                        result = fixture.first_half()
+                    else:
+                        result = fixture.second_half()
+                else:
+                    result = fixture.full_time()
+
+                if result:
+                    if win(result):
+                        home.wins += 1
+                        away.losses += 1
+                    elif defeat(result):
+                        home.losses += 1
+                        away.wins += 1
+                    else:
+                        home.draws += 1
+                        away.draws += 1
+
+                    home.goals_for += result.left
+                    home.goals_against += result.right
+                    away.goals_for += result.right
+                    away.goals_against += result.left
 
         assert home_data.keys() == away_data.keys()
 
@@ -160,16 +170,16 @@ class LeagueTable(list):
         if position == Position.top:
             lower_bound = self._best_start
             upper_bound = self._best_end
-        elif position == Position.top_not_best:
+        elif position == Position.top_but_not_best:
             lower_bound = self._best_start + 1
             upper_bound = self._best_end
-        elif position == Position.mid:
+        elif position == Position.middle:
             lower_bound = self._best_end
             upper_bound = self._worst_start
         elif position == Position.bottom:
             lower_bound = self._worst_start
             upper_bound = self._worst_end
-        elif position == Position.bottom_not_worst:
+        elif position == Position.bottom_but_not_worst:
             lower_bound = self._worst_start
             upper_bound = self._worst_end - 1
         elif position == Position.best:
@@ -184,10 +194,10 @@ class LeagueTable(list):
         elif position == Position.bottom_half:
             lower_bound = self._bottom_half_start
             upper_bound = self._worst_end
-        elif position == Position.top_half_others:
+        elif position == Position.worst_of_top_half:
             lower_bound = self._best_end
             upper_bound = self._top_half_end
-        elif position == Position.bottom_half_others:
+        elif position == Position.best_of_bottom_half:
             lower_bound = self._bottom_half_start
             upper_bound = self._worst_start + 1
         else:

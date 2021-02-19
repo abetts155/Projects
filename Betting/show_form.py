@@ -1,399 +1,216 @@
 from argparse import ArgumentParser, Namespace
-from collections import OrderedDict
 from cli.cli import (add_database_option,
-                     add_history_option,
-                     add_league_option,
-                     add_team_option,
-                     add_half_option,
                      add_logging_options,
-                     add_venue_option,
                      set_logging_options,
+                     add_team_option,
+                     add_league_option,
+                     add_venue_option,
+                     add_half_option,
+                     add_block_option,
                      get_unique_league,
-                     get_multiple_teams,
                      get_unique_team)
-from lib.helpful import split_into_contiguous_groups, to_string
-from lib.messages import error_message
-from math import floor
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
-from model.fixtures import Half, Venue, win, defeat, draw
-from model.leagues import league_register, League
+from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, defeat
+from model.leagues import league_register
 from model.seasons import Season
-from model.tables import LeagueTable, Position
+from model.tables import LeagueTable
 from model.teams import Team
-from statistics import mean
-from sql.sql import load_database, extract_picked_team
-from typing import List
+from sql.sql import Database, load_database, extract_picked_team, ColumnNames, Characters, Keywords
+from typing import List, Tuple
+
+import pandas as pd
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Compare team performance from this season against previous seasons')
+    parser = ArgumentParser(description='Show recent form')
     add_database_option(parser)
-    add_history_option(parser)
-    add_league_option(parser)
-    add_team_option(parser)
-    add_half_option(parser)
-    add_venue_option(parser)
     add_logging_options(parser)
-
-    parser.add_argument('-A',
-                        '--average',
-                        help='compare against averages over previous seasons',
-                        action='store_true',
-                        default=False)
-
-    parser.add_argument('-r',
-                        '--relative',
-                        choices=Position,
-                        type=Position.from_string,
-                        metavar='{{{}}}'.format(','.join(position.name for position in Position)),
-                        help='compare against relative table positions over previous seasons')
-
-    parser.add_argument('-p',
-                        '--position',
-                        type=int,
-                        nargs='+',
-                        help='compare against absolute table positions over previous seasons')
-
+    add_team_option(parser, True)
+    add_league_option(parser, True)
+    add_venue_option(parser)
+    add_half_option(parser)
+    add_block_option(parser)
     return parser.parse_args()
 
 
-class Statistics:
-    __slots__ = ['wins', 'draws', 'losses', 'goals_for', 'goals_against', 'points']
-
-    def __init__(self):
-        self.wins = 0
-        self.draws = 0
-        self.losses = 0
-        self.goals_for = 0
-        self.goals_against = 0
-        self.points = 0
-
-    def __str__(self):
-        return 'W={}, D={}, L={}, GF={}, GA={} PTS={}'.format(self.wins,
-                                                              self.draws,
-                                                              self.losses,
-                                                              self.goals_for,
-                                                              self.goals_against,
-                                                              self.points)
-
-
-def combine(left: Statistics, right: Statistics) -> Statistics:
-    combined = Statistics()
-    combined.wins = left.wins + right.wins
-    combined.draws = left.draws + right.draws
-    combined.losses = left.losses + right.losses
-    combined.goals_for = left.goals_for + right.goals_for
-    combined.goals_against = left.goals_against + right.goals_against
-    combined.points = left.points + right.points
-    return combined
-
-
-def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, summary: List[Statistics]):
+def get_fixtures(database: str, team: Team, this_season: Season, venue: Venue):
     fixtures = []
-    season.sort_fixtures()
-    for fixture in season.fixtures():
-        if fixture.first_half() is not None and fixture.second_half() is not None:
-            if venue == Venue.any:
-                if fixture.home_team == team or fixture.away_team == team:
-                    fixtures.append(fixture)
-            elif venue == Venue.away:
-                if fixture.away_team == team:
-                    fixtures.append(fixture)
-            elif venue == Venue.home:
-                if fixture.home_team == team:
-                    fixtures.append(fixture)
-
-    for fixture in fixtures:
-        if half is not None:
-            if half == Half.first:
-                result = fixture.first_half()
-            else:
-                result = fixture.second_half()
+    with Database(database) as db:
+        if venue == Venue.home:
+            team_constraint = "{}={}".format(ColumnNames.Home_ID.name, team.id)
+        elif venue == Venue.away:
+            team_constraint = "{}={}".format(ColumnNames.Away_ID.name, team.id)
         else:
-            result = fixture.full_time()
+            team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                        team.id,
+                                                        Keywords.OR.name,
+                                                        ColumnNames.Away_ID.name,
+                                                        team.id)
 
-        if fixture.away_team == team:
-            result = result.reverse()
+        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.TRUE.value)
+        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, this_season.id)
+        constraints = [team_constraint, finished_constraint, season_constraint]
+        fixtures_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
 
-        stats = Statistics()
+        for row in fixtures_rows:
+            fixture = create_fixture_from_row(row)
+            fixtures.append(fixture)
+    return fixtures
+
+
+def decide_cell_color(result: Result,
+                      left_color: Tuple[float, float, float],
+                      right_color: Tuple[float, float, float],
+                      neutral_color: Tuple[float, float, float],
+                      unknown_color: Tuple[float, float, float]):
+    if result:
         if win(result):
-            stats.wins += 1
-            stats.points += 3
-        elif draw(result):
-            stats.draws += 1
-            stats.points += 1
+            return left_color
+        elif defeat(result):
+            return right_color
         else:
-            assert defeat(result)
-            stats.losses += 1
-
-        stats.goals_for = result.left
-        stats.goals_against = result.right
-
-        if not summary:
-            summary.append(stats)
-        else:
-            summary.append(combine(stats, summary[-1]))
-
-
-class Subplot:
-    def __init__(self, ax, title):
-        self.ax = ax
-        self.title = title
-        self.xlim = 0
-        self.ylim = 0
-
-    def add_line(self, x_values, y_values, label: str, color, line_width: int, marker_size: int):
-        self.xlim = max(self.xlim, x_values[-1])
-        self.ylim = max(self.ylim, y_values[-1])
-        self.ax.plot(x_values,
-                     y_values,
-                     color=color,
-                     linewidth=line_width,
-                     label=label,
-                     marker='o',
-                     ms=marker_size)
-
-
-class Datum:
-    __slots__ = ['summary', 'label', 'color', 'line_width', 'marker_size']
-
-    def __init__(self, summary: List[Statistics], label: str, color: str, line_width: float = 2, marker_size: int = 10):
-        self.summary = summary
-        self.label = label
-        self.color = color
-        self.line_width = line_width
-        self.marker_size = marker_size
-
-
-def display(title: str, data: List[Datum]):
-    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
-    wins_ax, draws_ax, losses_ax = axes[0]
-    goals_for_ax, goals_against_ax, points_ax = axes[1]
-
-    wins_subplot = Subplot(wins_ax, 'Wins')
-    draws_subplot = Subplot(draws_ax, 'Draws')
-    losses_subplot = Subplot(losses_ax, 'Losses')
-    goals_for_subplot = Subplot(goals_for_ax, 'GF')
-    goals_against_subplot = Subplot(goals_against_ax, 'GA')
-    points_subplot = Subplot(points_ax, 'PTS')
-
-    subplots = [wins_subplot, draws_subplot, losses_subplot, goals_for_subplot, goals_against_subplot, points_subplot]
-    for datum in data:
-        wins_line = []
-        draws_line = []
-        losses_line = []
-        goals_for_line = []
-        goals_against_line = []
-        points_line = []
-        x_values = []
-
-        for week, week_stats in enumerate(datum.summary, start=1):
-            x_values.append(week)
-            wins_line.append(week_stats.wins)
-            draws_line.append(week_stats.draws)
-            losses_line.append(week_stats.losses)
-            goals_for_line.append(week_stats.goals_for)
-            goals_against_line.append(week_stats.goals_against)
-            points_line.append(week_stats.points)
-
-        wins_subplot.add_line(x_values, wins_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-        draws_subplot.add_line(x_values, draws_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-        losses_subplot.add_line(x_values, losses_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-        goals_for_subplot.add_line(x_values, goals_for_line, datum.label, datum.color, datum.line_width,
-                                   datum.marker_size)
-        goals_against_subplot.add_line(x_values, goals_against_line, datum.label, datum.color, datum.line_width,
-                                       datum.marker_size)
-        points_subplot.add_line(x_values, points_line, datum.label, datum.color, datum.line_width, datum.marker_size)
-
-    max_ylabels = 10
-    for subplot in subplots:
-        subplot.ax.set_title(subplot.title)
-        subplot.ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        subplot.ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-
-        subplot.ax.set_xlim(1, subplot.xlim)
-        step = 5
-        xticks = [1] + [i for i in range(1 + step, subplot.xlim, step)] + [subplot.xlim]
-        subplot.ax.set_xticks(xticks)
-        subplot.ax.set_xlabel('Matchday')
-
-        subplot.ax.set_ylim(0, subplot.ylim)
-        if subplot.ylim <= max_ylabels:
-            yticks = [i for i in range(0, subplot.ylim)] + [subplot.ylim]
-        else:
-            step = subplot.ylim // 10
-            yticks = [i for i in range(subplot.ylim, 0, -step)]
-        subplot.ax.set_yticks(yticks)
-
-        subplot.ax.legend()
-
-    fig.suptitle(title, fontweight='bold', fontsize=14)
-    plt.tight_layout()
-    plt.show()
-
-
-def compute_summary(team: Team, seasons: List[Season], venue: Venue, half: Half):
-    team_summary = OrderedDict()
-    for season in seasons:
-        summary = []
-        compute_statistics(season, team, venue, half, summary)
-        team_summary[season] = summary
-    return team_summary
-
-
-def compute_average(combined_summary):
-    average_summary = []
-    for weekly_stats in combined_summary:
-        average_stats = Statistics()
-        average_summary.append(average_stats)
-        for stat in Statistics.__slots__:
-            values = [getattr(datum, stat) for datum in weekly_stats]
-            average = floor(mean(values))
-            setattr(average_stats, stat, average)
-    return average_summary
-
-
-def add_venue_and_half_to_title(title: str, venue: Venue, half: Half):
-    if venue == Venue.any:
-        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
+            return neutral_color
     else:
-        title = '{} ({} only)'.format(title, venue.name)
-
-    if half is not None:
-        title = '{} ({} half)'.format(title, half.name)
-
-    return title
+        return unknown_color
 
 
-class Color:
-    def __init__(self, gradient: bool = False):
-        self.index = 0
-        if gradient:
-            self.choices = [(0.118, 0.565, 1), (1, 0, 0), (1, 0.39, 0.28), (1, 0.49, 0.31), (0.80, 0.36, 0.36),
-                            (0.95, 0.50, 0.50), (0.91, 0.59, 0.48), (0.98, 0.50, 0.44), (1, 0.63, 0.48), (1, 0.27, 0),
-                            (1, 0.55, 0), (1, 0.65, 0), (1, 0.84, 0)]
+def create_results_table(ax,
+                         team: Team,
+                         fixtures: List[Fixture],
+                         team_color: Tuple[float, float, float],
+                         other_color: Tuple[float, float, float],
+                         neutral_color: Tuple[float, float, float],
+                         unknown_color: Tuple[float, float, float]):
+    colors = []
+    table = []
+    fixtures.sort(key=lambda row: row.date)
+    for i, fixture in enumerate(fixtures):
+        first_half = fixture.canonicalise_result(team, fixture.first_half())
+        second_half = fixture.canonicalise_result(team, fixture.second_half())
+        full_time = fixture.canonicalise_result(team, fixture.full_time())
+        colors.append([neutral_color,
+                       neutral_color,
+                       neutral_color,
+                       decide_cell_color(first_half, team_color, other_color, neutral_color, unknown_color),
+                       decide_cell_color(second_half, team_color, other_color, neutral_color, unknown_color),
+                       decide_cell_color(full_time, team_color, other_color, neutral_color, unknown_color)])
+
+        if fixture.home_team == team:
+            opponent_team = fixture.away_team
+            venue = Venue.home
         else:
-            self.choices = ['black', 'dodgerblue', 'lightblue', 'salmon', 'gold', 'darkorange', 'silver']
+            opponent_team = fixture.home_team
+            venue = Venue.away
 
-    def next(self) -> str:
-        if self.index > len(self.choices) - 1:
-            error_message('Out of options for next color')
-        self.index += 1
-        return self.choices[self.index - 1]
+        row = ['{}'.format(fixture.date.strftime('%Y-%m-%d')),
+               opponent_team.name,
+               venue.name[0].upper(),
+               str(first_half),
+               str(second_half),
+               str(full_time)]
+        table.append(row)
 
+    df = pd.DataFrame(table)
+    df.columns = ['Date', 'Opponent', 'Venue', '1st', '2nd', 'FT']
 
-def compute_relative_performance(args: Namespace,
-                                 league: League,
-                                 seasons: List[Season],
-                                 team_names: List[str],
-                                 positions: List[int]):
-    this_season = seasons[-1]
-    team_summaries = {}
-    for name in team_names:
-        team = extract_picked_team(args.database, name, league)
-        team_summaries[team] = compute_summary(team, [this_season], args.venue, args.half)
-
-    summaries = []
-    for season in seasons:
-        if not season.current:
-            table = LeagueTable(season)
-            teams = table.teams_by_position(positions)
-            for team in teams:
-                summary = []
-                summaries.append(summary)
-                compute_statistics(season, team, args.venue, args.half, summary)
-
-    combined_summary = []
-    for summary in summaries:
-        for week, stat in enumerate(summary):
-            if week >= len(combined_summary):
-                combined_summary.append([])
-            combined_summary[week].append(stat)
-
-    color = Color()
-    sublists = split_into_contiguous_groups(positions)
-    label = 'Positions: {}'.format(to_string(sublists))
-    label = '{} ({}-{})'.format(label, seasons[0].year, seasons[-2].year)
-    average_summary = compute_average(combined_summary)
-    data = [Datum(average_summary, label, color.next())]
-
-    for name in team_names:
-        team = extract_picked_team(args.database, name, league)
-        summary = team_summaries[team][this_season]
-        data.append(Datum(summary, team.name, color.next()))
-
-    title = 'Relative performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
-    title = add_venue_and_half_to_title(title, args.venue, args.half)
-    display(title, data)
+    ax.table(cellText=df.values,
+             colLabels=df.columns,
+             colLoc='left',
+             colWidths=[0.2, 0.4, 0.1, 0.1, 0.1, 0.1],
+             cellColours=colors,
+             cellLoc='left',
+             loc='upper center')
+    ax.set_title('Form')
+    ax.axis('off')
 
 
-def compute_average_performance(args: Namespace, league: League, seasons: List[Season], team_name: str):
-    team = extract_picked_team(args.database, team_name, league)
-    team_summary = compute_summary(team, seasons, args.venue, args.half)
+def create_league_table(ax,
+                        this_season: Season,
+                        team: Team,
+                        team_color: Tuple[float, float, float],
+                        other_color: Tuple[float, float, float],
+                        venue: Venue,
+                        half: Half):
+    league_table = LeagueTable(this_season, half)
+    display_table = []
+    colors = []
+    team_length = 1
+    for i, league_row in enumerate(league_table, start=1):
+        display_row = [league_row.TEAM.name]
+        if venue == Venue.home:
+            display_row.extend([league_row.HW + league_row.HD + league_row.HL,
+                                league_row.HW, league_row.HD, league_row.HL, league_row.HF, league_row.HA])
+            wins = league_row.HW
+            draws = league_row.HD
+        elif venue == Venue.away:
+            display_row.extend([league_row.AW + league_row.AD + league_row.AL,
+                                league_row.AW, league_row.AD, league_row.AL, league_row.AF, league_row.AA])
+            wins = league_row.AW
+            draws = league_row.AD
+        else:
+            display_row.extend([league_row.W + league_row.D + league_row.L,
+                                league_row.W, league_row.D, league_row.L, league_row.F, league_row.A])
+            wins = league_row.W
+            draws = league_row.D
+        pts = wins * 3 + draws
+        display_row.append(pts)
+        display_table.append(display_row)
+        team_length = max(team_length, len(league_row.TEAM.name))
 
-    this_season = seasons[-1]
-    combined_summary = []
-    for season, summary in team_summary.items():
-        if season != this_season and summary:
-            for week, stat in enumerate(summary):
-                if week >= len(combined_summary):
-                    combined_summary.append([])
-                combined_summary[week].append(stat)
+    display_table.sort(key=lambda row: row[-1], reverse=True)
 
-    color = Color()
-    average_summary = compute_average(combined_summary)
-    data = [Datum(average_summary, 'Average', color.next()),
-            Datum(team_summary[this_season], '{}:{}'.format(team.name, this_season.year), color.next())]
+    for display_row in display_table:
+        if display_row[0] == team.name:
+            colors.append([team_color] * len(display_row))
+        else:
+            colors.append([other_color] * len(display_row))
 
-    title = 'Average performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
-    title = add_venue_and_half_to_title(title, args.venue, args.half)
-    display(title, data)
+    df = pd.DataFrame(display_table)
+    df.columns = ['Team', 'Played', 'W', 'D', 'L', 'F', 'A', 'PTS']
 
-
-def compute_individual_performance(args: Namespace, league: League, seasons: List[Season]):
-    name = get_unique_team(args)
-    team = extract_picked_team(args.database, name, league)
-    team_summary = compute_summary(team, seasons, args.venue, args.half)
-
-    color = Color(True)
-    linewidth = 3
-    marker_size = 10
-    data = []
-    for season in reversed(seasons):
-        summary = team_summary[season]
-        if summary:
-            data.append(Datum(summary, str(season.year), color.next(), linewidth, marker_size))
-            linewidth -= 0.3
-            marker_size -= 1
-
-    title = 'Team performance comparison {}-{}: {}'.format(seasons[0].year, seasons[-2].year, team.name)
-    title = add_venue_and_half_to_title(title, args.venue, args.half)
-    display(title, data)
+    ax.table(cellText=df.values,
+             colLabels=df.columns,
+             colLoc='left',
+             colWidths=[0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+             cellColours=colors,
+             cellLoc='left',
+             loc='upper center')
+    title = 'League table'
+    if half:
+        title = '{} ({} half)'.format(title, half.name)
+    ax.set_title(title)
+    ax.axis('off')
 
 
 def main(args: Namespace):
     league = league_register[get_unique_league(args)]
     load_database(args.database, league)
+    team_name = get_unique_team(args)
+    team = extract_picked_team(args.database, team_name, league)
+    seasons = Season.seasons(league)
+    this_season = seasons.pop()
+    fixtures = get_fixtures(args.database, team, this_season, args.venue)
 
-    seasons = Season.seasons()
-    if args.history:
-        seasons = seasons[-args.history:]
+    nrows = 2
+    ncols = 1
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 10), squeeze=False, constrained_layout=True)
 
-    if args.relative:
-        team_names = get_multiple_teams(args)
-        table = LeagueTable(seasons[-1])
-        lower, upper = table.positions(args.relative)
-        positions = [i for i in range(lower, upper)]
-        compute_relative_performance(args, league, seasons, team_names, positions)
-    elif args.position:
-        team_names = get_multiple_teams(args)
-        compute_relative_performance(args, league, seasons, team_names, args.position)
-    elif args.average:
-        team_name = get_unique_team(args)
-        compute_average_performance(args, league, seasons, team_name)
+    team_color = (54 / 255, 104 / 255, 141 / 255)
+    other_team_color = (240 / 255, 88 / 255, 55 / 255)
+    neutral_color = (1, 1, 1)
+    unknown_color = (0, 0, 0)
+
+    create_results_table(axs[0, 0], team, fixtures, team_color, other_team_color, neutral_color, unknown_color)
+    create_league_table(axs[1, 0], this_season, team, team_color, neutral_color, args.venue, args.half)
+
+    title = '{} {}: {}'.format(league.country, league.name, team.name)
+    if args.venue == Venue.any:
+        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
     else:
-        compute_individual_performance(args, league, seasons)
+        title = '{} ({} only)'.format(title, args.venue.name)
+
+    fig.suptitle(title, fontweight='bold', fontsize=14)
+    plt.show(block=args.block)
 
 
 if __name__ == '__main__':
