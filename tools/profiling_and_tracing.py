@@ -7,7 +7,7 @@ import sys
 from lib.utils import dot
 
 from graphs import graphs
-from system import program
+from system import programs
 from utils import messages
 
 
@@ -116,7 +116,7 @@ def check_traces(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPoint
             assert true_count[v] == ipg_count[v]
 
 
-def inter_procedural_analysis(prog: program.Program, policy, reinstrument, traces):
+def inter_procedural_analysis(prog: programs.Program, policy, reinstrument, traces):
     dfs = graphs.DepthFirstSearch(prog.call_graph, prog.call_graph.root)
     for call_v in dfs.post_order():
         cfg = prog[call_v.name]
@@ -188,7 +188,7 @@ def intra_procedural_analysis(prog, policy, reinstrument, traces):
                                               largest_footprint.number_of_edges()))
 
 def main(**kwargs):
-    prog = program.Program.IO.read(kwargs['filename'])
+    prog = programs.Program.IO.read(kwargs['filename'])
     if kwargs['interprocedural']:
         inter_procedural_analysis(prog,
                                   kwargs['policy'],

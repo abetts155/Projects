@@ -13,15 +13,15 @@ from cli.cli import (add_database_option,
 from collections import Counter
 from datetime import date, datetime, timedelta
 from lib import messages
-from model.fixtures import Half, Fixture, Event
-from model.leagues import league_register, prettify
+from model.fixtures import Half, Fixture, Event, Venue
+from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.teams import Team
 from model.sequences import count_events, DataUnit
-from sql.sql import extract_picked_team, load_database, Database
+from sql.sql import Database, extract_picked_team, load_league, load_teams, get_fixtures
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
-from typing import Callable
+from typing import Callable, Dict, List
 
 
 def parse_command_line():
@@ -65,6 +65,62 @@ def probability(current_run: int, counter: Counter) -> float:
         return 1
 
 
+def analyse_team_and_event(seasons: List[Season], this_season: Season, team: Team, event: Callable):
+    team_history = DataUnit(Counter(), seasons)
+    for season in seasons:
+        count_events(season,
+                     team,
+                     args.venue,
+                     args.half,
+                     event,
+                     args.negate,
+                     team_history)
+
+    team_now = DataUnit(Counter(), [this_season], team=team)
+    count_events(this_season,
+                 team,
+                 args.venue,
+                 args.half,
+                 event,
+                 args.negate,
+                 team_now)
+
+    return team_now, team_history
+
+
+def predict(team_now: DataUnit, team_history: DataUnit, aggregated_history: DataUnit, threshold: float, minimum: int):
+    aggregated_message = ''
+    team_message = ''
+
+    if team_now.last and team_now.last >= minimum:
+        aggregated_probability = probability(team_now.last, aggregated_history.counter)
+        if aggregated_probability <= threshold:
+            aggregated_message = 'Probability of extension is {:.3f} [aggregated]'.format(aggregated_probability)
+
+        team_probability = probability(team_now.last, team_history.counter)
+        if team_probability and team_probability <= threshold:
+            team_message = 'Probability of extension is {:.3f}'.format(team_probability)
+            team_message = '{} [based on {} individual observations]'.format(team_message,
+                                                                             sum(team_history.counter.values()))
+
+    return aggregated_message, team_message
+
+
+def get_match_information(database: str, season: Season, team: Team):
+    with Database(database) as db:
+        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
+        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                    team.id,
+                                                    Keywords.OR.name,
+                                                    ColumnNames.Away_ID.name,
+                                                    team.id)
+        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
+        constraints = [season_constraint, team_constraint, finished_constraint]
+        fixtures = get_fixtures(db, constraints)
+        fixtures.sort(key=lambda fixture: fixture.date)
+        return fixtures
+
+
 class Text:
     BLUE = '\033[94m'
     YELLOW = '\033[93m'
@@ -74,91 +130,105 @@ class Text:
     END = '\033[0m'
 
 
-def output_prediction(database_name: str,
-                      season: Season,
-                      team: Team,
+def output_prediction(team: Team,
+                      next_match: Fixture,
+                      remaining_matches: int,
                       half: Half,
-                      aggregated_history: DataUnit,
-                      team_history: DataUnit,
-                      team_now: DataUnit,
-                      event_function: Callable,
+                      event: Callable,
                       negate: bool,
-                      threshold: float,
-                      show_match: bool):
-    aggregated_probability = probability(team_now.last, aggregated_history.counter)
-    if aggregated_probability <= threshold:
-        aggregated_message = 'Probability of extension is {:.3f} [aggregated]'.format(aggregated_probability)
+                      length_of_run: int,
+                      aggregated_message: str,
+                      team_message: str):
+    event = Event.name(event, negate)
+    header = '{} {}{}{} in the last {}{}{}'.format('>' * 10,
+                                                   Text.BLUE,
+                                                   event,
+                                                   Text.END,
+                                                   Text.BOLD,
+                                                   length_of_run,
+                                                   Text.END)
+
+    if half == Half.both:
+        header += ' {}{}{}'.format(Text.UNDERLINE, 'games' if length_of_run > 1 else 'game', Text.END)
+    elif half == Half.first:
+        header += ' {}1st {}{}'.format(Text.UNDERLINE, 'halves' if length_of_run > 1 else 'half', Text.END)
+    elif half == Half.second:
+        header += ' {}2nd {}{}'.format(Text.UNDERLINE, 'halves' if length_of_run > 1 else 'half', Text.END)
+    elif half == Half.separate:
+        header += ' {}consecutive {}{}'.format(Text.UNDERLINE,'halves' if length_of_run > 1 else 'half', Text.END)
     else:
-        aggregated_message = None
+        assert False
 
-    team_probability = probability(team_now.last, team_history.counter)
-    if team_probability and team_probability <= threshold:
-        team_message = 'Probability of extension is {:.3f}'.format(team_probability)
-        team_message = '{} [based on {} individual observations]'.format(team_message,
-                                                                         sum(team_history.counter.values()))
-    else:
-        team_message = None
-
-    with Database(database_name) as db:
-        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
-        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
-                                                    team.id,
-                                                    Keywords.OR.name,
-                                                    ColumnNames.Away_ID.name,
-                                                    team.id)
-        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
-        constraints = [season_constraint, team_constraint, finished_constraint]
-        fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
-        fixture_rows.sort(key=lambda row: row[1])
-        fixture_rows = [row for row in fixture_rows if datetime.fromisoformat(row[1]).date() >= date.today()]
-
-        if fixture_rows:
-            row = fixture_rows[0]
-            match_date = datetime.fromisoformat(row[1])
-            window = datetime.now() + timedelta(hours=12)
-
-            if match_date.date() <= window.date() or show_match:
-                event = Event.name(event_function, negate)
-                header = '{} {}{}{} in the last {}{}{} {}'.format('>' * 10,
-                                                                  Text.BLUE,
-                                                                  event,
-                                                                  Text.END,
+    header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
+    next_match_message = 'Next match: {} {}{}{} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
                                                                   Text.BOLD,
-                                                                  team_now.last,
+                                                                  next_match.date.strftime('%H.%M'),
                                                                   Text.END,
-                                                                  'games' if team_now.last > 1 else 'game')
+                                                                  next_match.home_team.name,
+                                                                  next_match.away_team.name)
+    remaining_matches_message = '{} matches remaining'.format(remaining_matches)
+    message = '{}\n{}{}{}\n{}\n'.format(header,
+                                        aggregated_message + '\n' if aggregated_message else '',
+                                        team_message + '\n' if team_message else '',
+                                        next_match_message,
+                                        remaining_matches_message)
+    print(message)
 
-                if half:
-                    header = '{} ({}{} half{})'.format(header, Text.UNDERLINE, half.name, Text.END)
 
-                header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
+def analyse_teams(args: Namespace,
+                  league: League,
+                  seasons: List[Season],
+                  this_season: Season,
+                  teams: List[Team],
+                  historical_data: Dict[Callable, DataUnit]):
+    header = "{} Analysing sequences in {} {} {}".format('*' * 80 + '\n',
+                                                         prettify(league.country),
+                                                         league.name,
+                                                         '\n' + '*' * 80)
+    header_emitted = False
 
-                home_team = Team.inventory[row[3]]
-                away_team = Team.inventory[row[4]]
+    for team in teams:
+        for event, history in historical_data.items():
+            team_now, team_history = analyse_team_and_event(seasons, this_season, team, event)
+            aggregated_message, team_message = predict(team_now, team_history, history, args.probability, args.minimum)
 
-                next_match_message = 'Next match: {} {}{}{} {} vs. {}'.format(match_date.strftime('%Y-%m-%d'),
-                                                                              Text.BOLD,
-                                                                              match_date.strftime('%H.%M'),
-                                                                              Text.END,
-                                                                              home_team.name,
-                                                                              away_team.name)
-                remaining_matches_message = '{} matches remaining'.format(len(fixture_rows))
-                message = '{}\n{}{}{}\n{}\n'.format(header,
-                                                    aggregated_message + '\n' if aggregated_message else '',
-                                                    team_message + '\n' if team_message else '',
-                                                    next_match_message,
-                                                    remaining_matches_message)
-                print(message)
+            if aggregated_message or team_message:
+                fixtures = get_match_information(args.database, this_season, team)
+                if fixtures:
+                    fixtures = [fixture for fixture in fixtures if datetime.date(fixture.date) >= date.today()]
+                    next_match = fixtures[0]
+                    window = datetime.now() + timedelta(hours=12)
+
+                    satisfies_date_constraint = (datetime.date(next_match.date) <= window.date() or args.show_match)
+                    satisfies_venue_constraint = ((args.venue == Venue.any) or
+                                                  (args.venue == Venue.home and next_match.home_team == team) or
+                                                  (args.venue == Venue.away and next_match.away_team == team))
+
+                    if satisfies_date_constraint and satisfies_venue_constraint:
+                        if not args.no_header and not header_emitted:
+                            header_emitted = True
+                            messages.vanilla_message(header)
+
+                        output_prediction(team,
+                                          next_match,
+                                          len(fixtures),
+                                          args.half,
+                                          event,
+                                          args.negate,
+                                          team_now.last,
+                                          aggregated_message,
+                                          team_message)
 
 
 def main(args: Namespace):
+    load_teams(args.database)
+
     for league_code in args.league:
         league = league_register[league_code]
-        load_database(args.database, league)
+        load_league(args.database, league)
 
         seasons = Season.seasons(league)
         if not seasons:
-            print(args)
             messages.error_message("No season data found")
 
         if args.history:
@@ -170,15 +240,16 @@ def main(args: Namespace):
             if args.team:
                 teams = []
                 for team_name in get_multiple_teams(args):
-                    team = extract_picked_team(args.database, team_name, league)
+                    (row,) = extract_picked_team(args.database, team_name, league)
+                    team = Team.inventory[row[0]]
                     teams.append(team)
             else:
                 teams = this_season.teams()
 
             events = [Event.get(event) for event in args.event]
-            histories = {}
+            historical_data = {}
             for event in events:
-                histories[event] = DataUnit(Counter(), seasons)
+                historical_data[event] = DataUnit(Counter(), seasons)
                 for season in seasons:
                     for team in season.teams():
                         count_events(season,
@@ -187,55 +258,9 @@ def main(args: Namespace):
                                      args.half,
                                      event,
                                      args.negate,
-                                     histories[event])
+                                     historical_data[event])
 
-            header = "{} Analysing sequences in {} {} {}".format('*' * 80 + '\n',
-                                                                 prettify(league.country),
-                                                                 league.name,
-                                                                 '\n' + '*' * 80)
-            header_emitted = False
-
-            for team in teams:
-                for event in events:
-                    team_history = DataUnit(Counter(), seasons)
-                    for season in seasons:
-                        count_events(season,
-                                     team,
-                                     args.venue,
-                                     args.half,
-                                     event,
-                                     args.negate,
-                                     team_history)
-
-                    team_now = DataUnit(Counter(), [this_season], team=team)
-                    count_events(this_season,
-                                 team,
-                                 args.venue,
-                                 args.half,
-                                 event,
-                                 args.negate,
-                                 team_now)
-
-                    if team_now.last is not None and team_now.last >= args.minimum:
-                        aggregated_history = histories[event]
-                        aggregated_probability = probability(team_now.last, aggregated_history.counter)
-                        team_probability = probability(team_now.last, team_history.counter)
-                        if aggregated_probability <= args.probability or team_probability <= args.probability:
-                            if not args.no_header and not header_emitted:
-                                header_emitted = True
-                                messages.vanilla_message(header)
-
-                            output_prediction(args.database,
-                                              this_season,
-                                              team,
-                                              args.half,
-                                              aggregated_history,
-                                              team_history,
-                                              team_now,
-                                              event,
-                                              args.negate,
-                                              args.probability,
-                                              args.show_match)
+            analyse_teams(args, league, seasons, this_season, teams, historical_data)
         else:
             messages.error_message("The current season has not yet started")
 

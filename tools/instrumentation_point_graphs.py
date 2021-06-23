@@ -5,13 +5,13 @@ import sys
 import threading
 
 from graphs import graphs
-from system import (program, database, calculations)
+from system import (programs, database, calculations)
 from utils import messages
 
 
 def main(**kwargs):
     messages.verbose_message("Reading program from '{}'".format(kwargs['filename']))
-    prog = program.IO.read(kwargs['filename'])
+    prog = programs.IO.read(kwargs['filename'])
     prog.cleanup()
 
     failures = set()

@@ -17,7 +17,7 @@ from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
 from numpy import arange, median
-from sql.sql import load_database, extract_picked_team
+from sql.sql import extract_picked_team, load_league, load_teams
 from typing import Callable, List
 
 
@@ -134,9 +134,6 @@ def compute_statistics(season: Season, team: Team, venue: Venue, game_states: Li
             update_stats(stats.first_half, first_half)
             update_stats(stats.second_half, second_half)
             update_stats(stats.both_halves, full_time)
-
-            if game_states:
-                print(fixture)
 
     return stats
 
@@ -324,8 +321,9 @@ def reduce(individuals: List[MatchStatistics], func: Callable, scale: int = 1) -
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
 
     seasons = Season.seasons(league)
     if not seasons:
@@ -334,7 +332,8 @@ def main(args: Namespace):
     if args.history:
         seasons = seasons[-args.history:]
 
-    selected_team = extract_picked_team(args.database, get_unique_team(args), league)
+    (row,) = extract_picked_team(args.database, get_unique_team(args), league)
+    selected_team = Team.inventory[row[0]]
 
     if args.averages:
         if seasons[-1].current:

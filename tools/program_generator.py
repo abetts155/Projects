@@ -1,9 +1,11 @@
 import argparse
 import random
-import sys
 
 from graphs import (edges, graphs, vertices)
-from system import program
+from sys import setrecursionlimit
+from system import programs
+from threading import stack_size
+from time import time
 from utils import messages
 
 
@@ -219,6 +221,7 @@ def create_control_flow_graph(the_program,
         level_edges = random.randint(1, max_edges)
         anywhere_edges = max_edges - level_edges
 
+        start = time()
         if len(candidate_levels) > 2:
             for _ in range(level_edges):
                 p_level = random.choice(candidate_levels[2:])
@@ -228,16 +231,23 @@ def create_control_flow_graph(the_program,
                 if not cfg.has_edge(p, s):
                     cfg.add_edge(edges.ControlFlowEdge(p, s))
 
+                if time() - start > 5:
+                    break
+
+        start = time()
         for _ in range(anywhere_edges):
             p = random.choice(candidates)
             s = random.choice(candidates)
             if not cfg.has_edge(p, s):
                 cfg.add_edge(edges.ControlFlowEdge(p, s))
 
+            if time() - start > 5:
+                break
+
     return cfg
 
 
-def add_subprograms(the_program:        program.Program,
+def add_subprograms(the_program:        programs.Program,
                     subprograms:        int,
                     loops:              int,
                     nesting_depth:      int,
@@ -255,12 +265,11 @@ def add_subprograms(the_program:        program.Program,
                                         number_of_vertices,
                                         fan_out,
                                         subprogram_name)
-        cfg.dotify()
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
-        the_program.add_subprogram(program.Subprogram(cfg, call_vertex))
+        the_program.add_subprogram(programs.Subprogram(cfg, call_vertex))
 
 
-def add_calls(the_program: program.Program, recursion_enabled):
+def add_calls(the_program: programs.Program, recursion_enabled):
     class Subprogram:
         __slots__ = ['name', 'candidates', 'level']
 
@@ -342,10 +351,8 @@ def add_calls(the_program: program.Program, recursion_enabled):
             e = edges.CallGraphEdge(the_program[caller.name].call_vertex, the_program[callee.name].call_vertex, site)
             the_program.call_graph.add_edge(e)
 
-    the_program.call_graph.dotify()
 
-
-def annotate_control_flow_edges(the_program: program.Program):
+def annotate_control_flow_edges(the_program: programs.Program):
     for subprogram in the_program:
         for v in subprogram.cfg:
             if len(subprogram.cfg.successors(v)) == 1:
@@ -370,7 +377,7 @@ def main(**kwargs):
         messages.error_message(
             'The number of vertices in a control flow graph must be at least twice the number of loops')
 
-    the_program = program.Program(kwargs['program'])
+    the_program = programs.Program(kwargs['program'])
     add_subprograms(the_program,
                     kwargs['subprograms'],
                     kwargs['loops'],
@@ -382,7 +389,7 @@ def main(**kwargs):
 
     if not kwargs['no_calls']:
         add_calls(the_program, kwargs['recursion'])
-    program.IO.write(the_program, kwargs['program'])
+    programs.IO.write(the_program, kwargs['program'])
 
 
 class CheckForPositiveValue(argparse.Action):
@@ -456,5 +463,6 @@ def parse_the_command_line():
 
 
 if __name__ == '__main__':
-    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
+    stack_size(2 ** 26)
+    setrecursionlimit(2 ** 30)
     main(**vars(parse_the_command_line()))

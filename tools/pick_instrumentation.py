@@ -1,16 +1,16 @@
 import argparse
 import sys
 
-from system import program
+from system import programs
 from graphs import (vertices, edges, graphs)
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
     the_program.call_graph.dotify()
 
     if kwargs['manual']:
-        program.IO.read_properties(the_program, kwargs['manual'])
+        programs.IO.read_properties(the_program, kwargs['manual'])
     else:
         instrumentation_id = 0
         for subprogram in the_program:
@@ -48,7 +48,7 @@ def main(**kwargs):
                     subprogram.cfg.remove_edge(edges.ControlFlowEdge(predecessor, successor))
                     subprogram.cfg.add_edge(edges.InstrumentationEdge(predecessor, successor, instrumentation_id))
 
-    program.IO.write(the_program, kwargs['output'])
+    programs.IO.write(the_program, kwargs['output'])
 
 
 def parse_the_command_line():

@@ -2,16 +2,19 @@ from argparse import ArgumentParser, Namespace
 from cli.cli import (add_database_option,
                      add_logging_options,
                      set_logging_options,
+                     add_league_option,
                      add_team_option,
                      add_block_option,
-                     get_multiple_teams)
+                     get_multiple_teams,
+                     get_unique_league)
 from collections import Counter
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Fixture, Result, create_fixture_from_row, win, draw, defeat
+from model.leagues import league_register
 from model.teams import Team
 from sql.sql import Database
-from sql.sql import load_database, extract_picked_team, ColumnNames, Characters, Keywords
+from sql.sql import ColumnNames, Characters, Keywords, extract_picked_team, load_league, load_teams
 from typing import Callable, List, Tuple
 
 import pandas as pd
@@ -21,6 +24,7 @@ def parse_command_line():
     parser = ArgumentParser(description='Show head-to-head record')
     add_database_option(parser)
     add_logging_options(parser)
+    add_league_option(parser, False)
     add_team_option(parser, True)
     add_block_option(parser)
     return parser.parse_args()
@@ -101,10 +105,8 @@ def attach_scorelines(ax,
             index += 1
 
 
-def create_title(team: Team, half: Half = None):
+def create_title(team: Team):
     title = 'At {}'.format(team.name)
-    if half:
-        title = '{} ({} half)'.format(title, half.name)
     return title
 
 
@@ -113,7 +115,6 @@ def create_single_bar(ax,
                       left_color: Tuple[float, float, float],
                       right_color: Tuple[float, float, float],
                       neutral_color: Tuple[float, float, float],
-                      half: Half,
                       stats: Statistics):
     x_values = ['H', 'D', 'A', 'HG', 'AG']
     y_values = [stats.wins, stats.draws, stats.losses, stats.goals_for, stats.goals_against]
@@ -131,7 +132,7 @@ def create_single_bar(ax,
     ax.set_xticks(indices)
     ax.set_xticklabels(x_values, rotation=30)
     ax.set_yticks([])
-    ax.set_title(create_title(home_team, half), fontweight='bold', fontsize=14, color=left_color)
+    ax.set_title(create_title(home_team), fontweight='bold', fontsize=14, color=left_color)
 
 
 def decide_cell_color(result: Result,
@@ -185,20 +186,27 @@ def create_results_table(ax,
 
 
 def main(args: Namespace):
-    load_database(args.database)
+    load_teams(args.database)
+
+    if args.league:
+        league = league_register[get_unique_league(args)]
+        load_league(args.database, league)
 
     nrows = 2
     ncols = 4
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 13.5), squeeze=False, constrained_layout=True)
 
     left_name, right_name = get_multiple_teams(args)
-    left_team = extract_picked_team(args.database, left_name)
-    right_team = extract_picked_team(args.database, right_name)
+    (row,) = extract_picked_team(args.database, left_name, league)
+    left_team = Team.inventory[row[0]]
+    (row,) = extract_picked_team(args.database, right_name, league)
+    right_team = Team.inventory[row[0]]
+
     left_team_color = (54 / 255, 104 / 255, 141 / 255)
     right_team_color = (240 / 255, 88 / 255, 55 / 255)
     neutral_color = (1, 1, 1)
     unknown_color = (0, 0, 0)
-    halves = [Half.first, Half.second, None]
+    halves = [Half.first, Half.second, Half.both]
 
     left_fixtures = get_fixtures(args.database, left_team, right_team)
     right_fixtures = get_fixtures(args.database, right_team, left_team)
@@ -215,7 +223,6 @@ def main(args: Namespace):
                                   left_team_color,
                                   right_team_color,
                                   neutral_color,
-                                  half,
                                   stats)
 
             create_results_table(axs[0, ncols - 1],
@@ -238,7 +245,6 @@ def main(args: Namespace):
                                   right_team_color,
                                   left_team_color,
                                   neutral_color,
-                                  half,
                                   stats)
             create_results_table(axs[1, ncols - 1],
                                  right_fixtures,

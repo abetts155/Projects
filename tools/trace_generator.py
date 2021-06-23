@@ -3,7 +3,7 @@ import random
 import sys
 
 from graphs import graphs
-from system import traces, program
+from system import traces, programs
 from utils import messages
 
 
@@ -26,7 +26,7 @@ def generate_trace(ppg: graphs.ProgramPointGraph, **kwargs):
 
 def main(**kwargs):
     kwargs['number_of_runs'] = max(kwargs['number_of_runs'], 1)
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
     for subprogram in the_program:
         messages.debug_message('Creating traces for {}'.format(subprogram.name))
         subprogram.cfg.dotify()

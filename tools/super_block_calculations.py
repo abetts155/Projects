@@ -6,7 +6,7 @@ import threading
 import typing
 
 from graphs import graphs
-from system import (program, database, calculations)
+from system import (programs, database, calculations)
 from utils import messages
 
 
@@ -16,7 +16,7 @@ def main(program_filename:       str,
          subprogram_names:       typing.List[str],
          fold_optimisation:      bool,
          dominator_optimisation: bool):
-    the_program = program.IO.read(program_filename)
+    the_program = programs.IO.read(program_filename)
     the_program.cleanup()
 
     failures = set()
@@ -164,7 +164,6 @@ def parse_the_command_line():
 
 
 if __name__ == '__main__':
-    assert sys.version_info >= (3, 0), 'Script requires Python 3.0 or greater to run'
     assert shutil.which('lp_solve', mode=os.X_OK), 'Script requires lp_solve to be in your path'
     threading.stack_size(2 ** 26)
     sys.setrecursionlimit(2 ** 20)

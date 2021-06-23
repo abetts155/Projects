@@ -27,7 +27,8 @@ def add_half_option(parser: ArgumentParser):
                         choices=Half,
                         type=Half.from_string,
                         metavar='{{{}}}'.format(','.join(half.name for half in Half)),
-                        help='filter fixtures according to the half')
+                        help='filter fixtures according to the half',
+                        default=Half.both)
 
 
 def add_league_option(parser: ArgumentParser, required: bool = True):

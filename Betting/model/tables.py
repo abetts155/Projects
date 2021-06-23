@@ -100,14 +100,14 @@ class TableMap:
 
 
 class LeagueTable(list):
-    def __init__(self, season: Season, half: Half = None):
+    def __init__(self, season: Season, half: Half):
         list.__init__(self)
         self._season = season
         self.__fill(season.fixtures(), half)
         self.sort(key=lambda row: (row.PTS, row.F - row.A, row.F), reverse=True)
         self.__compute_slices()
 
-    def __fill(self, fixtures: List[Fixture], half: Half = None):
+    def __fill(self, fixtures: List[Fixture], half: Half):
         home_data = {}
         away_data = {}
         for fixture in fixtures:
@@ -121,29 +121,40 @@ class LeagueTable(list):
                 home = home_data[fixture.home_team]
                 away = away_data[fixture.away_team]
 
-                if half:
-                    if half == half.first:
-                        result = fixture.first_half()
-                    else:
-                        result = fixture.second_half()
+                results = []
+                if half == Half.both:
+                    if fixture.full_time() is not None:
+                        results.append(fixture.full_time())
+                elif half == Half.first:
+                    if fixture.first_half() is not None:
+                        results.append(fixture.first_half())
+                elif half == Half.second:
+                    if fixture.second_half() is not None:
+                        results.append(fixture.second_half())
+                elif half == Half.separate:
+                    if fixture.first_half() is not None:
+                        results.append(fixture.first_half())
+                    if fixture.second_half() is not None:
+                        results.append(fixture.second_half())
                 else:
-                    result = fixture.full_time()
+                    assert False
 
-                if result:
-                    if win(result):
-                        home.wins += 1
-                        away.losses += 1
-                    elif defeat(result):
-                        home.losses += 1
-                        away.wins += 1
-                    else:
-                        home.draws += 1
-                        away.draws += 1
+                if results:
+                    for result in results:
+                        if win(result):
+                            home.wins += 1
+                            away.losses += 1
+                        elif defeat(result):
+                            home.losses += 1
+                            away.wins += 1
+                        else:
+                            home.draws += 1
+                            away.draws += 1
 
-                    home.goals_for += result.left
-                    home.goals_against += result.right
-                    away.goals_for += result.right
-                    away.goals_against += result.left
+                        home.goals_for += result.left
+                        home.goals_against += result.right
+                        away.goals_for += result.right
+                        away.goals_against += result.left
 
         assert home_data.keys() == away_data.keys()
 
@@ -240,9 +251,9 @@ class LeagueTable(list):
                  '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                  '{:>2} {:>2} {:>2} {:>3} {:>3}|  ' \
                  '{:>3}|'.format('Team', team_column_length, 'P',
-                                'W', 'D', 'L', 'F', 'A',
-                                'W', 'D', 'L', 'F', 'A',
-                                'W', 'D', 'L', 'F', 'A', 'PTS')
+                                 'W', 'D', 'L', 'F', 'A',
+                                 'W', 'D', 'L', 'F', 'A',
+                                 'W', 'D', 'L', 'F', 'A', 'PTS')
 
         rows = []
         for row in self:
@@ -251,9 +262,9 @@ class LeagueTable(list):
                    '{:>2} {:>2} {:>2} {:>2} {:>2}|  ' \
                    '{:>2} {:>2} {:>2} {:>3} {:>3}|  ' \
                    '{:>3}|'.format(row.TEAM.name, team_column_length, row.P,
-                                  row.HW, row.HD, row.HL, row.HF, row.HA,
-                                  row.AW, row.AD, row.AL, row.AF, row.AA,
-                                  row.W, row.D, row.L, row.F, row.A, row.PTS)
+                                   row.HW, row.HD, row.HL, row.HF, row.HA,
+                                   row.AW, row.AD, row.AL, row.AF, row.AA,
+                                   row.W, row.D, row.L, row.F, row.A, row.PTS)
             rows.append(data)
 
         divider = '-' * len(bottom)

@@ -18,7 +18,7 @@ from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap
-from sql.sql import load_database
+from sql.sql import load_league, load_teams
 
 import numpy as np
 import pandas as pd
@@ -87,13 +87,14 @@ def fill_matrix(matrix: np.ndarray, table_map: TableMap, table: LeagueTable, pre
         fixtures = team_fixtures[row.TEAM]
         results = []
         for fixture in fixtures:
-            if half:
-                if half == Half.first:
-                    result = fixture.first_half()
-                else:
-                    result = fixture.second_half()
-            else:
+            if half == Half.both:
                 result = fixture.full_time()
+            elif half == Half.first:
+                result = fixture.first_half()
+            elif half == Half.second:
+                result = fixture.second_half()
+            else:
+                assert False
 
             if result:
                 result = fixture.canonicalise_result(row.TEAM, result)
@@ -128,22 +129,23 @@ def create_chunk_labels(table_map: TableMap):
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
 
     seasons = Season.seasons(league)
     if args.history:
         seasons = seasons[-args.history:]
 
     head_season = seasons[-1]
-    head_table = LeagueTable(head_season)
+    head_table = LeagueTable(head_season, args.half)
     table_map = head_table.group(args.chunks)
     predicates = predicate_table[args.analysis]
     matrix = np.zeros(shape=(table_map.number_of_chunks(), len(predicates.functions)),
                       dtype=np.int32)
 
     for season in seasons:
-        table = LeagueTable(season)
+        table = LeagueTable(season, args.half)
         table_map = table.group(args.chunks)
         fill_matrix(matrix, table_map, table, predicates, args.half)
 
@@ -158,7 +160,7 @@ def main(args: Namespace):
 
     sublists = split_into_contiguous_groups([season.year for season in seasons])
     title = '{} {} Seasons:{}'.format(league.country, league.name, to_string(sublists))
-    if args.half is not None:
+    if args.half != Half.both:
         title = '{} ({} half)'.format(title, args.half.name)
     fig.suptitle(title, fontweight='bold', fontsize=14)
     plt.show(block=args.block)

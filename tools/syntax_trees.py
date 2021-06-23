@@ -2,12 +2,12 @@ import argparse
 import sys
 
 from graphs import graphs
-from system import program
+from system import programs
 from utils import messages
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['filename'])
+    the_program = programs.IO.read(kwargs['filename'])
 
     for subprogram in the_program:
         messages.debug_message('Analysing CFG for {}'.format(subprogram.name))

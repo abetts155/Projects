@@ -9,13 +9,14 @@ from cli.cli import (add_database_option,
                      add_block_option,
                      get_unique_league,
                      get_unique_team)
+from lib.messages import warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, defeat
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team
-from sql.sql import Database, load_database, extract_picked_team, ColumnNames, Characters, Keywords
+from sql.sql import Database, ColumnNames, Characters, Keywords, extract_picked_team, load_league, load_teams
 from typing import List, Tuple
 
 import pandas as pd
@@ -183,34 +184,39 @@ def create_league_table(ax,
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
-    team_name = get_unique_team(args)
-    team = extract_picked_team(args.database, team_name, league)
+    load_league(args.database, league)
+
+    (row,) = extract_picked_team(args.database, get_unique_team(args), league)
+    team = Team.inventory[row[0]]
     seasons = Season.seasons(league)
     this_season = seasons.pop()
     fixtures = get_fixtures(args.database, team, this_season, args.venue)
 
-    nrows = 2
-    ncols = 1
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 10), squeeze=False, constrained_layout=True)
+    if fixtures:
+        nrows = 2
+        ncols = 1
+        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 10), squeeze=False, constrained_layout=True)
 
-    team_color = (54 / 255, 104 / 255, 141 / 255)
-    other_team_color = (240 / 255, 88 / 255, 55 / 255)
-    neutral_color = (1, 1, 1)
-    unknown_color = (0, 0, 0)
+        team_color = (54 / 255, 104 / 255, 141 / 255)
+        other_team_color = (240 / 255, 88 / 255, 55 / 255)
+        neutral_color = (1, 1, 1)
+        unknown_color = (0, 0, 0)
 
-    create_results_table(axs[0, 0], team, fixtures, team_color, other_team_color, neutral_color, unknown_color)
-    create_league_table(axs[1, 0], this_season, team, team_color, neutral_color, args.venue, args.half)
+        create_results_table(axs[0, 0], team, fixtures, team_color, other_team_color, neutral_color, unknown_color)
+        create_league_table(axs[1, 0], this_season, team, team_color, neutral_color, args.venue, args.half)
 
-    title = '{} {}: {}'.format(league.country, league.name, team.name)
-    if args.venue == Venue.any:
-        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
+        title = '{} {}: {}'.format(league.country, league.name, team.name)
+        if args.venue == Venue.any:
+            title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
+        else:
+            title = '{} ({} only)'.format(title, args.venue.name)
+
+        fig.suptitle(title, fontweight='bold', fontsize=14)
+        plt.show(block=args.block)
     else:
-        title = '{} ({} only)'.format(title, args.venue.name)
-
-    fig.suptitle(title, fontweight='bold', fontsize=14)
-    plt.show(block=args.block)
+        warning_message("No data to display for {} in {} {}".format(team.name, league.country, league.name))
 
 
 if __name__ == '__main__':

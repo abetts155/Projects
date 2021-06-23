@@ -17,7 +17,7 @@ from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap
-from sql.sql import load_database
+from sql.sql import load_league, load_teams
 from typing import Callable
 
 import numpy as np
@@ -57,13 +57,14 @@ def fill_matrix(func: Callable,
         away_team_position = table.team_position(fixture.away_team)
         away_team_chunk_id = table_map.get_chunk(away_team_position)
 
-        if half is not None:
-            if half == Half.first:
-                result = fixture.first_half()
-            else:
-                result = fixture.second_half()
-        else:
+        if half == Half.both:
             result = fixture.full_time()
+        elif half == Half.first:
+            result = fixture.first_half()
+        elif half == Half.second:
+            result = fixture.second_half()
+        else:
+            assert False
 
         if result:
             if func(result):
@@ -94,15 +95,16 @@ def populate_axis(table_map: TableMap, datum: pd.DataFrame, ax, title: str):
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
 
     seasons = Season.seasons(league)
     if args.history:
         seasons = seasons[-args.history:]
 
     head_season = seasons.pop()
-    head_table = LeagueTable(head_season)
+    head_table = LeagueTable(head_season, args.half)
     head_map = head_table.group(args.chunks)
     shape = (head_map.number_of_chunks(), head_map.number_of_chunks())
     (event_name,) = args.event
@@ -110,7 +112,7 @@ def main(args: Namespace):
 
     historical_matrix = np.zeros(shape=shape, dtype=np.int32)
     for season in seasons:
-        table = LeagueTable(season)
+        table = LeagueTable(season, args.half)
         fill_matrix(event, args.symmetry, historical_matrix, head_map, table, args.half)
 
     now_matrix = np.zeros(shape=shape, dtype=np.int32)
@@ -128,7 +130,7 @@ def main(args: Namespace):
     populate_axis(head_map, datum, axs[1, 0], title)
 
     title = '{} {}: {}'.format(league.country, league.name, Event.name(event, args.negate))
-    if args.half is not None:
+    if args.half != Half.both:
         title = '{} ({} half)'.format(title, args.half.name)
     fig.suptitle(title, fontweight='bold', fontsize=14)
     plt.show(block=args.block)

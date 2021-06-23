@@ -14,8 +14,6 @@ def get_edge_id():
 
 
 class Edge:
-    """Base edge class"""
-
     def __init__(self, predecessor, successor):
         self._predecessor = predecessor
         self._successor = successor
@@ -46,16 +44,6 @@ class Edge:
 
 
 class Direction(enum.Enum):
-    """Direction of control flow of an edge P => S:
-    NONE means there is no direction information for P => S.
-    RETURN means P only has one successor, S, but P transfers control to another subprogram.
-    CONTINUE means P only has one successor, S, and the first instruction of S immediately follows the last instruction
-    of P.
-    ELSE means P is a 2-way branch and P => S is the false arm.
-    THEN means P is a 2-way branch and P => S is the true arm.
-    CASE means P is an n-way branch and P => S is one arm of the branch.
-    UNREACHABLE means control flow can never traverse P => S"""
-
     NONE = 0
     RETURN = 1
     CONTINUE = 2
@@ -66,8 +54,6 @@ class Direction(enum.Enum):
 
 
 class ControlFlowEdge(Edge):
-    """Models a transfer of control between basic blocks"""
-
     def __init__(self, predecessor, successor, direction=Direction.NONE):
         Edge.__init__(self, predecessor, successor)
         self.__direction = direction
@@ -108,24 +94,35 @@ class ControlFlowEdge(Edge):
                                                                                  style)
 
 
+class SuperEdge(Edge, set):
+    def __init__(self, predecessor, successor):
+        Edge.__init__(self, predecessor, successor)
+        set.__init__(self)
+
+    def dotify(self):
+        if len(self) > 10:
+            return '{}->{};\n'.format(self._predecessor.id_, self._successor.id_)
+        else:
+            return '{}->{} [label="{}"];\n'.format(self._predecessor.id_,
+                                                   self._successor.id_,
+                                                   '\n'.join(str(edge) for edge in self))
+
+
 class InstrumentationEdge(ControlFlowEdge, instrumentation.Instrumentation):
     def __init__(self, predecessor, successor, number, direction=Direction.NONE):
         ControlFlowEdge.__init__(self, predecessor, successor, direction)
         instrumentation.Instrumentation.__init__(self, number)
 
     def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(border=2))
-        label.append('id:{}'.format(self.number))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
+        label = [dot.HTML.open_html,
+                 dot.HTML.open_table,
+                 dot.HTML.open_row,
+                 dot.HTML.open_cell(border=2),
+                 'id:{}'.format(self.number),
+                 dot.HTML.close_cell,
+                 dot.HTML.close_row,
+                 dot.HTML.close_table,
+                 dot.HTML.close_html]
 
         return '{}->{} [label={}, color={}, style={}];\n'.format(self._predecessor.id_,
                                                                  self._successor.id_,
@@ -135,8 +132,6 @@ class InstrumentationEdge(ControlFlowEdge, instrumentation.Instrumentation):
 
 
 class TransitionEdge(Edge, list):
-    """Models a transition between two program points and the sequence of instructions executed during the transition"""
-
     def __init__(self, predecessor, successor):
         Edge.__init__(self, predecessor, successor)
         self._back_edge = False
@@ -149,9 +144,8 @@ class TransitionEdge(Edge, list):
         self._back_edge = True
 
     def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
+        label = [dot.HTML.open_html,
+                 dot.HTML.open_table]
 
         for arg in self:
             label.append(dot.HTML.open_row)
@@ -178,7 +172,6 @@ class LoopTransition(Edge, set):
         EXIT = 1
         BACK = 2
 
-    """Models the transitions that execute when control passes into and out of loops"""
     def __init__(self, predecessor, successor, direction):
         Edge.__init__(self, predecessor, successor)
         self._direction = direction
@@ -188,9 +181,8 @@ class LoopTransition(Edge, set):
         return self._direction
 
     def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
+        label = [dot.HTML.open_html,
+                 dot.HTML.open_table]
 
         if self._direction == LoopTransition.Direction.ENTRY:
             color = dot.Colors.red
@@ -219,13 +211,13 @@ class LoopTransition(Edge, set):
 
 
 class CallGraphEdge(Edge):
-    def __init__(self, predecessor, successor, call_site):
+    def __init__(self, predecessor, successor, site):
         Edge.__init__(self, predecessor, successor)
-        self.__call_site = call_site
+        self._site = site
 
     @property
-    def call_site(self):
-        return self.__call_site
+    def site(self):
+        return self._site
 
     def dotify(self):
-        return '{}->{} [label="{}"];\n'.format(self._predecessor, self._successor, self.__call_site)
+        return '{}->{} [label="{}"];\n'.format(self.predecessor, self.successor, self.site)

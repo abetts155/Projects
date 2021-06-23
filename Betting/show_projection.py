@@ -23,7 +23,7 @@ from model.seasons import Season
 from model.tables import LeagueTable, Position
 from model.teams import Team
 from statistics import mean
-from sql.sql import load_database, extract_picked_team
+from sql.sql import extract_picked_team, load_league, load_teams
 from typing import List
 
 
@@ -107,13 +107,14 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
                     fixtures.append(fixture)
 
     for fixture in fixtures:
-        if half is not None:
-            if half == Half.first:
-                result = fixture.first_half()
-            else:
-                result = fixture.second_half()
-        else:
+        if half == Half.both:
             result = fixture.full_time()
+        elif half == Half.first:
+            result = fixture.first_half()
+        elif half == Half.second:
+            result = fixture.second_half()
+        else:
+            assert False
 
         if fixture.away_team == team:
             result = result.reverse()
@@ -261,7 +262,7 @@ def add_venue_and_half_to_title(title: str, venue: Venue, half: Half):
     else:
         title = '{} ({} only)'.format(title, venue.name)
 
-    if half is not None:
+    if half != Half.both:
         title = '{} ({} half)'.format(title, half.name)
 
     return title
@@ -292,13 +293,14 @@ def compute_relative_performance(args: Namespace,
     this_season = seasons[-1]
     team_summaries = {}
     for name in team_names:
-        team = extract_picked_team(args.database, name, league)
+        (row,) = extract_picked_team(args.database, name, league)
+        team = Team.inventory[row[0]]
         team_summaries[team] = compute_summary(team, [this_season], args.venue, args.half)
 
     summaries = []
     for season in seasons:
         if not season.current:
-            table = LeagueTable(season)
+            table = LeagueTable(season, args.half)
             teams = table.teams_by_position(positions)
             for team in teams:
                 summary = []
@@ -320,7 +322,8 @@ def compute_relative_performance(args: Namespace,
     data = [Datum(average_summary, label, color.next())]
 
     for name in team_names:
-        team = extract_picked_team(args.database, name, league)
+        (row,) = extract_picked_team(args.database, name, league)
+        team = Team.inventory[row[0]]
         summary = team_summaries[team][this_season]
         data.append(Datum(summary, team.name, color.next()))
 
@@ -330,7 +333,8 @@ def compute_relative_performance(args: Namespace,
 
 
 def compute_average_performance(args: Namespace, league: League, seasons: List[Season], team_name: str):
-    team = extract_picked_team(args.database, team_name, league)
+    (row,) = extract_picked_team(args.database, team_name, league)
+    team = Team.inventory[row[0]]
     team_summary = compute_summary(team, seasons, args.venue, args.half)
 
     this_season = seasons[-1]
@@ -353,8 +357,8 @@ def compute_average_performance(args: Namespace, league: League, seasons: List[S
 
 
 def compute_individual_performance(args: Namespace, league: League, seasons: List[Season]):
-    name = get_unique_team(args)
-    team = extract_picked_team(args.database, name, league)
+    (row,) = extract_picked_team(args.database, get_unique_team(args), league)
+    team = Team.inventory[row[0]]
     team_summary = compute_summary(team, seasons, args.venue, args.half)
 
     color = Color(True)
@@ -374,8 +378,9 @@ def compute_individual_performance(args: Namespace, league: League, seasons: Lis
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
     seasons = Season.seasons(league)
 
     if args.history:
@@ -383,7 +388,7 @@ def main(args: Namespace):
 
     if args.relative:
         team_names = get_multiple_teams(args)
-        table = LeagueTable(seasons[-1])
+        table = LeagueTable(seasons[-1], args.half)
         lower, upper = table.positions(Position.from_string(args.relative))
         positions = [i for i in range(lower, upper)]
         compute_relative_performance(args, league, seasons, team_names, positions)

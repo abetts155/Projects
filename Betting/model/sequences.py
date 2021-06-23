@@ -67,36 +67,44 @@ def count_events(season: Season,
 
     sequence = []
     for fixture in fixtures:
-        result = None
-        if half is not None:
-            if half == Half.first:
-                if fixture.first_half() is not None:
-                    result = fixture.first_half()
-                else:
-                    warning_message('No 1st half result for fixture {}'.format(fixture))
+        results = []
+        if half == Half.both:
+            if fixture.full_time() is not None:
+                results.append(fixture.full_time())
+        elif half == Half.first:
+            if fixture.first_half() is not None:
+                results.append(fixture.first_half())
             else:
-                if fixture.second_half() is not None:
-                    result = fixture.second_half()
-                else:
-                    warning_message('No 2nd half result for fixture {}'.format(fixture))
+                warning_message('No 1st half result for fixture {}'.format(fixture))
+        elif half == Half.second:
+            if fixture.second_half() is not None:
+                results.append(fixture.second_half())
+            else:
+                warning_message('No 2nd half result for fixture {}'.format(fixture))
+        elif half == Half.separate:
+            if fixture.first_half() is not None:
+                results.append(fixture.first_half())
+            if fixture.second_half() is not None:
+                results.append(fixture.second_half())
         else:
-            result = fixture.full_time()
+            assert False
 
-        if result:
-            if fixture.home_team != team:
-                result = result.reverse()
+        if results:
+            for result in results:
+                if fixture.home_team != team:
+                    result = result.reverse()
 
-            if negate:
-                outcome = not func(result)
-            else:
-                outcome = func(result)
+                if negate:
+                    outcome = not func(result)
+                else:
+                    outcome = func(result)
 
-            if outcome:
-                sequence.append(fixture)
-            else:
-                data.last = len(sequence)
-                data.counter[len(sequence)] += 1
-                sequence = []
+                if outcome:
+                    sequence.append(fixture)
+                else:
+                    data.last = len(sequence)
+                    data.counter[len(sequence)] += 1
+                    sequence = []
 
     if sequence:
         data.last = len(sequence)

@@ -6,7 +6,7 @@ import time
 import typing
 
 from graphs import graphs
-from system import program
+from system import programs
 from utils import messages
 
 
@@ -47,7 +47,7 @@ def main(program_filename: str,
          repeat:           int,
          subprogram_names: typing.List[str],
          verify:           bool):
-    the_program = program.IO.read(program_filename)
+    the_program = programs.IO.read(program_filename)
     the_program.cleanup()
 
     messages.verbose_message("Verification is {}".format("ON" if verify else "OFF"))

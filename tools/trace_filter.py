@@ -2,7 +2,7 @@ import argparse
 import sys
 
 from graphs import (edges, graphs, vertices)
-from system import (traces, program)
+from system import (traces, programs)
 from utils import messages
 
 
@@ -32,7 +32,7 @@ def filter_trace(ppg: graphs.ProgramPointGraph, ipg: graphs.InstrumentationPoint
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
 
     subprogram_trace = {}
     for trace_file in kwargs['traces']:

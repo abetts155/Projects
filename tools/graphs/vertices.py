@@ -6,8 +6,6 @@ from graphs import instrumentation
 
 
 class VertexPool:
-    """Manage allocation and deallocation of vertices."""
-
     CUTOFF = 0
 
     def __init__(self):
@@ -45,9 +43,6 @@ class VertexPool:
 
 
 class Vertex:
-    """Base vertex class"""
-
-    # Used to generate IDs of vertices and keep track of allocation.
     id_pool = VertexPool()
 
     @classmethod
@@ -116,8 +111,6 @@ class Vertex:
 
 
 class NamedVertex(Vertex):
-    """Models a vertex that carries a name, usually identifying a subprogram"""
-
     def __init__(self, id_, name):
         if not re.match(r'\w+', name):
             raise ValueError('Vertex name must not be empty and must only contain characters in the set [a-zA-Z0-9_]')
@@ -350,35 +343,28 @@ class Merge(ControlPoint):
 
 
 class SuperBlock(Vertex, list):
-    """A super block is a set of program points"""
-
     def __init__(self, id_):
         Vertex.__init__(self, id_)
-        self.__representative = None
+        self._representative = None
 
     def append(self, element):
-        if not isinstance(element, ProgramPointVertex):
-            raise TypeError('Only program points can be added to super blocks')
         list.append(self, element)
 
     @property
     def representative(self):
-        return self.__representative
+        return self._representative
 
     @representative.setter
     def representative(self, v):
-        self.__representative = v
+        self._representative = v
 
     def _label(self, *args):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(color=dot.Colors.cyan, border=5))
-        label.append('id={}'.format(self))
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
+        label = [dot.HTML.open_html,
+                 dot.HTML.open_table,
+                 dot.HTML.open_row,
+                 dot.HTML.open_cell(color=dot.Colors.cyan, border=5), 'id={}'.format(self),
+                 dot.HTML.close_cell,
+                 dot.HTML.close_row]
 
         for arg in args:
             label.append(dot.HTML.open_row)
@@ -387,10 +373,10 @@ class SuperBlock(Vertex, list):
             label.append(dot.HTML.close_cell)
             label.append(dot.HTML.close_row)
 
-        for v in self:
+        for vertex in self:
             label.append(dot.HTML.open_row)
             label.append(dot.HTML.open_cell())
-            label.append(str(v.program_point))
+            label.append(str(vertex))
             label.append(dot.HTML.close_cell)
             label.append(dot.HTML.close_row)
 
@@ -402,16 +388,10 @@ class SuperBlock(Vertex, list):
         return '{} [label={}, shape=record];\n'.format(self, ''.join(self._label()))
 
 
-class LoopBody(SuperBlock):
-    """Models a loop body"""
-
-    def __init__(self, id_, header: Vertex):
-        SuperBlock.__init__(self, id_)
-        self.__header = header
-
-    @property
-    def header(self) -> Vertex:
-        return self.__header
+class LoopBody(Vertex, set):
+    def __init__(self, id_):
+        Vertex.__init__(self, id_)
+        set.__init__(self)
 
 
 class Sequence(Vertex):
@@ -442,8 +422,4 @@ class Alternative(Vertex):
         label.append(dot.HTML.close_table)
         label.append(dot.HTML.close_html)
         return '{} [label={}]'.format(self, ''.join(label))
-
-
-class Loop(Vertex):
-    pass
 

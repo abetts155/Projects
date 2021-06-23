@@ -14,7 +14,7 @@ from model.fixtures import Event, Half, Venue, win, defeat
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
-from sql.sql import load_database, extract_picked_team
+from sql.sql import extract_picked_team, load_league, load_teams
 from typing import Callable, Dict
 
 
@@ -26,7 +26,7 @@ def parse_command_line():
     add_half_option(parser)
     add_venue_option(parser)
     add_logging_options(parser)
-    add_team_option(parser)
+    add_team_option(parser, True)
     add_block_option(parser)
     return parser.parse_args()
 
@@ -41,13 +41,14 @@ def populate(season: Season, team: Team, venue: Venue, half: Half, values: Dict,
             fixtures = [fixture for fixture in fixtures if fixture.away_team == team]
 
     for fixture in fixtures:
-        if half:
-            if half == Half.first:
-                result = fixture.first_half()
-            else:
-                result = fixture.second_half()
-        else:
+        if half == Half.both:
             result = fixture.full_time()
+        elif half == Half.first:
+            result = fixture.first_half()
+        elif half == Half.second:
+            result = fixture.second_half()
+        else:
+            assert False
 
         result = fixture.canonicalise_result(team, result)
         if func(result):
@@ -87,15 +88,17 @@ def add_bar_chart(ax, container: BarContainer):
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
 
     seasons = Season.seasons(league)
     if args.history:
         seasons = seasons[-args.history:]
 
     this_season = seasons.pop()
-    team = extract_picked_team(args.database, args.team, league)
+    (row,) = extract_picked_team(args.database, args.team, league)
+    team = Team.inventory[row[0]]
 
     events = [win, defeat]
     colors = ['dodgerblue', 'salmon']
@@ -124,7 +127,7 @@ def main(args: Namespace):
     else:
         title = '{} ({} only)'.format(title, args.venue.name)
 
-    if args.half:
+    if args.half != Half.both:
         title = '{} ({} half)'.format(title, args.half.name)
 
     fig.suptitle(title, fontweight='bold', fontsize=14)

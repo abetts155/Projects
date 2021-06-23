@@ -5,11 +5,11 @@ import sys
 import threading
 
 from graphs import graphs, instrumentation, vertices
-from system import program
+from system import programs
 from utils import messages
 
 
-def parse_trace(the_program: program.Program, root: str, trace: str):
+def parse_trace(the_program: programs.Program, root: str, trace: str):
     execution_times = {}
     parse_stack = []
     loop_stack = []
@@ -79,7 +79,7 @@ def create_instrumentation_point_graphs(the_program):
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
     the_program.cleanup()
     the_program.call_graph.dotify()
 

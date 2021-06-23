@@ -4,6 +4,7 @@ from lib import messages
 from model.teams import Team
 from sql import sql_columns, sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
+from time import time
 from typing import Callable, Dict, List
 
 import datetime
@@ -27,9 +28,11 @@ class Venue(Enum):
 class Half(Enum):
     first = auto()
     second = auto()
+    both = auto()
+    separate = auto()
 
-    @staticmethod
-    def from_string(string: str):
+    @classmethod
+    def from_string(cls, string: str):
         try:
             return Half[string.lower()]
         except KeyError:
@@ -48,6 +51,14 @@ class Result:
 
     def __str__(self):
         return '{}-{}'.format(self.left, self.right)
+
+    def __eq__(self, other):
+        if type(other) == type(self):
+            return self.left == other.left and self.right == other.right
+        return NotImplemented
+
+    def __hash__(self):
+        return self.left + self.right
 
 
 def win(result: Result):
@@ -288,10 +299,20 @@ class Fixture:
 round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Regular Season'),
                  re.compile(r'Girone [A-C] - \d+'),
+                 re.compile(r'Group [A-D] - \d+'),
+                 re.compile(r'Group [1-3] - \d+$'),
+                 re.compile(r'(North A|North B|South A|South B) - \d+$'),
                  re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
                  re.compile(r'(Clausura|Apertura)'),
                  re.compile(r'(1st|2nd) (Stage|Phase) - \d+'),
                  re.compile(r'(South|North) - \d+'),
+                 re.compile(r'(Südwest|Nordost|Nord|West) - \d+'),
+                 re.compile(r'(Östra Götaland|'
+                            r'Västra Götaland|'
+                            r'Södra Svealand|'
+                            r'Norrland|'
+                            r'Norra Svealand|'
+                            r'Norra Götaland) - \d+'),
                  re.compile(r'(National First Division|'
                             r'K-League Challenge|'
                             r'Women Bundesliga|'
@@ -339,9 +360,16 @@ def create_fixture_from_json(data: Dict):
         messages.warning_message('Ignoring fixture. Round is {}.'.format(data['round']))
 
 
+def datetime_from_utc_to_local(utc_datetime):
+    now_timestamp = time()
+    offset = datetime.datetime.fromtimestamp(now_timestamp) - datetime.datetime.utcfromtimestamp(now_timestamp)
+    return utc_datetime + offset
+
+
 def create_fixture_from_row(row: List):
     id_ = int(row[0])
     date = datetime.datetime.fromisoformat(row[1])
+    date = datetime_from_utc_to_local(date)
     season_id = int(row[2])
     home_id = int(row[3])
     home_team = Team.inventory[home_id] if home_id in Team.inventory else None

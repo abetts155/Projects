@@ -4,16 +4,16 @@ import sys
 import threading
 
 from graphs import (edges, graphs, vertices)
-from system import program, database
+from system import programs, database
 from utils import messages
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
     the_program.call_graph.dotify()
 
     if kwargs['manual']:
-        program.IO.read_properties(the_program, kwargs['manual'])
+        programs.IO.read_properties(the_program, kwargs['manual'])
 
     with database.Database(kwargs['database']) as db:
         db.reset()
@@ -32,7 +32,7 @@ def main(**kwargs):
                     default = 0
 
                 if kwargs['manual']:
-                    db.add_wcet(v, getattr(v.program_point, program.IO.WCET, default))
+                    db.add_wcet(v, getattr(v.program_point, programs.IO.WCET, default))
                 else:
                     db.add_wcet(v, default)
 
@@ -43,7 +43,7 @@ def main(**kwargs):
                     else:
                         if kwargs['manual']:
                             local_bound = getattr(v.program_point,
-                                                  program.IO.LOCAL_BOUND,
+                                                  programs.IO.LOCAL_BOUND,
                                                   random.randint(1, kwargs['max_loop_bound']))
                         else:
                             local_bound = random.randint(1, kwargs['max_loop_bound'])
@@ -56,7 +56,7 @@ def main(**kwargs):
                         else:
                             if kwargs['manual']:
                                 global_bound = getattr(v.program_point,
-                                                       program.IO.GLOBAL_BOUND,
+                                                       programs.IO.GLOBAL_BOUND,
                                                        random.randint(local_bound, kwargs['max_loop_bound']))
                             else:
                                 global_bound = random.randint(local_bound, kwargs['max_loop_bound'])

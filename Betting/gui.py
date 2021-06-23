@@ -3,7 +3,6 @@ from lib import messages
 from model.fixtures import Event, Half, Venue, win, defeat, draw, bts
 from model.leagues import League, league_register, get_league_code
 from model.tables import Position
-from model.teams import Team
 from PySimpleGUI import (InputText,
                          Text,
                          Submit,
@@ -16,7 +15,7 @@ from PySimpleGUI import (InputText,
                          PopupError,
                          theme,
                          WIN_CLOSED)
-from sql.sql import extract_picked_team, load_database
+from sql.sql import extract_picked_team, load_teams, load_league
 from typing import Dict, List
 
 import head_to_head
@@ -76,9 +75,10 @@ venue_any = Radio(Venue.any.name.capitalize(), radio_venue, font=font, default=T
 venue_home = Radio(Venue.home.name.capitalize(), radio_venue, font=font)
 venue_away = Radio(Venue.away.name.capitalize(), radio_venue, font=font)
 
-half_any = Radio('Any', 2, font=font, default=True)
+half_both = Radio(Half.both.name.capitalize(), radio_half, font=font, default=True)
 half_first = Radio(Half.first.name.capitalize(), radio_half, font=font)
 half_second = Radio(Half.second.name.capitalize(), radio_half, font=font)
+half_separate = Radio(Half.separate.name.capitalize(), radio_half, font=font)
 
 chunks_choice = Slider(range=(chunks_min, chunks_max),
                        default_value=chunks_min,
@@ -91,9 +91,25 @@ event_negation = Checkbox('Negate', font=font, key='-NEGATE-EVENT-')
 
 seq_submit = Submit(font=font, key='-SEQ-SUBMIT-')
 
-team_analysis_margins = Radio('Margins', radio_team_analysis, font=font)
-team_analysis_summary = Radio('Summary', radio_team_analysis, font=font)
-team_analysis_form = Radio('Form', radio_team_analysis, font=font)
+team_analysis_form = Radio('Form',
+                           radio_team_analysis,
+                           font=font,
+                           key='-TEAM-ANALYSIS-FORM-',
+                           default=True,
+                           enable_events=True)
+team_analysis_margins = Radio('Margins',
+                              radio_team_analysis,
+                              font=font,
+                              key='-TEAM-ANALYSIS-MARGINS-',
+                              enable_events=True)
+team_analysis_summary = Radio('Summary',
+                              radio_team_analysis,
+                              font=font,
+                              key='-TEAM-ANALYSIS-SUMMARY-',
+                              enable_events=True)
+team_analysis_game_states = InputText(font=font,
+                                      key='-TEAM-ANALYSIS-GAME-STATES-',
+                                      disabled=True)
 team_analysis_submit = Submit(font=font, key='-TEAM-ANALYSIS-SUBMIT-')
 
 h2h_submit = Submit(font=font, key='-H2H-SUBMIT-')
@@ -126,6 +142,8 @@ performance_analysis_submit = Submit(font=font, key='-PERFORMANCE-ANALYSIS-SUBMI
 left_operand = InputText(font=font, size=(8, 1), key='-LEFT-OPERAND-', enable_events=True)
 multiplication = Text('X', font=font, justification='center', key='-MULTIPLICATION-')
 right_operand = InputText(font=font, size=(8, 1), key='-RIGHT-OPERAND-', enable_events=True)
+power = Text('^', font=font, justification='center', key='-POWER-')
+index_operand = InputText(font=font, size=(8, 1), key='-INDEX-OPERAND-', enable_events=True)
 equals = Text('=', font=font, justification='center', key='-EQUALS-')
 result = Text(font=font, size=(10, 1), key='-RESULT-')
 
@@ -140,7 +158,7 @@ def make():
         [Text('History', font=font, size=default_size), history_choice],
         [Text('Event', font=font, size=default_size), event_choice, event_negation],
         [Text('Venue', font=font, size=default_size), venue_any, venue_home, venue_away],
-        [Text('Half', font=font, size=default_size), half_any, half_first, half_second],
+        [Text('Half', font=font, size=default_size), half_both, half_first, half_second, half_separate],
         [Text('Chunks', font=font, size=default_size), chunks_choice],
         [Text('_' * divider)],
         [Text('Sequences analysis', font=font)],
@@ -151,9 +169,10 @@ def make():
         [Text('_' * divider)],
         [Text('Individual team analysis', font=font)],
         [Text('Analysis', font=font, size=default_size),
+         team_analysis_form,
          team_analysis_margins,
-         team_analysis_summary,
-         team_analysis_form],
+         team_analysis_summary],
+        [Text('Game states', font=font, size=default_size), team_analysis_game_states],
         [team_analysis_submit],
         [Text('_' * divider)],
         [Text('Performance analysis', font=font)],
@@ -173,7 +192,7 @@ def make():
         [league_analysis_submit],
         [Text('_' * divider)],
         [Text('Quick calculation', font=font)],
-        [left_operand, multiplication, right_operand, equals, result]
+        [left_operand, multiplication, right_operand, power, index_operand, equals, result]
     ]
 
     return Window('', layout=layout, finalize=True)
@@ -198,8 +217,12 @@ def set_half(values: Dict, args: Namespace):
         args.half = Half.first
     elif values[half_second.Key]:
         args.half = Half.second
+    elif values[half_both.Key]:
+        args.half = Half.both
+    elif values[half_separate.Key]:
+        args.half = Half.separate
     else:
-        args.half = None
+        assert False
 
 
 def set_history(values: Dict, args: Namespace):
@@ -214,14 +237,12 @@ def set_chunks(values: Dict, args: Namespace):
 
 
 def set_league(values: Dict, args: Namespace):
-    value = values[league_choice.Key][0]
-    league = get_league(value)
-    args.league = [get_league_code(league)]
-
-
-def team_name(value: str) -> str:
-    lexemes = value.split()
-    return '*'.join(lexemes)
+    if values[league_choice.Key]:
+        value = values[league_choice.Key][0]
+        league = get_league(value)
+        args.league = [get_league_code(league)]
+    else:
+        args.league = None
 
 
 def to_int(value: str) -> int:
@@ -256,36 +277,57 @@ def get_event(value: str) -> str:
 
 
 def check_team(values: Dict, team_key: str):
-    selected_name = values[team_key]
+    selected_name = values[team_key].strip()
     if values[league_choice.Key]:
         league = get_league(values[league_choice.Key][0])
     else:
         league = None
 
-    values = extract_picked_team(database, selected_name, league, False)
-
-    if type(values) is not Team:
-        if len(values) == 0:
-            PopupError("No team '{}' found in the database.".format(selected_name),
-                       auto_close=True)
-        elif len(values) > 3:
-            PopupError("Too many teams ({}) match the name '{}' in the database.".format(len(values), selected_name),
-                       auto_close=True)
+    rows = extract_picked_team(database, selected_name, league=league, error=False)
+    if len(rows) == 0:
+        PopupError("No team '{}' found in the database.".format(selected_name),
+                   auto_close=True,
+                   non_blocking=True)
+        return ''
+    elif len(rows) > 1:
+        if len(rows) > 10:
+            PopupError("Too many teams ({}) match the name '{}' in the database.".format(len(rows), selected_name),
+                       auto_close=True,
+                       non_blocking=True)
         else:
+            names = [row[1] for row in rows]
             PopupError("Too many teams match the name '{}' in the database: {}.".format(selected_name,
-                                                                                        ', '.join(values)),
-                       auto_close=True)
-        return False
+                                                                                        ', '.join(names)),
+                       auto_close=True,
+                       non_blocking=True)
+        return ''
     else:
-        return True
+        (row,) = rows
+        return row[1]
 
 
-def team_one_is_valid(values: Dict):
-    return values[team_radio_one.Key] and check_team(values, team_choice_one.Key)
+def team_one_is_valid(values: Dict) -> str:
+    if values[team_radio_one.Key] and values[team_choice_one.Key]:
+        return check_team(values, team_choice_one.Key)
+    return ''
 
 
-def team_two_is_valid(values: Dict):
-    return values[team_radio_two.Key] and check_team(values, team_choice_two.Key)
+def team_two_is_valid(values: Dict) -> str:
+    if values[team_radio_two.Key] and values[team_choice_two.Key]:
+        return check_team(values, team_choice_two.Key)
+    return ''
+
+
+def team_selected(values: Dict) -> str:
+    team_one = team_one_is_valid(values)
+    if team_one:
+        return team_one
+
+    team_two = team_two_is_valid(values)
+    if team_two:
+        return team_two
+
+    return ''
 
 
 def run_head_to_head(values: Dict):
@@ -293,8 +335,9 @@ def run_head_to_head(values: Dict):
         args = Namespace()
         args.database = database
         args.block = False
-        team_one = team_name(values[team_choice_one.Key])
-        team_two = team_name(values[team_choice_two.Key])
+        set_league(values, args)
+        team_one = check_team(values, team_choice_one.Key)
+        team_two = check_team(values, team_choice_two.Key)
         args.team = '{}:{}'.format(team_one, team_two)
         head_to_head.main(args)
 
@@ -306,19 +349,12 @@ def run_sequences(values: Dict):
         args.block = False
         args.event = [get_event(values[event_choice.Key])]
         args.negate = values[event_negation.Key]
+        args.team = team_selected(values)
         set_league(values, args)
         set_history(values, args)
         set_venue(values, args)
         set_half(values, args)
         set_chunks(values, args)
-
-        if team_one_is_valid(values):
-            args.team = team_name(values[team_choice_one.Key])
-        elif team_two_is_valid(values):
-            args.team = team_name(values[team_choice_two.Key])
-        else:
-            args.team = None
-
         args.lines = None
         show_sequences.main(args)
 
@@ -329,10 +365,7 @@ def run_team_analysis(values: Dict):
             args = Namespace()
             args.database = database
             args.block = False
-            if team_one_is_valid(values):
-                args.team = team_name(values[team_choice_one.Key])
-            else:
-                args.team = team_name(values[team_choice_two.Key])
+            args.team = team_selected(values)
             set_league(values, args)
             set_history(values, args)
             set_venue(values, args)
@@ -341,8 +374,12 @@ def run_team_analysis(values: Dict):
             if values[team_analysis_margins.Key]:
                 show_breakdown.main(args)
             elif values[team_analysis_summary.Key]:
+                if values[team_analysis_game_states.Key]:
+                    args.game_states = values[team_analysis_game_states.Key].split()
+                else:
+                    args.game_states = None
+
                 args.averages = None
-                args.game_states = None
                 show_team.main(args)
             elif values[team_analysis_form.Key]:
                 show_form.main(args)
@@ -350,14 +387,12 @@ def run_team_analysis(values: Dict):
 
 def run_performance_analysis(values: Dict):
     if values[league_choice.Key]:
-        if team_one_is_valid(values) or team_two_is_valid(values):
+        selected_team = team_selected(values)
+        if selected_team:
             args = Namespace()
             args.database = database
             args.block = False
-            if team_one_is_valid(values):
-                args.team = team_name(values[team_choice_one.Key])
-            else:
-                args.team = team_name(values[team_choice_two.Key])
+            args.team = selected_team
             set_league(values, args)
             set_history(values, args)
             set_venue(values, args)
@@ -410,8 +445,7 @@ def run_event_matrix_analysis(values: Dict):
         set_venue(values, args)
         set_half(values, args)
         set_chunks(values, args)
-        event = Event.get(values[event_choice.Key])
-        if event in [win, defeat]:
+        if args.event in [win, defeat]:
             args.symmetry = False
         else:
             args.symmetry = True
@@ -424,14 +458,16 @@ def run_league_analysis(values: Dict):
         args.database = database
         args.block = False
         set_league(values, args)
+        set_half(values, args)
         args.history = None
         show_summary.main(args)
 
 
 def run_multiplication(values: Dict):
-    if values[left_operand.Key] and values[right_operand.Key]:
+    if values[left_operand.Key] and values[right_operand.Key] and values[index_operand.Key]:
         try:
-            answer = float(values[left_operand.Key]) * float(values[right_operand.Key])
+            answer = float(values[left_operand.Key]) * (float(values[right_operand.Key]) **
+                                                        float(values[index_operand.Key]))
             result.update('{:.2f}'.format(answer))
         except ValueError:
             pass
@@ -468,13 +504,17 @@ def run(window: Window):
         elif event == performance_relative.Key:
             performance_positions_choice.update(disabled=True)
             performance_relative_choice.update(disabled=False)
-        elif event == left_operand.Key or event == right_operand.Key:
+        elif event == team_analysis_summary.Key:
+            team_analysis_game_states.update(disabled=False)
+        elif event in [team_analysis_form.Key, team_analysis_margins.Key]:
+            team_analysis_game_states.update(disabled=True)
+        elif event == left_operand.Key or event == right_operand.Key or event == index_operand.Key:
             run_multiplication(values)
 
 
 if __name__ == '__main__':
     theme('DarkBlue')
-    load_database(database)
+    load_teams(database)
     window = make()
     run(window)
     window.close()

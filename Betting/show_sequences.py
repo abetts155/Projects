@@ -23,7 +23,7 @@ from model.seasons import Season
 from model.sequences import count_events, DataUnit
 from model.tables import LeagueTable
 from model.teams import Team
-from sql.sql import load_database, extract_picked_team
+from sql.sql import extract_picked_team, load_league, load_teams
 from typing import Callable, List
 
 import numpy as np
@@ -97,7 +97,7 @@ def compute_chunked_data(seasons: List[Season],
                          chunk_size: int):
     chunk_to_chart = OrderedDict()
     for season in seasons:
-        table = LeagueTable(season)
+        table = LeagueTable(season, half)
         table_map = table.group(chunk_size)
 
         for chunk_id in range(table_map.number_of_chunks()):
@@ -120,7 +120,7 @@ def construct_title(league: League, func: Callable, negate: bool, venue: Venue, 
     else:
         prologue = '{} ({} only)'.format(event, venue.name)
 
-    if half:
+    if half != Half.both:
         prologue += ' ({} half)'.format(half.name)
 
     return 'Sequences: {} in {} {}'.format(prologue, prettify(league.country), league.name)
@@ -167,8 +167,9 @@ def plot(ax, datum: DataUnit, x_limit: int, lines_only: bool):
 
 
 def main(args: Namespace):
+    load_teams(args.database)
     league = league_register[get_unique_league(args)]
-    load_database(args.database, league)
+    load_league(args.database, league)
 
     seasons = Season.seasons(league)
     if not seasons:
@@ -178,7 +179,8 @@ def main(args: Namespace):
         seasons = seasons[-args.history:]
 
     if args.team:
-        selected_team = extract_picked_team(args.database, args.team, league)
+        (row,) = extract_picked_team(args.database, args.team, league)
+        selected_team = Team.inventory[row[0]]
     else:
         selected_team = None
 
@@ -206,7 +208,7 @@ def main(args: Namespace):
 
         if selected_team is not None:
             golden_season = seasons[-1]
-            golden_table = LeagueTable(golden_season)
+            golden_table = LeagueTable(golden_season, args.half)
             golden_map = golden_table.group(args.chunks)
 
             chunk_to_seasons = OrderedDict()
@@ -216,7 +218,7 @@ def main(args: Namespace):
 
             for season in seasons:
                 if season != golden_season:
-                    table = LeagueTable(season)
+                    table = LeagueTable(season, args.half)
                     table_map = table.group(args.chunks)
                     if selected_team in season.teams():
                         position = table.team_position(selected_team)
@@ -243,7 +245,7 @@ def main(args: Namespace):
                     golden_datum = datum
                 else:
                     if selected_team in season.teams():
-                        table = LeagueTable(season)
+                        table = LeagueTable(season, args.half)
                         table_map = table.group(args.chunks)
                         position = table.team_position(selected_team)
                         chunk_id = table_map.get_chunk(position)

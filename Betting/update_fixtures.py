@@ -64,14 +64,17 @@ def update_leagues(database: str, leagues: List[str], past: bool, force: bool):
         for league_code in leagues:
             messages.vanilla_message('Updating {}...'.format(league_code))
             league = league_register[league_code]
+
             name_constraint = "{}='{}' {} {}".format(ColumnNames.Code.name,
                                                      league.name,
                                                      Keywords.COLLATE.name,
                                                      Keywords.NOCASE.name)
+
             country_constraint = "{}='{}' {} {}".format(ColumnNames.Country.name,
                                                         league.country,
                                                         Keywords.COLLATE.name,
                                                         Keywords.NOCASE.name)
+
             current_constraint = "{}={}".format(ColumnNames.Current.name,
                                                 Characters.FALSE.value if past else Characters.TRUE.value)
             constraints = [name_constraint, country_constraint, current_constraint]

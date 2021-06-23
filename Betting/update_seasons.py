@@ -2,8 +2,9 @@ from argparse import ArgumentParser, Namespace
 from cli.cli import add_database_option, add_logging_options, set_logging_options
 from football_api.football_api import get_seasons
 from football_api.structure import get_seasons_json, store
+from json import load
 from lib import messages
-from model.seasons import Season
+from model.seasons import Season, create_season_from_json
 from sql.sql import Database
 
 
@@ -22,6 +23,12 @@ def create_season_json():
 
 def main(arguments: Namespace):
     create_season_json()
+
+    seasons_json = get_seasons_json()
+    with seasons_json.open() as in_file:
+        json_text = load(in_file)
+        for data in json_text['api']['leagues']:
+            create_season_from_json(data)
 
     with Database(arguments.database) as db:
         db.create_table(Season)

@@ -3,7 +3,7 @@ import os
 from graphs import edges
 from graphs import vertices
 from graphs import graphs
-from system import program
+from system import programs
 
 
 class TraceElement:
@@ -52,7 +52,7 @@ class Traces(list):
 
 class TraceFile:
     @classmethod
-    def tokenize(cls, the_program: program.Program, filename: str):
+    def tokenize(cls, the_program: programs.Program, filename: str):
         _, prefix = os.path.split(the_program.basename())
         _, filename = os.path.split(filename)
         filename = filename[len(prefix):]
@@ -61,12 +61,12 @@ class TraceFile:
         return lexemes[1:-1]
 
     @classmethod
-    def extract_subprogram(cls, the_program: program.Program, filename: str):
+    def extract_subprogram(cls, the_program: programs.Program, filename: str):
         lexemes = cls.tokenize(the_program, filename)
         return lexemes[0]
 
     @classmethod
-    def extract_type(cls, the_program: program.Program, filename: str):
+    def extract_type(cls, the_program: programs.Program, filename: str):
         lexemes = cls.tokenize(the_program, filename)
         if lexemes[1] == 'ppg':
             return graphs.ProgramPointGraph

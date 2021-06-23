@@ -2,7 +2,7 @@ import argparse
 import sys
 
 from graphs import (edges, graphs, vertices)
-from system import (traces, program)
+from system import (traces, programs)
 
 
 class BoundSequence(list):
@@ -103,7 +103,7 @@ def parse(ppg: graphs.ProgramPointGraph, lnt, trace):
 
 
 def main(**kwargs):
-    the_program = program.IO.read(kwargs['program'])
+    the_program = programs.IO.read(kwargs['program'])
 
     name = traces.TraceFile.extract_subprogram(the_program, kwargs['trace'])
     subprogram = the_program[name]

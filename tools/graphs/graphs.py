@@ -1,11 +1,8 @@
-import enum
-import random
-import time
-import cProfile
-
-from utils import messages
-from utils import dot
-from graphs import (vertices, edges, instrumentation)
+from enum import Enum
+from graphs import vertices, edges, instrumentation
+from random import shuffle
+from typing import Callable, Dict
+from utils import dot, messages
 
 
 class InvalidVertexError(ValueError):
@@ -21,90 +18,85 @@ class MultiEdgeError(ValueError):
 
 
 class VertexData:
-    """Models the relation of a vertex to other vertices inside a directed graph. By __not__ attaching predecessor and
-    successor information to a vertex, we allow the same vertex to exist in several directed graphs simultaneously. All
-    edge information must be requested through the directed graph."""
+    __slots__ = ['vertex', 'predecessors', 'successors']
 
-    __slots__ = ['v', 'predecessors', 'successors']
-
-    def __init__(self, v: vertices.Vertex):
-        self.v = v
+    def __init__(self, vertex: vertices.Vertex):
+        self.vertex = vertex
         self.predecessors = []
         self.successors = []
 
 
 class DirectedGraph:
-    """Models a directed graph: A set of vertices and a set of directed edges"""
-
     def __init__(self):
         self._data = {}
 
-    def add_vertex(self, v: vertices.Vertex):
-        if v.id_ in self._data:
-            raise DuplicateVertexError('Graph already contains a vertex with ID {}'.format(v.id_))
-        self._data[v.id_] = VertexData(v)
+    def add_vertex(self, vertex: vertices.Vertex):
+        if vertex.id_ in self._data:
+            raise DuplicateVertexError('Graph already contains a vertex with ID {}'.format(vertex.id_))
+        self._data[vertex.id_] = VertexData(vertex)
 
-    def _get_vertex_data(self, v: vertices.Vertex) -> VertexData:
+    def _get_vertex_data(self, vertex: vertices.Vertex) -> VertexData:
         try:
-            return self._data[v.id_]
+            return self._data[vertex.id_]
         except KeyError:
-            messages.error_message("No data for vertex with ID {}".format(v.id_))
+            messages.error_message("No data for vertex with ID {}".format(vertex.id_))
 
-    def remove_vertex(self, v: vertices.Vertex):
-        v_info = self._get_vertex_data(v)
-        for e in v_info.predecessors:
-            self.remove_successor(e.predecessor(), v)
-        for e in v_info.successors:
-            self.remove_predecessor(e.successor(), v)
-        del self._data[v.id_]
+    def remove_vertex(self, vertex: vertices.Vertex):
+        v_info = self._get_vertex_data(vertex)
 
-    def __contains__(self, v: vertices.Vertex):
-        return v.id_ in self._data
+        for edge in v_info.predecessors:
+            self.remove_successor(edge.predecessor(), vertex)
+
+        for edge in v_info.successors:
+            self.remove_predecessor(edge.successor(), vertex)
+
+        del self._data[vertex.id_]
+
+    def __contains__(self, vertex: vertices.Vertex):
+        return vertex.id_ in self._data
 
     def __iter__(self):
-        for _ in self._data.values():
-            yield _.v
+        for info in self._data.values():
+            yield info.vertex
 
     def number_of_vertices(self):
         return len(self._data)
 
     def number_of_edges(self):
-        return sum([len(self.successors(v)) for v in self])
+        return sum([len(self.successors(vertex)) for vertex in self])
 
     def number_of_branches(self):
-        return len([v for v in self if len(self.successors(v)) > 1])
+        return len([vertex for vertex in self if len(self.successors(vertex)) > 1])
 
     def number_of_merges(self):
-        return len([v for v in self if len(self.predecessors(v)) > 1])
+        return len([vertex for vertex in self if len(self.predecessors(vertex)) > 1])
 
-    def predecessors(self, v: vertices.Vertex):
-        return self._get_vertex_data(v).predecessors
+    def predecessors(self, vertex: vertices.Vertex):
+        return self._get_vertex_data(vertex).predecessors
 
-    def successors(self, v: vertices.Vertex):
-        return self._get_vertex_data(v).successors
+    def successors(self, vertex: vertices.Vertex):
+        return self._get_vertex_data(vertex).successors
 
-    def add_edge(self, e: edges.Edge) -> None:
-        p_info = self._get_vertex_data(e.predecessor())
-        p_info.successors.append(e)
-        s_info = self._get_vertex_data(e.successor())
-        s_info.predecessors.append(e)
+    def add_edge(self, edge: edges.Edge) -> None:
+        p_info = self._get_vertex_data(edge.predecessor())
+        p_info.successors.append(edge)
+        s_info = self._get_vertex_data(edge.successor())
+        s_info.predecessors.append(edge)
 
     def has_edge(self, p: vertices.Vertex, s: vertices.Vertex):
         return self.has_successor(p, s) and self.has_predecessor(s, p)
 
-    def remove_predecessor(self, v, p):
-        v_info = self._get_vertex_data(v)
-        updated_predecessors = [e for e in v_info.predecessors if e.predecessor() != p]
-        v_info.predecessors = updated_predecessors
+    def remove_predecessor(self, vertex: vertices.Vertex, predecessor: vertices.Vertex):
+        info = self._get_vertex_data(vertex)
+        info.predecessors = [edge for edge in info.predecessors if edge.predecessor() != predecessor]
 
-    def remove_successor(self, v, s):
-        v_info = self._get_vertex_data(v)
-        updated_successors = [e for e in v_info.successors if e.successor() != s]
-        v_info.successors = updated_successors
+    def remove_successor(self, vertex: vertices.Vertex, successor: vertices.Vertex):
+        info = self._get_vertex_data(vertex)
+        info.successors = [edge for edge in info.successors if edge.successor() != successor]
 
-    def remove_edge(self, e: edges.Edge):
-        self.remove_successor(e.predecessor(), e.successor())
-        self.remove_predecessor(e.successor(), e.predecessor())
+    def remove_edge(self, edge: edges.Edge):
+        self.remove_successor(edge.predecessor(), edge.successor())
+        self.remove_predecessor(edge.successor(), edge.predecessor())
 
     def has_predecessor(self, v, p):
         return [e for e in self.predecessors(v) if e.predecessor() == p]
@@ -112,70 +104,68 @@ class DirectedGraph:
     def has_successor(self, v, s):
         return [e for e in self.successors(v) if e.successor() == s]
 
-    def wipe_edges(self, v):
-        v_info = self._get_vertex_data(v)
-        v_info.predecessors = []
-        v_info.successors = []
+    def wipe_edges(self, vertex: vertices.Vertex):
+        info = self._get_vertex_data(vertex)
+        info.predecessors = []
+        info.successors = []
 
     def shuffle_edges(self):
-        for v in self:
-            v_info = self._get_vertex_data(v)
-            random.shuffle(v_info.predecessors)
-            random.shuffle(v_info.successors)
+        for vertex in self:
+            info = self._get_vertex_data(vertex)
+            shuffle(info.predecessors)
+            shuffle(info.successors)
 
     def __str__(self):
         value = ''
-        for v in self:
-            value += 'V: {}\n'.format(v)
-            for edge in self.successors(v):
-                value += 'E: {}\n'.format(edge)
-            value += '\n'
+        for vertex in self:
+            value = '{} V: {}\n'.format(value, vertex)
+            for edge in self.successors(vertex):
+                value = '{} E: {}\n'.format(value, edge)
+            value = '{}\n'.format(value)
         return value
+
+    def dotify(self, name):
+        data = []
+        for vertex in self:
+            data.append(vertex.dotify())
+            for edge in self.successors(vertex):
+                data.append(edge.dotify())
+
+        filename = '{}.dot'.format(name)
+        dot.generate(filename, data)
 
 
 class CallGraph(DirectedGraph):
-    """Models the calling relationship between subprograms"""
-
     def __init__(self, program):
         DirectedGraph.__init__(self)
         self.program = program
 
-    def is_call_site(self, call_vertex: vertices.SubprogramVertex, v: vertices.Vertex):
-        for e in self.successors(call_vertex):
-            if v == e.call_site:
-                return e.successor()
+    def is_call_site(self, vertex: vertices.SubprogramVertex, candidate: vertices.Vertex):
+        for edge in self.successors(vertex):
+            if candidate == edge.call_site:
+                return edge.successor()
         return None
 
     def dotify(self):
         data = []
-        for v in self:
-            data.append(v.dotify())
-            for e in sorted([e for e in self.successors(v)], key=lambda e: e.successor().name):
-                data.append(e.dotify())
+        for vertex in self:
+            data.append(vertex.dotify())
+            for edge in sorted([edge for edge in self.successors(vertex)], key=lambda edge: edge.successor().name):
+                data.append(edge.dotify())
 
         filename = '{}.call.dot'.format(self.program.basename())
         dot.generate(filename, data)
 
 
 class ProgramData:
-    """Track which program and subprogram a graph belongs to"""
+    __slots__ = ['program', 'name']
 
     def __init__(self, program, name):
-        self._program = program
-        self._name = name
-
-    @property
-    def program(self):
-        return self._program
-
-    @property
-    def name(self):
-        return self._name
+        self.program = program
+        self.name = name
 
 
 class FlowGraph(DirectedGraph, ProgramData):
-    """Models a directed graph that has a designated entry vertex and a designated exit vertex"""
-
     def __init__(self, program, name):
         DirectedGraph.__init__(self)
         ProgramData.__init__(self, program, name)
@@ -252,18 +242,24 @@ class ControlFlowGraph(FlowGraph):
                     sole_e.direction = edges.Direction.CONTINUE
 
     def dotify(self, suffix=''):
-        assert self.entry
         data = []
-        queue = [self.entry]
-        visited = set()
-        while queue:
-            v = queue.pop()
-            visited.add(v)
-            data.append(v.dotify())
-            for e in self.successors(v):
-                data.append(e.dotify())
-                if not (e.successor() in visited or e.successor() in queue):
-                    queue.insert(0, e.successor())
+
+        if self._entry:
+            queue = [self.entry]
+            visited = set()
+            while queue:
+                v = queue.pop()
+                visited.add(v)
+                data.append(v.dotify())
+                for e in self.successors(v):
+                    data.append(e.dotify())
+                    if not (e.successor() in visited or e.successor() in queue):
+                        queue.insert(0, e.successor())
+        else:
+            for v in self:
+                data.append(v.dotify())
+                for e in self.successors(v):
+                    data.append(e.dotify())
 
         if suffix:
             filename = '{}.{}.cfg.{}.dot'.format(self.program.basename(), self.name, suffix)
@@ -361,7 +357,7 @@ class ProgramPointGraph(FlowGraph):
             changed = False
             candidates = [v for v in self
                           if v != self.entry and v != self.exit and not isinstance(v, vertices.CallVertex)]
-            random.shuffle(candidates)
+            shuffle(candidates)
             for v in candidates:
                 if attempt_removal():
                     changed = True
@@ -392,7 +388,8 @@ class ProgramPointGraph(FlowGraph):
 
 class DependenceGraph(DirectedGraph):
     def __init__(self, program, cfg, basic_block: vertices.BasicBlock):
-        DirectedGraph.__init__(self, program)
+        DirectedGraph.__init__(self)
+        self._program = program
         self._cfg = cfg
         self._basic_block = basic_block
 
@@ -403,7 +400,7 @@ class DependenceGraph(DirectedGraph):
             for e in self.successors(v):
                 data.append(e.dotify())
 
-        filename = '{}{}.{}.order.dot'.format(self.program.basename(), self._cfg.name, self._basic_block)
+        filename = '{}{}.{}.order.dot'.format(self._program.basename(), self._cfg.name, self._basic_block)
         dot.generate(filename, data)
 
     def reduce_transitively(self):
@@ -444,8 +441,8 @@ class DepthFirstSearch:
         self._vertex_to_post = {}
         self._pre_to_vertex = {}
         self._post_to_vertex = {}
-        self._back_edges = []
-        self.__search(g, root)
+        self._back_edges = {}
+        self._search(g, root)
 
     def pre_order(self):
         return list(e[0] for e in sorted(self._vertex_to_pre.items(), key=lambda e: e[1]))
@@ -465,30 +462,33 @@ class DepthFirstSearch:
     def post_order_vertex(self, i: int):
         return self._post_to_vertex[i]
 
-    @property
-    def back_edges(self):
-        return self._back_edges
+    def back_edges(self, vertex: vertices.Vertex):
+        return self._back_edges[vertex]
 
-    def __search(self, g, root):
-        def explore(v):
+    def has_back_edges(self):
+        return sum([len(backedges) for backedges in self._back_edges.values()])
+
+    def _search(self, g, root):
+        def explore(vertex):
             nonlocal pre_id
             pre_id += 1
-            self._vertex_to_pre[v] = pre_id
-            self._pre_to_vertex[pre_id] = v
+            self._vertex_to_pre[vertex] = pre_id
+            self._pre_to_vertex[pre_id] = vertex
+            self._back_edges[vertex] = set()
 
-            for e in g.successors(v):
-                if e.successor() not in self._vertex_to_pre:
+            for edge in g.successors(vertex):
+                if edge.successor() not in self._vertex_to_pre:
                     # Not yet visited
-                    explore(e.successor())
-                elif self._vertex_to_pre[v] < self._vertex_to_pre[e.successor()]:
+                    explore(edge.successor())
+                elif self._vertex_to_pre[vertex] < self._vertex_to_pre[edge.successor()]:
                     pass
-                elif e.successor() not in self._vertex_to_post:
-                    self._back_edges.append(e)
+                elif edge.successor() not in self._vertex_to_post:
+                    self._back_edges[edge.successor()].add(edge)
 
             nonlocal post_id
             post_id += 1
-            self._vertex_to_post[v] = post_id
-            self._post_to_vertex[post_id] = v
+            self._vertex_to_post[vertex] = post_id
+            self._post_to_vertex[post_id] = vertex
 
         pre_id = 0
         post_id = 0
@@ -519,7 +519,7 @@ class Tree(DirectedGraph):
 
 
 class LengauerTarjan(Tree, ProgramData):
-    class Type(enum.Enum):
+    class Type(Enum):
         PRE = 0
         POST = 1
 
@@ -717,56 +717,80 @@ class DominanceFrontiers:
             backward_transitions = DirectedGraph.successors
             backward_transition = edges.Edge.successor
 
-        for v in g:
-            if len(backward_transitions(g, v)) > 1:
-                (parent_e,) = t.predecessors(v)
-                immediate_dominator = parent_e.predecessor()
-                for e in backward_transitions(g, v):
-                    runner = backward_transition(e)
+        for vertex in g:
+            if len(backward_transitions(g, vertex)) > 1:
+                (parent_edge,) = t.predecessors(vertex)
+                immediate_dominator = parent_edge.predecessor()
+                for edge in backward_transitions(g, vertex):
+                    runner = backward_transition(edge)
                     while runner != immediate_dominator:
-                        self._frontier[runner].add(v)
-                        (parent_e,) = t.predecessors(runner)
-                        runner = parent_e.predecessor()
+                        self._frontier[runner].add(vertex)
+                        (parent_edge,) = t.predecessors(runner)
+                        runner = parent_edge.predecessor()
 
 
-class StrongComponents(set):
-    def __init__(self, directed_graph: DirectedGraph):
-        set.__init__(self)
-        self._scc = {v: None for v in directed_graph}
-        self.__compute(directed_graph)
+class StrongComponents:
+    def __init__(self, directed_graph: DirectedGraph, alive: Callable):
+        self._stack = []
+        self._unexplored = 0
+        self._pre_order = {}
+        self._low_link = {}
+        self._on_stack = {}
+        self._vertex_to_scc = {}
+        self._singletons = set()
+        self._non_trivial_sccs = set()
 
-    def __compute(self, directed_graph):
-        def explore(v):
-            nonlocal pre_id
-            pre_id += 1
-            pre_order[v] = pre_id
-            low_link[v] = pre_id
-            stack.append(v)
+        for vertex in directed_graph:
+            if alive(vertex):
+                self._pre_order[vertex] = self._unexplored
+                self._low_link[vertex] = self._unexplored
+                self._on_stack[vertex] = False
 
-            for e in directed_graph.successors(v):
-                if pre_order[e.successor()] == 0:
-                    explore(e.successor())
-                    low_link[v] = min(low_link[v], low_link[e.successor()])
-                elif e.successor() in stack:
-                    low_link[v] = min(low_link[v], pre_order[e.successor()])
+        self._pre_id = 0
+        for vertex in directed_graph:
+            if alive(vertex) and self._pre_order[vertex] == 0:
+                self._explore(directed_graph, alive, vertex)
 
-            if low_link[v] == pre_order[v]:
-                scc = set()
-                done = False
-                while not done:
-                    z = stack.pop()
-                    scc.add(z)
-                    self._scc[z] = scc
-                    done = z == v
-                self.add(frozenset(scc))
+    def _explore(self,
+                 directed_graph: DirectedGraph,
+                 alive: Callable,
+                 vertex: vertices.Vertex):
+        self._pre_id += 1
+        self._pre_order[vertex] = self._pre_id
+        self._low_link[vertex] = self._pre_id
+        self._on_stack[vertex] = True
+        self._stack.append(vertex)
 
-        pre_id = 0
-        stack = []
-        pre_order = {v: 0 for v in directed_graph}
-        low_link = {v: 0 for v in directed_graph}
-        for v in directed_graph:
-            if pre_order[v] == 0:
-                explore(v)
+        for edge in directed_graph.successors(vertex):
+            if alive(edge.successor()):
+                if self._pre_order[edge.successor()] == self._unexplored:
+                    self._explore(directed_graph, alive, edge.successor())
+                    self._low_link[vertex] = min(self._low_link[vertex], self._low_link[edge.successor()])
+                elif self._on_stack[edge.successor()]:
+                    self._low_link[vertex] = min(self._low_link[vertex], self._pre_order[edge.successor()])
+
+        if self._low_link[vertex] == self._pre_order[vertex]:
+            scc = []
+            done = False
+            while not done:
+                z = self._stack.pop()
+                self._on_stack[z] = False
+                scc.append(z)
+                self._vertex_to_scc[z] = scc
+                done = z == vertex
+
+            if len(scc) == 1:
+                self._singletons.update(scc)
+            else:
+                self._non_trivial_sccs.add(frozenset(scc))
+
+    @property
+    def singletons(self):
+        return self._singletons
+
+    def non_trivial(self):
+        for scc in self._non_trivial_sccs:
+            yield scc
 
 
 class Cooper(Tree):
@@ -826,146 +850,6 @@ class Cooper(Tree):
         for child, parent in idom.items():
             if child != g.entry:
                 self.add_edge(edges.Edge(parent, child))
-
-
-class Betts(Tree, ProgramData):
-    def __init__(self, g: FlowGraph):
-        Tree.__init__(self)
-        ProgramData.__init__(self, g.program, g.name)
-        #pr = cProfile.Profile()
-        #pr.enable()
-        self._compute(g)
-        #pr.disable()
-        #pr.print_stats(sort='cumtime')
-
-    def _compute(self, g):
-        data = {}
-        idom = {}
-        dfs = DepthFirstSearch(g, g.entry)
-        predecessors = {}
-        unexplored_edges = []
-        for vertex in g:
-            self.add_vertex(vertex)
-            predecessors[vertex] = set()
-            data[vertex] = []
-
-        headers = {edge.successor() for edge in dfs.back_edges}
-        closed = set()
-        open = [g.entry]
-
-        while open or unexplored_edges:
-            while unexplored_edges:
-                edge = unexplored_edges.pop()
-                print(edge)
-                predecessor = edge.predecessor()
-                successor = edge.successor()
-                predecessors[successor].add(edge)
-
-                if len(g.predecessors(successor)) == 1:
-                    idom[successor] = predecessor
-                    data[successor] = data[edge][:]
-
-                    if len(g.successors(predecessor)) == 1:
-                        data[successor].pop()
-
-                    for edge in g.successors(successor):
-                        data[edge] = data[successor][:] + [successor]
-                        unexplored_edges.append(edge)
-
-                else:
-                    if len(predecessors[successor]) == len(g.predecessors(successor)):
-                        open.append(successor)
-                    elif successor in headers:
-                        closed.add(successor)
-
-            articulation = not closed and not unexplored_edges and len(open) == 1
-            while open:
-                vertex = open.pop()
-                changed = True
-
-                if data[vertex]:
-                    old = data[vertex][:]
-                    for counter, edge in enumerate(predecessors[vertex]):
-                        if counter == 0:
-                            data[vertex] = data[edge][:]
-                        else:
-                            min_length = min(len(data[edge]), len(data[vertex]))
-                            data[vertex] = data[vertex][:min_length]
-                            i = min_length - 1
-                            print(vertex, edge, ','.join(str(x) for x in data[edge]))
-                            while data[vertex][i] != data[edge][i]:
-                                data[vertex].pop()
-                                i -= 1
-
-                        if len(data[vertex]) == 1:
-                            break
-
-                    changed = old != data[vertex]
-                else:
-                    for counter, edge in enumerate(predecessors[vertex]):
-                        if counter == 0:
-                            data[vertex] = data[edge][:]
-                        else:
-                            min_length = min(len(data[edge]), len(data[vertex]))
-                            data[vertex] = data[vertex][:min_length]
-                            i = min_length - 1
-                            while data[vertex][i] != data[edge][i]:
-                                data[vertex].pop()
-                                i -= 1
-
-                        if len(data[vertex]) == 1:
-                            break
-
-                if vertex != g.entry:
-                    idom[vertex] = data[vertex][-1]
-
-                if changed:
-                    for edge in g.successors(vertex):
-                        if articulation:
-                            data[edge] = [vertex]
-                        else:
-                            data[edge] = data[vertex][:] + [vertex]
-                        unexplored_edges.append(edge)
-
-            if not open and not unexplored_edges and closed:
-                (vertex,) = random.sample(closed, 1)
-                closed.remove(vertex)
-
-                for counter, edge in enumerate(predecessors[vertex]):
-                    if counter == 0:
-                        data[vertex] = data[edge][:]
-                    else:
-                        min_length = min(len(data[edge]), len(data[vertex]))
-                        data[vertex] = data[vertex][:min_length]
-                        i = min_length - 1
-                        while data[vertex][i] != data[edge][i]:
-                            data[vertex].pop()
-                            i -= 1
-
-                    if len(data[vertex]) == 1:
-                        break
-
-                for edge in g.successors(vertex):
-                    if articulation:
-                        data[edge] = [vertex]
-                    else:
-                        data[edge] = data[vertex][:] + [vertex]
-                    unexplored_edges.append(edge)
-
-
-
-        for child, parent in idom.items():
-            self.add_edge(edges.Edge(parent, child))
-
-    def dotify(self):
-        data = []
-        for v in self:
-            data.append(v.dotify())
-            for edge in self.successors(v):
-                data.append(edge.dotify())
-
-        filename = '{}.{}.betts.dot'.format(self.program.basename(), self.name)
-        dot.generate(filename, data)
 
 
 class LoopNests(FlowGraph):
@@ -1456,3 +1340,88 @@ class SyntaxTree(Tree, ProgramData):
         filename = '{}.{}.ast.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
 
+
+class LoopNest(Tree):
+    def __init__(self):
+        Tree.__init__(self)
+        self._vertex_to_loop = {}
+        self._loop_to_headers = {}
+        self._headers = {}
+
+    def create_loop(self) -> vertices.LoopBody:
+        loop = vertices.LoopBody(vertices.Vertex.get_vertex_id())
+        self.add_vertex(loop)
+        return loop
+
+    def add_to_body(self, vertex: vertices.Vertex, loop: vertices.LoopBody):
+        if vertex in self._vertex_to_loop:
+            ancestor = self._vertex_to_loop[vertex]
+            ancestor.remove(vertex)
+            if not self.has_edge(ancestor, loop):
+                edge = edges.Edge(ancestor, loop)
+                self.add_edge(edge)
+        self._vertex_to_loop[vertex] = loop
+        loop.add(vertex)
+
+    def add_to_headers(self, header: vertices.Vertex, loop: vertices.LoopBody):
+        self._loop_to_headers.setdefault(loop, set()).add(header)
+        self._headers[header] = loop
+
+    def is_header(self, vertex: vertices.Vertex) -> int or None:
+        if vertex in self._headers:
+            return self._headers[vertex]
+
+    def headers(self, loop_id: int):
+        return self._loop_to_headers[loop_id]
+
+    def loop(self, vertex: vertices.Vertex):
+        return self._vertex_to_loop[vertex]
+
+
+class SuperBlockLoopGraph(FlowGraph):
+    def __init__(self, cfg: ControlFlowGraph, loop_nest: LoopNest):
+        FlowGraph.__init__(self, cfg.program, cfg.name)
+        self._vertex_to_super_block = {}
+        self._create(cfg, loop_nest)
+
+    def _create(self, cfg: ControlFlowGraph, loop_nest: LoopNest):
+        for loop in loop_nest:
+            headers = loop_nest.headers(loop)
+            super_block = vertices.SuperBlock(vertices.Vertex.get_vertex_id())
+            super_block.extend(headers)
+            self.add_vertex(super_block)
+            for header in headers:
+                self._vertex_to_super_block[header] = super_block
+
+        for vertex in cfg:
+            if vertex not in self._vertex_to_super_block:
+                super_block = vertices.SuperBlock(vertices.Vertex.get_vertex_id())
+                super_block.append(vertex)
+                self.add_vertex(super_block)
+                self._vertex_to_super_block[vertex] = super_block
+
+        super_edges = {}
+        for vertex in cfg:
+            for edge in cfg.successors(vertex):
+                predecessor_block = self._vertex_to_super_block[edge.predecessor()]
+                successor_block = self._vertex_to_super_block[edge.successor()]
+                key = (predecessor_block, successor_block)
+                if key not in super_edges:
+                    super_edge = edges.SuperEdge(predecessor_block, successor_block)
+                    self.add_edge(super_edge)
+                else:
+                    super_edge = super_edges[key]
+                super_edge.add(edge.predecessor())
+
+        self.entry = self._vertex_to_super_block[cfg.entry]
+        self.exit = self._vertex_to_super_block[cfg.exit]
+
+    def dotify(self):
+        data = []
+        for vertex in self:
+            data.append(vertex.dotify())
+            for edge in self.successors(vertex):
+                data.append(edge.dotify())
+
+        filename = '{}.{}.super.dot'.format(self.program.basename(), self.name)
+        dot.generate(filename, data)

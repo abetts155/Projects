@@ -3,6 +3,7 @@ import os
 import re
 
 from graphs import (edges, graphs, vertices)
+from typing import List
 from utils import messages
 
 
@@ -47,33 +48,42 @@ class Subprogram:
 class Program:
     def __init__(self, filename):
         self._filename = filename
-        self.__subprograms = collections.OrderedDict()
-        self.__call_graph = graphs.CallGraph(self)
+        self._subprograms = collections.OrderedDict()
+        self._call_graph = graphs.CallGraph(self)
 
     def add_subprogram(self, subprogram: Subprogram):
-        assert subprogram.name not in self.__subprograms, 'Already have information on subprogram {}'.format(
+        assert subprogram.name not in self._subprograms, 'Already have information on subprogram {}'.format(
             subprogram.name)
-        self.__subprograms[subprogram.name] = subprogram
-        self.__call_graph.add_vertex(subprogram.call_vertex)
+        self._subprograms[subprogram.name] = subprogram
+        self._call_graph.add_vertex(subprogram.call_vertex)
 
     def remove_subprogram(self, subprogram: Subprogram):
-        self.__call_graph.remove_vertex(subprogram.call_vertex)
-        del self.__subprograms[subprogram.name]
+        self._call_graph.remove_vertex(subprogram.call_vertex)
+        del self._subprograms[subprogram.name]
+
+    def keep_only(self, names: List[str]):
+        dead = set()
+        for name, subprogram in self._subprograms.items():
+            if name not in names:
+                dead.add(subprogram)
+
+        for subprogram in dead:
+            self.remove_subprogram(subprogram)
 
     def __getitem__(self, name) -> Subprogram:
-        assert name in self.__subprograms, "No subprogram with name '{}'".format(name)
-        return self.__subprograms[name]
+        assert name in self._subprograms, "No subprogram with name '{}'".format(name)
+        return self._subprograms[name]
 
     def __contains__(self, name):
-        return name in self.__subprograms
+        return name in self._subprograms
 
     def __iter__(self) -> Subprogram:
-        for subprogram in self.__subprograms.values():
+        for subprogram in self._subprograms.values():
             yield subprogram
 
     @property
     def call_graph(self) -> graphs.CallGraph:
-        return self.__call_graph
+        return self._call_graph
 
     @property
     def filename(self):
@@ -145,7 +155,7 @@ class IO:
 
     @classmethod
     def read(cls, filename: str) -> Program:
-        messages.verbose_message("Reading program from '{}'".format(filename))
+        messages.debug_message("Reading program from '{}'".format(filename))
 
         def parse():
             lines = []
