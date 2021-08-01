@@ -37,6 +37,9 @@ class Summary:
         self.away_goals = 0
         self.scores = Counter()
 
+    def __bool__(self):
+        return len(self.scores) > 0
+
 
 def compute_summary(season: Season, half: Half):
     summary = Summary()
@@ -162,8 +165,10 @@ def main(args: Namespace):
     season_to_summary = OrderedDict()
     ylim = 0
     for season in seasons:
-        season_to_summary[season] = compute_summary(season, args.half)
-        ylim = max(ylim, season_to_summary[season].home_goals, season_to_summary[season].away_goals)
+        summary = compute_summary(season, args.half)
+        if summary:
+            season_to_summary[season] = summary
+            ylim = max(ylim, season_to_summary[season].home_goals, season_to_summary[season].away_goals)
     ylim += 25
 
     title = '{} {}'.format(league.country, league.name)

@@ -65,7 +65,7 @@ def win(result: Result):
     return operator.gt(result.left, result.right)
 
 
-def defeat(result: Result):
+def loss(result: Result):
     return operator.lt(result.left, result.right)
 
 
@@ -97,7 +97,7 @@ def gd(op: Callable, bound: int, result: Result):
 
 
 class Event:
-    inventory = {func.__name__: func for func in {win, draw, defeat, bts}}
+    inventory = {func.__name__: func for func in {win, draw, loss, bts}}
     stems = {func.__name__: func for func in {gf, ga, gfa, gd}}
 
     op_table = {(operator.eq, True): '!=',
@@ -117,7 +117,7 @@ class Event:
                   gd: 'Goal difference',
                   win: 'Win',
                   draw: 'Draw',
-                  defeat: 'Loss',
+                  loss: 'Loss',
                   bts: 'BTS'}
 
     short_table = {gf: 'GF',
@@ -126,7 +126,7 @@ class Event:
                    gd: 'GD',
                    win: 'W',
                    draw: 'D',
-                   defeat: 'L',
+                   loss: 'L',
                    bts: 'BTS'}
 
     @classmethod
@@ -360,6 +360,18 @@ def create_fixture_from_json(data: Dict):
         messages.warning_message('Ignoring fixture. Round is {}.'.format(data['round']))
 
 
+def get_home_team_data(data: Dict):
+    home_id = int(data['homeTeam']['team_id'])
+    home_name = data['homeTeam']['team_name']
+    return home_id, home_name
+
+
+def get_away_team_data(data: Dict):
+    away_id = int(data['awayTeam']['team_id'])
+    away_name = data['awayTeam']['team_name']
+    return away_id, away_name
+
+
 def datetime_from_utc_to_local(utc_datetime):
     now_timestamp = time()
     offset = datetime.datetime.fromtimestamp(now_timestamp) - datetime.datetime.utcfromtimestamp(now_timestamp)
@@ -368,8 +380,9 @@ def datetime_from_utc_to_local(utc_datetime):
 
 def create_fixture_from_row(row: List):
     id_ = int(row[0])
-    date = datetime.datetime.fromisoformat(row[1])
-    date = datetime_from_utc_to_local(date)
+    date1 = datetime.datetime.fromisoformat(row[1])
+    date2 = datetime_from_utc_to_local(date1)
+    #print(date1, date2)
     season_id = int(row[2])
     home_id = int(row[3])
     home_team = Team.inventory[home_id] if home_id in Team.inventory else None
@@ -380,7 +393,7 @@ def create_fixture_from_row(row: List):
     finished = bool(row[7])
     updated = datetime.datetime.fromisoformat(row[8])
     fixture = Fixture(id_,
-                      date,
+                      date2,
                       season_id,
                       home_team,
                       away_team,

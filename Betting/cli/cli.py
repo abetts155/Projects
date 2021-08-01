@@ -48,7 +48,7 @@ def get_country(value: str):
     return delimiter.join(lex.lower() for lex in lexemes)
 
 
-def add_country_option(parser: ArgumentParser):
+def add_country_option(parser: ArgumentParser, required: bool = True):
     parser.add_argument('-C',
                         '--country',
                         help='choose the country to analyse',
@@ -56,7 +56,7 @@ def add_country_option(parser: ArgumentParser):
                         nargs='+',
                         choices=list(map(str.lower, country_register)),
                         type=get_country,
-                        required=True)
+                        required=required)
 
 
 def add_history_option(parser: ArgumentParser):
@@ -132,10 +132,10 @@ def add_logging_options(parser: ArgumentParser):
                         default=False)
 
 
-def set_logging_options(arguments: Namespace):
-    messages.verbose = arguments.verbose
-    messages.debug = arguments.debug
-    if arguments.no_warnings:
+def set_logging_options(args: Namespace):
+    messages.verbose = args.verbose
+    messages.debug = args.debug
+    if args.no_warnings:
         messages.warnings = False
 
 
@@ -146,22 +146,37 @@ def add_block_option(parser: ArgumentParser):
                         default=True)
 
 
-def get_unique_league(arguments: Namespace) -> str:
-    if len(arguments.league) > 1:
+def add_past_option(parser: ArgumentParser):
+    parser.add_argument('--past',
+                        action='store_true',
+                        help="if selected, update historical data; otherwise, update this season's data",
+                        default=False)
+
+
+def add_force_option(parser: ArgumentParser):
+    parser.add_argument('-f',
+                        '--force',
+                        action='store_true',
+                        help='force an update',
+                        default=False)
+
+
+def get_unique_league(args: Namespace) -> str:
+    if len(args.league) > 1:
         messages.error_message("This tool only supports a single league. "
-                               "You selected: '{}'".format(','.join(arguments.league)))
+                               "You selected: '{}'".format(','.join(args.league)))
     else:
-        (league_code,) = arguments.league
+        (league_code,) = args.league
         return league_code
 
 
-def get_multiple_teams(arguments: Namespace) -> List[str]:
-    team_names = arguments.team.split(':')
+def get_multiple_teams(args: Namespace) -> List[str]:
+    team_names = args.team.split(':')
     return team_names
 
 
-def get_unique_team(arguments: Namespace) -> str:
-    team_names = get_multiple_teams(arguments)
+def get_unique_team(args: Namespace) -> str:
+    team_names = get_multiple_teams(args)
     if len(team_names) > 1:
         messages.error_message("This tool only supports a single team. "
                                "You selected: '{}'".format(','.join(team_names)))
@@ -170,10 +185,10 @@ def get_unique_team(arguments: Namespace) -> str:
         return team_name
 
 
-def get_unique_event(arguments: Namespace) -> str:
-    if len(arguments.event) > 1:
+def get_unique_event(args: Namespace) -> str:
+    if len(args.event) > 1:
         messages.error_message("This tool only supports a single event. "
-                               "You selected: '{}'".format(','.join(arguments.event)))
+                               "You selected: '{}'".format(','.join(args.event)))
     else:
-        (event,) = arguments.event
+        (event,) = args.event
         return event

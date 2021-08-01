@@ -6,16 +6,16 @@ from cli.cli import (add_database_option,
                      add_logging_options,
                      set_logging_options,
                      add_league_option,
+                     add_country_option,
                      add_half_option)
 from datetime import datetime, timedelta
 from model.fixtures import Half, Fixture, Venue
 from model.leagues import league_register, League, prettify
-from model.seasons import Season
 from model.teams import create_team_from_row, Team
 from pathlib import Path
-from sql.sql import Database, get_fixtures
+from sql.sql import Database, get_fixtures, get_current_season
 from sql.sql_columns import ColumnNames
-from sql.sql_language import Characters, Keywords
+from sql.sql_language import Characters
 from subprocess import run
 from typing import List
 
@@ -28,6 +28,7 @@ def parse_command_line():
     add_minimum_option(parser)
     add_logging_options(parser)
     add_league_option(parser, False)
+    add_country_option(parser, False)
     add_events_option(parser, False)
 
     parser.add_argument('-l',
@@ -45,26 +46,6 @@ def parse_command_line():
                         default=12)
 
     return parser.parse_args()
-
-
-def get_current_season(db: Database, league: League):
-    country_constraint = "{}='{}' {} {}".format(ColumnNames.Country.name,
-                                                league.country,
-                                                Keywords.COLLATE.name,
-                                                Keywords.NOCASE.name)
-
-    name_constraint = "{}='{}' {} {}".format(ColumnNames.Code.name,
-                                             league.name,
-                                             Keywords.COLLATE.name,
-                                             Keywords.NOCASE.name)
-
-    current_constraint = "{}={}".format(ColumnNames.Current.name,
-                                        Characters.TRUE.value)
-    constraints = [country_constraint, name_constraint, current_constraint]
-    season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
-    if season_rows:
-        (season,) = season_rows
-        return season
 
 
 def filter_fixtures(fixtures: List[Fixture], left: int, right: int):
@@ -120,10 +101,16 @@ def analyse_sequences(db: Database,
 
 
 def main(args: Namespace):
+    leagues = set()
+    if args.country:
+        for country in args.country:
+            leagues.update({code for code, league in league_register.items() if league.country == country.capitalize()})
+
     if args.league:
         leagues = args.league
-    else:
-        leagues = league_register.keys()
+
+    if not args.country and not args.league:
+        leagues.update(league_register.keys())
 
     with Database(args.database) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())

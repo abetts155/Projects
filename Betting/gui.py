@@ -1,11 +1,12 @@
 from argparse import Namespace
 from lib import messages
-from model.fixtures import Event, Half, Venue, win, defeat, draw, bts
+from model.fixtures import Half, Venue, win, loss, draw, bts
 from model.leagues import League, league_register, get_league_code
 from model.tables import Position
 from PySimpleGUI import (InputText,
                          Text,
                          Submit,
+                         Button,
                          Slider,
                          Checkbox,
                          Radio,
@@ -15,11 +16,12 @@ from PySimpleGUI import (InputText,
                          PopupError,
                          theme,
                          WIN_CLOSED)
-from sql.sql import extract_picked_team, load_teams, load_league
+from sql.sql import extract_picked_team, load_teams
 from typing import Dict, List
 
 import head_to_head
 import show_breakdown
+import show_goal_events
 import show_heatmap
 import show_form
 import show_matrix
@@ -33,7 +35,7 @@ database = 'football.db'
 width = 10
 height = 1
 history_min = 1
-history_max = 10
+history_max = 12
 chunks_min = 0
 chunks_max = 12
 font = ('Helvetica', 14)
@@ -55,7 +57,7 @@ def leagues() -> List[str]:
 
 
 league_choice = Listbox(leagues(),
-                        size=(35, 8),
+                        size=(34, 16),
                         font=font,
                         enable_events=True,
                         key='-LEAGUE-')
@@ -66,10 +68,13 @@ history_choice = Slider(range=(history_min, history_max),
                         font=font,
                         key='-HISTORY-')
 
+
 team_radio_one = Radio('', radio_team_choice, font=font, default=True)
 team_radio_two = Radio('', radio_team_choice, font=font)
-team_choice_one = InputText(font=font, key='-TEAM1-')
-team_choice_two = InputText(font=font, key='-TEAM2-')
+team_choice_one = InputText(font=font, size=(30, 1), key='-TEAM1-')
+team_choice_two = InputText(font=font, size=(30, 1), key='-TEAM2-')
+team_clear_one = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-TEAM1-')
+team_clear_two = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-TEAM2-')
 
 venue_any = Radio(Venue.any.name.capitalize(), radio_venue, font=font, default=True)
 venue_home = Radio(Venue.home.name.capitalize(), radio_venue, font=font)
@@ -86,16 +91,23 @@ chunks_choice = Slider(range=(chunks_min, chunks_max),
                        font=font,
                        key='-CHUNKS-')
 
-event_choice = InputText(font=font, key='-EVENT-')
+event_choice = InputText(font=font, size=(16, 1), key='-EVENT-')
 event_negation = Checkbox('Negate', font=font, key='-NEGATE-EVENT-')
+event_clear = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-EVENT-')
 
-seq_submit = Submit(font=font, key='-SEQ-SUBMIT-')
+seq_submit = Button('Sequences', font=font, key='-SEQ-SUBMIT-')
 
+
+team_analysis_goals = Radio('Goals',
+                            radio_team_analysis,
+                            font=font,
+                            key='-TEAM-ANALYSIS-GOALS-',
+                            default=True,
+                            enable_events=True)
 team_analysis_form = Radio('Form',
                            radio_team_analysis,
                            font=font,
                            key='-TEAM-ANALYSIS-FORM-',
-                           default=True,
                            enable_events=True)
 team_analysis_margins = Radio('Margins',
                               radio_team_analysis,
@@ -112,9 +124,9 @@ team_analysis_game_states = InputText(font=font,
                                       disabled=True)
 team_analysis_submit = Submit(font=font, key='-TEAM-ANALYSIS-SUBMIT-')
 
-h2h_submit = Submit(font=font, key='-H2H-SUBMIT-')
+h2h_submit = Button('Head to head', font=font, key='-H2H-SUBMIT-')
 
-league_analysis_submit = Submit(font=font, key='-LEAGUE-ANALYSIS-SUBMIT-')
+league_analysis_submit = Button('League Analysis', font=font, key='-LEAGUE-ANALYSIS-SUBMIT-')
 
 heatmap_analysis = Combo([analysis.name.lower().capitalize() for analysis in show_heatmap.Analysis],
                          default_value=show_heatmap.Analysis.RESULT.name.lower().capitalize(),
@@ -139,11 +151,7 @@ performance_relative_choice = Listbox(sorted([Position.pretty(position) for posi
                                       enable_events=True)
 performance_analysis_submit = Submit(font=font, key='-PERFORMANCE-ANALYSIS-SUBMIT-')
 
-left_operand = InputText(font=font, size=(8, 1), key='-LEFT-OPERAND-', enable_events=True)
-multiplication = Text('X', font=font, justification='center', key='-MULTIPLICATION-')
-right_operand = InputText(font=font, size=(8, 1), key='-RIGHT-OPERAND-', enable_events=True)
-power = Text('^', font=font, justification='center', key='-POWER-')
-index_operand = InputText(font=font, size=(8, 1), key='-INDEX-OPERAND-', enable_events=True)
+expression = InputText(font=font, size=(16, 1), key='-EXPR-', enable_events=True)
 equals = Text('=', font=font, justification='center', key='-EQUALS-')
 result = Text(font=font, size=(10, 1), key='-RESULT-')
 
@@ -153,22 +161,19 @@ def make():
 
     layout = [
         [Text('League', font=font, size=default_size), league_choice],
-        [Text('Team #1', font=font, size=default_size), team_radio_one, team_choice_one],
-        [Text('Team #2', font=font, size=default_size), team_radio_two, team_choice_two],
+        [Text('Team #1', font=font, size=default_size), team_radio_one, team_choice_one, team_clear_one],
+        [Text('Team #2', font=font, size=default_size), team_radio_two, team_choice_two, team_clear_two],
         [Text('History', font=font, size=default_size), history_choice],
-        [Text('Event', font=font, size=default_size), event_choice, event_negation],
+        [Text('Event', font=font, size=default_size), event_choice, event_negation, event_clear],
         [Text('Venue', font=font, size=default_size), venue_any, venue_home, venue_away],
         [Text('Half', font=font, size=default_size), half_both, half_first, half_second, half_separate],
         [Text('Chunks', font=font, size=default_size), chunks_choice],
         [Text('_' * divider)],
-        [Text('Sequences analysis', font=font)],
-        [seq_submit],
-        [Text('_' * divider)],
-        [Text('Head-to-head analysis', font=font)],
-        [h2h_submit],
+        [seq_submit, h2h_submit, league_analysis_submit],
         [Text('_' * divider)],
         [Text('Individual team analysis', font=font)],
         [Text('Analysis', font=font, size=default_size),
+         team_analysis_goals,
          team_analysis_form,
          team_analysis_margins,
          team_analysis_summary],
@@ -188,11 +193,8 @@ def make():
         [Text('Event matrix analysis', font=font)],
         [event_matrix_submit],
         [Text('_' * divider)],
-        [Text('Individual league analysis', font=font)],
-        [league_analysis_submit],
-        [Text('_' * divider)],
         [Text('Quick calculation', font=font)],
-        [left_operand, multiplication, right_operand, power, index_operand, equals, result]
+        [expression, equals, result]
     ]
 
     return Window('', layout=layout, finalize=True)
@@ -253,7 +255,7 @@ def to_int(value: str) -> int:
 
 
 def get_event(value: str) -> str:
-    if value in [draw.__name__, win.__name__, defeat.__name__, bts.__name__]:
+    if value in [draw.__name__, win.__name__, loss.__name__, bts.__name__]:
         return value
     elif value.startswith('gf') or value.startswith('ga') or value.startswith('gfa'):
         prefix, infix, postfix = value.split()
@@ -383,6 +385,9 @@ def run_team_analysis(values: Dict):
                 show_team.main(args)
             elif values[team_analysis_form.Key]:
                 show_form.main(args)
+            elif values[team_analysis_goals.Key]:
+                args.intervals = 3
+                show_goal_events.main(args)
 
 
 def run_performance_analysis(values: Dict):
@@ -445,7 +450,7 @@ def run_event_matrix_analysis(values: Dict):
         set_venue(values, args)
         set_half(values, args)
         set_chunks(values, args)
-        if args.event in [win, defeat]:
+        if args.event in [win, loss]:
             args.symmetry = False
         else:
             args.symmetry = True
@@ -463,15 +468,11 @@ def run_league_analysis(values: Dict):
         show_summary.main(args)
 
 
-def run_multiplication(values: Dict):
-    if values[left_operand.Key] and values[right_operand.Key] and values[index_operand.Key]:
-        try:
-            answer = float(values[left_operand.Key]) * (float(values[right_operand.Key]) **
-                                                        float(values[index_operand.Key]))
-            result.update('{:.2f}'.format(answer))
-        except ValueError:
-            pass
-    else:
+def run_expression_evaluation(values: Dict):
+    try:
+        answer = eval(values[expression.Key])
+        result.update('{:.5f}'.format(answer))
+    except (ValueError, SyntaxError):
         result.update('')
 
 
@@ -481,6 +482,12 @@ def run(window: Window):
 
         if event in [WIN_CLOSED, 'Exit']:
             break
+        elif event == team_clear_one.Key:
+            team_choice_one.Update('')
+        elif event == team_clear_two.Key:
+            team_choice_two.Update('')
+        elif event == event_clear.Key:
+            event_choice.Update('')
         elif event == h2h_submit.Key:
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
@@ -506,10 +513,10 @@ def run(window: Window):
             performance_relative_choice.update(disabled=False)
         elif event == team_analysis_summary.Key:
             team_analysis_game_states.update(disabled=False)
-        elif event in [team_analysis_form.Key, team_analysis_margins.Key]:
+        elif event in [team_analysis_form.Key, team_analysis_margins.Key, team_analysis_goals.Key]:
             team_analysis_game_states.update(disabled=True)
-        elif event == left_operand.Key or event == right_operand.Key or event == index_operand.Key:
-            run_multiplication(values)
+        elif event == expression.Key:
+            run_expression_evaluation(values)
 
 
 if __name__ == '__main__':

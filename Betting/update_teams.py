@@ -40,19 +40,18 @@ def load_team_data(country: str):
             create_team_from_json(data)
 
 
-def main(arguments: Namespace):
-    for country in arguments.country:
-        create_teams_json(country, arguments.force)
+def main(args: Namespace):
+    for country in args.country:
+        create_teams_json(country, args.force)
         load_team_data(country)
 
-    with Database(arguments.database) as db:
+    with Database(args.database) as db:
         db.create_table(Team)
         db.create_rows(Team)
 
-    exit(EX_OK)
-
 
 if __name__ == '__main__':
-    arguments = parse_command_line()
-    set_logging_options(arguments)
-    main(arguments)
+    args = parse_command_line()
+    set_logging_options(args)
+    main(args)
+    exit(EX_OK)

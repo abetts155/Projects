@@ -7,10 +7,12 @@ from cli.cli import (add_database_option,
                      add_venue_option,
                      set_logging_options,
                      add_events_option,
+                     get_unique_event,
                      add_chunk_option,
                      add_block_option,
                      get_unique_league)
-from lib.helpful import split_into_contiguous_groups, to_string
+from lib.helpful import split_into_contiguous_groups, to_string, DisplayGrid
+from lib.messages import verbose_message
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Event
 from model.leagues import league_register
@@ -51,6 +53,7 @@ def fill_matrix(func: Callable,
                 table_map: TableMap,
                 table: LeagueTable,
                 half: Half):
+    verbose_message('Filling matrix for season {}'.format(table.season))
     for fixture in table.season.fixtures():
         home_team_position = table.team_position(fixture.home_team)
         home_team_chunk_id = table_map.get_chunk(home_team_position)
@@ -103,31 +106,48 @@ def main(args: Namespace):
     if args.history:
         seasons = seasons[-args.history:]
 
-    head_season = seasons.pop()
+    event = Event.get(get_unique_event(args))
+
+    head_season = seasons[-1]
     head_table = LeagueTable(head_season, args.half)
+    if head_table.played() == 0:
+        head_season = seasons[-2]
+        head_table = LeagueTable(head_season, args.half)
+        nrows = 1
+    else:
+        nrows = 2
+
     head_map = head_table.group(args.chunks)
     shape = (head_map.number_of_chunks(), head_map.number_of_chunks())
-    (event_name,) = args.event
-    event = Event.get(event_name)
 
     historical_matrix = np.zeros(shape=shape, dtype=np.int32)
-    for season in seasons:
+    historical_seasons = seasons[:-1]
+    for season in historical_seasons:
         table = LeagueTable(season, args.half)
         fill_matrix(event, args.symmetry, historical_matrix, head_map, table, args.half)
 
-    now_matrix = np.zeros(shape=shape, dtype=np.int32)
-    fill_matrix(event, args.symmetry, now_matrix, head_map, head_table, args.half)
-
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(15, 12), squeeze=False, constrained_layout=True)
+    display = DisplayGrid(nrows, 1)
+    fig, axs = plt.subplots(nrows=display.nrows,
+                            ncols=display.ncols,
+                            figsize=(15, 12),
+                            squeeze=False,
+                            constrained_layout=True)
 
     datum = pd.DataFrame(historical_matrix)
-    sublists = split_into_contiguous_groups([season.year for season in seasons])
+    sublists = split_into_contiguous_groups([season.year for season in historical_seasons])
     title = 'Seasons:{}'.format(to_string(sublists))
-    populate_axis(head_map, datum, axs[0, 0], title)
+    cell_x, cell_y = display.index(0)
+    ax = axs[cell_x, cell_y]
+    populate_axis(head_map, datum, ax, title)
 
-    datum = pd.DataFrame(now_matrix)
-    title = 'Season:{}'.format(head_season.year)
-    populate_axis(head_map, datum, axs[1, 0], title)
+    if nrows == 2:
+        now_matrix = np.zeros(shape=shape, dtype=np.int32)
+        fill_matrix(event, args.symmetry, now_matrix, head_map, head_table, args.half)
+        datum = pd.DataFrame(now_matrix)
+        title = 'Season:{}'.format(head_season.year)
+        cell_x, cell_y = display.index(1)
+        ax = axs[cell_x, cell_y]
+        populate_axis(head_map, datum, ax, title)
 
     title = '{} {}: {}'.format(league.country, league.name, Event.name(event, args.negate))
     if args.half != Half.both:

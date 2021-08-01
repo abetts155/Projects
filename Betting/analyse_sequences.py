@@ -186,6 +186,7 @@ def analyse_teams(args: Namespace,
                                                          league.name,
                                                          '\n' + '*' * 80)
     header_emitted = False
+    now = datetime.now().timetuple()
 
     for team in teams:
         for event, history in historical_data.items():
@@ -194,11 +195,15 @@ def analyse_teams(args: Namespace,
 
             if aggregated_message or team_message:
                 fixtures = get_match_information(args.database, this_season, team)
+                fixtures_remaining = len(fixtures)
+                fixtures = [fixture for fixture in fixtures if
+                            (fixture.date.timetuple().tm_yday == now.tm_yday and
+                             fixture.date.timetuple().tm_hour >= now.tm_hour - 1) or
+                            fixture.date.timetuple().tm_yday > now.tm_yday]
+
                 if fixtures:
-                    fixtures = [fixture for fixture in fixtures if datetime.date(fixture.date) >= date.today()]
                     next_match = fixtures[0]
                     window = datetime.now() + timedelta(hours=12)
-
                     satisfies_date_constraint = (datetime.date(next_match.date) <= window.date() or args.show_match)
                     satisfies_venue_constraint = ((args.venue == Venue.any) or
                                                   (args.venue == Venue.home and next_match.home_team == team) or
@@ -211,7 +216,7 @@ def analyse_teams(args: Namespace,
 
                         output_prediction(team,
                                           next_match,
-                                          len(fixtures),
+                                          fixtures_remaining,
                                           args.half,
                                           event,
                                           args.negate,

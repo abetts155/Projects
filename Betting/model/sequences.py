@@ -31,6 +31,8 @@ class DataUnit:
             positions = split_into_contiguous_groups([position + 1 for position in self.positions])
             title = '{}  Position{}:{}'.format(title, 's' if len(self.positions) > 1 else '', to_string(positions))
 
+        title = '{} ({} data points)'.format(title, sum(self.counter.values()))
+
         return title
 
     def values(self, x_limit: int):

@@ -1,7 +1,7 @@
 from collections import OrderedDict, namedtuple
 from enum import auto, Enum
 from lib.messages import error_message
-from model.fixtures import Fixture, Half, draw, win, defeat
+from model.fixtures import Fixture, Half, draw, win, loss
 from model.seasons import Season
 from model.teams import Team
 from typing import List, Tuple
@@ -144,7 +144,7 @@ class LeagueTable(list):
                         if win(result):
                             home.wins += 1
                             away.losses += 1
-                        elif defeat(result):
+                        elif loss(result):
                             home.losses += 1
                             away.wins += 1
                         else:
@@ -234,6 +234,9 @@ class LeagueTable(list):
         if chunk_size <= 0 or chunk_size > len(self):
             error_message('Chunk size {} is not for tables of size {}.'.format(chunk_size, len(self)))
         return TableMap(chunk_size, len(self))
+
+    def played(self) -> int:
+        return sum([row.P for row in self])
 
     def __str__(self):
         team_column_length = 0

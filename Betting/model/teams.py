@@ -64,6 +64,10 @@ class Team:
         except KeyError:
             warning_message("No team '{}' with ID {} in the team inventory.".format(name, id_))
 
+    @classmethod
+    def has_team(cls, id_: int) -> bool:
+        return id_ in cls.inventory
+
 
 def create_team_from_json(data: Dict):
     id_ = int(data['team_id'])

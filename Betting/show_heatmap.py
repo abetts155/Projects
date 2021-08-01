@@ -13,7 +13,7 @@ from enum import auto, Enum
 from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message, warning_message
 from matplotlib import pyplot as plt
-from model.fixtures import Half, Event, win, defeat, draw, bts
+from model.fixtures import Half, Event, win, loss, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
@@ -68,7 +68,7 @@ class Predicates:
 
 
 predicate_table = {
-    Analysis.RESULT: Predicates([win, draw, defeat],
+    Analysis.RESULT: Predicates([win, draw, loss],
                                 False),
 
     Analysis.SCORED: Predicates([bts, Event.get('gf_gt_0'), Event.get('ga_gt_0'), Event.get('gfa_eq_0')],

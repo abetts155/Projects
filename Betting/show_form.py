@@ -11,7 +11,7 @@ from cli.cli import (add_database_option,
                      get_unique_team)
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
-from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, defeat
+from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, loss
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
@@ -67,7 +67,7 @@ def decide_cell_color(result: Result,
     if result:
         if win(result):
             return left_color
-        elif defeat(result):
+        elif loss(result):
             return right_color
         else:
             return neutral_color
@@ -106,8 +106,8 @@ def create_results_table(ax,
         row = ['{}'.format(fixture.date.strftime('%Y-%m-%d')),
                opponent_team.name,
                venue.name[0].upper(),
-               str(first_half),
-               str(second_half),
+               str(first_half) if first_half else '',
+               str(second_half) if second_half else '',
                str(full_time)]
         table.append(row)
 
@@ -202,7 +202,7 @@ def main(args: Namespace):
         team_color = (54 / 255, 104 / 255, 141 / 255)
         other_team_color = (240 / 255, 88 / 255, 55 / 255)
         neutral_color = (1, 1, 1)
-        unknown_color = (0, 0, 0)
+        unknown_color = (1, 1, 1)
 
         create_results_table(axs[0, 0], team, fixtures, team_color, other_team_color, neutral_color, unknown_color)
         create_league_table(axs[1, 0], this_season, team, team_color, neutral_color, args.venue, args.half)

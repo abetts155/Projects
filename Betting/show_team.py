@@ -12,7 +12,7 @@ from cli.cli import (add_database_option,
 from collections import Counter
 from lib import messages
 from matplotlib import pyplot as plt
-from model.fixtures import Result, Venue, win, defeat, draw, bts
+from model.fixtures import Result, Venue, win, loss, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -78,7 +78,7 @@ def update_stats(stats: Statistics, result: Result):
 
     if win(result):
         stats.wins += 1
-    elif defeat(result):
+    elif loss(result):
         stats.losses += 1
     else:
         assert draw(result)

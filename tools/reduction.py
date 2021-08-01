@@ -1,10 +1,13 @@
+import random
 from argparse import ArgumentParser
 from graphs import edges, graphs, vertices
+from miscellaneous.helpful import error_message
+from numpy import percentile
 from sys import setrecursionlimit
 from system import programs
 from threading import stack_size
-from time import time
-from typing import Dict, List, Set
+from time import sleep, time
+from typing import Dict, List, Set, Tuple
 
 
 def loop_body(cfg: graphs.ControlFlowGraph,
@@ -108,21 +111,23 @@ def betts_loops(cfg: graphs.ControlFlowGraph):
 
 def verify(cfg: graphs.ControlFlowGraph, betts_tree):
     tarjan_tree = graphs.LengauerTarjan(cfg, cfg.entry)
-    graphs.Cooper(cfg)
     differences = set()
     for vertex in cfg:
         if vertex != cfg.entry:
             (betts,) = betts_tree.predecessors(vertex)
             (tarjan,) = tarjan_tree.predecessors(vertex)
             if betts.predecessor() != tarjan.predecessor():
-                print('Error {}: betts({}) = {}  tarjan({}) = {}'.format(cfg.name,
-                                                                         vertex,
-                                                                         betts.predecessor(),
-                                                                         vertex,
-                                                                         tarjan.predecessor()))
+                print('{}: betts({}) = {}  tarjan({}) = {}'.format(cfg.name,
+                                                                   vertex,
+                                                                   betts.predecessor(),
+                                                                   vertex,
+                                                                   tarjan.predecessor()))
                 differences.add((vertex, betts.predecessor(), tarjan.predecessor()))
-                assert False
-    print('VERIFIED')
+
+    if differences:
+        error_message('Verification failed')
+    else:
+        print('Verified')
 
 
 class TableRow:
@@ -203,33 +208,11 @@ class RootTable:
             print(root_data)
 
 
-class DynamicSCC:
-    __slots__ = ['sccs', 'vertex_to_scc']
-
-    def __init__(self):
-        self.sccs = set()
-        self.vertex_to_scc = {}
-
-    def populate(self, sccs: graphs.StrongComponents):
-        for scc in sccs.non_trivial():
-            self.sccs.add(scc)
-            for vertex in scc:
-                self.vertex_to_scc[vertex] = scc
-
-    def __iter__(self):
-        for scc in self.sccs:
-            yield scc
-
-    def __bool__(self):
-        return len(self.sccs) > 0
-
-
-def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph):
+def old_t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph):
     tree = graphs.Tree()
     data = {}
     forest = {}
     table = RootTable()
-    dynamic_sccs = DynamicSCC()
     worklist = []
 
     def alive(vertex: vertices.Vertex):
@@ -337,78 +320,278 @@ def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph):
                 answer(row)
                 del table[key]
         else:
-            if not dynamic_sccs:
-                sccs = graphs.StrongComponents(cfg, alive)
-                dynamic_sccs.populate(sccs)
+            pass
 
-            for scc in dynamic_sccs:
-                headers = set()
-                rest = set()
-                for vertex in scc:
-                    external_edges = {edge for edge in cfg.predecessors(vertex) if edge.predecessor() not in scc}
-                    if external_edges:
-                        headers.add(vertex)
-                    else:
-                        rest.add(vertex)
+    verify(cfg, tree)
 
-                table.merge(headers, rest)
-                (header, *others) = headers
-                key, row = table[header]
-                worklist.append((key, row))
-                table.dump()
+
+class GraphRow:
+    __slots__ = ['id_', 'vertices', 'successors', 'predecessors', 'ready']
+
+    def __init__(self, id_: int, vertices: Set[vertices.Vertex]):
+        self.id_ = id_
+        self.vertices = vertices
+        self.successors = set()
+        self.predecessors = set()
+        self.ready = False
+
+    def __str__(self):
+        return ('ID={}\nV={}\nP={}\nS={}'.format(self.id_,
+                                                 ','.join(str(x) for x in self.vertices),
+                                                 ','.join(str(x) for x in self.predecessors),
+                                                 ','.join(str(x) for x in self.successors)))
+
+
+def do_lca(data: List[vertices.Vertex], query: Set[vertices.Vertex]):
+    (first, *rest) = query
+    dominator = data[first][:]
+    for tentacle in rest:
+        if len(dominator) == 1:
+            break
+
+        min_length = min(len(data[tentacle]), len(dominator))
+        dominator = dominator[:min_length]
+        i = min_length - 1
+        while dominator[i] != data[tentacle][i]:
+            dominator.pop()
+            i -= 1
+
+    return dominator
+
+
+def compute_sccs(forest: Dict[vertices.Vertex, GraphRow], entry_row_id: int):
+    pre_order = {}
+    low_link = {}
+    on_stack = {}
+    stack = []
+    unexplored = 0
+    pre_id = 0
+    non_trivial_sccs = set()
+
+    def explore(row_id: int):
+        nonlocal pre_id, unexplored, non_trivial_sccs
+        pre_id += 1
+        pre_order[row_id] = pre_id
+        low_link[row_id] = pre_id
+        on_stack[row_id] = True
+        stack.append(row_id)
+
+        row = forest[row_id]
+        for predecessor_id in row.predecessors:
+            if predecessor_id not in pre_order:
+                explore(predecessor_id)
+                low_link[row_id] = min(low_link[row_id], low_link[predecessor_id])
+            elif predecessor_id in on_stack:
+                low_link[row_id] = min(low_link[row_id], pre_order[predecessor_id])
+
+        if low_link[row_id] == pre_order[row_id]:
+            scc = set()
+            done = False
+            while not done:
+                z = stack.pop()
+                del on_stack[z]
+                scc.add(z)
+                done = z == row_id
+
+            if len(scc) > 1:
+                non_trivial_sccs.add(frozenset(scc))
+
+    entry_row = forest[entry_row_id]
+    starting_points = set()
+    for successor_id in entry_row.successors:
+        successor_row = forest[successor_id]
+        starting_points.update(successor_row.predecessors)
+
+    for row_id in starting_points:
+        if row_id not in pre_order:
+            explore(row_id)
+
+    return non_trivial_sccs
+
+
+def see_forest(forest: Dict[vertices.Vertex, GraphRow]):
+    for row in forest.values():
+        print('>' * 10)
+        print(row)
+    print()
+
+
+def preliminary_search(cfg: graphs.ControlFlowGraph,
+                       entry: vertices.Vertex,
+                       entry_row_id: int,
+                       tree: graphs.Tree,
+                       data: List[vertices.Vertex],
+                       forest: Dict[vertices.Vertex, GraphRow],
+                       tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]]):
+    vertex_to_row = {}
+    next_row_id = entry_row_id
+    tree.add_vertex(entry)
+    forest[entry_row_id] = GraphRow(next_row_id, {entry})
+    vertex_to_row[entry] = entry_row_id
+
+    roots = [entry]
+    while roots:
+        root = roots.pop()
+        data[root] = []
+        if len(cfg.successors(root)) > 1:
+            data[root].append(root)
+
+        explore = [root]
+        while explore:
+            predecessor = explore.pop()
+
+            for edge in cfg.successors(predecessor):
+                successor = edge.successor()
+
+                if len(cfg.predecessors(successor)) == 1:
+                    tree.add_vertex(successor)
+                    tree.add_edge(edges.Edge(predecessor, successor))
+
+                    explore.append(successor)
+                    data[successor] = data[predecessor][:]
+                    if len(cfg.successors(successor)) > 1:
+                        data[successor].append(successor)
+                else:
+                    if successor not in vertex_to_row:
+                        roots.append(successor)
+                        tree.add_vertex(successor)
+                        next_row_id += 1
+                        forest[next_row_id] = GraphRow(next_row_id, {successor})
+                        vertex_to_row[successor] = next_row_id
+
+                    if root != successor:
+                        predecessor_row = forest[vertex_to_row[root]]
+                        successor_row = forest[vertex_to_row[successor]]
+                        predecessor_row.successors.add(successor_row.id_)
+                        successor_row.predecessors.add(predecessor_row.id_)
+                        forest_edge = (predecessor_row.id_, successor_row.id_)
+                        tentacles.setdefault(forest_edge, set()).add(predecessor)
+
+    return next_row_id
+
+
+def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph, entry: vertices.Vertex):
+    tree = graphs.Tree()
+    forest = {}
+    tentacles = {}
+    data = {}
+    entry_row_id = 0
+
+    next_row_id = preliminary_search(cfg, entry, entry_row_id, tree, data, forest, tentacles)
+
+    worklist = []
+    for row in forest.values():
+        if len(row.predecessors) == 1:
+            row.ready = True
+            worklist.append(row)
+
+    # see_forest(forest)
+
+    while len(forest) > 1:
+        if worklist:
+            while worklist:
+                row = worklist.pop(0)
+                row.ready = True
+                (predecessor_id,) = row.predecessors
+                predecessor_row = forest[predecessor_id]
+                forest_edge = (predecessor_row.id_, row.id_)
+                query = tentacles[forest_edge]
+
+                if len(query) == 1:
+                    (tentacle,) = query
+                    dominator = data[tentacle][:] + [tentacle]
+                else:
+                    dominator = do_lca(data, query)
+
+                for vertex in row.vertices:
+                    tree.add_edge(edges.Edge(dominator[-1], vertex))
+
+                changed = set(row.vertices)
+                predecessor_row.successors.remove(row.id_)
+                for successor_id in row.successors:
+                    successor_row = forest[successor_id]
+                    successor_row.predecessors.remove(row.id_)
+                    forest_edge = (row.id_, successor_row.id_)
+                    changed.update(tentacles[forest_edge])
+
+                    if predecessor_id != successor_id:
+                        successor_row.predecessors.add(predecessor_id)
+                        predecessor_row.successors.add(successor_id)
+
+                        new_forest_edge = (predecessor_row.id_, successor_row.id_)
+                        tentacles.setdefault(new_forest_edge, set()).update(tentacles[forest_edge])
+
+                for successor_id in row.successors:
+                    successor_row = forest[successor_id]
+                    if not successor_row.ready and len(successor_row.predecessors) == 1:
+                        successor_row.ready = True
+                        worklist.append(successor_row)
+
+                del forest[row.id_]
+
+                for tentacle in changed:
+                    data[tentacle] = dominator + data[tentacle]
+
+        else:
+            non_trivial_sccs = compute_sccs(forest, entry_row_id)
+            for scc in non_trivial_sccs:
+                entry_rows = set()
+                entry_vertices = set()
+                for row_id in scc:
+                    row = forest[row_id]
+                    for predecessor_id in row.predecessors:
+                        if predecessor_id not in scc:
+                            entry_vertices.update(row.vertices)
+                            entry_rows.add(row_id)
+
+                next_row_id += 1
+                new_row = GraphRow(next_row_id, entry_vertices)
+                forest[next_row_id] = new_row
+
+                for row_id in entry_rows:
+                    row = forest[row_id]
+                    for predecessor_id in row.predecessors:
+                        predecessor_row = forest[predecessor_id]
+                        predecessor_row.successors.discard(row_id)
+                        if predecessor_id not in scc:
+                            new_row.predecessors.add(predecessor_id)
+                            predecessor_row.successors.add(new_row.id_)
+
+                            forest_edge = (predecessor_row.id_, row.id_)
+                            new_forest_edge = (predecessor_row.id_, new_row.id_)
+                            tentacles.setdefault(new_forest_edge, set()).update(tentacles[forest_edge])
+
+                    for successor_id in row.successors:
+                        if successor_id not in entry_rows:
+                            successor_row = forest[successor_id]
+                            new_row.successors.add(successor_id)
+                            successor_row.predecessors.add(new_row.id_)
+                            successor_row.predecessors.discard(row_id)
+
+                            forest_edge = (row.id_, successor_row.id_)
+                            new_forest_edge = (new_row.id_, successor_row.id_)
+                            tentacles.setdefault(new_forest_edge, set()).update(tentacles[forest_edge])
+
+                for row_id in entry_rows:
+                    del forest[row_id]
+
+            entry_row = forest[entry_row_id]
+            for successor_id in entry_row.successors:
+                successor_row = forest[successor_id]
+                if not successor_row.ready and len(successor_row.predecessors) == 1:
+                    successor_row.ready = True
+                    worklist.append(successor_row)
 
     #tree.dotify('{}.t0_t1_t2'.format(cfg.name))
     #verify(cfg, tree)
 
 
-def betts_dominators(cfg: graphs.ControlFlowGraph):
-    t0 = time()
-    loop_nest = betts_loops(cfg)
-    t1 = time()
-    print('Betts  {}'.format(t1 - t0))
-    super_graph = graphs.SuperBlockLoopGraph(cfg, loop_nest)
-    t2 = time()
-    print('Betts  {}'.format(t2 - t1))
-
-    dfs = graphs.DepthFirstSearch(super_graph, super_graph.entry)
-    edge_dominance = {}
-    tree = graphs.Tree()
-    for super_block in reversed(dfs.post_order()):
-        for vertex in super_block:
-            tree.add_vertex(vertex)
-
-        super_dominance = []
-        for super_edge in super_graph.predecessors(super_block):
-            if super_edge in edge_dominance:
-                if not super_dominance:
-                    super_dominance = edge_dominance[super_edge][:]
-                else:
-                    min_length = min(len(edge_dominance[super_edge]), len(super_dominance))
-                    super_dominance = super_dominance[:min_length]
-                    i = min_length - 1
-                    while super_dominance[i] != edge_dominance[super_edge][i]:
-                        super_dominance.pop()
-                        i -= 1
-
-            if len(super_dominance) == 1:
-                break
-
-        if super_block != super_graph.entry:
-            for vertex in super_block:
-                edge = edges.Edge(super_dominance[-1], vertex)
-                tree.add_edge(edge)
-
-        for super_edge in super_graph.successors(super_block):
-            if len(super_edge) == 1:
-                (source,) = super_edge
-                edge_dominance[super_edge] = super_dominance[:] + [source]
-            else:
-                edge_dominance[super_edge] = super_dominance[:]
-
-    t3 = time()
-    print('Betts  {}'.format(t3 - t2))
-    print('Betts  {}'.format(t3 - t0))
-    verify(cfg, tree)
+def strip_outliers(data: List[float]):
+    q25, q75 = percentile(data, 25), percentile(data, 75)
+    iqr = q75 - q25
+    cut_off = iqr * 1.5
+    lower, upper = q25 - cut_off, q75 + cut_off
+    return [x for x in data if lower <= x <= upper]
 
 
 def main(filename: str, subprogram_names: List[str], repeat: int):
@@ -423,25 +606,23 @@ def main(filename: str, subprogram_names: List[str], repeat: int):
     for subprogram in program:
         subprogram.cfg.dotify()
         print(subprogram.cfg.name)
-        time_for_new = 0
-        time_for_lt = 0
-        time_for_df = 0
+        algorithms = [t0_t1_t2_dominators, graphs.LengauerTarjan, graphs.Cooper]
+        total_time = {alg: [] for alg in algorithms}
 
         for i in range(repeat):
             subprogram.cfg.shuffle_edges()
-            begin = time()
-            t0_t1_t2_dominators(subprogram.cfg)
-            time_for_new += time() - begin
+            random.shuffle(algorithms)
 
-            begin = time()
-            graphs.LengauerTarjan(subprogram.cfg, subprogram.cfg.entry)
-            time_for_lt += time() - begin
+            for alg in algorithms:
+                begin = time()
+                alg(subprogram.cfg, subprogram.cfg.entry)
+                total_time[alg].append(time() - begin)
 
-            begin = time()
-            graphs.Cooper(subprogram.cfg)
-            time_for_df += time() - begin
+        algorithms = [t0_t1_t2_dominators, graphs.LengauerTarjan, graphs.Cooper]
+        for alg in algorithms:
+            total_time[alg] = strip_outliers(total_time[alg])
+            print('{:.5f}'.format(sum(total_time[alg]) / len(total_time[alg])))
 
-        print('New={}, LT={}, DF={}'.format(time_for_new/repeat, time_for_lt/repeat, time_for_df/repeat))
         print()
 
     print('Old={:.5f}  New={:.5f}'.format(time_for_original, time_for_new))
@@ -474,4 +655,3 @@ if __name__ == '__main__':
     setrecursionlimit(2 ** 30)
     args = parse_command_line()
     main(args.program, args.subprograms, args.repeat)
-

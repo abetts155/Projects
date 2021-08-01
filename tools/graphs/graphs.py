@@ -794,7 +794,7 @@ class StrongComponents:
 
 
 class Cooper(Tree):
-    def __init__(self, g: FlowGraph):
+    def __init__(self, g: FlowGraph, entry: vertices.Vertex):
         Tree.__init__(self)
         idom = self._solve(g)
         self._add_edges(g, idom)

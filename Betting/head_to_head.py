@@ -10,7 +10,7 @@ from cli.cli import (add_database_option,
 from collections import Counter
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
-from model.fixtures import Half, Fixture, Result, create_fixture_from_row, win, draw, defeat
+from model.fixtures import Half, Fixture, Result, create_fixture_from_row, win, draw, loss
 from model.leagues import league_register
 from model.teams import Team
 from sql.sql import Database
@@ -64,7 +64,7 @@ def populate(stats: Statistics, result: Result):
     if result:
         if win(result):
             stats.wins += 1
-        elif defeat(result):
+        elif loss(result):
             stats.losses += 1
         else:
             assert draw(result)
@@ -143,7 +143,7 @@ def decide_cell_color(result: Result,
     if result:
         if win(result):
             return left_color
-        elif defeat(result):
+        elif loss(result):
             return right_color
         else:
             return neutral_color

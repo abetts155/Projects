@@ -17,7 +17,7 @@ from lib.messages import error_message
 from math import floor
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import Half, Venue, win, defeat, draw
+from model.fixtures import Half, Venue, win, loss, draw
 from model.leagues import league_register, League
 from model.seasons import Season
 from model.tables import LeagueTable, Position
@@ -127,7 +127,7 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
             stats.draws += 1
             stats.points += 1
         else:
-            assert defeat(result)
+            assert loss(result)
             stats.losses += 1
 
         stats.goals_for = result.left

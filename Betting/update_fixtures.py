@@ -1,12 +1,21 @@
 from argparse import ArgumentParser, Namespace
-from cli.cli import add_database_option, add_logging_options, add_league_option, set_logging_options
+from cli.cli import (add_database_option,
+                     add_logging_options,
+                     add_league_option,
+                     set_logging_options,
+                     add_past_option,
+                     add_force_option)
 from datetime import datetime, timedelta
 from football_api.football_api import get_fixtures
 from football_api.structure import get_fixtures_json, store
 from json import load
 from lib import messages
-from model.fixtures import Fixture, create_fixture_from_json, create_fixture_from_row
-from model.leagues import league_register
+from model.fixtures import (Fixture,
+                            create_fixture_from_json,
+                            create_fixture_from_row,
+                            get_home_team_data,
+                            get_away_team_data)
+from model.leagues import League, league_register
 from model.seasons import Season, create_season_from_row
 from model.teams import Team, create_team_from_row
 from os import EX_OK
@@ -22,18 +31,8 @@ def parse_command_line():
     add_database_option(parser)
     add_logging_options(parser)
     add_league_option(parser, False)
-
-    parser.add_argument('--past',
-                        action='store_true',
-                        help="if selected, update all historical fixtures; otherwise, update this season's fixtures",
-                        default=False)
-
-    parser.add_argument('-f',
-                        '--force',
-                        action='store_true',
-                        help='force an update',
-                        default=False)
-
+    add_past_option(parser)
+    add_force_option(parser)
     return parser.parse_args()
 
 
@@ -44,14 +43,30 @@ def create_fixtures_json(season: int, force: bool):
         store(fixtures_json, get_fixtures(season))
 
 
-def load_fixture_data(season: int):
-    fixtures_json = get_fixtures_json(season)
+def create_team_row(league: League, id_: int, name: str):
+    url = 'https://media.api-sports.io/football/teams/{}.png'.format(id_)
+    return [id_, name, league.country, url]
+
+
+def load_fixture_data(league: League, season: Season):
+    fixtures_json = get_fixtures_json(season.id)
     if not fixtures_json.exists():
-        messages.warning_message("No fixtures available for season {}".format(season))
+        messages.warning_message("No fixtures available for season {}".format(season.id))
     else:
+        messages.verbose_message('Season {}'.format(season.year))
         with fixtures_json.open() as in_file:
             json_text = load(in_file)
             for data in json_text['api']['fixtures']:
+                home_id, home_name = get_home_team_data(data)
+                if not Team.has_team(home_id):
+                    team_row = create_team_row(league, home_id, home_name)
+                    create_team_from_row(team_row)
+
+                away_id, away_name = get_away_team_data(data)
+                if not Team.has_team(away_id):
+                    team_row = create_team_row(league, away_id, away_name)
+                    create_team_from_row(team_row)
+
                 create_fixture_from_json(data)
 
 
@@ -80,10 +95,13 @@ def update_leagues(database: str, leagues: List[str], past: bool, force: bool):
             constraints = [name_constraint, country_constraint, current_constraint]
             season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
             for row in season_rows:
-                create_fixtures_json(row[0], force)
-                load_fixture_data(row[0])
+                season = create_season_from_row(row)
+                create_fixtures_json(season.id, force)
+                load_fixture_data(league, season)
                 db.create_table(Fixture)
                 db.create_rows(Fixture)
+                db.create_table(Team)
+                db.create_rows(Team)
 
 
 def fixtures_played(database: str, season: Season) -> bool:
@@ -122,18 +140,16 @@ def update_all(database: str, past: bool, force: bool):
     update_leagues(database, codes, past, force or codes)
 
 
-def main(arguments: Namespace):
-    check_database_exists(arguments.database)
-
-    if arguments.league:
-        update_leagues(arguments.database, arguments.league, arguments.past, arguments.force)
+def main(args: Namespace):
+    if args.league:
+        update_leagues(args.database, args.league, args.past, args.force)
     else:
-        update_all(arguments.database, arguments.past, arguments.force)
-
-    exit(EX_OK)
+        update_all(args.database, args.past, args.force)
 
 
 if __name__ == '__main__':
-    arguments = parse_command_line()
-    set_logging_options(arguments)
-    main(arguments)
+    args = parse_command_line()
+    set_logging_options(args)
+    check_database_exists(args.database)
+    main(args)
+    exit(EX_OK)

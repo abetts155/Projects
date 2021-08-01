@@ -10,7 +10,7 @@ from cli.cli import (add_database_option,
                      add_block_option,
                      get_unique_league)
 from matplotlib import pyplot as plt
-from model.fixtures import Event, Half, Venue, win, defeat
+from model.fixtures import Event, Half, Venue, win, loss
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -100,7 +100,7 @@ def main(args: Namespace):
     (row,) = extract_picked_team(args.database, args.team, league)
     team = Team.inventory[row[0]]
 
-    events = [win, defeat]
+    events = [win, loss]
     colors = ['dodgerblue', 'salmon']
     data = []
     for i, func in enumerate(events):
