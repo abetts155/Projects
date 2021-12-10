@@ -178,6 +178,4 @@ class IO:
             callee = the_program[callee].call_vertex
             the_program.call_graph.add_edge(edges.CallGraphEdge(caller, callee, site))
 
-        #More comments
-
         return the_program
