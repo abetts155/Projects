@@ -3,6 +3,7 @@ from cli.cli import (add_database_option,
                      add_half_option,
                      add_history_option,
                      add_league_option,
+                     add_country_option,
                      add_team_option,
                      add_minimum_option,
                      add_logging_options,
@@ -29,7 +30,8 @@ def parse_command_line():
     add_database_option(parser)
     add_half_option(parser)
     add_history_option(parser)
-    add_league_option(parser)
+    add_league_option(parser, False)
+    add_country_option(parser, False)
     add_minimum_option(parser)
     add_team_option(parser)
     add_venue_option(parser)
@@ -121,57 +123,39 @@ def get_match_information(database: str, season: Season, team: Team):
         return fixtures
 
 
-class Text:
-    BLUE = '\033[94m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
-
-
 def output_prediction(team: Team,
                       next_match: Fixture,
                       remaining_matches: int,
                       half: Half,
+                      venue: Venue,
                       event: Callable,
                       negate: bool,
                       length_of_run: int,
                       aggregated_message: str,
                       team_message: str):
     event = Event.name(event, negate)
-    header = '{} {}{}{} in the last {}{}{}'.format('>' * 10,
-                                                   Text.BLUE,
-                                                   event,
-                                                   Text.END,
-                                                   Text.BOLD,
-                                                   length_of_run,
-                                                   Text.END)
+    header = '{} {} in the last {}'.format('>' * 10, event, length_of_run)
+
+    if venue != Venue.any:
+        header += ' {}'.format(venue.name)
 
     if half == Half.both:
-        header += ' {}{}{}'.format(Text.UNDERLINE, 'games' if length_of_run > 1 else 'game', Text.END)
+        header += ' {}'.format('games' if length_of_run > 1 else 'game')
     elif half == Half.first:
-        header += ' {}1st {}{}'.format(Text.UNDERLINE, 'halves' if length_of_run > 1 else 'half', Text.END)
+        header += ' 1st {}'.format('halves' if length_of_run > 1 else 'half')
     elif half == Half.second:
-        header += ' {}2nd {}{}'.format(Text.UNDERLINE, 'halves' if length_of_run > 1 else 'half', Text.END)
+        header += ' 2nd {}'.format('halves' if length_of_run > 1 else 'half')
     elif half == Half.separate:
-        header += ' {}consecutive {}{}'.format(Text.UNDERLINE,'halves' if length_of_run > 1 else 'half', Text.END)
+        header += ' consecutive {}'.format('halves' if length_of_run > 1 else 'half')
     else:
         assert False
 
-    header = '{}: {}{}{}'.format(header, Text.RED, team.name, Text.END)
-    next_match_message = 'Next match: {} {}{}{} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
-                                                                  Text.BOLD,
-                                                                  next_match.date.strftime('%H.%M'),
-                                                                  Text.END,
-                                                                  next_match.home_team.name,
-                                                                  next_match.away_team.name)
-    remaining_matches_message = '{} matches remaining'.format(remaining_matches)
-    message = '{}\n{}{}{}\n{}\n'.format(header,
-                                        aggregated_message + '\n' if aggregated_message else '',
-                                        team_message + '\n' if team_message else '',
-                                        next_match_message,
-                                        remaining_matches_message)
+    header = '{}: {}'.format(header, team.name)
+    next_match_message = 'Next match: {} {} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
+                                                              next_match.date.strftime('%H.%M'),
+                                                              next_match.home_team.name,
+                                                              next_match.away_team.name)
+    message = '{}\n{}\n'.format(next_match_message, header)
     print(message)
 
 
@@ -181,10 +165,10 @@ def analyse_teams(args: Namespace,
                   this_season: Season,
                   teams: List[Team],
                   historical_data: Dict[Callable, DataUnit]):
-    header = "{} Analysing sequences in {} {} {}".format('*' * 80 + '\n',
-                                                         prettify(league.country),
-                                                         league.name,
-                                                         '\n' + '*' * 80)
+    header = "{}Analysing sequences in {} {} {}".format('*' * 80 + '\n',
+                                                        prettify(league.country),
+                                                        league.name,
+                                                        '\n' + '*' * 80)
     header_emitted = False
     now = datetime.now().timetuple()
 
@@ -218,6 +202,7 @@ def analyse_teams(args: Namespace,
                                           next_match,
                                           fixtures_remaining,
                                           args.half,
+                                          args.venue,
                                           event,
                                           args.negate,
                                           team_now.last,
@@ -228,46 +213,57 @@ def analyse_teams(args: Namespace,
 def main(args: Namespace):
     load_teams(args.database)
 
-    for league_code in args.league:
+    leagues = []
+    if args.country:
+        for country in args.country:
+            leagues.extend([code for code, league in league_register.items() if league.country == country.capitalize()])
+
+    if args.league:
+        leagues.extend(list(args.league))
+
+    if not args.country and not args.league:
+        leagues.extend(list(league_register.keys()))
+
+    for league_code in leagues:
         league = league_register[league_code]
         load_league(args.database, league)
 
         seasons = Season.seasons(league)
         if not seasons:
-            messages.error_message("No season data found")
-
-        if args.history:
-            seasons = seasons[-args.history:]
-
-        if seasons[-1].current:
-            this_season = seasons.pop()
-
-            if args.team:
-                teams = []
-                for team_name in get_multiple_teams(args):
-                    (row,) = extract_picked_team(args.database, team_name, league)
-                    team = Team.inventory[row[0]]
-                    teams.append(team)
-            else:
-                teams = this_season.teams()
-
-            events = [Event.get(event) for event in args.event]
-            historical_data = {}
-            for event in events:
-                historical_data[event] = DataUnit(Counter(), seasons)
-                for season in seasons:
-                    for team in season.teams():
-                        count_events(season,
-                                     team,
-                                     args.venue,
-                                     args.half,
-                                     event,
-                                     args.negate,
-                                     historical_data[event])
-
-            analyse_teams(args, league, seasons, this_season, teams, historical_data)
+            messages.warning_message("No season data found")
         else:
-            messages.error_message("The current season has not yet started")
+            if args.history:
+                seasons = seasons[-args.history:]
+
+            if seasons[-1].current:
+                this_season = seasons.pop()
+
+                if args.team:
+                    teams = []
+                    for team_name in get_multiple_teams(args):
+                        (row,) = extract_picked_team(args.database, team_name, league)
+                        team = Team.inventory[row[0]]
+                        teams.append(team)
+                else:
+                    teams = this_season.teams()
+
+                events = [Event.get(event) for event in args.event]
+                historical_data = {}
+                for event in events:
+                    historical_data[event] = DataUnit(Counter(), seasons)
+                    for season in seasons:
+                        for team in season.teams():
+                            count_events(season,
+                                         team,
+                                         args.venue,
+                                         args.half,
+                                         event,
+                                         args.negate,
+                                         historical_data[event])
+
+                analyse_teams(args, league, seasons, this_season, teams, historical_data)
+            else:
+                messages.error_message("The current season has not yet started")
 
 
 if __name__ == '__main__':

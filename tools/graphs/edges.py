@@ -103,9 +103,9 @@ class SuperEdge(Edge, set):
         if len(self) > 10:
             return '{}->{};\n'.format(self._predecessor.id_, self._successor.id_)
         else:
-            return '{}->{} [label="{}"];\n'.format(self._predecessor.id_,
-                                                   self._successor.id_,
-                                                   '\n'.join(str(edge) for edge in self))
+                return '{}->{} [label="{}"];\n'.format(self._predecessor.id_,
+                                                       self._successor.id_,
+                                                       '\n'.join(str(edge) for edge in self))
 
 
 class InstrumentationEdge(ControlFlowEdge, instrumentation.Instrumentation):
@@ -220,4 +220,4 @@ class CallGraphEdge(Edge):
         return self._site
 
     def dotify(self):
-        return '{}->{} [label="{}"];\n'.format(self.predecessor, self.successor, self.site)
+        return '{}->{} [label="{}"];\n'.format(self.predecessor().id_, self.successor().id_, self.site)

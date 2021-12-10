@@ -1,8 +1,8 @@
-import re
-
 from low_level import instructions
-from utils import (dot, messages)
 from graphs import instrumentation
+from re import match
+from typing import List
+from utils import dot, messages
 
 
 class VertexPool:
@@ -112,7 +112,7 @@ class Vertex:
 
 class NamedVertex(Vertex):
     def __init__(self, id_, name):
-        if not re.match(r'\w+', name):
+        if not match(r'\w+', name):
             raise ValueError('Vertex name must not be empty and must only contain characters in the set [a-zA-Z0-9_]')
         Vertex.__init__(self, id_)
         self.__name = name
@@ -188,45 +188,21 @@ class CallVertex(NamedVertex):
                                                                                dot.Styles.filled)
 
 
-class BasicBlock(NamedVertex, instructions.Instructions):
-    """Models a sequence of instructions and control into and out of that sequence"""
+class BasicBlock(Vertex):
+    def __init__(self, id_):
+        Vertex.__init__(self, id_)
+        self._instructions = []
 
-    def change_review_status_of_instructions(self,
-                                             current_status: instructions.ReviewStatus,
-                                             new_status: instructions.ReviewStatus):
-        for instruction in self:
-            for field in instruction:
-                if field.status == current_status:
-                    field.status = new_status
+    @property
+    def instructions(self) -> List[str]:
+        return self._instructions
 
     def dotify(self):
-        label = []
-        label.append(dot.HTML.open_html)
-        label.append(dot.HTML.open_table)
-
-        column_span = 2
-        if self:
-            column_span += len(max(self, key=lambda instruction: len(instruction)))
-
-        label.append(dot.HTML.open_row)
-        label.append(dot.HTML.open_cell(column_span=column_span))
-        label.append(self.name)
-        label.append(dot.HTML.close_cell)
-        label.append(dot.HTML.close_row)
-
-        for i in self:
-            label.extend(i.dotify())
-
-        label.append(dot.HTML.close_table)
-        label.append(dot.HTML.close_html)
-
-        return '{} [label={}, shape=box];\n'.format(self, ''.join(label))
+        return '{} [label="{}", shape=rectangle]'.format(self.id_,
+                                                         '{} {}'.format(self.id_, '\l'.join(self.instructions) + '\l'))
 
 
 class InstructionVertex(Vertex, set):
-    """Models an instruction in a dependency graph of instruction scheduling. The set component contains all
-    instructions on which this instruction depends inside a basic block"""
-
     def __init__(self, id_, instruction: instructions.Instruction):
         Vertex.__init__(self, id_)
         self.__instruction = instruction
@@ -246,7 +222,6 @@ class InstructionVertex(Vertex, set):
 
 
 class SubprogramVertex(NamedVertex):
-    """Models subprograms in a call graph"""
 
     def dotify(self):
         label = []
@@ -266,8 +241,6 @@ class SubprogramVertex(NamedVertex):
 
 
 class ProgramPointVertex(Vertex):
-    """A program point is either a vertex or an edge"""
-
     def __init__(self, id_, program_point):
         Vertex.__init__(self, id_)
         self.__program_point = program_point

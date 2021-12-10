@@ -82,10 +82,10 @@ def add_event(value: str):
     return value
 
 
-def add_events_option(parser: ArgumentParser, required: bool = True, number: int = 2):
+def add_events_option(parser: ArgumentParser, required: bool = True, allowed_events: int = 2):
     parser.add_argument('-E',
                         '--event',
-                        nargs='+' if number > 1 else 1,
+                        nargs='+' if allowed_events > 1 else 1,
                         type=add_event,
                         help='choose event to analyse',
                         required=required)

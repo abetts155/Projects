@@ -142,7 +142,7 @@ class CallGraph(DirectedGraph):
 
     def is_call_site(self, vertex: vertices.SubprogramVertex, candidate: vertices.Vertex):
         for edge in self.successors(vertex):
-            if candidate == edge.call_site:
+            if candidate == edge.site:
                 return edge.successor()
         return None
 
@@ -176,7 +176,6 @@ class FlowGraph(DirectedGraph, ProgramData):
 
     @property
     def entry(self):
-        assert self._entry is not None
         return self._entry
 
     @entry.setter
@@ -185,7 +184,6 @@ class FlowGraph(DirectedGraph, ProgramData):
 
     @property
     def exit(self):
-        assert self._exit is not None
         return self._exit
 
     @exit.setter
@@ -436,13 +434,13 @@ class DependenceGraph(DirectedGraph):
 
 
 class DepthFirstSearch:
-    def __init__(self, g: DirectedGraph, root: vertices.Vertex):
+    def __init__(self, g: DirectedGraph, root: vertices.Vertex, forwards: bool = True):
         self._vertex_to_pre = {}
         self._vertex_to_post = {}
         self._pre_to_vertex = {}
         self._post_to_vertex = {}
         self._back_edges = {}
-        self._search(g, root)
+        self._search(g, root, forwards)
 
     def pre_order(self):
         return list(e[0] for e in sorted(self._vertex_to_pre.items(), key=lambda e: e[1]))
@@ -468,7 +466,7 @@ class DepthFirstSearch:
     def has_back_edges(self):
         return sum([len(backedges) for backedges in self._back_edges.values()])
 
-    def _search(self, g, root):
+    def _search(self, g, root, forwards):
         def explore(vertex):
             nonlocal pre_id
             pre_id += 1
@@ -476,19 +474,27 @@ class DepthFirstSearch:
             self._pre_to_vertex[pre_id] = vertex
             self._back_edges[vertex] = set()
 
-            for edge in g.successors(vertex):
-                if edge.successor() not in self._vertex_to_pre:
+            for edge in forward_transitions(g, vertex):
+                destination = forward_transition(edge)
+                if destination not in self._vertex_to_pre:
                     # Not yet visited
-                    explore(edge.successor())
-                elif self._vertex_to_pre[vertex] < self._vertex_to_pre[edge.successor()]:
+                    explore(destination)
+                elif self._vertex_to_pre[vertex] < self._vertex_to_pre[destination]:
                     pass
-                elif edge.successor() not in self._vertex_to_post:
-                    self._back_edges[edge.successor()].add(edge)
+                elif destination not in self._vertex_to_post:
+                    self._back_edges[destination].add(edge)
 
             nonlocal post_id
             post_id += 1
             self._vertex_to_post[vertex] = post_id
             self._post_to_vertex[post_id] = vertex
+
+        if forwards:
+            forward_transitions = DirectedGraph.successors
+            forward_transition = edges.Edge.successor
+        else:
+            forward_transitions = DirectedGraph.predecessors
+            forward_transition = edges.Edge.predecessor
 
         pre_id = 0
         post_id = 0
@@ -796,7 +802,7 @@ class StrongComponents:
 class Cooper(Tree):
     def __init__(self, g: FlowGraph, entry: vertices.Vertex):
         Tree.__init__(self)
-        idom = self._solve(g)
+        idom = self._solve(g, entry)
         self._add_edges(g, idom)
 
     def _intersect(self, dfs, idom, b1, b2):
@@ -814,34 +820,45 @@ class Cooper(Tree):
 
         return dfs.post_order_vertex(finger1)
 
-    def _solve(self, g: FlowGraph):
-        dfs = DepthFirstSearch(g, g.entry)
+    def _solve(self, g: FlowGraph, entry: vertices.Vertex):
+        if entry == g.entry:
+            forward_transitions = DirectedGraph.successors
+            forward_transition = edges.Edge.successor
+            backward_transitions = DirectedGraph.predecessors
+            backward_transition = edges.Edge.predecessor
+        else:
+            forward_transitions = DirectedGraph.predecessors
+            forward_transition = edges.Edge.predecessor
+            backward_transitions = DirectedGraph.successors
+            backward_transition = edges.Edge.successor
+
+        dfs = DepthFirstSearch(g, entry, entry == g.entry)
         idom = {}
-        for v in g:
-            idom[v] = None
-            self.add_vertex(v)
-        idom[g.entry] = g.entry
+        for vertex in g:
+            idom[vertex] = None
+            self.add_vertex(vertex)
+        idom[entry] = entry
 
         changed = True
         while changed:
             changed = False
-            for v in reversed(dfs.post_order()[:-1]):
+            for vertex in reversed(dfs.post_order()[:-1]):
                 chosen = None
                 i = 0
-                while not chosen and i < len(g.predecessors(v)):
-                    e = g.predecessors(v)[i]
-                    if idom[e.predecessor()]:
-                        chosen = e
+                while not chosen and i < len(backward_transitions(g, vertex)):
+                    edge = backward_transitions(g, vertex)[i]
+                    if idom[backward_transition(edge)]:
+                        chosen = edge
                     i += 1
 
                 if chosen:
-                    current_idom = chosen.predecessor()
-                    for e in g.predecessors(v):
-                        if e != chosen and idom[e.predecessor()]:
-                            current_idom = self._intersect(dfs, idom, e.predecessor(), current_idom)
+                    current_idom = backward_transition(chosen)
+                    for edge in backward_transitions(g, vertex):
+                        if edge != chosen and idom[backward_transition(edge)]:
+                            current_idom = self._intersect(dfs, idom, backward_transition(edge), current_idom)
 
-                    if current_idom != idom[v]:
-                        idom[v] = current_idom
+                    if current_idom != idom[vertex]:
+                        idom[vertex] = current_idom
                         changed = True
 
         return idom

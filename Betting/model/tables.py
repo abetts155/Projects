@@ -156,8 +156,6 @@ class LeagueTable(list):
                         away.goals_for += result.right
                         away.goals_against += result.left
 
-        assert home_data.keys() == away_data.keys()
-
         for team in home_data.keys():
             home = home_data[team]
             away = away_data[team]

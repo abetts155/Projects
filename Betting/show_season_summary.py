@@ -17,7 +17,7 @@ from sql.sql import load_league, load_teams
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Show season summary data bar charts')
+    parser = ArgumentParser(description='Show summary of seasons by results, goals, and scorelines')
     add_database_option(parser)
     add_league_option(parser)
     add_logging_options(parser)

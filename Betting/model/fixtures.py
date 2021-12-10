@@ -300,13 +300,15 @@ round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Regular Season'),
                  re.compile(r'Girone [A-C] - \d+'),
                  re.compile(r'Group [A-D] - \d+'),
-                 re.compile(r'Group [1-3] - \d+$'),
+                 re.compile(r'Group [1-4] - \d+$'),
                  re.compile(r'(North A|North B|South A|South B) - \d+$'),
-                 re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
+		 re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
+		 re.compile(r'Liga 1 - Round \d+'),
                  re.compile(r'(Clausura|Apertura)'),
                  re.compile(r'(1st|2nd) (Stage|Phase) - \d+'),
                  re.compile(r'(South|North) - \d+'),
-                 re.compile(r'(Südwest|Nordost|Nord|West) - \d+'),
+                 re.compile(r'(Isthmian|Northern|Southern|Southern South) - \d+'),
+                 re.compile(r'(Südwest|Nordost|Nord|West|Vorarlberg|Mitte|Ost) - \d+'),
                  re.compile(r'(Östra Götaland|'
                             r'Västra Götaland|'
                             r'Södra Svealand|'

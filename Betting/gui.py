@@ -27,7 +27,8 @@ import show_form
 import show_matrix
 import show_projection
 import show_sequences
-import show_summary
+import show_season_sequences
+import show_season_summary
 import show_team
 
 messages.warnings = False
@@ -50,10 +51,10 @@ radio_team_choice = 5
 
 def leagues() -> List[str]:
     options = []
-    for key in sorted(list(league_register.keys())):
+    for key in list(league_register.keys()):
         league = league_register[key]
         options.append('{} {}'.format(league.country, league.name))
-    return sorted(options)
+    return options
 
 
 league_choice = Listbox(leagues(),
@@ -95,7 +96,8 @@ event_choice = InputText(font=font, size=(16, 1), key='-EVENT-')
 event_negation = Checkbox('Negate', font=font, key='-NEGATE-EVENT-')
 event_clear = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-EVENT-')
 
-seq_submit = Button('Sequences', font=font, key='-SEQ-SUBMIT-')
+aggregated_sequences_submit = Button('Aggregated sequences', font=font, key='-AGG-SEQ-SUBMIT-')
+season_sequences_submit = Button('Per-season sequences', font=font, key='-PER-SEQ-SUBMIT-')
 
 
 team_analysis_goals = Radio('Goals',
@@ -169,7 +171,7 @@ def make():
         [Text('Half', font=font, size=default_size), half_both, half_first, half_second, half_separate],
         [Text('Chunks', font=font, size=default_size), chunks_choice],
         [Text('_' * divider)],
-        [seq_submit, h2h_submit, league_analysis_submit],
+        [aggregated_sequences_submit, season_sequences_submit, h2h_submit, league_analysis_submit],
         [Text('_' * divider)],
         [Text('Individual team analysis', font=font)],
         [Text('Analysis', font=font, size=default_size),
@@ -344,7 +346,7 @@ def run_head_to_head(values: Dict):
         head_to_head.main(args)
 
 
-def run_sequences(values: Dict):
+def run_sequences(values: Dict, event):
     if values[league_choice.Key] and values[event_choice.Key]:
         args = Namespace()
         args.database = database
@@ -356,9 +358,13 @@ def run_sequences(values: Dict):
         set_history(values, args)
         set_venue(values, args)
         set_half(values, args)
-        set_chunks(values, args)
         args.lines = None
-        show_sequences.main(args)
+
+        if event == aggregated_sequences_submit.Key:
+            set_chunks(values, args)
+            show_sequences.main(args)
+        else:
+            show_season_sequences.main(args)
 
 
 def run_team_analysis(values: Dict):
@@ -465,7 +471,7 @@ def run_league_analysis(values: Dict):
         set_league(values, args)
         set_half(values, args)
         args.history = None
-        show_summary.main(args)
+        show_season_summary.main(args)
 
 
 def run_expression_evaluation(values: Dict):
@@ -494,8 +500,8 @@ def run(window: Window):
             run_team_analysis(values)
         elif event == performance_analysis_submit.Key:
             run_performance_analysis(values)
-        elif event == seq_submit.Key:
-            run_sequences(values)
+        elif event in [aggregated_sequences_submit.Key, season_sequences_submit.Key]:
+            run_sequences(values, event)
         elif event == heatmap_submit.Key:
             run_heatmap_analysis(values)
         elif event == event_matrix_submit.Key:

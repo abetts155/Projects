@@ -8,7 +8,7 @@ from cli.cli import (add_database_option,
                      add_league_option,
                      add_country_option,
                      add_half_option)
-from datetime import datetime, timedelta
+from datetime import datetime
 from model.fixtures import Half, Fixture, Venue
 from model.leagues import league_register, League, prettify
 from model.teams import create_team_from_row, Team
@@ -17,11 +17,11 @@ from sql.sql import Database, get_fixtures, get_current_season
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters
 from subprocess import run
-from typing import List
+from typing import List, Tuple
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Show fixtures for today')
+    parser = ArgumentParser(description='Show fixtures for specified date')
     add_half_option(parser)
     add_venue_option(parser)
     add_database_option(parser)
@@ -31,30 +31,50 @@ def parse_command_line():
     add_country_option(parser, False)
     add_events_option(parser, False)
 
+    today = datetime.today()
+    parser.add_argument('-D',
+                        '--day',
+                        help='day of fixtures',
+                        metavar='<INT>',
+                        type=int,
+                        default=today.day)
+
+    parser.add_argument('-M',
+                        '--month',
+                        help='month of fixtures',
+                        metavar='<INT>',
+                        type=int,
+                        default=today.month)
+
+    parser.add_argument('-Y',
+                        '--year',
+                        help='month of fixtures',
+                        metavar='<INT>',
+                        type=int,
+                        default=today.year)
+
     parser.add_argument('-l',
-                        '--left',
+                        '--lower',
                         help='left-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=-2)
+                        default=0)
 
-    parser.add_argument('-r',
-                        '--right',
+    parser.add_argument('-u',
+                        '--upper',
                         help='right-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=12)
+                        default=23)
 
     return parser.parse_args()
 
 
-def filter_fixtures(fixtures: List[Fixture], left: int, right: int):
+def filter_fixtures(fixtures: List[Fixture], left_datetime: datetime, right_datetime: datetime):
     filtered = []
-    lower_bound = datetime.today() + timedelta(hours=left)
-    upper_bound = datetime.today() + timedelta(hours=right)
     for fixture in fixtures:
         match_date = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
-        if lower_bound <= match_date <= upper_bound:
+        if left_datetime <= match_date <= right_datetime:
             filtered.append(fixture)
     filtered.sort(key=lambda fixture: (fixture.date.date(), fixture.date.time()))
     return filtered
@@ -101,16 +121,21 @@ def analyse_sequences(db: Database,
 
 
 def main(args: Namespace):
-    leagues = set()
+    leagues = []
     if args.country:
         for country in args.country:
-            leagues.update({code for code, league in league_register.items() if league.country == country.capitalize()})
+            leagues.extend([code for code, league in league_register.items() if league.country == country.capitalize()])
 
     if args.league:
-        leagues = args.league
+        leagues.extend(list(args.league))
 
     if not args.country and not args.league:
-        leagues.update(league_register.keys())
+        leagues.extend(list(league_register.keys()))
+
+    left_datetime = datetime(args.year, args.month, args.day, args.lower)
+    right_datetime = datetime(args.year, args.month, args.day, args.upper)
+
+    print(left_datetime, right_datetime)
 
     with Database(args.database) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())
@@ -127,7 +152,7 @@ def main(args: Namespace):
                 finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
                 constraints = [season_constraint, finished_constraint]
                 fixtures = get_fixtures(db, constraints)
-                fixtures = filter_fixtures(fixtures, args.left, args.right)
+                fixtures = filter_fixtures(fixtures, left_datetime, right_datetime)
 
                 if fixtures:
                     if args.event:
