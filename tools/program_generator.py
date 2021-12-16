@@ -1,7 +1,7 @@
-from argparse import Action, ArgumentError, ArgumentParser
+from argparse import Action, ArgumentError, ArgumentParser, Namespace
 from graphs import edges, graphs, vertices
 from low_level import instructions
-from random import choice, getrandbits, random, randint, sample
+from random import choice, choices, getrandbits, random, randint, sample
 from sys import setrecursionlimit
 from system import programs
 from threading import stack_size
@@ -72,10 +72,10 @@ class ArtificialLoopBody:
         # b) we decide the proportion of loop tails to the number of loop body
         #    vertices is too great.
         if len(loop_tails) > 1:
-            if outermost_loop or len(loop_tails)/len(self._vertex_to_level) > 0.2:
+            if outermost_loop or len(loop_tails) / len(self._vertex_to_level) > 0.2:
                 # Promote a random vertex to be the unique loop tail
                 new_highest_level = highest_level + 1
-                v = loop_tails[randint(0, len(loop_tails)-1)]
+                v = loop_tails[randint(0, len(loop_tails) - 1)]
                 self.level_to_vertices.setdefault(new_highest_level, []).append(v)
                 self.level_to_vertices[highest_level].remove(v)
                 self._vertex_to_level[v] = new_highest_level
@@ -84,7 +84,7 @@ class ArtificialLoopBody:
         for level in sorted(self.level_to_vertices.keys(), reverse=True):
             if level > 0:
                 for s in self.level_to_vertices[level]:
-                    candidates = [v for v in self.level_to_vertices[level-1] if len(cfg.successors(v)) < fan_out]
+                    candidates = [v for v in self.level_to_vertices[level - 1] if len(cfg.successors(v)) < fan_out]
                     (p,) = sample(candidates, 1)
                     cfg.add_edge(edges.ControlFlowEdge(p, s))
                     if len(cfg.successors(p)) == fan_out:
@@ -129,7 +129,7 @@ class ArtificialLoopBody:
             self._exits.add(self._header)
 
 
-def create_control_flow_graph(the_program,
+def create_control_flow_graph(program,
                               loops,
                               nesting_depth,
                               dense,
@@ -141,7 +141,7 @@ def create_control_flow_graph(the_program,
         # Add abstract vertices to the tree, including an extra one
         # for the dummy outer loop
         lnt = graphs.DirectedGraph()
-        for _ in range(1, loops+2):
+        for _ in range(1, loops + 2):
             lnt.add_vertex(vertices.Vertex(vertices.Vertex.get_vertex_id()))
 
         # Add edges to the tree
@@ -197,7 +197,7 @@ def create_control_flow_graph(the_program,
             cfg.entry = edge.successor()
             cfg.exit = edge.predecessor()
 
-    cfg = graphs.ControlFlowGraph(the_program, subprg_name)
+    cfg = graphs.ControlFlowGraph(program, subprg_name)
     if not irreducible:
         lnt, root_vertex = create_artificial_loop_hierarchy()
         loops = {}
@@ -211,12 +211,12 @@ def create_control_flow_graph(the_program,
 
         min_level = min(loop.level_to_vertices.keys())
         max_level = max(loop.level_to_vertices.keys())
-        candidate_levels = [level for level in range(min_level+1, max_level)]
+        candidate_levels = [level for level in range(min_level + 1, max_level)]
 
         if dense:
             max_edges = len(candidates) * len(candidates) * len(candidates)
         else:
-            max_edges = len(candidates) + int(len(candidates)/2)
+            max_edges = len(candidates) + int(len(candidates) / 2)
 
         level_edges = randint(1, max_edges)
         anywhere_edges = max_edges - level_edges
@@ -225,7 +225,7 @@ def create_control_flow_graph(the_program,
         if len(candidate_levels) > 2:
             for _ in range(level_edges):
                 p_level = choice(candidate_levels[2:])
-                s_level = choice(candidate_levels[:p_level-1])
+                s_level = choice(candidate_levels[:p_level - 1])
                 p = choice(loop.level_to_vertices[p_level])
                 s = choice(loop.level_to_vertices[s_level])
                 if not cfg.has_edge(p, s):
@@ -247,17 +247,17 @@ def create_control_flow_graph(the_program,
     return cfg
 
 
-def add_subprograms(the_program:        programs.Program,
-                    subprograms:        int,
-                    loops:              int,
-                    nesting_depth:      int,
-                    dense:              bool,
-                    irreducible:        bool,
+def add_subprograms(program: programs.Program,
+                    subprograms: int,
+                    loops: int,
+                    nesting_depth: int,
+                    dense: bool,
+                    irreducible: bool,
                     number_of_vertices: int,
-                    fan_out:            int):
-    for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms+1)]:
+                    fan_out: int):
+    for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms + 1)]:
         messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
-        cfg = create_control_flow_graph(the_program,
+        cfg = create_control_flow_graph(program,
                                         loops,
                                         nesting_depth,
                                         dense,
@@ -266,17 +266,17 @@ def add_subprograms(the_program:        programs.Program,
                                         fan_out,
                                         subprogram_name)
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
-        the_program.add_subprogram(programs.Subprogram(cfg, call_vertex))
+        program.add_subprogram(programs.Subprogram(cfg, call_vertex))
 
 
-def add_calls(the_program: programs.Program, recursion_enabled):
+def add_calls(program: programs.Program, recursion_enabled):
     subprogram_call_candidates = {}
-    for subprogram in the_program:
+    for subprogram in program:
         subprogram_call_candidates[subprogram] = []
         # Work out which basic blocks can legitimately make calls
         dfs = graphs.DepthFirstSearch(subprogram.cfg, subprogram.cfg.entry)
         for vertex in subprogram.cfg:
-            if len(subprogram.cfg.successors(vertex)) == 1:
+            if len(subprogram.cfg.successors(vertex)) == 1 and vertex != subprogram.cfg.exit:
                 (edge,) = subprogram.cfg.successors(vertex)
                 # Check that the sole successor is not a loop header
                 if edge not in dfs.back_edges(vertex):
@@ -284,7 +284,7 @@ def add_calls(the_program: programs.Program, recursion_enabled):
 
     # Pick a root subprogram with the largest number of call candidates
     root_subprogram = choice(list(subprogram_call_candidates.keys()))
-    for subprogram in the_program:
+    for subprogram in program:
         if len(subprogram_call_candidates[subprogram]) > len(subprogram_call_candidates[root_subprogram]):
             root_subprogram = subprogram
 
@@ -295,7 +295,7 @@ def add_calls(the_program: programs.Program, recursion_enabled):
     subprogram_to_level[root_subprogram] = level - 1
     level_to_subprograms[level - 1] = [root_subprogram]
     level_to_subprograms[level] = []
-    for subprogram in the_program:
+    for subprogram in program:
         if subprogram != root_subprogram:
             total_candidates = sum(len(subprogram_call_candidates[subprogram])
                                    for subprogram in level_to_subprograms[level - 1])
@@ -347,63 +347,72 @@ def add_calls(the_program: programs.Program, recursion_enabled):
                 if callees and random() < 0.25:
                     (callee,) = sample(callees, 1)
                     add_call(callers, callee)
-    else:
-        def alive(vertex):
-            return True
-
-        sccs = graphs.StrongComponents(the_program.call_graph, alive)
-        assert len(sccs.singletons) == the_program.call_graph.number_of_vertices()
 
     for (caller, callee), sites in call_graph_edges.items():
         for site in sites:
-            edge = edges.CallGraphEdge(the_program[caller.name].call_vertex,
-                                       the_program[callee.name].call_vertex,
+            edge = edges.CallGraphEdge(program[caller.name].call_vertex,
+                                       program[callee.name].call_vertex,
                                        site)
-            the_program.call_graph.add_edge(edge)
+            program.call_graph.add_edge(edge)
 
 
-def annotate_control_flow_edges(the_program: programs.Program):
-    for subprogram in the_program:
+def add_instructions(program: programs.Program):
+    messages.debug_message('Adding instructions')
+    for subprogram in program:
         for vertex in subprogram.cfg:
+            if random() < 0.05:
+                number_of_instructions = randint(10, 20)
+            else:
+                number_of_instructions = randint(3, 8)
+
             if len(subprogram.cfg.successors(vertex)) == 1:
                 (edge,) = subprogram.cfg.successors(vertex)
-                callee = the_program.call_graph.is_call_site(subprogram.call_vertex, vertex)
+                callee = program.call_graph.is_call_site(subprogram.call_vertex, vertex)
                 if callee:
-                    edge.set_return(callee)
-                elif edge.successor() == subprogram.cfg.entry:
-                    edge.direction = edges.Direction.UNREACHABLE
+                    number_of_instructions -= 1
+
+            for count in range(1, number_of_instructions + 1):
+                if len(subprogram.cfg.successors(vertex)) >= 2 and count == number_of_instructions:
+                    vertex.instructions.insert(len(vertex.instructions), instructions.BranchInstruction())
                 else:
-                    edge.direction = edges.Direction.CONTINUE
-            elif len(subprogram.cfg.successors(vertex)) == 2:
-                for edge, direction in zip(subprogram.cfg.successors(vertex), [edges.Direction.THEN, edges.Direction.ELSE]):
-                    edge.direction = direction
-            elif len(subprogram.cfg.successors(vertex)) > 2:
-                for edge in subprogram.cfg.successors(vertex):
-                    edge.direction = edges.Direction.CASE
+                    # Prefer arithmetic instructions over load-store instructions
+                    if random() < 0.33:
+                        population = [instructions.LoadInstruction,
+                                      instructions.StoreInstruction]
+                        weights = [0.5, 0.5]
+                    else:
+                        population = [instructions.AddInstruction,
+                                      instructions.SubtractInstruction,
+                                      instructions.MultiplyInstruction,
+                                      instructions.DivideInstruction]
+                        weights = [0.55, 0.35, 0.05, 0.05]
+                    (instruction,) = choices(population, weights=weights)
+                    vertex.instructions.insert(0, instruction())
 
 
-def main(**kwargs):
-    if kwargs['vertices'] < kwargs['loops'] * 2:
+def main(args: Namespace):
+    if args.vertices < args.loops * 2:
         messages.error_message(
             'The number of vertices in a control flow graph must be at least twice the number of loops')
 
-    the_program = programs.Program(kwargs['program'])
-    add_subprograms(the_program,
-                    kwargs['subprograms'],
-                    kwargs['loops'],
-                    kwargs['nesting_depth'],
-                    kwargs['dense'],
-                    kwargs['irreducible'],
-                    kwargs['vertices'],
-                    kwargs['fan_out'])
+    program = programs.Program(args.program)
+    add_subprograms(program,
+                    args.subprograms,
+                    args.loops,
+                    args.nesting_depth,
+                    args.dense,
+                    args.irreducible,
+                    args.vertices,
+                    args.fan_out)
 
-    if not kwargs['no_calls']:
-        add_calls(the_program, kwargs['recursion'])
+    if not args.no_calls:
+        add_calls(program, args.recursion)
 
-    annotate_control_flow_edges(the_program)
+    if not args.no_instructions:
+        add_instructions(program)
 
-    programs.IO.write(the_program, kwargs['program'])
-    the_program.call_graph.dotify()
+    programs.IO.write(program, args.program)
+    program.call_graph.dotify()
 
 
 class CheckForPositiveValue(Action):
@@ -473,10 +482,16 @@ def parse_the_command_line():
                         help='do not add calls between subprograms',
                         default=False)
 
+    parser.add_argument('--no-instructions',
+                        action='store_true',
+                        help='do not add instructions to basic blocks',
+                        default=False)
+
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     stack_size(2 ** 26)
     setrecursionlimit(2 ** 30)
-    main(**vars(parse_the_command_line()))
+    args = parse_the_command_line()
+    main(args)

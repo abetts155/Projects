@@ -110,22 +110,14 @@ class Vertex:
             return '{} [label={}, shape=record];\n'.format(self, ''.join(label))
 
 
-class NamedVertex(Vertex):
-    def __init__(self, id_, name):
-        if not match(r'\w+', name):
-            raise ValueError('Vertex name must not be empty and must only contain characters in the set [a-zA-Z0-9_]')
+class InstrumentationVertex(Vertex):
+    def __init__(self, id_, label):
         Vertex.__init__(self, id_)
-        self.__name = name
+        self._label = label
 
     @property
-    def name(self):
-        return self.__name
-
-
-class InstrumentationVertex(NamedVertex, instrumentation.Instrumentation):
-    def __init__(self, id_, name, number):
-        NamedVertex.__init__(self, id_, name)
-        instrumentation.Instrumentation.__init__(self, number)
+    def label(self):
+        return self._label
 
     def dotify(self):
         label = []
@@ -140,7 +132,7 @@ class InstrumentationVertex(NamedVertex, instrumentation.Instrumentation):
 
         label.append(dot.HTML.open_row)
         label.append(dot.HTML.open_cell())
-        label.append('id:{}'.format(self.number))
+        label.append('label:{}'.format(self.label))
         label.append(dot.HTML.close_cell)
         label.append(dot.HTML.close_row)
 
@@ -153,14 +145,14 @@ class InstrumentationVertex(NamedVertex, instrumentation.Instrumentation):
                                                                                dot.Styles.filled)
 
 
-class CallVertex(NamedVertex):
-    def __init__(self, id_, name, callee):
-        NamedVertex.__init__(self, id_, name)
-        self.__callee = callee
+class CallVertex(Vertex):
+    def __init__(self, id_, callee):
+        Vertex.__init__(self, id_)
+        self._callee = callee
 
     @property
     def callee(self):
-        return self.__callee
+        return self._callee
 
     def dotify(self):
         label = []
@@ -198,8 +190,9 @@ class BasicBlock(Vertex):
         return self._instructions
 
     def dotify(self):
+        instruction_text = '\l'.join('{}'.format(x) for x in self.instructions)
         return '{} [label="{}", shape=rectangle]'.format(self.id_,
-                                                         '{} {}'.format(self.id_, '\l'.join(self.instructions) + '\l'))
+                                                         '{}\n{}'.format(self.id_, instruction_text + '\l'))
 
 
 class InstructionVertex(Vertex, set):
@@ -221,7 +214,14 @@ class InstructionVertex(Vertex, set):
         return '{} [label={}, shape=record]'.format(self, ''.join(label))
 
 
-class SubprogramVertex(NamedVertex):
+class SubprogramVertex(Vertex):
+    def __init__(self, id_, name):
+        Vertex.__init__(self, id_)
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     def dotify(self):
         label = []

@@ -5,9 +5,47 @@ import re
 import subprocess
 import timeit
 
-from graphs import (edges, graphs, vertices)
+from graphs import edges, graphs, vertices
 from system import database
 from utils import messages
+
+
+class VertexVariable:
+    def __init__(self, vertex: vertices.Vertex):
+        self._vertex = vertex
+
+    def __hash__(self):
+        return hash(self._vertex)
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __str__(self):
+        return 'v__{}'.format(self._vertex.id_)
+
+
+class EdgeVariable:
+    def __init__(self, edge: edges.Edge):
+        self._edge = edge
+
+    def __hash__(self):
+        return hash(self._edge)
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __str__(self):
+        return 'e__{}__{}'.format(self._edge.predecessor().id_, self._edge.successor().id_)
 
 
 class ProgramPointVariable:
@@ -66,12 +104,12 @@ class TransitionVariable:
 
 
 class Term:
-    def __init__(self, coefficient, variable):
+    def __init__(self, coefficient, variable=None):
         self._coefficient = coefficient
         self._variable = variable
 
     def __str__(self):
-        return '{} {}'.format(self._coefficient, self._variable)
+        return '{} {}'.format(self._coefficient, self._variable if self._variable else '')
 
 
 class LinearExpr(list):
@@ -192,8 +230,7 @@ class IntegerLinearProgram(ConstraintSystem):
             if line and re.search('\d+', line):
                 lexemes = re.split('\s+', line)
                 if len(lexemes) == 2:
-                    self._variable_execution_counts[lexemes[0]] = \
-                        int(decimal.Decimal(lexemes[1]))
+                    self._variable_execution_counts[lexemes[0]] = int(decimal.Decimal(lexemes[1]))
                 else:
                     self._wcet = int(round(float(lexemes[-1])))
 

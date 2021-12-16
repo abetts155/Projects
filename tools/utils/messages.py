@@ -20,5 +20,6 @@ def error_message(*args):
     print('ERROR:', *args, file=sys.stderr, flush=True)
     sys.exit(1)
 
+
 def message(*args, new_lines=1):
     print(*args, end='\n' * new_lines, flush=True)

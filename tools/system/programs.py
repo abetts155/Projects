@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from graphs import edges, graphs, vertices
 from low_level import instructions
+from random import randint
 from typing import List
 from utils import messages
 
@@ -26,11 +27,12 @@ class Subprogram:
         return self.__cfg
 
     @property
-    def lnt(self) -> graphs.LoopNests:
-        if self.__lnt is None:
-            ppg = graphs.ProgramPointGraph.create_from_control_flow_graph(self.__cfg)
-            self.__lnt = graphs.LoopNests(ppg)
+    def lnt(self) -> graphs.LoopNest:
         return self.__lnt
+
+    @lnt.setter
+    def lnt(self, lnt):
+        self.__lnt = lnt
 
     @property
     def call_vertex(self) -> vertices.SubprogramVertex:
@@ -48,6 +50,7 @@ class Subprogram:
 
 class Program:
     def __init__(self, filename):
+        self._magic = ''.join('{}'.format(randint(0, 9)) for _ in range(32))
         self._filename = filename
         self._subprograms = OrderedDict()
         self._call_graph = graphs.CallGraph(self)
@@ -82,9 +85,20 @@ class Program:
         for subprogram in self._subprograms.values():
             yield subprogram
 
+    def __len__(self):
+        return len(self._subprograms)
+
     @property
     def call_graph(self) -> graphs.CallGraph:
         return self._call_graph
+
+    @property
+    def magic(self):
+        return self._magic
+
+    @magic.setter
+    def magic(self, value):
+        self._magic = value
 
     @property
     def filename(self):
@@ -105,9 +119,10 @@ class Program:
 
 class IO:
     @classmethod
-    def write(cls, the_program: Program, filename: str):
-        program_json = {}
-        for subprogram in the_program:
+    def write(cls, program: Program, filename: str):
+        subprograms_json = {}
+        program_json = [['magic', program.magic], subprograms_json]
+        for subprogram in program:
             vertices_json = []
             edges_json = []
             for vertex in subprogram.cfg:
@@ -119,39 +134,60 @@ class IO:
                 for instruction in vertex.instructions:
                     if isinstance(instruction, instructions.CallInstruction):
                         instruction_json.append([instruction.opcode, instruction.target])
+                    else:
+                        instruction_json.append([instruction.opcode])
 
                 for edge in subprogram.cfg.successors(vertex):
                     if edge.successor() != subprogram.cfg.entry:
                         edges_json.append((edge.predecessor().id_, edge.successor().id_))
 
-            program_json[subprogram.name] = [vertices_json, edges_json]
-            with open(filename, 'w') as outfile:
-                json.dump(program_json, outfile, indent=2)
+            subprograms_json[subprogram.name] = [vertices_json, edges_json]
+
+        with open(filename, 'w') as outfile:
+            json.dump(program_json, outfile, indent=2)
 
 
     @classmethod
     def read(cls, filename: str) -> Program:
         messages.debug_message("Reading program from '{}'".format(filename))
 
-        the_program = Program(filename)
+        program = Program(filename)
         cfgs = []
         calls = []
         with open(filename) as json_file:
             program_json = json.load(json_file)
-            for subprogram_name, (vertices_json, edges_json) in program_json.items():
-                cfg = graphs.ControlFlowGraph(the_program, subprogram_name)
+            magic_info = program_json[0]
+            program.magic = magic_info[1]
+            subprograms_json = program_json[1]
+            for subprogram_name, (vertices_json, edges_json) in subprograms_json.items():
+                cfg = graphs.ControlFlowGraph(program, subprogram_name)
                 cfgs.append(cfg)
 
                 for vertex_json in vertices_json:
                     vertex_id = int(vertex_json[0])
-                    vertex = vertices.Vertex(int(vertex_id))
+                    vertex = vertices.BasicBlock(int(vertex_id))
                     cfg.add_vertex(vertex)
 
                     instruction_json = vertex_json[1]
-                    for instruction in instruction_json:
-                        if instruction[0] == instructions.CallInstruction.opcode:
-                            callee = instruction[1]
+                    for instruction_text in instruction_json:
+                        if instruction_text[0] == instructions.CallInstruction.OPCODE:
+                            callee = instruction_text[1]
                             calls.append([cfg.name, callee, vertex])
+                            vertex.instructions.append(instructions.CallInstruction(callee))
+                        elif instruction_text[0] == instructions.BranchInstruction.OPCODE:
+                            vertex.instructions.append(instructions.BranchInstruction())
+                        elif instruction_text[0] == instructions.StoreInstruction.OPCODE:
+                            vertex.instructions.append(instructions.StoreInstruction())
+                        elif instruction_text[0] == instructions.LoadInstruction.OPCODE:
+                            vertex.instructions.append(instructions.LoadInstruction())
+                        elif instruction_text[0] == instructions.AddInstruction.OPCODE:
+                            vertex.instructions.append(instructions.AddInstruction())
+                        elif instruction_text[0] == instructions.SubtractInstruction.OPCODE:
+                            vertex.instructions.append(instructions.SubtractInstruction())
+                        elif instruction_text[0] == instructions.MultiplyInstruction.OPCODE:
+                            vertex.instructions.append(instructions.MultiplyInstruction())
+                        elif instruction_text[0] == instructions.DivideInstruction.OPCODE:
+                            vertex.instructions.append(instructions.DivideInstruction())
 
                 for edge_json in edges_json:
                     predecessor_id, successor_id = edge_json
@@ -162,7 +198,7 @@ class IO:
         for cfg in cfgs:
             call = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), cfg.name)
             subprogram = Subprogram(cfg, call)
-            the_program.add_subprogram(subprogram)
+            program.add_subprogram(subprogram)
 
             for vertex in cfg:
                 if len(cfg.predecessors(vertex)) == 0:
@@ -173,9 +209,11 @@ class IO:
                     assert cfg.exit is None
                     cfg.exit = vertex
 
-        for caller, callee, site in calls:
-            caller = the_program[caller].call_vertex
-            callee = the_program[callee].call_vertex
-            the_program.call_graph.add_edge(edges.CallGraphEdge(caller, callee, site))
+            cfg.add_edge(edges.ControlFlowEdge(cfg.exit, cfg.entry))
 
-        return the_program
+        for caller, callee, site in calls:
+            caller = program[caller].call_vertex
+            callee = program[callee].call_vertex
+            program.call_graph.add_edge(edges.CallGraphEdge(caller, callee, site))
+
+        return program

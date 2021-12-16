@@ -124,14 +124,14 @@ class DirectedGraph:
             value = '{}\n'.format(value)
         return value
 
-    def dotify(self, name):
+    def dotify(self, order, prefix):
         data = []
-        for vertex in self:
+        for vertex in order:
             data.append(vertex.dotify())
             for edge in self.successors(vertex):
                 data.append(edge.dotify())
 
-        filename = '{}.dot'.format(name)
+        filename = '{}.dot'.format(prefix)
         dot.generate(filename, data)
 
 
@@ -145,6 +145,13 @@ class CallGraph(DirectedGraph):
             if candidate == edge.site:
                 return edge.successor()
         return None
+
+    def get_root(self) -> vertices.SubprogramVertex:
+        try:
+            (root,) = [vertex for vertex in self if len(self.predecessors(vertex)) == 0]
+            return root
+        except ValueError:
+            messages.error_message('The call graph does not have a unique root')
 
     def dotify(self):
         data = []
@@ -207,6 +214,29 @@ class FlowGraph(DirectedGraph, ProgramData):
             self._post_dominator_tree = LengauerTarjan(self, self.exit)
         return self._post_dominator_tree
 
+    def dotify(self, suffix=''):
+        order = []
+        if self._entry:
+            queue = [self.entry]
+            visited = set()
+            while queue:
+                vertex = queue.pop()
+                order.append(vertex)
+                visited.add(vertex)
+                for edge in self.successors(vertex):
+                    if not (edge.successor() in visited or edge.successor() in queue):
+                        queue.insert(0, edge.successor())
+        else:
+            for vertex in self:
+                order.append(vertex)
+
+        if suffix:
+            prefix = '{}.{}.{}'.format(self.program.basename(), self.name, suffix)
+        else:
+            prefix = '{}.{}'.format(self.program.basename(), self.name)
+
+        super().dotify(order, prefix)
+
 
 class ControlFlowGraph(FlowGraph):
     """Models a control flow graph at the disassembly code level where:
@@ -240,30 +270,7 @@ class ControlFlowGraph(FlowGraph):
                     sole_e.direction = edges.Direction.CONTINUE
 
     def dotify(self, suffix=''):
-        data = []
-
-        if self._entry:
-            queue = [self.entry]
-            visited = set()
-            while queue:
-                v = queue.pop()
-                visited.add(v)
-                data.append(v.dotify())
-                for e in self.successors(v):
-                    data.append(e.dotify())
-                    if not (e.successor() in visited or e.successor() in queue):
-                        queue.insert(0, e.successor())
-        else:
-            for v in self:
-                data.append(v.dotify())
-                for e in self.successors(v):
-                    data.append(e.dotify())
-
-        if suffix:
-            filename = '{}.{}.cfg.{}.dot'.format(self.program.basename(), self.name, suffix)
-        else:
-            filename = '{}.{}.cfg.dot'.format(self.program.basename(), self.name)
-        dot.generate(filename, data)
+        super().dotify('cfg')
 
 
 class ProgramPointGraph(FlowGraph):
@@ -736,7 +743,7 @@ class DominanceFrontiers:
 
 
 class StrongComponents:
-    def __init__(self, directed_graph: DirectedGraph, alive: Callable):
+    def __init__(self, directed_graph: DirectedGraph, alive: Dict):
         self._stack = []
         self._unexplored = 0
         self._pre_order = {}
@@ -747,19 +754,19 @@ class StrongComponents:
         self._non_trivial_sccs = set()
 
         for vertex in directed_graph:
-            if alive(vertex):
+            if alive[vertex]:
                 self._pre_order[vertex] = self._unexplored
                 self._low_link[vertex] = self._unexplored
                 self._on_stack[vertex] = False
 
         self._pre_id = 0
         for vertex in directed_graph:
-            if alive(vertex) and self._pre_order[vertex] == 0:
+            if alive[vertex] and self._pre_order[vertex] == 0:
                 self._explore(directed_graph, alive, vertex)
 
     def _explore(self,
                  directed_graph: DirectedGraph,
-                 alive: Callable,
+                 alive: Dict,
                  vertex: vertices.Vertex):
         self._pre_id += 1
         self._pre_order[vertex] = self._pre_id
@@ -768,7 +775,7 @@ class StrongComponents:
         self._stack.append(vertex)
 
         for edge in directed_graph.successors(vertex):
-            if alive(edge.successor()):
+            if alive[edge]:
                 if self._pre_order[edge.successor()] == self._unexplored:
                     self._explore(directed_graph, alive, edge.successor())
                     self._low_link[vertex] = min(self._low_link[vertex], self._low_link[edge.successor()])
@@ -1358,12 +1365,15 @@ class SyntaxTree(Tree, ProgramData):
         dot.generate(filename, data)
 
 
-class LoopNest(Tree):
-    def __init__(self):
-        Tree.__init__(self)
+class LoopNest(DirectedGraph):
+    def __init__(self, name):
+        DirectedGraph.__init__(self)
+        self._name = name
         self._vertex_to_loop = {}
         self._loop_to_headers = {}
         self._headers = {}
+        self._loop_to_level = {}
+        self._root = None
 
     def create_loop(self) -> vertices.LoopBody:
         loop = vertices.LoopBody(vertices.Vertex.get_vertex_id())
@@ -1391,8 +1401,63 @@ class LoopNest(Tree):
     def headers(self, loop_id: int):
         return self._loop_to_headers[loop_id]
 
-    def loop(self, vertex: vertices.Vertex):
+    def loop(self, vertex: vertices.Vertex) -> vertices.LoopBody:
         return self._vertex_to_loop[vertex]
+
+    @property
+    def root(self) -> vertices.LoopBody:
+        assert self._root
+        return self._root
+
+    @root.setter
+    def root(self, value: vertices.LoopBody):
+        self._root = value
+
+    def set_levels(self):
+        queue = [self.root]
+        self._loop_to_level[self.root] = 1
+        visited = set()
+        while queue:
+            loop = queue.pop(0)
+            visited.add(loop)
+
+            for edge in self.successors(loop):
+                if edge.successor() not in visited:
+                    self._loop_to_level[edge.successor()] = self._loop_to_level[edge.predecessor()] + 1
+                    queue.append(edge.successor())
+
+    def level(self, loop: vertices.LoopBody) -> int:
+        return self._loop_to_level[loop]
+
+    def dotify(self):
+        data = []
+        for loop in self:
+            label = []
+            label.append(dot.HTML.open_html)
+            label.append(dot.HTML.open_table)
+
+            label.append(dot.HTML.open_row)
+            label.append(dot.HTML.open_cell())
+            label.append('level={}'.format(self._loop_to_level[loop]))
+            label.append(dot.HTML.close_cell)
+            label.append(dot.HTML.close_row)
+
+            label.append(dot.HTML.open_row)
+            label.append(dot.HTML.open_cell())
+            label.append(','.join(str(vertex.id_) for vertex in loop))
+            label.append(dot.HTML.close_cell)
+            label.append(dot.HTML.close_row)
+
+            label.append(dot.HTML.close_table)
+            label.append(dot.HTML.close_html)
+
+            data.append('{} [label={}, shape=record];\n'.format(loop.id_, ''.join(label)))
+
+            for edge in self.successors(loop):
+                data.append(edge.dotify())
+
+        filename = '{}.lnt.dot'.format(self._name)
+        dot.generate(filename, data)
 
 
 class SuperBlockLoopGraph(FlowGraph):
