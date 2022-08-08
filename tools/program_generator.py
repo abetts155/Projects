@@ -1,12 +1,13 @@
 from argparse import Action, ArgumentError, ArgumentParser, Namespace
 from graphs import edges, graphs, vertices
 from low_level import instructions
-from random import choice, choices, getrandbits, random, randint, sample
+from random import choice, choices, getrandbits, random, randint, sample, shuffle
 from sys import setrecursionlimit
 from system import programs
 from threading import stack_size
 from time import time
-from utils import messages
+from typing import Dict, List
+from utils.messages import debug_message, error_message
 
 
 def go_ahead(weight=None):
@@ -16,254 +17,361 @@ def go_ahead(weight=None):
         return bool(getrandbits(1))
 
 
-class ArtificialLoopBody:
-    def __init__(self, fan_out, cfg, number_of_vertices, nested_loops: list, outermost_loop):
-        self._header = None
-        self._exits = set()
-        self._vertices = set()
-        self.add_vertices(cfg, number_of_vertices)
-        self.level_to_vertices = {}
+class LoopBody:
+    def __init__(self,
+                 cfg: graphs.ControlFlowGraph,
+                 number_of_vertices: int,
+                 nested_loops: List,
+                 artificial: bool,
+                 multi_entry: bool):
+        assert number_of_vertices >= 2
+        if number_of_vertices <= 3:
+            # Guarantee a separate level for: (a) the entry, (b) the exit, and (c) the spare vertex, if there is one.
+            total_levels = number_of_vertices
+        else:
+            # The rationale here is to allow all levels to have access to multiple vertices. This will prevent all
+            # vertices being bunched into a single level or all levels having access to just a single vertex; in both
+            # cases, the generation is tied to specific structures.
+            total_levels = number_of_vertices // 2 + 1
+
+        self._level_to_vertices = {}
+        for level in range(total_levels + 1):
+            self._level_to_vertices[level] = []
+
+        self._lowest_level = 0
+        self._highest_level = total_levels - 1
         self._vertex_to_level = {}
-        self.position_vertices(fan_out, len(nested_loops), outermost_loop)
-        self.add_edges(cfg, fan_out)
+
+        self._vertices = []
+        self.add_vertices(cfg, number_of_vertices)
+        self._entry_vertex, self._exit_vertex = sample(self._vertices, 2)
+        self._entries = {self._entry_vertex}
+        self._exits = {self._exit_vertex}
+
+        self.position_vertices(number_of_vertices)
+        self.add_edges(cfg)
         self.connect_nested_loops(cfg, nested_loops)
-        self.connect_terminal_vertices(cfg)
-        self.add_backedges(cfg)
-        self.set_exits(cfg)
+        self.connect_dead_ends(cfg)
+        self.add_more_forward_branches(cfg)
+
+        if multi_entry:
+            self.pick_more_entries()
+
+        if not artificial:
+            self.pick_more_exits()
+            cfg.add_edge(edges.Edge(self._exit_vertex, self._entry_vertex))
+            self.add_backedges(cfg)
+
+    def add_vertices(self, cfg: graphs.ControlFlowGraph, number_of_vertices: int):
+        while number_of_vertices > 0:
+            vertex = vertices.BasicBlock(vertices.Vertex.get_vertex_id())
+            cfg.add_vertex(vertex)
+            self._vertices.append(vertex)
+            number_of_vertices -= 1
+
+    def position_vertices(self, number_of_vertices: int):
+        self._level_to_vertices[self._lowest_level].append(self._entry_vertex)
+        self._vertex_to_level[self._entry_vertex] = self._lowest_level
+
+        self._level_to_vertices[self._highest_level].append(self._exit_vertex)
+        self._vertex_to_level[self._exit_vertex] = self._highest_level
+
+        candidates = [vertex for vertex in self._vertices if vertex not in [self._entry_vertex, self._exit_vertex]]
+        if candidates:
+            for level in range(self._lowest_level + 1, self._highest_level):
+                vertex = candidates.pop()
+                self._level_to_vertices[level].append(vertex)
+                self._vertex_to_level[vertex] = level
+
+        while candidates:
+            vertex = candidates.pop()
+            level = randint(self._lowest_level + 1, self._highest_level - 1)
+            self._level_to_vertices[level].append(vertex)
+            self._vertex_to_level[vertex] = level
+
+    def add_edges(self, cfg: graphs.ControlFlowGraph):
+        preferred = {}
+        for level in range(self._lowest_level, self._highest_level):
+            preferred[level] = [vertex for vertex in self._level_to_vertices[level] if len(cfg.successors(vertex)) == 0]
+
+        for level in range(self._lowest_level + 1, self._highest_level + 1):
+            for successor in self._level_to_vertices[level]:
+                options = preferred[level - 1]
+                if options:
+                    predecessor = choice(options)
+                    options.remove(predecessor)
+                else:
+                    predecessor = choice(self._level_to_vertices[level - 1])
+
+                cfg.add_edge(edges.ControlFlowEdge(predecessor, successor))
+
+    def connect_nested_loops(self, cfg: graphs.ControlFlowGraph, nested_loops: List["ArtificialLoopBody"]):
+        options = [vertex for vertex in self._vertices
+                   if len(cfg.successors(vertex)) == 0 and self._vertex_to_level[vertex] < self._highest_level]
+
+        for loop in nested_loops:
+            if options:
+                candidate_predecessors = options
+            else:
+                candidate_predecessors = [vertex for vertex in self._vertices
+                                          if self._vertex_to_level[vertex] < self._highest_level]
+
+            highest_level = 0
+            for entry_vertex in loop.entries:
+                predecessor = choice(candidate_predecessors)
+                cfg.add_edge(edges.ControlFlowEdge(predecessor, entry_vertex))
+                highest_level = max(highest_level, self._vertex_to_level[predecessor])
+
+            candidate_successors = [vertex for vertex in self._vertices
+                                    if self._vertex_to_level[vertex] > highest_level]
+            for exit_vertex in loop.exits:
+                successor = choice(candidate_successors)
+                cfg.add_edge(edges.ControlFlowEdge(exit_vertex, successor))
+
+    def connect_dead_ends(self, cfg: graphs.ControlFlowGraph):
+        for level in range(self._lowest_level, self._highest_level):
+            dead = [vertex for vertex in self._level_to_vertices[level] if len(cfg.successors(vertex)) == 0]
+            for predecessor in dead:
+                higher_level = randint(level + 1, self._highest_level)
+                successor = choice(self._level_to_vertices[higher_level])
+                cfg.add_edge(edges.ControlFlowEdge(predecessor, successor))
+
+    def add_more_forward_branches(self, cfg: graphs.ControlFlowGraph):
+        stepping_stones = [vertex for vertex in self._vertices if len(cfg.successors(vertex)) == 1]
+        while stepping_stones and go_ahead(0.2):
+            predecessor = choice(stepping_stones)
+            higher_level = randint(self._vertex_to_level[predecessor] + 1, self._highest_level)
+            successor = choice(self._level_to_vertices[higher_level])
+            if not cfg.has_edge(predecessor, successor):
+                stepping_stones.remove(predecessor)
+                cfg.add_edge(edges.ControlFlowEdge(predecessor, successor))
+
+    def pick_more_entries(self):
+        candidates = [vertex for vertex in self._vertices if vertex != self._entry_vertex]
+
+        # Ensure there are at least two entries; then pick liberally.
+        vertex = choice(candidates)
+        self._entries.add(vertex)
+        candidates.remove(vertex)
+
+        while candidates and go_ahead(0.05):
+            vertex = choice(candidates)
+            self._entries.add(vertex)
+            candidates.remove(vertex)
+
+    def pick_more_exits(self):
+        candidates = [vertex for vertex in self._vertices if vertex != self._exit_vertex]
+        while candidates and go_ahead(0.05):
+            vertex = choice(candidates)
+            self._exits.add(vertex)
+            candidates.remove(vertex)
+
+    def add_backedges(self, cfg: graphs.ControlFlowGraph):
+        has_backedges = randint(0, len(self._entries))
+        chosen_headers = sample(self._entries, has_backedges)
+        candidate_tails = [vertex for vertex in self._vertices if vertex not in self._entries]
+        if candidate_tails:
+            for header_vertex in chosen_headers:
+                tail_vertex = choice(candidate_tails)
+                if not cfg.has_edge(tail_vertex, header_vertex):
+                    cfg.add_edge(edges.ControlFlowEdge(tail_vertex, header_vertex))
 
     @property
-    def header(self):
-        return self._header
+    def entries(self):
+        return self._entries
 
     @property
     def exits(self):
         return self._exits
 
-    def add_vertices(self, cfg, number_of_vertices):
-        while number_of_vertices > 0:
-            basic_block = vertices.BasicBlock(vertices.Vertex.get_vertex_id())
-            cfg.add_vertex(basic_block)
-            self._vertices.add(basic_block)
-            number_of_vertices -= 1
 
-    def position_vertices(self, fan_out, number_of_nested_loops, outermost_loop):
-        level = 0
-        for vertex in self._vertices:
-            self._vertex_to_level[vertex] = level
-            self.level_to_vertices.setdefault(level, []).append(vertex)
+def create_loop_hierarchy(total_loops: int, nesting_depth: int, number_of_vertices: int):
+    # Add vertices to the tree, one per requested loop, as well as an extra vertex to represent the dummy outer loop.
+    lnt = graphs.DirectedGraph()
+    for _ in range(1, total_loops + 2):
+        lnt.add_vertex(vertices.Vertex(vertices.Vertex.get_vertex_id()))
 
-            if level == 0:
-                self._header = vertex
-                level += 1
-            elif number_of_nested_loops > 0:
-                number_of_nested_loops -= 1
-                level += 1
-            elif len(self.level_to_vertices[level]) == fan_out * len(self.level_to_vertices[level - 1]):
-                level += 1
-            elif go_ahead(0.25):
-                level += 1
+    # Connect loops, thus creating a hierarchy.
+    vertex_to_level = {vertex: 0 for vertex in lnt}
+    (root_vertex,) = sample(vertex_to_level.keys(), 1)
+    parent_vertex = root_vertex
+    for vertex in lnt:
+        if vertex != root_vertex:
+            new_level = vertex_to_level[parent_vertex] + 1
+            if new_level <= nesting_depth:
+                lnt.add_edge(edges.Edge(parent_vertex, vertex))
+                vertex_to_level[vertex] = new_level
+            else:
+                # The height of the tree now exceeds the maximum depth, so backtrack to an arbitrary proper ancestor.
+                ancestor_vertex = parent_vertex
+                while True:
+                    (edge,) = lnt.predecessors(ancestor_vertex)
+                    ancestor_vertex = edge.predecessor()
+                    if go_ahead() or ancestor_vertex == root_vertex:
+                        break
+                parent_vertex = ancestor_vertex
+                lnt.add_edge(edges.Edge(parent_vertex, vertex))
+                vertex_to_level[vertex] = vertex_to_level[parent_vertex] + 1
+            parent_vertex = vertex
 
-        highest_level = max(self.level_to_vertices.keys())
-        loop_tails = self.level_to_vertices[highest_level]
+    # Compute number of vertices in each loop.
+    number_of_vertices_remaining = number_of_vertices
+    for vertex in lnt:
+        # Guarantee each loop has at least 2 vertices plus vertices needed to connect inner nested loops.
+        vertex.size = 2 + len(lnt.successors(vertex))
+        number_of_vertices_remaining -= vertex.size
 
-        # Does this loop body have too many loop tails?
-        # Yes if either
-        # a) this is the outermost loop and there is no single loop tail, or
-        # b) we decide the proportion of loop tails to the number of loop body
-        #    vertices is too great.
-        if len(loop_tails) > 1:
-            if outermost_loop or len(loop_tails) / len(self._vertex_to_level) > 0.2:
-                # Promote a random vertex to be the unique loop tail
-                new_highest_level = highest_level + 1
-                v = loop_tails[randint(0, len(loop_tails) - 1)]
-                self.level_to_vertices.setdefault(new_highest_level, []).append(v)
-                self.level_to_vertices[highest_level].remove(v)
-                self._vertex_to_level[v] = new_highest_level
+    # Arbitrarily distribute any remaining vertices to the loop bodies.
+    while number_of_vertices_remaining > 0:
+        choices = [vertex for vertex in lnt]
+        shuffle(choices)
+        for vertex in choices:
+            additional_vertices = randint(0, number_of_vertices_remaining)
+            vertex.size += additional_vertices
+            number_of_vertices_remaining -= additional_vertices
 
-    def add_edges(self, cfg, fan_out):
-        for level in sorted(self.level_to_vertices.keys(), reverse=True):
-            if level > 0:
-                for s in self.level_to_vertices[level]:
-                    candidates = [v for v in self.level_to_vertices[level - 1] if len(cfg.successors(v)) < fan_out]
-                    (p,) = sample(candidates, 1)
-                    cfg.add_edge(edges.ControlFlowEdge(p, s))
-                    if len(cfg.successors(p)) == fan_out:
-                        candidates.remove(p)
-
-    def connect_nested_loops(self, cfg, nested_loops):
-        highest_level = max(self.level_to_vertices.keys())
-        candidate_entry_sources = [v for v in self._vertices if 0 < self._vertex_to_level[v] < highest_level]
-        for loop in nested_loops:
-            (p,) = sample(candidate_entry_sources, 1)
-            cfg.add_edge(edges.ControlFlowEdge(p, loop.header))
-            for exit_source in loop.exits:
-                higher_level = randint(self._vertex_to_level[p] + 1, highest_level)
-                candidate_exit_destinations = self.level_to_vertices[higher_level]
-                (s,) = sample(candidate_exit_destinations, 1)
-                cfg.add_edge(edges.ControlFlowEdge(exit_source, s))
-
-    def connect_terminal_vertices(self, cfg):
-        highest_level = max(self.level_to_vertices.keys())
-        for level in sorted(self.level_to_vertices.keys(), reverse=True):
-            if 0 < level < highest_level:
-                candidate_predecessors = [v for v in self.level_to_vertices[level] if len(cfg.successors(v)) == 0]
-                higher_level = randint(level + 1, highest_level)
-                candidate_successors = self.level_to_vertices[higher_level]
-                for p in candidate_predecessors:
-                    (s,) = sample(candidate_successors, 1)
-                    cfg.add_edge(edges.ControlFlowEdge(p, s))
-
-    def add_backedges(self, cfg):
-        highest_level = max(self.level_to_vertices.keys())
-        for v in self.level_to_vertices[highest_level]:
-            cfg.add_edge(edges.ControlFlowEdge(v, self._header))
-
-    def set_exits(self, cfg):
-        selection_probability = 1.0
-        for vertex in self._vertex_to_level:
-            if len(cfg.successors(vertex)) == 1 and selection_probability > random() and vertex != self._header:
-                self._exits.add(vertex)
-                selection_probability /= 2
-
-        if not self._exits:
-            self._exits.add(self._header)
+    return lnt, root_vertex
 
 
-def create_control_flow_graph(program,
-                              loops,
-                              nesting_depth,
-                              dense,
-                              irreducible,
-                              number_of_vertices,
-                              fan_out,
-                              subprg_name):
-    def create_artificial_loop_hierarchy():
-        # Add abstract vertices to the tree, including an extra one
-        # for the dummy outer loop
-        lnt = graphs.DirectedGraph()
-        for _ in range(1, loops + 2):
-            lnt.add_vertex(vertices.Vertex(vertices.Vertex.get_vertex_id()))
+def create_loop_bodies(cfg: graphs.ControlFlowGraph,
+                       lnt: graphs.DirectedGraph,
+                       root_vertex: vertices.Vertex,
+                       vertex: vertices.Vertex,
+                       is_multi_entry: Dict[vertices.Vertex, bool],
+                       bodies: Dict[vertices.Vertex, LoopBody]):
+    for edge in lnt.successors(vertex):
+        create_loop_bodies(cfg, lnt, root_vertex, edge.successor(), is_multi_entry, bodies)
 
-        # Add edges to the tree
-        vertex_to_level = {vertex: 0 for vertex in lnt}
-        (root_vertex,) = sample(vertex_to_level.keys(), 1)
-        parent_vertex = root_vertex
-        for vertex in lnt:
-            if vertex != root_vertex:
-                new_level = vertex_to_level[parent_vertex] + 1
-                if new_level <= nesting_depth:
-                    lnt.add_edge(edges.Edge(parent_vertex, vertex))
-                    vertex_to_level[vertex] = new_level
-                else:
-                    # The height of the tree now exceeds the maximum depth, so
-                    # backtrack to an arbitrary proper ancestor
-                    ancestor_vertex = parent_vertex
-                    while True:
-                        (edge,) = lnt.predecessors(ancestor_vertex)
-                        ancestor_vertex = edge.predecessor()
-                        if go_ahead() or ancestor_vertex == root_vertex:
-                            break
-                    parent_vertex = ancestor_vertex
-                    lnt.add_edge(edges.Edge(parent_vertex, vertex))
-                    vertex_to_level[vertex] = vertex_to_level[parent_vertex] + 1
-                parent_vertex = vertex
+    is_root_vertex = len(lnt.predecessors(vertex)) == 0
+    bodies[vertex] = LoopBody(cfg,
+                              vertex.size,
+                              [bodies[edge.successor()] for edge in lnt.successors(vertex)],
+                              vertex == root_vertex,
+                              is_multi_entry[vertex])
 
-        # Compute number of vertices in each loop
-        number_of_vertices_remaining = number_of_vertices
-        for vertex in lnt:
-            # Guarantee each loop has at least 2 vertices plus vertices needed
-            # to connect inner nested loops
-            vertex.size = 2 + len(lnt.successors(vertex))
-            number_of_vertices_remaining -= vertex.size
+    if vertex == root_vertex:
+        body = bodies[vertex]
+        (cfg.entry,) = body.entries
+        (cfg.exit,) = body.exits
 
-        # Arbitrarily distribute any remaining vertices to the loop bodies
-        while number_of_vertices_remaining > 0:
-            for vertex in lnt:
-                additional_vertices = randint(0, number_of_vertices_remaining)
-                vertex.size += additional_vertices
-                number_of_vertices_remaining -= additional_vertices
-        return lnt, root_vertex
 
-    def create_loop_body(vertex):
-        for edge in lnt.successors(vertex):
-            create_loop_body(edge.successor())
-
-        # Post-order actions
-        nested_loops = [loops[edge.successor()] for edge in lnt.successors(vertex)]
-        loops[vertex] = ArtificialLoopBody(fan_out, cfg, vertex.size, nested_loops, len(lnt.predecessors(vertex)) == 0)
-
-        if len(lnt.predecessors(vertex)) == 0:
-            (edge,) = cfg.predecessors(loops[vertex].header)
-            cfg.entry = edge.successor()
-            cfg.exit = edge.predecessor()
-
-    cfg = graphs.ControlFlowGraph(program, subprg_name)
-    if not irreducible:
-        lnt, root_vertex = create_artificial_loop_hierarchy()
-        loops = {}
-        create_loop_body(root_vertex)
+def is_connected(cfg: graphs.ControlFlowGraph, origin: vertices.Vertex):
+    if origin == cfg.entry:
+        tentacles = graphs.DirectedGraph.successors
+        tentacle = edges.Edge.successor
     else:
-        loop = ArtificialLoopBody(fan_out, cfg, number_of_vertices, [], True)
-        (edge,) = cfg.predecessors(loop.header)
-        cfg.entry = edge.successor()
-        cfg.exit = edge.predecessor()
-        candidates = [vertex for vertex in cfg if vertex != cfg.entry and vertex != cfg.exit]
+        tentacles = graphs.DirectedGraph.predecessors
+        tentacle = edges.Edge.predecessor
 
-        min_level = min(loop.level_to_vertices.keys())
-        max_level = max(loop.level_to_vertices.keys())
-        candidate_levels = [level for level in range(min_level + 1, max_level)]
+    visited = {}
+    readied = {}
+    for vertex in cfg:
+        visited[vertex] = False
+        readied[vertex] = False
 
-        if dense:
-            max_edges = len(candidates) * len(candidates) * len(candidates)
-        else:
-            max_edges = len(candidates) + int(len(candidates) / 2)
+    readied[origin] = True
+    stack = [origin]
+    while stack:
+        vertex = stack.pop()
+        visited[vertex] = True
+        readied[vertex] = False
 
-        level_edges = randint(1, max_edges)
-        anywhere_edges = max_edges - level_edges
+        for edge in tentacles(cfg, vertex):
+            next_vertex = tentacle(edge)
+            if not visited[next_vertex] and not readied[next_vertex]:
+                stack.append(next_vertex)
+                readied[next_vertex] = True
 
-        start = time()
-        if len(candidate_levels) > 2:
-            for _ in range(level_edges):
-                p_level = choice(candidate_levels[2:])
-                s_level = choice(candidate_levels[:p_level - 1])
-                p = choice(loop.level_to_vertices[p_level])
-                s = choice(loop.level_to_vertices[s_level])
-                if not cfg.has_edge(p, s):
-                    cfg.add_edge(edges.ControlFlowEdge(p, s))
+    for vertex in cfg:
+        if not visited[vertex]:
+            return False
 
-                if time() - start > 5:
-                    break
+    return True
 
-        start = time()
-        for _ in range(anywhere_edges):
-            p = choice(candidates)
-            s = choice(candidates)
-            if not cfg.has_edge(p, s):
-                cfg.add_edge(edges.ControlFlowEdge(p, s))
 
-            if time() - start > 5:
-                break
+def is_well_related(cfg: graphs.ControlFlowGraph):
+    visited = set()
+    for vertex in cfg:
+        visited.clear()
+        for edge in cfg.successors(vertex):
+            successor = edge.successor()
+            if successor in visited:
+                print('Violation', vertex, successor)
+                return False
+            elif vertex == successor:
+                print('Self', vertex, successor)
+                return False
+            else:
+                visited.add(successor)
+    return True
 
+
+def is_valid(cfg: graphs.ControlFlowGraph):
+    if len(cfg.predecessors(cfg.entry)) > 0:
+        return False
+
+    if len(cfg.successors(cfg.exit)) > 0:
+        return False
+
+    if not is_connected(cfg, cfg.entry):
+        print('Not connected from E')
+        return False
+
+    if not is_connected(cfg, cfg.exit):
+        print('Not connected from X')
+        return False
+
+    if not is_well_related(cfg):
+        return False
+
+    return True
+
+
+def create_control_flow_graph(program: programs.Program,
+                              total_loops: int,
+                              multi_entry_loops: int,
+                              nesting_depth: int,
+                              number_of_vertices: int,
+                              subprogram_name: str):
+    cfg = graphs.ControlFlowGraph(program, subprogram_name)
+
+    # Create outline of the loop hierarchy.
+    lnt, root_vertex = create_loop_hierarchy(total_loops, nesting_depth, number_of_vertices)
+
+    # Decide which loops have multiple entries.
+    is_multi_entry = {}
+    candidates = []
+    for vertex in lnt:
+        is_multi_entry[vertex] = False
+        if vertex != root_vertex:
+            candidates.append(vertex)
+
+    while multi_entry_loops:
+        multi_entry_loops -= 1
+        vertex = choice(candidates)
+        candidates.remove(vertex)
+        is_multi_entry[vertex] = True
+
+    bodies = {}
+    create_loop_bodies(cfg, lnt, root_vertex, root_vertex, is_multi_entry, bodies)
+    cfg.dotify()
+    assert is_valid(cfg), 'Unable to produce a valid CFG'
     return cfg
 
 
 def add_subprograms(program: programs.Program,
                     subprograms: int,
-                    loops: int,
+                    total_loops: int,
+                    multi_entry_loops: int,
                     nesting_depth: int,
-                    dense: bool,
-                    irreducible: bool,
-                    number_of_vertices: int,
-                    fan_out: int):
+                    number_of_vertices: int):
     for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms + 1)]:
-        messages.debug_message('Creating CFG with name {}'.format(subprogram_name))
+        debug_message('Creating CFG with name {}'.format(subprogram_name))
         cfg = create_control_flow_graph(program,
-                                        loops,
+                                        total_loops,
+                                        multi_entry_loops,
                                         nesting_depth,
-                                        dense,
-                                        irreducible,
                                         number_of_vertices,
-                                        fan_out,
                                         subprogram_name)
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
         program.add_subprogram(programs.Subprogram(cfg, call_vertex))
@@ -332,7 +440,7 @@ def add_calls(program: programs.Program, recursion_enabled):
                 lower_level = randint(0, level - 1)
                 callers = level_to_subprograms[lower_level]
                 callers = [caller for caller in callers if subprogram_call_candidates[caller]]
-                if callers and random() < 0.33:
+                if callers and random() < 0.66:
                     add_call(callers, callee)
                 else:
                     break
@@ -357,7 +465,7 @@ def add_calls(program: programs.Program, recursion_enabled):
 
 
 def add_instructions(program: programs.Program):
-    messages.debug_message('Adding instructions')
+    debug_message('Adding instructions')
     for subprogram in program:
         for vertex in subprogram.cfg:
             if random() < 0.05:
@@ -392,18 +500,18 @@ def add_instructions(program: programs.Program):
 
 def main(args: Namespace):
     if args.vertices < args.loops * 2:
-        messages.error_message(
-            'The number of vertices in a control flow graph must be at least twice the number of loops')
+        error_message('The number of vertices in a control flow graph must be at least twice the number of loops')
+
+    if args.multi > args.loops:
+        error_message('The number of multi-entry loops cannot exceed the number of loops')
 
     program = programs.Program(args.program)
     add_subprograms(program,
                     args.subprograms,
                     args.loops,
+                    args.multi,
                     args.nesting_depth,
-                    args.dense,
-                    args.irreducible,
-                    args.vertices,
-                    args.fan_out)
+                    args.vertices)
 
     if not args.no_calls:
         add_calls(program, args.recursion)
@@ -432,44 +540,38 @@ def parse_the_command_line():
     parser.add_argument('--subprograms',
                         action=CheckForPositiveValue,
                         type=int,
-                        help='number of subprograms',
+                        help='the number of subprograms',
                         metavar='<INT>',
                         default=1)
 
     parser.add_argument('--loops',
                         type=int,
-                        help='maximum number of loops in a control flow graph',
+                        help='the number of loops in a CFG',
+                        metavar='<INT>',
+                        default=0)
+
+    parser.add_argument('--multi',
+                        type=int,
+                        help='the number of multi-entry loops in a CFG',
                         metavar='<INT>',
                         default=0)
 
     parser.add_argument('--nesting-depth',
                         type=int,
-                        help='maximum nesting depth of loops',
+                        help='the maximum nesting depth of loops',
                         metavar='<INT>',
                         default=1)
-
-    parser.add_argument('--fan-out',
-                        action=CheckForPositiveValue,
-                        type=int,
-                        help='select maximum fan out of a basic block',
-                        metavar='<INT>',
-                        default=2)
 
     parser.add_argument('--vertices',
                         type=int,
                         action=CheckForPositiveValue,
-                        help='maximum number of basic blocks in a control flow graph',
+                        help='the number of basic blocks in a CFG',
                         metavar='<INT>',
                         default=10)
 
     parser.add_argument('--dense',
                         action='store_true',
                         help='allow dense graphs',
-                        default=False)
-
-    parser.add_argument('--irreducible',
-                        action='store_true',
-                        help='create arbitrary looping structures',
                         default=False)
 
     parser.add_argument('--recursion',

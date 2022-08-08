@@ -1,8 +1,9 @@
 from enum import auto, Enum
+from football_api.football_api import get_events
+from football_api.structure import get_events_json, store
+from json import load
 from model.fixtures import Fixture
 from model.teams import Team
-from sql import sql_tables
-from sql.sql_columns import Affinity, Column, ColumnNames
 from typing import Dict, List
 
 
@@ -25,10 +26,25 @@ def is_goal(detail: EventDetail):
     return detail in [EventDetail.normal_goal, EventDetail.own_goal, EventDetail.penalty]
 
 
-class Event:
-    table = None
-    inventory = {}
+def create_events_json(fixture_id: int):
+    events_json = get_events_json(fixture_id)
+    if not events_json.exists():
+        store(events_json, get_events(fixture_id))
 
+
+def get_events_for_fixture(fixture):
+    create_events_json(fixture.id)
+    events = []
+    events_json = get_events_json(fixture.id)
+    with events_json.open() as in_file:
+        json_text = load(in_file)
+        for data in json_text['api']['events']:
+            event = create_event_from_json(data, fixture)
+            events.append(event)
+    return events
+
+
+class Event:
     def __init__(self,
                  fixture: Fixture,
                  time: int,
@@ -72,38 +88,6 @@ class Event:
     @property
     def detail(self) -> EventDetail:
         return self._detail
-
-    def sql_values(self):
-        values = [self.fixture.id,
-                  self.time,
-                  self.extra_time,
-                  self.team.id,
-                  self.team.name,
-                  self.left_id,
-                  self.right_id,
-                  self.detail.name]
-        assert len(values) == len(self.__class__.sql_table().columns)
-        return values
-
-    @classmethod
-    def sql_table(cls) -> sql_tables.Table:
-        if cls.table is None:
-            cls.table = sql_tables.Table(cls.__name__,
-                                         None,
-                                         [Column(ColumnNames.Fixture_ID.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Time.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Extra_Time.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Team_ID.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Name.name, Affinity.TEXT),
-                                          Column(ColumnNames.Left_ID.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Right_ID.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Detail.name, Affinity.TEXT)])
-        return cls.table
-
-    def __eq__(self, other):
-        if type(other) == type(self):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
 
     def __str__(self):
         return '{:>2}+{}: {} {}'.format(self.time,
@@ -155,21 +139,8 @@ def create_event_from_json(data: Dict, fixture: Fixture):
         elif data['detail'] == 'Red Card':
             detail = EventDetail.red_card
         else:
-            assert False
+            detail = None
     else:
         assert False
 
-    Event.inventory[(fixture.id, time, extra_time)] = Event(fixture, time, extra_time, team, left_id, right_id, detail)
-
-
-def create_event_from_row(row: List, fixture: Fixture):
-    time = int(row[1])
-    extra_time = int(row[2])
-    team_id = int(row[3])
-    team_name = row[4]
-    team = Team.find_team(team_id, team_name)
-    left_id = int(row[5])
-    right_id = int(row[6])
-    detail = EventDetail[row[7]]
-    event = Event(fixture, time, extra_time, team, left_id, right_id, detail)
-    return event
+    return Event(fixture, time, extra_time, team, left_id, right_id, detail)

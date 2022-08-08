@@ -14,7 +14,7 @@ from cli.cli import (add_database_option,
                      get_unique_event)
 from collections import Counter, OrderedDict
 from lib import messages
-from lib.helpful import DisplayGrid
+from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from model.fixtures import Half, Venue, Event
@@ -41,13 +41,6 @@ def parse_command_line():
     add_logging_options(parser)
     add_chunk_option(parser)
     add_block_option(parser)
-
-    parser.add_argument('-l',
-                        '--lines',
-                        action='store_true',
-                        help='only show lines (not bars)',
-                        default=False)
-
     return parser.parse_args()
 
 
@@ -138,35 +131,33 @@ def find_limits(data: List[DataUnit]):
     return x_limit, y_limit
 
 
-def plot(ax, datum: DataUnit, x_limit: int, lines_only: bool):
+def plot(ax, datum: DataUnit, x_limit: int):
     x_values, y_values = datum.values(x_limit)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xticks(range(0, x_limit + 1))
-    ax.set_title(datum.title(), fontsize=9)
-
-    for k, v in datum.counter.items():
-        ax.text(k, v, str(v), ha='center', fontsize=8, fontweight='bold')
+    ax.set_title(datum.title(), fontstyle='italic')
+    ax.set_frame_on(False)
 
     if sum(y_values):
-        if lines_only:
-            ax.plot(x_values, y_values, color='red', linewidth=2, marker='o', ms=3)
-        else:
-            cmap = plt.get_cmap('Blues')
-            min_y = np.min(y_values)
-            max_y = np.max(y_values)
-            scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
-            ax.set_yticks([])
-            offset = 0.5
-            ax.set_xlim([-1 * offset, x_limit + offset])
-            bar = ax.bar(x_values, y_values, color=cmap(scaled), edgecolor='black')
+        cmap = plt.get_cmap('RdPu')
+        min_y = np.min(y_values)
+        max_y = np.max(y_values)
+        scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
+        ax.set_yticks([])
+        offset = 0.5
+        ax.set_xlim([-1 * offset, x_limit + offset])
+        bar = ax.bar(x_values, y_values, color=cmap(scaled), zorder=1)
 
-            if datum.team is not None and datum.last is not None and datum.highlight:
-                bar[datum.last].set_color('gold')
-                bar[datum.last].set_edgecolor('black')
+        if datum.team is not None and datum.last is not None and datum.highlight:
+            bar[datum.last].set_color('gold')
+
+    for k, v in datum.counter.items():
+        ax.text(k, v, str(v), ha='center', zorder=2)
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)
@@ -199,12 +190,18 @@ def main(args: Namespace):
         else:
             ncols = 1
 
-        fig, axes = plt.subplots(nrows=len(data), ncols=ncols, figsize=(20, 13), squeeze=False, constrained_layout=True)
+        fig, axes = plt.subplots(nrows=len(data),
+                                 ncols=ncols,
+                                 figsize=(20, 10),
+                                 squeeze=False,
+                                 constrained_layout=True)
 
         x_limit, _ = find_limits(data)
         for i, datum in enumerate(data):
             ax = axes[i, 0]
-            plot(ax, datum, x_limit, args.lines)
+            plot(ax, datum, x_limit)
+            if datum.positions:
+                ax.set_ylabel(datum.y_label())
 
         if selected_team is not None:
             golden_season = seasons[-1]
@@ -262,12 +259,12 @@ def main(args: Namespace):
             position = golden_table.team_position(selected_team)
             chunk_id = golden_map.get_chunk(position)
             ax = axes[chunk_id, 1]
-            plot(ax, golden_datum, x_limit, args.lines)
+            plot(ax, golden_datum, x_limit)
             used = {(chunk_id, 1)}
 
             for chunk_id, datum in chunk_to_datum.items():
                 ax = axes[chunk_id, 2]
-                plot(ax, datum, x_limit, args.lines)
+                plot(ax, datum, x_limit)
                 used.add((chunk_id, 2))
 
             for i in range(0, nrows):
@@ -287,10 +284,10 @@ def main(args: Namespace):
         for i, datum in enumerate(data):
             cell_x, cell_y = display.index(i)
             ax = axes[cell_x, cell_y]
-            plot(ax, datum, x_limit, args.lines)
+            plot(ax, datum, x_limit)
 
     title = construct_title(league, func, args.negate, args.venue, args.half)
-    fig.suptitle(title, fontweight='bold', fontsize=14)
+    fig.suptitle(title, fontweight='bold')
     plt.show(block=args.block)
 
 

@@ -11,33 +11,50 @@ class Algorithm(Enum):
     Cooper = 2
 
 
-time_line = compile(r'\d+.\d+')
+time_regex = compile(r'\d+.\d+')
 prefix = 'results.'
 suffix = '.txt'
 result_files = sorted(glob('{}[0-9]*{}'.format(prefix, suffix)), key=lambda name: int(name[len(prefix):-len(suffix)]))
 lines = {alg: [] for alg in Algorithm}
 x_values = []
 
+largest_time = 0
+largest_size = 0
+subprograms = 0
 for a_file in result_files:
-    total = {alg:0 for alg in Algorithm}
+    alg_times = {alg: [] for alg in Algorithm}
     state = Algorithm.Betts
     with open(a_file, 'r') as in_file:
         for line in in_file:
-            times = time_line.match(line)
-            if times:
-                total[state] += float(times[0])
+            execution_time_match = time_regex.match(line)
+            if execution_time_match:
+                execution_time = execution_time_match[0]
+                alg_times[state].append(float(execution_time))
                 state = Algorithm((state.value + 1) % len(Algorithm))
 
-    if sum(total.values()):
+    if sum(len(x) for x in alg_times.values()):
         lexemes = a_file.split('.')
         x_values.append(lexemes[1])
+        largest_size = max(largest_size, int(lexemes[1]))
 
         for alg in Algorithm:
-            lines[alg].append(total[alg])
+            subprograms = max(subprograms, len(alg_times[alg]))
+            total_time = sum(alg_times[alg])
+            lines[alg].append(total_time)
+            largest_time = max(largest_time, total_time)
 
 fig, ax = plt.subplots(1, 1, constrained_layout=True)
-ax.plot(x_values, lines[Algorithm.Betts], label=Algorithm.Betts.name, color='black')
-ax.plot(x_values, lines[Algorithm.Tarjan], label=Algorithm.Tarjan.name, color='dodgerblue')
-ax.plot(x_values, lines[Algorithm.Cooper], label=Algorithm.Cooper.name, color='salmon')
-ax.legend()
+ax.plot(x_values, lines[Algorithm.Betts], label=Algorithm.Betts.name, c='black', marker='^', lw=0.5, ms=3)
+ax.plot(x_values, lines[Algorithm.Tarjan], label=Algorithm.Tarjan.name, c='dodgerblue', marker='o', lw=0.5, ms=3)
+ax.plot(x_values, lines[Algorithm.Cooper], label=Algorithm.Cooper.name, c='salmon', marker='*', lw=0.5, ms=3)
+
+ax.get_xaxis().set_major_locator(plt.MaxNLocator())
+ax.get_yaxis().set_major_locator(plt.MaxNLocator())
+
+ax.set_xlabel('Size of a CFG')
+ax.set_ylabel('Average time (seconds) to process {} CFGs'.format(subprograms))
+
+ax.yaxis.grid(True)
+
+ax.legend(loc='upper left')
 plt.show()

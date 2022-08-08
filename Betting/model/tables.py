@@ -1,7 +1,7 @@
 from collections import OrderedDict, namedtuple
 from enum import auto, Enum
 from lib.messages import error_message
-from model.fixtures import Fixture, Half, draw, win, loss
+from model.fixtures import Fixture, Half, Venue, draw, win, loss
 from model.seasons import Season
 from model.teams import Team
 from typing import List, Tuple
@@ -108,19 +108,15 @@ class LeagueTable(list):
         self.__compute_slices()
 
     def __fill(self, fixtures: List[Fixture], half: Half):
-        home_data = {}
-        away_data = {}
+        data = {}
         for fixture in fixtures:
+            if fixture.home_team not in data:
+                data[fixture.home_team] = {Venue.home: Data(), Venue.away: Data()}
+
+            if fixture.away_team not in data:
+                data[fixture.away_team] = {Venue.home: Data(), Venue.away: Data()}
+
             if fixture.full_time():
-                if fixture.home_team not in home_data:
-                    home_data[fixture.home_team] = Data()
-
-                if fixture.away_team not in away_data:
-                    away_data[fixture.away_team] = Data()
-
-                home = home_data[fixture.home_team]
-                away = away_data[fixture.away_team]
-
                 results = []
                 if half == Half.both:
                     if fixture.full_time() is not None:
@@ -140,6 +136,9 @@ class LeagueTable(list):
                     assert False
 
                 if results:
+                    home = data[fixture.home_team][Venue.home]
+                    away = data[fixture.away_team][Venue.away]
+
                     for result in results:
                         if win(result):
                             home.wins += 1
@@ -156,9 +155,9 @@ class LeagueTable(list):
                         away.goals_for += result.right
                         away.goals_against += result.left
 
-        for team in home_data.keys():
-            home = home_data[team]
-            away = away_data[team]
+        for team in data.keys():
+            home = data[team][Venue.home]
+            away = data[team][Venue.away]
             total = combine(home, away)
             row = TableRow(team, total.games(),
                            home.wins, home.draws, home.losses, home.goals_for, home.goals_against,

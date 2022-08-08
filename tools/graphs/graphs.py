@@ -531,27 +531,25 @@ class Tree(DirectedGraph):
         return a == v or self.is_proper_ancestor(a, v)
 
 
-class LengauerTarjan(Tree, ProgramData):
+class LengauerTarjan(ProgramData):
     class Type(Enum):
         PRE = 0
         POST = 1
 
     def __init__(self, flow_graph: FlowGraph, root: vertices.Vertex):
-        Tree.__init__(self)
         ProgramData.__init__(self, flow_graph.program, flow_graph.name)
+        self.idom = {}
         self._root = root
         self.__compute(flow_graph)
-        assert len(self.predecessors(self._root)) == 0
         if self._root == flow_graph.entry:
             self._type = LengauerTarjan.Type.PRE
         else:
             self._type = LengauerTarjan.Type.POST
 
     def __compute(self, flow_graph):
-        # This is an implementation of the Lengauer-Tarjan algorithm
-        def link(v, w):
-            s = w
-            while semi[label[w]] < semi[label[child[s]]]:
+        def link(left: vertices.Vertex, right: vertices.Vertex):
+            s = right
+            while semi[label[right]] < semi[label[child[s]]]:
                 if size[s] + size[child[child[s]]] >= 2 * size[child[s]]:
                     ancestor[child[s]] = s
                     child[s] = child[child[s]]
@@ -559,47 +557,33 @@ class LengauerTarjan(Tree, ProgramData):
                     size[child[s]] = size[s]
                     ancestor[s] = child[s]
                     s = ancestor[s]
-            label[s] = label[w]
-            size[v] += size[w]
-            if size[v] < 2 * size[w]:
-                s, child[v] = child[v], s
+
+            label[s] = label[right]
+            size[left] += size[right]
+
+            if size[left] < 2 * size[right]:
+                s, child[left] = child[left], s
+
             while s != self._root:
-                ancestor[s] = v
+                ancestor[s] = left
                 s = child[s]
 
-        def compress(v):
-            if ancestor[ancestor[v]] != self._root:
-                compress(ancestor[v])
-                if semi[label[ancestor[v]]] < semi[label[v]]:
-                    label[v] = label[ancestor[v]]
-                ancestor[v] = ancestor[ancestor[v]]
+        def compress(vertex: vertices.Vertex):
+            if ancestor[ancestor[vertex]] != self._root:
+                compress(ancestor[vertex])
+                if semi[label[ancestor[vertex]]] < semi[label[vertex]]:
+                    label[vertex] = label[ancestor[vertex]]
+                ancestor[vertex] = ancestor[ancestor[vertex]]
 
-        def evaluate(v):
-            if ancestor[v] == self._root:
-                return label[v]
+        def evaluate(vertex: vertices.Vertex):
+            if ancestor[vertex] == self._root:
+                return label[vertex]
             else:
-                compress(v)
-                if semi[label[ancestor[v]]] >= semi[label[v]]:
-                    return label[v]
+                compress(vertex)
+                if semi[label[ancestor[vertex]]] >= semi[label[vertex]]:
+                    return label[vertex]
                 else:
-                    return label[ancestor[v]]
-
-        def do_search(v: vertices.Vertex):
-            nonlocal pre_id
-            pre_id += 1
-            semi[v] = pre_id
-            pre_order[pre_id] = v
-            label[v] = v
-            ancestor[v] = self._root
-            child[v] = self._root
-            size[v] = 1
-            bucket[v] = set()
-            self.add_vertex(v)
-
-            for e in forward_transitions(flow_graph, v):
-                if semi[forward_transition(e)] == 0:
-                    parent[forward_transition(e)] = v
-                    do_search(forward_transition(e))
+                    return label[ancestor[vertex]]
 
         class Bijection(dict):
             def __setitem__(self, key, value):
@@ -635,20 +619,37 @@ class LengauerTarjan(Tree, ProgramData):
         size[self._root] = 0
         ancestor[self._root] = self._root
         label[self._root] = self._root
-        semi = {v: 0 for v in flow_graph}
-        idom = {}
+        semi = {}
+
+        def visit(vertex: vertices.Vertex):
+            nonlocal pre_id
+            pre_id += 1
+            semi[vertex] = pre_id
+            pre_order[pre_id] = vertex
+            label[vertex] = vertex
+            ancestor[vertex] = self._root
+            child[vertex] = self._root
+            size[vertex] = 1
+            bucket[vertex] = set()
+
+            for edge in forward_transitions(flow_graph, vertex):
+                tentacle = forward_transition(edge)
+                if tentacle not in semi:
+                    parent[tentacle] = vertex
+                    visit(tentacle)
 
         # Stage 1: Do depth-first search
         pre_id = 0
-        do_search(self._root)
+        stack = [self._root]
+        visit(self._root)
 
         # Stage 2: Compute semi-dominators
         for i in reversed(range(2, pre_id + 1)):
             # Reverse pre-order
             w = pre_order[i]
 
-            for e in backward_transitions(flow_graph, w):
-                u = evaluate(backward_transition(e))
+            for edge in backward_transitions(flow_graph, w):
+                u = evaluate(backward_transition(edge))
                 if semi[u] < semi[w]:
                     semi[w] = semi[u]
 
@@ -659,19 +660,15 @@ class LengauerTarjan(Tree, ProgramData):
                 v = bucket[parent[w]].pop()
                 u = evaluate(v)
                 if semi[u] < semi[v]:
-                    idom[v] = u
+                    self.idom[v] = u
                 else:
-                    idom[v] = parent[w]
+                    self.idom[v] = parent[w]
 
         # Stage 3: Set immediate dominators
         for i in range(2, pre_id + 1):
             w = pre_order[i]
-            if idom[w] != pre_order[semi[w]]:
-                idom[w] = idom[idom[w]]
-
-        # All done: Add edges to the tree data structure
-        for child, parent in idom.items():
-            self.add_edge(edges.Edge(parent, child))
+            if self.idom[w] != pre_order[semi[w]]:
+                self.idom[w] = self.idom[self.idom[w]]
 
     def dotify(self):
         data = []
@@ -743,7 +740,7 @@ class DominanceFrontiers:
 
 
 class StrongComponents:
-    def __init__(self, directed_graph: DirectedGraph, alive: Dict):
+    def __init__(self, directed_graph: DirectedGraph, origin: vertices.Vertex = None):
         self._stack = []
         self._unexplored = 0
         self._pre_order = {}
@@ -753,21 +750,18 @@ class StrongComponents:
         self._singletons = set()
         self._non_trivial_sccs = set()
 
-        for vertex in directed_graph:
-            if alive[vertex]:
-                self._pre_order[vertex] = self._unexplored
-                self._low_link[vertex] = self._unexplored
-                self._on_stack[vertex] = False
-
         self._pre_id = 0
-        for vertex in directed_graph:
-            if alive[vertex] and self._pre_order[vertex] == 0:
-                self._explore(directed_graph, alive, vertex)
+        if origin:
+            self._explore(directed_graph, origin)
+        else:
+            for vertex in directed_graph:
+                if self._pre_order[vertex] == 0:
+                    self._explore(directed_graph, vertex)
 
-    def _explore(self,
-                 directed_graph: DirectedGraph,
-                 alive: Dict,
-                 vertex: vertices.Vertex):
+        for vertex in sorted(directed_graph):
+            print('pre[{}] = {}   low[{}]={}'.format(vertex, self._pre_order[vertex], vertex, self._low_link[vertex]))
+
+    def _explore(self, directed_graph: DirectedGraph, vertex: vertices.Vertex):
         self._pre_id += 1
         self._pre_order[vertex] = self._pre_id
         self._low_link[vertex] = self._pre_id
@@ -775,12 +769,13 @@ class StrongComponents:
         self._stack.append(vertex)
 
         for edge in directed_graph.successors(vertex):
-            if alive[edge]:
-                if self._pre_order[edge.successor()] == self._unexplored:
-                    self._explore(directed_graph, alive, edge.successor())
-                    self._low_link[vertex] = min(self._low_link[vertex], self._low_link[edge.successor()])
-                elif self._on_stack[edge.successor()]:
-                    self._low_link[vertex] = min(self._low_link[vertex], self._pre_order[edge.successor()])
+            successor = edge.successor()
+
+            if successor not in self._pre_order:
+                self._explore(directed_graph, edge.successor())
+                self._low_link[vertex] = min(self._low_link[vertex], self._low_link[successor])
+            elif self._on_stack[successor]:
+                self._low_link[vertex] = min(self._low_link[vertex], self._pre_order[successor])
 
         if self._low_link[vertex] == self._pre_order[vertex]:
             scc = []
@@ -810,7 +805,6 @@ class Cooper(Tree):
     def __init__(self, g: FlowGraph, entry: vertices.Vertex):
         Tree.__init__(self)
         idom = self._solve(g, entry)
-        self._add_edges(g, idom)
 
     def _intersect(self, dfs, idom, b1, b2):
         finger1 = dfs.post_order_number(b1)
@@ -843,11 +837,12 @@ class Cooper(Tree):
         idom = {}
         for vertex in g:
             idom[vertex] = None
-            self.add_vertex(vertex)
         idom[entry] = entry
 
+        iteration = 0
         changed = True
         while changed:
+            iteration += 1
             changed = False
             for vertex in reversed(dfs.post_order()[:-1]):
                 chosen = None
@@ -868,12 +863,10 @@ class Cooper(Tree):
                         idom[vertex] = current_idom
                         changed = True
 
-        return idom
+            if iteration == 1 and not dfs.has_back_edges():
+                changed = False
 
-    def _add_edges(self, g, idom):
-        for child, parent in idom.items():
-            if child != g.entry:
-                self.add_edge(edges.Edge(parent, child))
+        return idom
 
 
 class LoopNests(FlowGraph):

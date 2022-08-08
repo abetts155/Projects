@@ -85,7 +85,7 @@ def load_teams(filename: str):
             create_team_from_row(row)
 
 
-def load_league(filename, league: League):
+def load_league(filename: str, league: League):
     check_database_exists(filename)
     with Database(filename) as db:
         name_constraint = "{}='{}' {} {}".format(ColumnNames.Code.name,

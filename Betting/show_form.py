@@ -9,6 +9,7 @@ from cli.cli import (add_database_option,
                      add_block_option,
                      get_unique_league,
                      get_unique_team)
+from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, loss
@@ -78,13 +79,13 @@ def decide_cell_color(result: Result,
 def create_results_table(ax,
                          team: Team,
                          fixtures: List[Fixture],
-                         team_color: Tuple[float, float, float],
-                         other_color: Tuple[float, float, float],
-                         neutral_color: Tuple[float, float, float],
-                         unknown_color: Tuple[float, float, float]):
+                         team_color: str,
+                         other_color: str,
+                         neutral_color: str,
+                         unknown_color: str):
     colors = []
     table = []
-    fixtures.sort(key=lambda row: row.date)
+    fixtures.sort(key=lambda row: row.date, reverse=True)
     for i, fixture in enumerate(fixtures):
         first_half = fixture.canonicalise_result(team, fixture.first_half())
         second_half = fixture.canonicalise_result(team, fixture.second_half())
@@ -114,22 +115,24 @@ def create_results_table(ax,
     df = pd.DataFrame(table)
     df.columns = ['Date', 'Opponent', 'Venue', '1st', '2nd', 'FT']
 
-    ax.table(cellText=df.values,
-             colLabels=df.columns,
-             colLoc='left',
-             colWidths=[0.2, 0.4, 0.1, 0.1, 0.1, 0.1],
-             cellColours=colors,
-             cellLoc='left',
-             loc='upper center')
-    ax.set_title('Form')
+    ax_table = ax.table(cellText=df.values,
+                        colLabels=df.columns,
+                        colLoc='left',
+                        colColours=[neutral_color] * len(df.columns),
+                        colWidths=[0.2, 0.4, 0.1, 0.1, 0.1, 0.1],
+                        cellColours=colors,
+                        cellLoc='left',
+                        fontsize=16,
+                        loc='upper center')
+    ax.set_title('Form', fontstyle='italic')
     ax.axis('off')
 
 
 def create_league_table(ax,
                         this_season: Season,
                         team: Team,
-                        team_color: Tuple[float, float, float],
-                        other_color: Tuple[float, float, float],
+                        team_color: str,
+                        other_color: str,
                         venue: Venue,
                         half: Half):
     league_table = LeagueTable(this_season, half)
@@ -172,18 +175,21 @@ def create_league_table(ax,
     ax.table(cellText=df.values,
              colLabels=df.columns,
              colLoc='left',
+             colColours=[other_color] * len(df.columns),
              colWidths=[0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
              cellColours=colors,
              cellLoc='left',
              loc='upper center')
+
     title = 'League table'
     if half:
         title = '{} ({} half)'.format(title, half.name)
-    ax.set_title(title)
+    ax.set_title(title, fontstyle='italic')
     ax.axis('off')
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)
@@ -195,17 +201,17 @@ def main(args: Namespace):
     fixtures = get_fixtures(args.database, team, this_season, args.venue)
 
     if fixtures:
-        nrows = 2
-        ncols = 1
-        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 10), squeeze=False, constrained_layout=True)
+        nrows = 1
+        ncols = 2
+        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(15, 10), squeeze=False, constrained_layout=True)
 
-        team_color = (54 / 255, 104 / 255, 141 / 255)
-        other_team_color = (240 / 255, 88 / 255, 55 / 255)
-        neutral_color = (1, 1, 1)
-        unknown_color = (1, 1, 1)
+        team_color = '#70A3CC'
+        other_team_color = '#FA8072'
+        neutral_color = '#FFF0FF'
+        unknown_color = '#FFF0FF'
 
         create_results_table(axs[0, 0], team, fixtures, team_color, other_team_color, neutral_color, unknown_color)
-        create_league_table(axs[1, 0], this_season, team, team_color, neutral_color, args.venue, args.half)
+        create_league_table(axs[0, 1], this_season, team, team_color, neutral_color, args.venue, args.half)
 
         title = '{} {}: {}'.format(league.country, league.name, team.name)
         if args.venue == Venue.any:
@@ -213,7 +219,7 @@ def main(args: Namespace):
         else:
             title = '{} ({} only)'.format(title, args.venue.name)
 
-        fig.suptitle(title, fontweight='bold', fontsize=14)
+        fig.suptitle(title, fontweight='bold')
         plt.show(block=args.block)
     else:
         warning_message("No data to display for {} in {} {}".format(team.name, league.country, league.name))

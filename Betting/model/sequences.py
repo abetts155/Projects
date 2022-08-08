@@ -25,15 +25,15 @@ class DataUnit:
 
     def title(self):
         years = split_into_contiguous_groups([season.year for season in self.seasons])
-        title = '{}:{}'.format(self.team.name if self.team else 'Aggregated', to_string(years))
+        title = '{}:{} ({} data points)'.format(self.team.name if self.team else 'Aggregated',
+                                                to_string(years),
+                                                sum(self.counter.values()))
+        return title
 
+    def y_label(self):
         if self.positions:
             positions = split_into_contiguous_groups([position + 1 for position in self.positions])
-            title = '{}  Position{}:{}'.format(title, 's' if len(self.positions) > 1 else '', to_string(positions))
-
-        title = '{} ({} data points)'.format(title, sum(self.counter.values()))
-
-        return title
+            return to_string(positions)
 
     def values(self, x_limit: int):
         x_values = []

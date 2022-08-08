@@ -1,4 +1,5 @@
 from math import ceil
+from matplotlib import pyplot as plt
 from typing import List, Tuple
 
 
@@ -60,3 +61,17 @@ class DisplayGrid:
 
     def index(self, cell: int) -> Tuple[int, int]:
         return self._cell_to_indices[cell]
+
+
+def set_matplotlib_defaults():
+    plt.style.use('seaborn-deep')
+    plt.rcParams['font.serif'] = 'Ubuntu'
+    plt.rcParams['font.monospace'] = 'Ubuntu Mono'
+    plt.rcParams['font.size'] = 10
+    plt.rcParams['axes.labelsize'] = 10
+    plt.rcParams['axes.labelweight'] = 'bold'
+    plt.rcParams['axes.titlesize'] = 10
+    plt.rcParams['xtick.labelsize'] = 8
+    plt.rcParams['ytick.labelsize'] = 8
+    plt.rcParams['legend.fontsize'] = 10
+    plt.rcParams['figure.titlesize'] = 12

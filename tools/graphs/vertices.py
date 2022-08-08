@@ -115,6 +115,10 @@ class InstrumentationVertex(Vertex):
         Vertex.__init__(self, id_)
         self._label = label
 
+    @staticmethod
+    def ghost_value():
+        return 0
+
     @property
     def label(self):
         return self._label
@@ -190,9 +194,12 @@ class BasicBlock(Vertex):
         return self._instructions
 
     def dotify(self):
-        instruction_text = '\l'.join('{}'.format(x) for x in self.instructions)
-        return '{} [label="{}", shape=rectangle]'.format(self.id_,
-                                                         '{}\n{}'.format(self.id_, instruction_text + '\l'))
+        if self.instructions:
+            instruction_text = '\l'.join('{}'.format(x) for x in self.instructions)
+            return '{} [label="{}", shape=rectangle]'.format(self.id_,
+                                                             '{}\n{}'.format(self.id_, instruction_text + '\l'))
+        else:
+            return '{} [label="{}", shape=record, fontsize=8]'.format(self.id_, self.id_)
 
 
 class InstructionVertex(Vertex, set):

@@ -13,7 +13,7 @@ from cli.cli import (add_database_option,
                      get_unique_event)
 from collections import Counter, OrderedDict
 from lib import messages
-from lib.helpful import DisplayGrid
+from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import min, max
@@ -41,11 +41,11 @@ def parse_command_line():
 
 
 def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: bool):
+    set_matplotlib_defaults()
     display = DisplayGrid(len(season_data), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
                             figsize=(20, 10),
-                            squeeze=False,
                             constrained_layout=True)
 
     for i, (season, datum) in enumerate(season_data.items()):
@@ -60,17 +60,18 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
 
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x, cell_y]
-        cmap = plt.get_cmap('Blues')
+        cmap = plt.get_cmap('Wistia')
         min_y = min(y_values)
         max_y = max(y_values)
         scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
 
-        ax.bar(x_values, y_values, color=cmap(scaled), edgecolor='black')
+        ax.bar(x_values, y_values, color=cmap(scaled))
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_yticks([])
+        ax.set_ylabel(season.year)
         ax.set_xticks(x_values)
-        ax.set_title('{}'.format(season.year))
+        ax.set_frame_on(False)
 
         for k, v in datum.counter.items():
             ax.text(k, v, str(v), ha='center', fontsize=8, fontweight='bold')
@@ -80,7 +81,7 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
 
-    fig.suptitle(title, fontweight='bold', fontsize=14)
+    fig.suptitle(title, fontweight='bold')
     plt.show(block=block)
 
 

@@ -1,9 +1,14 @@
 from argparse import ArgumentParser
+from cProfile import Profile
+from collections import deque
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from enum import auto, Enum
 from graphs import edges, graphs, vertices
+from heapq import heapify, heappop, heappush
 from miscellaneous.helpful import error_message
+from multiprocessing import Manager
 from numpy import percentile
-from random import shuffle
+from random import sample, shuffle
 from sys import setrecursionlimit
 from system import programs
 from threading import stack_size
@@ -110,20 +115,22 @@ def betts_loops(cfg: graphs.ControlFlowGraph):
     return loop_nest
 
 
-def verify(cfg: graphs.ControlFlowGraph, betts_tree):
+def verify_immediate_dominators(cfg: graphs.ControlFlowGraph,
+                                idom: Dict[vertices.Vertex, vertices.Vertex]):
     tarjan_tree = graphs.LengauerTarjan(cfg, cfg.entry)
-    differences = set()
+    differences = 0
     for vertex in cfg:
         if vertex != cfg.entry:
-            (betts,) = betts_tree.predecessors(vertex)
-            (tarjan,) = tarjan_tree.predecessors(vertex)
-            if betts.predecessor() != tarjan.predecessor():
+            betts = idom[vertex]
+            tarjan = tarjan_tree.idom[vertex]
+
+            if betts != tarjan:
                 print('{}: betts({}) = {}  tarjan({}) = {}'.format(cfg.name,
                                                                    vertex,
-                                                                   betts.predecessor(),
+                                                                   betts,
                                                                    vertex,
-                                                                   tarjan.predecessor()))
-                differences.add((vertex, betts.predecessor(), tarjan.predecessor()))
+                                                                   tarjan))
+                differences += 1
 
     if differences:
         error_message('Verification failed')
@@ -197,6 +204,11 @@ def compute_sccs(forest: Dict[vertices.Vertex, GraphRow], entry_row_id: int):
     return non_trivial_sccs
 
 
+def dump_data(data: Dict[vertices.Vertex, List[vertices.Vertex]]):
+    for vertex in sorted(data.keys()):
+        print('{:<3}:  [{}]'.format(vertex.id_, '  '.join(str(x) for x in data[vertex])))
+
+
 def see_forest(forest: Dict[vertices.Vertex, GraphRow]):
     for row in forest.values():
         print('>' * 10)
@@ -207,13 +219,12 @@ def see_forest(forest: Dict[vertices.Vertex, GraphRow]):
 def preliminary_search(cfg: graphs.ControlFlowGraph,
                        entry: vertices.Vertex,
                        entry_row_id: int,
-                       tree: graphs.Tree,
+                       idom: Dict[vertices.Vertex, vertices.Vertex],
                        data: Dict[vertices.Vertex, List[vertices.Vertex]],
                        forest: Dict[vertices.Vertex, GraphRow],
                        tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]]):
     vertex_to_row = {}
     next_row_id = entry_row_id
-    tree.add_vertex(entry)
     forest[entry_row_id] = GraphRow(next_row_id, {entry})
     vertex_to_row[entry] = entry_row_id
 
@@ -243,8 +254,7 @@ def preliminary_search(cfg: graphs.ControlFlowGraph,
                 successor = forward_transition(edge)
 
                 if len(backward_transitions(cfg, successor)) == 1:
-                    tree.add_vertex(successor)
-                    tree.add_edge(edges.Edge(predecessor, successor))
+                    idom[successor] = predecessor
 
                     explore.append(successor)
                     data[successor] = data[predecessor][:]
@@ -253,7 +263,6 @@ def preliminary_search(cfg: graphs.ControlFlowGraph,
                 else:
                     if successor not in vertex_to_row:
                         roots.append(successor)
-                        tree.add_vertex(successor)
                         next_row_id += 1
                         forest[next_row_id] = GraphRow(next_row_id, {successor})
                         vertex_to_row[successor] = next_row_id
@@ -272,9 +281,8 @@ def preliminary_search(cfg: graphs.ControlFlowGraph,
 def update_dominator_tree(predecessor_row: GraphRow,
                           row: GraphRow,
                           data: Dict[vertices.Vertex, List[vertices.Vertex]],
-                          forest: Dict[vertices.Vertex, GraphRow],
                           tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
-                          tree: graphs.Tree):
+                          idom: Dict[vertices.Vertex, vertices.Vertex]):
     forest_edge = (predecessor_row.id_, row.id_)
     query = tentacles[forest_edge]
 
@@ -296,7 +304,7 @@ def update_dominator_tree(predecessor_row: GraphRow,
                 i -= 1
 
     for vertex in row.vertices:
-        tree.add_edge(edges.Edge(dominator[-1], vertex))
+        idom[vertex] = dominator[-1]
 
     return dominator
 
@@ -306,7 +314,6 @@ def update_forest(predecessor_row: GraphRow,
                   data: Dict[vertices.Vertex, List[vertices.Vertex]],
                   forest: Dict[vertices.Vertex, GraphRow],
                   tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
-                  tree: graphs.Tree,
                   dominator: List[vertices.Vertex]):
     predecessor_row.successors.remove(row.id_)
     changed = set(row.vertices)
@@ -332,7 +339,7 @@ def update_forest(predecessor_row: GraphRow,
 def do_t0_reduction(next_row_id: int,
                     scc: Set[int],
                     forest: Dict[vertices.Vertex, GraphRow],
-                    tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],):
+                    tentacles: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]], ):
     entry_rows = set()
     entry_vertices = set()
     for row_id in scc:
@@ -374,13 +381,16 @@ def do_t0_reduction(next_row_id: int,
 
 
 def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph, entry: vertices.Vertex):
-    tree = graphs.Tree()
+    idom = {}
     forest = {}
     tentacles = {}
     data = {}
     entry_row_id = 0
 
-    next_row_id = preliminary_search(cfg, entry, entry_row_id, tree, data, forest, tentacles)
+    s = time()
+    next_row_id = preliminary_search(cfg, entry, entry_row_id, idom, data, forest, tentacles)
+    t = time()
+    # print('search', t-s)
     ready = [id_ for id_, row in forest.items() if len(row.predecessors) == 1]
     while len(forest) > 1:
         if ready:
@@ -389,8 +399,8 @@ def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph, entry: vertices.Vertex):
                 row = forest[id_]
                 (predecessor_id,) = row.predecessors
                 predecessor_row = forest[predecessor_id]
-                dominator = update_dominator_tree(predecessor_row, row, data, forest, tentacles, tree)
-                update_forest(predecessor_row, row, data, forest, tentacles, tree, dominator)
+                dominator = update_dominator_tree(predecessor_row, row, data, tentacles, idom)
+                update_forest(predecessor_row, row, data, forest, tentacles, dominator)
                 candidates.update(row.successors)
 
             ready = [id_ for id_ in candidates if id_ in forest and len(forest[id_].predecessors) == 1]
@@ -402,9 +412,422 @@ def t0_t1_t2_dominators(cfg: graphs.ControlFlowGraph, entry: vertices.Vertex):
 
             entry_row = forest[entry_row_id]
             ready = [id_ for id_ in entry_row.successors if len(forest[id_].predecessors) == 1]
+    u = time()
+    # print('reduce', u-t)
+    # tree.dotify('{}.t0_t1_t2'.format(cfg.name))
+    # verify(cfg, tree)
 
-    #tree.dotify('{}.t0_t1_t2'.format(cfg.name))
-    #verify(cfg, tree)
+
+class AuxiliaryVertex:
+    def __init__(self, root: vertices.Vertex):
+        self.root = root
+        self.merges = {root}
+        self.predecessors = set()
+        self.successors = set()
+        self.explorers = 0
+        self.ready = False
+        self.fixed = False
+
+
+def answer_query(left: List[vertices.Vertex], right: List[vertices.Vertex]):
+    i = min(len(left) - 1, len(right) - 1)
+    while i >= 0 and left[i] != right[i]:
+        i -= 1
+    return left[:i + 1]
+
+
+def add_edge(auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+             articulations: Set[vertices.Vertex],
+             auxiliary_predecessor: AuxiliaryVertex,
+             auxiliary_successor: AuxiliaryVertex,
+             data: List[vertices.Vertex]):
+    key = (auxiliary_predecessor.root.id_, auxiliary_successor.root.id_)
+    if key not in auxiliary_edges:
+        auxiliary_edges[key] = data
+        auxiliary_successor.predecessors.add(auxiliary_predecessor.root.id_)
+        auxiliary_predecessor.successors.add(auxiliary_successor.root.id_)
+    elif auxiliary_edges[key][-1] not in articulations:
+        auxiliary_edges[key] = answer_query(auxiliary_edges[key], data)
+
+
+def remove_edge(auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+                auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+                predecessor: AuxiliaryVertex,
+                successor: AuxiliaryVertex):
+    successor.predecessors.discard(predecessor.root.id_)
+    predecessor.successors.discard(successor.root.id_)
+    del auxiliary_edges[(predecessor.root.id_, successor.root.id_)]
+
+
+def to_string(auxiliary_vertices, auxiliary_edges):
+    pad = 0
+    for vertex_id in auxiliary_vertices.keys():
+        pad = max(pad, len(str(vertex_id)))
+
+    value = '{}\n'.format('*' * 40)
+    for vertex_id in sorted(auxiliary_vertices.keys(), reverse=True):
+        for successor_id in sorted(auxiliary_vertices[vertex_id].successors, reverse=True):
+            key = (vertex_id, successor_id)
+            value += '|{:>{pad}} => {:>{pad}}|  {}\n'.format(vertex_id,
+                                                             successor_id,
+                                                             ' '.join(str(x) for x in auxiliary_edges[key]),
+                                                             pad=pad)
+    value += '{}\n'.format('*' * 40)
+    return value
+
+
+def is_t1_or_t2_reducible(auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+                          auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+                          root_to_articulations: Dict[vertices.Vertex, Set[vertices.Vertex]],
+                          auxiliary_origin: AuxiliaryVertex,
+                          auxiliary_root: AuxiliaryVertex):
+    if len(auxiliary_root.predecessors) == 1:
+        auxiliary_root.ready = True
+        (predecessor_id,) = auxiliary_root.predecessors
+        return auxiliary_vertices[predecessor_id], auxiliary_root
+
+    elif len(auxiliary_root.predecessors) == 2 and auxiliary_root.root.id_ in auxiliary_root.predecessors:
+        auxiliary_root.ready = True
+        predecessor_one, predecessor_two = auxiliary_root.predecessors
+        if predecessor_one == auxiliary_root.root.id_:
+            predecessor_id = predecessor_two
+        else:
+            predecessor_id = predecessor_one
+        return auxiliary_vertices[predecessor_id], auxiliary_root
+
+    elif auxiliary_origin.root.id_ in auxiliary_root.predecessors:
+        key = (auxiliary_origin.root.id_, auxiliary_root.root.id_)
+        if auxiliary_edges[key][-1] in root_to_articulations[auxiliary_origin.root.id_]:
+            auxiliary_root.ready = True
+            return auxiliary_origin, auxiliary_root
+
+
+def reduce_by_t1_and_t2(idom: Dict[vertices.Vertex, vertices.Vertex],
+                        auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+                        auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+                        root_to_articulations: Dict[vertices.Vertex, Set[vertices.Vertex]],
+                        auxiliary_origin: AuxiliaryVertex,
+                        auxiliary_predecessor: AuxiliaryVertex,
+                        auxiliary_root: AuxiliaryVertex):
+    key = (auxiliary_predecessor.root.id_, auxiliary_root.root.id_)
+    prefix = auxiliary_edges[key]
+
+    for merge in auxiliary_root.merges:
+        idom[merge] = prefix[-1]
+
+    while auxiliary_root.predecessors:
+        predecessor_id = auxiliary_root.predecessors.pop()
+        remove_edge(auxiliary_vertices, auxiliary_edges, auxiliary_vertices[predecessor_id], auxiliary_root)
+
+    if auxiliary_predecessor.root.id_ == auxiliary_origin.root.id_ and len(auxiliary_predecessor.successors) == 0 and len(auxiliary_root.merges) == 1:
+        root_to_articulations[auxiliary_origin.root.id_].update(root_to_articulations[auxiliary_root.root.id_])
+        prefix = []
+
+    ready = []
+    while auxiliary_root.successors:
+        successor_id = auxiliary_root.successors.pop()
+        auxiliary_successor = auxiliary_vertices[successor_id]
+        edge_data = prefix + auxiliary_edges[(auxiliary_root.root.id_, auxiliary_successor.root.id_)]
+        add_edge(auxiliary_edges,
+                 root_to_articulations[auxiliary_origin.root.id_],
+                 auxiliary_predecessor,
+                 auxiliary_successor,
+                 edge_data)
+
+        remove_edge(auxiliary_vertices, auxiliary_edges, auxiliary_root, auxiliary_successor)
+
+        if not auxiliary_successor.ready:
+            information = is_t1_or_t2_reducible(auxiliary_vertices,
+                                                auxiliary_edges,
+                                                root_to_articulations,
+                                                auxiliary_origin,
+                                                auxiliary_successor)
+            if information:
+                ready.append(information)
+
+    del auxiliary_vertices[auxiliary_root.root.id_]
+    return ready
+
+
+def search(origin: vertices.Vertex,
+           cfg: graphs.ControlFlowGraph,
+           idom: Dict[vertices.Vertex, vertices.Vertex],
+           auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+           auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+           root_to_articulations: Dict[vertices.Vertex, Set[vertices.Vertex]]):
+    auxiliary_origin = AuxiliaryVertex(origin)
+    auxiliary_vertices[origin.id_] = auxiliary_origin
+    data = {}
+    frontier = deque([origin.id_])
+    while frontier:
+        root_id = frontier.popleft()
+        auxiliary_root = auxiliary_vertices[root_id]
+        root_to_articulations[root_id] = set()
+
+        ready = [auxiliary_root.root]
+        while ready:
+            vertex = ready.pop()
+
+            if len(ready) == 0 and len(auxiliary_root.successors) == 0:
+                root_to_articulations[root_id].add(vertex)
+                data[vertex] = []
+
+            if len(cfg.successors(vertex)) > 1:
+                data[vertex] = data[vertex] + [vertex]
+
+            for edge in cfg.successors(vertex):
+                predecessor = edge.predecessor()
+                successor = edge.successor()
+
+                if len(cfg.predecessors(successor)) == 1:
+                    data[successor] = data[predecessor]
+                    idom[successor] = predecessor
+                    ready.append(successor)
+                elif root_id != successor.id_:
+                    if len(cfg.successors(vertex)) == 1:
+                        edge_data = data[vertex] + [vertex]
+                    else:
+                        edge_data = data[vertex]
+
+                    if successor.id_ not in auxiliary_vertices:
+                        auxiliary_vertices[successor.id_] = AuxiliaryVertex(successor)
+                        auxiliary_successor = auxiliary_vertices[successor.id_]
+                        auxiliary_successor.explorers = 1
+
+                        add_edge(auxiliary_edges,
+                                 root_to_articulations[root_id],
+                                 auxiliary_root,
+                                 auxiliary_successor,
+                                 edge_data)
+                    else:
+                        auxiliary_successor = auxiliary_vertices[successor.id_]
+                        add_edge(auxiliary_edges,
+                                 root_to_articulations[root_id],
+                                 auxiliary_root,
+                                 auxiliary_successor,
+                                 edge_data)
+
+                        if len(auxiliary_successor.predecessors) == 1:
+                            auxiliary_successor.explorers += 1
+
+                            if auxiliary_successor.explorers == len(cfg.predecessors(successor)):
+                                key = (root_id, auxiliary_successor.root.id_)
+                                data[successor] = auxiliary_edges[key]
+                                idom[successor] = data[successor][-1]
+                                ready.append(successor)
+
+                                remove_edge(auxiliary_vertices, auxiliary_edges, auxiliary_root, auxiliary_successor)
+                                del auxiliary_vertices[auxiliary_successor.root.id_]
+
+        for successor_id in auxiliary_root.successors:
+            auxiliary_successor = auxiliary_vertices[successor_id]
+            if len(auxiliary_successor.predecessors) == 1:
+                frontier.append(successor_id)
+
+
+class StrongComponentData:
+    __slots__ = ['pre_id', 'low_id']
+
+    def __init__(self, value):
+        self.pre_id = value
+        self.low_id = value
+
+
+def find_strong_components(auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+                           auxiliary_origin: AuxiliaryVertex,
+                           auxiliary_root: AuxiliaryVertex,
+                           stack: List[AuxiliaryVertex],
+                           data: Dict[int, StrongComponentData],
+                           on_stack: Dict[int, bool],
+                           strong_components: List[List[vertices.Vertex]],
+                           vertex_to_component: Dict[vertices.Vertex, int]):
+    root_id = auxiliary_root.root.id_
+    data[root_id] = StrongComponentData(len(data) + 1)
+    on_stack[root_id] = True
+    stack.append(root_id)
+
+    for predecessor_id in auxiliary_root.predecessors:
+        auxiliary_predecessor = auxiliary_vertices[predecessor_id]
+        if predecessor_id not in data:
+            find_strong_components(auxiliary_vertices,
+                                   auxiliary_origin,
+                                   auxiliary_predecessor,
+                                   stack,
+                                   data,
+                                   on_stack,
+                                   strong_components,
+                                   vertex_to_component)
+            data[root_id].low_id = min(data[root_id].low_id, data[predecessor_id].low_id)
+        elif predecessor_id in on_stack:
+            data[root_id].low_id = min(data[root_id].low_id, data[predecessor_id].pre_id)
+
+    #print('{}: pre={}  low={}'.format(root_id, data[root_id].pre_id, data[root_id].low_id))
+
+    if data[root_id].pre_id == data[root_id].low_id:
+        done = False
+        scc = []
+        strong_components.append(scc)
+        scc_number = len(strong_components)
+        while not done:
+            vertex_id = stack.pop()
+            del on_stack[vertex_id]
+            scc.append(vertex_id)
+            vertex_to_component[vertex_id] = scc_number
+            done = vertex_id == root_id
+
+
+def reduce_by_t0(auxiliary_origin: AuxiliaryVertex,
+                 auxiliary_vertices: Dict[vertices.Vertex, AuxiliaryVertex],
+                 auxiliary_edges: Dict[Tuple[vertices.Vertex, vertices.Vertex], List[vertices.Vertex]],
+                 root_to_articulations: Dict[vertices.Vertex, Set[vertices.Vertex]]):
+    #print(to_string(auxiliary_vertices, auxiliary_edges))
+    stack = []
+    data = {}
+    on_stack = {}
+    vertex_to_component = {}
+    strong_components = []
+
+    for successor_id in auxiliary_origin.successors:
+        auxiliary_successor = auxiliary_vertices[successor_id]
+        for predecessor_id in auxiliary_successor.predecessors:
+            if predecessor_id not in data:
+                auxiliary_predecessor = auxiliary_vertices[predecessor_id]
+                find_strong_components(auxiliary_vertices,
+                                       auxiliary_origin,
+                                       auxiliary_predecessor,
+                                       stack,
+                                       data,
+                                       on_stack,
+                                       strong_components,
+                                       vertex_to_component)
+
+    ready = []
+    for scc in strong_components:
+        if len(scc) > 1:
+            #print('  '.join(str(x) for x in sorted(scc)))
+
+            scc_entries = set()
+            for vertex_id in scc:
+                auxiliary_vertex = auxiliary_vertices[vertex_id]
+                for predecessor_id in auxiliary_vertex.predecessors:
+                    if vertex_to_component[vertex_id] != vertex_to_component[predecessor_id]:
+                        scc_entries.add(vertex_id)
+
+            (representative_id,) = sample(scc_entries, 1)
+            auxiliary_representative = auxiliary_vertices[representative_id]
+
+            new_predecessors = {}
+            new_successors = {}
+            for vertex_id in scc_entries:
+                auxiliary_vertex = auxiliary_vertices[vertex_id]
+                auxiliary_representative.merges.update(auxiliary_vertex.merges)
+
+                while auxiliary_vertex.predecessors:
+                    predecessor_id = auxiliary_vertex.predecessors.pop()
+                    auxiliary_predecessor = auxiliary_vertices[predecessor_id]
+
+                    if vertex_to_component[vertex_id] != vertex_to_component[predecessor_id]:
+                        key = (predecessor_id, vertex_id)
+                        if predecessor_id not in new_predecessors:
+                            new_predecessors[predecessor_id] = auxiliary_edges[key]
+                        else:
+                            new_predecessors[predecessor_id] = answer_query(new_predecessors[predecessor_id],
+                                                                            auxiliary_edges[key])
+
+                    remove_edge(auxiliary_vertices,
+                                auxiliary_edges,
+                                auxiliary_predecessor,
+                                auxiliary_vertex)
+
+                while auxiliary_vertex.successors:
+                    successor_id = auxiliary_vertex.successors.pop()
+                    auxiliary_successor = auxiliary_vertices[successor_id]
+
+                    if successor_id not in scc_entries:
+                        key = (vertex_id, successor_id)
+                        if successor_id not in new_successors:
+                            new_successors[successor_id] = auxiliary_edges[key]
+                        else:
+                            new_successors[successor_id] = answer_query(new_successors[successor_id],
+                                                                        auxiliary_edges[key])
+
+                    remove_edge(auxiliary_vertices,
+                                auxiliary_edges,
+                                auxiliary_vertex,
+                                auxiliary_successor)
+
+                if vertex_id != representative_id:
+                    del auxiliary_vertices[vertex_id]
+
+            for predecessor_id, edge_data in new_predecessors.items():
+                add_edge(auxiliary_edges,
+                         root_to_articulations[auxiliary_origin.root.id_],
+                         auxiliary_vertices[predecessor_id],
+                         auxiliary_representative,
+                         edge_data)
+
+            for successor_id, edge_data in new_successors.items():
+                add_edge(auxiliary_edges,
+                         root_to_articulations[auxiliary_origin.root.id_],
+                         auxiliary_representative,
+                         auxiliary_vertices[successor_id],
+                         edge_data)
+
+            if len(auxiliary_representative.predecessors) == 1:
+                if auxiliary_origin.root.id_ in auxiliary_representative.predecessors:
+                    auxiliary_representative.ready = True
+                    ready.append((auxiliary_origin, auxiliary_representative))
+
+    #print(to_string(auxiliary_vertices, auxiliary_edges))
+
+    assert ready
+    return ready
+
+
+def betts(cfg: graphs.ControlFlowGraph, origin: vertices.Vertex):
+    idom = {}
+    auxiliary_vertices = {}
+    auxiliary_edges = {}
+    root_to_articulations = {}
+    search(origin, cfg, idom, auxiliary_vertices, auxiliary_edges, root_to_articulations)
+
+    auxiliary_origin = auxiliary_vertices[origin.id_]
+    ready = deque([])
+    for auxiliary_root in auxiliary_vertices.values():
+        information = is_t1_or_t2_reducible(auxiliary_vertices,
+                                            auxiliary_edges,
+                                            root_to_articulations,
+                                            auxiliary_origin,
+                                            auxiliary_root)
+        if information:
+            ready.append(information)
+
+    effective_predecessors = {}
+    while len(auxiliary_vertices) > 1:
+        if ready:
+            while ready:
+                auxiliary_predecessor, auxiliary_root = ready.popleft()
+
+                while auxiliary_predecessor in effective_predecessors:
+                    auxiliary_predecessor = effective_predecessors[auxiliary_predecessor]
+                effective_predecessors[auxiliary_root] = auxiliary_predecessor
+
+                pending = reduce_by_t1_and_t2(idom,
+                                              auxiliary_vertices,
+                                              auxiliary_edges,
+                                              root_to_articulations,
+                                              auxiliary_origin,
+                                              auxiliary_predecessor,
+                                              auxiliary_root)
+                ready.extend(pending)
+        else:
+            pending = reduce_by_t0(auxiliary_origin,
+                                   auxiliary_vertices,
+                                   auxiliary_edges,
+                                   root_to_articulations)
+            ready.extend(pending)
+
+    return idom
 
 
 def strip_outliers(data: List[float]):
@@ -415,7 +838,7 @@ def strip_outliers(data: List[float]):
     return [x for x in data if lower <= x <= upper]
 
 
-def main(filename: str, subprogram_names: List[str], repeat: int):
+def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
     program = programs.IO.read(filename)
     program.cleanup()
 
@@ -425,36 +848,48 @@ def main(filename: str, subprogram_names: List[str], repeat: int):
     time_for_original = 0
     time_for_new = 0
     for subprogram in program:
+        subprogram.cfg.remove_edge(edges.Edge(subprogram.cfg.exit, subprogram.cfg.entry))
         subprogram.cfg.dotify()
-        print(subprogram.cfg.name)
-        algorithms = [t0_t1_t2_dominators, graphs.LengauerTarjan, graphs.Cooper]
+
+        subprogram.cfg.shuffle_edges()
+        #graphs.StrongComponents(subprogram.cfg, subprogram.cfg.entry)
+
+        print('{}: |V|={}  |E|={}'.format(subprogram.cfg.name,
+                                          subprogram.cfg.number_of_vertices(),
+                                          subprogram.cfg.number_of_edges()))
+        algorithms = [betts, graphs.LengauerTarjan, graphs.Cooper]
         total_time = {alg: [] for alg in algorithms}
 
         for i in range(repeat):
             subprogram.cfg.shuffle_edges()
-            shuffle(algorithms)
+            mutated = algorithms[:]
+            shuffle(mutated)
 
-            for alg in algorithms:
+            for alg in mutated:
                 begin = time()
-                alg(subprogram.cfg, subprogram.cfg.exit)
-                total_time[alg].append(time() - begin)
+                idom = alg(subprogram.cfg, subprogram.cfg.entry)
+                end = time()
+                total_time[alg].append(end - begin)
+                if alg == betts and verify:
+                    verify_immediate_dominators(subprogram.cfg, idom)
 
-        algorithms = [t0_t1_t2_dominators, graphs.LengauerTarjan, graphs.Cooper]
         for alg in algorithms:
-            total_time[alg] = strip_outliers(total_time[alg])
-            print('{:.5f}'.format(sum(total_time[alg]) / len(total_time[alg])))
+            # print('  '.join(str(t) for t in sorted(total_time[alg])))
+            # total_time[alg] = strip_outliers(total_time[alg])
+            print('{:.8f}'.format(sum(total_time[alg]) / len(total_time[alg])))
 
         print()
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Reduce CFGs to hierarchy of loops')
+    parser = ArgumentParser(description='Compute immediate dominators')
 
     parser.add_argument('--program',
                         help='read the program from this file',
                         required=True)
 
-    parser.add_argument('--repeat',
+    parser.add_argument('-R',
+                        '--repeat',
                         type=int,
                         help='repeat the computations this many times',
                         default=1,
@@ -466,6 +901,12 @@ def parse_command_line():
                         help='only apply the algorithms to these subprograms',
                         metavar='<NAME>')
 
+    parser.add_argument('-V',
+                        '--verify',
+                        action='store_true',
+                        help='verify the immediate dominators',
+                        default=False)
+
     return parser.parse_args()
 
 
@@ -473,4 +914,4 @@ if __name__ == '__main__':
     stack_size(2 ** 26)
     setrecursionlimit(2 ** 30)
     args = parse_command_line()
-    main(args.program, args.subprograms, args.repeat)
+    main(args.program, args.subprograms, args.repeat, args.verify)

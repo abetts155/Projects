@@ -72,10 +72,13 @@ def main(args: Namespace):
     count = 1
     traces = []
     total = len(uncovered)
-    while len(uncovered)/total > 0.1 and count <= args.runs:
-        print(count, len(uncovered)/total)
+    attained = len(uncovered) / total
+    while attained > args.coverage and count <= args.runs:
+        if attained < args.coverage * 2:
+            print('Tests = {}. Coverage attained = {:.2f}%.'.format(count, attained * 100))
         traces.append(generate_trace(program, root, uncovered))
         count += 1
+        attained = len(uncovered) / total
 
     stem, _ = splitext(program.filename)
     with open('traces.{}.txt'.format(stem), 'w') as traces_file:
@@ -97,7 +100,13 @@ def parse_the_command_line():
                         type=int,
                         help='maximum number of runs',
                         metavar='<INT>',
-                        default=50000)
+                        default=20000)
+
+    parser.add_argument('--coverage',
+                        type=float,
+                        help='basic block coverage stopping criterion',
+                        metavar='<FLOAT>',
+                        default=0.1)
 
     return parser.parse_args()
 

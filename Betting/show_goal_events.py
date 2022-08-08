@@ -11,9 +11,10 @@ from cli.cli import (add_database_option,
                      get_unique_team)
 from collections import Counter, OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from lib.helpful import DisplayGrid
+from lib.helpful import DisplayGrid, set_matplotlib_defaults
+from lib.messages import error_message
 from matplotlib import pyplot as plt
-from model.events import Event, create_event_from_row, is_goal
+from model.events import Event, get_events_for_fixture, is_goal
 from model.fixtures import Venue
 from model.leagues import league_register
 from model.seasons import Season
@@ -29,16 +30,16 @@ def parse_command_line():
     add_database_option(parser)
     add_block_option(parser)
     add_history_option(parser)
-    add_team_option(parser)
     add_venue_option(parser)
     add_league_option(parser, True)
+    add_team_option(parser, True)
     add_logging_options(parser)
 
     parser.add_argument('-I',
                         '--intervals',
-                        help='specify the number of time intervals',
+                        help='specify the number of time intervals per half, excluding injury time',
                         type=int,
-                        default=5)
+                        default=3)
 
     return parser.parse_args()
 
@@ -121,41 +122,34 @@ class Summary:
         return sum(self._interval_to_goals.values()) > 0
 
 
-def compute_summaries(database: str,
-                      season: Season,
+def compute_summaries(season: Season,
                       intervals: List[Interval],
                       team: Team,
                       venue: Venue) -> Tuple[Summary]:
-    overall = Summary(intervals)
     for_team = Summary(intervals)
     against_team = Summary(intervals)
 
-    with Database(database) as db:
-        for fixture in season.fixtures():
-            fixture_constraint = "{}={}".format(ColumnNames.Fixture_ID.name, fixture.id)
-            constraints = [fixture_constraint]
+    time_since_goal = 0
+    for fixture in season.fixtures():
+        events = get_events_for_fixture(fixture)
+        for event in events:
+            if is_goal(event.detail):
+                count_for_team = False
+                if venue == Venue.any:
+                    count_for_team = team in [fixture.home_team, fixture.away_team]
+                elif venue == Venue.home and team == fixture.home_team:
+                    count_for_team = True
+                elif venue == Venue.away and team == fixture.away_team:
+                    count_for_team = True
 
-            events_rows = db.fetch_all_rows(Event.sql_table(), constraints)
-            for row in events_rows:
-                event: Event = create_event_from_row(row, fixture)
-                if is_goal(event.detail):
-                    overall.add_goal(event.time, event.extra_time)
+                if count_for_team:
+                    if event.team == team:
+                        for_team.add_goal(event.time, event.extra_time)
+                        time_since_goal
+                    else:
+                        against_team.add_goal(event.time, event.extra_time)
 
-                    count_for_team = False
-                    if venue == Venue.any:
-                        count_for_team = team in [fixture.home_team, fixture.away_team]
-                    elif venue == Venue.home and team == fixture.home_team:
-                        count_for_team = True
-                    elif venue == Venue.away and team == fixture.away_team:
-                        count_for_team = True
-
-                    if count_for_team:
-                        if event.team == team:
-                            for_team.add_goal(event.time, event.extra_time)
-                        else:
-                            against_team.add_goal(event.time, event.extra_time)
-
-    return overall, for_team, against_team
+    return for_team, against_team
 
 
 def create_bar(ax, summary: Summary, bar_width: float, offset: int, color: str):
@@ -164,59 +158,47 @@ def create_bar(ax, summary: Summary, bar_width: float, offset: int, color: str):
     for interval, goals in summary:
         y_values.append(goals)
 
-    ax.bar(indices + bar_width * offset, y_values, width=bar_width, color=color, edgecolor='black')
+    ax.bar(indices + bar_width * offset, y_values, width=bar_width, color=color)
 
     for k, v in zip(indices, y_values):
-        ax.text(k + bar_width * offset, v, str(v), ha='center', fontsize=8, fontweight='bold')
+        ax.text(k + bar_width * offset, v, str(v), ha='center')
 
 
 def show(title: str, season_to_summary, block: bool):
+    set_matplotlib_defaults()
     display = DisplayGrid(len(season_to_summary), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
                             figsize=(20, 10),
-                            squeeze=False,
                             constrained_layout=True)
 
     for i, season in enumerate(sorted(season_to_summary.keys())):
-        overall, for_team, against_team = season_to_summary[season]
+        for_team, against_team = season_to_summary[season]
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x, cell_y]
 
-        if for_team and against_team:
-            bar_width = 0.3
-        else:
-            bar_width = 0.8
-
-        middle = 0
-        create_bar(ax, overall, bar_width, 0, 'silver')
-
-        if for_team and against_team:
-            middle = 1
-            create_bar(ax, for_team, bar_width, 1, 'gold')
-            create_bar(ax, against_team, bar_width, 2, 'black')
+        bar_width = 0.3
+        create_bar(ax, for_team, bar_width, 1, 'gold')
+        create_bar(ax, against_team, bar_width, 2, 'black')
 
         labels = []
-        indices = arange(len(overall))
-        for interval, _ in overall:
+        indices = arange(len(for_team))
+        for interval, _ in for_team:
             labels.append(str(interval))
 
-        ax.set_xticks(indices + bar_width * middle)
-        ax.set_xticklabels(labels, rotation=30, ha='center')
+        ax.set_xticks(indices + bar_width * 1.5)
+        ax.set_xticklabels(labels, ha='center')
 
-        dead_spines = ['top', 'left', 'right']
-        for spine in dead_spines:
-            ax.spines[spine].set_visible(False)
-
+        #ax.set_frame_on(False)
         ax.set_yticks([])
-        ax.set_title('{}'.format(season.year))
+        ax.set_ylabel('{}'.format(season.year))
 
     for i in range(len(season_to_summary), display.nrows * display.ncols):
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
 
-    fig.suptitle(title, fontweight='bold', fontsize=14)
+    fig.suptitle(title, fontweight='bold')
     plt.show(block=block)
 
 
@@ -227,15 +209,13 @@ def main(args: Namespace):
 
     seasons = Season.seasons(league)
     if not seasons:
-        messages.error_message("No season data found")
+        error_message("No season data found")
 
     if args.history:
         seasons = seasons[-args.history:]
 
-    selected_team = None
-    if args.team:
-        (row,) = extract_picked_team(args.database, get_unique_team(args), league)
-        selected_team = Team.inventory[row[0]]
+    (row,) = extract_picked_team(args.database, get_unique_team(args), league)
+    selected_team = Team.inventory[row[0]]
 
     intervals = []
     create_intervals(intervals, args.intervals, 0)
@@ -244,24 +224,21 @@ def main(args: Namespace):
     season_to_summary = OrderedDict()
     with ThreadPoolExecutor(max_workers=8) as executor:
         future_to_data = {executor.submit(compute_summaries,
-                                          args.database,
                                           season,
                                           intervals,
                                           selected_team,
                                           args.venue): season for season in seasons}
         for future in as_completed(future_to_data):
             season = future_to_data[future]
-            overall, for_team, against_team = future.result()
-            if overall:
-                season_to_summary[season] = (overall, for_team, against_team)
+            for_team, against_team = future.result()
+            if for_team and against_team:
+                season_to_summary[season] = (for_team, against_team)
 
-    title = 'Goal times: {} {}'.format(league.country, league.name)
-    if selected_team:
-        title = '{} and {}'.format(title, selected_team.name)
-        if args.venue == Venue.any:
-            title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
-        else:
-            title = '{} ({} only)'.format(title, args.venue.name)
+    title = 'Goal times: {} ({})'.format(selected_team.name, league)
+    if args.venue == Venue.any:
+        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
+    else:
+        title = '{} ({} only)'.format(title, args.venue.name)
 
     show(title, season_to_summary, args.block)
 

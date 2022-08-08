@@ -60,20 +60,11 @@ for game in game_index.values():
     game_times[game.hour].append(game)
 
 
-class Text:
-    BLUE = '\033[94m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
-
-
 today = datetime.today()
 with open('{:02d}_{:02d}_{:02d}_{:02d}.txt'.format(today.month, today.day, today.hour, today.minute), 'w') as out_file:
     for hour, games in game_times.items():
         if games:
-            out_file.write('{}{}\nGames starting at {}\n{}{}'.format(Text.BOLD, '-' * 80, hour, '-' * 80, Text.END))
+            out_file.write('{}\nGames starting at {}\n{}'.format('-' * 80, hour, '-' * 80))
             out_file.write('\n')
             games.sort(key=lambda game: (game.minutes, game.league))
             last_league = None
@@ -82,12 +73,12 @@ with open('{:02d}_{:02d}_{:02d}_{:02d}.txt'.format(today.month, today.day, today
                     last_league = game.league
                     out_file.write('*' * 80)
                     out_file.write('\n')
-                    out_file.write('{}{}{}'.format(Text.RED, game.league, Text.END))
+                    out_file.write(game.league)
                     out_file.write('\n')
                     out_file.write('*' * 80)
                     out_file.write('\n')
 
-                out_file.write('{}{}{}'.format(Text.BLUE, game, Text.END))
+                out_file.write(str(game))
                 out_file.write('\n')
                 out_file.write('\n'.join(game.events))
                 out_file.write('\n')

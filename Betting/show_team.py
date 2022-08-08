@@ -11,12 +11,15 @@ from cli.cli import (add_database_option,
                      get_unique_team)
 from collections import Counter
 from lib import messages
+from lib.helpful import set_matplotlib_defaults
 from matplotlib import pyplot as plt
+from matplotlib import gridspec
 from model.fixtures import Result, Venue, win, loss, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
 from numpy import arange, median
+from re import compile
 from sql.sql import extract_picked_team, load_league, load_teams
 from typing import Callable, List
 
@@ -47,7 +50,18 @@ def parse_command_line():
 
 
 class Statistics:
-    __slots__ = ['wins', 'draws', 'losses', 'goals_for', 'goals_against', 'bts', 'scored', 'conceded', 'goals',
+    goal_re = compile(r'(\d+)(\+)? goal(s)?')
+    score_re = compile(r'(\d|X)-(\d|X)')
+
+    __slots__ = ['wins',
+                 'draws',
+                 'losses',
+                 'goals_for',
+                 'goals_against',
+                 'bts',
+                 'scored',
+                 'conceded',
+                 'goals',
                  'scores']
 
     def __init__(self):
@@ -61,6 +75,43 @@ class Statistics:
         self.conceded = 0
         self.goals = Counter()
         self.scores = Counter()
+
+    def get(self, name: str):
+        if hasattr(self, name.lower()):
+            return getattr(self, name.lower())
+        elif name == 'GF':
+            return self.goals_for
+        elif name == 'GA':
+            return self.goals_against
+        elif Statistics.goal_re.match(name):
+            matches = Statistics.goal_re.findall(name)
+            x, y, z = matches[0]
+            base = int(x)
+            if not y:
+                return self.goals[base]
+            else:
+                total = 0
+                for key in self.goals.keys():
+                    if key >= base:
+                        total += self.goals[key]
+                return total
+        elif Statistics.score_re.match(name):
+            matches = Statistics.score_re.findall(name)
+            x, y = matches[0]
+            if x == 'X':
+                total = 0
+                for home, away in self.scores.keys():
+                    if away == int(y):
+                        total += self.scores[(home, away)]
+                return total
+            elif y == 'X':
+                total = 0
+                for home, away in self.scores.keys():
+                    if home == int(x):
+                        total += self.scores[(home, away)]
+                return total
+            else:
+                return self.scores[(int(x), int(y))]
 
 
 class MatchStatistics:
@@ -152,7 +203,7 @@ def attach_scorelines(ax,
             x_values.append('{}-{}'.format(left, right))
             y_values.append(count)
             effective_index = index + offset
-            ax.text(effective_index, count, str(count), ha='center', fontsize=8)
+            ax.text(effective_index, count, str(count), ha='center')
             if count >= max_count:
                 max_count = count
                 if max_colors is not None:
@@ -171,15 +222,15 @@ def create_dual_bars(ax, left: Statistics, right: Statistics, title: str):
                 left.goals[4], sum([left.goals[k] for k, v in left.goals.items() if k >= 5])]
 
     for x, y in enumerate(y_values):
-        ax.text(x, y, str(y), ha='center', fontsize=8)
+        ax.text(x, y, str(y), ha='center')
 
     attach_scorelines(ax, x_values, y_values, left, int.__gt__)
-    ax.axvline((width + 2 * len(x_values) - 1) / 2, color='red', ls='-', lw=1)
+    ax.axvline((width + 2 * len(x_values) - 1) / 2, ls='-', lw=1)
     attach_scorelines(ax, x_values, y_values, left, int.__eq__)
-    ax.axvline((width + 2 * len(x_values) - 1) / 2, color='red', ls='-', lw=1)
+    ax.axvline((width + 2 * len(x_values) - 1) / 2, ls='-', lw=1)
     attach_scorelines(ax, x_values, y_values, left, int.__lt__)
 
-    ax.bar(x_values, y_values, width=width, align='center', color='lightskyblue', edgecolor='black')
+    ax.bar(x_values, y_values, align='center')
 
     y_values = [right.wins, right.draws, right.losses, right.goals_for, right.goals_against,
                 right.bts, right.scored, right.conceded, right.goals[0], right.goals[1],
@@ -193,14 +244,14 @@ def create_dual_bars(ax, left: Statistics, right: Statistics, title: str):
             y_values.append(0)
 
     for x, y in enumerate(y_values):
-        ax.text(x + width, y, str(y), ha='center', fontsize=8)
+        ax.text(x + width, y, str(y), ha='center')
 
     indices = arange(len(x_values))
-    ax.bar(indices + width, y_values, width=width, align='center', color='whitesmoke', edgecolor='black')
+    ax.bar(indices + width, y_values, width=width, align='center')
 
     boundaries = [(2, 3), (7, 8), (13, 14)]
     for pair in boundaries:
-        ax.axvline((width + pair[0] + pair[1]) / 2, color='black', lw=4)
+        ax.axvline((width + pair[0] + pair[1]) / 2, lw=4)
 
     ax.set_xticks(indices + width / 2)
     ax.set_xticklabels(x_values, rotation=30, ha='center')
@@ -227,7 +278,7 @@ def display_averages(team: Team,
         venue_string = '{} only'.format(venue.name)
 
     fig.suptitle('{}: Averages comparison for {} ({})'.format(year_string, team.name, venue_string),
-                 fontweight='bold', fontsize=14)
+                 fontweight='bold')
 
     create_dual_bars(axes[0], team_stats.first_half, all_stats.first_half, 'First half')
     create_dual_bars(axes[1], team_stats.second_half, all_stats.second_half, 'Second half')
@@ -235,49 +286,41 @@ def display_averages(team: Team,
     plt.show(block=block)
 
 
-def create_single_bar(ax, stats: Statistics, title: str):
-    x_values = ['wins', 'draws', 'losses', 'GF', 'GA', 'BTS', 'Scored', 'Conceded']
-    y_values = [stats.wins, stats.draws, stats.losses, stats.goals_for, stats.goals_against,
-                stats.bts, stats.scored, stats.conceded]
+class Frame:
+    __slots__ = ['x_values', 'cmap']
+
+    def __init__(self, x_values, cmap):
+        self.x_values = x_values
+        self.cmap = cmap
+
+
+def create_single_bar(ax, stats: Statistics, frame: Frame):
+    y_values = []
+    for field in frame.x_values:
+        y_values.append(stats.get(field))
+
+    min_y = min(y_values)
+    max_y = max(y_values)
+    scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
+    ax.bar(frame.x_values,
+           y_values,
+           align='center',
+           color=frame.cmap(scaled) if frame.cmap else 'gray',
+           zorder=1)
+
     for x, y in enumerate(y_values):
-        ax.text(x, y, str(y), ha='center', fontsize=8)
+        ax.text(x, y, str(y), ha='center', zorder=2)
 
-    x_values.extend(['0 goals', '1 goal', '2 goals', '3 goals', '4 goals', '5+ goals'])
-    goals = [stats.goals[0], stats.goals[1], stats.goals[2], stats.goals[3], stats.goals[4],
-             sum([stats.goals[k] for k, v in stats.goals.items() if k >= 5])]
-    maximum = max(goals)
-    max_colors = [len(y_values) + i for i, j in enumerate(goals) if j == maximum]
-    denominator = sum(goals)
-    for x, y in enumerate(goals):
-        percentage = round(100 * (y / denominator))
-        ax.text(x + len(y_values), y, '{} ({}%)'.format(y, percentage), ha='center', fontsize=8)
-    y_values.extend(goals)
-
-    attach_scorelines(ax, x_values, y_values, stats, int.__gt__, max_colors)
-    ax.axvline((2 * len(x_values) - 1) / 2, color='red', ls='-', lw=1)
-    attach_scorelines(ax, x_values, y_values, stats, int.__eq__, max_colors)
-    ax.axvline((2 * len(x_values) - 1) / 2, color='red', ls='-', lw=1)
-    attach_scorelines(ax, x_values, y_values, stats, int.__lt__, max_colors)
-
-    width = 0.5
-    bar = ax.bar(x_values, y_values, width=width, align='center', color='lightskyblue', edgecolor='black')
-    for i in max_colors:
-        bar[i].set_color('dodgerblue')
-        bar[i].set_edgecolor('black')
-
-    boundaries = [(2, 3), (7, 8), (13, 14)]
-    for pair in boundaries:
-        ax.axvline((pair[0] + pair[1]) / 2, color='black', lw=4)
-
-    indices = arange(len(x_values))
-    ax.set_xticks(indices)
-    ax.set_xticklabels(x_values, rotation=30, ha='center')
-    ax.set_title(title)
     ax.set_yticks([])
+    ax.set_frame_on(False)
 
 
 def display_summations(team: Team, venue: Venue, seasons: List[Season], team_stats: MatchStatistics, block: bool):
-    fig, axes = plt.subplots(3, figsize=(25, 13), constrained_layout=True)
+    fig, axs = plt.subplots(nrows=3,
+                            ncols=4,
+                            figsize=(22, 12),
+                            gridspec_kw={'width_ratios': [1, 1.5, 1.5, 3]},
+                            constrained_layout=True)
 
     if len(seasons) > 1:
         year_string = '{}-{}'.format(seasons[0].year, seasons[-1].year)
@@ -290,12 +333,33 @@ def display_summations(team: Team, venue: Venue, seasons: List[Season], team_sta
         venue_string = '{} only'.format(venue.name)
 
     total_games = team_stats.both_halves.wins + team_stats.both_halves.draws + team_stats.both_halves.losses
-    fig.suptitle('{}: {} over {} games ({})'.format(year_string, team.name, total_games, venue_string),
-                 fontweight='bold', fontsize=14)
+    title = '{}: {} over {} games ({})'.format(year_string, team.name, total_games, venue_string)
+    fig.suptitle(title, fontweight='bold')
 
-    create_single_bar(axes[0], team_stats.first_half, 'First half')
-    create_single_bar(axes[1], team_stats.second_half, 'Second half')
-    create_single_bar(axes[2], team_stats.both_halves, 'Both halves')
+    frame_1 = Frame(['wins', 'draws', 'losses'], plt.get_cmap('Wistia'))
+    frame_2 = Frame(['GF', 'GA', 'BTS', 'Scored', 'Conceded'], None)
+    frame_3 = Frame(['0 goals', '1 goal', '2 goals', '3 goals', '4 goals', '5+ goals'], plt.get_cmap('Blues'))
+    frame_4 = Frame(['1-0', '2-0', '2-1', '3-0', '3-1', '3-2', '4-X', '5-X', '6-X',
+                     '0-0', '1-1', '2-2', '3-3',
+                     '0-1', '0-2', '1-2', '0-3', '1-3', '2-3', 'X-4', 'X-5', 'X-6'],
+                    plt.get_cmap('Reds'))
+    frames = [frame_1, frame_2, frame_3, frame_4]
+
+    rows = [[team_stats.first_half, '1st half'],
+            [team_stats.second_half, '2nd half'],
+            [team_stats.both_halves, 'Overall']]
+
+    for i, row in enumerate(rows):
+        for j, frame in enumerate(frames):
+            ax = axs[i, j]
+            create_single_bar(ax, row[0], frame)
+
+            if j == 0:
+                ax.set_ylabel(row[1])
+            elif j == len(frames) - 1:
+                ax.axvline(8.5, color='black', ls='--', lw=0.5)
+                ax.axvline(12.5, color='black', ls='--', lw=0.5)
+
     plt.show(block=block)
 
 
@@ -321,6 +385,7 @@ def reduce(individuals: List[MatchStatistics], func: Callable, scale: int = 1) -
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)

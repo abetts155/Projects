@@ -13,39 +13,38 @@ class Subprogram:
     def __init__(self, cfg: graphs.ControlFlowGraph, call_vertex: vertices.SubprogramVertex):
         if not cfg.name == call_vertex.name:
             raise ValueError('Subprogram name mismatch: Found {} and {}'.format(cfg.name, call_vertex.name))
-        self.__cfg = cfg
-        self.__call_vertex = call_vertex
-        self.__lnt = None
-        self.__ipg = None
+        self._cfg = cfg
+        self._call_vertex = call_vertex
+        self._lnt = None
+        self._ipg = None
 
     @property
     def name(self):
-        return self.__cfg.name
+        return self._cfg.name
 
     @property
     def cfg(self) -> graphs.ControlFlowGraph:
-        return self.__cfg
+        return self._cfg
 
     @property
     def lnt(self) -> graphs.LoopNest:
-        return self.__lnt
+        return self._lnt
 
     @lnt.setter
     def lnt(self, lnt):
-        self.__lnt = lnt
+        self._lnt = lnt
 
     @property
     def call_vertex(self) -> vertices.SubprogramVertex:
-        return self.__call_vertex
+        return self._call_vertex
 
     @property
     def ipg(self):
-        assert self.__ipg, 'No instrumentation point graph for {}'.format(self.__cfg.name)
-        return self.__ipg
+        return self._ipg
 
     @ipg.setter
     def ipg(self, ipg):
-        self.__ipg = ipg
+        self._ipg = ipg
 
 
 class Program:

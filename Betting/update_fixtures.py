@@ -94,6 +94,7 @@ def update_leagues(database: str, leagues: List[str], past: bool, force: bool):
                                                 Characters.FALSE.value if past else Characters.TRUE.value)
             constraints = [name_constraint, country_constraint, current_constraint]
             season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
+            assert season_rows
             for row in season_rows:
                 season = create_season_from_row(row)
                 create_fixtures_json(season.id, force)
@@ -131,6 +132,7 @@ def update_all(database: str, past: bool, force: bool):
             constraints = ["{}='{}'".format(ColumnNames.Country.name, league.country),
                            "{}='{}'".format(ColumnNames.Code.name, league.name)]
             season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
+            assert season_rows
             for season_row in season_rows:
                 season = create_season_from_row(season_row)
                 if season.current:

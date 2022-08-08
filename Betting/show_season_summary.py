@@ -8,7 +8,7 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from collections import Counter, OrderedDict
 from lib import messages
-from lib.helpful import DisplayGrid
+from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from model.fixtures import Half
 from model.leagues import league_register
@@ -72,6 +72,7 @@ def compute_summary(season: Season, half: Half):
 
 
 def show(title: str, season_to_summary, ylim: int, block: bool):
+    set_matplotlib_defaults()
     display = DisplayGrid(len(season_to_summary), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
@@ -106,10 +107,12 @@ def show(title: str, season_to_summary, ylim: int, block: bool):
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x, cell_y]
         bar = ax.bar(x_values, y_values)
+        ax.set_ylabel(season.year)
         ax.set_ylim(0, ylim + 20)
         ax.set_yticks([])
+        ax.set_frame_on(False)
         total_games = summary.home_wins + summary.draws + summary.away_wins
-        ax.set_title('{}: {} games'.format(season.year, total_games))
+        ax.set_title('{} games'.format(total_games))
 
         if total_games:
             results_copy = y_values_results[:]
@@ -149,7 +152,7 @@ def show(title: str, season_to_summary, ylim: int, block: bool):
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
 
-    fig.suptitle(title, fontweight='bold', fontsize=14)
+    fig.suptitle(title, fontweight='bold')
     plt.show(block=block)
 
 

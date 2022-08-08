@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from enum import Enum
 from graphs import edges, graphs, vertices
-from random import choice, randint
+from random import choice, randint, shuffle
 from system import calculations, programs
 from typing import Dict, List, Set, Tuple
 from utils.messages import error_message, verbose_message
@@ -198,67 +198,220 @@ def create_instrumentation_point(vertex: vertices.BasicBlock):
 def instrument_with_a_policy(program: programs.Program,
                              call_vertex: vertices.SubprogramVertex,
                              cfg: graphs.ControlFlowGraph,
-                             policy: InstrumentationPolicy,
-                             vertex_to_ipg: Dict[vertices.Vertex, List]):
+                             policy: InstrumentationPolicy):
+    vertex_to_ipg = {}
     for vertex in cfg:
         if policy == InstrumentationPolicy.full:
-            if program.call_graph.is_call_site(call_vertex, vertex):
-                vertex_to_ipg[vertex] = (create_instrumentation_point(vertex), create_call(vertex))
-            else:
-                point = create_instrumentation_point(vertex)
-                vertex_to_ipg[vertex] = (point, point)
-        elif policy == InstrumentationPolicy.deterministic:
-            if program.call_graph.is_call_site(call_vertex, vertex):
-                vertex_to_ipg[vertex] = (create_instrumentation_point(vertex), create_call(vertex))
-            elif vertex == cfg.entry or vertex == cfg.exit:
-                point = create_instrumentation_point(vertex)
-                vertex_to_ipg[vertex] = (point, point)
+            point = create_instrumentation_point(vertex)
+            vertex_to_ipg[vertex] = point
         elif policy == InstrumentationPolicy.subprograms:
-            if vertex == cfg.entry:
-                if program.call_graph.is_call_site(call_vertex, vertex):
-                    vertex_to_ipg[vertex] = (create_instrumentation_point(vertex), create_call(vertex))
-                else:
-                    point = create_instrumentation_point(vertex)
-                    vertex_to_ipg[vertex] = (point, point)
-            elif vertex == cfg.entry or vertex == cfg.exit:
+            if vertex == cfg.entry or vertex == cfg.exit:
                 point = create_instrumentation_point(vertex)
-                vertex_to_ipg[vertex] = (point, point)
-            elif program.call_graph.is_call_site(call_vertex, vertex):
-                call = create_call(vertex)
-                vertex_to_ipg[vertex] = (call, call)
+                vertex_to_ipg[vertex] = point
+        elif policy == InstrumentationPolicy.deterministic:
+            if vertex == cfg.entry or vertex == cfg.exit or program.call_graph.is_call_site(call_vertex, vertex):
+                point = create_instrumentation_point(vertex)
+                vertex_to_ipg[vertex] = point
+        else:
+            assert False
+
+    return vertex_to_ipg
 
 
 def instrument_with_a_budget(program: programs.Program,
                              call_vertex: vertices.SubprogramVertex,
                              cfg: graphs.ControlFlowGraph,
                              budget: int,
-                             vertex_to_ipg: Dict[vertices.Vertex, List]):
-    point = create_instrumentation_point(cfg.entry)
-    if program.call_graph.is_call_site(call_vertex, cfg.entry):
-        vertex_to_ipg[cfg.entry] = (point, create_call(cfg.entry))
-    else:
-        vertex_to_ipg[cfg.entry] = (point, point)
+                             randomise: bool) -> graphs.ControlFlowGraph:
+    if budget < 2 or budget > cfg.number_of_vertices():
+        error_message('Subprogram: {}, CFG size: {}, budget: {}'.format(call_vertex.name,
+                                                                        cfg.number_of_vertices(),
+                                                                        budget))
 
-    point = create_instrumentation_point(cfg.exit)
-    vertex_to_ipg[cfg.exit] = (point, point)
+    def instrument(vertex_to_ipg: Dict, order: List[vertices.BasicBlock]):
+        nonlocal budget
 
-    budget -= 2
-    candidates = [vertex for vertex in cfg if vertex != cfg.entry and vertex != cfg.exit]
-    while budget > 0:
-        budget -= 1
-        vertex = choice(candidates)
-        candidates.remove(vertex)
-        point = create_instrumentation_point(vertex)
-        if program.call_graph.is_call_site(call_vertex, vertex):
-            vertex_to_ipg[vertex] = (point, create_call(vertex))
+        if randomise:
+            shuffle(order)
+
+        while budget > 0 and order:
+            vertex = order.pop(0)
+            budget -= 1
+            point = create_instrumentation_point(vertex)
+            vertex_to_ipg[vertex] = point
+
+    high_priority = []
+    medium_priority = []
+    low_priority = []
+    for vertex in cfg:
+        if vertex in [cfg.entry, cfg.exit]:
+            high_priority.append(vertex)
         else:
-            vertex_to_ipg[vertex] = (point, point)
+            if program.call_graph.is_call_site(call_vertex, vertex):
+                medium_priority.append(vertex)
+            else:
+                low_priority.append(vertex)
+
+    vertex_to_ipg = {}
+    instrument(vertex_to_ipg, high_priority)
+    instrument(vertex_to_ipg, medium_priority)
+    instrument(vertex_to_ipg, low_priority)
+
+    return vertex_to_ipg
+
+
+def create_instrumented_cfg(program: programs.Program, cfg: graphs.ControlFlowGraph, vertex_to_ipg: Dict):
+    instrumented_cfg = graphs.ControlFlowGraph(program, cfg.name)
+    for vertex in cfg:
+        instrumented_cfg.add_vertex(vertex)
+        if vertex in vertex_to_ipg:
+            instrumented_cfg.add_vertex(vertex_to_ipg[vertex])
+
+    if cfg.entry in vertex_to_ipg:
+        instrumented_cfg.entry = vertex_to_ipg[cfg.entry]
+    else:
+        instrumented_cfg.entry = cfg.entry
+
+    if cfg.exit in vertex_to_ipg:
+        instrumented_cfg.exit = vertex_to_ipg[cfg.exit]
+    else:
+        instrumented_cfg.exit = cfg.exit
 
     for vertex in cfg:
-        if program.call_graph.is_call_site(call_vertex, vertex):
-            if vertex not in vertex_to_ipg:
-                call = create_call(vertex)
-                vertex_to_ipg[vertex] = (call, call)
+        if vertex in vertex_to_ipg:
+            if vertex == cfg.exit:
+                instrumented_cfg.add_edge(edges.Edge(vertex, vertex_to_ipg[vertex]))
+            else:
+                instrumented_cfg.add_edge(edges.Edge(vertex_to_ipg[vertex], vertex))
+
+        for edge in cfg.successors(vertex):
+            if vertex == cfg.exit and vertex in vertex_to_ipg:
+                true_predecessor = vertex_to_ipg[vertex]
+            else:
+                true_predecessor = vertex
+
+            if edge.successor() in vertex_to_ipg:
+                if edge.successor() == cfg.exit:
+                    true_successor = edge.successor()
+                else:
+                    true_successor = vertex_to_ipg[edge.successor()]
+            else:
+                true_successor = edge.successor()
+
+            instrumented_cfg.add_edge(edges.Edge(true_predecessor, true_successor))
+
+    return instrumented_cfg
+
+
+def transform_type_of_call_sites(program: programs.Program,
+                                 call_vertex: vertices.SubprogramVertex,
+                                 cfg: graphs.ControlFlowGraph):
+    vertex_to_call = {}
+    for vertex in cfg:
+        callee = program.call_graph.is_call_site(call_vertex, vertex)
+        if callee:
+            call_site = vertices.CallVertex(vertices.Vertex.get_vertex_id(), callee.name)
+            vertex_to_call[vertex] = call_site
+
+    for call_site in vertex_to_call.values():
+        cfg.add_vertex(call_site)
+
+    for vertex, call_site in vertex_to_call.items():
+        for predecessor_edge in cfg.predecessors(vertex):
+            predecessor = predecessor_edge.predecessor()
+            if predecessor in vertex_to_call:
+                predecessor = vertex_to_call[predecessor]
+            cfg.add_edge(edges.Edge(predecessor, call_site))
+
+        for successor_edge in cfg.successors(vertex):
+            successor = successor_edge.successor()
+            if successor in vertex_to_call:
+                successor = vertex_to_call[successor]
+            cfg.add_edge(edges.Edge(call_site, successor))
+
+        cfg.remove_vertex(vertex)
+
+
+def copy_callee(callee_cfg: graphs.ControlFlowGraph):
+    vertex_to_copy = {}
+    vertex_set = set()
+    edge_set = set()
+    for vertex in callee_cfg:
+        if isinstance(vertex, vertices.CallVertex):
+            cloned_vertex = vertices.CallVertex(vertices.Vertex.get_vertex_id(), vertex.callee)
+        else:
+            cloned_vertex = vertices.BasicBlock(vertices.Vertex.get_vertex_id())
+
+        vertex_to_copy[vertex] = cloned_vertex
+
+    the_entry = None
+    the_exit = None
+    for vertex in callee_cfg:
+        cloned_vertex = vertex_to_copy[vertex]
+        vertex_set.add(cloned_vertex)
+
+        if vertex != callee_cfg.exit:
+            for successor_edge in callee_cfg.successors(vertex):
+                successor = successor_edge.successor()
+                successor = vertex_to_copy[successor]
+                edge_set.add(edges.Edge(cloned_vertex, successor))
+
+        if vertex == callee_cfg.entry:
+            the_entry = cloned_vertex
+
+        if vertex == callee_cfg.exit:
+            the_exit = cloned_vertex
+
+    return vertex_set, edge_set, the_entry, the_exit
+
+
+def simplify(program: programs.Program,
+             call_vertex: vertices.SubprogramVertex,
+             instrumented_cfgs: Dict):
+    cfg: graphs.ControlFlowGraph = instrumented_cfgs[call_vertex.name]
+    inline = {}
+    for vertex in cfg:
+        if isinstance(vertex, vertices.CallVertex):
+            callee_cfg = instrumented_cfgs[vertex.callee]
+            instrumentation_points = 0
+            chained_calls = 0
+            for callee_vertex in callee_cfg:
+                if isinstance(callee_vertex, vertices.InstrumentationVertex):
+                    instrumentation_points += 1
+                elif isinstance(callee_vertex, vertices.CallVertex):
+                    chained_calls += 1
+
+            if instrumentation_points == 0:
+                if chained_calls == 0:
+                    inline[vertex] = None
+                else:
+                    inline[vertex] = callee_cfg
+
+    for dead, callee_cfg in inline.items():
+        if callee_cfg is None:
+            for predecessor_edge in cfg.predecessors(dead):
+                predecessor = predecessor_edge.predecessor()
+                for successor_edge in cfg.successors(dead):
+                    successor = successor_edge.successor()
+                    if not cfg.has_edge(predecessor, successor):
+                        cfg.add_edge(edges.Edge(predecessor, successor))
+        else:
+            vertex_set, edge_set, the_entry, the_exit = copy_callee(callee_cfg)
+            for vertex in vertex_set:
+                cfg.add_vertex(vertex)
+
+            for edge in edge_set:
+                cfg.add_edge(edge)
+
+            for predecessor_edge in cfg.predecessors(dead):
+                predecessor = predecessor_edge.predecessor()
+                cfg.add_edge(edges.Edge(predecessor, the_entry))
+
+            for successor_edge in cfg.successors(dead):
+                successor = successor_edge.successor()
+                cfg.add_edge(edges.Edge(the_exit, successor))
+
+        cfg.remove_vertex(dead)
 
 
 def determinise(ipg: graphs.FlowGraph):
@@ -290,35 +443,29 @@ def determinise(ipg: graphs.FlowGraph):
                         ipg.remove_vertex(dead)
 
 
-def create_ipg(program: programs.Program, cfg: graphs.ControlFlowGraph, vertex_to_ipg: Dict[vertices.Vertex, Tuple]):
-    ipg = graphs.FlowGraph(program, cfg.name)
-
+def create_ipg(program: programs.Program, instrumented_cfg: graphs.ControlFlowGraph):
     in_data = {}
     out_data = {}
-    for vertex in cfg:
+    vertex_to_ipg = {}
+    for vertex in instrumented_cfg:
         in_data[vertex] = set()
         out_data[vertex] = set()
 
-        if vertex in vertex_to_ipg:
-            the_entry, the_exit = vertex_to_ipg[vertex]
-            ipg.add_vertex(the_entry)
-
-            if the_entry != the_exit:
-                ipg.add_vertex(the_exit)
-                ipg.add_edge(edges.Edge(the_entry, the_exit))
-
-    (ipg.entry, _) = vertex_to_ipg[cfg.entry]
-    (ipg.exit, _) = vertex_to_ipg[cfg.exit]
+        if isinstance(vertex, vertices.InstrumentationVertex):
+            vertex_to_ipg[vertex] = vertex
+        elif isinstance(vertex, vertices.CallVertex):
+            vertex_to_ipg[vertex] = vertex
 
     changed = True
-    dfs = graphs.DepthFirstSearch(cfg, cfg.entry)
+    dfs = graphs.DepthFirstSearch(instrumented_cfg, instrumented_cfg.entry)
+    assert len(dfs.post_order()) == instrumented_cfg.number_of_vertices()
     while changed:
         changed = False
 
         for vertex in reversed(dfs.post_order()):
             size = len(in_data[vertex])
 
-            for edge in cfg.predecessors(vertex):
+            for edge in instrumented_cfg.predecessors(vertex):
                 in_data[vertex].update(out_data[edge.predecessor()])
 
             if vertex in vertex_to_ipg:
@@ -329,14 +476,18 @@ def create_ipg(program: programs.Program, cfg: graphs.ControlFlowGraph, vertex_t
             if size != len(in_data[vertex]):
                 changed = True
 
+    ipg = graphs.FlowGraph(program, instrumented_cfg.name)
+    for vertex in vertex_to_ipg.values():
+        ipg.add_vertex(vertex)
+
+    ipg.entry = instrumented_cfg.entry
+    ipg.exit = instrumented_cfg.exit
+
     for successor, predecessors in in_data.items():
         if successor in vertex_to_ipg:
             for predecessor in predecessors:
                 if predecessor in vertex_to_ipg:
-                    ipg.add_edge(edges.Edge(vertex_to_ipg[predecessor][1],
-                                            vertex_to_ipg[successor][0]))
-
-    determinise(ipg)
+                    ipg.add_edge(edges.Edge(vertex_to_ipg[predecessor], vertex_to_ipg[successor]))
     return ipg
 
 
@@ -433,12 +584,10 @@ class ParsingPosition:
 
 def parse_traces(program: programs.Program,
                  root_vertex: vertices.SubprogramVertex,
-                 traces_filename: str,
-                 labels: Set[int],
                  call_table: Dict[int, str],
                  trace: List,
-                 wcet_data: Dict[str, MeasuredData],
-                 measured_times: Set[int]):
+                 wcet_data: Dict[str, MeasuredData]):
+    measured_times = set()
     sentinel = 0
     root_subprogram = program[root_vertex.name]
     origin = ParsingPosition(root_subprogram.ipg,
@@ -509,100 +658,221 @@ def parse_traces(program: programs.Program,
 
         before = tick
 
+    return measured_times
+
+
+def instrumentation_budget_pipeline(program: programs.Program,
+                                    root_subprogram: programs.Subprogram,
+                                    total_budget: int,
+                                    randomise: bool,
+                                    instrumented_cfgs: Dict):
+    remaining_budget = total_budget
+    budgets = {}
+    minimum = 2
+
+    if remaining_budget >= minimum * len(program):
+        for subprogram in program:
+            budgets[subprogram] = minimum
+            remaining_budget -= minimum
+    else:
+        candidates = [subprogram for subprogram in program]
+        root_index = candidates.index(root_subprogram)
+        candidates[0], candidates[root_index] = candidates[root_index], candidates[0]
+        while remaining_budget >= minimum and candidates:
+            subprogram = candidates.pop(0)
+            budgets[subprogram] = minimum
+            remaining_budget -= minimum
+
+        for subprogram in candidates:
+            budgets[subprogram] = 0
+
+    calls = {}
+    for subprogram in program:
+        calls[subprogram] = 0
+        if budgets[subprogram]:
+            for vertex in subprogram.cfg:
+                if vertex != subprogram.cfg.entry and program.call_graph.is_call_site(subprogram.call_vertex, vertex):
+                    calls[subprogram] += 1
+
+    if remaining_budget >= sum(calls.values()):
+        for subprogram in program:
+            budgets[subprogram] += calls[subprogram]
+            remaining_budget -= calls[subprogram]
+    else:
+        candidates = [subprogram for subprogram in program if calls[subprogram]]
+        while remaining_budget > 0:
+            if randomise:
+                subprogram = choice(candidates)
+            else:
+                subprogram = candidates[0]
+
+            upper_bound = min(remaining_budget, calls[subprogram])
+            if randomise:
+                budget = randint(1, upper_bound)
+            else:
+                budget = upper_bound
+
+            budgets[subprogram] += budget
+            calls[subprogram] -= budget
+            remaining_budget -= budget
+
+            if calls[subprogram] == 0:
+                candidates.remove(subprogram)
+
+    candidates = [subprogram for subprogram in program
+                  if 0 < budgets[subprogram] < subprogram.cfg.number_of_vertices()]
+    while remaining_budget > 0:
+        if randomise:
+            subprogram = choice(candidates)
+        else:
+            subprogram = candidates[0]
+
+        max_budget = subprogram.cfg.number_of_vertices() - budgets[subprogram]
+        upper_bound = min(remaining_budget, max_budget)
+        if randomise:
+            budget = randint(1, upper_bound)
+        else:
+            budget = upper_bound
+
+        budgets[subprogram] += budget
+        remaining_budget -= budget
+        if budgets[subprogram] == subprogram.cfg.number_of_vertices():
+            candidates.remove(subprogram)
+
+    assert remaining_budget == 0, 'Remaining budget is {}'.format(remaining_budget)
+
+    for call_vertex in program.call_graph:
+        subprogram = program[call_vertex.name]
+        budget = budgets[subprogram]
+        vertex_to_ipg = {}
+        if budget > 0:
+            vertex_to_ipg = instrument_with_a_budget(program, call_vertex, subprogram.cfg, budget, randomise)
+        instrumented_cfg = create_instrumented_cfg(program, subprogram.cfg, vertex_to_ipg)
+        transform_type_of_call_sites(program, call_vertex, instrumented_cfg)
+        instrumented_cfgs[subprogram.name] = instrumented_cfg
+
+
+def instrumentation_policy_pipeline(program: programs.Program, policy: InstrumentationPolicy, instrumented_cfgs: Dict):
+    for call_vertex in program.call_graph:
+        subprogram = program[call_vertex.name]
+        vertex_to_ipg = instrument_with_a_policy(program, call_vertex, subprogram.cfg, policy)
+        instrumented_cfg = create_instrumented_cfg(program, subprogram.cfg, vertex_to_ipg)
+        transform_type_of_call_sites(program, call_vertex, instrumented_cfg)
+        instrumented_cfgs[subprogram.name] = instrumented_cfg
+
+
+def do_hybrid_analysis_wcet_calculation(program: programs.Program,
+                                        root_vertex: vertices.SubprogramVertex,
+                                        dfs: graphs.DepthFirstSearch,
+                                        wcet_data: Dict) -> int:
+    wcets = {}
+    for call_vertex in dfs.post_order():
+        subprogram = program[call_vertex.name]
+        if subprogram.ipg:
+            vertex_times = {}
+            for vertex in subprogram.ipg:
+                if isinstance(vertex, vertices.CallVertex):
+                    vertex_times[vertex] = wcets[vertex.callee]
+                else:
+                    vertex_times[vertex] = 0
+
+            subprogram_data = wcet_data[call_vertex.name]
+            wcet = statically_analyse_ipg(subprogram.ipg, subprogram.lnt, subprogram_data, vertex_times)
+            wcets[call_vertex.name] = wcet
+        else:
+            wcets[call_vertex.name] = 0
+
+    return wcets[root_vertex.name]
+
+
+def calculate_coverage_and_instrumentation_stats(program: programs.Program, wcet_data: Dict):
+    instrumentation_points = 0
+    total_transitions = 0
+    uncovered_transitions = 0
+    for subprogram in program:
+        if subprogram.ipg:
+            for vertex in subprogram.ipg:
+                if isinstance(vertex, vertices.InstrumentationVertex):
+                    instrumentation_points += 1
+
+            subprogram_data = wcet_data[subprogram.name]
+            for edge, time in subprogram_data.times.items():
+                total_transitions += 1
+                if time == 0:
+                    uncovered_transitions += 1
+
+    coverage = 100 * (total_transitions - uncovered_transitions) // total_transitions
+    return coverage, instrumentation_points
+
 
 def hybrid_analysis(program: programs.Program,
                     root_vertex: vertices.SubprogramVertex,
                     dfs: graphs.DepthFirstSearch,
                     traces_filename: str,
                     policy: InstrumentationPolicy,
-                    total_budget: int):
+                    total_budget: int,
+                    randomise: bool):
+    verbose_message('Creating instrumented CFGs')
+    instrumented_cfgs = {}
     if policy == InstrumentationPolicy.none:
-        minimum = 2
-        candidates = []
-        budgets = {}
-        for subprogram in program:
-            budgets[subprogram] = minimum
-            candidates.append(subprogram)
-
-        remaining_budget = total_budget - minimum * len(program)
-        while remaining_budget > 0:
-            subprogram = choice(candidates)
-            max_budget = subprogram.cfg.number_of_vertices() - budgets[subprogram]
-            budget = randint(1, min(remaining_budget, max_budget))
-            budgets[subprogram] += budget
-            remaining_budget -= budget
-            if budgets[subprogram] == subprogram.cfg.number_of_vertices():
-                candidates.remove(subprogram)
-
-        assert remaining_budget == 0
-
-        for call_vertex in dfs.post_order():
-            subprogram = program[call_vertex.name]
-            vertex_to_ipg = {}
-            instrument_with_a_budget(program, call_vertex, subprogram.cfg, budgets[subprogram], vertex_to_ipg)
-            subprogram.ipg = create_ipg(program, subprogram.cfg, vertex_to_ipg)
+        root_subprogram = program[root_vertex.name]
+        instrumentation_budget_pipeline(program, root_subprogram, total_budget, randomise, instrumented_cfgs)
     else:
-        for call_vertex in dfs.post_order():
-            subprogram = program[call_vertex.name]
-            vertex_to_ipg = {}
-            instrument_with_a_policy(program, call_vertex, subprogram.cfg, policy, vertex_to_ipg)
-            subprogram.ipg = create_ipg(program, subprogram.cfg, vertex_to_ipg)
+        instrumentation_policy_pipeline(program, policy, instrumented_cfgs)
 
-    labels = {0}
+    labels = {vertices.InstrumentationVertex.ghost_value()}
     call_table = {}
     wcet_data = {}
-    for subprogram in program:
-        subprogram.lnt = create_lnt(subprogram.ipg)
-        wcet_data[subprogram.name] = MeasuredData(subprogram)
-        for vertex in subprogram.ipg:
-            if isinstance(vertex, vertices.InstrumentationVertex):
-                labels.add(vertex.label)
-
-        assert isinstance(subprogram.ipg.entry, vertices.InstrumentationVertex)
-        call_table[subprogram.ipg.entry.label] = subprogram.name
-
-    trace = filter_traces(labels, traces_filename)
-    measured_times = set()
-    parse_traces(program, root_vertex, traces_filename, labels, call_table, trace, wcet_data, measured_times)
-    print('Dynamic WCET estimate: {}'.format(max(measured_times)))
-
-    wcets = {}
-    instrumentation_points = set()
-    uncovered_transitions = 0
-    total_transitions = 0
+    verbose_message('Creating IPGs')
     for call_vertex in dfs.post_order():
         subprogram = program[call_vertex.name]
-        vertex_times = {}
-        for vertex in subprogram.ipg:
-            if isinstance(vertex, vertices.CallVertex):
-                vertex_times[vertex] = wcets[vertex.callee]
-            else:
-                vertex_times[vertex] = 0
-                instrumentation_points.add(vertex)
+        simplify(program, call_vertex, instrumented_cfgs)
+        instrumented_cfg = instrumented_cfgs[subprogram.name]
 
-        subprogram_data = wcet_data[call_vertex.name]
-        wcet = statically_analyse_ipg(subprogram.ipg, subprogram.lnt, subprogram_data, vertex_times)
-        wcets[call_vertex.name] = wcet
+        instrumentation_points = len([vertex for vertex in instrumented_cfg
+                                      if isinstance(vertex, vertices.InstrumentationVertex)])
 
-        for edge, time in subprogram_data.times.items():
-            total_transitions += 1
-            if time == 0:
-                uncovered_transitions += 1
+        if instrumentation_points > 0:
+            subprogram.ipg = create_ipg(program, instrumented_cfg)
+            determinise(subprogram.ipg)
+            subprogram.lnt = create_lnt(subprogram.ipg)
+            wcet_data[subprogram.name] = MeasuredData(subprogram)
+            for vertex in subprogram.ipg:
+                if isinstance(vertex, vertices.InstrumentationVertex):
+                    labels.add(vertex.label)
 
-    print('Hybrid WCET estimate: {}'.format(wcets[root_vertex.name]))
-    coverage = 100 * (total_transitions - uncovered_transitions) // total_transitions
+            assert isinstance(subprogram.ipg.entry, vertices.InstrumentationVertex)
+            call_table[subprogram.ipg.entry.label] = subprogram.name
+
+    trace = filter_traces(labels, traces_filename)
+    measured_times = parse_traces(program, root_vertex, call_table, trace, wcet_data)
+    print('Dynamic WCET estimate: {}'.format(max(measured_times)))
+
+    wcet = do_hybrid_analysis_wcet_calculation(program, root_vertex, dfs, wcet_data)
+    print('Hybrid WCET estimate: {}'.format(wcet))
+
+    coverage, instrumentation_points = calculate_coverage_and_instrumentation_stats(program, wcet_data)
     print('{}% transition coverage achieved'.format(coverage))
-    print('{} instrumentation points'.format(len(instrumentation_points)))
+    print('{} instrumentation points'.format(instrumentation_points))
 
 
 def main(args: Namespace):
     program = programs.IO.read(args.program)
+    program.call_graph.dotify()
     root = program.call_graph.get_root()
 
+    calls = 0
+    for subprogram in program:
+        for vertex in subprogram.cfg:
+            if program.call_graph.is_call_site(subprogram.call_vertex, vertex):
+                calls += 1
+
+    print('#Subprograms: {}'.format(len(program)))
+    print('#Calls: {}'.format(calls))
+
     if args.budget:
-        if args.budget < 2 * len(program):
-            error_message('Each subprogram requires at least two instrumentation points; '
-                          'the given program thus needs at least {}.'.format(len(program) * 2))
+        if args.budget < 2:
+            error_message('The minimum number of allowed instrumentation points is 2.')
 
         max_budget = sum([subprogram.cfg.number_of_vertices() for subprogram in program])
         if args.budget > max_budget:
@@ -617,7 +887,7 @@ def main(args: Namespace):
     verbose_message('Root is {}'.format(root.name))
     dfs = graphs.DepthFirstSearch(program.call_graph, root)
     static_analysis(program, root, dfs)
-    hybrid_analysis(program, root, dfs, args.traces, args.policy, args.budget)
+    hybrid_analysis(program, root, dfs, args.traces, args.policy, args.budget, args.randomise)
 
 
 def check_arguments(args: Namespace):
@@ -646,6 +916,11 @@ def parse_the_command_line():
                         help='choose the instrumentation budget',
                         type=int,
                         default=0)
+
+    parser.add_argument('--randomise',
+                        action='store_true',
+                        help='where a choice exists, pick randomly',
+                        default=False)
 
     return parser.parse_args()
 
