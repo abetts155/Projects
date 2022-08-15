@@ -230,7 +230,7 @@ def main(args: Namespace):
 
         seasons = Season.seasons(league)
         if not seasons:
-            messages.warning_message("No season data found")
+            messages.warning_message("No season data found for {} {}".format(league.country, league.name))
         else:
             if args.history:
                 seasons = seasons[-args.history:]

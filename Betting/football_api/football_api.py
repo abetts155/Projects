@@ -38,3 +38,10 @@ def get_events(fixture: int):
                        '{}/events/{}'.format(base_url, fixture),
                        headers=headers)
     return response
+
+
+def get_timezone():
+    response = request('GET',
+                       '{}/timezone'.format(base_url),
+                       headers=headers)
+    return response

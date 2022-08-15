@@ -92,8 +92,9 @@ class Season:
 
     @classmethod
     def seasons(cls, league: League, ordered: bool = True):
+        massaged_league_name = league.name.replace("''", "'").lower()
         seasons = [season for season in Season.inventory.values()
-                   if season.country == league.country and season.name == league.name.replace("''", "'")]
+                   if season.country == league.country and season.name.lower() == massaged_league_name]
         if ordered:
             seasons.sort(key=lambda season: season.year)
         return seasons

@@ -63,9 +63,6 @@ header 'Draws (second half)'
 header 'Draws (consecutive halves)'
 ./fixtures.sh -E draw --half separate --minimum 5 "$@"
 
-header 'Wins (consecutive halves)'
-./fixtures.sh -E win --half separate --minimum 5 "$@"
-
 header 'No draws (consecutive halves)'
 ./fixtures.sh -E draw -n --half separate --minimum 10 "$@"
 

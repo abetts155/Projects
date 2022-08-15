@@ -271,7 +271,7 @@ league_register = OrderedDict({
     'ISL2': League('Iceland', '1. Deild'),
     'ISL3': League('Iceland', '2. Deild'),
     'ISL1W': League('Iceland', 'Úrvalsdeild Women'),
-    #'ISR1': League('Israel', "Ligat ha''Al"),
+    'ISR1': League('Israel', "Ligat Ha''al"),
     'ISR2': League('Israel', 'Liga Leumit'),
     'ISR3': League('Israel', 'Liga Alef'),
     'ITA1': League('Italy', 'Serie A'),

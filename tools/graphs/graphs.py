@@ -206,12 +206,12 @@ class FlowGraph(DirectedGraph, ProgramData):
 
     def pre_dominator_tree(self):
         if self._pre_dominator_tree is None:
-            self._pre_dominator_tree = LengauerTarjan(self, self.entry)
+            self._pre_dominator_tree = Tarjan(self, self.entry)
         return self._pre_dominator_tree
 
     def post_dominator_tree(self):
         if self._post_dominator_tree is None:
-            self._post_dominator_tree = LengauerTarjan(self, self.exit)
+            self._post_dominator_tree = Tarjan(self, self.exit)
         return self._post_dominator_tree
 
     def dotify(self, suffix=''):
@@ -531,7 +531,7 @@ class Tree(DirectedGraph):
         return a == v or self.is_proper_ancestor(a, v)
 
 
-class LengauerTarjan(ProgramData):
+class Tarjan(ProgramData):
     class Type(Enum):
         PRE = 0
         POST = 1
@@ -542,9 +542,9 @@ class LengauerTarjan(ProgramData):
         self._root = root
         self.__compute(flow_graph)
         if self._root == flow_graph.entry:
-            self._type = LengauerTarjan.Type.PRE
+            self._type = Tarjan.Type.PRE
         else:
-            self._type = LengauerTarjan.Type.POST
+            self._type = Tarjan.Type.POST
 
     def __compute(self, flow_graph):
         def link(left: vertices.Vertex, right: vertices.Vertex):
@@ -677,7 +677,7 @@ class LengauerTarjan(ProgramData):
             for e in self.successors(v):
                 data.append(e.dotify())
 
-        if self._type == LengauerTarjan.Type.PRE:
+        if self._type == Tarjan.Type.PRE:
             suffix = 'pre'
         else:
             suffix = 'post'
@@ -686,7 +686,7 @@ class LengauerTarjan(ProgramData):
 
 
 class DominatorGraph(FlowGraph):
-    def __init__(self, pre_dominator_tree: LengauerTarjan, post_dominator_tree: LengauerTarjan):
+    def __init__(self, pre_dominator_tree: Tarjan, post_dominator_tree: Tarjan):
         FlowGraph.__init__(self, pre_dominator_tree.program, pre_dominator_tree.name)
 
         for v in pre_dominator_tree:
@@ -712,7 +712,7 @@ class DominatorGraph(FlowGraph):
 
 
 class DominanceFrontiers:
-    def __init__(self, g: FlowGraph, t: LengauerTarjan):
+    def __init__(self, g: FlowGraph, t: Tarjan):
         self._frontier = {v: set() for v in g}
         self.__compute(g, t)
 
@@ -1218,8 +1218,8 @@ class SuperBlockGraph(DirectedGraph, ProgramData):
             ppg.add_edge(edge)
             added.add(edge)
 
-        self.__pre_dominator_tree = LengauerTarjan(ppg, ppg.entry)
-        self.__post_dominator_tree = LengauerTarjan(ppg, ppg.exit)
+        self.__pre_dominator_tree = Tarjan(ppg, ppg.entry)
+        self.__post_dominator_tree = Tarjan(ppg, ppg.exit)
 
         for edge in added:
             ppg.remove_edge(edge)

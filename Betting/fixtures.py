@@ -58,7 +58,7 @@ def parse_command_line():
                         help='left-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=0)
+                        default=datetime.now().hour)
 
     parser.add_argument('-u',
                         '--upper',
@@ -66,6 +66,12 @@ def parse_command_line():
                         metavar='<INT>',
                         type=int,
                         default=23)
+
+    parser.add_argument('-T',
+                        '--time',
+                        action='store_true',
+                        help='sort by time rather than by league',
+                        default=False)
 
     return parser.parse_args()
 
@@ -81,10 +87,11 @@ def filter_fixtures(fixtures: List[Fixture], left_datetime: datetime, right_date
 
 
 def output_fixtures(league: League, fixtures: List[Fixture]):
-    print("{} Fixtures in {} {} {}".format('*' * 80 + '\n',
-                                           prettify(league.country),
-                                           league.name,
-                                           '\n' + '*' * 80))
+    print("{}Fixtures in {} {} {}".format('*' * 80 + '\n',
+                                          prettify(league.country),
+                                          league.name,
+                                          '\n' + '*' * 80))
+
     for fixture in fixtures:
         next_match_message = 'Next match: {} {} vs. {}'.format(fixture.date.strftime('%Y-%m-%d %H.%M'),
                                                                fixture.home_team.name,
@@ -135,8 +142,7 @@ def main(args: Namespace):
     left_datetime = datetime(args.year, args.month, args.day, args.lower)
     right_datetime = datetime(args.year, args.month, args.day, args.upper)
 
-    print(left_datetime, right_datetime)
-
+    season_fixtures = {}
     with Database(args.database) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())
         for row in team_rows:
@@ -170,7 +176,26 @@ def main(args: Namespace):
                                           args.half,
                                           args.minimum)
                     else:
-                        output_fixtures(league, fixtures)
+                        season_fixtures[league] = fixtures
+
+    if args.time:
+        tick = left_datetime.hour
+
+        while tick < 24:
+            for league, fixtures in season_fixtures.items():
+                hourly_fixtures = []
+                for fixture in fixtures:
+                    match_date = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
+                    if match_date.hour == tick:
+                        hourly_fixtures.append(fixture)
+
+                if hourly_fixtures:
+                    output_fixtures(league, hourly_fixtures)
+
+            tick += 1
+    else:
+        for league, fixtures in season_fixtures.items():
+            output_fixtures(league, fixtures)
 
 
 if __name__ == '__main__':

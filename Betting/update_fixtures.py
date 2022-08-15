@@ -6,8 +6,8 @@ from cli.cli import (add_database_option,
                      add_past_option,
                      add_force_option)
 from datetime import datetime, timedelta
-from football_api.football_api import get_fixtures
-from football_api.structure import get_fixtures_json, store
+from football_api.football_api import get_fixtures, get_timezone
+from football_api.structure import get_fixtures_json, get_timezone_json, store
 from json import load
 from lib import messages
 from model.fixtures import (Fixture,

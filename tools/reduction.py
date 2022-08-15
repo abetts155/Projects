@@ -50,7 +50,7 @@ def ramalingam_loops(cfg: graphs.ControlFlowGraph):
     for vertex in cfg:
         containment[vertex] = vertex
 
-    tarjan_tree = graphs.LengauerTarjan(cfg, cfg.entry)
+    tarjan_tree = graphs.Tarjan(cfg, cfg.entry)
     start = {}
     finish = {}
     clock = 0
@@ -117,7 +117,7 @@ def betts_loops(cfg: graphs.ControlFlowGraph):
 
 def verify_immediate_dominators(cfg: graphs.ControlFlowGraph,
                                 idom: Dict[vertices.Vertex, vertices.Vertex]):
-    tarjan_tree = graphs.LengauerTarjan(cfg, cfg.entry)
+    tarjan_tree = graphs.Tarjan(cfg, cfg.entry)
     differences = 0
     for vertex in cfg:
         if vertex != cfg.entry:
@@ -857,7 +857,7 @@ def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
         print('{}: |V|={}  |E|={}'.format(subprogram.cfg.name,
                                           subprogram.cfg.number_of_vertices(),
                                           subprogram.cfg.number_of_edges()))
-        algorithms = [betts, graphs.LengauerTarjan, graphs.Cooper]
+        algorithms = [betts, graphs.Tarjan, graphs.Cooper]
         total_time = {alg: [] for alg in algorithms}
 
         for i in range(repeat):
@@ -876,7 +876,7 @@ def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
         for alg in algorithms:
             # print('  '.join(str(t) for t in sorted(total_time[alg])))
             # total_time[alg] = strip_outliers(total_time[alg])
-            print('{:.8f}'.format(sum(total_time[alg]) / len(total_time[alg])))
+            print(alg.__name__.capitalize(), '{:.8f}'.format(sum(total_time[alg]) / len(total_time[alg])))
 
         print()
 

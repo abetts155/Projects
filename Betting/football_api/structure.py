@@ -27,6 +27,10 @@ def get_events_json(fixture: int):
     return json_events_directory.joinpath('{}.json'.format(fixture))
 
 
+def get_timezone_json():
+    return json_directory.joinpath('timezone.json')
+
+
 def store(path: Path, response):
     with path.open('w') as out_file:
         out_file.write(response.text)

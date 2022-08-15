@@ -102,6 +102,8 @@ class Event:
 
     op_table = {(operator.eq, True): '!=',
                 (operator.eq, False): '=',
+                (operator.ne, True): '=',
+                (operator.ne, False): '!=',
                 (operator.gt, True): '<=',
                 (operator.gt, False): '>',
                 (operator.ge, True): '<',
@@ -298,6 +300,7 @@ class Fixture:
 
 round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Regular Season'),
+                 re.compile(r'Round is (Salzburg|Tirol|Southern Central)'),
                  re.compile(r'Girone [A-C] - \d+'),
                  re.compile(r'Group [A-D] - \d+'),
                  re.compile(r'Group [1-4] - \d+$'),
@@ -384,7 +387,6 @@ def create_fixture_from_row(row: List):
     id_ = int(row[0])
     date1 = datetime.datetime.fromisoformat(row[1])
     date2 = datetime_from_utc_to_local(date1)
-    #print(date1, date2)
     season_id = int(row[2])
     home_id = int(row[3])
     home_team = Team.inventory[home_id] if home_id in Team.inventory else None

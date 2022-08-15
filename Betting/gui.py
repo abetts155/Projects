@@ -16,6 +16,7 @@ from PySimpleGUI import (InputText,
                          PopupError,
                          theme,
                          WIN_CLOSED)
+from re import compile
 from sql.sql import extract_picked_team, load_teams
 from typing import Dict, List
 
@@ -249,19 +250,11 @@ def set_league(values: Dict, args: Namespace):
         args.league = None
 
 
-def to_int(value: str) -> int:
-    try:
-        return int(value)
-    except ValueError:
-        pass
-
-
 def get_event(value: str) -> str:
-    if value in [draw.__name__, win.__name__, loss.__name__, bts.__name__]:
-        return value
-    elif value.startswith('gf') or value.startswith('ga') or value.startswith('gfa'):
-        prefix, infix, postfix = value.split()
-
+    goals_re = compile(r'\s*(gfa|gf|ga)\s*(>=|<=|>|<|==|!=)\s*(\d+)\s*')
+    match = goals_re.match(value)
+    if match:
+        infix = match.group(2)
         if infix == '>=':
             infix = 'ge'
         elif infix == '<=':
@@ -275,9 +268,17 @@ def get_event(value: str) -> str:
         elif infix == '!=':
             infix = 'ne'
 
-        return '{}_{}_{}'.format(prefix, infix, postfix)
-    else:
-        pass
+        return '{}_{}_{}'.format(match.group(1), infix, match.group(3))
+
+    other_re = compile(r'\s*({}|{}|{}|{})\s*'.format(draw.__name__, win.__name__, loss.__name__, bts.__name__))
+    match = other_re.match(value)
+    if match:
+        return match.group(1)
+
+    PopupError("Do not recognise '{}' as an event".format(value.strip()),
+               auto_close=True,
+               auto_close_duration=2,
+               non_blocking=True)
 
 
 def check_team(values: Dict, team_key: str):
@@ -335,23 +336,24 @@ def team_selected(values: Dict) -> str:
 
 
 def run_head_to_head(values: Dict):
-    if check_team(values, team_choice_one.Key) and check_team(values, team_choice_two.Key):
+    team_one = check_team(values, team_choice_one.Key)
+    team_two = check_team(values, team_choice_two.Key)
+    if team_one and team_two:
         args = Namespace()
         args.database = database
         args.block = False
         set_league(values, args)
-        team_one = check_team(values, team_choice_one.Key)
-        team_two = check_team(values, team_choice_two.Key)
         args.team = '{}:{}'.format(team_one, team_two)
         head_to_head.main(args)
 
 
 def run_sequences(values: Dict, event):
-    if values[league_choice.Key] and values[event_choice.Key]:
+    valid_event = get_event(values[event_choice.Key])
+    if values[league_choice.Key] and valid_event:
         args = Namespace()
         args.database = database
         args.block = False
-        args.event = [get_event(values[event_choice.Key])]
+        args.event = [valid_event]
         args.negate = values[event_negation.Key]
         args.team = team_selected(values)
         set_league(values, args)
@@ -420,10 +422,14 @@ def run_performance_analysis(values: Dict):
                 show_projection.main(args)
             elif values[performance_positions.Key] and values[performance_positions_choice.Key]:
                 positions = values[performance_positions_choice.Key].strip().split(' ')
+
                 args.position = []
                 for value in positions:
-                    if to_int(value):
-                        args.position.append(to_int(value))
+                    try:
+                        args.position.append(int(value))
+                    except ValueError:
+                        pass
+
                 show_projection.main(args)
             elif values[performance_relative.Key] and values[performance_relative_choice.Key]:
                 args.relative = '_'.join(values[performance_relative_choice.Key][0].split())
@@ -478,7 +484,7 @@ def run_expression_evaluation(values: Dict):
     try:
         answer = eval(values[expression.Key])
         result.update('{:.5f}'.format(answer))
-    except (ValueError, SyntaxError):
+    except (SyntaxError, TypeError, ValueError, ZeroDivisionError):
         result.update('')
 
 
