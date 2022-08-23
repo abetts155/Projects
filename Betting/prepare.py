@@ -71,11 +71,9 @@ with open('{:02d}_{:02d}_{:02d}_{:02d}.txt'.format(today.month, today.day, today
             for game in games:
                 if last_league is None or game.league != last_league:
                     last_league = game.league
-                    out_file.write('*' * 80)
-                    out_file.write('\n')
+                    out_file.write('>' * 10)
+                    out_file.write(' ')
                     out_file.write(game.league)
-                    out_file.write('\n')
-                    out_file.write('*' * 80)
                     out_file.write('\n')
 
                 out_file.write(str(game))

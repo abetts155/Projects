@@ -97,11 +97,11 @@ def add_events_option(parser: ArgumentParser, required: bool = True, allowed_eve
                         default=False)
 
 
-def add_minimum_option(parser: ArgumentParser):
+def add_minimum_option(parser: ArgumentParser, required: bool = True):
     parser.add_argument('--minimum',
                         type=int,
                         help='the minimum sequence length threshold',
-                        default=1)
+                        required=required)
 
 
 def add_chunk_option(parser: ArgumentParser):

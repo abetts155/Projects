@@ -97,8 +97,8 @@ def load_league(filename: str, league: League):
 
         for season_row in season_rows:
             season = create_season_from_row(season_row)
-            constraints = ['{}={}'.format(ColumnNames.Season_ID.name, season_row[0]),
-                           '{}={}'.format(ColumnNames.Finished.name, Characters.TRUE.value)]
+            constraints = ['{}={}'.format(ColumnNames.Season_ID.name, season_row[0])]
+                          # '{}={}'.format(ColumnNames.Finished.name, Characters.TRUE.value)]
             fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
             for fixture_row in fixture_rows:
                 fixture = create_fixture_from_row(fixture_row)

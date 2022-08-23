@@ -74,4 +74,4 @@ def set_matplotlib_defaults():
     plt.rcParams['xtick.labelsize'] = 8
     plt.rcParams['ytick.labelsize'] = 8
     plt.rcParams['legend.fontsize'] = 10
-    plt.rcParams['figure.titlesize'] = 12
+    plt.rcParams['figure.titlesize'] = 10

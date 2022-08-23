@@ -25,11 +25,11 @@ def parse_command_line():
     add_half_option(parser)
     add_venue_option(parser)
     add_database_option(parser)
-    add_minimum_option(parser)
     add_logging_options(parser)
     add_league_option(parser, False)
     add_country_option(parser, False)
     add_events_option(parser, False)
+    add_minimum_option(parser, False)
 
     today = datetime.today()
     parser.add_argument('-D',

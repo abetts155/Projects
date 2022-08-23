@@ -2,21 +2,38 @@ from collections import OrderedDict
 from lib import messages
 
 
+ugly_separator = '-'
+pretty_separator = ' '
+
+
 def prettify(country_name: str) -> str:
-    sep = '-'
-    if sep in country_name:
-        lexemes = country_name.split(sep)
-        return ' '.join(lex.capitalize() for lex in lexemes)
+    if ugly_separator in country_name:
+        lexemes = country_name.split(ugly_separator)
+        return pretty_separator.join(lex.capitalize() for lex in lexemes)
+    else:
+        return country_name
+
+
+def uglify(country_name: str) -> str:
+    if pretty_separator in country_name:
+        lexemes = country_name.split(pretty_separator)
+        return ugly_separator.join(lex.capitalize() for lex in lexemes)
     else:
         return country_name
 
 
 class League:
-    __slots__ = ['country', 'name']
-
     def __init__(self, country: str, name: str):
         self.country = country
         self.name = name
+
+    def __eq__(self, other):
+        if type(other) == type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __hash__(self):
+        return self.country.__hash__() + self.name.__hash__()
 
     def __str__(self):
         return '{} {}'.format(prettify(self.country), self.name)
@@ -104,6 +121,7 @@ country_register = [
     'Saudi-Arabia',
     'Scotland',
     'Serbia',
+    'Singapore',
     'Slovakia',
     'Slovenia',
     'South-Africa',
@@ -348,6 +366,7 @@ league_register = OrderedDict({
     'SCO2': League('Scotland', 'Championship'),
     'SCO3': League('Scotland', 'League One'),
     'SCO4': League('Scotland', 'League Two'),
+    'SIN1': League('Singapore', 'Premier League'),
     'SRB1': League('Serbia', 'Super Liga'),
     'SRB2': League('Serbia', 'Prva Liga'),
     'SVK1': League('Slovakia', 'Super Liga'),
@@ -396,12 +415,8 @@ league_register = OrderedDict({
     'ZAF2': League('South-Africa', '1st Division')
 })
 
-for league in league_register.values():
-    if league.country not in country_register:
-        messages.error_message("Unrecognised country '{}' for league".format(league.country))
+reverse_league_register = {league: code for code, league in league_register.items()}
 
 
 def get_league_code(league: League) -> str:
-    for key, candidate in league_register.items():
-        if candidate.name == league.name and candidate.country == league.country:
-            return key
+    return reverse_league_register[league]

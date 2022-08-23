@@ -31,7 +31,7 @@ header 'No BTS'
 ./fixtures.sh -E bts -n --minimum 6 "$@"
 
 header '0-0 draws'
-./fixtures.sh -E gfa_eq_0 "$@"
+./fixtures.sh -E gfa_eq_0 --minimum 1 "$@"
 
 header 'No goals (consecutive halves)'
 ./fixtures.sh -E gfa_eq_0 --half separate --minimum 4 "$@"

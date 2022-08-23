@@ -1,211 +1,76 @@
 from argparse import Namespace
-from lib import messages
-from model.fixtures import Half, Venue, win, loss, draw, bts
-from model.leagues import League, league_register, get_league_code
-from model.tables import Position
-from PySimpleGUI import (InputText,
-                         Text,
-                         Submit,
-                         Button,
-                         Slider,
-                         Checkbox,
-                         Radio,
-                         Listbox,
-                         Window,
-                         Combo,
-                         PopupError,
-                         theme,
-                         WIN_CLOSED)
 from re import compile
-from sql.sql import extract_picked_team, load_teams
-from typing import Dict, List
+from typing import Dict
+
+from PySimpleGUI import theme, PopupError, Window, WIN_CLOSED
 
 import head_to_head
-import show_breakdown
-import show_goal_events
-import show_heatmap
-import show_form
-import show_matrix
-import show_projection
 import show_sequences
+import show_matrix
 import show_season_sequences
-import show_season_summary
+import show_projection
+import show_form
 import show_team
+import show_heatmap
+import show_breakdown
+import show_season_summary
+import show_goal_events
+
+from gui.widgets import (aggregated_sequences_submit,
+                         betting_file,
+                         betting_text,
+                         chunks_choice,
+                         country_choice,
+                         event_choice,
+                         event_clear,
+                         event_matrix_submit,
+                         event_negation,
+                         expression_text,
+                         half_both,
+                         half_first,
+                         half_second,
+                         half_separate,
+                         heatmap_analysis,
+                         heatmap_submit,
+                         history_choice,
+                         h2h_submit,
+                         league_analysis_submit,
+                         league_choice,
+                         make_window,
+                         performance_analysis_submit,
+                         performance_average,
+                         performance_individual,
+                         performance_relative,
+                         performance_positions,
+                         performance_positions_choice,
+                         performance_relative_choice,
+                         result_text,
+                         season_sequences_submit,
+                         team_analysis_game_states,
+                         team_analysis_form,
+                         team_analysis_goals,
+                         team_analysis_margins,
+                         team_analysis_submit,
+                         team_analysis_summary,
+                         team_choice_one,
+                         team_choice_two,
+                         team_radio_one,
+                         team_radio_two,
+                         venue_away,
+                         venue_home)
+from lib import messages
+from model.fixtures import Half, Venue, win, loss, draw, bts
+from model.leagues import League, get_league_code, league_register, uglify
+from model.seasons import Season
+from model.tables import LeagueTable
+from sql.sql import extract_picked_team, load_league, load_teams
 
 messages.warnings = False
 database = 'football.db'
-width = 10
-height = 1
-history_min = 1
-history_max = 12
-chunks_min = 0
-chunks_max = 12
-font = ('Helvetica', 14)
-default_size = (width, height)
-
-radio_venue = 1
-radio_half = 2
-radio_team_analysis = 3
-radio_performance = 4
-radio_team_choice = 5
 
 
-def leagues() -> List[str]:
-    options = []
-    for key in list(league_register.keys()):
-        league = league_register[key]
-        options.append('{} {}'.format(league.country, league.name))
-    return options
-
-
-league_choice = Listbox(leagues(),
-                        size=(34, 16),
-                        font=font,
-                        enable_events=True,
-                        key='-LEAGUE-')
-
-history_choice = Slider(range=(history_min, history_max),
-                        default_value=history_max,
-                        orientation='h',
-                        font=font,
-                        key='-HISTORY-')
-
-
-team_radio_one = Radio('', radio_team_choice, font=font, default=True)
-team_radio_two = Radio('', radio_team_choice, font=font)
-team_choice_one = InputText(font=font, size=(30, 1), key='-TEAM1-')
-team_choice_two = InputText(font=font, size=(30, 1), key='-TEAM2-')
-team_clear_one = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-TEAM1-')
-team_clear_two = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-TEAM2-')
-
-venue_any = Radio(Venue.any.name.capitalize(), radio_venue, font=font, default=True)
-venue_home = Radio(Venue.home.name.capitalize(), radio_venue, font=font)
-venue_away = Radio(Venue.away.name.capitalize(), radio_venue, font=font)
-
-half_both = Radio(Half.both.name.capitalize(), radio_half, font=font, default=True)
-half_first = Radio(Half.first.name.capitalize(), radio_half, font=font)
-half_second = Radio(Half.second.name.capitalize(), radio_half, font=font)
-half_separate = Radio(Half.separate.name.capitalize(), radio_half, font=font)
-
-chunks_choice = Slider(range=(chunks_min, chunks_max),
-                       default_value=chunks_min,
-                       orientation='h',
-                       font=font,
-                       key='-CHUNKS-')
-
-event_choice = InputText(font=font, size=(16, 1), key='-EVENT-')
-event_negation = Checkbox('Negate', font=font, key='-NEGATE-EVENT-')
-event_clear = Button('Clear', button_color=('black', 'white'), font=font, key='-CLEAR-EVENT-')
-
-aggregated_sequences_submit = Button('Aggregated sequences', font=font, key='-AGG-SEQ-SUBMIT-')
-season_sequences_submit = Button('Per-season sequences', font=font, key='-PER-SEQ-SUBMIT-')
-
-
-team_analysis_goals = Radio('Goals',
-                            radio_team_analysis,
-                            font=font,
-                            key='-TEAM-ANALYSIS-GOALS-',
-                            default=True,
-                            enable_events=True)
-team_analysis_form = Radio('Form',
-                           radio_team_analysis,
-                           font=font,
-                           key='-TEAM-ANALYSIS-FORM-',
-                           enable_events=True)
-team_analysis_margins = Radio('Margins',
-                              radio_team_analysis,
-                              font=font,
-                              key='-TEAM-ANALYSIS-MARGINS-',
-                              enable_events=True)
-team_analysis_summary = Radio('Summary',
-                              radio_team_analysis,
-                              font=font,
-                              key='-TEAM-ANALYSIS-SUMMARY-',
-                              enable_events=True)
-team_analysis_game_states = InputText(font=font,
-                                      key='-TEAM-ANALYSIS-GAME-STATES-',
-                                      disabled=True)
-team_analysis_submit = Submit(font=font, key='-TEAM-ANALYSIS-SUBMIT-')
-
-h2h_submit = Button('Head to head', font=font, key='-H2H-SUBMIT-')
-
-league_analysis_submit = Button('League Analysis', font=font, key='-LEAGUE-ANALYSIS-SUBMIT-')
-
-heatmap_analysis = Combo([analysis.name.lower().capitalize() for analysis in show_heatmap.Analysis],
-                         default_value=show_heatmap.Analysis.RESULT.name.lower().capitalize(),
-                         key='-HEATMAP-')
-heatmap_submit = Submit(font=font, key='-HEATMAP-SUBMIT-')
-
-event_matrix_submit = Submit(font=font, key='-EVENT-MATRIX-SUBMIT-')
-
-performance_individual = Radio('Individual', radio_performance, font=font, default=True, enable_events=True)
-performance_average = Radio('Average', radio_performance, font=font, enable_events=True)
-performance_positions = Radio('Absolute', radio_performance, font=font, enable_events=True)
-performance_positions_choice = InputText(font=font,
-                                         key='-PERFORMANCE-POSITIONS-CHOICE-',
-                                         disabled=True,
-                                         enable_events=True)
-performance_relative = Radio('Relative', radio_performance, font=font, enable_events=True)
-performance_relative_choice = Listbox(sorted([Position.pretty(position) for position in Position]),
-                                      size=(20, 5),
-                                      font=font,
-                                      key='-PERFORMANCE-RELATIVE-CHOICE-',
-                                      disabled=True,
-                                      enable_events=True)
-performance_analysis_submit = Submit(font=font, key='-PERFORMANCE-ANALYSIS-SUBMIT-')
-
-expression = InputText(font=font, size=(16, 1), key='-EXPR-', enable_events=True)
-equals = Text('=', font=font, justification='center', key='-EQUALS-')
-result = Text(font=font, size=(10, 1), key='-RESULT-')
-
-
-def make():
-    divider = 105
-
-    layout = [
-        [Text('League', font=font, size=default_size), league_choice],
-        [Text('Team #1', font=font, size=default_size), team_radio_one, team_choice_one, team_clear_one],
-        [Text('Team #2', font=font, size=default_size), team_radio_two, team_choice_two, team_clear_two],
-        [Text('History', font=font, size=default_size), history_choice],
-        [Text('Event', font=font, size=default_size), event_choice, event_negation, event_clear],
-        [Text('Venue', font=font, size=default_size), venue_any, venue_home, venue_away],
-        [Text('Half', font=font, size=default_size), half_both, half_first, half_second, half_separate],
-        [Text('Chunks', font=font, size=default_size), chunks_choice],
-        [Text('_' * divider)],
-        [aggregated_sequences_submit, season_sequences_submit, h2h_submit, league_analysis_submit],
-        [Text('_' * divider)],
-        [Text('Individual team analysis', font=font)],
-        [Text('Analysis', font=font, size=default_size),
-         team_analysis_goals,
-         team_analysis_form,
-         team_analysis_margins,
-         team_analysis_summary],
-        [Text('Game states', font=font, size=default_size), team_analysis_game_states],
-        [team_analysis_submit],
-        [Text('_' * divider)],
-        [Text('Performance analysis', font=font)],
-        [Text('Type', font=font, size=default_size),
-         performance_individual, performance_average, performance_positions, performance_relative],
-        [Text('Relative', font=font, size=default_size), performance_relative_choice],
-        [Text('Absolute', font=font, size=default_size), performance_positions_choice],
-        [performance_analysis_submit],
-        [Text('_' * divider)],
-        [Text('Heatmap analysis', font=font), heatmap_analysis],
-        [heatmap_submit],
-        [Text('_' * divider)],
-        [Text('Event matrix analysis', font=font)],
-        [event_matrix_submit],
-        [Text('_' * divider)],
-        [Text('Quick calculation', font=font)],
-        [expression, equals, result]
-    ]
-
-    return Window('', layout=layout, finalize=True)
-
-
-def get_league(value: str):
-    country, *others = value.split()
-    return League(country, ' '.join(others))
+def get_league(values: Dict):
+    return League(values[country_choice.Key], values[league_choice.Key])
 
 
 def set_venue(values: Dict, args: Namespace):
@@ -243,8 +108,7 @@ def set_chunks(values: Dict, args: Namespace):
 
 def set_league(values: Dict, args: Namespace):
     if values[league_choice.Key]:
-        value = values[league_choice.Key][0]
-        league = get_league(value)
+        league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
         args.league = [get_league_code(league)]
     else:
         args.league = None
@@ -284,7 +148,7 @@ def get_event(value: str) -> str:
 def check_team(values: Dict, team_key: str):
     selected_name = values[team_key].strip()
     if values[league_choice.Key]:
-        league = get_league(values[league_choice.Key][0])
+        league = get_league(values)
     else:
         league = None
 
@@ -482,10 +346,59 @@ def run_league_analysis(values: Dict):
 
 def run_expression_evaluation(values: Dict):
     try:
-        answer = eval(values[expression.Key])
-        result.update('{:.5f}'.format(answer))
-    except (SyntaxError, TypeError, ValueError, ZeroDivisionError):
-        result.update('')
+        answer = eval(values[expression_text.Key])
+        result_text.update('{:.5f}'.format(answer))
+    except (NameError, SyntaxError, TypeError, ValueError, ZeroDivisionError):
+        result_text.update('')
+
+
+def update_team_choices(values: Dict):
+    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    load_league(database, league)
+    league_seasons = Season.seasons(league)
+    if league_seasons:
+        this_season = league_seasons[-1]
+        candidates = ['']
+        width = 0
+        for team in this_season.teams():
+            candidates.append(team.name)
+            width = max(width, len(candidates[-1]))
+
+        candidates.sort()
+        team_choice_one.set_size([width, None])
+        team_choice_two.set_size([width, None])
+        team_choice_one.update(values=candidates, set_to_index=0)
+        team_choice_two.update(values=candidates, set_to_index=0)
+
+
+def update_league_choices(values: Dict):
+    candidates = []
+    width = 0
+    for league in league_register.values():
+        if league.country == uglify(values[country_choice.Key]):
+            candidates.append(league.name)
+            width = max(width, len(candidates[-1]))
+    league_choice.set_size([width, None])
+    league_choice.update(values=candidates, set_to_index=0)
+    values[league_choice.Key] = candidates[0]
+
+
+def update_history_bar(values: Dict):
+    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    history = len(Season.seasons(league))
+    history_choice.update(range=(2, history))
+    history_choice.update(value=history)
+    history_choice.update(disabled=False)
+
+
+def update_chunk_bar(values: Dict):
+    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    history = Season.seasons(league)
+    table = LeagueTable(history[-1], Half.both)
+    divisors = [i for i in range(2, len(table) + 1) if len(table) % i == 0]
+    chunks_choice.update(values=[''] + divisors, set_to_index=0)
+    chunks_choice.update(disabled=False)
+    chunks_choice.set_size([2, None])
 
 
 def run(window: Window):
@@ -494,12 +407,17 @@ def run(window: Window):
 
         if event in [WIN_CLOSED, 'Exit']:
             break
-        elif event == team_clear_one.Key:
-            team_choice_one.Update('')
-        elif event == team_clear_two.Key:
-            team_choice_two.Update('')
+        elif event == country_choice.Key:
+            update_league_choices(values)
+            update_team_choices(values)
+            update_history_bar(values)
+            update_chunk_bar(values)
+        elif event == league_choice.Key:
+            update_team_choices(values)
+            update_history_bar(values)
+            update_chunk_bar(values)
         elif event == event_clear.Key:
-            event_choice.Update('')
+            event_choice.update('')
         elif event == h2h_submit.Key:
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
@@ -522,18 +440,24 @@ def run(window: Window):
             performance_relative_choice.update(disabled=True)
         elif event == performance_relative.Key:
             performance_positions_choice.update(disabled=True)
-            performance_relative_choice.update(disabled=False)
+            performance_relative_choice.update(set_to_index=0, disabled=False)
         elif event == team_analysis_summary.Key:
             team_analysis_game_states.update(disabled=False)
         elif event in [team_analysis_form.Key, team_analysis_margins.Key, team_analysis_goals.Key]:
             team_analysis_game_states.update(disabled=True)
-        elif event == expression.Key:
+        elif event == expression_text.Key:
             run_expression_evaluation(values)
+        elif event == betting_file.Key:
+            text = ''
+            with open(values[betting_file.Key], 'r') as in_file:
+                for line in in_file:
+                    text += line
+            betting_text.update(value=text)
 
 
 if __name__ == '__main__':
     theme('DarkBlue')
     load_teams(database)
-    window = make()
+    window = make_window()
     run(window)
     window.close()

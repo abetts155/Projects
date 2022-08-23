@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import datetime
 from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import warning_message
 from model.fixtures import Half, Venue
@@ -55,17 +56,19 @@ def count_events(season: Season,
                  func: Callable,
                  negate: bool,
                  data: DataUnit):
+    right_now = datetime.now()
     fixtures = []
     for fixture in season.fixtures():
-        if venue == Venue.any:
-            if fixture.home_team == team or fixture.away_team == team:
-                fixtures.append(fixture)
-        elif venue == Venue.away:
-            if fixture.away_team == team:
-                fixtures.append(fixture)
-        elif venue == Venue.home:
-            if fixture.home_team == team:
-                fixtures.append(fixture)
+        if datetime.date(fixture.date) <= right_now.date():
+            if venue == Venue.any:
+                if fixture.home_team == team or fixture.away_team == team:
+                    fixtures.append(fixture)
+            elif venue == Venue.away:
+                if fixture.away_team == team:
+                    fixtures.append(fixture)
+            elif venue == Venue.home:
+                if fixture.home_team == team:
+                    fixtures.append(fixture)
 
     sequence = []
     for fixture in fixtures:

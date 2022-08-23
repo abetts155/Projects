@@ -192,7 +192,6 @@ def main(args: Namespace):
 
         fig, axes = plt.subplots(nrows=len(data),
                                  ncols=ncols,
-                                 figsize=(20, 10),
                                  squeeze=False,
                                  constrained_layout=True)
 
@@ -280,14 +279,14 @@ def main(args: Namespace):
                                        args.half)
         x_limit, _ = find_limits(data)
         display = DisplayGrid(len(data), 2)
-        fig, axes = plt.subplots(nrows=display.nrows, ncols=display.ncols, figsize=(20, 10), squeeze=False)
+        fig, axes = plt.subplots(nrows=display.nrows, ncols=display.ncols, squeeze=False, constrained_layout=True)
         for i, datum in enumerate(data):
             cell_x, cell_y = display.index(i)
             ax = axes[cell_x, cell_y]
             plot(ax, datum, x_limit)
 
     title = construct_title(league, func, args.negate, args.venue, args.half)
-    fig.suptitle(title, fontweight='bold')
+    fig.suptitle(title, fontweight='bold', wrap=True)
     plt.show(block=args.block)
 
 
