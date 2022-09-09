@@ -19,7 +19,7 @@ from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.teams import Team
 from model.sequences import count_events, DataUnit
-from sql.sql import Database, extract_picked_team, load_league, load_teams, get_fixtures
+from sql.sql import Database, extract_picked_team, load_league, load_teams, get_team_fixtures
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
 from typing import Callable, Dict, List
@@ -108,31 +108,13 @@ def predict(team_now: DataUnit, team_history: DataUnit, aggregated_history: Data
     return aggregated_message, team_message
 
 
-def get_match_information(database: str, season: Season, team: Team):
-    with Database(database) as db:
-        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
-        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
-                                                    team.id,
-                                                    Keywords.OR.name,
-                                                    ColumnNames.Away_ID.name,
-                                                    team.id)
-        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
-        constraints = [season_constraint, team_constraint, finished_constraint]
-        fixtures = get_fixtures(db, constraints)
-        fixtures.sort(key=lambda fixture: fixture.date)
-        return fixtures
-
-
 def output_prediction(team: Team,
                       next_match: Fixture,
-                      remaining_matches: int,
                       half: Half,
                       venue: Venue,
                       event: Callable,
                       negate: bool,
-                      length_of_run: int,
-                      aggregated_message: str,
-                      team_message: str):
+                      length_of_run: int):
     event = Event.name(event, negate)
     header = '{} {} in the last {}'.format('>' * 10, event, length_of_run)
 
@@ -178,7 +160,7 @@ def analyse_teams(args: Namespace,
             aggregated_message, team_message = predict(team_now, team_history, history, args.probability, args.minimum)
 
             if aggregated_message or team_message:
-                fixtures = get_match_information(args.database, this_season, team)
+                fixtures = get_team_fixtures(args.database, this_season, team)
                 fixtures_remaining = len(fixtures)
                 fixtures = [fixture for fixture in fixtures if
                             (fixture.date.timetuple().tm_yday == now.tm_yday and
@@ -200,14 +182,11 @@ def analyse_teams(args: Namespace,
 
                         output_prediction(team,
                                           next_match,
-                                          fixtures_remaining,
                                           args.half,
                                           args.venue,
                                           event,
                                           args.negate,
-                                          team_now.last,
-                                          aggregated_message,
-                                          team_message)
+                                          team_now.last)
 
 
 def main(args: Namespace):

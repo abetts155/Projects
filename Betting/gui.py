@@ -2,7 +2,7 @@ from argparse import Namespace
 from re import compile
 from typing import Dict
 
-from PySimpleGUI import theme, PopupError, Window, WIN_CLOSED
+from PySimpleGUI import theme, PopupError, PopupAutoClose, Window, WIN_CLOSED
 
 import head_to_head
 import show_sequences
@@ -12,7 +12,6 @@ import show_projection
 import show_form
 import show_team
 import show_heatmap
-import show_breakdown
 import show_season_summary
 import show_goal_events
 
@@ -49,7 +48,6 @@ from gui.widgets import (aggregated_sequences_submit,
                          team_analysis_game_states,
                          team_analysis_form,
                          team_analysis_goals,
-                         team_analysis_margins,
                          team_analysis_submit,
                          team_analysis_summary,
                          team_choice_one,
@@ -63,7 +61,8 @@ from model.fixtures import Half, Venue, win, loss, draw, bts
 from model.leagues import League, get_league_code, league_register, uglify
 from model.seasons import Season
 from model.tables import LeagueTable
-from sql.sql import extract_picked_team, load_league, load_teams
+from model.teams import Team
+from sql.sql import extract_picked_team, get_team_fixtures, load_league, load_teams
 
 messages.warnings = False
 database = 'football.db'
@@ -106,17 +105,9 @@ def set_chunks(values: Dict, args: Namespace):
         args.chunks = None
 
 
-def set_league(values: Dict, args: Namespace):
-    if values[league_choice.Key]:
-        league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
-        args.league = [get_league_code(league)]
-    else:
-        args.league = None
-
-
-def get_event(value: str) -> str:
+def get_event(values: Dict) -> str:
     goals_re = compile(r'\s*(gfa|gf|ga)\s*(>=|<=|>|<|==|!=)\s*(\d+)\s*')
-    match = goals_re.match(value)
+    match = goals_re.match(values[event_choice.Key])
     if match:
         infix = match.group(2)
         if infix == '>=':
@@ -135,55 +126,49 @@ def get_event(value: str) -> str:
         return '{}_{}_{}'.format(match.group(1), infix, match.group(3))
 
     other_re = compile(r'\s*({}|{}|{}|{})\s*'.format(draw.__name__, win.__name__, loss.__name__, bts.__name__))
-    match = other_re.match(value)
+    match = other_re.match(values[event_choice.Key])
     if match:
         return match.group(1)
 
-    PopupError("Do not recognise '{}' as an event".format(value.strip()),
-               auto_close=True,
-               auto_close_duration=2,
-               non_blocking=True)
-
-
-def check_team(values: Dict, team_key: str):
-    selected_name = values[team_key].strip()
-    if values[league_choice.Key]:
-        league = get_league(values)
+    if values[event_choice.Key] == 'won':
+        event_choice.update('win')
+        PopupAutoClose("Fixing event 'won' to 'win'",
+                       title='',
+                       auto_close=True,
+                       auto_close_duration=2,
+                       non_blocking=True)
+    elif values[event_choice.Key] == 'lost':
+        event_choice.update('loss')
+        PopupAutoClose("Fixing event 'lost' to 'loss'",
+                       title='',
+                       auto_close=True,
+                       auto_close_duration=2,
+                       non_blocking=True)
+    elif values[event_choice.Key] == 'drew':
+        event_choice.update('draw')
+        PopupAutoClose("Fixing event 'drew' to 'draw'",
+                       title='',
+                       auto_close=True,
+                       auto_close_duration=2,
+                       non_blocking=True)
     else:
-        league = None
-
-    rows = extract_picked_team(database, selected_name, league=league, error=False)
-    if len(rows) == 0:
-        PopupError("No team '{}' found in the database.".format(selected_name),
+        PopupError("Do not recognise '{}' as an event".format(values[event_choice.Key].strip()),
+                   title='',
                    auto_close=True,
+                   auto_close_duration=2,
                    non_blocking=True)
-        return ''
-    elif len(rows) > 1:
-        if len(rows) > 10:
-            PopupError("Too many teams ({}) match the name '{}' in the database.".format(len(rows), selected_name),
-                       auto_close=True,
-                       non_blocking=True)
-        else:
-            names = [row[1] for row in rows]
-            PopupError("Too many teams match the name '{}' in the database: {}.".format(selected_name,
-                                                                                        ', '.join(names)),
-                       auto_close=True,
-                       non_blocking=True)
-        return ''
-    else:
-        (row,) = rows
-        return row[1]
+    return ''
 
 
 def team_one_is_valid(values: Dict) -> str:
     if values[team_radio_one.Key] and values[team_choice_one.Key]:
-        return check_team(values, team_choice_one.Key)
+        return values[team_choice_one.Key]
     return ''
 
 
 def team_two_is_valid(values: Dict) -> str:
     if values[team_radio_two.Key] and values[team_choice_two.Key]:
-        return check_team(values, team_choice_two.Key)
+        return values[team_choice_two.Key]
     return ''
 
 
@@ -199,20 +184,30 @@ def team_selected(values: Dict) -> str:
     return ''
 
 
+def get_league(values: Dict) -> League:
+    return League(uglify(values[country_choice.Key]), values[league_choice.Key])
+
+
+def set_league(values: Dict, args: Namespace):
+    if values[league_choice.Key]:
+        league = get_league(values)
+        args.league = [get_league_code(league)]
+    else:
+        args.league = None
+
+
 def run_head_to_head(values: Dict):
-    team_one = check_team(values, team_choice_one.Key)
-    team_two = check_team(values, team_choice_two.Key)
-    if team_one and team_two:
+    if values[team_choice_one.Key] and values[team_choice_two.Key]:
         args = Namespace()
         args.database = database
         args.block = False
         set_league(values, args)
-        args.team = '{}:{}'.format(team_one, team_two)
+        args.team = '{}:{}'.format(values[team_choice_one.Key], values[team_choice_two.Key])
         head_to_head.main(args)
 
 
 def run_sequences(values: Dict, event):
-    valid_event = get_event(values[event_choice.Key])
+    valid_event = get_event(values)
     if values[league_choice.Key] and valid_event:
         args = Namespace()
         args.database = database
@@ -245,9 +240,7 @@ def run_team_analysis(values: Dict):
             set_venue(values, args)
             set_half(values, args)
 
-            if values[team_analysis_margins.Key]:
-                show_breakdown.main(args)
-            elif values[team_analysis_summary.Key]:
+            if values[team_analysis_summary.Key]:
                 if values[team_analysis_game_states.Key]:
                     args.game_states = values[team_analysis_game_states.Key].split()
                 else:
@@ -319,7 +312,7 @@ def run_event_matrix_analysis(values: Dict):
         args = Namespace()
         args.database = database
         args.block = False
-        args.event = [get_event(values[event_choice.Key])]
+        args.event = [get_event(values)]
         args.negate = values[event_negation.Key]
         set_league(values, args)
         set_history(values, args)
@@ -340,6 +333,8 @@ def run_league_analysis(values: Dict):
         args.block = False
         set_league(values, args)
         set_half(values, args)
+        set_venue(values, args)
+        args.team = team_selected(values)
         args.history = None
         show_season_summary.main(args)
 
@@ -353,7 +348,7 @@ def run_expression_evaluation(values: Dict):
 
 
 def update_team_choices(values: Dict):
-    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    league = get_league(values)
     load_league(database, league)
     league_seasons = Season.seasons(league)
     if league_seasons:
@@ -383,8 +378,31 @@ def update_league_choices(values: Dict):
     values[league_choice.Key] = candidates[0]
 
 
+def update_other_team(values: Dict, team_choice):
+    league = get_league(values)
+    league_seasons = Season.seasons(league)
+    if league_seasons:
+        (row,) = extract_picked_team(database, values[team_choice.Key], league)
+        team = Team.inventory[row[0]]
+        fixtures = get_team_fixtures(database, league_seasons[-1], team)
+        if fixtures:
+            next_match = fixtures[0]
+
+            if next_match.home_team.name == values[team_choice.Key]:
+                team_radio_one.update(True)
+            else:
+                team_radio_two.update(True)
+
+            if team == next_match.home_team:
+                team_choice_one.update(value=team.name)
+                team_choice_two.update(value=next_match.away_team.name)
+            else:
+                team_choice_one.update(value=next_match.home_team.name)
+                team_choice_two.update(value=team.name)
+
+
 def update_history_bar(values: Dict):
-    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    league = get_league(values)
     history = len(Season.seasons(league))
     history_choice.update(range=(2, history))
     history_choice.update(value=history)
@@ -392,7 +410,7 @@ def update_history_bar(values: Dict):
 
 
 def update_chunk_bar(values: Dict):
-    league = League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    league = get_league(values)
     history = Season.seasons(league)
     table = LeagueTable(history[-1], Half.both)
     divisors = [i for i in range(2, len(table) + 1) if len(table) % i == 0]
@@ -416,6 +434,10 @@ def run(window: Window):
             update_team_choices(values)
             update_history_bar(values)
             update_chunk_bar(values)
+        elif event == team_choice_one.Key and values[team_choice_one.Key]:
+            update_other_team(values, team_choice_one)
+        elif event == team_choice_two.Key and values[team_choice_two.Key]:
+            update_other_team(values, team_choice_two)
         elif event == event_clear.Key:
             event_choice.update('')
         elif event == h2h_submit.Key:
@@ -443,7 +465,7 @@ def run(window: Window):
             performance_relative_choice.update(set_to_index=0, disabled=False)
         elif event == team_analysis_summary.Key:
             team_analysis_game_states.update(disabled=False)
-        elif event in [team_analysis_form.Key, team_analysis_margins.Key, team_analysis_goals.Key]:
+        elif event in [team_analysis_form.Key, team_analysis_goals.Key]:
             team_analysis_game_states.update(disabled=True)
         elif event == expression_text.Key:
             run_expression_evaluation(values)

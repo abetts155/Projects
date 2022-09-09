@@ -1,3 +1,4 @@
+import operator
 from argparse import ArgumentParser, Namespace
 from cli.cli import (add_database_option,
                      add_league_option,
@@ -5,149 +6,175 @@ from cli.cli import (add_database_option,
                      set_logging_options,
                      add_block_option,
                      add_half_option,
-                     get_unique_league)
+                     get_unique_league,
+                     add_team_option,
+                     add_venue_option)
 from collections import Counter, OrderedDict
 from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
-from model.fixtures import Half
+from model.fixtures import Half, Venue
 from model.leagues import league_register
 from model.seasons import Season
-from sql.sql import load_league, load_teams
+from model.teams import Team
+from sql.sql import extract_picked_team, load_league, load_teams
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Show summary of seasons by results, goals, and scorelines')
+    parser = ArgumentParser(description='Show summary of each season by scorelines')
     add_database_option(parser)
     add_league_option(parser)
     add_logging_options(parser)
     add_half_option(parser)
     add_block_option(parser)
+    add_team_option(parser)
+    add_venue_option(parser)
     return parser.parse_args()
 
 
-class Summary:
-    __slots__ = ['home_wins', 'away_wins', 'draws', 'home_goals', 'away_goals', 'scores']
-
-    def __init__(self):
-        self.home_wins = 0
-        self.away_wins = 0
-        self.draws = 0
-        self.home_goals = 0
-        self.away_goals = 0
-        self.scores = Counter()
-
-    def __bool__(self):
-        return len(self.scores) > 0
-
-
-def compute_summary(season: Season, half: Half):
-    summary = Summary()
+def compute_scorelines(season: Season, half: Half, venue: Venue, team: Team) -> Counter:
+    scorelines = Counter()
     for fixture in season.fixtures():
-        if half == Half.both:
-            results = [fixture.full_time()]
-        elif half == Half.first:
-            results = [fixture.first_half()]
-        elif half == Half.second:
-            results = [fixture.second_half()]
+        results = []
+
+        analyse = False
+        if team is None:
+            analyse = True
         else:
-            results = [fixture.first_half(), fixture.second_half()]
+            if venue:
+                if venue == Venue.home and fixture.home_team == team:
+                    analyse = True
+                elif venue == Venue.away and fixture.away_team == team:
+                    analyse = True
+                elif venue == Venue.any and team in [fixture.home_team, fixture.away_team]:
+                    analyse = True
+
+        if analyse:
+            if half == Half.both:
+                results.append(fixture.full_time())
+            elif half == Half.first:
+                results.append(fixture.first_half())
+            elif half == Half.second:
+                results.append(fixture.second_half())
+            else:
+                results.append(fixture.first_half())
+                results.append(fixture.second_half())
 
         for result in results:
             if result is not None:
-                summary.home_goals += result.left
-                summary.away_goals += result.right
-                if result.left > result.right:
-                    summary.home_wins += 1
-                elif result.left < result.right:
-                    summary.away_wins += 1
-                else:
-                    summary.draws += 1
+                if team is not None and fixture.away_team == team:
+                    result = result.reverse()
 
-                if result.left >= result.right:
-                    summary.scores[(result.left, result.right)] += 1
-                else:
-                    summary.scores[(result.right, result.left)] += 1
-    return summary
+                scorelines[(result.left, result.right)] += 1
+    return scorelines
 
 
-def show(title: str, season_to_summary, ylim: int, block: bool):
+def compute_slack(x_values, scorelines, key: str):
+    if '>' in key:
+        op = operator.gt
+    elif '<' in key:
+        op = operator.lt
+    else:
+        op = operator.eq
+
+    slack = 0
+    for k, v in scorelines.items():
+        left, right = k
+        if op(left, right) and '{}-{}'.format(left, right) not in x_values:
+            slack += v
+    return slack
+
+
+def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
     set_matplotlib_defaults()
-    display = DisplayGrid(len(season_to_summary), 2)
+    display = DisplayGrid(len(season_scorelines), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
                             figsize=(20, 10),
                             squeeze=False,
                             constrained_layout=True)
 
-    for i, (season, summary) in enumerate(season_to_summary.items()):
-        x_values_results = ['HW', 'D', 'AW']
-        x_values_goals = ['HG', 'AG']
-        x_values_scores = []
-
-        y_values_results = [summary.home_wins, summary.draws, summary.away_wins]
-        y_values_goals = [summary.home_goals, summary.away_goals]
-        y_values_scores = []
+    for i, (season, scorelines) in enumerate(season_scorelines.items()):
+        x_values = ['1-0', '2-0', '2-1', '3-0', '3-1', '3-2', '4-0', '4-1', 'X>Y',
+                    '0-0', '1-1', '2-2', '3-3', 'X==Y',
+                    '0-1', '0-2', '1-2', '0-3', '1-3', '2-3', '0-4', '1-4', 'X<Y']
+        y_values = []
         slack = 0
-        for score, count in summary.scores.most_common():
-            key = '{}-{}'.format(score[0], score[1])
-            if score[0] <= 3 and score[1] <= 3:
-                if key not in x_values_scores:
-                    x_values_scores.append(key)
-                    y_values_scores.append(count)
+        for score in x_values:
+            if score in ['X>Y', 'X==Y', 'X<Y']:
+                slack = compute_slack(x_values, scorelines, score)
+                y_values.append(slack)
             else:
-                slack += count
+                left, right = score.split('-')
+                key = (int(left), int(right))
+                y_values.append(scorelines[key])
 
-        x_values_scores.append('Other')
-        y_values_scores.append(slack)
-
-        x_values = x_values_results + x_values_goals + x_values_scores
-        y_values = y_values_results + y_values_goals + y_values_scores
+        cmap = plt.get_cmap('Blues')
+        min_y = min(y_values)
+        max_y = max(y_values)
+        scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
 
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x, cell_y]
-        bar = ax.bar(x_values, y_values)
+        bar = ax.bar(x_values, y_values, color=cmap(scaled))
         ax.set_ylabel(season.year)
-        ax.set_ylim(0, ylim + 20)
         ax.set_yticks([])
         ax.set_frame_on(False)
-        total_games = summary.home_wins + summary.draws + summary.away_wins
-        ax.set_title('{} games'.format(total_games))
+
+        total_games = sum(scorelines.values())
+        if half == Half.both:
+            ax.set_title('{} games'.format(total_games))
+        else:
+            ax.set_title('{} halves'.format(total_games))
 
         if total_games:
-            results_copy = y_values_results[:]
-            results_copy.sort()
-            colors = ['white', 'silver', 'gold']
-            for x, y_value in enumerate(results_copy):
-                index = y_values_results.index(y_value)
-                bar[index].set_color(colors[x])
-                bar[index].set_edgecolor('black')
-
-            goals_copy = y_values_goals[:]
-            goals_copy.sort()
-            colors = ['white', 'dodgerblue']
-            for x, y_value in enumerate(goals_copy):
-                index = y_values_goals.index(y_value) + len(y_values_results)
-                bar[index].set_color(colors[x])
-                bar[index].set_edgecolor('black')
-
-            for x, y_value in enumerate(y_values_scores):
-                index = x + len(y_values_results) + len(y_values_goals)
-                bar[index].set_color('grey')
-                bar[index].set_edgecolor('black')
-
             for k, v in zip(x_values, y_values):
-                if k in x_values_results:
-                    percentage = round((v / total_games) * 100)
-                    text = '{} ({}%)'.format(v, percentage)
-                elif k in x_values_scores:
-                    percentage = round((v / total_games) * 100)
-                    text = '{} ({}%)'.format(v, percentage)
-                else:
-                    text = str(v)
-                ax.text(k, v + 5, text, ha='center', fontsize=8)
+                percentage = round((v / total_games) * 100)
+                text = '{}%'.format(percentage)
+                ax.text(k, v, text, ha='center', fontsize=8)
 
-    for i in range(len(season_to_summary), display.nrows * display.ncols):
+            ax.axvline(8.5, ls='-', lw=1)
+            ax.axvline(13.5, ls='-', lw=1)
+
+        total_homes = 0
+        total_draws = 0
+        total_aways = 0
+        for scoreline, count in scorelines.items():
+            left, right = scoreline
+            if left > right:
+                total_homes += count
+            elif left < right:
+                total_aways += count
+            else:
+                total_draws += count
+
+        home_percentage = round(100 * total_homes / total_games)
+        draw_percentage = round(100 * total_draws / total_games)
+        away_percentage = round(100 * total_aways / total_games)
+
+        colours = ['red', 'orange', 'yellow']
+        percentages = [home_percentage, draw_percentage, away_percentage]
+        percentages.sort(reverse=True)
+
+        ax.annotate('{}%'.format(home_percentage),
+                    xy=(0.2, 0.8),
+                    xycoords='axes fraction',
+                    color='black',
+                    bbox=dict(facecolor=colours[percentages.index(home_percentage)], edgecolor='black'))
+
+        ax.annotate('{}%'.format(draw_percentage),
+                    xy=(0.5, 0.8),
+                    xycoords='axes fraction',
+                    color='black',
+                    bbox=dict(facecolor=colours[percentages.index(draw_percentage)], edgecolor='black'))
+
+        ax.annotate('{}%'.format(away_percentage),
+                    xy=(0.75, 0.8),
+                    xycoords='axes fraction',
+                    color='black',
+                    bbox=dict(facecolor=colours[percentages.index(away_percentage)], edgecolor='black'))
+
+    for i in range(len(season_scorelines), display.nrows * display.ncols):
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
@@ -165,20 +192,27 @@ def main(args: Namespace):
     if not seasons:
         messages.error_message("No season data found")
 
-    season_to_summary = OrderedDict()
-    ylim = 0
-    for season in seasons:
-        summary = compute_summary(season, args.half)
-        if summary:
-            season_to_summary[season] = summary
-            ylim = max(ylim, season_to_summary[season].home_goals, season_to_summary[season].away_goals)
-    ylim += 25
+    if args.team:
+        (row,) = extract_picked_team(args.database, args.team, league)
+        selected_team = Team.inventory[row[0]]
+    else:
+        selected_team = None
 
-    title = '{} {}'.format(league.country, league.name)
+    season_scorelines = OrderedDict()
+    for season in seasons:
+        scorelines = compute_scorelines(season, args.half, args.venue, selected_team)
+        if scorelines:
+            season_scorelines[season] = scorelines
+
+    if selected_team:
+        title = '{} in {} {}'.format(selected_team.name, league.country, league.name)
+    else:
+        title = '{} {}'.format(league.country, league.name)
+
     if args.half != Half.both:
         title += ' ({} half)'.format(args.half.name)
 
-    show(title, season_to_summary, ylim, args.block)
+    show(title, args.half,  selected_team, season_scorelines, args.block)
 
 
 if __name__ == '__main__':

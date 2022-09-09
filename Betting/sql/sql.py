@@ -98,7 +98,6 @@ def load_league(filename: str, league: League):
         for season_row in season_rows:
             season = create_season_from_row(season_row)
             constraints = ['{}={}'.format(ColumnNames.Season_ID.name, season_row[0])]
-                          # '{}={}'.format(ColumnNames.Finished.name, Characters.TRUE.value)]
             fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
             for fixture_row in fixture_rows:
                 fixture = create_fixture_from_row(fixture_row)
@@ -107,7 +106,7 @@ def load_league(filename: str, league: League):
             season.sort_fixtures()
 
 
-def extract_picked_team(database_name: str, team_name: str, league: League = None, error: bool = True) -> List[str]:
+def extract_picked_team(database: str, team_name: str, league: League = None, error: bool = True) -> List[str]:
     team_name = team_name.replace('*', '%')
     team_name = team_name.replace("'", "''")
 
@@ -120,7 +119,7 @@ def extract_picked_team(database_name: str, team_name: str, league: League = Non
                                                 Keywords.NOCASE.name)
     constraints.append(team_constraint)
 
-    with Database(database_name) as db:
+    with Database(database) as db:
         team_rows.extend(db.fetch_all_rows(Team.sql_table(), constraints))
 
     if (not team_rows or len(team_rows) > 1) and league:
@@ -131,7 +130,7 @@ def extract_picked_team(database_name: str, team_name: str, league: League = Non
                                                    Keywords.NOCASE.name)
         constraints.append(country_constaint)
 
-        with Database(database_name) as db:
+        with Database(database) as db:
             team_rows.extend(db.fetch_all_rows(Team.sql_table(), constraints))
 
     if not team_rows:
@@ -139,7 +138,7 @@ def extract_picked_team(database_name: str, team_name: str, league: League = Non
             messages.error_message("No team '{}' found in the database.".format(team_name))
         else:
             all_rows = []
-            with Database(database_name) as db:
+            with Database(database) as db:
                 all_rows.extend(db.fetch_all_rows(Team.sql_table(), []))
 
             expr = compile(r'.*{}.*'.format(team_name.replace('%', '.*')))
@@ -161,6 +160,21 @@ def get_fixtures(db: Database, constraints: List[str]):
         fixture = create_fixture_from_row(row)
         fixtures.append(fixture)
     return fixtures
+
+
+def get_team_fixtures(database: str, season: Season, team: Team):
+    with Database(database) as db:
+        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
+        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                    team.id,
+                                                    Keywords.OR.name,
+                                                    ColumnNames.Away_ID.name,
+                                                    team.id)
+        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
+        constraints = [season_constraint, team_constraint, finished_constraint]
+        fixtures = get_fixtures(db, constraints)
+        fixtures.sort(key=lambda fixture: fixture.date)
+        return fixtures
 
 
 def get_current_season(db: Database, league: League):
