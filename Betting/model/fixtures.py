@@ -28,8 +28,7 @@ class Venue(Enum):
 class Half(Enum):
     first = auto()
     second = auto()
-    both = auto()
-    separate = auto()
+    full = auto()
 
     @classmethod
     def from_string(cls, string: str):
@@ -304,6 +303,8 @@ round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Girone [A-C] - \d+'),
                  re.compile(r'Group [A-D] - \d+'),
                  re.compile(r'Group [1-4] - \d+$'),
+                 re.compile(r'ČFL (A|B) - \d+'),
+                 re.compile(r'MSFL - \d+'),
                  re.compile(r'(North A|North B|South A|South B) - \d+$'),
                  re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
                  re.compile(r'Liga 1 - Round \d+'),

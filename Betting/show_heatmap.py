@@ -19,6 +19,7 @@ from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap
 from sql.sql import load_league, load_teams
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -81,20 +82,20 @@ predicate_table = {
 }
 
 
-def fill_matrix(matrix: np.ndarray, table_map: TableMap, table: LeagueTable, predicates: Predicates, half: Half):
+def fill_matrix(matrix: np.ndarray, table_map: TableMap, table: LeagueTable, predicates: Predicates, halves: List[Half]):
     team_fixtures = table.season.fixtures_per_team()
     for position, row in enumerate(table):
         fixtures = team_fixtures[row.TEAM]
         results = []
         for fixture in fixtures:
-            if half == Half.both:
-                result = fixture.full_time()
-            elif half == Half.first:
-                result = fixture.first_half()
-            elif half == Half.second:
-                result = fixture.second_half()
-            else:
-                assert False
+            if Half.first in halves:
+                results.append(fixture.first_half())
+
+            if Half.second in halves:
+                results.append(fixture.second_half())
+
+            if Half.full in halves:
+                results.append(fixture.full_time())
 
             if result:
                 result = fixture.canonicalise_result(row.TEAM, result)

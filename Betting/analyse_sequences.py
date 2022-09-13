@@ -19,7 +19,7 @@ from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.teams import Team
 from model.sequences import count_events, DataUnit
-from sql.sql import Database, extract_picked_team, load_league, load_teams, get_team_fixtures
+from sql.sql import Database, extract_picked_team, load_league, load_teams, get_unfinished_matches
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters, Keywords
 from typing import Callable, Dict, List
@@ -110,7 +110,7 @@ def predict(team_now: DataUnit, team_history: DataUnit, aggregated_history: Data
 
 def output_prediction(team: Team,
                       next_match: Fixture,
-                      half: Half,
+                      halves: List[Half],
                       venue: Venue,
                       event: Callable,
                       negate: bool,
@@ -121,16 +121,8 @@ def output_prediction(team: Team,
     if venue != Venue.any:
         header += ' {}'.format(venue.name)
 
-    if half == Half.both:
-        header += ' {}'.format('games' if length_of_run > 1 else 'game')
-    elif half == Half.first:
-        header += ' 1st {}'.format('halves' if length_of_run > 1 else 'half')
-    elif half == Half.second:
-        header += ' 2nd {}'.format('halves' if length_of_run > 1 else 'half')
-    elif half == Half.separate:
-        header += ' consecutive {}'.format('halves' if length_of_run > 1 else 'half')
-    else:
-        assert False
+    header += ' {} ({})'.format('results' if length_of_run > 1 else 'result',
+                                ', '.join([half.name for half in Half if half in halves]))
 
     header = '{}: {}'.format(header, team.name)
     next_match_message = 'Next match: {} {} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
@@ -160,7 +152,7 @@ def analyse_teams(args: Namespace,
             aggregated_message, team_message = predict(team_now, team_history, history, args.probability, args.minimum)
 
             if aggregated_message or team_message:
-                fixtures = get_team_fixtures(args.database, this_season, team)
+                fixtures = get_unfinished_matches(args.database, this_season, team)
                 fixtures_remaining = len(fixtures)
                 fixtures = [fixture for fixture in fixtures if
                             (fixture.date.timetuple().tm_yday == now.tm_yday and

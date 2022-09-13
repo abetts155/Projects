@@ -107,7 +107,7 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
                     fixtures.append(fixture)
 
     for fixture in fixtures:
-        if half == Half.both:
+        if half == Half.full:
             result = fixture.full_time()
         elif half == Half.first:
             result = fixture.first_half()
@@ -262,7 +262,7 @@ def add_venue_and_half_to_title(title: str, venue: Venue, half: Half):
     else:
         title = '{} ({} only)'.format(title, venue.name)
 
-    if half != Half.both:
+    if half != Half.full:
         title = '{} ({} half)'.format(title, half.name)
 
     return title

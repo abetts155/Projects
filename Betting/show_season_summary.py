@@ -18,6 +18,7 @@ from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
 from sql.sql import extract_picked_team, load_league, load_teams
+from typing import List
 
 
 def parse_command_line():
@@ -32,7 +33,7 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def compute_scorelines(season: Season, half: Half, venue: Venue, team: Team) -> Counter:
+def compute_scorelines(season: Season, halves: List[Half], venue: Venue, team: Team) -> Counter:
     scorelines = Counter()
     for fixture in season.fixtures():
         results = []
@@ -50,15 +51,14 @@ def compute_scorelines(season: Season, half: Half, venue: Venue, team: Team) -> 
                     analyse = True
 
         if analyse:
-            if half == Half.both:
+            if Half.first in halves:
+                results.append(fixture.first_half())
+
+            if Half.second in halves:
+                results.append(fixture.second_half())
+
+            if Half.full in halves:
                 results.append(fixture.full_time())
-            elif half == Half.first:
-                results.append(fixture.first_half())
-            elif half == Half.second:
-                results.append(fixture.second_half())
-            else:
-                results.append(fixture.first_half())
-                results.append(fixture.second_half())
 
         for result in results:
             if result is not None:
@@ -122,10 +122,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
         ax.set_frame_on(False)
 
         total_games = sum(scorelines.values())
-        if half == Half.both:
-            ax.set_title('{} games'.format(total_games))
-        else:
-            ax.set_title('{} halves'.format(total_games))
+        ax.set_title('{} results'.format(total_games))
 
         if total_games:
             for k, v in zip(x_values, y_values):
@@ -209,8 +206,7 @@ def main(args: Namespace):
     else:
         title = '{} {}'.format(league.country, league.name)
 
-    if args.half != Half.both:
-        title += ' ({} half)'.format(args.half.name)
+    title += ' ({})'.format(', '.join([half.name for half in args.half]))
 
     show(title, args.half,  selected_team, season_scorelines, args.block)
 

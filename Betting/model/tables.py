@@ -100,14 +100,14 @@ class TableMap:
 
 
 class LeagueTable(list):
-    def __init__(self, season: Season, half: Half):
+    def __init__(self, season: Season, halves: List[Half]):
         list.__init__(self)
         self._season = season
-        self.__fill(season.fixtures(), half)
+        self.__fill(season.fixtures(), halves)
         self.sort(key=lambda row: (row.PTS, row.F - row.A, row.F), reverse=True)
         self.__compute_slices()
 
-    def __fill(self, fixtures: List[Fixture], half: Half):
+    def __fill(self, fixtures: List[Fixture], halves: List[Half]):
         data = {}
         for fixture in fixtures:
             if fixture.home_team not in data:
@@ -118,22 +118,12 @@ class LeagueTable(list):
 
             if fixture.full_time():
                 results = []
-                if half == Half.both:
-                    if fixture.full_time() is not None:
-                        results.append(fixture.full_time())
-                elif half == Half.first:
-                    if fixture.first_half() is not None:
-                        results.append(fixture.first_half())
-                elif half == Half.second:
-                    if fixture.second_half() is not None:
-                        results.append(fixture.second_half())
-                elif half == Half.separate:
-                    if fixture.first_half() is not None:
-                        results.append(fixture.first_half())
-                    if fixture.second_half() is not None:
-                        results.append(fixture.second_half())
-                else:
-                    assert False
+                if Half.full in halves and fixture.full_time() is not None:
+                    results.append(fixture.full_time())
+                if Half.first in halves and fixture.first_half() is not None:
+                    results.append(fixture.first_half())
+                if Half.second in halves and fixture.second_half() is not None:
+                    results.append(fixture.second_half())
 
                 if results:
                     home = data[fixture.home_team][Venue.home]

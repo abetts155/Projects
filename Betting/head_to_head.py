@@ -1,4 +1,10 @@
 from argparse import ArgumentParser, Namespace
+from matplotlib import pyplot as plt
+from matplotlib import gridspec as gridspec
+from pandas import DataFrame
+from typing import Dict, List, Tuple
+from urllib.error import URLError
+
 from cli.cli import (add_database_option,
                      add_logging_options,
                      set_logging_options,
@@ -7,17 +13,20 @@ from cli.cli import (add_database_option,
                      add_block_option,
                      get_multiple_teams,
                      get_unique_league)
-from collections import Counter
+from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
-from matplotlib import pyplot as plt
-from model.fixtures import Half, Fixture, Result, create_fixture_from_row, win, draw, loss
+from model.fixtures import Half, Fixture, Result, Venue, create_fixture_from_row, win, loss
 from model.leagues import league_register
+from model.seasons import Season
+from model.tables import LeagueTable
 from model.teams import Team
+from sql.sql import (ColumnNames,
+                     Characters,
+                     Keywords,
+                     extract_picked_team,
+                     load_league, load_teams,
+                     get_finished_matches)
 from sql.sql import Database
-from sql.sql import ColumnNames, Characters, Keywords, extract_picked_team, load_league, load_teams
-from typing import Callable, List, Tuple
-
-import pandas as pd
 
 
 def parse_command_line():
@@ -30,7 +39,18 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def get_fixtures(database: str, left_team: Team, right_team: Team):
+def add_image(ax, team: Team):
+    try:
+        url = 'https://media.api-sports.io/football/teams'
+        img = plt.imread('{}/{}.png'.format(url, team.id))
+        ax.imshow(img)
+        ax.axis('off')
+        return True
+    except URLError:
+        return False
+
+
+def get_head_to_head_fixtures(database: str, left_team: Team, right_team: Team):
     fixtures = []
     with Database(database) as db:
         teams_constraint = "{}={} {} {}={}".format(ColumnNames.Home_ID.name,
@@ -48,98 +68,10 @@ def get_fixtures(database: str, left_team: Team, right_team: Team):
     return fixtures
 
 
-class Statistics:
-    __slots__ = ['wins', 'draws', 'losses', 'goals_for', 'goals_against', 'scores']
-
-    def __init__(self):
-        self.wins = 0
-        self.draws = 0
-        self.losses = 0
-        self.goals_for = 0
-        self.goals_against = 0
-        self.scores = Counter()
-
-
-def populate(stats: Statistics, result: Result):
-    if result:
-        if win(result):
-            stats.wins += 1
-        elif loss(result):
-            stats.losses += 1
-        else:
-            assert draw(result)
-            stats.draws += 1
-
-        stats.goals_for += result.left
-        stats.goals_against += result.right
-        stats.scores[(result.left, result.right)] += 1
-
-
-def compute_records(fixtures: List[Fixture]):
-    first_half_stats = Statistics()
-    second_half_stats = Statistics()
-    full_time_stats = Statistics()
-    for fixture in fixtures:
-        populate(first_half_stats, fixture.first_half())
-        populate(second_half_stats, fixture.second_half())
-        populate(full_time_stats, fixture.full_time())
-    return first_half_stats, second_half_stats, full_time_stats
-
-
-def attach_scorelines(ax,
-                      x_values: List,
-                      y_values: List,
-                      colors: List,
-                      color: Tuple[float, float, float],
-                      stats: Statistics,
-                      predicate: Callable):
-    index = 0
-    offset = len(y_values)
-    for (left, right), count in sorted(stats.scores.items(), key=lambda x: x[1], reverse=True):
-        if predicate(left, right):
-            x_values.append('{}-{}'.format(left, right))
-            y_values.append(count)
-            colors.append(color)
-            effective_index = index + offset
-            ax.text(effective_index, count, str(count), ha='center', fontsize=8)
-            index += 1
-
-
-def create_title(team: Team):
-    title = 'At {}'.format(team.name)
-    return title
-
-
-def create_single_bar(ax,
-                      home_team: Team,
-                      left_color: Tuple[float, float, float],
-                      right_color: Tuple[float, float, float],
-                      neutral_color: Tuple[float, float, float],
-                      stats: Statistics):
-    x_values = ['H', 'D', 'A', 'HG', 'AG']
-    y_values = [stats.wins, stats.draws, stats.losses, stats.goals_for, stats.goals_against]
-    colors = [left_color, neutral_color, right_color, left_color, right_color]
-
-    for x, y in enumerate(y_values):
-        ax.text(x, y, str(y), ha='center', fontsize=8)
-
-    attach_scorelines(ax, x_values, y_values, colors, left_color, stats, int.__gt__)
-    attach_scorelines(ax, x_values, y_values, colors, neutral_color, stats, int.__eq__)
-    attach_scorelines(ax, x_values, y_values, colors, right_color, stats, int.__lt__)
-
-    ax.bar(x_values, y_values, align='center', color=colors, edgecolor='black')
-    indices = range(len(x_values))
-    ax.set_xticks(indices)
-    ax.set_xticklabels(x_values, rotation=30)
-    ax.set_yticks([])
-    ax.set_title(create_title(home_team), fontweight='bold', fontsize=14, color=left_color)
-
-
 def decide_cell_color(result: Result,
                       left_color: Tuple[float, float, float],
                       right_color: Tuple[float, float, float],
-                      neutral_color: Tuple[float, float, float],
-                      unknown_color: Tuple[float, float, float]):
+                      neutral_color: Tuple[float, float, float]):
     if result:
         if win(result):
             return left_color
@@ -148,40 +80,148 @@ def decide_cell_color(result: Result,
         else:
             return neutral_color
     else:
-        return unknown_color
+        return neutral_color
 
 
 def create_results_table(ax,
                          fixtures: List[Fixture],
-                         team: Team,
+                         left_team: Team,
+                         right_team: Team,
                          left_color: Tuple[float, float, float],
                          right_color: Tuple[float, float, float],
-                         neutral_color: Tuple[float, float, float],
-                         unknown_color: Tuple[float, float, float]):
+                         neutral_color: Tuple[float, float, float]):
     colors = []
     table = []
-    fixtures.sort(key=lambda row: row.date)
+    fixtures.sort(key=lambda row: row.date, reverse=True)
     for i, fixture in enumerate(fixtures):
         first_half = fixture.first_half()
         second_half = fixture.second_half()
         full_time = fixture.full_time()
         colors.append([neutral_color,
-                       decide_cell_color(first_half, left_color, right_color, neutral_color, unknown_color),
-                       decide_cell_color(second_half, left_color, right_color, neutral_color, unknown_color),
-                       decide_cell_color(full_time, left_color, right_color, neutral_color, unknown_color)])
-        row = ['{}'.format(fixture.date.strftime('%Y-%m-%d')), str(first_half), str(second_half), str(full_time)]
+                       left_color,
+                       right_color,
+                       decide_cell_color(first_half, left_color, right_color, neutral_color),
+                       decide_cell_color(second_half, left_color, right_color, neutral_color),
+                       decide_cell_color(full_time, left_color, right_color, neutral_color)])
+        row = [fixture.date.strftime('%Y %b'),
+               left_team.name,
+               right_team.name,
+               str(first_half) if first_half else '',
+               str(second_half) if second_half else '',
+               str(full_time) if full_time else '']
         table.append(row)
 
-    df = pd.DataFrame(table)
-    df.columns = ['Date', '1st', '2nd', 'FT']
+    df = DataFrame(table)
+    df.columns = ['Date', 'Home', 'Away', '1st', '2nd', 'FT']
 
-    ax.table(cellText=df.values,
-             colLabels=df.columns,
-             colLoc='left',
-             cellColours=colors,
-             cellLoc='left',
-             loc='upper center')
-    ax.set_title(create_title(team), fontweight='bold', fontsize=14, color=left_color)
+    the_table = ax.table(cellText=df.values,
+                         colLabels=df.columns,
+                         colColours=[neutral_color] * len(df.columns),
+                         colLoc='left',
+                         cellColours=colors,
+                         cellLoc='left',
+                         colWidths=[0.15, 0.3, 0.3, 0.05, 0.05, 0.05],
+                         loc='upper center')
+    the_table.auto_set_font_size(False)
+    the_table.set_fontsize(8)
+    ax.axis('off')
+
+
+def create_form_table(ax,
+                      fixtures: List[Fixture],
+                      team: Team,
+                      team_color: Tuple[float, float, float],
+                      other_color: Tuple[float, float, float],
+                      neutral_color: Tuple[float, float, float]):
+    colors = []
+    table = []
+    fixtures.sort(key=lambda row: row.date, reverse=True)
+    for i, fixture in enumerate(fixtures):
+        first_half = fixture.first_half()
+        second_half = fixture.second_half()
+        full_time = fixture.full_time()
+
+        if team == fixture.away_team:
+            first_half = first_half.reverse()
+            second_half = second_half.reverse()
+            full_time = full_time.reverse()
+
+        colors.append([neutral_color,
+                       neutral_color if fixture.home_team != team else team_color,
+                       neutral_color if fixture.away_team != team else team_color,
+                       decide_cell_color(first_half, team_color, other_color, neutral_color),
+                       decide_cell_color(second_half, team_color, other_color, neutral_color),
+                       decide_cell_color(full_time, team_color, other_color, neutral_color)])
+
+        if team == fixture.away_team:
+            first_half = first_half.reverse()
+            second_half = second_half.reverse()
+            full_time = full_time.reverse()
+
+        row = [fixture.date.strftime('%Y %b'),
+               fixture.home_team.name,
+               fixture.away_team.name,
+               str(first_half) if first_half else '',
+               str(second_half) if second_half else '',
+               str(full_time) if full_time else '']
+        table.append(row)
+
+    df = DataFrame(table)
+    df.columns = ['Date', 'Home', 'Away', '1st', '2nd', 'FT']
+
+    the_table = ax.table(cellText=df.values,
+                         colLabels=df.columns,
+                         colColours=[neutral_color] * len(df.columns),
+                         colLoc='left',
+                         cellColours=colors,
+                         cellLoc='left',
+                         colWidths=[0.15, 0.3, 0.3, 0.05, 0.05, 0.05],
+                         loc='upper center')
+    the_table.auto_set_font_size(False)
+    the_table.set_fontsize(8)
+    ax.axis('off')
+
+
+def create_league_table(ax,
+                        this_season: Season,
+                        team_colors: Dict,
+                        neutral_color: str):
+    league_table = LeagueTable(this_season, [Half.full])
+    display_table = []
+    team_length = 1
+    for i, league_row in enumerate(league_table, start=1):
+        display_row = [league_row.TEAM.name,
+                       league_row.W + league_row.D + league_row.L,
+                       league_row.W, league_row.D, league_row.L, league_row.F, league_row.A]
+        wins = league_row.W
+        draws = league_row.D
+        pts = wins * 3 + draws
+        display_row.append(pts)
+        display_table.append(display_row)
+        team_length = max(team_length, len(league_row.TEAM.name))
+
+    display_table.sort(key=lambda row: row[-1], reverse=True)
+
+    colors = []
+    for display_row in display_table:
+        if display_row[0] in team_colors:
+            colors.append([team_colors[display_row[0]]] * len(display_row))
+        else:
+            colors.append([neutral_color] * len(display_row))
+
+    df = DataFrame(display_table)
+    df.columns = ['Team', 'P', 'W', 'D', 'L', 'F', 'A', 'PTS']
+
+    the_table = ax.table(cellText=df.values,
+                         colLabels=df.columns,
+                         colLoc='left',
+                         colColours=[neutral_color] * len(df.columns),
+                         colWidths=[0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                         cellColours=colors,
+                         cellLoc='left',
+                         loc='upper center')
+    the_table.auto_set_font_size(False)
+    the_table.set_fontsize(8)
     ax.axis('off')
 
 
@@ -192,9 +232,16 @@ def main(args: Namespace):
         league = league_register[get_unique_league(args)]
         load_league(args.database, league)
 
-    nrows = 2
-    ncols = 4
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 13.5), squeeze=False, constrained_layout=True)
+    background_color = '#d3d3d3'
+    left_color = '#81d4fa'
+    right_color = '#0086c3'
+    other_color = '#ef5350'
+    neutral_color = '#ffffff'
+
+    nrows = 3
+    ncols = 3
+    fig = plt.figure(figsize=(15, 10), constrained_layout=True, facecolor=background_color)
+    spec = gridspec.GridSpec(nrows=nrows, ncols=ncols, figure=fig, hspace=0.75)
 
     left_name, right_name = get_multiple_teams(args)
     (row,) = extract_picked_team(args.database, left_name, league)
@@ -202,66 +249,70 @@ def main(args: Namespace):
     (row,) = extract_picked_team(args.database, right_name, league)
     right_team = Team.inventory[row[0]]
 
-    left_team_color = (54 / 255, 104 / 255, 141 / 255)
-    right_team_color = (240 / 255, 88 / 255, 55 / 255)
-    neutral_color = (1, 1, 1)
-    unknown_color = (0, 0, 0)
-    halves = [Half.first, Half.second, Half.both]
+    ax = fig.add_subplot(spec[0, 0])
+    if not add_image(ax, left_team):
+        fig.delaxes(ax)
 
-    left_fixtures = get_fixtures(args.database, left_team, right_team)
-    right_fixtures = get_fixtures(args.database, right_team, left_team)
+    ax = fig.add_subplot(spec[0, 2])
+    if not add_image(ax, right_team):
+        fig.delaxes(ax)
+
+    left_fixtures = get_head_to_head_fixtures(args.database, left_team, right_team)
+    right_fixtures = get_head_to_head_fixtures(args.database, right_team, left_team)
 
     if not left_fixtures and not right_fixtures:
         warning_message("No head-to-head between {} and {}".format(left_team.name, right_team.name))
     else:
         if left_fixtures:
-            first_half_stats, second_half_stats, full_time_stats = compute_records(left_fixtures)
-            data = [first_half_stats, second_half_stats, full_time_stats]
-            for i, (half, stats) in enumerate(zip(halves, data)):
-                create_single_bar(axs[0, i],
-                                  left_team,
-                                  left_team_color,
-                                  right_team_color,
-                                  neutral_color,
-                                  stats)
-
-            create_results_table(axs[0, ncols - 1],
+            ax = fig.add_subplot(spec[1, 0])
+            create_results_table(ax,
                                  left_fixtures,
                                  left_team,
-                                 left_team_color,
-                                 right_team_color,
-                                 neutral_color,
-                                 unknown_color)
-        else:
-            for i in range(ncols):
-                fig.delaxes(axs[0, i])
+                                 right_team,
+                                 left_color,
+                                 right_color,
+                                 neutral_color)
 
         if right_fixtures:
-            first_half_stats, second_half_stats, full_time_stats = compute_records(right_fixtures)
-            data = [first_half_stats, second_half_stats, full_time_stats]
-            for i, (half, stats) in enumerate(zip(halves, data)):
-                create_single_bar(axs[1, i],
-                                  right_team,
-                                  right_team_color,
-                                  left_team_color,
-                                  neutral_color,
-                                  stats)
-            create_results_table(axs[1, ncols - 1],
+            ax = fig.add_subplot(spec[1, 2])
+            create_results_table(ax,
                                  right_fixtures,
                                  right_team,
-                                 right_team_color,
-                                 left_team_color,
-                                 neutral_color,
-                                 unknown_color)
-        else:
-            for i in range(ncols):
-                fig.delaxes(axs[1, i])
+                                 left_team,
+                                 right_color,
+                                 left_color,
+                                 neutral_color)
 
-        fig.suptitle('Head-to-head: {} vs {}'.format(left_team.name, right_team.name), fontweight='bold', fontsize=14)
-        plt.show(block=args.block)
+    seasons = Season.seasons(league)
+    this_season = seasons.pop()
+
+    fixtures = get_finished_matches(args.database, this_season, left_team)
+    ax = fig.add_subplot(spec[2, 0])
+    create_form_table(ax,
+                      fixtures,
+                      left_team,
+                      left_color,
+                      other_color,
+                      neutral_color)
+
+    fixtures = get_finished_matches(args.database, this_season, right_team)
+    ax = fig.add_subplot(spec[2, 2])
+    create_form_table(ax,
+                      fixtures,
+                      right_team,
+                      right_color,
+                      other_color,
+                      neutral_color)
+
+    ax = fig.add_subplot(spec[1:, 1])
+    colors = {left_team.name: left_color, right_team.name: right_color}
+    create_league_table(ax, this_season, colors, neutral_color)
+
+    plt.show(block=args.block)
 
 
 if __name__ == '__main__':
     args = parse_command_line()
     set_logging_options(args)
+    set_matplotlib_defaults()
     main(args)

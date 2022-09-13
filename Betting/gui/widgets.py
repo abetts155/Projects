@@ -42,15 +42,17 @@ team_radio_one = Radio('', radio_team_choice, default=True)
 team_radio_two = Radio('', radio_team_choice)
 team_choice_one = Combo([], enable_events=True, readonly=True, key='-TEAM1-')
 team_choice_two = Combo([], enable_events=True, readonly=True, key='-TEAM2-')
+team_clear_one = Button('Clear', button_color=('black', 'white'), key='-TEAM1-CLEAR-')
+team_clear_two = Button('Clear', button_color=('black', 'white'), key='-TEAM2-CLEAR-')
 
 venue_any = Radio(Venue.any.name.capitalize(), radio_venue, default=True)
 venue_home = Radio(Venue.home.name.capitalize(), radio_venue)
 venue_away = Radio(Venue.away.name.capitalize(), radio_venue)
 
-half_both = Radio(Half.both.name.capitalize(), radio_half, default=True)
-half_first = Radio(Half.first.name.capitalize(), radio_half)
-half_second = Radio(Half.second.name.capitalize(), radio_half)
-half_separate = Radio(Half.separate.name.capitalize(), radio_half)
+half_full = Checkbox(Half.full.name.capitalize(), enable_events=True, default=True)
+half_first = Checkbox(Half.first.name.capitalize(), enable_events=True)
+half_second = Checkbox(Half.second.name.capitalize(), enable_events=True)
+half_reset = Button('Reset', button_color=('black', 'white'), key='-HALF-RESET-')
 
 chunks_choice = Combo([],
                       disabled=True,
@@ -60,20 +62,16 @@ chunks_choice = Combo([],
 
 event_choice = InputText(size=(16, 1), key='-EVENT-')
 event_negation = Checkbox('Negate', key='-NEGATE-EVENT-')
-event_clear = Button('Clear', button_color=('black', 'white'), key='-CLEAR-EVENT-')
+event_clear = Button('Clear', button_color=('black', 'white'), key='-EVENT-CLEAR-')
 
 aggregated_sequences_submit = Button('Aggregated sequences', key='-AGG-SEQ-SUBMIT-')
 season_sequences_submit = Button('Per-season sequences', key='-PER-SEQ-SUBMIT-')
 
-team_analysis_form = Radio('Form',
-                           radio_team_analysis,
-                           key='-TEAM-ANALYSIS-FORM-',
-                           enable_events=True,
-                           default=True)
 team_analysis_summary = Radio('Summary',
                               radio_team_analysis,
                               key='-TEAM-ANALYSIS-SUMMARY-',
-                              enable_events=True)
+                              enable_events=True,
+                              default=True)
 team_analysis_goals = Radio('Goals',
                             radio_team_analysis,
                             key='-TEAM-ANALYSIS-GOALS-',
@@ -118,19 +116,18 @@ def make_window():
     default_size = (10, 1)
     layout1 = [[Text('Country', size=default_size), country_choice],
                [Text('League', size=default_size), league_choice],
-               [Text('Team #1', size=default_size), team_radio_one, team_choice_one],
-               [Text('Team #2', size=default_size), team_radio_two, team_choice_two],
+               [Text('Team #1', size=default_size), team_radio_one, team_choice_one, team_clear_one],
+               [Text('Team #2', size=default_size), team_radio_two, team_choice_two, team_clear_two],
                [Text('History', size=default_size), history_choice],
                [Text('Event', size=default_size), event_choice, event_negation, event_clear],
                [Text('Venue', size=default_size), venue_any, venue_home, venue_away],
-               [Text('Half', size=default_size), half_both, half_first, half_second, half_separate],
+               [Text('Half', size=default_size), half_full, half_first, half_second, half_reset],
                [Text('Chunks', size=default_size), chunks_choice],
                [HorizontalSeparator()],
                [aggregated_sequences_submit, season_sequences_submit, h2h_submit, league_analysis_submit],
                [HorizontalSeparator()],
                [Text('Individual team analysis', )],
                [Text('Analysis', size=default_size),
-                team_analysis_form,
                 team_analysis_summary,
                 team_analysis_goals],
                [Text('Game states', size=default_size), team_analysis_game_states],

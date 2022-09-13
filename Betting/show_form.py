@@ -17,7 +17,7 @@ from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team
-from sql.sql import Database, ColumnNames, Characters, Keywords, extract_picked_team, load_league, load_teams
+from sql.sql import extract_picked_team, load_league, load_teams, get_finished_matches
 from typing import List, Tuple
 
 import pandas as pd
@@ -33,31 +33,6 @@ def parse_command_line():
     add_half_option(parser)
     add_block_option(parser)
     return parser.parse_args()
-
-
-def get_fixtures(database: str, team: Team, this_season: Season, venue: Venue):
-    fixtures = []
-    with Database(database) as db:
-        if venue == Venue.home:
-            team_constraint = "{}={}".format(ColumnNames.Home_ID.name, team.id)
-        elif venue == Venue.away:
-            team_constraint = "{}={}".format(ColumnNames.Away_ID.name, team.id)
-        else:
-            team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
-                                                        team.id,
-                                                        Keywords.OR.name,
-                                                        ColumnNames.Away_ID.name,
-                                                        team.id)
-
-        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.TRUE.value)
-        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, this_season.id)
-        constraints = [team_constraint, finished_constraint, season_constraint]
-        fixtures_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
-
-        for row in fixtures_rows:
-            fixture = create_fixture_from_row(row)
-            fixtures.append(fixture)
-    return fixtures
 
 
 def decide_cell_color(result: Result,
@@ -198,7 +173,7 @@ def main(args: Namespace):
     team = Team.inventory[row[0]]
     seasons = Season.seasons(league)
     this_season = seasons.pop()
-    fixtures = get_fixtures(args.database, team, this_season, args.venue)
+    fixtures = get_finished_matches(args.database, this_season, team, args.venue)
 
     if fixtures:
         nrows = 1

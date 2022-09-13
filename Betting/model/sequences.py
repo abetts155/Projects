@@ -52,7 +52,7 @@ class DataUnit:
 def count_events(season: Season,
                  team: Team,
                  venue: Venue,
-                 half: Half,
+                 halves: List[Half],
                  func: Callable,
                  negate: bool,
                  data: DataUnit):
@@ -73,26 +73,24 @@ def count_events(season: Season,
     sequence = []
     for fixture in fixtures:
         results = []
-        if half == Half.both:
-            if fixture.full_time() is not None:
-                results.append(fixture.full_time())
-        elif half == Half.first:
+
+        if Half.first in halves:
             if fixture.first_half() is not None:
                 results.append(fixture.first_half())
             else:
                 warning_message('No 1st half result for fixture {}'.format(fixture))
-        elif half == Half.second:
+
+        if Half.second in halves:
             if fixture.second_half() is not None:
                 results.append(fixture.second_half())
             else:
                 warning_message('No 2nd half result for fixture {}'.format(fixture))
-        elif half == Half.separate:
-            if fixture.first_half() is not None:
-                results.append(fixture.first_half())
-            if fixture.second_half() is not None:
-                results.append(fixture.second_half())
-        else:
-            assert False
+
+        if Half.full in halves:
+            if fixture.full_time() is not None:
+                results.append(fixture.full_time())
+            else:
+                warning_message('No full-time result for fixture {}'.format(fixture))
 
         if results:
             for result in results:

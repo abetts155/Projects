@@ -1,4 +1,5 @@
 from argparse import Namespace
+from datetime import datetime
 from re import compile
 from typing import Dict
 
@@ -9,7 +10,6 @@ import show_sequences
 import show_matrix
 import show_season_sequences
 import show_projection
-import show_form
 import show_team
 import show_heatmap
 import show_season_summary
@@ -25,10 +25,10 @@ from gui.widgets import (aggregated_sequences_submit,
                          event_matrix_submit,
                          event_negation,
                          expression_text,
-                         half_both,
+                         half_full,
                          half_first,
                          half_second,
-                         half_separate,
+                         half_reset,
                          heatmap_analysis,
                          heatmap_submit,
                          history_choice,
@@ -46,12 +46,13 @@ from gui.widgets import (aggregated_sequences_submit,
                          result_text,
                          season_sequences_submit,
                          team_analysis_game_states,
-                         team_analysis_form,
                          team_analysis_goals,
                          team_analysis_submit,
                          team_analysis_summary,
                          team_choice_one,
                          team_choice_two,
+                         team_clear_one,
+                         team_clear_two,
                          team_radio_one,
                          team_radio_two,
                          venue_away,
@@ -62,7 +63,7 @@ from model.leagues import League, get_league_code, league_register, uglify
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team
-from sql.sql import extract_picked_team, get_team_fixtures, load_league, load_teams
+from sql.sql import extract_picked_team, get_unfinished_matches, load_league, load_teams
 
 messages.warnings = False
 database = 'football.db'
@@ -82,16 +83,13 @@ def set_venue(values: Dict, args: Namespace):
 
 
 def set_half(values: Dict, args: Namespace):
+    args.half = []
     if values[half_first.Key]:
-        args.half = Half.first
-    elif values[half_second.Key]:
-        args.half = Half.second
-    elif values[half_both.Key]:
-        args.half = Half.both
-    elif values[half_separate.Key]:
-        args.half = Half.separate
-    else:
-        assert False
+        args.half.append(Half.first)
+    if values[half_second.Key]:
+        args.half.append(Half.second)
+    if values[half_full.Key]:
+        args.half.append(Half.full)
 
 
 def set_history(values: Dict, args: Namespace):
@@ -248,8 +246,6 @@ def run_team_analysis(values: Dict):
 
                 args.averages = None
                 show_team.main(args)
-            elif values[team_analysis_form.Key]:
-                show_form.main(args)
             elif values[team_analysis_goals.Key]:
                 args.intervals = 3
                 show_goal_events.main(args)
@@ -384,7 +380,10 @@ def update_other_team(values: Dict, team_choice):
     if league_seasons:
         (row,) = extract_picked_team(database, values[team_choice.Key], league)
         team = Team.inventory[row[0]]
-        fixtures = get_team_fixtures(database, league_seasons[-1], team)
+        fixtures = get_unfinished_matches(database, league_seasons[-1], team)
+        now = datetime.now()
+        cutoff = datetime(now.year, now.month, now.day, now.hour - 2)
+        fixtures = [fixture for fixture in fixtures if datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None) >= cutoff]
         if fixtures:
             next_match = fixtures[0]
 
@@ -412,11 +411,17 @@ def update_history_bar(values: Dict):
 def update_chunk_bar(values: Dict):
     league = get_league(values)
     history = Season.seasons(league)
-    table = LeagueTable(history[-1], Half.both)
+    table = LeagueTable(history[-1], [Half.full])
     divisors = [i for i in range(2, len(table) + 1) if len(table) % i == 0]
     chunks_choice.update(values=[''] + divisors, set_to_index=0)
     chunks_choice.update(disabled=False)
     chunks_choice.set_size([2, None])
+
+
+def reset_halves():
+    half_full.update(value=True)
+    half_first.update(value=False)
+    half_second.update(value=False)
 
 
 def run(window: Window):
@@ -440,6 +445,15 @@ def run(window: Window):
             update_other_team(values, team_choice_two)
         elif event == event_clear.Key:
             event_choice.update('')
+        elif event == team_clear_one.Key:
+            team_choice_one.update(set_to_index=0)
+        elif event == team_clear_two.Key:
+            team_choice_two.update(set_to_index=0)
+        elif event == half_first.Key or event == half_second.Key or event == half_full.Key:
+            if not values[half_first.Key] and not values[half_second.Key] and not values[half_full.Key]:
+                reset_halves()
+        elif event == half_reset.Key:
+            reset_halves()
         elif event == h2h_submit.Key:
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
@@ -465,7 +479,7 @@ def run(window: Window):
             performance_relative_choice.update(set_to_index=0, disabled=False)
         elif event == team_analysis_summary.Key:
             team_analysis_game_states.update(disabled=False)
-        elif event in [team_analysis_form.Key, team_analysis_goals.Key]:
+        elif event == team_analysis_goals.Key:
             team_analysis_game_states.update(disabled=True)
         elif event == expression_text.Key:
             run_expression_evaluation(values)

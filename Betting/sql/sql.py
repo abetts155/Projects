@@ -1,5 +1,5 @@
 from lib import messages
-from model.fixtures import Fixture, create_fixture_from_row
+from model.fixtures import Fixture, Venue, create_fixture_from_row
 from model.leagues import League
 from model.seasons import Season, create_season_from_row
 from model.teams import Team, create_team_from_row
@@ -162,17 +162,46 @@ def get_fixtures(db: Database, constraints: List[str]):
     return fixtures
 
 
-def get_team_fixtures(database: str, season: Season, team: Team):
-    with Database(database) as db:
+def get_finished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.any):
+    with Database(filename) as db:
         season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
-        team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
-                                                    team.id,
-                                                    Keywords.OR.name,
-                                                    ColumnNames.Away_ID.name,
-                                                    team.id)
+
+        if venue == Venue.home:
+            team_constraint = "{}={}".format(ColumnNames.Home_ID.name, team.id)
+        elif venue == Venue.away:
+            team_constraint = "{}={}".format(ColumnNames.Away_ID.name, team.id)
+        else:
+            team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                        team.id,
+                                                        Keywords.OR.name,
+                                                        ColumnNames.Away_ID.name,
+                                                        team.id)
+
+        finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.TRUE.value)
+
+        fixtures = get_fixtures(db, [season_constraint, team_constraint, finished_constraint])
+        fixtures.sort(key=lambda fixture: fixture.date)
+        return fixtures
+
+
+def get_unfinished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.any):
+    with Database(filename) as db:
+        season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
+
+        if venue == Venue.home:
+            team_constraint = "{}={}".format(ColumnNames.Home_ID.name, team.id)
+        elif venue == Venue.away:
+            team_constraint = "{}={}".format(ColumnNames.Away_ID.name, team.id)
+        else:
+            team_constraint = "({}={} {} {}={})".format(ColumnNames.Home_ID.name,
+                                                        team.id,
+                                                        Keywords.OR.name,
+                                                        ColumnNames.Away_ID.name,
+                                                        team.id)
+
         finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
-        constraints = [season_constraint, team_constraint, finished_constraint]
-        fixtures = get_fixtures(db, constraints)
+
+        fixtures = get_fixtures(db, [season_constraint, team_constraint, finished_constraint])
         fixtures.sort(key=lambda fixture: fixture.date)
         return fixtures
 

@@ -106,17 +106,16 @@ def compute_chunked_data(seasons: List[Season],
     return list(chunk_to_chart.values())
 
 
-def construct_title(league: League, func: Callable, negate: bool, venue: Venue, half: Half):
+def construct_title(league: League, func: Callable, negate: bool, venue: Venue, halves: List[Half]):
     event = Event.name(func, negate)
     if venue == Venue.any:
         prologue = '{} ({} or {})'.format(event, Venue.home.name, Venue.away.name)
     else:
         prologue = '{} ({} only)'.format(event, venue.name)
 
-    if half != Half.both:
-        prologue += ' ({} half)'.format(half.name)
+    prologue += ' ({} results)'.format(', '.join([half.name for half in Half if half in halves]))
 
-    return 'Sequences: {} in {} {}'.format(prologue, prettify(league.country), league.name)
+    return '{} in {} {}'.format(prologue, prettify(league.country), league.name)
 
 
 def find_limits(data: List[DataUnit]):
@@ -147,13 +146,13 @@ def plot(ax, datum: DataUnit, x_limit: int):
         ax.set_yticks([])
         offset = 0.5
         ax.set_xlim([-1 * offset, x_limit + offset])
-        bar = ax.bar(x_values, y_values, color=cmap(scaled), zorder=1)
+        bar = ax.bar(x_values, y_values, color=cmap(scaled), zorder=1, width=0.5)
 
         if datum.team is not None and datum.last is not None and datum.highlight:
             bar[datum.last].set_color('gold')
 
     for k, v in datum.counter.items():
-        ax.text(k, v, str(v), ha='center', zorder=2)
+        ax.text(k, v, str(v), ha='center', zorder=2, rotation=45, color='red', alpha=0.75)
 
 
 def main(args: Namespace):
@@ -174,6 +173,8 @@ def main(args: Namespace):
         selected_team = Team.inventory[row[0]]
     else:
         selected_team = None
+
+    figsize = (12, 10)
 
     func = Event.get(get_unique_event(args))
     if args.chunks:
@@ -279,7 +280,11 @@ def main(args: Namespace):
                                        args.half)
         x_limit, _ = find_limits(data)
         display = DisplayGrid(len(data), 2)
-        fig, axes = plt.subplots(nrows=display.nrows, ncols=display.ncols, squeeze=False, constrained_layout=True)
+        fig, axes = plt.subplots(nrows=display.nrows,
+                                 ncols=display.ncols,
+                                 figsize=figsize,
+                                 squeeze=False,
+                                 constrained_layout=True)
         for i, datum in enumerate(data):
             cell_x, cell_y = display.index(i)
             ax = axes[cell_x, cell_y]

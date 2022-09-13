@@ -34,7 +34,7 @@ header '0-0 draws'
 ./fixtures.sh -E gfa_eq_0 --minimum 1 "$@"
 
 header 'No goals (consecutive halves)'
-./fixtures.sh -E gfa_eq_0 --half separate --minimum 4 "$@"
+./fixtures.sh -E gfa_eq_0 --half first second --minimum 4 "$@"
 
 header 'Goals scored = 0 (first half)'
 ./fixtures.sh -E gfa_eq_0 --half first --minimum 4 "$@"
@@ -61,10 +61,10 @@ header 'Draws (second half)'
 ./fixtures.sh -E draw --half second --minimum 4 "$@"
 
 header 'Draws (consecutive halves)'
-./fixtures.sh -E draw --half separate --minimum 5 "$@"
+./fixtures.sh -E draw --half first second --minimum 5 "$@"
 
 header 'No draws (consecutive halves)'
-./fixtures.sh -E draw -n --half separate --minimum 10 "$@"
+./fixtures.sh -E draw -n --half first second --minimum 10 "$@"
 
 header 'Goals scored >= 3'
 ./fixtures.sh -E gfa_ge_3 --minimum 6 "$@"

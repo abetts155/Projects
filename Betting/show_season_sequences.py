@@ -23,7 +23,7 @@ from model.seasons import Season
 from model.sequences import count_events, DataUnit
 from model.teams import Team
 from sql.sql import load_league, load_teams, extract_picked_team
-from typing import Callable, Dict
+from typing import Callable, Dict, List
 
 
 def parse_command_line():
@@ -85,17 +85,15 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
     plt.show(block=block)
 
 
-def construct_title(league: League, func: Callable, negate: bool, venue: Venue, half: Half, team: Team):
+def construct_title(league: League, func: Callable, negate: bool, venue: Venue, halves: List[Half], team: Team):
     event = Event.name(func, negate)
     if venue == Venue.any:
         prologue = '{} ({} or {})'.format(event, Venue.home.name, Venue.away.name)
     else:
         prologue = '{} ({} only)'.format(event, venue.name)
 
-    if half != Half.both:
-        prologue += ' ({} half)'.format(half.name)
-
-    prologue = 'Sequences: {} in {} {}'.format(prologue, prettify(league.country), league.name)
+    prologue += ' ({} results)'.format(', '.join([half.name for half in Half if half in halves]))
+    prologue = '{} in {} {}'.format(prologue, prettify(league.country), league.name)
 
     if team:
         return '{} for {}'.format(prologue, team.name)
