@@ -38,11 +38,6 @@ def parse_command_line():
     add_events_option(parser)
     add_logging_options(parser)
 
-    parser.add_argument('--probability',
-                        type=float,
-                        help='only show events below or at this threshold',
-                        default=0.1)
-
     parser.add_argument('-S',
                         '--show-match',
                         action='store_true',
@@ -57,27 +52,7 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def probability(current_run: int, counter: Counter) -> float:
-    if counter:
-        numerator = 0
-        for i in range(current_run + 1, len(counter) + 1):
-            numerator += counter[i]
-        return numerator / sum(counter.values())
-    else:
-        return 1
-
-
-def analyse_team_and_event(seasons: List[Season], this_season: Season, team: Team, event: Callable):
-    team_history = DataUnit(Counter(), seasons)
-    for season in seasons:
-        count_events(season,
-                     team,
-                     args.venue,
-                     args.half,
-                     event,
-                     args.negate,
-                     team_history)
-
+def analyse_team_and_event(args: Namespace, this_season: Season, team: Team, event: Callable):
     team_now = DataUnit(Counter(), [this_season], team=team)
     count_events(this_season,
                  team,
@@ -87,25 +62,7 @@ def analyse_team_and_event(seasons: List[Season], this_season: Season, team: Tea
                  args.negate,
                  team_now)
 
-    return team_now, team_history
-
-
-def predict(team_now: DataUnit, team_history: DataUnit, aggregated_history: DataUnit, threshold: float, minimum: int):
-    aggregated_message = ''
-    team_message = ''
-
-    if team_now.last and team_now.last >= minimum:
-        aggregated_probability = probability(team_now.last, aggregated_history.counter)
-        if aggregated_probability <= threshold:
-            aggregated_message = 'Probability of extension is {:.3f} [aggregated]'.format(aggregated_probability)
-
-        team_probability = probability(team_now.last, team_history.counter)
-        if team_probability and team_probability <= threshold:
-            team_message = 'Probability of extension is {:.3f}'.format(team_probability)
-            team_message = '{} [based on {} individual observations]'.format(team_message,
-                                                                             sum(team_history.counter.values()))
-
-    return aggregated_message, team_message
+    return team_now
 
 
 def output_prediction(team: Team,
@@ -115,30 +72,25 @@ def output_prediction(team: Team,
                       event: Callable,
                       negate: bool,
                       length_of_run: int):
-    event = Event.name(event, negate)
-    header = '{} {} in the last {}'.format('>' * 10, event, length_of_run)
+    part_one = 'Next match: {} {} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
+                                                    next_match.date.strftime('%H.%M'),
+                                                    next_match.home_team.name,
+                                                    next_match.away_team.name)
 
-    if venue != Venue.any:
-        header += ' {}'.format(venue.name)
+    part_two = '{} {} in the last {} ({}) ({}): {}'.format('>' * 10,
+                                                           Event.name(event, negate),
+                                                           length_of_run,
+                                                           venue.name,
+                                                           ', '.join([half.name for half in Half if half in halves]),
+                                                           team.name)
 
-    header += ' {} ({})'.format('results' if length_of_run > 1 else 'result',
-                                ', '.join([half.name for half in Half if half in halves]))
-
-    header = '{}: {}'.format(header, team.name)
-    next_match_message = 'Next match: {} {} {} vs. {}'.format(next_match.date.strftime('%Y-%m-%d'),
-                                                              next_match.date.strftime('%H.%M'),
-                                                              next_match.home_team.name,
-                                                              next_match.away_team.name)
-    message = '{}\n{}\n'.format(next_match_message, header)
-    print(message)
+    print('{}\n{}\n'.format(part_one, part_two))
 
 
 def analyse_teams(args: Namespace,
                   league: League,
-                  seasons: List[Season],
                   this_season: Season,
-                  teams: List[Team],
-                  historical_data: Dict[Callable, DataUnit]):
+                  teams: List[Team]):
     header = "{}Analysing sequences in {} {} {}".format('*' * 80 + '\n',
                                                         prettify(league.country),
                                                         league.name,
@@ -147,11 +99,11 @@ def analyse_teams(args: Namespace,
     now = datetime.now().timetuple()
 
     for team in teams:
-        for event, history in historical_data.items():
-            team_now, team_history = analyse_team_and_event(seasons, this_season, team, event)
-            aggregated_message, team_message = predict(team_now, team_history, history, args.probability, args.minimum)
+        for event_name in args.event:
+            event = Event.get(event_name)
+            team_now = analyse_team_and_event(args, this_season, team, event)
 
-            if aggregated_message or team_message:
+            if team_now.last and team_now.last >= args.minimum:
                 fixtures = get_unfinished_matches(args.database, this_season, team)
                 fixtures_remaining = len(fixtures)
                 fixtures = [fixture for fixture in fixtures if
@@ -218,21 +170,7 @@ def main(args: Namespace):
                 else:
                     teams = this_season.teams()
 
-                events = [Event.get(event) for event in args.event]
-                historical_data = {}
-                for event in events:
-                    historical_data[event] = DataUnit(Counter(), seasons)
-                    for season in seasons:
-                        for team in season.teams():
-                            count_events(season,
-                                         team,
-                                         args.venue,
-                                         args.half,
-                                         event,
-                                         args.negate,
-                                         historical_data[event])
-
-                analyse_teams(args, league, seasons, this_season, teams, historical_data)
+                analyse_teams(args, league, this_season, teams)
             else:
                 messages.error_message("The current season has not yet started")
 

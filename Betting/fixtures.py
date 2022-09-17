@@ -101,12 +101,12 @@ def output_fixtures(league: League, fixtures: List[Fixture]):
 
 
 def analyse_sequences(db: Database,
-                      league_code:
-                      str, teams: List[Team],
+                      league_code: str,
+                      teams: List[Team],
                       events: List[str],
                       negate: bool,
                       venue: Venue,
-                      half: Half,
+                      halves: List[Half],
                       minimum: int):
     analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
     args = ['python3', str(analyse_script),
@@ -116,7 +116,7 @@ def analyse_sequences(db: Database,
             '-E', *events,
             '-L', league_code,
             '--minimum', str(minimum),
-            '--half', half.name]
+            '--half', *[half.name for half in halves]]
 
     if negate:
         args.append('--negate')

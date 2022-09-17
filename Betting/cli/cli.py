@@ -29,7 +29,7 @@ def add_half_option(parser: ArgumentParser):
                         nargs='+',
                         metavar='{{{}}}'.format(','.join(half.name for half in Half)),
                         help='filter fixtures according to the half',
-                        default=Half.full)
+                        default=[Half.full])
 
 
 def add_league_option(parser: ArgumentParser, required: bool = True):

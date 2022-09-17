@@ -142,9 +142,14 @@ def create_form_table(ax,
         full_time = fixture.full_time()
 
         if team == fixture.away_team:
-            first_half = first_half.reverse()
-            second_half = second_half.reverse()
-            full_time = full_time.reverse()
+            if first_half:
+                first_half = first_half.reverse()
+
+            if second_half:
+                second_half = second_half.reverse()
+
+            if full_time:
+                full_time = full_time.reverse()
 
         colors.append([neutral_color,
                        neutral_color if fixture.home_team != team else team_color,
@@ -154,9 +159,14 @@ def create_form_table(ax,
                        decide_cell_color(full_time, team_color, other_color, neutral_color)])
 
         if team == fixture.away_team:
-            first_half = first_half.reverse()
-            second_half = second_half.reverse()
-            full_time = full_time.reverse()
+            if first_half:
+                first_half = first_half.reverse()
+
+            if second_half:
+                second_half = second_half.reverse()
+
+            if full_time:
+                full_time = full_time.reverse()
 
         row = [fixture.date.strftime('%Y %b'),
                fixture.home_team.name,

@@ -146,9 +146,9 @@ country_register = [
     'Wales']
 
 league_register = OrderedDict({
-    'ALB1': League('Albania', 'Superliga'),
+    #'ALB1': League('Albania', 'Superliga'),
     'ALG1': League('Algeria', 'Ligue 1'),
-    #'ALG1U': League('Algeria', 'U21 League 1'),
+    'ALG1U': League('Algeria', 'U21 League 1'),
     'ARG1': League('Argentina', 'Liga Profesional Argentina'),
     'ARG2A': League('Argentina', 'Primera Nacional'),
     'ARG2B': League('Argentina', 'Primera B Metropolitana'),
@@ -173,9 +173,9 @@ league_register = OrderedDict({
     #'AUT3E': League('Austria', 'Regionalliga - Tirol'),
     'AZE1': League('Azerbaidjan', 'Premyer Liqa'),
     'BEL1': League('Belgium', 'Jupiler Pro League'),
-    'BEL2': League('Belgium', 'Challenger Pro League'),
-    'BEL1A': League('Belgium', 'Reserve Pro League'),
-    'BEL1W': League('Belgium', 'Super League Women'),
+    #BEL2': League('Belgium', 'Challenger Pro League'),
+    #'BEL1A': League('Belgium', 'Reserve Pro League'),
+    #'BEL1W': League('Belgium', 'Super League Women'),
     'BGD1': League('Bangladesh', 'Premier League'),
     #'BHR1': League('Bahrain', 'Premier League'),
     'BRA1': League('Brazil', 'Serie A'),
