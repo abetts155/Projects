@@ -13,7 +13,7 @@ from PySimpleGUI import (Button,
                          Text,
                          Window)
 
-from model.fixtures import Half, Venue
+from model.fixtures import Venue
 from model.leagues import league_register, prettify
 from model.tables import Position
 from show_heatmap import Analysis
@@ -23,6 +23,7 @@ radio_half = 2
 radio_team_analysis = 3
 radio_performance = 4
 radio_team_choice = 5
+radio_event = 6
 
 countries = sorted({league.country for league in league_register.values()})
 country_choice = Combo([prettify(country) for country in countries],
@@ -49,20 +50,28 @@ venue_any = Radio(Venue.any.name.capitalize(), radio_venue, default=True)
 venue_home = Radio(Venue.home.name.capitalize(), radio_venue)
 venue_away = Radio(Venue.away.name.capitalize(), radio_venue)
 
-half_full = Checkbox(Half.full.name.capitalize(), enable_events=True, default=True)
-half_first = Checkbox(Half.first.name.capitalize(), enable_events=True)
-half_second = Checkbox(Half.second.name.capitalize(), enable_events=True)
-half_reset = Button('Reset', button_color=('black', 'white'), key='-HALF-RESET-')
+event_negation = Checkbox('Negate', background_color='black', key='-NEGATE-EVENT-')
+win_event = Radio('Win', radio_event)
+draw_event = Radio('Draw', radio_event)
+loss_event = Radio('Loss', radio_event)
+bts_event = Radio('BTS', radio_event)
+for_0_event = Radio('For = 0', radio_event)
+for_1_event = Radio('For <= 1', radio_event)
+against_0_event = Radio('Against = 0', radio_event)
+against_1_event = Radio('Against <= 1', radio_event)
+for_against_0_event = Radio('Goals = 0', radio_event, default=True)
+for_against_1_event = Radio('Goals <= 1', radio_event)
+for_against_2_event = Radio('Goals <= 2', radio_event)
+
+result_full = Checkbox('Full-time', enable_events=True, default=True)
+result_first = Checkbox('1st-half', enable_events=True)
+result_second = Checkbox('2nd-half', enable_events=True)
 
 chunks_choice = Combo([],
                       disabled=True,
                       enable_events=True,
                       readonly=True,
                       key='-CHUNKS-')
-
-event_choice = InputText(size=(16, 1), key='-EVENT-')
-event_negation = Checkbox('Negate', key='-NEGATE-EVENT-')
-event_clear = Button('Clear', button_color=('black', 'white'), key='-EVENT-CLEAR-')
 
 aggregated_sequences_submit = Button('Aggregated sequences', key='-AGG-SEQ-SUBMIT-')
 season_sequences_submit = Button('Per-season sequences', key='-PER-SEQ-SUBMIT-')
@@ -106,7 +115,7 @@ performance_analysis_submit = Submit(key='-PERFORMANCE-ANALYSIS-SUBMIT-')
 
 expression_text = InputText(size=(16, 1), key='-EXPR-', enable_events=True)
 equals_text = Text('=', justification='center', key='-EQUALS-')
-result_text = Text(size=(10, 1), key='-RESULT-')
+evaluation_text = Text(size=(10, 1), key='-RESULT-')
 
 betting_file = FileBrowse('Load betting file', key='-BETTING-FILE-', enable_events=True)
 betting_text = Multiline(size=[60, 50], key='-BETTING-')
@@ -119,9 +128,17 @@ def make_window():
                [Text('Team #1', size=default_size), team_radio_one, team_choice_one, team_clear_one],
                [Text('Team #2', size=default_size), team_radio_two, team_choice_two, team_clear_two],
                [Text('History', size=default_size), history_choice],
-               [Text('Event', size=default_size), event_choice, event_negation, event_clear],
+               [HorizontalSeparator()],
+               [Text('Event', size=default_size)],
+               [event_negation],
+               [win_event, draw_event, loss_event],
+               [bts_event],
+               [for_against_0_event, for_against_1_event, for_against_2_event],
+               [for_0_event, for_1_event],
+               [against_0_event, against_1_event],
+               [HorizontalSeparator()],
                [Text('Venue', size=default_size), venue_any, venue_home, venue_away],
-               [Text('Half', size=default_size), half_full, half_first, half_second, half_reset],
+               [Text('Result', size=default_size), result_full, result_first, result_second],
                [Text('Chunks', size=default_size), chunks_choice],
                [HorizontalSeparator()],
                [aggregated_sequences_submit, season_sequences_submit, h2h_submit, league_analysis_submit],
@@ -147,7 +164,7 @@ def make_window():
                [event_matrix_submit],
                [HorizontalSeparator()],
                [Text('Quick calculation', )],
-               [expression_text, equals_text, result_text]]
+               [expression_text, equals_text, evaluation_text]]
     tab1 = Tab('Analysis', layout1)
 
     layout2 = [[betting_file],

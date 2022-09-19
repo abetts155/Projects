@@ -11,8 +11,9 @@ from cli.cli import (add_database_option,
                      add_block_option,
                      get_unique_league,
                      get_multiple_teams,
-                     get_unique_team)
-from lib.helpful import split_into_contiguous_groups, to_string
+                     get_unique_team,
+                     get_unique_half)
+from lib.helpful import set_matplotlib_defaults, split_into_contiguous_groups, to_string
 from lib.messages import error_message
 from math import floor
 from matplotlib import pyplot as plt
@@ -95,7 +96,7 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
     fixtures = []
     season.sort_fixtures()
     for fixture in season.fixtures():
-        if fixture.first_half() is not None and fixture.second_half() is not None:
+        if fixture.first_half() and fixture.second_half():
             if venue == Venue.any:
                 if fixture.home_team == team or fixture.away_team == team:
                     fixtures.append(fixture)
@@ -170,16 +171,16 @@ class Datum:
 
 
 def display(title: str, data: List[Datum], block: bool):
-    fig, axes = plt.subplots(2, 3, figsize=(20, 12), constrained_layout=True)
+    fig, axes = plt.subplots(2, 3, constrained_layout=True)
     wins_ax, draws_ax, losses_ax = axes[0]
     goals_for_ax, goals_against_ax, points_ax = axes[1]
 
     wins_subplot = Subplot(wins_ax, 'Wins')
     draws_subplot = Subplot(draws_ax, 'Draws')
     losses_subplot = Subplot(losses_ax, 'Losses')
-    goals_for_subplot = Subplot(goals_for_ax, 'GF')
-    goals_against_subplot = Subplot(goals_against_ax, 'GA')
-    points_subplot = Subplot(points_ax, 'PTS')
+    goals_for_subplot = Subplot(goals_for_ax, 'For')
+    goals_against_subplot = Subplot(goals_against_ax, 'Against')
+    points_subplot = Subplot(points_ax, 'Points')
 
     subplots = [wins_subplot, draws_subplot, losses_subplot, goals_for_subplot, goals_against_subplot, points_subplot]
     for datum in data:
@@ -228,10 +229,11 @@ def display(title: str, data: List[Datum], block: bool):
             step = subplot.ylim // 10
             yticks = [i for i in range(subplot.ylim, 0, -step)]
         subplot.ax.set_yticks(yticks)
-
+        subplot.ax.spines['right'].set_visible(False)
+        subplot.ax.spines['top'].set_visible(False)
         subplot.ax.legend()
 
-    fig.suptitle(title, fontweight='bold', fontsize=14)
+    fig.suptitle(title, fontweight='bold')
     plt.show(block=block)
 
 
@@ -319,7 +321,7 @@ def compute_relative_performance(args: Namespace,
     label = 'Positions: {}'.format(to_string(sublists))
     label = '{} ({}-{})'.format(label, seasons[0].year, seasons[-2].year)
     average_summary = compute_average(combined_summary)
-    data = [Datum(average_summary, label, color.next())]
+    data = [Datum(average_summary, label, '#ef5350')]
 
     for name in team_names:
         (row,) = extract_picked_team(args.database, name, league)
@@ -346,10 +348,9 @@ def compute_average_performance(args: Namespace, league: League, seasons: List[S
                     combined_summary.append([])
                 combined_summary[week].append(stat)
 
-    color = Color()
     average_summary = compute_average(combined_summary)
-    data = [Datum(average_summary, 'Average', color.next()),
-            Datum(team_summary[this_season], '{}:{}'.format(team.name, this_season.year), color.next())]
+    data = [Datum(average_summary, 'Average', '#ef5350'),
+            Datum(team_summary[this_season], '{}:{}'.format(team.name, this_season.year), '#ffffff')]
 
     title = 'Average performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
     title = add_venue_and_half_to_title(title, args.venue, args.half)
@@ -361,14 +362,15 @@ def compute_individual_performance(args: Namespace, league: League, seasons: Lis
     team = Team.inventory[row[0]]
     team_summary = compute_summary(team, seasons, args.venue, args.half)
 
+    cmap = plt.get_cmap('tab20c')
     color = Color(True)
     linewidth = 3
     marker_size = 10
     data = []
-    for season in reversed(seasons):
+    for i, season in enumerate(reversed(seasons)):
         summary = team_summary[season]
         if summary:
-            data.append(Datum(summary, str(season.year), color.next(), linewidth, marker_size))
+            data.append(Datum(summary, str(season.year), cmap.colors[i], linewidth, marker_size))
             linewidth -= 0.3
             marker_size -= 1
 
@@ -378,10 +380,13 @@ def compute_individual_performance(args: Namespace, league: League, seasons: Lis
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)
     seasons = Season.seasons(league)
+
+    args.half = get_unique_half(args)
 
     if args.history:
         seasons = seasons[-args.history:]

@@ -1,9 +1,8 @@
 from argparse import Namespace
 from datetime import datetime
-from re import compile
 from typing import Dict
 
-from PySimpleGUI import theme, PopupError, PopupAutoClose, Window, WIN_CLOSED
+from PySimpleGUI import set_options, theme, Popup, Window, WIN_CLOSED
 
 import head_to_head
 import show_sequences
@@ -20,15 +19,21 @@ from gui.widgets import (aggregated_sequences_submit,
                          betting_text,
                          chunks_choice,
                          country_choice,
-                         event_choice,
-                         event_clear,
+                         win_event,
+                         draw_event,
+                         loss_event,
+                         bts_event,
+                         for_against_0_event,
+                         for_against_1_event,
+                         for_against_2_event,
+                         for_0_event,
+                         for_1_event,
+                         against_0_event,
+                         against_1_event,
+                         evaluation_text,
                          event_matrix_submit,
                          event_negation,
                          expression_text,
-                         half_full,
-                         half_first,
-                         half_second,
-                         half_reset,
                          heatmap_analysis,
                          heatmap_submit,
                          history_choice,
@@ -43,7 +48,9 @@ from gui.widgets import (aggregated_sequences_submit,
                          performance_positions,
                          performance_positions_choice,
                          performance_relative_choice,
-                         result_text,
+                         result_first,
+                         result_full,
+                         result_second,
                          season_sequences_submit,
                          team_analysis_game_states,
                          team_analysis_goals,
@@ -69,10 +76,6 @@ messages.warnings = False
 database = 'football.db'
 
 
-def get_league(values: Dict):
-    return League(values[country_choice.Key], values[league_choice.Key])
-
-
 def set_venue(values: Dict, args: Namespace):
     if values[venue_home.Key]:
         args.venue = Venue.home
@@ -84,12 +87,20 @@ def set_venue(values: Dict, args: Namespace):
 
 def set_half(values: Dict, args: Namespace):
     args.half = []
-    if values[half_first.Key]:
+    if values[result_first.Key]:
         args.half.append(Half.first)
-    if values[half_second.Key]:
+    if values[result_second.Key]:
         args.half.append(Half.second)
-    if values[half_full.Key]:
+    if values[result_full.Key]:
         args.half.append(Half.full)
+
+
+def half_selected(values: Dict):
+    if not values[result_first.Key] and not values[result_second.Key] and not values[result_full.Key]:
+        Popup('No result selected', title='', auto_close=True, auto_close_duration=2, non_blocking=True)
+        return False
+    else:
+        return True
 
 
 def set_history(values: Dict, args: Namespace):
@@ -104,58 +115,30 @@ def set_chunks(values: Dict, args: Namespace):
 
 
 def get_event(values: Dict) -> str:
-    goals_re = compile(r'\s*(gfa|gf|ga)\s*(>=|<=|>|<|==|!=)\s*(\d+)\s*')
-    match = goals_re.match(values[event_choice.Key])
-    if match:
-        infix = match.group(2)
-        if infix == '>=':
-            infix = 'ge'
-        elif infix == '<=':
-            infix = 'le'
-        elif infix == '>':
-            infix = 'gt'
-        elif infix == '<':
-            infix = 'lt'
-        elif infix == '==':
-            infix = 'eq'
-        elif infix == '!=':
-            infix = 'ne'
-
-        return '{}_{}_{}'.format(match.group(1), infix, match.group(3))
-
-    other_re = compile(r'\s*({}|{}|{}|{})\s*'.format(draw.__name__, win.__name__, loss.__name__, bts.__name__))
-    match = other_re.match(values[event_choice.Key])
-    if match:
-        return match.group(1)
-
-    if values[event_choice.Key] == 'won':
-        event_choice.update('win')
-        PopupAutoClose("Fixing event 'won' to 'win'",
-                       title='',
-                       auto_close=True,
-                       auto_close_duration=2,
-                       non_blocking=True)
-    elif values[event_choice.Key] == 'lost':
-        event_choice.update('loss')
-        PopupAutoClose("Fixing event 'lost' to 'loss'",
-                       title='',
-                       auto_close=True,
-                       auto_close_duration=2,
-                       non_blocking=True)
-    elif values[event_choice.Key] == 'drew':
-        event_choice.update('draw')
-        PopupAutoClose("Fixing event 'drew' to 'draw'",
-                       title='',
-                       auto_close=True,
-                       auto_close_duration=2,
-                       non_blocking=True)
+    if values[draw_event.Key]:
+        return draw.__name__
+    elif values[win_event.Key]:
+        return win.__name__
+    elif values[loss_event.Key]:
+        return loss.__name__
+    elif values[bts_event.Key]:
+        return bts.__name__
+    elif values[for_0_event.Key]:
+        return 'gf_eq_0'
+    elif values[for_1_event.Key]:
+        return 'gf_le_1'
+    elif values[against_0_event.Key]:
+        return 'ga_eq_0'
+    elif values[against_1_event.Key]:
+        return 'ga_le_1'
+    elif values[for_against_0_event.Key]:
+        return 'gfa_eq_0'
+    elif values[for_against_1_event.Key]:
+        return 'gfa_le_1'
+    elif values[for_against_2_event.Key]:
+        return 'gfa_le_2'
     else:
-        PopupError("Do not recognise '{}' as an event".format(values[event_choice.Key].strip()),
-                   title='',
-                   auto_close=True,
-                   auto_close_duration=2,
-                   non_blocking=True)
-    return ''
+        assert False
 
 
 def team_one_is_valid(values: Dict) -> str:
@@ -205,12 +188,11 @@ def run_head_to_head(values: Dict):
 
 
 def run_sequences(values: Dict, event):
-    valid_event = get_event(values)
-    if values[league_choice.Key] and valid_event:
+    if values[league_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
         args.block = False
-        args.event = [valid_event]
+        args.event = [get_event(values)]
         args.negate = values[event_negation.Key]
         args.team = team_selected(values)
         set_league(values, args)
@@ -227,7 +209,7 @@ def run_sequences(values: Dict, event):
 
 
 def run_team_analysis(values: Dict):
-    if values[league_choice.Key]:
+    if values[league_choice.Key] and half_selected(values):
         if team_one_is_valid(values) or team_two_is_valid(values):
             args = Namespace()
             args.database = database
@@ -252,7 +234,7 @@ def run_team_analysis(values: Dict):
 
 
 def run_performance_analysis(values: Dict):
-    if values[league_choice.Key]:
+    if values[league_choice.Key] and half_selected(values):
         selected_team = team_selected(values)
         if selected_team:
             args = Namespace()
@@ -290,7 +272,7 @@ def run_performance_analysis(values: Dict):
 
 
 def run_heatmap_analysis(values: Dict):
-    if values[league_choice.Key] and values[heatmap_analysis.Key] and values[chunks_choice.Key]:
+    if values[league_choice.Key] and values[heatmap_analysis.Key] and values[chunks_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
         args.block = False
@@ -304,7 +286,7 @@ def run_heatmap_analysis(values: Dict):
 
 
 def run_event_matrix_analysis(values: Dict):
-    if values[league_choice.Key] and values[event_choice.Key] and values[chunks_choice.Key]:
+    if values[league_choice.Key] and values[chunks_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
         args.block = False
@@ -323,7 +305,7 @@ def run_event_matrix_analysis(values: Dict):
 
 
 def run_league_analysis(values: Dict):
-    if values[league_choice.Key]:
+    if values[league_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
         args.block = False
@@ -338,9 +320,9 @@ def run_league_analysis(values: Dict):
 def run_expression_evaluation(values: Dict):
     try:
         answer = eval(values[expression_text.Key])
-        result_text.update('{:.5f}'.format(answer))
+        evaluation_text.update('{:.5f}'.format(answer))
     except (NameError, SyntaxError, TypeError, ValueError, ZeroDivisionError):
-        result_text.update('')
+        evaluation_text.update('')
 
 
 def update_team_choices(values: Dict):
@@ -383,7 +365,8 @@ def update_other_team(values: Dict, team_choice):
         fixtures = get_unfinished_matches(database, league_seasons[-1], team)
         now = datetime.now()
         cutoff = datetime(now.year, now.month, now.day, now.hour - 2)
-        fixtures = [fixture for fixture in fixtures if datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None) >= cutoff]
+        fixtures = [fixture for fixture in fixtures
+                    if datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None) >= cutoff]
         if fixtures:
             next_match = fixtures[0]
 
@@ -418,12 +401,6 @@ def update_chunk_bar(values: Dict):
     chunks_choice.set_size([2, None])
 
 
-def reset_halves():
-    half_full.update(value=True)
-    half_first.update(value=False)
-    half_second.update(value=False)
-
-
 def run(window: Window):
     while True:
         event, values = window.read()
@@ -443,17 +420,10 @@ def run(window: Window):
             update_other_team(values, team_choice_one)
         elif event == team_choice_two.Key and values[team_choice_two.Key]:
             update_other_team(values, team_choice_two)
-        elif event == event_clear.Key:
-            event_choice.update('')
         elif event == team_clear_one.Key:
             team_choice_one.update(set_to_index=0)
         elif event == team_clear_two.Key:
             team_choice_two.update(set_to_index=0)
-        elif event == half_first.Key or event == half_second.Key or event == half_full.Key:
-            if not values[half_first.Key] and not values[half_second.Key] and not values[half_full.Key]:
-                reset_halves()
-        elif event == half_reset.Key:
-            reset_halves()
         elif event == h2h_submit.Key:
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
@@ -492,7 +462,8 @@ def run(window: Window):
 
 
 if __name__ == '__main__':
-    theme('DarkBlue')
+    theme('LightGrey3')
+    set_options(font=('Open Sans', 12))
     load_teams(database)
     window = make_window()
     run(window)

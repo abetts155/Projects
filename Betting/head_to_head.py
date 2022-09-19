@@ -125,6 +125,7 @@ def create_results_table(ax,
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(8)
     ax.axis('off')
+    ax.set_title('History: {} vs {}'.format(left_team.name, right_team.name))
 
 
 def create_form_table(ax,
@@ -190,6 +191,7 @@ def create_form_table(ax,
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(8)
     ax.axis('off')
+    ax.set_title('{} form'.format(team.name))
 
 
 def create_league_table(ax,
@@ -231,11 +233,13 @@ def create_league_table(ax,
                          cellLoc='left',
                          loc='upper center')
     the_table.auto_set_font_size(False)
-    the_table.set_fontsize(8)
+    the_table.set_fontsize(10)
     ax.axis('off')
+    ax.set_title('League table')
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
 
     if args.league:
@@ -243,14 +247,14 @@ def main(args: Namespace):
         load_league(args.database, league)
 
     background_color = '#d3d3d3'
-    left_color = '#81d4fa'
+    left_color = '#00c39e'
     right_color = '#0086c3'
     other_color = '#ef5350'
-    neutral_color = '#ffffff'
+    neutral_color = '#000000'
 
-    nrows = 3
+    nrows = 7
     ncols = 3
-    fig = plt.figure(figsize=(15, 10), constrained_layout=True, facecolor=background_color)
+    fig = plt.figure(constrained_layout=True)
     spec = gridspec.GridSpec(nrows=nrows, ncols=ncols, figure=fig, hspace=0.75)
 
     left_name, right_name = get_multiple_teams(args)
@@ -274,7 +278,7 @@ def main(args: Namespace):
         warning_message("No head-to-head between {} and {}".format(left_team.name, right_team.name))
     else:
         if left_fixtures:
-            ax = fig.add_subplot(spec[1, 0])
+            ax = fig.add_subplot(spec[5:6, 0])
             create_results_table(ax,
                                  left_fixtures,
                                  left_team,
@@ -284,7 +288,7 @@ def main(args: Namespace):
                                  neutral_color)
 
         if right_fixtures:
-            ax = fig.add_subplot(spec[1, 2])
+            ax = fig.add_subplot(spec[5:6, 2])
             create_results_table(ax,
                                  right_fixtures,
                                  right_team,
@@ -297,7 +301,7 @@ def main(args: Namespace):
     this_season = seasons.pop()
 
     fixtures = get_finished_matches(args.database, this_season, left_team)
-    ax = fig.add_subplot(spec[2, 0])
+    ax = fig.add_subplot(spec[1:4, 0])
     create_form_table(ax,
                       fixtures,
                       left_team,
@@ -306,7 +310,7 @@ def main(args: Namespace):
                       neutral_color)
 
     fixtures = get_finished_matches(args.database, this_season, right_team)
-    ax = fig.add_subplot(spec[2, 2])
+    ax = fig.add_subplot(spec[1:4, 2])
     create_form_table(ax,
                       fixtures,
                       right_team,
@@ -314,7 +318,7 @@ def main(args: Namespace):
                       other_color,
                       neutral_color)
 
-    ax = fig.add_subplot(spec[1:, 1])
+    ax = fig.add_subplot(spec[1:4, 1])
     colors = {left_team.name: left_color, right_team.name: right_color}
     create_league_table(ax, this_season, colors, neutral_color)
 
@@ -324,5 +328,4 @@ def main(args: Namespace):
 if __name__ == '__main__':
     args = parse_command_line()
     set_logging_options(args)
-    set_matplotlib_defaults()
     main(args)

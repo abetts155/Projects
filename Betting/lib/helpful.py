@@ -64,14 +64,14 @@ class DisplayGrid:
 
 
 def set_matplotlib_defaults():
-    plt.style.use('seaborn-deep')
-    plt.rcParams['font.serif'] = 'Ubuntu'
-    plt.rcParams['font.monospace'] = 'Ubuntu Mono'
+    plt.style.use('dark_background')
+    plt.rcParams['font.family'] = 'Helvetica'
     plt.rcParams['font.size'] = 10
     plt.rcParams['axes.labelsize'] = 10
     plt.rcParams['axes.labelweight'] = 'bold'
-    plt.rcParams['axes.titlesize'] = 10
+    plt.rcParams['axes.titlesize'] = 14
     plt.rcParams['xtick.labelsize'] = 8
     plt.rcParams['ytick.labelsize'] = 8
     plt.rcParams['legend.fontsize'] = 10
-    plt.rcParams['figure.titlesize'] = 10
+    plt.rcParams['figure.titlesize'] = 14
+    plt.rcParams['figure.figsize'] = (18, 12)

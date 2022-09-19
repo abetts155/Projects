@@ -265,7 +265,7 @@ def display_averages(team: Team,
                      team_stats: MatchStatistics,
                      all_stats: MatchStatistics,
                      block: bool):
-    fig, axes = plt.subplots(3, figsize=(25, 13), constrained_layout=True)
+    fig, axes = plt.subplots(3, constrained_layout=True)
 
     if len(seasons) > 1:
         year_string = '{}-{}'.format(seasons[0].year, seasons[-1].year)
@@ -318,7 +318,6 @@ def create_single_bar(ax, stats: Statistics, frame: Frame):
 def display_summations(team: Team, venue: Venue, seasons: List[Season], team_stats: MatchStatistics, block: bool):
     fig, axs = plt.subplots(nrows=3,
                             ncols=4,
-                            figsize=(22, 12),
                             gridspec_kw={'width_ratios': [1, 1.5, 1.5, 3]},
                             constrained_layout=True)
 

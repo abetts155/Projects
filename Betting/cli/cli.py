@@ -193,3 +193,12 @@ def get_unique_event(args: Namespace) -> str:
     else:
         (event,) = args.event
         return event
+
+
+def get_unique_half(args: Namespace) -> str:
+    if len(args.half) > 1:
+        messages.error_message("This tool only supports a single half. "
+                               "You selected: '{}'".format(','.join(args.half)))
+    else:
+        (half,) = args.half
+        return half

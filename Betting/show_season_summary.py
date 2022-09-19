@@ -90,7 +90,6 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
     display = DisplayGrid(len(season_scorelines), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
-                            figsize=(20, 10),
                             squeeze=False,
                             constrained_layout=True)
 

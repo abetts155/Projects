@@ -174,8 +174,6 @@ def main(args: Namespace):
     else:
         selected_team = None
 
-    figsize = (12, 10)
-
     func = Event.get(get_unique_event(args))
     if args.chunks:
         data = compute_chunked_data(seasons,
@@ -282,7 +280,6 @@ def main(args: Namespace):
         display = DisplayGrid(len(data), 2)
         fig, axes = plt.subplots(nrows=display.nrows,
                                  ncols=display.ncols,
-                                 figsize=figsize,
                                  squeeze=False,
                                  constrained_layout=True)
         for i, datum in enumerate(data):

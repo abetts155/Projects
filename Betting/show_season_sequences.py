@@ -45,7 +45,6 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
     display = DisplayGrid(len(season_data), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
-                            figsize=(20, 10),
                             constrained_layout=True)
 
     for i, (season, datum) in enumerate(season_data.items()):
