@@ -9,7 +9,7 @@ from cli.cli import (add_database_option,
                      get_unique_event,
                      get_unique_league)
 from collections import Counter
-from model.fixtures import Event, Fixture, Half, Result, Venue, draw, win, bts
+from model.fixtures import Event, Fixture, Half, Scoreline, Venue, draw, win, bts, canonicalise_scoreline
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
@@ -71,7 +71,7 @@ def main(args: Namespace):
                     result = fixture.second_half()
 
                 if result:
-                    home_result = fixture.canonicalise_result(fixture.home_team, result)
+                    home_result = canonicalise_scoreline(fixture, fixture.home_team, result)
                     home_outcome = prediction.func(home_result)
                     home_state = states[fixture.home_team]
 
@@ -88,7 +88,7 @@ def main(args: Namespace):
                         if final_position not in [0, 1, len(table) - 2, len(table) - 1]:
                             home_state.alive = True
 
-                    away_result = fixture.canonicalise_result(fixture.away_team, result)
+                    away_result = canonicalise_scoreline(fixture, fixture.away_team, result)
                     away_outcome = prediction.func(away_result)
                     away_state = states[fixture.away_team]
                     if not away_outcome:

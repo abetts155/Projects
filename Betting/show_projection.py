@@ -97,7 +97,7 @@ def compute_statistics(season: Season, team: Team, venue: Venue, half: Half, sum
     season.sort_fixtures()
     for fixture in season.fixtures():
         if fixture.first_half() and fixture.second_half():
-            if venue == Venue.any:
+            if venue == Venue.anywhere:
                 if fixture.home_team == team or fixture.away_team == team:
                     fixtures.append(fixture)
             elif venue == Venue.away:
@@ -259,15 +259,7 @@ def compute_average(combined_summary):
 
 
 def add_venue_and_half_to_title(title: str, venue: Venue, half: Half):
-    if venue == Venue.any:
-        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
-    else:
-        title = '{} ({} only)'.format(title, venue.name)
-
-    if half != Half.full:
-        title = '{} ({} half)'.format(title, half.name)
-
-    return title
+    return '{} ({}) ({} results)'.format(title, venue.name, Half.to_string([half]))
 
 
 class Color:

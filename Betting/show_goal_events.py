@@ -135,7 +135,7 @@ def compute_summaries(season: Season,
         for event in events:
             if is_goal(event.detail):
                 count_for_team = False
-                if venue == Venue.any:
+                if venue == Venue.anywhere:
                     count_for_team = team in [fixture.home_team, fixture.away_team]
                 elif venue == Venue.home and team == fixture.home_team:
                     count_for_team = True
@@ -178,8 +178,8 @@ def show(title: str, season_to_summary, block: bool):
         ax = axs[cell_x, cell_y]
 
         bar_width = 0.3
-        create_bar(ax, for_team, bar_width, 1, 'gold')
-        create_bar(ax, against_team, bar_width, 2, 'black')
+        create_bar(ax, for_team, bar_width, 1, '#00c39e')
+        create_bar(ax, against_team, bar_width, 2, '#ef5350')
 
         labels = []
         indices = arange(len(for_team))
@@ -189,7 +189,7 @@ def show(title: str, season_to_summary, block: bool):
         ax.set_xticks(indices + bar_width * 1.5)
         ax.set_xticklabels(labels, ha='center')
 
-        #ax.set_frame_on(False)
+        ax.set_frame_on(False)
         ax.set_yticks([])
         ax.set_ylabel('{}'.format(season.year))
 
@@ -234,12 +234,7 @@ def main(args: Namespace):
             if for_team and against_team:
                 season_to_summary[season] = (for_team, against_team)
 
-    title = 'Goal times: {} ({})'.format(selected_team.name, league)
-    if args.venue == Venue.any:
-        title = '{} ({} or {})'.format(title, Venue.home.name, Venue.away.name)
-    else:
-        title = '{} ({} only)'.format(title, args.venue.name)
-
+    title = 'Goal times: {} ({}) in {}'.format(selected_team.name, args.venue.name, league)
     show(title, season_to_summary, args.block)
 
 

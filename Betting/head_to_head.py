@@ -15,7 +15,7 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
-from model.fixtures import Half, Fixture, Result, Venue, create_fixture_from_row, win, loss
+from model.fixtures import Half, Fixture, Scoreline, Venue, create_fixture_from_row, win, loss
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
@@ -68,14 +68,14 @@ def get_head_to_head_fixtures(database: str, left_team: Team, right_team: Team):
     return fixtures
 
 
-def decide_cell_color(result: Result,
+def decide_cell_color(score: Scoreline,
                       left_color: Tuple[float, float, float],
                       right_color: Tuple[float, float, float],
                       neutral_color: Tuple[float, float, float]):
-    if result:
-        if win(result):
+    if score:
+        if win(score):
             return left_color
-        elif loss(result):
+        elif loss(score):
             return right_color
         else:
             return neutral_color
@@ -125,7 +125,7 @@ def create_results_table(ax,
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(8)
     ax.axis('off')
-    ax.set_title('History: {} vs {}'.format(left_team.name, right_team.name))
+    ax.set_title('History @ {}'.format(left_team.name))
 
 
 def create_form_table(ax,
@@ -191,7 +191,7 @@ def create_form_table(ax,
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(8)
     ax.axis('off')
-    ax.set_title('{} form'.format(team.name))
+    ax.set_title('Form: {}'.format(team.name))
 
 
 def create_league_table(ax,
@@ -226,14 +226,15 @@ def create_league_table(ax,
 
     the_table = ax.table(cellText=df.values,
                          colLabels=df.columns,
-                         colLoc='left',
                          colColours=[neutral_color] * len(df.columns),
-                         colWidths=[0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                         cellColours=colors,
+                         colLoc='left',
+                         colWidths=[0.5, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07],
                          cellLoc='left',
+                         cellColours=colors,
                          loc='upper center')
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(10)
+
     ax.axis('off')
     ax.set_title('League table')
 
@@ -322,6 +323,7 @@ def main(args: Namespace):
     colors = {left_team.name: left_color, right_team.name: right_color}
     create_league_table(ax, this_season, colors, neutral_color)
 
+    fig.suptitle('{} vs {}'.format(left_team.name, right_team.name))
     plt.show(block=args.block)
 
 

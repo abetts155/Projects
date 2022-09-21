@@ -17,7 +17,7 @@ from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import min, max
-from model.fixtures import Half, Event, Venue
+from model.fixtures import BettingEvent, Event, Half, Venue
 from model.leagues import league_register, prettify, League
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
@@ -41,7 +41,6 @@ def parse_command_line():
 
 
 def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: bool):
-    set_matplotlib_defaults()
     display = DisplayGrid(len(season_data), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
@@ -59,7 +58,7 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
 
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x, cell_y]
-        cmap = plt.get_cmap('Wistia')
+        cmap = plt.get_cmap('Blues')
         min_y = min(y_values)
         max_y = max(y_values)
         scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
@@ -73,7 +72,7 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
         ax.set_frame_on(False)
 
         for k, v in datum.counter.items():
-            ax.text(k, v, str(v), ha='center', fontsize=8, fontweight='bold')
+            ax.text(k, v, str(v), ha='center', zorder=2, rotation=45, color='red', alpha=0.75)
 
     for i in range(len(season_data), display.nrows * display.ncols):
         cell_x, cell_y = display.index(i)
@@ -86,13 +85,7 @@ def show(title: str, season_data: Dict[Season, DataUnit], x_limit: int, block: b
 
 def construct_title(league: League, func: Callable, negate: bool, venue: Venue, halves: List[Half], team: Team):
     event = Event.name(func, negate)
-    if venue == Venue.any:
-        prologue = '{} ({} or {})'.format(event, Venue.home.name, Venue.away.name)
-    else:
-        prologue = '{} ({} only)'.format(event, venue.name)
-
-    prologue += ' ({} results)'.format(', '.join([half.name for half in Half if half in halves]))
-    prologue = '{} in {} {}'.format(prologue, prettify(league.country), league.name)
+    prologue = '{} ({}) ({} results) in {}'.format(event, venue.name, Half.to_string(halves), str(league))
 
     if team:
         return '{} for {}'.format(prologue, team.name)
@@ -101,6 +94,7 @@ def construct_title(league: League, func: Callable, negate: bool, venue: Venue, 
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)
@@ -113,6 +107,7 @@ def main(args: Namespace):
         seasons = seasons[-args.history:]
 
     func = Event.get(get_unique_event(args))
+    bet = BettingEvent(func, args.negate, None, args.venue, args.half)
 
     if args.team:
         (row,) = extract_picked_team(args.database, args.team, league)
@@ -123,28 +118,26 @@ def main(args: Namespace):
     season_data = {}
     x_limit = 0
     for season in seasons:
-        data = DataUnit(Counter(), season)
-        if selected_team:
-            count_events(season,
-                         selected_team,
-                         args.venue,
-                         args.half,
-                         func,
-                         args.negate,
-                         data)
-        else:
-            for team in season.teams():
+        datum = DataUnit(Counter(), season)
+
+        for team, fixtures in season.fixtures_per_team().items():
+            if selected_team:
+                if team == selected_team:
+                    count_events(season,
+                                 team,
+                                 fixtures,
+                                 [bet],
+                                 [datum])
+            else:
                 count_events(season,
                              team,
-                             args.venue,
-                             args.half,
-                             func,
-                             args.negate,
-                             data)
+                             fixtures,
+                             [bet],
+                             [datum])
 
-        if data.counter:
-            x_limit = max([x_limit] + list(data.counter.keys()))
-            season_data[season] = data
+        if datum.counter:
+            x_limit = max([x_limit] + list(datum.counter.keys()))
+            season_data[season] = datum
 
     title = construct_title(league, func, args.negate, args.venue, args.half, selected_team)
     show(title, season_data, x_limit, args.block)

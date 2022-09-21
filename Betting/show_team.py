@@ -14,7 +14,7 @@ from lib import messages
 from lib.helpful import set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from model.fixtures import Result, Venue, win, loss, draw, bts
+from model.fixtures import Scoreline, Venue, win, loss, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -123,36 +123,36 @@ class MatchStatistics:
         self.both_halves = Statistics()
 
 
-def update_stats(stats: Statistics, result: Result):
-    stats.goals_for += result.left
-    stats.goals_against += result.right
+def update_stats(stats: Statistics, score: Scoreline):
+    stats.goals_for += score.left
+    stats.goals_against += score.right
 
-    if win(result):
+    if win(score):
         stats.wins += 1
-    elif loss(result):
+    elif loss(score):
         stats.losses += 1
     else:
-        assert draw(result)
+        assert draw(score)
         stats.draws += 1
 
-    if bts(result):
+    if bts(score):
         stats.bts += 1
 
-    if result.left > 0:
+    if score.left > 0:
         stats.scored += 1
 
-    if result.right > 0:
+    if score.right > 0:
         stats.conceded += 1
 
-    stats.goals[result.left + result.right] += 1
-    stats.scores[(result.left, result.right)] += 1
+    stats.goals[score.left + score.right] += 1
+    stats.scores[(score.left, score.right)] += 1
 
 
 def compute_statistics(season: Season, team: Team, venue: Venue, game_states: List[str]):
     fixtures = []
     for fixture in season.fixtures():
         if fixture.first_half() is not None and fixture.second_half() is not None:
-            if venue == Venue.any:
+            if venue == Venue.anywhere:
                 if fixture.home_team == team or fixture.away_team == team:
                     fixtures.append(fixture)
             elif venue == Venue.away:
@@ -272,7 +272,7 @@ def display_averages(team: Team,
     else:
         year_string = str(seasons[0].year)
 
-    if venue == Venue.any:
+    if venue == Venue.anywhere:
         venue_string = '{} or {}'.format(Venue.home.name, Venue.away.name)
     else:
         venue_string = '{} only'.format(venue.name)
@@ -326,7 +326,7 @@ def display_summations(team: Team, venue: Venue, seasons: List[Season], team_sta
     else:
         year_string = str(seasons[0].year)
 
-    if venue == Venue.any:
+    if venue == Venue.anywhere:
         venue_string = '{} or {}'.format(Venue.home.name, Venue.away.name)
     else:
         venue_string = '{} only'.format(venue.name)

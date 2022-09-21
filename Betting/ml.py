@@ -8,7 +8,7 @@ from cli.cli import (add_database_option,
                      add_events_option,
                      set_logging_options,
                      get_unique_event)
-from model.fixtures import Event, Fixture, Half, Result, win, defeat, draw
+from model.fixtures import Event, Fixture, Half, Scoreline, win, loss, draw, canonicalise_scoreline
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
@@ -70,7 +70,7 @@ def collapse(team: Team, form: List[Fixture], func: Callable) -> HistorySummary:
     summary = HistorySummary()
     for fixture in form:
         result = fixture.full_time()
-        result = fixture.canonicalise_result(team, result)
+        result = canonicalise_scoreline(fixture, team, result)
         summary.add(result, func)
     summary.scored /= len(form)
     summary.conceded /= len(form)

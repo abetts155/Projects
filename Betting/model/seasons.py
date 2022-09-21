@@ -19,6 +19,7 @@ class Season:
         self._flag = flag
         self._current = current
         self._fixtures = []
+        self._team_fixtures = {}
 
     @property
     def id(self) -> int:
@@ -65,11 +66,12 @@ class Season:
         return self._fixtures
 
     def fixtures_per_team(self) -> Dict[Team, List[Fixture]]:
-        team_fixtures = {team: [] for team in self.teams()}
-        for fixture in self.fixtures():
-            team_fixtures[fixture.home_team].append(fixture)
-            team_fixtures[fixture.away_team].append(fixture)
-        return team_fixtures
+        if not self._team_fixtures:
+            self.sort_fixtures()
+            for fixture in self._fixtures:
+                self._team_fixtures.setdefault(fixture.home_team, []).append(fixture)
+                self._team_fixtures.setdefault(fixture.away_team, []).append(fixture)
+        return self._team_fixtures
 
     def sql_values(self):
         values = [self.id, self.year, self.name, self.country, self.country_code, self.flag, self.current]

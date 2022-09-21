@@ -17,7 +17,7 @@ from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import Half, Venue, Event
+from model.fixtures import BettingEvent, Event, Half, Venue
 from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
@@ -46,40 +46,35 @@ def parse_command_line():
 
 def compute_aggregated_data(seasons: List[Season],
                             selected_team: Team,
-                            func: Callable,
-                            negate: bool,
-                            venue: Venue,
-                            half: Half):
+                            bet: BettingEvent):
     if seasons[-1].current:
         this_season = seasons.pop()
     else:
         this_season = None
 
-    charts = []
-    aggregated_history = DataUnit(Counter(), seasons)
-    charts.append(aggregated_history)
-    for season in seasons:
-        for team in season.teams():
-            count_events(season, team, venue, half, func, negate, aggregated_history)
+    historical_aggregated_datum = DataUnit(Counter(), seasons)
+    historical_team_datum = DataUnit(Counter(), seasons, team=selected_team)
+    now_aggregated_datum = DataUnit(Counter(), [this_season])
+    now_team_datum = DataUnit(Counter(), [this_season], team=selected_team, highlight=True)
 
-    if selected_team is not None:
-        team_history = DataUnit(Counter(), seasons, team=selected_team)
-        charts.append(team_history)
-        for season in seasons:
-            count_events(season, team_history.team, venue, half, func, negate, team_history)
+    for season in seasons:
+        for team, fixtures in season.fixtures_per_team().items():
+            count_events(season, team, fixtures, [bet], [historical_aggregated_datum])
+
+            if selected_team == team:
+                count_events(season, team, fixtures, [bet], [historical_team_datum])
 
     if this_season is not None:
-        aggregated_now = DataUnit(Counter(), [this_season])
-        charts.append(aggregated_now)
-        for team in this_season.teams():
-            count_events(this_season, team, venue, half, func, negate, aggregated_now)
+        for team, fixtures in this_season.fixtures_per_team().items():
+            count_events(this_season, team, fixtures, [bet], [now_aggregated_datum])
 
-        if selected_team is not None:
-            team_now = DataUnit(Counter(), [this_season], team=selected_team, highlight=True)
-            charts.append(team_now)
-            count_events(this_season, selected_team, venue, half, func, negate, team_now)
+            if selected_team == team:
+                count_events(this_season, team, fixtures, [bet], [now_team_datum])
 
-    return charts
+    if selected_team is not None:
+        return [historical_aggregated_datum, historical_team_datum, now_aggregated_datum, now_team_datum]
+    else:
+        return [historical_aggregated_datum, now_aggregated_datum]
 
 
 def compute_chunked_data(seasons: List[Season],
@@ -108,14 +103,11 @@ def compute_chunked_data(seasons: List[Season],
 
 def construct_title(league: League, func: Callable, negate: bool, venue: Venue, halves: List[Half]):
     event = Event.name(func, negate)
-    if venue == Venue.any:
-        prologue = '{} ({} or {})'.format(event, Venue.home.name, Venue.away.name)
-    else:
-        prologue = '{} ({} only)'.format(event, venue.name)
-
-    prologue += ' ({} results)'.format(', '.join([half.name for half in Half if half in halves]))
-
-    return '{} in {} {}'.format(prologue, prettify(league.country), league.name)
+    return '{} ({}) ({} results) in {} {}'.format(event,
+                                                  venue.name,
+                                                  Half.to_string(halves),
+                                                  prettify(league.country),
+                                                  league.name)
 
 
 def find_limits(data: List[DataUnit]):
@@ -175,6 +167,8 @@ def main(args: Namespace):
         selected_team = None
 
     func = Event.get(get_unique_event(args))
+    bet = BettingEvent(func, args.negate, None, args.venue, args.half)
+
     if args.chunks:
         data = compute_chunked_data(seasons,
                                     func,
@@ -272,10 +266,7 @@ def main(args: Namespace):
     else:
         data = compute_aggregated_data(seasons,
                                        selected_team,
-                                       func,
-                                       args.negate,
-                                       args.venue,
-                                       args.half)
+                                       bet)
         x_limit, _ = find_limits(data)
         display = DisplayGrid(len(data), 2)
         fig, axes = plt.subplots(nrows=display.nrows,

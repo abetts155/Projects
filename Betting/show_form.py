@@ -12,7 +12,7 @@ from cli.cli import (add_database_option,
 from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
-from model.fixtures import Fixture, Half, Result, Venue, create_fixture_from_row, win, loss
+from model.fixtures import Fixture, Half, Scoreline, Venue, create_fixture_from_row, win, loss, canonicalise_scoreline
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
@@ -62,9 +62,9 @@ def create_results_table(ax,
     table = []
     fixtures.sort(key=lambda row: row.date, reverse=True)
     for i, fixture in enumerate(fixtures):
-        first_half = fixture.canonicalise_result(team, fixture.first_half())
-        second_half = fixture.canonicalise_result(team, fixture.second_half())
-        full_time = fixture.canonicalise_result(team, fixture.full_time())
+        first_half = canonicalise_scoreline(team, fixture.first_half())
+        second_half = canonicalise_scoreline(fixture, team, fixture.second_half())
+        full_time = canonicalise_scoreline(fixture, team, fixture.full_time())
         colors.append([neutral_color,
                        neutral_color,
                        neutral_color,

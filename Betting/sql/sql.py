@@ -124,11 +124,11 @@ def extract_picked_team(database: str, team_name: str, league: League = None, er
 
     if (not team_rows or len(team_rows) > 1) and league:
         team_rows = []
-        country_constaint = "{}='{}' {} {}".format(ColumnNames.Country.name,
-                                                   league.country,
-                                                   Keywords.COLLATE.name,
-                                                   Keywords.NOCASE.name)
-        constraints.append(country_constaint)
+        country_constraint = "{}='{}' {} {}".format(ColumnNames.Country.name,
+                                                    league.country,
+                                                    Keywords.COLLATE.name,
+                                                    Keywords.NOCASE.name)
+        constraints.append(country_constraint)
 
         with Database(database) as db:
             team_rows.extend(db.fetch_all_rows(Team.sql_table(), constraints))
@@ -162,7 +162,7 @@ def get_fixtures(db: Database, constraints: List[str]):
     return fixtures
 
 
-def get_finished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.any):
+def get_finished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.anywhere):
     with Database(filename) as db:
         season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
 
@@ -184,7 +184,7 @@ def get_finished_matches(filename: str, season: Season, team: Team, venue: Venue
         return fixtures
 
 
-def get_unfinished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.any):
+def get_unfinished_matches(filename: str, season: Season, team: Team, venue: Venue = Venue.anywhere):
     with Database(filename) as db:
         season_constraint = "{}={}".format(ColumnNames.Season_ID.name, season.id)
 

@@ -19,7 +19,7 @@ def add_venue_option(parser: ArgumentParser):
                         type=Venue.from_string,
                         metavar='{{{}}}'.format(','.join(venue.name for venue in Venue)),
                         help='filter fixtures according to the venue',
-                        default=Venue.any)
+                        default=Venue.anywhere)
 
 
 def add_half_option(parser: ArgumentParser):
@@ -102,7 +102,8 @@ def add_minimum_option(parser: ArgumentParser, required: bool = True):
     parser.add_argument('--minimum',
                         type=int,
                         help='the minimum sequence length threshold',
-                        required=required)
+                        required=required,
+                        default=1)
 
 
 def add_chunk_option(parser: ArgumentParser):

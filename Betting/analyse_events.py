@@ -111,19 +111,18 @@ def create_bar(ax, datum: SeasonData):
         if interval == datum.interval:
             to_highlight = i
 
-    cmap = plt.get_cmap('gist_yarg')
+    cmap = plt.get_cmap('Blues')
     min_y = min(y_values)
     max_y = max(y_values)
     scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
     bar = ax.bar(x_values, y_values, color=cmap(scaled), zorder=1)
 
     if to_highlight is not None:
-        bar[to_highlight].set_edgecolor('salmon')
+        bar[to_highlight].set_edgecolor('gold')
         bar[to_highlight].set_lw(2)
 
 
 def show(league, team, season_to_data, what_to_analyse: AnalysedEvent):
-    set_matplotlib_defaults()
     display = DisplayGrid(len(season_to_data))
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
@@ -133,21 +132,19 @@ def show(league, team, season_to_data, what_to_analyse: AnalysedEvent):
     for i, datum in enumerate(season_to_data.values()):
         row, col = display.index(i)
         ax = axs[row, col]
+        ax.set_ylabel('{}'.format(datum.season.year))
         create_bar(ax, datum)
-
-        if datum.time is not None:
-            ax.set_title('{}: Last {} {} minutes ago'.format(datum.season.year, what_to_analyse.name, datum.time),
-                         color='salmon',
-                         fontstyle='italic')
-        else:
-            ax.set_title('{}'.format(datum.season.year))
 
     for i in range(len(season_to_data), display.nrows * display.ncols):
         cell_x, cell_y = display.index(i)
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
 
-    fig.suptitle('{} {}: {}'.format(prettify(league.country), league.name, team.name), fontweight='bold')
+    title = '{} {}: {}'.format(prettify(league.country), league.name, team.name)
+    if datum.time is not None:
+        title += '\nLast {} {} minutes ago'.format(what_to_analyse.name, datum.time)
+
+    fig.suptitle(title, fontweight='bold')
     plt.show()
 
 
@@ -157,12 +154,13 @@ def gather(seasons: List[Season], team: Team, venue: Venue, half: Half, what_to_
     for season in seasons:
         team_fixtures = []
         for fixture in season.fixtures():
-            if venue == Venue.any and team in [fixture.home_team, fixture.away_team]:
-                team_fixtures.append(fixture)
-            elif venue == Venue.away and fixture.away_team == team:
-                team_fixtures.append(fixture)
-            elif venue == Venue.home and fixture.home_team == team:
-                team_fixtures.append(fixture)
+            if fixture.finished:
+                if venue == Venue.anywhere and team in [fixture.home_team, fixture.away_team]:
+                    team_fixtures.append(fixture)
+                elif venue == Venue.away and fixture.away_team == team:
+                    team_fixtures.append(fixture)
+                elif venue == Venue.home and fixture.home_team == team:
+                    team_fixtures.append(fixture)
 
         season_events = []
         minutes_per_half = 45
@@ -252,6 +250,7 @@ def create_intervals(this_season: Season, season_to_gaps: Dict[Season, List], ma
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)

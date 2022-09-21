@@ -13,7 +13,7 @@ import re
 
 
 class Venue(Enum):
-    any = auto()
+    anywhere = auto()
     away = auto()
     home = auto()
 
@@ -37,16 +37,31 @@ class Half(Enum):
         except KeyError:
             messages.error_message("Half '{}' is not valid".format(string))
 
+    @staticmethod
+    def to_string(halves: List["Half"]) -> str:
+        value = ''
+        for i, half in enumerate(halves, start=1):
+            if half == Half.first:
+                value += '1st-half'
+            elif half == Half.second:
+                value += '2nd-half'
+            else:
+                value += 'full-time'
 
-class Result:
+            if i < len(halves):
+                value += ', '
+        return value
+
+
+class Scoreline:
     __slots__ = ['left', 'right']
 
     def __init__(self, left: int, right: int):
         self.left = left
         self.right = right
 
-    def reverse(self) -> "Result":
-        return Result(self.right, self.left)
+    def reverse(self) -> "Scoreline":
+        return Scoreline(self.right, self.left)
 
     def __str__(self):
         return '{}-{}'.format(self.left, self.right)
@@ -60,39 +75,39 @@ class Result:
         return self.left + self.right
 
 
-def win(result: Result):
-    return operator.gt(result.left, result.right)
+def win(score: Scoreline):
+    return operator.gt(score.left, score.right)
 
 
-def loss(result: Result):
-    return operator.lt(result.left, result.right)
+def loss(score: Scoreline):
+    return operator.lt(score.left, score.right)
 
 
-def draw(result: Result):
-    return operator.eq(result.left, result.right)
+def draw(score: Scoreline):
+    return operator.eq(score.left, score.right)
 
 
-def bts(result: Result):
-    return operator.gt(result.left, 0) and operator.gt(result.right, 0)
+def bts(score: Scoreline):
+    return operator.gt(score.left, 0) and operator.gt(score.right, 0)
 
 
-def gf(op: Callable, bound: int, result: Result):
-    return op(result.left, bound)
+def gf(op: Callable, bound: int, score: Scoreline):
+    return op(score.left, bound)
 
 
-def ga(op: Callable, bound: int, result: Result):
-    return op(result.right, bound)
+def ga(op: Callable, bound: int, score: Scoreline):
+    return op(score.right, bound)
 
 
-def gfa(op: Callable, bound: int, result: Result):
-    return op(result.left + result.right, bound)
+def gfa(op: Callable, bound: int, score: Scoreline):
+    return op(score.left + score.right, bound)
 
 
-def gd(op: Callable, bound: int, result: Result):
-    if result.left > result.right:
-        return op(result.left - result.right, bound)
+def gd(op: Callable, bound: int, score: Scoreline):
+    if score.left > score.right:
+        return op(score.left - score.right, bound)
     else:
-        return op(result.right - result.left, bound)
+        return op(score.right - score.left, bound)
 
 
 class Event:
@@ -175,6 +190,54 @@ class Event:
                 return func_name
 
 
+class BettingEvent:
+    def __init__(self, func: Callable, negate: bool, minimum: int, venue: Venue, halves: List[Half]):
+        self.func = func
+        self.negate = negate
+        self.minimum = minimum
+        self.venue = venue
+        self.halves = halves
+
+
+classic_bets = [
+    BettingEvent(Event.get('draw'), True, 10, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('draw'), False, 3, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gf_eq_0'), False, 3, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('ga_eq_0'), False, 3, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gfa_le_1'), False, 3, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gfa_le_2'), False, 7, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('win'), False, 8, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('bts'), True, 7, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 1, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.home, [Half.first, Half.second]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.away, [Half.first, Half.second]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.home, [Half.first]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.away, [Half.first]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.anywhere, [Half.second]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.home, [Half.second]),
+    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.away, [Half.second]),
+    BettingEvent(Event.get('ga_eq_0'), False, 8, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('ga_eq_0'), False, 7, Venue.anywhere, [Half.second]),
+    BettingEvent(Event.get('gf_eq_0'), False, 8, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('gf_eq_0'), False, 7, Venue.anywhere, [Half.second]),
+    BettingEvent(Event.get('gf_eq_0'), False, 2, Venue.home, [Half.full]),
+    BettingEvent(Event.get('gf_eq_0'), False, 3, Venue.away, [Half.full]),
+    BettingEvent(Event.get('draw'), False, 5, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('draw'), False, 4, Venue.anywhere, [Half.second]),
+    BettingEvent(Event.get('draw'), False, 5, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('win'), False, 6, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('loss'), False, 5, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('draw'), True, 7, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('draw'), True, 12, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('gfa_ne_0'), False, 12, Venue.anywhere, [Half.first]),
+    BettingEvent(Event.get('bts'), False, 6, Venue.anywhere, [Half.full]),
+    BettingEvent(Event.get('gfa_le_1'), False, 12, Venue.anywhere, [Half.first, Half.second]),
+    BettingEvent(Event.get('gfa_gt_2'), False, 7, Venue.anywhere, [Half.full])
+]
+
+
 class Fixture:
     table = None
     inventory = {}
@@ -219,22 +282,22 @@ class Fixture:
     def away_team(self) -> Team:
         return self._away_team
 
-    def first_half(self) -> Result or None:
+    def first_half(self) -> Scoreline or None:
         if self._half_time:
             left, right = self._half_time.split('-')
             if left and right:
-                return Result(int(left), int(right))
+                return Scoreline(int(left), int(right))
 
-    def full_time(self) -> Result or None:
+    def full_time(self) -> Scoreline or None:
         if self._full_time:
             left, right = self._full_time.split('-')
             if left and right:
-                return Result(int(left), int(right))
+                return Scoreline(int(left), int(right))
 
-    def second_half(self) -> Result or None:
+    def second_half(self) -> Scoreline or None:
         if self.first_half() and self.full_time():
-            return Result(self.full_time().left - self.first_half().left,
-                          self.full_time().right - self.first_half().right)
+            return Scoreline(self.full_time().left - self.first_half().left,
+                             self.full_time().right - self.first_half().right)
 
     @property
     def finished(self) -> int:
@@ -243,13 +306,6 @@ class Fixture:
     @property
     def updated(self) -> datetime.date:
         return self._updated
-
-    def canonicalise_result(self, team: Team, result: Result) -> Result:
-        if result:
-            if self.home_team == team:
-                return result
-            else:
-                return result.reverse()
 
     def sql_values(self):
         values = [self.id,
@@ -297,22 +353,33 @@ class Fixture:
                                                             self.away_team.name if self.away_team else None)
 
 
+def canonicalise_scoreline(fixture: Fixture, team: Team, score: Scoreline) -> Scoreline:
+    if score:
+        if fixture.home_team == team:
+            return score
+        else:
+            return score.reverse()
+
+
 round_regexes = [re.compile(r'Regular Season - \d+'),
                  re.compile(r'Regular Season'),
                  re.compile(r'Round is (Salzburg|Tirol|Southern Central)'),
                  re.compile(r'Girone [A-C] - \d+'),
                  re.compile(r'Group [A-D] - \d+'),
-                 re.compile(r'Group [1-4] - \d+$'),
+                 re.compile(r'Group [1-5] - \d+$'),
                  re.compile(r'ČFL (A|B) - \d+'),
                  re.compile(r'MSFL - \d+'),
                  re.compile(r'(North A|North B|South A|South B) - \d+$'),
                  re.compile(r'(Clausura|Apertura|Liguilla|Norra|Södra) - \d+'),
                  re.compile(r'Liga 1 - Round \d+'),
                  re.compile(r'(Clausura|Apertura)'),
-                 re.compile(r'(1st|2nd) (Stage|Phase) - \d+'),
+                 re.compile(r'(1st|2nd) (Stage|Phase|Round) - \d+'),
                  re.compile(r'(South|North) - \d+'),
-                 re.compile(r'(Isthmian|Northern|Southern|Southern South) - \d+'),
-                 re.compile(r'(Südwest|Nordost|Nord|West|Vorarlberg|Mitte|Ost) - \d+'),
+                 re.compile(r'(Isthmian|Northern|Southern|Southern South|Southern Central) - \d+'),
+                 re.compile(r'(Südwest|Nordost|Nord|West|Bayern|Süd \/ Südwest|Nord \/ Nordost) - \d+'),
+                 re.compile(r'(Vorarlberg|Mitte|Ost) - \d+'),
+                 re.compile(r'(Kirmizi|Kırmızı|Beyaz) - \d+'),
+                 re.compile(r'(Championship|Relegation) Round - \d+'),
                  re.compile(r'(Östra Götaland|'
                             r'Västra Götaland|'
                             r'Södra Svealand|'

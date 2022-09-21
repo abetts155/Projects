@@ -1,8 +1,7 @@
 from collections import Counter
-from datetime import datetime
 from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import warning_message
-from model.fixtures import Half, Venue
+from model.fixtures import BettingEvent, Fixture, Half, Venue
 from model.seasons import Season
 from model.teams import Team
 from typing import Callable, List
@@ -51,66 +50,53 @@ class DataUnit:
 
 def count_events(season: Season,
                  team: Team,
-                 venue: Venue,
-                 halves: List[Half],
-                 func: Callable,
-                 negate: bool,
-                 data: DataUnit):
-    right_now = datetime.now()
-    fixtures = []
-    for fixture in season.fixtures():
-        if datetime.date(fixture.date) <= right_now.date():
-            if venue == Venue.any:
-                if fixture.home_team == team or fixture.away_team == team:
-                    fixtures.append(fixture)
-            elif venue == Venue.away:
-                if fixture.away_team == team:
-                    fixtures.append(fixture)
-            elif venue == Venue.home:
-                if fixture.home_team == team:
-                    fixtures.append(fixture)
-
-    sequence = []
+                 fixtures: List[Fixture],
+                 bets: List[BettingEvent],
+                 data: List[DataUnit]):
+    bet_sequences = {bet: [] for bet in bets}
     for fixture in fixtures:
-        results = []
+        for bet, datum in zip(bets, data):
+            results = []
 
-        if Half.first in halves:
-            if fixture.first_half() is not None:
-                results.append(fixture.first_half())
-            else:
-                warning_message('No 1st half result for fixture {}'.format(fixture))
+            if fixture.finished and (bet.venue == Venue.anywhere or
+                                     (bet.venue == Venue.home and fixture.home_team == team) or
+                                     (bet.venue == Venue.away and fixture.away_team == team)):
 
-        if Half.second in halves:
-            if fixture.second_half() is not None:
-                results.append(fixture.second_half())
-            else:
-                warning_message('No 2nd half result for fixture {}'.format(fixture))
+                if Half.first in bet.halves:
+                    if fixture.first_half() is not None:
+                        results.append(fixture.first_half())
+                    else:
+                        warning_message('No 1st half result for fixture {}'.format(fixture))
 
-        if Half.full in halves:
-            if fixture.full_time() is not None:
-                results.append(fixture.full_time())
-            else:
-                warning_message('No full-time result for fixture {}'.format(fixture))
+                if Half.second in bet.halves:
+                    if fixture.second_half() is not None:
+                        results.append(fixture.second_half())
+                    else:
+                        warning_message('No 2nd half result for fixture {}'.format(fixture))
 
-        if results:
-            for result in results:
-                if fixture.home_team != team:
-                    result = result.reverse()
+                if Half.full in bet.halves:
+                    if fixture.full_time() is not None:
+                        results.append(fixture.full_time())
+                    else:
+                        warning_message('No full-time result for fixture {}'.format(fixture))
 
-                if negate:
-                    outcome = not func(result)
-                else:
-                    outcome = func(result)
+            if results:
+                for result in results:
+                    if fixture.home_team != team:
+                        result = result.reverse()
 
-                if outcome:
-                    sequence.append(fixture)
-                else:
-                    data.last = len(sequence)
-                    data.counter[len(sequence)] += 1
-                    sequence = []
+                    if bet.negate:
+                        outcome = not bet.func(result)
+                    else:
+                        outcome = bet.func(result)
 
-    if sequence:
-        data.last = len(sequence)
-        data.counter[len(sequence)] += 1
-    else:
-        data.last = None
+                    if outcome:
+                        bet_sequences[bet].append(fixture)
+                    else:
+                        datum.last = len(bet_sequences[bet])
+                        datum.counter[len(bet_sequences[bet])] += 1
+                        bet_sequences[bet].clear()
+
+    for bet, datum in zip(bets, data):
+        datum.last = len(bet_sequences[bet])
+        datum.counter[len(bet_sequences[bet])] += 1

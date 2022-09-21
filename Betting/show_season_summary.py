@@ -47,7 +47,7 @@ def compute_scorelines(season: Season, halves: List[Half], venue: Venue, team: T
                     analyse = True
                 elif venue == Venue.away and fixture.away_team == team:
                     analyse = True
-                elif venue == Venue.any and team in [fixture.home_team, fixture.away_team]:
+                elif venue == Venue.anywhere and team in [fixture.home_team, fixture.away_team]:
                     analyse = True
 
         if analyse:
@@ -86,7 +86,6 @@ def compute_slack(x_values, scorelines, key: str):
 
 
 def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
-    set_matplotlib_defaults()
     display = DisplayGrid(len(season_scorelines), 2)
     fig, axs = plt.subplots(nrows=display.nrows,
                             ncols=display.ncols,
@@ -180,6 +179,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
 
 
 def main(args: Namespace):
+    set_matplotlib_defaults()
     load_teams(args.database)
     league = league_register[get_unique_league(args)]
     load_league(args.database, league)

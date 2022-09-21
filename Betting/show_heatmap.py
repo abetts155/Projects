@@ -13,7 +13,7 @@ from enum import auto, Enum
 from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message, warning_message
 from matplotlib import pyplot as plt
-from model.fixtures import Half, Event, win, loss, draw, bts
+from model.fixtures import Half, Event, win, loss, draw, bts, canonicalise_scoreline
 from model.leagues import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
@@ -98,7 +98,7 @@ def fill_matrix(matrix: np.ndarray, table_map: TableMap, table: LeagueTable, pre
                 results.append(fixture.full_time())
 
             if result:
-                result = fixture.canonicalise_result(row.TEAM, result)
+                result = canonicalise_scoreline(fixture, row.TEAM, result)
                 results.append(result)
             else:
                 warning_message('Ignoring {}'.format(fixture))
