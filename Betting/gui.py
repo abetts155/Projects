@@ -82,7 +82,7 @@ def set_venue(values: Dict, args: Namespace):
     elif values[venue_away.Key]:
         args.venue = Venue.away
     else:
-        args.venue = Venue.any
+        args.venue = Venue.anywhere
 
 
 def set_half(values: Dict, args: Namespace):

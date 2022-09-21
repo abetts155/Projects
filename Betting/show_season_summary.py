@@ -205,7 +205,7 @@ def main(args: Namespace):
     else:
         title = '{} {}'.format(league.country, league.name)
 
-    title += ' ({})'.format(', '.join([half.name for half in args.half]))
+    title += ' ({})'.format(Half.to_string(args.half))
 
     show(title, args.half,  selected_team, season_scorelines, args.block)
 

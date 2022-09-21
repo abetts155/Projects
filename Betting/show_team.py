@@ -272,12 +272,7 @@ def display_averages(team: Team,
     else:
         year_string = str(seasons[0].year)
 
-    if venue == Venue.anywhere:
-        venue_string = '{} or {}'.format(Venue.home.name, Venue.away.name)
-    else:
-        venue_string = '{} only'.format(venue.name)
-
-    fig.suptitle('{}: Averages comparison for {} ({})'.format(year_string, team.name, venue_string),
+    fig.suptitle('{}: Averages comparison for {} ({})'.format(year_string, team.name, venue.name),
                  fontweight='bold')
 
     create_dual_bars(axes[0], team_stats.first_half, all_stats.first_half, 'First half')
@@ -326,13 +321,8 @@ def display_summations(team: Team, venue: Venue, seasons: List[Season], team_sta
     else:
         year_string = str(seasons[0].year)
 
-    if venue == Venue.anywhere:
-        venue_string = '{} or {}'.format(Venue.home.name, Venue.away.name)
-    else:
-        venue_string = '{} only'.format(venue.name)
-
     total_games = team_stats.both_halves.wins + team_stats.both_halves.draws + team_stats.both_halves.losses
-    title = '{}: {} over {} games ({})'.format(year_string, team.name, total_games, venue_string)
+    title = '{}: {} over {} games ({})'.format(year_string, team.name, total_games, venue.name)
     fig.suptitle(title, fontweight='bold')
 
     frame_1 = Frame(['wins', 'draws', 'losses'], plt.get_cmap('Wistia'))

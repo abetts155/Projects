@@ -46,7 +46,7 @@ team_choice_two = Combo([], enable_events=True, readonly=True, key='-TEAM2-')
 team_clear_one = Button('Clear', button_color=('black', 'white'), key='-TEAM1-CLEAR-')
 team_clear_two = Button('Clear', button_color=('black', 'white'), key='-TEAM2-CLEAR-')
 
-venue_any = Radio(Venue.any.name.capitalize(), radio_venue, default=True)
+venue_any = Radio(Venue.anywhere.name.capitalize(), radio_venue, default=True)
 venue_home = Radio(Venue.home.name.capitalize(), radio_venue)
 venue_away = Radio(Venue.away.name.capitalize(), radio_venue)
 

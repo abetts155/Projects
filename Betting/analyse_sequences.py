@@ -35,12 +35,19 @@ def parse_command_line():
     add_events_option(parser, False)
     add_logging_options(parser)
 
-    parser.add_argument('-w',
-                        '--window',
-                        type=int,
+    parser.add_argument('-l',
+                        '--lower',
+                        help='left-side of the time window to consider',
                         metavar='<INT>',
-                        help='the time window in hours to consider (zero indicates no limit)',
-                        default=12)
+                        type=int,
+                        default=0)
+
+    parser.add_argument('-u',
+                        '--upper',
+                        help='right-side of the time window to consider',
+                        metavar='<INT>',
+                        type=int,
+                        default=0)
 
     parser.add_argument('-D',
                         '--defaults',
@@ -83,34 +90,31 @@ class Prediction:
 def analyse_teams(league: League,
                   season: Season,
                   bets: List[BettingEvent],
-                  window: datetime):
+                  left_window: datetime,
+                  right_window: datetime):
     now = datetime.now().timetuple()
     fixture_predictions = {}
     for team, fixtures in season.fixtures_per_team().items():
         filtered = []
         for fixture in fixtures:
             if not fixture.finished:
-                if fixture.date.timetuple().tm_yday > now.tm_yday:
-                    filtered.append(fixture)
-
-                if fixture.date.timetuple().tm_yday == now.tm_yday and fixture.date.timetuple().tm_hour >= now.tm_hour - 1:
+                fixture_datetime = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
+                if left_window <= fixture_datetime and (right_window is None or fixture_datetime <= right_window):
                     filtered.append(fixture)
 
         if filtered:
             next_match = filtered[0]
-            next_match_datetime = datetime.fromisoformat(str(next_match.date)).replace(tzinfo=None)
-            if window is None or next_match_datetime <= window:
-                data = [DataUnit(Counter(), [season], team=team) for bet in bets]
-                count_events(season,
-                             team,
-                             fixtures,
-                             bets,
-                             data)
+            data = [DataUnit(Counter(), [season], team=team) for bet in bets]
+            count_events(season,
+                         team,
+                         fixtures,
+                         bets,
+                         data)
 
-                for bet, datum in zip(bets, data):
-                    if datum.last and datum.last >= bet.minimum and satisfies_venue_constraint(team, next_match, bet):
-                        prediction = Prediction(league, team, next_match, bet, datum.last)
-                        fixture_predictions.setdefault(next_match, []).append(prediction)
+            for bet, datum in zip(bets, data):
+                if datum.last and datum.last >= bet.minimum and satisfies_venue_constraint(team, next_match, bet):
+                    prediction = Prediction(league, team, next_match, bet, datum.last)
+                    fixture_predictions.setdefault(next_match, []).append(prediction)
     return fixture_predictions
 
 
@@ -122,8 +126,13 @@ def create_fixture_header(fixture: Fixture):
 
 
 def create_league_header(league: League):
-    delimiter = '*' * 80
-    return "{}\n{}\n{}".format(delimiter, league, delimiter)
+    delimiter = '*' * 10
+    return "{} {} {}".format(delimiter, league, delimiter)
+
+
+def create_hour_header(hour: int):
+    delimiter = '-' * 80
+    return '{}\nGames starting at {}\n{}'.format(delimiter, hour, delimiter)
 
 
 def main(args: Namespace):
@@ -148,10 +157,11 @@ def main(args: Namespace):
     if args.defaults:
         bets.extend(classic_bets)
 
-    if args.window:
-        window = datetime.now() + timedelta(hours=args.window)
+    left_window = datetime.now() + timedelta(hours=args.lower)
+    if args.upper:
+        right_window = datetime.now() + timedelta(hours=args.upper)
     else:
-        window = None
+        right_window = None
 
     league_predictions = {}
     flat_predictions = []
@@ -168,7 +178,7 @@ def main(args: Namespace):
 
             if seasons[-1].current:
                 this_season = seasons.pop()
-                fixture_predictions = analyse_teams(league, this_season, bets, window)
+                fixture_predictions = analyse_teams(league, this_season, bets, left_window, right_window)
                 if fixture_predictions:
                     if args.time:
                         for predictions in fixture_predictions.values():
@@ -183,16 +193,30 @@ def main(args: Namespace):
                                                       prediction.league.country,
                                                       prediction.league.name,
                                                       prediction.team.name))
+        last_hour = None
         last_league = None
         last_fixture = None
         for prediction in flat_predictions:
+            hour_emitted = False
+            if last_hour is None:
+                last_hour = prediction.fixture.date.hour
+                print(create_hour_header(last_hour))
+                hour_emitted = True
+            elif last_hour != prediction.fixture.date.hour:
+                last_hour = prediction.fixture.date.hour
+                print()
+                print(create_hour_header(last_hour))
+                hour_emitted = True
+
             league_header_emitted = False
             if last_league is None:
-                print(create_league_header(prediction.league))
+                last_league = prediction.league
+                print(create_league_header(last_league))
                 league_header_emitted = True
 
             if prediction.league != last_league:
-                print()
+                if not hour_emitted:
+                    print()
                 print(create_league_header(prediction.league))
                 league_header_emitted = True
             last_league = prediction.league
@@ -207,6 +231,8 @@ def main(args: Namespace):
             last_fixture = prediction.fixture
 
             print(prediction)
+
+        print()
     else:
         for league, fixture_predictions in league_predictions.items():
             print(create_league_header(league))
