@@ -12,6 +12,7 @@ from cli.cli import (add_database_option,
                      get_multiple_teams,
                      set_logging_options)
 from collections import Counter
+from colorama import Fore, Style
 from datetime import datetime, timedelta
 from lib import messages
 from model.fixtures import BettingEvent, Event, Half, Fixture, Venue, classic_bets
@@ -78,14 +79,6 @@ class Prediction:
         self.bet = bet
         self.run = run
 
-    def __str__(self):
-        return '{} {} in the last {} ({}) ({}): {}'.format('>' * 10,
-                                                           Event.name(self.bet.func, self.bet.negate),
-                                                           self.run,
-                                                           self.bet.venue.name,
-                                                           Half.to_string(self.bet.halves),
-                                                           self.team.name)
-
 
 def analyse_teams(league: League,
                   season: Season,
@@ -118,21 +111,34 @@ def analyse_teams(league: League,
     return fixture_predictions
 
 
-def create_fixture_header(fixture: Fixture):
-    return 'Next match: {} {} {} vs. {}'.format(fixture.date.strftime('%Y-%m-%d'),
-                                                fixture.date.strftime('%H.%M'),
-                                                fixture.home_team.name,
-                                                fixture.away_team.name)
+def create_fixture_header(fixture: Fixture, home_color, away_color):
+    return '[{}] {}{}{} vs. {}{}{}'.format(fixture.date.strftime('%H.%M'),
+                                           home_color, fixture.home_team.name, Style.RESET_ALL,
+                                           away_color, fixture.away_team.name, Style.RESET_ALL)
 
 
 def create_league_header(league: League):
-    delimiter = '*' * 10
-    return "{} {} {}".format(delimiter, league, delimiter)
+    delimiter = '*' * (len(str(league)) + 2)
+    return "{}\n {} \n{}".format(delimiter, league, delimiter)
 
 
-def create_hour_header(hour: int):
+def create_date_header(date: datetime):
     delimiter = '-' * 80
-    return '{}\nGames starting at {}\n{}'.format(delimiter, hour, delimiter)
+    return '{}\n{} on {}\n{}'.format(delimiter, date.strftime('%-I %p'), date.strftime('%d %B %Y'), delimiter)
+
+
+def create_prediction(prediction: Prediction, home_color, away_color):
+    if prediction.team == prediction.fixture.home_team:
+        color = home_color
+    else:
+        color = away_color
+    return '> {}{}{}: {} in the last {} ({}) ({})'.format(color,
+                                                          prediction.team.name,
+                                                          Style.RESET_ALL,
+                                                          Event.name(prediction.bet.func, prediction.bet.negate),
+                                                          prediction.run,
+                                                          prediction.bet.venue.name,
+                                                          Half.to_string(prediction.bet.halves))
 
 
 def main(args: Namespace):
@@ -188,59 +194,52 @@ def main(args: Namespace):
             else:
                 messages.warning_message('The current season for {} has not yet started'.format(league.name))
 
+    home_color = Fore.BLUE
+    away_color = Fore.RED
     if args.time:
         flat_predictions.sort(key=lambda prediction: (prediction.fixture.date,
                                                       prediction.league.country,
-                                                      prediction.league.name,
-                                                      prediction.team.name))
-        last_hour = None
-        last_league = None
-        last_fixture = None
+                                                      prediction.league.ordering,
+                                                      prediction.team == prediction.fixture.away_team))
+        last_prediction = None
         for prediction in flat_predictions:
-            hour_emitted = False
-            if last_hour is None:
-                last_hour = prediction.fixture.date.hour
-                print(create_hour_header(last_hour))
-                hour_emitted = True
-            elif last_hour != prediction.fixture.date.hour:
-                last_hour = prediction.fixture.date.hour
+            date_emitted = False
+            if last_prediction is None:
+                print(create_date_header(prediction.fixture.date))
+                date_emitted = True
+            elif last_prediction.fixture.date.hour != prediction.fixture.date.hour:
                 print()
-                print(create_hour_header(last_hour))
-                hour_emitted = True
+                print(create_date_header(prediction.fixture.date))
+                date_emitted = True
 
             league_header_emitted = False
-            if last_league is None:
-                last_league = prediction.league
-                print(create_league_header(last_league))
+            if last_prediction is None:
+                print(create_league_header(prediction.league))
                 league_header_emitted = True
-
-            if prediction.league != last_league:
-                if not hour_emitted:
+            elif last_prediction.league != prediction.league or date_emitted:
+                if not date_emitted:
                     print()
                 print(create_league_header(prediction.league))
                 league_header_emitted = True
-            last_league = prediction.league
 
-            if last_fixture is None:
-                print(create_fixture_header(prediction.fixture))
-
-            if prediction.fixture != last_fixture:
+            if last_prediction is None:
+                print(create_fixture_header(prediction.fixture, home_color, away_color))
+            elif last_prediction.fixture != prediction.fixture:
                 if not league_header_emitted:
                     print()
-                print(create_fixture_header(prediction.fixture))
-            last_fixture = prediction.fixture
+                print(create_fixture_header(prediction.fixture, home_color, away_color))
 
-            print(prediction)
-
+            print(create_prediction(prediction, home_color, away_color))
+            last_prediction = prediction
         print()
     else:
         for league, fixture_predictions in league_predictions.items():
             print(create_league_header(league))
 
             for fixture, predictions in fixture_predictions.items():
-                print(create_fixture_header(fixture))
+                print(create_fixture_header(fixture, home_color, away_color))
                 for prediction in predictions:
-                    print(prediction)
+                    print(create_prediction(prediction, home_color, away_color))
                 print()
 
 
