@@ -1,71 +1,40 @@
 from argparse import ArgumentParser, Namespace
 from cli.cli import (add_database_option,
-                     add_venue_option,
-                     add_events_option,
-                     add_minimum_option,
                      add_logging_options,
                      set_logging_options,
                      add_league_option,
-                     add_country_option,
-                     add_half_option)
-from datetime import datetime
+                     add_country_option)
+from colorama import Fore, Style
+from datetime import datetime, timedelta
 from model.fixtures import Half, Fixture, Venue
 from model.leagues import league_register, League, prettify
 from model.teams import create_team_from_row, Team
-from pathlib import Path
 from sql.sql import Database, get_fixtures, get_current_season
 from sql.sql_columns import ColumnNames
 from sql.sql_language import Characters
-from subprocess import run
 from typing import List, Tuple
 
 
 def parse_command_line():
     parser = ArgumentParser(description='Show fixtures for specified date')
-    add_half_option(parser)
-    add_venue_option(parser)
     add_database_option(parser)
     add_logging_options(parser)
     add_league_option(parser, False)
     add_country_option(parser, False)
-    add_events_option(parser, False)
-    add_minimum_option(parser, False)
-
-    today = datetime.today()
-    parser.add_argument('-D',
-                        '--day',
-                        help='day of fixtures',
-                        metavar='<INT>',
-                        type=int,
-                        default=today.day)
-
-    parser.add_argument('-M',
-                        '--month',
-                        help='month of fixtures',
-                        metavar='<INT>',
-                        type=int,
-                        default=today.month)
-
-    parser.add_argument('-Y',
-                        '--year',
-                        help='month of fixtures',
-                        metavar='<INT>',
-                        type=int,
-                        default=today.year)
 
     parser.add_argument('-l',
                         '--lower',
                         help='left-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=datetime.now().hour)
+                        default=0)
 
     parser.add_argument('-u',
                         '--upper',
                         help='right-side of the time window to consider',
                         metavar='<INT>',
                         type=int,
-                        default=23)
+                        default=24)
 
     parser.add_argument('-T',
                         '--time',
@@ -76,55 +45,32 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def filter_fixtures(fixtures: List[Fixture], left_datetime: datetime, right_datetime: datetime):
+def filter_fixtures(fixtures: List[Fixture], left_window: datetime, right_window: datetime):
     filtered = []
     for fixture in fixtures:
         match_date = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
-        if left_datetime <= match_date <= right_datetime:
+        if left_window <= match_date <= right_window:
             filtered.append(fixture)
     filtered.sort(key=lambda fixture: (fixture.date.date(), fixture.date.time()))
     return filtered
 
 
+def get_league_header(league: League) -> str:
+    delimiter = '*' * (len(str(league)) + 2)
+    return "{}\n {} \n{}".format(delimiter, league, delimiter)
+
+
+def get_fixture_header(fixture: Fixture, home_color, away_color) -> str:
+    return '[{}] {}{}{} vs. {}{}{}'.format(fixture.date.strftime('%d-%m-%Y %H.%M'),
+                                           home_color, fixture.home_team.name, Style.RESET_ALL,
+                                           away_color, fixture.away_team.name, Style.RESET_ALL)
+
+
 def output_fixtures(league: League, fixtures: List[Fixture]):
-    print("{}Fixtures in {} {} {}".format('*' * 80 + '\n',
-                                          prettify(league.country),
-                                          league.name,
-                                          '\n' + '*' * 80))
-
+    print(get_league_header(league))
     for fixture in fixtures:
-        next_match_message = 'Next match: {} {} vs. {}'.format(fixture.date.strftime('%Y-%m-%d %H.%M'),
-                                                               fixture.home_team.name,
-                                                               fixture.away_team.name)
-        print(next_match_message)
+        print(get_fixture_header(fixture, Fore.BLUE, Fore.RED))
     print()
-
-
-def analyse_sequences(db: Database,
-                      league_code: str,
-                      teams: List[Team],
-                      events: List[str],
-                      negate: bool,
-                      venue: Venue,
-                      halves: List[Half],
-                      minimum: int):
-    analyse_script = Path(__file__).parent.absolute().joinpath('analyse_sequences.py')
-    args = ['python3', str(analyse_script),
-            '--database', db.name,
-            '--no-warnings',
-            '-T', ':'.join([team.name for team in teams]),
-            '-E', *events,
-            '-L', league_code,
-            '--minimum', str(minimum),
-            '--half', *[half.name for half in halves]]
-
-    if negate:
-        args.append('--negate')
-
-    if venue:
-        args.extend(['--venue', venue.name])
-
-    run(args)
 
 
 def main(args: Namespace):
@@ -139,10 +85,11 @@ def main(args: Namespace):
     if not args.country and not args.league:
         leagues.extend(list(league_register.keys()))
 
-    left_datetime = datetime(args.year, args.month, args.day, args.lower)
-    right_datetime = datetime(args.year, args.month, args.day, args.upper)
+    now = datetime.now()
+    left_window = datetime.now() + timedelta(hours=args.lower)
+    right_window = datetime.now() + timedelta(hours=args.upper)
 
-    season_fixtures = {}
+    league_fixtures = {}
     with Database(args.database) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())
         for row in team_rows:
@@ -158,43 +105,30 @@ def main(args: Namespace):
                 finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.FALSE.value)
                 constraints = [season_constraint, finished_constraint]
                 fixtures = get_fixtures(db, constraints)
-                fixtures = filter_fixtures(fixtures, left_datetime, right_datetime)
-
+                fixtures = filter_fixtures(fixtures, left_window, right_window)
                 if fixtures:
-                    if args.event:
-                        teams = []
-                        for fixture in fixtures:
-                            teams.append(Team.inventory[fixture.home_team.id])
-                            teams.append(Team.inventory[fixture.away_team.id])
-
-                        analyse_sequences(db,
-                                          league_code,
-                                          teams,
-                                          args.event,
-                                          args.negate,
-                                          args.venue,
-                                          args.half,
-                                          args.minimum)
-                    else:
-                        season_fixtures[league] = fixtures
+                    league_fixtures[league] = fixtures
 
     if args.time:
-        tick = left_datetime.hour
+        flat = []
+        for league, fixtures in league_fixtures.items():
+            for fixture in fixtures:
+                flat.append((league, fixture))
+        flat.sort(key=lambda tup: (tup[1].date, tup[0].country, tup[0].code))
 
-        while tick < 24:
-            for league, fixtures in season_fixtures.items():
-                hourly_fixtures = []
-                for fixture in fixtures:
-                    match_date = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
-                    if match_date.hour == tick:
-                        hourly_fixtures.append(fixture)
+        last_league = None
+        for league, fixture in flat:
+            if last_league is None:
+                print(get_league_header(league))
+            elif last_league != league:
+                print()
+                print(get_league_header(league))
 
-                if hourly_fixtures:
-                    output_fixtures(league, hourly_fixtures)
-
-            tick += 1
+            print(get_fixture_header(fixture, Fore.BLUE, Fore.RED))
+            last_league = league
+        print()
     else:
-        for league, fixtures in season_fixtures.items():
+        for league, fixtures in league_fixtures.items():
             output_fixtures(league, fixtures)
 
 

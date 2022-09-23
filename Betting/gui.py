@@ -166,13 +166,16 @@ def team_selected(values: Dict) -> str:
 
 
 def get_league(values: Dict) -> League:
-    return League(uglify(values[country_choice.Key]), values[league_choice.Key])
+    for code, league in league_register.items():
+        if league.country == uglify(values[country_choice.Key]) and league.name == values[league_choice.Key]:
+            return league
+    assert False
 
 
 def set_league(values: Dict, args: Namespace):
     if values[league_choice.Key]:
         league = get_league(values)
-        args.league = [get_league_code(league)]
+        args.league = [league.code]
     else:
         args.league = None
 

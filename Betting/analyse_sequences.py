@@ -199,7 +199,7 @@ def main(args: Namespace):
     if args.time:
         flat_predictions.sort(key=lambda prediction: (prediction.fixture.date,
                                                       prediction.league.country,
-                                                      prediction.league.ordering,
+                                                      prediction.league.code,
                                                       prediction.team == prediction.fixture.away_team))
         last_prediction = None
         for prediction in flat_predictions:

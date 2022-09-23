@@ -42,8 +42,11 @@ def parse_command_line():
 def add_image(ax, team: Team):
     try:
         url = 'https://media.api-sports.io/football/teams'
-        img = plt.imread('{}/{}.png'.format(url, team.id))
-        ax.imshow(img)
+        try:
+            img = plt.imread('{}/{}.png'.format(url, team.id))
+            ax.imshow(img)
+        except SyntaxError:
+            return False
         ax.axis('off')
         return True
     except URLError:
@@ -122,8 +125,8 @@ def create_results_table(ax,
                          cellLoc='left',
                          colWidths=[0.15, 0.3, 0.3, 0.05, 0.05, 0.05],
                          loc='upper center')
-    the_table.auto_set_font_size(False)
-    the_table.set_fontsize(8)
+    #the_table.auto_set_font_size(False)
+    #the_table.set_fontsize(8)
     ax.axis('off')
     ax.set_title('History @ {}'.format(left_team.name))
 
@@ -188,8 +191,8 @@ def create_form_table(ax,
                          cellLoc='left',
                          colWidths=[0.15, 0.3, 0.3, 0.05, 0.05, 0.05],
                          loc='upper center')
-    the_table.auto_set_font_size(False)
-    the_table.set_fontsize(8)
+    #the_table.auto_set_font_size(False)
+    #the_table.set_fontsize(8)
     ax.axis('off')
     ax.set_title('Form: {}'.format(team.name))
 
@@ -232,8 +235,8 @@ def create_league_table(ax,
                          cellLoc='left',
                          cellColours=colors,
                          loc='upper center')
-    the_table.auto_set_font_size(False)
-    the_table.set_fontsize(10)
+    #the_table.auto_set_font_size(False)
+    #the_table.set_fontsize(10)
 
     ax.axis('off')
     ax.set_title('League table')
