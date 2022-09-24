@@ -163,7 +163,7 @@ def make_window():
                [Text('Event matrix analysis', )],
                [event_matrix_submit],
                [HorizontalSeparator()],
-               [Text('Quick calculation', )],
+               [Text('Calculator', )],
                [expression_text, equals_text, evaluation_text]]
     tab1 = Tab('Analysis', layout1)
 
