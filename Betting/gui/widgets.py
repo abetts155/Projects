@@ -81,6 +81,7 @@ performance_individual = Radio('Individual', radio_performance, default=True, en
 performance_average = Radio('Average', radio_performance, enable_events=True)
 performance_positions = Radio('Absolute', radio_performance, enable_events=True)
 performance_positions_choice = InputText(key='-PERFORMANCE-POSITIONS-CHOICE-',
+                                         size=(12, 1),
                                          disabled=True,
                                          enable_events=True)
 performance_relative = Radio('Relative', radio_performance, enable_events=True)
@@ -123,8 +124,10 @@ def make_window():
               [Text('Performance analysis', )],
               [Text('Type', size=default_size),
                performance_individual, performance_average, performance_positions, performance_relative],
-              [Text('Relative', size=default_size), performance_relative_choice],
-              [Text('Absolute', size=default_size), performance_positions_choice],
+              [Text('Relative', size=default_size),
+               performance_relative_choice,
+               Text('Absolute', size=default_size),
+               performance_positions_choice],
               [performance_analysis_submit],
               [HorizontalSeparator()],
               [Text('Calculator', )],
