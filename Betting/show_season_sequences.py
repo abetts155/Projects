@@ -11,14 +11,13 @@ from cli.cli import (add_database_option,
                      add_team_option,
                      get_unique_league,
                      get_unique_event)
-from collections import Counter, OrderedDict
+from collections import Counter
 from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from numpy import min, max
 from model.fixtures import BettingEvent, Event, Half, Venue
-from model.leagues import league_register, prettify, League
+from model.leagues import league_register, League
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
 from model.teams import Team
@@ -123,17 +122,9 @@ def main(args: Namespace):
         for team, fixtures in season.fixtures_per_team().items():
             if selected_team:
                 if team == selected_team:
-                    count_events(season,
-                                 team,
-                                 fixtures,
-                                 [bet],
-                                 [datum])
+                    count_events(team, fixtures, [bet], [datum])
             else:
-                count_events(season,
-                             team,
-                             fixtures,
-                             [bet],
-                             [datum])
+                count_events(team, fixtures, [bet], [datum])
 
         if datum.counter:
             x_limit = max([x_limit] + list(datum.counter.keys()))

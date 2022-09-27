@@ -5,18 +5,16 @@ from typing import Dict
 from PySimpleGUI import set_options, theme, Popup, Window, WIN_CLOSED
 
 import head_to_head
+import regression
 import show_sequences
-import show_matrix
 import show_season_sequences
 import show_projection
 import show_team
-import show_heatmap
 import show_season_summary
 import show_goal_events
+import show_history
 
 from gui.widgets import (aggregated_sequences_submit,
-                         betting_file,
-                         betting_text,
                          chunks_choice,
                          country_choice,
                          win_event,
@@ -31,14 +29,10 @@ from gui.widgets import (aggregated_sequences_submit,
                          against_0_event,
                          against_1_event,
                          evaluation_text,
-                         event_matrix_submit,
                          event_negation,
                          expression_text,
-                         heatmap_analysis,
-                         heatmap_submit,
                          history_choice,
                          h2h_submit,
-                         league_analysis_submit,
                          league_choice,
                          make_window,
                          performance_analysis_submit,
@@ -48,14 +42,15 @@ from gui.widgets import (aggregated_sequences_submit,
                          performance_positions,
                          performance_positions_choice,
                          performance_relative_choice,
+                         regression_submit,
                          result_first,
                          result_full,
                          result_second,
+                         results_submit,
                          season_sequences_submit,
-                         team_analysis_game_states,
-                         team_analysis_goals,
                          team_analysis_submit,
-                         team_analysis_summary,
+                         team_goals_submit,
+                         team_history_submit,
                          team_choice_one,
                          team_choice_two,
                          team_clear_one,
@@ -212,28 +207,40 @@ def run_sequences(values: Dict, event):
 
 
 def run_team_analysis(values: Dict):
-    if values[league_choice.Key] and half_selected(values):
-        if team_one_is_valid(values) or team_two_is_valid(values):
-            args = Namespace()
-            args.database = database
-            args.block = False
-            args.team = team_selected(values)
-            set_league(values, args)
-            set_history(values, args)
-            set_venue(values, args)
-            set_half(values, args)
+    if values[league_choice.Key] and team_selected(values):
+        args = Namespace()
+        args.database = database
+        args.block = False
+        args.team = team_selected(values)
+        set_league(values, args)
+        set_history(values, args)
+        set_venue(values, args)
+        args.game_states = []
+        args.averages = None
+        show_team.main(args)
 
-            if values[team_analysis_summary.Key]:
-                if values[team_analysis_game_states.Key]:
-                    args.game_states = values[team_analysis_game_states.Key].split()
-                else:
-                    args.game_states = None
 
-                args.averages = None
-                show_team.main(args)
-            elif values[team_analysis_goals.Key]:
-                args.intervals = 3
-                show_goal_events.main(args)
+def run_team_goals_analysis(values: Dict):
+    if values[league_choice.Key] and team_selected(values):
+        args = Namespace()
+        args.database = database
+        args.block = False
+        args.team = team_selected(values)
+        set_league(values, args)
+        set_history(values, args)
+        set_venue(values, args)
+        args.intervals = 3
+        show_goal_events.main(args)
+
+
+def run_team_history(values: Dict):
+    if values[league_choice.Key] and team_selected(values):
+        args = Namespace()
+        args.database = database
+        args.block = False
+        args.team = team_selected(values)
+        set_league(values, args)
+        show_history.main(args)
 
 
 def run_performance_analysis(values: Dict):
@@ -274,40 +281,7 @@ def run_performance_analysis(values: Dict):
                 show_projection.main(args)
 
 
-def run_heatmap_analysis(values: Dict):
-    if values[league_choice.Key] and values[heatmap_analysis.Key] and values[chunks_choice.Key] and half_selected(values):
-        args = Namespace()
-        args.database = database
-        args.block = False
-        set_league(values, args)
-        set_history(values, args)
-        set_venue(values, args)
-        set_half(values, args)
-        set_chunks(values, args)
-        args.analysis = show_heatmap.Analysis.from_string(values[heatmap_analysis.Key])
-        show_heatmap.main(args)
-
-
-def run_event_matrix_analysis(values: Dict):
-    if values[league_choice.Key] and values[chunks_choice.Key] and half_selected(values):
-        args = Namespace()
-        args.database = database
-        args.block = False
-        args.event = [get_event(values)]
-        args.negate = values[event_negation.Key]
-        set_league(values, args)
-        set_history(values, args)
-        set_venue(values, args)
-        set_half(values, args)
-        set_chunks(values, args)
-        if args.event in [win, loss]:
-            args.symmetry = False
-        else:
-            args.symmetry = True
-        show_matrix.main(args)
-
-
-def run_league_analysis(values: Dict):
+def run_results_analysis(values: Dict):
     if values[league_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
@@ -318,6 +292,20 @@ def run_league_analysis(values: Dict):
         args.team = team_selected(values)
         args.history = None
         show_season_summary.main(args)
+
+
+def run_regression_analysis(values: Dict):
+    if values[league_choice.Key] and half_selected(values):
+        args = Namespace()
+        args.database = database
+        set_league(values, args)
+        set_half(values, args)
+        args.country = None
+        args.team = team_selected(values)
+        args.no_colors = True
+        set_history(values, args)
+        buffer = regression.main(args)
+        Popup(buffer, background_color='#add8e6', title='', non_blocking=True)
 
 
 def run_expression_evaluation(values: Dict):
@@ -431,16 +419,18 @@ def run(window: Window):
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
             run_team_analysis(values)
+        elif event == team_goals_submit.Key:
+            run_team_goals_analysis(values)
+        elif event == team_history_submit.Key:
+            run_team_history(values)
         elif event == performance_analysis_submit.Key:
             run_performance_analysis(values)
         elif event in [aggregated_sequences_submit.Key, season_sequences_submit.Key]:
             run_sequences(values, event)
-        elif event == heatmap_submit.Key:
-            run_heatmap_analysis(values)
-        elif event == event_matrix_submit.Key:
-            run_event_matrix_analysis(values)
-        elif event == league_analysis_submit.Key:
-            run_league_analysis(values)
+        elif event == results_submit.Key:
+            run_results_analysis(values)
+        elif event == regression_submit.Key:
+            run_regression_analysis(values)
         elif event in [performance_individual.Key, performance_average.Key]:
             performance_positions_choice.update(disabled=True)
             performance_relative_choice.update(disabled=True)
@@ -450,18 +440,8 @@ def run(window: Window):
         elif event == performance_relative.Key:
             performance_positions_choice.update(disabled=True)
             performance_relative_choice.update(set_to_index=0, disabled=False)
-        elif event == team_analysis_summary.Key:
-            team_analysis_game_states.update(disabled=False)
-        elif event == team_analysis_goals.Key:
-            team_analysis_game_states.update(disabled=True)
         elif event == expression_text.Key:
             run_expression_evaluation(values)
-        elif event == betting_file.Key:
-            text = ''
-            with open(values[betting_file.Key], 'r') as in_file:
-                for line in in_file:
-                    text += line
-            betting_text.update(value=text)
 
 
 if __name__ == '__main__':

@@ -23,7 +23,7 @@ from model.leagues import league_register, League
 from model.seasons import Season
 from model.tables import LeagueTable, Position
 from model.teams import Team
-from statistics import mean
+from statistics import median
 from sql.sql import extract_picked_team, load_league, load_teams
 from typing import List
 
@@ -162,7 +162,7 @@ class Subplot:
 class Datum:
     __slots__ = ['summary', 'label', 'color', 'line_width', 'marker_size']
 
-    def __init__(self, summary: List[Statistics], label: str, color: str, line_width: float = 2, marker_size: int = 10):
+    def __init__(self, summary: List[Statistics], label: str, color: str, line_width: float = 1, marker_size: int = 6):
         self.summary = summary
         self.label = label
         self.color = color
@@ -220,15 +220,8 @@ def display(title: str, data: List[Datum], block: bool):
         step = 5
         xticks = [1] + [i for i in range(1 + step, subplot.xlim, step)] + [subplot.xlim]
         subplot.ax.set_xticks(xticks)
-        subplot.ax.set_xlabel('Matchday')
 
         subplot.ax.set_ylim(0, subplot.ylim)
-        if subplot.ylim <= max_ylabels:
-            yticks = [i for i in range(0, subplot.ylim)] + [subplot.ylim]
-        else:
-            step = subplot.ylim // 10
-            yticks = [i for i in range(subplot.ylim, 0, -step)]
-        subplot.ax.set_yticks(yticks)
         subplot.ax.spines['right'].set_visible(False)
         subplot.ax.spines['top'].set_visible(False)
         subplot.ax.legend()
@@ -253,30 +246,13 @@ def compute_average(combined_summary):
         average_summary.append(average_stats)
         for stat in Statistics.__slots__:
             values = [getattr(datum, stat) for datum in weekly_stats]
-            average = floor(mean(values))
+            average = median(values)
             setattr(average_stats, stat, average)
     return average_summary
 
 
 def add_venue_and_half_to_title(title: str, venue: Venue, half: Half):
     return '{} ({}) ({} results)'.format(title, venue.name, Half.to_string([half]))
-
-
-class Color:
-    def __init__(self, gradient: bool = False):
-        self.index = 0
-        if gradient:
-            self.choices = [(0.118, 0.565, 1), (1, 0, 0), (1, 0.39, 0.28), (1, 0.49, 0.31), (0.80, 0.36, 0.36),
-                            (0.95, 0.50, 0.50), (0.91, 0.59, 0.48), (0.98, 0.50, 0.44), (1, 0.63, 0.48), (1, 0.27, 0),
-                            (1, 0.55, 0), (1, 0.65, 0), (1, 0.84, 0)]
-        else:
-            self.choices = ['black', 'dodgerblue', 'lightblue', 'salmon', 'gold', 'darkorange', 'silver']
-
-    def next(self) -> str:
-        if self.index > len(self.choices) - 1:
-            error_message('Out of options for next color')
-        self.index += 1
-        return self.choices[self.index - 1]
 
 
 def compute_relative_performance(args: Namespace,
@@ -294,7 +270,7 @@ def compute_relative_performance(args: Namespace,
     summaries = []
     for season in seasons:
         if not season.current:
-            table = LeagueTable(season, args.half)
+            table = LeagueTable(season, [args.half])
             teams = table.teams_by_position(positions)
             for team in teams:
                 summary = []
@@ -308,7 +284,6 @@ def compute_relative_performance(args: Namespace,
                 combined_summary.append([])
             combined_summary[week].append(stat)
 
-    color = Color()
     sublists = split_into_contiguous_groups(positions)
     label = 'Positions: {}'.format(to_string(sublists))
     label = '{} ({}-{})'.format(label, seasons[0].year, seasons[-2].year)
@@ -319,7 +294,7 @@ def compute_relative_performance(args: Namespace,
         (row,) = extract_picked_team(args.database, name, league)
         team = Team.inventory[row[0]]
         summary = team_summaries[team][this_season]
-        data.append(Datum(summary, team.name, color.next()))
+        data.append(Datum(summary, team.name, '#ffffff'))
 
     title = 'Relative performance comparison {}-{}'.format(seasons[0].year, seasons[-2].year)
     title = add_venue_and_half_to_title(title, args.venue, args.half)

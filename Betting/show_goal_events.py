@@ -178,7 +178,7 @@ def show(title: str, season_to_summary, block: bool):
         ax = axs[cell_x, cell_y]
 
         bar_width = 0.3
-        create_bar(ax, for_team, bar_width, 1, '#00c39e')
+        create_bar(ax, for_team, bar_width, 1, '#0086c3')
         create_bar(ax, against_team, bar_width, 2, '#ef5350')
 
         labels = []

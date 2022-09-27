@@ -48,8 +48,7 @@ class DataUnit:
         return x_values, y_values
 
 
-def count_events(season: Season,
-                 team: Team,
+def count_events(team: Team,
                  fixtures: List[Fixture],
                  bets: List[BettingEvent],
                  data: List[DataUnit]):

@@ -95,7 +95,7 @@ def create_results_table(ax,
                          neutral_color: Tuple[float, float, float]):
     colors = []
     table = []
-    fixtures.sort(key=lambda row: row.date, reverse=True)
+    fixtures.sort(key=lambda row: row.date)
     for i, fixture in enumerate(fixtures):
         first_half = fixture.first_half()
         second_half = fixture.second_half()
@@ -139,7 +139,7 @@ def create_form_table(ax,
                       neutral_color: Tuple[float, float, float]):
     colors = []
     table = []
-    fixtures.sort(key=lambda row: row.date, reverse=True)
+    fixtures.sort(key=lambda row: row.date)
     for i, fixture in enumerate(fixtures):
         first_half = fixture.first_half()
         second_half = fixture.second_half()
@@ -251,8 +251,8 @@ def main(args: Namespace):
         load_league(args.database, league)
 
     background_color = '#d3d3d3'
-    left_color = '#00c39e'
-    right_color = '#0086c3'
+    left_color = '#0086c3'
+    right_color = '#00c39e'
     other_color = '#ef5350'
     neutral_color = '#000000'
 

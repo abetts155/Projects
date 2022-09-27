@@ -208,7 +208,7 @@ league_register = OrderedDict({
     'CYP1': League('Cyprus', '1. Division', 'CYP1'),
     #'CYP2': League('Cyprus', '2. Division', 'CYP2),
     'CZE1': League('Czech-Republic', 'Czech Liga', 'CZE1'),
-    'CZE2': League('Czech-Republic', 'FNL', 'CZE12'),
+    'CZE2': League('Czech-Republic', 'FNL', 'CZE2'),
     'CZE3A': League('Czech-Republic', '3. liga - CFL A', 'CZE3A'),
     'CZE3B': League('Czech-Republic', '3. liga - CFL B', 'CZE3B'),
     'CZE3C': League('Czech-Republic', '3. liga - MSFL', 'CZE3C'),

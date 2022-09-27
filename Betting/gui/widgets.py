@@ -1,15 +1,11 @@
 from PySimpleGUI import (Button,
                          Checkbox,
                          Combo,
-                         FileBrowse,
                          HorizontalSeparator,
                          InputText,
-                         Multiline,
                          Radio,
                          Slider,
                          Submit,
-                         Tab,
-                         TabGroup,
                          Text,
                          Window)
 
@@ -20,10 +16,9 @@ from show_heatmap import Analysis
 
 radio_venue = 1
 radio_half = 2
-radio_team_analysis = 3
+radio_event = 3
 radio_performance = 4
 radio_team_choice = 5
-radio_event = 6
 
 countries = sorted({league.country for league in league_register.values()})
 country_choice = Combo([prettify(country) for country in countries],
@@ -73,32 +68,14 @@ chunks_choice = Combo([],
                       readonly=True,
                       key='-CHUNKS-')
 
-aggregated_sequences_submit = Button('Aggregated sequences', key='-AGG-SEQ-SUBMIT-')
-season_sequences_submit = Button('Per-season sequences', key='-PER-SEQ-SUBMIT-')
-
-team_analysis_summary = Radio('Summary',
-                              radio_team_analysis,
-                              key='-TEAM-ANALYSIS-SUMMARY-',
-                              enable_events=True,
-                              default=True)
-team_analysis_goals = Radio('Goals',
-                            radio_team_analysis,
-                            key='-TEAM-ANALYSIS-GOALS-',
-                            enable_events=True)
-team_analysis_game_states = InputText(key='-TEAM-ANALYSIS-GAME-STATES-',
-                                      disabled=True)
-team_analysis_submit = Submit(key='-TEAM-ANALYSIS-SUBMIT-')
-
+aggregated_sequences_submit = Button('Sequences (aggregated)', key='-AGG-SEQ-SUBMIT-')
+season_sequences_submit = Button('Sequences (per-season)', key='-PER-SEQ-SUBMIT-')
+team_analysis_submit = Button('Summary', key='-TEAM-ANALYSIS-SUMMARY-')
+team_history_submit = Button('History', key='-TEAM-HISTORY_')
+team_goals_submit = Button('Goals', key='-TEAM-ANALYSIS-GOALS-')
 h2h_submit = Button('Head to head', key='-H2H-SUBMIT-')
-
-league_analysis_submit = Button('League Analysis', key='-LEAGUE-ANALYSIS-SUBMIT-')
-
-heatmap_analysis = Combo([analysis.name.lower().capitalize() for analysis in Analysis],
-                         default_value=Analysis.RESULT.name.lower().capitalize(),
-                         key='-HEATMAP-')
-heatmap_submit = Submit(key='-HEATMAP-SUBMIT-')
-
-event_matrix_submit = Submit(key='-EVENT-MATRIX-SUBMIT-')
+results_submit = Button('Results', key='-RESULTS-SUBMIT-')
+regression_submit = Button('Regression', key='-REGRESSION-SUBMIT-')
 
 performance_individual = Radio('Individual', radio_performance, default=True, enable_events=True)
 performance_average = Radio('Average', radio_performance, enable_events=True)
@@ -117,61 +94,40 @@ expression_text = InputText(size=(16, 1), key='-EXPR-', enable_events=True)
 equals_text = Text('=', justification='center', key='-EQUALS-')
 evaluation_text = Text(size=(10, 1), key='-RESULT-')
 
-betting_file = FileBrowse('Load betting file', key='-BETTING-FILE-', enable_events=True)
-betting_text = Multiline(size=[60, 50], key='-BETTING-')
-
 
 def make_window():
     default_size = (10, 1)
-    layout1 = [[Text('Country', size=default_size), country_choice],
-               [Text('League', size=default_size), league_choice],
-               [Text('Team #1', size=default_size), team_radio_one, team_choice_one, team_clear_one],
-               [Text('Team #2', size=default_size), team_radio_two, team_choice_two, team_clear_two],
-               [Text('History', size=default_size), history_choice],
-               [HorizontalSeparator()],
-               [Text('Event', size=default_size)],
-               [event_negation],
-               [win_event, draw_event, loss_event],
-               [bts_event],
-               [for_against_0_event, for_against_1_event, for_against_2_event],
-               [for_0_event, for_1_event],
-               [against_0_event, against_1_event],
-               [HorizontalSeparator()],
-               [Text('Venue', size=default_size), venue_any, venue_home, venue_away],
-               [Text('Result', size=default_size), result_full, result_first, result_second],
-               [Text('Chunks', size=default_size), chunks_choice],
-               [HorizontalSeparator()],
-               [aggregated_sequences_submit, season_sequences_submit, h2h_submit, league_analysis_submit],
-               [HorizontalSeparator()],
-               [Text('Individual team analysis', )],
-               [Text('Analysis', size=default_size),
-                team_analysis_summary,
-                team_analysis_goals],
-               [Text('Game states', size=default_size), team_analysis_game_states],
-               [team_analysis_submit],
-               [HorizontalSeparator()],
-               [Text('Performance analysis', )],
-               [Text('Type', size=default_size),
-                performance_individual, performance_average, performance_positions, performance_relative],
-               [Text('Relative', size=default_size), performance_relative_choice],
-               [Text('Absolute', size=default_size), performance_positions_choice],
-               [performance_analysis_submit],
-               [HorizontalSeparator()],
-               [Text('Heatmap analysis', ), heatmap_analysis],
-               [heatmap_submit],
-               [HorizontalSeparator()],
-               [Text('Event matrix analysis', )],
-               [event_matrix_submit],
-               [HorizontalSeparator()],
-               [Text('Calculator', )],
-               [expression_text, equals_text, evaluation_text]]
-    tab1 = Tab('Analysis', layout1)
+    layout = [[Text('Country', size=default_size), country_choice],
+              [Text('League', size=default_size), league_choice],
+              [Text('Team #1', size=default_size), team_radio_one, team_choice_one, team_clear_one],
+              [Text('Team #2', size=default_size), team_radio_two, team_choice_two, team_clear_two],
+              [Text('History', size=default_size), history_choice],
+              [HorizontalSeparator()],
+              [Text('Event', size=default_size)],
+              [event_negation],
+              [win_event, draw_event, loss_event],
+              [bts_event],
+              [for_against_0_event, for_against_1_event, for_against_2_event],
+              [for_0_event, for_1_event],
+              [against_0_event, against_1_event],
+              [HorizontalSeparator()],
+              [Text('Venue', size=default_size), venue_any, venue_home, venue_away],
+              [Text('Result', size=default_size), result_full, result_first, result_second],
+              [Text('Chunks', size=default_size), chunks_choice],
+              [HorizontalSeparator()],
+              [aggregated_sequences_submit, season_sequences_submit, results_submit, regression_submit],
+              [HorizontalSeparator()],
+              [Text('Individual team analysis', )],
+              [team_analysis_submit, h2h_submit, team_history_submit, team_goals_submit],
+              [HorizontalSeparator()],
+              [Text('Performance analysis', )],
+              [Text('Type', size=default_size),
+               performance_individual, performance_average, performance_positions, performance_relative],
+              [Text('Relative', size=default_size), performance_relative_choice],
+              [Text('Absolute', size=default_size), performance_positions_choice],
+              [performance_analysis_submit],
+              [HorizontalSeparator()],
+              [Text('Calculator', )],
+              [expression_text, equals_text, evaluation_text]]
 
-    layout2 = [[betting_file],
-               [betting_text]]
-    tab2 = Tab('Betting information', layout2)
-
-    tab_group = TabGroup([[tab1, tab2]])
-    master_layout = [[tab_group]]
-
-    return Window('', layout=master_layout, finalize=True, grab_anywhere=True)
+    return Window('', layout=layout, finalize=True, grab_anywhere=True, resizable=True)

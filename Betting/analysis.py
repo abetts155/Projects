@@ -25,7 +25,7 @@ from typing import Dict, List
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Analyse sequence data and predict outcomes')
+    parser = ArgumentParser(description='Analyse events')
     add_database_option(parser)
     add_half_option(parser)
     add_history_option(parser)
@@ -98,8 +98,7 @@ def analyse_teams(league: League,
         if filtered:
             next_match = filtered[0]
             data = [DataUnit(Counter(), [season], team=team) for bet in bets]
-            count_events(season,
-                         team,
+            count_events(team,
                          fixtures,
                          bets,
                          data)
@@ -208,7 +207,8 @@ def main(args: Namespace):
             if last_prediction is None:
                 print(create_date_header(prediction.fixture.date))
                 date_emitted = True
-            elif last_prediction.fixture.date.hour != prediction.fixture.date.hour:
+            elif ((last_prediction.fixture.date.day != prediction.fixture.date.day) or
+                  (last_prediction.fixture.date.hour != prediction.fixture.date.hour)):
                 print()
                 print(create_date_header(prediction.fixture.date))
                 date_emitted = True

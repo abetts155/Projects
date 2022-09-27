@@ -128,17 +128,16 @@ def add_logging_options(parser: ArgumentParser):
                         help='print verbose messages',
                         default=False)
 
-    parser.add_argument('--no-warnings',
+    parser.add_argument('--warnings',
                         action='store_true',
-                        help='suppress warning messages',
+                        help='print warning messages',
                         default=False)
 
 
 def set_logging_options(args: Namespace):
     messages.verbose = args.verbose
     messages.debug = args.debug
-    if args.no_warnings:
-        messages.warnings = False
+    messages.warnings = args.warnings
 
 
 def add_block_option(parser: ArgumentParser):

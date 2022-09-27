@@ -26,8 +26,6 @@ from model.teams import Team
 from sql.sql import extract_picked_team, load_league, load_teams
 from typing import Callable, List
 
-import numpy as np
-
 
 def parse_command_line():
     parser = ArgumentParser(description='Show sequence data in bar charts')
@@ -59,17 +57,17 @@ def compute_aggregated_data(seasons: List[Season],
 
     for season in seasons:
         for team, fixtures in season.fixtures_per_team().items():
-            count_events(season, team, fixtures, [bet], [historical_aggregated_datum])
+            count_events(team, fixtures, [bet], [historical_aggregated_datum])
 
             if selected_team == team:
-                count_events(season, team, fixtures, [bet], [historical_team_datum])
+                count_events(team, fixtures, [bet], [historical_team_datum])
 
     if this_season is not None:
         for team, fixtures in this_season.fixtures_per_team().items():
-            count_events(this_season, team, fixtures, [bet], [now_aggregated_datum])
+            count_events(team, fixtures, [bet], [now_aggregated_datum])
 
             if selected_team == team:
-                count_events(this_season, team, fixtures, [bet], [now_team_datum])
+                count_events(team, fixtures, [bet], [now_team_datum])
 
     if selected_team is not None:
         return [historical_aggregated_datum, historical_team_datum, now_aggregated_datum, now_team_datum]
@@ -96,7 +94,7 @@ def compute_chunked_data(seasons: List[Season],
             chart = chunk_to_chart[chunk_id]
             for row_id in table_map.get_rows(chunk_id):
                 team = table[row_id].TEAM
-                count_events(season, team, venue, half, func, negate, chart)
+                count_events(team, venue, half, func, negate, chart)
 
     return list(chunk_to_chart.values())
 
@@ -132,8 +130,8 @@ def plot(ax, datum: DataUnit, x_limit: int):
 
     if sum(y_values):
         cmap = plt.get_cmap('RdPu')
-        min_y = np.min(y_values)
-        max_y = np.max(y_values)
+        min_y = min(y_values)
+        max_y = max(y_values)
         scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
         ax.set_yticks([])
         offset = 0.5
@@ -240,13 +238,7 @@ def main(args: Namespace):
                         chunk_id = table_map.get_chunk(position)
                         datum = chunk_to_datum[chunk_id]
 
-                count_events(season,
-                             selected_team,
-                             args.venue,
-                             args.half,
-                             func,
-                             args.negate,
-                             datum)
+                count_events(selected_team, args.venue, args.half, func, args.negate, datum)
 
             position = golden_table.team_position(selected_team)
             chunk_id = golden_map.get_chunk(position)
@@ -264,9 +256,7 @@ def main(args: Namespace):
                     if (i, j) not in used:
                         fig.delaxes(axes[i, j])
     else:
-        data = compute_aggregated_data(seasons,
-                                       selected_team,
-                                       bet)
+        data = compute_aggregated_data(seasons, selected_team, bet)
         x_limit, _ = find_limits(data)
         display = DisplayGrid(len(data), 2)
         fig, axes = plt.subplots(nrows=display.nrows,
