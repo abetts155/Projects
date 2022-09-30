@@ -88,9 +88,11 @@ def create_results_table(ax,
             if full_time:
                 full_time = full_time.reverse()
 
-        fixture_datetime = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
         now = datetime.now()
-        if fixture_datetime <= now and not fixture.finished:
+        if (fixture.date.day != now.day and
+                fixture.date.month != now.month and
+                fixture.date.year != now.year and
+                not fixture.finished):
             row = ['TBD',
                    fixture.home_team.name,
                    fixture.away_team.name,
@@ -134,7 +136,7 @@ def main(args: Namespace):
     seasons = Season.seasons(league)
     if not seasons:
         messages.error_message("No season data found")
-    history = 5
+    history = 4
     seasons = seasons[-history:]
 
     (row,) = extract_picked_team(args.database, args.team, league)

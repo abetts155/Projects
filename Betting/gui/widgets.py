@@ -75,7 +75,7 @@ team_history_submit = Button('History', key='-TEAM-HISTORY_')
 team_goals_submit = Button('Goals', key='-TEAM-ANALYSIS-GOALS-')
 h2h_submit = Button('Head to head', key='-H2H-SUBMIT-')
 results_submit = Button('Results', key='-RESULTS-SUBMIT-')
-regression_submit = Button('Regression', key='-REGRESSION-SUBMIT-')
+outliers_submit = Button('Outliers', key='-REGRESSION-SUBMIT-')
 
 performance_individual = Radio('Individual', radio_performance, default=True, enable_events=True)
 performance_average = Radio('Average', radio_performance, enable_events=True)
@@ -116,7 +116,7 @@ def make_window():
               [Text('Result', size=default_size), result_full, result_first, result_second],
               [Text('Chunks', size=default_size), chunks_choice],
               [HorizontalSeparator()],
-              [aggregated_sequences_submit, season_sequences_submit, results_submit, regression_submit],
+              [aggregated_sequences_submit, season_sequences_submit, results_submit, outliers_submit],
               [HorizontalSeparator()],
               [Text('Individual team analysis', )],
               [team_analysis_submit, h2h_submit, team_history_submit, team_goals_submit],

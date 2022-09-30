@@ -14,7 +14,7 @@ from lib import messages
 from lib.helpful import set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from model.fixtures import Scoreline, Venue, win, loss, draw, bts
+from model.fixtures import Half, Scoreline, Venue, win, loss, draw, bts
 from model.leagues import league_register
 from model.seasons import Season
 from model.teams import Team
@@ -334,9 +334,9 @@ def display_summations(team: Team, venue: Venue, seasons: List[Season], team_sta
                     plt.get_cmap('Reds'))
     frames = [frame_1, frame_2, frame_3, frame_4]
 
-    rows = [[team_stats.first_half, '1st half'],
-            [team_stats.second_half, '2nd half'],
-            [team_stats.both_halves, 'Overall']]
+    rows = [[team_stats.first_half, Half.first.value],
+            [team_stats.second_half, Half.second.value],
+            [team_stats.both_halves, Half.full.value]]
 
     for i, row in enumerate(rows):
         for j, frame in enumerate(frames):

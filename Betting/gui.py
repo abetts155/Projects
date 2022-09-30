@@ -5,7 +5,7 @@ from typing import Dict
 from PySimpleGUI import set_options, theme, Popup, Window, WIN_CLOSED
 
 import head_to_head
-import regression
+import outliers
 import show_sequences
 import show_season_sequences
 import show_projection
@@ -35,6 +35,7 @@ from gui.widgets import (aggregated_sequences_submit,
                          h2h_submit,
                          league_choice,
                          make_window,
+                         outliers_submit,
                          performance_analysis_submit,
                          performance_average,
                          performance_individual,
@@ -42,7 +43,6 @@ from gui.widgets import (aggregated_sequences_submit,
                          performance_positions,
                          performance_positions_choice,
                          performance_relative_choice,
-                         regression_submit,
                          result_first,
                          result_full,
                          result_second,
@@ -294,7 +294,7 @@ def run_results_analysis(values: Dict):
         show_season_summary.main(args)
 
 
-def run_regression_analysis(values: Dict):
+def run_outlier_analysis(values: Dict):
     if values[league_choice.Key] and half_selected(values):
         args = Namespace()
         args.database = database
@@ -304,7 +304,7 @@ def run_regression_analysis(values: Dict):
         args.team = team_selected(values)
         args.no_colors = True
         set_history(values, args)
-        buffer = regression.main(args)
+        buffer = outliers.main(args)
         Popup(buffer, background_color='#add8e6', title='', non_blocking=True)
 
 
@@ -429,8 +429,8 @@ def run(window: Window):
             run_sequences(values, event)
         elif event == results_submit.Key:
             run_results_analysis(values)
-        elif event == regression_submit.Key:
-            run_regression_analysis(values)
+        elif event == outliers_submit.Key:
+            run_outlier_analysis(values)
         elif event in [performance_individual.Key, performance_average.Key]:
             performance_positions_choice.update(disabled=True)
             performance_relative_choice.update(disabled=True)

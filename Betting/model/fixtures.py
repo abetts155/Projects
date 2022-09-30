@@ -26,9 +26,9 @@ class Venue(Enum):
 
 
 class Half(Enum):
-    first = auto()
-    second = auto()
-    full = auto()
+    first = '1st half'
+    second = '2nd half'
+    full = 'full time'
 
     @classmethod
     def from_string(cls, string: str):
@@ -39,18 +39,7 @@ class Half(Enum):
 
     @staticmethod
     def to_string(halves: List["Half"]) -> str:
-        value = ''
-        for i, half in enumerate(halves, start=1):
-            if half == Half.first:
-                value += '1st-half'
-            elif half == Half.second:
-                value += '2nd-half'
-            else:
-                value += 'full-time'
-
-            if i < len(halves):
-                value += ', '
-        return value
+        return ', '.join([half.value for half in halves])
 
 
 class Scoreline:
@@ -190,52 +179,12 @@ class Event:
                 return func_name
 
 
-class BettingEvent:
-    def __init__(self, func: Callable, negate: bool, minimum: int, venue: Venue, halves: List[Half]):
+class ContextualEvent:
+    def __init__(self, func: Callable, negate: bool, venue: Venue, halves: List[Half]):
         self.func = func
         self.negate = negate
-        self.minimum = minimum
         self.venue = venue
         self.halves = halves
-
-
-classic_bets = [
-    BettingEvent(Event.get('draw'), True, 10, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('draw'), False, 3, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gf_eq_0'), False, 3, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('ga_eq_0'), False, 3, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gfa_le_1'), False, 3, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gfa_le_2'), False, 7, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('win'), False, 8, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('bts'), True, 7, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 1, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.home, [Half.first, Half.second]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.away, [Half.first, Half.second]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.home, [Half.first]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.away, [Half.first]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 3, Venue.anywhere, [Half.second]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.home, [Half.second]),
-    BettingEvent(Event.get('gfa_eq_0'), False, 4, Venue.away, [Half.second]),
-    BettingEvent(Event.get('ga_eq_0'), False, 8, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('ga_eq_0'), False, 7, Venue.anywhere, [Half.second]),
-    BettingEvent(Event.get('gf_eq_0'), False, 8, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('gf_eq_0'), False, 7, Venue.anywhere, [Half.second]),
-    BettingEvent(Event.get('gf_eq_0'), False, 2, Venue.home, [Half.full]),
-    BettingEvent(Event.get('gf_eq_0'), False, 3, Venue.away, [Half.full]),
-    BettingEvent(Event.get('draw'), False, 5, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('draw'), False, 4, Venue.anywhere, [Half.second]),
-    BettingEvent(Event.get('draw'), False, 5, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('win'), False, 6, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('loss'), False, 5, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('draw'), True, 7, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('draw'), True, 12, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('gfa_ne_0'), False, 12, Venue.anywhere, [Half.first]),
-    BettingEvent(Event.get('bts'), False, 6, Venue.anywhere, [Half.full]),
-    BettingEvent(Event.get('gfa_le_1'), False, 12, Venue.anywhere, [Half.first, Half.second]),
-    BettingEvent(Event.get('gfa_gt_2'), False, 7, Venue.anywhere, [Half.full])
-]
 
 
 class Fixture:

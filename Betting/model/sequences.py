@@ -1,7 +1,7 @@
 from collections import Counter
 from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import warning_message
-from model.fixtures import BettingEvent, Fixture, Half, Venue
+from model.fixtures import ContextualEvent, Fixture, Half, Venue
 from model.seasons import Season
 from model.teams import Team
 from typing import Callable, List
@@ -50,7 +50,7 @@ class DataUnit:
 
 def count_events(team: Team,
                  fixtures: List[Fixture],
-                 bets: List[BettingEvent],
+                 bets: List[ContextualEvent],
                  data: List[DataUnit]):
     bet_sequences = {bet: [] for bet in bets}
     for fixture in fixtures:
