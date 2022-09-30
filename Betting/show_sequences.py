@@ -17,7 +17,7 @@ from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import BettingEvent, Event, Half, Venue
+from model.fixtures import ContextualEvent, Event, Half, Venue
 from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
@@ -44,7 +44,7 @@ def parse_command_line():
 
 def compute_aggregated_data(seasons: List[Season],
                             selected_team: Team,
-                            bet: BettingEvent):
+                            bet: ContextualEvent):
     if seasons[-1].current:
         this_season = seasons.pop()
     else:
@@ -165,7 +165,7 @@ def main(args: Namespace):
         selected_team = None
 
     func = Event.get(get_unique_event(args))
-    bet = BettingEvent(func, args.negate, None, args.venue, args.half)
+    bet = ContextualEvent(func, args.negate, args.venue, args.half)
 
     if args.chunks:
         data = compute_chunked_data(seasons,

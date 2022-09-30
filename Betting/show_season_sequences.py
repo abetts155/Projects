@@ -16,7 +16,7 @@ from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from model.fixtures import BettingEvent, Event, Half, Venue
+from model.fixtures import ContextualEvent, Event, Half, Venue
 from model.leagues import league_register, League
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
@@ -106,7 +106,7 @@ def main(args: Namespace):
         seasons = seasons[-args.history:]
 
     func = Event.get(get_unique_event(args))
-    bet = BettingEvent(func, args.negate, None, args.venue, args.half)
+    bet = ContextualEvent(func, args.negate, args.venue, args.half)
 
     if args.team:
         (row,) = extract_picked_team(args.database, args.team, league)

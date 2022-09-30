@@ -11,7 +11,7 @@ from datetime import datetime
 from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
-from model.fixtures import BettingEvent, Event, Fixture, Half, Scoreline, Venue, win, loss
+from model.fixtures import Event, Fixture, Half, Scoreline, Venue, win, loss
 from model.leagues import League, league_register, prettify
 from model.seasons import Season
 from model.teams import Team
