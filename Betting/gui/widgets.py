@@ -97,7 +97,7 @@ evaluation_text = Text(size=(10, 1), key='-RESULT-')
 
 
 def make_window():
-    default_size = (10, 1)
+    default_size = (8, 1)
     layout = [[Text('Country', size=default_size), country_choice],
               [Text('League', size=default_size), league_choice],
               [Text('Team #1', size=default_size), team_radio_one, team_choice_one, team_clear_one],
@@ -130,7 +130,6 @@ def make_window():
                performance_positions_choice],
               [performance_analysis_submit],
               [HorizontalSeparator()],
-              [Text('Calculator', )],
-              [expression_text, equals_text, evaluation_text]]
+              [Text('Calculator', ), expression_text, equals_text, evaluation_text]]
 
     return Window('', layout=layout, finalize=True, grab_anywhere=True, resizable=True)

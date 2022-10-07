@@ -442,6 +442,15 @@ def run(window: Window):
             performance_relative_choice.update(set_to_index=0, disabled=False)
         elif event == expression_text.Key:
             run_expression_evaluation(values)
+        elif event == result_full.Key and values[result_full.Key]:
+            result_first.update(value=False)
+            result_second.update(value=False)
+        elif ((event == result_first.Key and values[result_first.Key]) or
+              (event == result_second.Key and values[result_second.Key])):
+            result_full.update(value=False)
+        elif (event in [result_full.Key, result_first.Key, result_second.Key] and
+              not (values[result_full.Key] or values[result_first.Key] or values[result_second.Key])):
+            result_full.update(value=True)
 
 
 if __name__ == '__main__':

@@ -181,7 +181,8 @@ def main(args: Namespace):
                                      True,
                                      Venue.anywhere,
                                      [Half.full],
-                                     {BettingEvent.elsewhere: 10}),
+                                     {BettingEvent.elsewhere: 10,
+                                      'ZAF1': 6}),
 
                         BettingEvent(Event.get('draw'),
                                      False,
