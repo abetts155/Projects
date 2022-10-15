@@ -42,13 +42,28 @@ def show_results(league: League, season: Season, results: List[str]):
             messages.warning_message('Ignoring {}'.format(fixture))
 
     if matched:
-        table = LeagueTable(season, Half.both)
+        table = LeagueTable(season, [Half.full])
         print('>' * 40, season.year, '<' * 40)
+        team_count = {}
         for fixture in matched:
+            if fixture.home_team not in team_count:
+                team_count[fixture.home_team] = 0
+
+            if fixture.away_team not in team_count:
+                team_count[fixture.away_team] = 0
+
+            team_count[fixture.home_team] += 1
+            team_count[fixture.away_team] += 1
+
             print('{:<2} vs {:<2}: {}'.format(table.team_position(fixture.home_team) + 1,
                                               table.team_position(fixture.away_team) + 1,
                                               fixture))
         print()
+
+        teams = list(team_count.keys())
+        teams.sort(key=lambda team: team_count[team])
+        for team in teams:
+            print('{}: {}'.format(team.name, team_count[team]))
 
 
 def main(args: Namespace):

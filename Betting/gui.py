@@ -61,7 +61,7 @@ from gui.widgets import (aggregated_sequences_submit,
                          venue_home)
 from lib import messages
 from model.fixtures import Half, Venue, win, loss, draw, bts
-from model.leagues import League, get_league_code, league_register, uglify
+from model.leagues import League, league_register, uglify
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team

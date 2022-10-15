@@ -124,9 +124,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
 
         if total_games:
             for k, v in zip(x_values, y_values):
-                percentage = round((v / total_games) * 100)
-                text = '{}%'.format(percentage)
-                ax.text(k, v, text, ha='center', fontsize=8)
+                ax.text(k, v, v, ha='center', fontsize=8)
 
             ax.axvline(8.5, ls='-', lw=1)
             ax.axvline(13.5, ls='-', lw=1)
@@ -201,7 +199,7 @@ def main(args: Namespace):
             season_scorelines[season] = scorelines
 
     if selected_team:
-        title = '{} in {} {}'.format(selected_team.name, league.country, league.name)
+        title = '{} in {} {} ({})'.format(selected_team.name, league.country, league.name, args.venue.name)
     else:
         title = '{} {}'.format(league.country, league.name)
 
