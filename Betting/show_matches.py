@@ -55,15 +55,18 @@ def show_results(league: League, season: Season, results: List[str]):
             team_count[fixture.home_team] += 1
             team_count[fixture.away_team] += 1
 
-            print('{:<2} vs {:<2}: {}'.format(table.team_position(fixture.home_team) + 1,
-                                              table.team_position(fixture.away_team) + 1,
-                                              fixture))
+            print('{}: {:<2} vs {:<2} {} vs {}'.format(fixture.date.strftime('%d-%m-%y'),
+                                                       table.team_position(fixture.home_team) + 1,
+                                                       table.team_position(fixture.away_team) + 1,
+                                                       fixture.home_team.name,
+                                                       fixture.away_team.name))
         print()
 
         teams = list(team_count.keys())
-        teams.sort(key=lambda team: team_count[team])
+        teams.sort(key=lambda team: team_count[team], reverse=True)
+        max_name = max([len(team.name) for team in teams]) + 1
         for team in teams:
-            print('{}: {}'.format(team.name, team_count[team]))
+            print('{}{}: {}'.format(team.name, (max_name - len(team.name)) * ' ', team_count[team]))
 
 
 def main(args: Namespace):
