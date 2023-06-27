@@ -30,6 +30,15 @@ def create_events_json(fixture_id: int):
     events_json = get_events_json(fixture_id)
     if not events_json.exists():
         store(events_json, get_events(fixture_id))
+    else:
+        restore = False
+        with events_json.open() as in_file:
+            json_text = load(in_file)
+            events = json_text['api']['events']
+            restore = not events
+
+        if restore:
+            store(events_json, get_events(fixture_id))
 
 
 def get_events_for_fixture(fixture):

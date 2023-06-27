@@ -135,6 +135,13 @@ class Event:
                    bts: 'BTS'}
 
     @classmethod
+    def encode(cls, event):
+        for name, other in cls.inventory.items():
+            if other == event:
+                return name
+        assert False
+
+    @classmethod
     def decode(cls, name: str):
         lexemes = name.split('_')
         return lexemes[0], lexemes[1], int(lexemes[2])

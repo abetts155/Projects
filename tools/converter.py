@@ -7,7 +7,7 @@ from system import programs
 
 def main(filename):
     subprogram_regex = compile(r'subprogram')
-    edge_regex = compile(r'(?P<left>[a-z])\s+(?P<right>[a-z])')
+    edge_regex = compile(r'([a-z0-9]+)\s+([a-z0-9]+)')
 
     subprogram_data = {}
     subprograms = 0
@@ -23,9 +23,13 @@ def main(filename):
 
             edge_match = edge_regex.match(line)
             if edge_match:
-                left = edge_match.group('left')
-                right = edge_match.group('right')
-                subprogram_data[name].add((ord(left), ord(right)))
+                left, right = edge_match.groups()
+                if not(left.isdigit() and right.isdigit()):
+                    edge = (ord(left), ord(right))
+                else:
+                    edge = (int(left), int(right))
+
+                subprogram_data[name].add(edge)
 
     cfgs = []
     program = programs.Program(filename)
@@ -53,12 +57,13 @@ def main(filename):
                 right_vertex = vertex_map[right_id]
                 cfg.add_edge(edges.Edge(left_vertex, right_vertex))
 
-            offset += 26
+            offset += len(vertex_map)
 
     for cfg in cfgs:
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), cfg.name)
         subprogram = programs.Subprogram(cfg, call_vertex)
         program.add_subprogram(subprogram)
+        cfg.dotify()
 
     programs.IO.write(program, 'converted.' + filename)
 

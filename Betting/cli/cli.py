@@ -147,6 +147,13 @@ def add_block_option(parser: ArgumentParser):
                         default=True)
 
 
+def add_save_option(parser: ArgumentParser):
+    parser.add_argument('-S',
+                        '--save',
+                        type=str,
+                        help='save the graph to this file')
+
+
 def add_past_option(parser: ArgumentParser):
     parser.add_argument('--past',
                         action='store_true',

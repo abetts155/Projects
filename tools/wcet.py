@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, Namespace
+from system import graph_based_calculations
 from enum import Enum
 from graphs import edges, graphs, vertices
 from random import choice, randint, shuffle
@@ -105,29 +106,31 @@ def statically_analyse_ipg(ipg: graphs.InstrumentationPointGraph,
 
     def create_structural_constraints():
         for vertex in ipg:
-            flow_in_lhs = calculations.LinearExpr()
-            for edge in ipg.predecessors(vertex):
-                variable = calculations.EdgeVariable(edge)
-                flow_in_lhs.append(variable)
+            if len(ipg.successors(vertex)) > 0:
+                flow_in_lhs = calculations.LinearExpr()
+                for edge in ipg.successors(vertex):
+                    variable = calculations.EdgeVariable(edge)
+                    flow_in_lhs.append(variable)
 
-            flow_in_rhs = calculations.LinearExpr()
-            flow_in_rhs.append(calculations.VertexVariable(vertex))
+                flow_in_rhs = calculations.LinearExpr()
+                flow_in_rhs.append(calculations.VertexVariable(vertex))
 
-            flow_in_constraint = calculations.Constraint(flow_in_lhs, flow_in_rhs, calculations.Constraint.EQUALITY)
-            ilp.add_constraint(flow_in_constraint)
+                flow_in_constraint = calculations.Constraint(flow_in_lhs, flow_in_rhs, calculations.Constraint.EQUALITY)
+                ilp.add_constraint(flow_in_constraint)
 
-            flow_out_lhs = calculations.LinearExpr()
-            for edge in ipg.predecessors(vertex):
-                variable = calculations.EdgeVariable(edge)
-                flow_out_lhs.append(variable)
+            if len(ipg.predecessors(vertex)) > 0 and len(ipg.successors(vertex)) > 0:
+                flow_out_lhs = calculations.LinearExpr()
+                for edge in ipg.predecessors(vertex):
+                    variable = calculations.EdgeVariable(edge)
+                    flow_out_lhs.append(variable)
 
-            flow_out_rhs = calculations.LinearExpr()
-            for edge in ipg.successors(vertex):
-                variable = calculations.EdgeVariable(edge)
-                flow_out_rhs.append(variable)
+                flow_out_rhs = calculations.LinearExpr()
+                for edge in ipg.successors(vertex):
+                    variable = calculations.EdgeVariable(edge)
+                    flow_out_rhs.append(variable)
 
-            flow_out_constraint = calculations.Constraint(flow_out_lhs, flow_out_rhs, calculations.Constraint.EQUALITY)
-            ilp.add_constraint(flow_out_constraint)
+                flow_out_constraint = calculations.Constraint(flow_out_lhs, flow_out_rhs, calculations.Constraint.EQUALITY)
+                ilp.add_constraint(flow_out_constraint)
 
     def create_execution_count_constraints():
         for loop in lnt:
@@ -487,32 +490,27 @@ def create_ipg(program: programs.Program, instrumented_cfg: graphs.ControlFlowGr
         if successor in vertex_to_ipg:
             for predecessor in predecessors:
                 if predecessor in vertex_to_ipg:
-                    ipg.add_edge(edges.Edge(vertex_to_ipg[predecessor], vertex_to_ipg[successor]))
+                    if predecessor != ipg.exit and successor != ipg.entry:
+                        ipg.add_edge(edges.Edge(vertex_to_ipg[predecessor], vertex_to_ipg[successor]))
     return ipg
 
 
 def create_lnt(ipg: graphs.FlowGraph) -> graphs.LoopNest:
-    alive = {}
-    unexplored = set()
-    for vertex in ipg:
-        unexplored.add(vertex)
-        alive[vertex] = True
-        for edge in ipg.successors(vertex):
-            if vertex == ipg.exit:
-                alive[edge] = False
-            else:
-                alive[edge] = True
-
+    edges_to_restore = set()
+    flat_forest = set()
     loop_nest = graphs.LoopNest(ipg.name)
-    iteration = 1
-    surplus = set()
-    while unexplored:
-        sccs = graphs.StrongComponents(ipg, alive)
+
+    ipg.dotify('ipg')
+
+    while not graphs.is_dag(ipg):
+        killed_edges = set()
+        sccs = graphs.StrongComponents(ipg)
 
         for scc in sccs.non_trivial():
             loop = loop_nest.create_loop()
             headers = set()
             for vertex in scc:
+                flat_forest.add(vertex)
                 loop_nest.add_to_body(vertex, loop)
 
                 for edge in ipg.predecessors(vertex):
@@ -520,30 +518,24 @@ def create_lnt(ipg: graphs.FlowGraph) -> graphs.LoopNest:
                         loop_nest.add_to_headers(vertex, loop)
                         headers.add(vertex)
 
-                for edge in ipg.successors(vertex):
-                    if edge.successor() not in scc:
-                        alive[edge] = False
+            for h in headers:
+               print(h)
 
             for vertex in headers:
                 for edge in ipg.predecessors(vertex):
-                    alive[edge] = False
+                    killed_edges.add(edge)
 
-        for vertex in sccs.singletons:
-            alive[vertex] = False
-            unexplored.remove(vertex)
+        for edge in killed_edges:
+            ipg.remove_edge(edge)
+        edges_to_restore.update(killed_edges)
 
-            if ipg.has_edge(vertex, vertex):
-                loop = loop_nest.create_loop()
-                loop_nest.add_to_body(vertex, loop)
-                loop_nest.add_to_headers(vertex, loop)
-            elif iteration == 1:
-                surplus.add(vertex)
-
-        iteration += 1
+    for edge in edges_to_restore:
+        ipg.add_edge(edge)
 
     outermost_loop = loop_nest.create_loop()
-    for vertex in surplus:
-        loop_nest.add_to_body(vertex, outermost_loop)
+    for vertex in ipg:
+        if vertex not in flat_forest:
+            loop_nest.add_to_body(vertex, outermost_loop)
     loop_nest.add_to_headers(ipg.entry, outermost_loop)
     loop_nest.root = outermost_loop
 
@@ -863,6 +855,7 @@ def main(args: Namespace):
 
     calls = 0
     for subprogram in program:
+        graph_based_calculations.identify_loops(subprogram.cfg)
         for vertex in subprogram.cfg:
             if program.call_graph.is_call_site(subprogram.call_vertex, vertex):
                 calls += 1

@@ -144,6 +144,7 @@ class IO:
 
         with open(filename, 'w') as outfile:
             json.dump(program_json, outfile, indent=2)
+            outfile.write('\n')
 
 
     @classmethod

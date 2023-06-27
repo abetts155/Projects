@@ -5,7 +5,6 @@ from random import choice, choices, getrandbits, random, randint, sample, shuffl
 from sys import setrecursionlimit
 from system import programs
 from threading import stack_size
-from time import time
 from typing import Dict, List
 from utils.messages import debug_message, error_message
 
@@ -21,6 +20,7 @@ class LoopBody:
     def __init__(self,
                  cfg: graphs.ControlFlowGraph,
                  number_of_vertices: int,
+                 dense: bool,
                  nested_loops: List,
                  artificial: bool,
                  multi_entry: bool):
@@ -61,6 +61,9 @@ class LoopBody:
             self.pick_more_exits()
             cfg.add_edge(edges.Edge(self._exit_vertex, self._entry_vertex))
             self.add_backedges(cfg)
+
+        if dense:
+            self.densify(cfg)
 
     def add_vertices(self, cfg: graphs.ControlFlowGraph, number_of_vertices: int):
         while number_of_vertices > 0:
@@ -176,6 +179,14 @@ class LoopBody:
                 if not cfg.has_edge(tail_vertex, header_vertex):
                     cfg.add_edge(edges.ControlFlowEdge(tail_vertex, header_vertex))
 
+    def densify(self, cfg: graphs.ControlFlowGraph):
+        for level in range(self._lowest_level + 1, self._highest_level + 1):
+            for successor in self._level_to_vertices[level]:
+                lower_level = randint(self._lowest_level, level - 1)
+                for predecessor in self._level_to_vertices[lower_level]:
+                    if go_ahead(0.5) and not cfg.has_edge(predecessor, successor):
+                        cfg.add_edge(edges.ControlFlowEdge(predecessor, successor))
+
     @property
     def entries(self):
         return self._entries
@@ -238,13 +249,15 @@ def create_loop_bodies(cfg: graphs.ControlFlowGraph,
                        root_vertex: vertices.Vertex,
                        vertex: vertices.Vertex,
                        is_multi_entry: Dict[vertices.Vertex, bool],
-                       bodies: Dict[vertices.Vertex, LoopBody]):
+                       bodies: Dict[vertices.Vertex, LoopBody],
+                       dense: bool):
     for edge in lnt.successors(vertex):
-        create_loop_bodies(cfg, lnt, root_vertex, edge.successor(), is_multi_entry, bodies)
+        create_loop_bodies(cfg, lnt, root_vertex, edge.successor(), is_multi_entry, bodies, dense)
 
     is_root_vertex = len(lnt.predecessors(vertex)) == 0
     bodies[vertex] = LoopBody(cfg,
                               vertex.size,
+                              dense,
                               [bodies[edge.successor()] for edge in lnt.successors(vertex)],
                               vertex == root_vertex,
                               is_multi_entry[vertex])
@@ -332,6 +345,7 @@ def create_control_flow_graph(program: programs.Program,
                               multi_entry_loops: int,
                               nesting_depth: int,
                               number_of_vertices: int,
+                              dense: bool,
                               subprogram_name: str):
     cfg = graphs.ControlFlowGraph(program, subprogram_name)
 
@@ -353,7 +367,7 @@ def create_control_flow_graph(program: programs.Program,
         is_multi_entry[vertex] = True
 
     bodies = {}
-    create_loop_bodies(cfg, lnt, root_vertex, root_vertex, is_multi_entry, bodies)
+    create_loop_bodies(cfg, lnt, root_vertex, root_vertex, is_multi_entry, bodies, dense)
     cfg.dotify()
     assert is_valid(cfg), 'Unable to produce a valid CFG'
     return cfg
@@ -364,7 +378,8 @@ def add_subprograms(program: programs.Program,
                     total_loops: int,
                     multi_entry_loops: int,
                     nesting_depth: int,
-                    number_of_vertices: int):
+                    number_of_vertices: int,
+                    dense: bool):
     for subprogram_name in ['s{}'.format(i) for i in range(1, subprograms + 1)]:
         debug_message('Creating CFG with name {}'.format(subprogram_name))
         cfg = create_control_flow_graph(program,
@@ -372,6 +387,7 @@ def add_subprograms(program: programs.Program,
                                         multi_entry_loops,
                                         nesting_depth,
                                         number_of_vertices,
+                                        dense,
                                         subprogram_name)
         call_vertex = vertices.SubprogramVertex(vertices.Vertex.get_vertex_id(), subprogram_name)
         program.add_subprogram(programs.Subprogram(cfg, call_vertex))
@@ -511,7 +527,8 @@ def main(args: Namespace):
                     args.loops,
                     args.multi,
                     args.nesting_depth,
-                    args.vertices)
+                    args.vertices,
+                    args.dense)
 
     if not args.no_calls:
         add_calls(program, args.recursion)

@@ -70,6 +70,15 @@ class Database:
         self._execute(statement)
         return self._cursor.fetchall()
 
+    def get_number_of_rows(self, cls: ClassVar):
+        statement = "{} {}(*) {} {}".format(Keywords.SELECT.name,
+                                            Keywords.COUNT.name,
+                                            Keywords.FROM.name,
+                                            cls.sql_table().name)
+        self._execute(statement)
+        (value,) = self._cursor.fetchone()
+        return int(value)
+
 
 def check_database_exists(database_name: str):
     path = Path(database_name)

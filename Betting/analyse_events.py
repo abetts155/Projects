@@ -152,6 +152,7 @@ def gather(seasons: List[Season], team: Team, venue: Venue, half: Half, what_to_
     season_to_gaps = OrderedDict()
     max_gap = 0
     for season in seasons:
+        print('>' * 10, season.year)
         team_fixtures = []
         for fixture in season.fixtures():
             if fixture.finished:
@@ -164,6 +165,7 @@ def gather(seasons: List[Season], team: Team, venue: Venue, half: Half, what_to_
 
         season_events = []
         minutes_per_half = 45
+        first = 0
         with Database(args.database) as db:
             for fixture in team_fixtures:
                 fixture_events = get_events_for_fixture(fixture)
@@ -175,23 +177,38 @@ def gather(seasons: List[Season], team: Team, venue: Venue, half: Half, what_to_
 
                 fixture_events.sort(key=lambda event: (event.time, event.extra_time))
                 filtered_events = []
+                scored = []
                 for event in fixture_events:
                     if what_to_analyse == AnalysedEvent.GF and is_goal(event.detail) and team == event.team:
                         filtered_events.append(event)
+                        if not scored:
+                            scored.append(event.team)
                     elif what_to_analyse == AnalysedEvent.GA and is_goal(event.detail) and team != event.team:
                         filtered_events.append(event)
+                        if not scored:
+                            scored.append(event.team)
                     elif what_to_analyse == AnalysedEvent.GFA and is_goal(event.detail):
                         filtered_events.append(event)
+                        if not scored:
+                            scored.append(event.team)
                     elif what_to_analyse == AnalysedEvent.YELLOW and event.detail == EventDetail.yellow_card and team == event.team:
                         filtered_events.append(event)
                     elif what_to_analyse == AnalysedEvent.RED and event.detail == EventDetail.red_card and team == event.team:
                         filtered_events.append(event)
+
+                #print(fixture)
+                if scored:
+                    (first_scorer,) = scored
+                    print('{} scored first'.format(first_scorer.name))
+                    if first_scorer == team:
+                        first += 1
 
                 if filtered_events:
                     season_events.append(filtered_events)
                 else:
                     season_events.append([])
 
+        print(season.year, first)
         if season_events:
             gaps = []
             season_to_gaps[season] = gaps

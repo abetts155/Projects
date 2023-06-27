@@ -1,20 +1,8 @@
+from collections import deque
 from enum import Enum
 from graphs import vertices, edges, instrumentation
 from random import shuffle
-from typing import Callable, Dict
 from utils import dot, messages
-
-
-class InvalidVertexError(ValueError):
-    pass
-
-
-class DuplicateVertexError(ValueError):
-    pass
-
-
-class MultiEdgeError(ValueError):
-    pass
 
 
 class VertexData:
@@ -32,14 +20,14 @@ class DirectedGraph:
 
     def add_vertex(self, vertex: vertices.Vertex):
         if vertex.id_ in self._data:
-            raise DuplicateVertexError('Graph already contains a vertex with ID {}'.format(vertex.id_))
+            messages.error_message('Graph already contains a vertex with ID {}'.format(vertex.id_))
         self._data[vertex.id_] = VertexData(vertex)
 
     def _get_vertex_data(self, vertex: vertices.Vertex) -> VertexData:
         try:
             return self._data[vertex.id_]
         except KeyError:
-            messages.error_message("No data for vertex with ID {}".format(vertex.id_))
+            messages.error_message('No data for vertex with ID {}'.format(vertex.id_))
 
     def remove_vertex(self, vertex: vertices.Vertex):
         v_info = self._get_vertex_data(vertex)
@@ -239,10 +227,6 @@ class FlowGraph(DirectedGraph, ProgramData):
 
 
 class ControlFlowGraph(FlowGraph):
-    """Models a control flow graph at the disassembly code level where:
-    a) each vertex is a basic block of instructions and
-    b) edges represent intra-procedural control flow"""
-
     def __init__(self, program, name):
         FlowGraph.__init__(self, program, name)
 
@@ -742,13 +726,18 @@ class DominanceFrontiers:
 class StrongComponents:
     def __init__(self, directed_graph: DirectedGraph, origin: vertices.Vertex = None):
         self._stack = []
-        self._unexplored = 0
         self._pre_order = {}
         self._low_link = {}
         self._on_stack = {}
         self._vertex_to_scc = {}
         self._singletons = set()
         self._non_trivial_sccs = set()
+
+        for vertex in directed_graph:
+            self._pre_order[vertex] = 0
+            self._low_link[vertex] = 0
+            self._on_stack[vertex] = False
+            self._vertex_to_scc[vertex] = None
 
         self._pre_id = 0
         if origin:
@@ -757,9 +746,6 @@ class StrongComponents:
             for vertex in directed_graph:
                 if self._pre_order[vertex] == 0:
                     self._explore(directed_graph, vertex)
-
-        for vertex in sorted(directed_graph):
-            print('pre[{}] = {}   low[{}]={}'.format(vertex, self._pre_order[vertex], vertex, self._low_link[vertex]))
 
     def _explore(self, directed_graph: DirectedGraph, vertex: vertices.Vertex):
         self._pre_id += 1
@@ -771,7 +757,7 @@ class StrongComponents:
         for edge in directed_graph.successors(vertex):
             successor = edge.successor()
 
-            if successor not in self._pre_order:
+            if self._pre_order[successor] == 0:
                 self._explore(directed_graph, edge.successor())
                 self._low_link[vertex] = min(self._low_link[vertex], self._low_link[successor])
             elif self._on_stack[successor]:
@@ -787,7 +773,7 @@ class StrongComponents:
                 self._vertex_to_scc[z] = scc
                 done = z == vertex
 
-            if len(scc) == 1:
+            if len(scc) == 1 and not directed_graph.has_edge(vertex, vertex):
                 self._singletons.update(scc)
             else:
                 self._non_trivial_sccs.add(frozenset(scc))
@@ -1500,3 +1486,25 @@ class SuperBlockLoopGraph(FlowGraph):
 
         filename = '{}.{}.super.dot'.format(self.program.basename(), self.name)
         dot.generate(filename, data)
+
+
+def is_dag(graph: DirectedGraph) -> bool:
+    counts = {vertex: 0 for vertex in graph}
+    queue = deque()
+    for vertex in graph:
+        counts[vertex] = 0
+        if len(graph.predecessors(vertex)) == 0:
+            queue.append(vertex)
+
+    visited = set()
+    while queue:
+        vertex = queue.popleft()
+        visited.add(vertex)
+        for edge in graph.successors(vertex):
+            successor = edge.successor()
+            counts[successor] += 1
+
+            if counts[successor] == len(graph.predecessors(successor)):
+                queue.append(successor)
+
+    return len(visited) == graph.number_of_vertices()

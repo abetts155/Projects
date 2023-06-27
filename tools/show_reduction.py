@@ -57,6 +57,7 @@ def main():
     markers = ['^', 'o', '*']
     names = sorted(names)
     for i, name in enumerate(names):
+        print(lines[name])
         ax.plot(x_values, lines[name], label=name, c=colors[i], marker=markers[i], lw=0.5, ms=3)
 
     ax.get_xaxis().set_major_locator(plt.MaxNLocator())

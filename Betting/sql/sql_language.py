@@ -11,6 +11,7 @@ class Characters(enum.Enum):
 class Keywords(enum.Enum):
     AND = enum.auto()
     COLLATE = enum.auto()
+    COUNT = enum.auto()
     CREATE = enum.auto()
     DROP = enum.auto()
     EXISTS = enum.auto()

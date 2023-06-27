@@ -1,10 +1,6 @@
 from argparse import ArgumentParser
-from cProfile import Profile
+from graphs import dominators, edges, graphs, vertices
 from collections import deque
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from enum import auto, Enum
-from graphs import edges, graphs, vertices
-from heapq import heapify, heappop, heappush
 from miscellaneous.helpful import error_message
 from multiprocessing import Manager
 from numpy import percentile
@@ -851,13 +847,18 @@ def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
         subprogram.cfg.remove_edge(edges.Edge(subprogram.cfg.exit, subprogram.cfg.entry))
         subprogram.cfg.dotify()
 
+        #print(subprogram.cfg.name)
+        #for i in range(repeat):
+        #    subprogram.cfg.shuffle_edges()
+        #    dominators.betts(subprogram.cfg, subprogram.cfg.entry)
+
+    #for subprogram in program:
         subprogram.cfg.shuffle_edges()
-        #graphs.StrongComponents(subprogram.cfg, subprogram.cfg.entry)
 
         print('{}: |V|={}  |E|={}'.format(subprogram.cfg.name,
                                           subprogram.cfg.number_of_vertices(),
                                           subprogram.cfg.number_of_edges()))
-        algorithms = [betts, graphs.Tarjan, graphs.Cooper]
+        algorithms = [dominators.betts, graphs.Tarjan, graphs.Cooper]
         total_time = {alg: [] for alg in algorithms}
 
         for i in range(repeat):
@@ -870,7 +871,7 @@ def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
                 idom = alg(subprogram.cfg, subprogram.cfg.entry)
                 end = time()
                 total_time[alg].append(end - begin)
-                if alg == betts and verify:
+                if verify and alg == dominators.betts:
                     verify_immediate_dominators(subprogram.cfg, idom)
 
         for alg in algorithms:
