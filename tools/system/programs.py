@@ -165,7 +165,7 @@ class IO:
 
                 for vertex_json in vertices_json:
                     vertex_id = int(vertex_json[0])
-                    vertex = vertices.BasicBlock(int(vertex_id))
+                    vertex = vertices.BasicBlock(vertex_id)
                     cfg.add_vertex(vertex)
 
                     instruction_json = vertex_json[1]

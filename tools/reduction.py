@@ -73,44 +73,6 @@ def ramalingam_loops(cfg: graphs.ControlFlowGraph):
     return loop_nest
 
 
-def betts_loops(cfg: graphs.ControlFlowGraph):
-    alive = {}
-    for vertex in cfg:
-        alive[vertex] = True
-        for edge in cfg.successors(vertex):
-            alive[edge] = True
-
-    unexplored = cfg.number_of_vertices()
-    loop_nest = graphs.LoopNest()
-    while unexplored > 0:
-        sccs = graphs.StrongComponents(cfg, alive)
-
-        for scc in sccs.non_trivial():
-            loop = loop_nest.create_loop()
-            headers = set()
-            for vertex in scc:
-                loop_nest.add_to_body(vertex, loop)
-
-                for edge in cfg.predecessors(vertex):
-                    if edge.predecessor() not in scc:
-                        loop_nest.add_to_headers(vertex, loop)
-                        headers.add(vertex)
-
-                for edge in cfg.successors(vertex):
-                    if edge.successor() not in scc:
-                        alive[edge] = False
-
-            for vertex in headers:
-                for edge in cfg.predecessors(vertex):
-                    alive[edge] = False
-
-        for vertex in sccs.singletons:
-            alive[vertex] = False
-            unexplored -= 1
-
-    return loop_nest
-
-
 def verify_immediate_dominators(cfg: graphs.ControlFlowGraph,
                                 idom: Dict[vertices.Vertex, vertices.Vertex]):
     tarjan_tree = graphs.Tarjan(cfg, cfg.entry)
@@ -727,7 +689,7 @@ def reduce_by_t0(auxiliary_origin: AuxiliaryVertex,
                         if predecessor_id not in new_predecessors:
                             new_predecessors[predecessor_id] = auxiliary_edges[key]
                         else:
-                            new_predecessors[predecessor_id] = answer_query(new_predecessors[predecessor_id],
+                                new_predecessors[predecessor_id] = answer_query(new_predecessors[predecessor_id],
                                                                             auxiliary_edges[key])
 
                     remove_edge(auxiliary_vertices,
@@ -845,41 +807,42 @@ def main(filename: str, subprogram_names: List[str], repeat: int, verify: bool):
     time_for_new = 0
     for subprogram in program:
         subprogram.cfg.remove_edge(edges.Edge(subprogram.cfg.exit, subprogram.cfg.entry))
-        subprogram.cfg.dotify()
+        #subprogram.cfg.dotify()
 
-        #print(subprogram.cfg.name)
-        #for i in range(repeat):
-        #    subprogram.cfg.shuffle_edges()
-        #    dominators.betts(subprogram.cfg, subprogram.cfg.entry)
-
-    #for subprogram in program:
-        subprogram.cfg.shuffle_edges()
-
-        print('{}: |V|={}  |E|={}'.format(subprogram.cfg.name,
-                                          subprogram.cfg.number_of_vertices(),
-                                          subprogram.cfg.number_of_edges()))
-        algorithms = [dominators.betts, graphs.Tarjan, graphs.Cooper]
-        total_time = {alg: [] for alg in algorithms}
-
+        print(subprogram.cfg.name)
         for i in range(repeat):
             subprogram.cfg.shuffle_edges()
-            mutated = algorithms[:]
-            shuffle(mutated)
+        dominators.offline(subprogram.cfg, subprogram.cfg.entry)
 
-            for alg in mutated:
-                begin = time()
-                idom = alg(subprogram.cfg, subprogram.cfg.entry)
-                end = time()
-                total_time[alg].append(end - begin)
-                if verify and alg == dominators.betts:
-                    verify_immediate_dominators(subprogram.cfg, idom)
+    if False:
+        for subprogram in program:
+            subprogram.cfg.shuffle_edges()
 
-        for alg in algorithms:
-            # print('  '.join(str(t) for t in sorted(total_time[alg])))
-            # total_time[alg] = strip_outliers(total_time[alg])
-            print(alg.__name__.capitalize(), '{:.8f}'.format(sum(total_time[alg]) / len(total_time[alg])))
+            print('{}: |V|={}  |E|={}'.format(subprogram.cfg.name,
+                                              subprogram.cfg.number_of_vertices(),
+                                              subprogram.cfg.number_of_edges()))
+            algorithms = [dominators.offline, graphs.Tarjan, graphs.Cooper]
+            total_time = {alg: [] for alg in algorithms}
 
-        print()
+            for i in range(repeat):
+                subprogram.cfg.shuffle_edges()
+                mutated = algorithms[:]
+                shuffle(mutated)
+
+                for alg in mutated:
+                    begin = time()
+                    idom = alg(subprogram.cfg, subprogram.cfg.entry)
+                    end = time()
+                    total_time[alg].append(end - begin)
+                    if verify and alg == dominators.offline:
+                        verify_immediate_dominators(subprogram.cfg, idom)
+
+            for alg in algorithms:
+                # print('  '.join(str(t) for t in sorted(total_time[alg])))
+                # total_time[alg] = strip_outliers(total_time[alg])
+                print(alg.__name__.capitalize(), '{:.8f}'.format(sum(total_time[alg]) / len(total_time[alg])))
+
+            print()
 
 
 def parse_command_line():

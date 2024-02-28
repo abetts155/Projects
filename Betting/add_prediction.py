@@ -62,16 +62,20 @@ def pick_fixture(db: Database, league: League):
     finished_constraint = "{}={}".format(ColumnNames.Finished.name, Characters.TRUE.value)
     constraints = [season_constraint, finished_constraint]
     fixtures = get_fixtures(db, constraints)
-    fixtures.sort(key=lambda fixture: (fixture.date.date(), fixture.date.time()))
-    lower = 0
-    upper = len(fixtures) - 1
-    id_width = len(str(len(fixtures)))
+    if fixtures:
+        fixtures.sort(key=lambda fixture: (fixture.date.date(), fixture.date.time()))
+        lower = 0
+        upper = len(fixtures) - 1
+        id_width = len(str(len(fixtures)))
 
-    print('Fixture options')
-    for identifier, fixture in enumerate(fixtures, start=lower):
-        print('{:>{id_width}}  {}'.format(str(identifier), fixture, id_width=id_width))
-    print()
-    return fixtures[pick_option(lower, upper)]
+        print('Fixture options')
+        for identifier, fixture in enumerate(fixtures, start=lower):
+            print('{:>{id_width}}  {}'.format(str(identifier), fixture, id_width=id_width))
+        print()
+
+        return fixtures[pick_option(lower, upper)]
+    else:
+        print('No fixtures found')
 
 
 def pick_odds():
@@ -104,24 +108,38 @@ def pick_half():
     return halves[pick_option(lower, upper)]
 
 
+def affirmative(question: str):
+    answer = input('{} '.format(question)).strip().lower()
+    return answer in ['y', 'ye', 'yes']
+
+
 def create_prediction(database: str):
     with Database(database) as db:
         league = pick_league()
         fixture = pick_fixture(db, league)
 
-        fixture_id_constraint = "{}={}".format(ColumnNames.Fixture_ID.name, fixture.id)
-        constraints = [fixture_id_constraint]
-        predictions = db.fetch_all_rows(Prediction.sql_table(), constraints)
+        if fixture:
 
-        if predictions:
-            print('There is already a prediction entered for this game')
-        else:
-            odds = pick_odds()
-            event = pick_event()
-            half = pick_half()
-            id_ = db.get_number_of_rows(Prediction) + len(Prediction.inventory) + 1
-            prediction = Prediction(id_, league.code, fixture.id, odds, event, half)
-            Prediction.inventory[id_] = prediction
+            fixture_id_constraint = "{}={}".format(ColumnNames.Fixture_ID.name, fixture.id)
+            constraints = [fixture_id_constraint]
+            predictions = db.fetch_all_rows(Prediction.sql_table(), constraints)
+
+            if predictions:
+                print('There is already a prediction entered for this game')
+            else:
+                odds = pick_odds()
+                event = pick_event()
+                half = pick_half()
+
+                reiteration = 'The prediction was {} ({}) at odds of {} for {} vs {}.'.format(Event.name(event, False),
+                                                                                              Half.to_string([half]),
+                                                                                              odds,
+                                                                                              fixture.home_team.name,
+                                                                                              fixture.away_team.name)
+                if affirmative('{} Correct?'.format(reiteration)):
+                    id_ = db.get_number_of_rows(Prediction) + len(Prediction.inventory) + 1
+                    prediction = Prediction(id_, league.code, fixture.id, odds, event, half)
+                    Prediction.inventory[id_] = prediction
 
 
 def main(args: Namespace):
@@ -131,8 +149,7 @@ def main(args: Namespace):
 
     create_prediction(args.database)
     while True:
-        answer = input('Continue? ').strip().lower()
-        if answer not in ['y', 'ye', 'yes']:
+        if not affirmative('Continue?'):
             break
         create_prediction(args.database)
 

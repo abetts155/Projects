@@ -217,6 +217,7 @@ def run_team_analysis(values: Dict):
         set_venue(values, args)
         args.game_states = []
         args.averages = None
+        args.save = False
         show_team.main(args)
 
 

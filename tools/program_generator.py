@@ -60,7 +60,7 @@ class LoopBody:
         if not artificial:
             self.pick_more_exits()
             cfg.add_edge(edges.Edge(self._exit_vertex, self._entry_vertex))
-            self.add_backedges(cfg)
+            #self.add_backedges(cfg)
 
         if dense:
             self.densify(cfg)
@@ -164,7 +164,7 @@ class LoopBody:
 
     def pick_more_exits(self):
         candidates = [vertex for vertex in self._vertices if vertex != self._exit_vertex]
-        while candidates and go_ahead(0.05):
+        while candidates and go_ahead(0.15):
             vertex = choice(candidates)
             self._exits.add(vertex)
             candidates.remove(vertex)

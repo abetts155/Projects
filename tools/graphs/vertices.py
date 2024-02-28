@@ -324,19 +324,20 @@ class Merge(ControlPoint):
 
 class SuperBlock(Vertex, list):
     def __init__(self, id_):
+        list.__init__(self)
         Vertex.__init__(self, id_)
         self._representative = None
-
-    def append(self, element):
-        list.append(self, element)
 
     @property
     def representative(self):
         return self._representative
 
     @representative.setter
-    def representative(self, v):
-        self._representative = v
+    def representative(self, vertex):
+        self._representative = vertex
+
+    def __str__(self):
+        return ' '.join(str(vertex) for vertex in self)
 
     def _label(self, *args):
         label = [dot.HTML.open_html,

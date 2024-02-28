@@ -54,7 +54,7 @@ def parse_command_line():
 
 class Statistics:
     goal_re = compile(r'(\d+)(\+)? goal(s)?')
-    score_re = compile(r'(\d|X)-(\d|X)')
+    score_re = compile(r'(\d+|X)-(\d+|X)')
 
     __slots__ = ['wins',
                  'draws',
@@ -320,7 +320,7 @@ def create_bar_charts(team: Team, venue: Venue, seasons: List[Season], team_stat
                                                if venue == Venue.anywhere else venue.name, total_games)
     fig.suptitle(title, fontweight='bold')
 
-    frame_1 = Frame(['wins', 'draws', 'losses'], False, '#4169E1')
+    frame_1 = Frame(['wins', 'draws', 'losses'], True,  plt.get_cmap('Wistia'))
     frame_2 = Frame(['for', 'against'], False, '#DA70D6')
     frame_3 = Frame(['both scored', 'scored', 'conceded'], False, '#DC143C')
     frame_4 = Frame(['0 goals', '1 goal', '2 goals', '3 goals', '4 goals', '5+ goals'], True, plt.get_cmap('Blues'))
@@ -425,11 +425,12 @@ def main(args: Namespace):
             team_season_stats.append(stats)
 
         team_stats = reduce(team_season_stats, sum)
-        create_bar_charts(selected_team, args.venue, seasons, team_stats)
-        if args.save:
-            plt.savefig(args.save)
-        else:
-            plt.show(block=args.block)
+        if team_stats.both_halves.wins + team_stats.both_halves.draws + team_stats.both_halves.losses > 0:
+            create_bar_charts(selected_team, args.venue, seasons, team_stats)
+            if args.save:
+                plt.savefig(args.save)
+            else:
+                plt.show(block=args.block)
 
 
 if __name__ == '__main__':

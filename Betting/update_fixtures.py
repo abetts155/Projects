@@ -132,12 +132,12 @@ def update_all(database: str, past: bool, force: bool):
             constraints = ["{}='{}'".format(ColumnNames.Country.name, league.country),
                            "{}='{}'".format(ColumnNames.Code.name, league.name)]
             season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
-            assert season_rows
-            for season_row in season_rows:
-                season = create_season_from_row(season_row)
-                if season.current:
-                    if force or fixtures_played(database, season):
-                        codes.append(code)
+            if season_rows:
+                for season_row in season_rows:
+                    season = create_season_from_row(season_row)
+                    if season.current:
+                        if force or fixtures_played(database, season):
+                            codes.append(code)
 
     update_leagues(database, codes, past, force or codes)
 

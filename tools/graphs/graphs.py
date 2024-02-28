@@ -105,7 +105,8 @@ class DirectedGraph:
 
     def __str__(self):
         value = ''
-        for vertex in self:
+        for id_ in sorted(self._data.keys()):
+            vertex = self._data[id_].vertex
             value = '{} V: {}\n'.format(value, vertex)
             for edge in self.successors(vertex):
                 value = '{} E: {}\n'.format(value, edge)
@@ -1377,8 +1378,8 @@ class LoopNest(DirectedGraph):
         if vertex in self._headers:
             return self._headers[vertex]
 
-    def headers(self, loop_id: int):
-        return self._loop_to_headers[loop_id]
+    def headers(self, loop: vertices.LoopBody):
+        return self._loop_to_headers[loop]
 
     def loop(self, vertex: vertices.Vertex) -> vertices.LoopBody:
         return self._vertex_to_loop[vertex]
@@ -1407,6 +1408,13 @@ class LoopNest(DirectedGraph):
 
     def level(self, loop: vertices.LoopBody) -> int:
         return self._loop_to_level[loop]
+
+    def __str__(self):
+        value = ''
+        for loop in self:
+            value += 'Headers: {}\n'.format(','.join(str(header) for header in self.headers(loop)))
+            value += 'Body: {}\n'.format(','.join(str(vertex) for vertex in loop))
+        return value
 
     def dotify(self):
         data = []

@@ -107,7 +107,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
                 key = (int(left), int(right))
                 y_values.append(scorelines[key])
 
-        cmap = plt.get_cmap('Blues')
+        cmap = plt.get_cmap('Reds')
         min_y = min(y_values)
         max_y = max(y_values)
         scaled = [(y - min_y) / (max_y - min_y) for y in y_values]
@@ -145,7 +145,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
         draw_percentage = round(100 * total_draws / total_games)
         away_percentage = round(100 * total_aways / total_games)
 
-        colours = ['red', 'orange', 'yellow']
+        colours = ['#4169E1', '#FFD700', '#DA70D6']
         percentages = [home_percentage, draw_percentage, away_percentage]
         percentages.sort(reverse=True)
 
@@ -172,7 +172,7 @@ def show(title: str, half: Half, team: Team, season_scorelines, block: bool):
         ax = axs[cell_x][cell_y]
         fig.delaxes(ax)
 
-    fig.suptitle(title, fontweight='bold')
+    #fig.suptitle(title, fontweight='bold')
     plt.show(block=block)
 
 
