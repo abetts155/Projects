@@ -1,9 +1,11 @@
+import datetime
+
 from model.fixtures import Fixture
 from model.leagues import League
 from model.teams import Team
 from sql import sql_columns, sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 
 class Season:
@@ -72,6 +74,18 @@ class Season:
                 self._team_fixtures.setdefault(fixture.home_team, []).append(fixture)
                 self._team_fixtures.setdefault(fixture.away_team, []).append(fixture)
         return self._team_fixtures
+
+    def years(self) -> Tuple[datetime.datetime, datetime.datetime]:
+        x = y = None
+        for fixture in self.fixtures():
+            if x is None and y is None:
+                x = y = fixture.date
+            else:
+                if fixture.date < x:
+                    x = fixture.date
+                if fixture.date > y:
+                    y = fixture.date
+        return x, y
 
     def sql_values(self):
         values = [self.id, self.year, self.name, self.country, self.country_code, self.flag, self.current]

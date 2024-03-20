@@ -62,20 +62,20 @@ def count_events(team: Team,
                                      (bet.venue == Venue.away and fixture.away_team == team)):
 
                 if Half.first in bet.halves:
-                    if fixture.first_half() is not None:
-                        results.append(fixture.first_half())
+                    if fixture.result(Half.first) is not None:
+                        results.append(fixture.result(Half.first))
                     else:
                         warning_message('No 1st half result for fixture {}'.format(fixture))
 
                 if Half.second in bet.halves:
-                    if fixture.second_half() is not None:
-                        results.append(fixture.second_half())
+                    if fixture.result(Half.second) is not None:
+                        results.append(fixture.result(Half.second))
                     else:
                         warning_message('No 2nd half result for fixture {}'.format(fixture))
 
                 if Half.full in bet.halves:
-                    if fixture.full_time() is not None:
-                        results.append(fixture.full_time())
+                    if fixture.result(Half.full) is not None:
+                        results.append(fixture.result(Half.full))
                     else:
                         warning_message('No full-time result for fixture {}'.format(fixture))
 

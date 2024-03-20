@@ -4,6 +4,7 @@ from typing import Dict
 
 from PySimpleGUI import set_options, theme, Popup, Window, WIN_CLOSED
 
+import classify
 import head_to_head
 import outliers
 import show_sequences
@@ -49,6 +50,7 @@ from gui.widgets import (aggregated_sequences_submit,
                          results_submit,
                          season_sequences_submit,
                          team_analysis_submit,
+                         team_classify_submit,
                          team_goals_submit,
                          team_history_submit,
                          team_choice_one,
@@ -219,6 +221,18 @@ def run_team_analysis(values: Dict):
         args.averages = None
         args.save = False
         show_team.main(args)
+
+
+def run_team_classification(values: Dict):
+    if values[league_choice.Key] and team_selected(values):
+        args = Namespace()
+        args.database = database
+        args.block = False
+        args.team = team_selected(values)
+        set_league(values, args)
+        set_venue(values, args)
+        args.save = False
+        classify.main(args)
 
 
 def run_team_goals_analysis(values: Dict):
@@ -420,6 +434,8 @@ def run(window: Window):
             run_head_to_head(values)
         elif event == team_analysis_submit.Key:
             run_team_analysis(values)
+        elif event == team_classify_submit.Key:
+            run_team_classification(values)
         elif event == team_goals_submit.Key:
             run_team_goals_analysis(values)
         elif event == team_history_submit.Key:

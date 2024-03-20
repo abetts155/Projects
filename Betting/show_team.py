@@ -144,7 +144,7 @@ def update_stats(stats: Statistics, score: Scoreline):
 def compute_statistics(season: Season, team: Team, venue: Venue, game_states: List[str]):
     fixtures = []
     for fixture in season.fixtures():
-        if fixture.first_half() is not None and fixture.second_half() is not None:
+        if fixture.result(Half.first) is not None and fixture.result(Half.second) is not None:
             if venue == Venue.anywhere:
                 if fixture.home_team == team or fixture.away_team == team:
                     fixtures.append(fixture)
@@ -158,13 +158,13 @@ def compute_statistics(season: Season, team: Team, venue: Venue, game_states: Li
     stats = MatchStatistics()
     for fixture in fixtures:
         if fixture.home_team == team:
-            first_half = fixture.first_half()
-            second_half = fixture.second_half()
-            full_time = fixture.full_time()
+            first_half = fixture.result(Half.first)
+            second_half = fixture.result(Half.second)
+            full_time = fixture.result(Half.full)
         else:
-            first_half = fixture.first_half().reverse()
-            second_half = fixture.second_half().reverse()
-            full_time = fixture.full_time().reverse()
+            first_half = fixture.result(Half.first).reverse()
+            second_half = fixture.result(Half.second).reverse()
+            full_time = fixture.result(Half.full).reverse()
 
         analyse = True
         if game_states:

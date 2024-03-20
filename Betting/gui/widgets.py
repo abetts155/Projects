@@ -71,6 +71,7 @@ chunks_choice = Combo([],
 aggregated_sequences_submit = Button('Sequences (aggregated)', key='-AGG-SEQ-SUBMIT-')
 season_sequences_submit = Button('Sequences (per-season)', key='-PER-SEQ-SUBMIT-')
 team_analysis_submit = Button('Summary', key='-TEAM-ANALYSIS-SUMMARY-')
+team_classify_submit = Button('Classify', key='-TEAM-CLASSIFY-')
 team_history_submit = Button('History', key='-TEAM-HISTORY_')
 team_goals_submit = Button('Goals', key='-TEAM-ANALYSIS-GOALS-')
 h2h_submit = Button('Head to head', key='-H2H-SUBMIT-')
@@ -119,7 +120,7 @@ def make_window():
               [aggregated_sequences_submit, season_sequences_submit, results_submit, outliers_submit],
               [HorizontalSeparator()],
               [Text('Individual team analysis', )],
-              [team_analysis_submit, h2h_submit, team_history_submit, team_goals_submit],
+              [team_analysis_submit, team_classify_submit, h2h_submit, team_history_submit, team_goals_submit],
               [HorizontalSeparator()],
               [Text('Performance analysis', )],
               [Text('Type', size=default_size),

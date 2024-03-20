@@ -36,7 +36,7 @@ def debug_message(*args):
     if debug:
         caller_frame = inspect.stack()[1]
         info = inspect.getframeinfo(caller_frame[0])
-        prefix = '[{}:{}.{}@{}]'.format(datetime.datetime.now().strftime('%H:%M'),
+        prefix = '[{}:{}.{}@{}]'.format(datetime.datetime.now().strftime('%H:%M:%S'),
                                         os.path.basename(info.filename),
                                         info.function,
                                         info.lineno)

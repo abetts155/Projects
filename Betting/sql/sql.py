@@ -88,14 +88,17 @@ def check_database_exists(database_name: str):
 
 def load_teams(filename: str):
     check_database_exists(filename)
+    messages.debug_message('Loading teams [1]')
     with Database(filename) as db:
         team_rows = db.fetch_all_rows(Team.sql_table())
         for row in team_rows:
             create_team_from_row(row)
+    messages.debug_message('Loading teams [2]')
 
 
 def load_league(filename: str, league: League):
     check_database_exists(filename)
+    messages.debug_message('Loading league {} [1]'.format(league))
     with Database(filename) as db:
         name_constraint = "{}='{}' {} {}".format(ColumnNames.Code.name,
                                                  league.name,
@@ -106,6 +109,7 @@ def load_league(filename: str, league: League):
 
         for season_row in season_rows:
             season = create_season_from_row(season_row)
+            messages.debug_message('Loading season {} [1]'.format(season.year))
             constraints = ['{}={}'.format(ColumnNames.Season_ID.name, season_row[0])]
             fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
             for fixture_row in fixture_rows:
@@ -113,6 +117,8 @@ def load_league(filename: str, league: League):
                 if fixture:
                     season.add_fixture(fixture)
             season.sort_fixtures()
+            messages.debug_message('Loading season {} [2]'.format(season.year))
+    messages.debug_message('Loading league {} [2]'.format(league))
 
 
 def extract_picked_team(database: str, team_name: str, league: League = None, error: bool = True) -> List[str]:

@@ -1,0 +1,5 @@
+HOME_COLOR = '#1e90ff'
+AWAY_COLOR = '#ffa600'
+GOOD_NEWS_COLOR = '#ffa600'
+BAD_NEWS_COLOR = 'black'
+NEUTRAL_COLOR = 'grey'

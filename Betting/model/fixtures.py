@@ -13,9 +13,9 @@ import re
 
 
 class Venue(Enum):
-    anywhere = auto()
-    away = auto()
-    home = auto()
+    anywhere = 'Home or Away'
+    home = 'Home'
+    away = 'Away'
 
     @staticmethod
     def from_string(string: str):
@@ -24,11 +24,15 @@ class Venue(Enum):
         except KeyError:
             messages.error_message("Venue '{}' is not valid".format(string))
 
+    @staticmethod
+    def to_string(venues: List["Venue"]) -> str:
+        return ', '.join([venue.value for venue in venues])
+
 
 class Half(Enum):
-    first = '1st half'
-    second = '2nd half'
-    full = 'full time'
+    full = 'Full Time'
+    first = 'First Half'
+    second = 'Second Half'
 
     @classmethod
     def from_string(cls, string: str):
@@ -238,22 +242,23 @@ class Fixture:
     def away_team(self) -> Team:
         return self._away_team
 
-    def first_half(self) -> Scoreline or None:
-        if self._half_time:
-            left, right = self._half_time.split('-')
-            if left and right:
-                return Scoreline(int(left), int(right))
-
-    def full_time(self) -> Scoreline or None:
-        if self._full_time:
-            left, right = self._full_time.split('-')
-            if left and right:
-                return Scoreline(int(left), int(right))
-
-    def second_half(self) -> Scoreline or None:
-        if self.first_half() and self.full_time():
-            return Scoreline(self.full_time().left - self.first_half().left,
-                             self.full_time().right - self.first_half().right)
+    def result(self, half: Half) -> Scoreline or None:
+        if half == Half.first:
+            if self._half_time:
+                a, b = self._half_time.split('-')
+                if a and b:
+                    return Scoreline(int(a), int(b))
+        elif half == Half.second:
+            if self._half_time and self._full_time:
+                a, b = self._half_time.split('-')
+                c, d = self._full_time.split('-')
+                if a and b and c and d:
+                    return Scoreline(int(c) - int(a), int(d) - int(b))
+        else:
+            if self._full_time:
+                a, b = self._full_time.split('-')
+                if a and b:
+                    return Scoreline(int(a), int(b))
 
     @property
     def finished(self) -> int:
@@ -303,9 +308,9 @@ class Fixture:
     def __str__(self):
         return '{}: {} (First:{}) (Second:{}) {} {}'.format(self.date.strftime('%d-%m-%Y %H:%M'),
                                                             self.home_team.name if self.home_team else None,
-                                                            self.first_half(),
-                                                            self.second_half(),
-                                                            self.full_time(),
+                                                            self.result(Half.first),
+                                                            self.result(Half.second),
+                                                            self.result(Half.full),
                                                             self.away_team.name if self.away_team else None)
 
 

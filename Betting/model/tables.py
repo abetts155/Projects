@@ -116,14 +116,14 @@ class LeagueTable(list):
             if fixture.away_team not in data:
                 data[fixture.away_team] = {Venue.home: Data(), Venue.away: Data()}
 
-            if fixture.full_time():
+            if fixture.result(Half.full):
                 results = []
-                if Half.full in halves and fixture.full_time() is not None:
-                    results.append(fixture.full_time())
-                if Half.first in halves and fixture.first_half() is not None:
-                    results.append(fixture.first_half())
-                if Half.second in halves and fixture.second_half() is not None:
-                    results.append(fixture.second_half())
+                if Half.full in halves and fixture.result(Half.full) is not None:
+                    results.append(fixture.result(Half.full))
+                if Half.first in halves and fixture.result(Half.first) is not None:
+                    results.append(fixture.result(Half.first))
+                if Half.second in halves and fixture.result(Half.second) is not None:
+                    results.append(fixture.result(Half.second))
 
                 if results:
                     home = data[fixture.home_team][Venue.home]
