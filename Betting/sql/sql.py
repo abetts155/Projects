@@ -17,17 +17,17 @@ class Database:
         self._name = name
 
     def __enter__(self):
-        self._connection = connect(self.name)
-        self._cursor = self._connection.cursor()
+        self.connection = connect(self.name)
+        self.cursor = self.connection.cursor()
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        self._connection.commit()
-        self._connection.close()
+        self.connection.commit()
+        self.connection.close()
 
     def _execute(self, statement: str):
         messages.debug_message(statement)
-        self._cursor.execute(statement)
+        self.cursor.execute(statement)
 
     @property
     def name(self) -> str:
@@ -38,18 +38,18 @@ class Database:
         table.rows.clear()
         for registered in cls.inventory.values():
             table.add_row(registered.sql_values())
-        table.insert_rows(self._cursor)
-        self._connection.commit()
+        table.insert_rows(self.cursor)
+        self.connection.commit()
 
     def drop_table(self, cls: ClassVar):
         table = cls.sql_table()
-        table.drop(self._cursor)
-        self._connection.commit()
+        table.drop(self.cursor)
+        self.connection.commit()
 
     def create_table(self, cls: ClassVar):
         table = cls.sql_table()
-        table.create(self._cursor)
-        self._connection.commit()
+        table.create(self.cursor)
+        self.connection.commit()
 
     def fetch_all_rows(self, table: Table, constraints=None):
         statement = "{} {} {} {} {}".format(Keywords.SELECT.name,
@@ -67,8 +67,9 @@ class Database:
         else:
             statement = '{} {}'.format(statement, Characters.TRUE.value)
 
+        print(statement)
         self._execute(statement)
-        return self._cursor.fetchall()
+        return self.cursor.fetchall()
 
     def get_number_of_rows(self, cls: ClassVar):
         statement = "{} {}(*) {} {}".format(Keywords.SELECT.name,
@@ -76,7 +77,7 @@ class Database:
                                             Keywords.FROM.name,
                                             cls.sql_table().name)
         self._execute(statement)
-        (value,) = self._cursor.fetchone()
+        (value,) = self.cursor.fetchone()
         return int(value)
 
 
@@ -109,7 +110,7 @@ def load_league(filename: str, league: League):
 
         for season_row in season_rows:
             season = create_season_from_row(season_row)
-            messages.debug_message('Loading season {} [1]'.format(season.year))
+            print('Loading season {} [1]'.format(season.year))
             constraints = ['{}={}'.format(ColumnNames.Season_ID.name, season_row[0])]
             fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
             for fixture_row in fixture_rows:

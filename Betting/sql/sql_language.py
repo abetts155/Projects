@@ -1,35 +1,36 @@
-import enum
+from enum import Enum, auto
 
 
-class Characters(enum.Enum):
+class Characters(Enum):
     QUESTION_MARK = '?'
     STAR = '*'
     FALSE = '0'
     TRUE = '1'
 
 
-class Keywords(enum.Enum):
-    AND = enum.auto()
-    COLLATE = enum.auto()
-    COUNT = enum.auto()
-    CREATE = enum.auto()
-    DROP = enum.auto()
-    EXISTS = enum.auto()
-    FOREIGN = enum.auto()
-    FROM = enum.auto()
-    IF = enum.auto()
-    INSERT = enum.auto()
-    INTO = enum.auto()
-    KEY = enum.auto()
-    LIKE = enum.auto()
-    NOCASE = enum.auto()
-    NOT = enum.auto()
-    NULL = enum.auto()
-    OR = enum.auto()
-    PRIMARY = enum.auto()
-    REFERENCES = enum.auto()
-    REPLACE = enum.auto()
-    SELECT = enum.auto()
-    TABLE = enum.auto()
-    VALUES = enum.auto()
-    WHERE = enum.auto()
+class Keywords(Enum):
+    AND = auto()
+    COLLATE = auto()
+    COUNT = auto()
+    CREATE = auto()
+    DROP = auto()
+    EXISTS = auto()
+    FOREIGN = auto()
+    FROM = auto()
+    IF = auto()
+    IN = auto()
+    INSERT = auto()
+    INTO = auto()
+    KEY = auto()
+    LIKE = auto()
+    NOCASE = auto()
+    NOT = auto()
+    NULL = auto()
+    OR = auto()
+    PRIMARY = auto()
+    REFERENCES = auto()
+    REPLACE = auto()
+    SELECT = auto()
+    TABLE = auto()
+    VALUES = auto()
+    WHERE = auto()

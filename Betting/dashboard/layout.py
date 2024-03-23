@@ -1,22 +1,63 @@
-import datetime
-
 from dash import html, dcc, dash_table
 from dash_bootstrap_components import Row, Col, RadioItems, Card, Container, CardHeader
+from random import sample
 
 from dashboard import ids, tables
-from model.fixtures import Half, Venue
+from dashboard.fixtures import Period, Venue
 from model.leagues import country_whitelist, prettify
-from model.teams import Team
 
 
-def create_team_analysis_layout() -> html.Div:
+def create_team_now_layout() -> html.Div:
+    goals_trend_card = Card(
+        [
+            dcc.Graph(id=ids.Components.TEAM_GOALS_TREND.name, config={'displayModeBar': False}, figure={})
+        ],
+        body=True
+    )
+
+    results_trend_card = Card(
+        [
+            dcc.Graph(id=ids.Components.TEAM_RESULTS_TREND.name, config={'displayModeBar': False}, figure={})
+        ],
+        body=True
+    )
+
+    div = html.Div(
+        [
+            Row(
+                [
+                    Col(
+                        [
+                            goals_trend_card
+                        ],
+                        width={'size': 4}
+                    ),
+
+                    Col(
+                        [
+                            results_trend_card
+                        ],
+                        width={'size': 4}
+                    )
+                ],
+                justify='center',
+                align='start'
+            )
+        ]
+    )
+    return div
+
+
+def create_team_overview_layout() -> html.Div:
     upcoming_columns = [
-        dict(name=column, id=column) for column in [datetime.date.__name__, Venue.__name__, Team.__name__]
+        dict(name=column, id=column) for column in [tables.COL_DATE.display,
+                                                    tables.COL_VENUE.display,
+                                                    tables.COL_TEAM.display]
     ]
     upcoming_card = Card(
         [
             CardHeader(
-                id=ids.Components.TEAM_RESULTS_CARD.name,
+                id=ids.Components.TEAM_FIXTURES_CARD.name,
                 style={'text-align': 'center', 'margin-bottom': '20px'}
             ),
 
@@ -26,8 +67,7 @@ def create_team_analysis_layout() -> html.Div:
                 sort_action='native',
                 filter_action='native',
                 style_header={'border': '3px solid black'},
-                style_cell={'textAlign': 'center'},
-                style_cell_conditional=[{'if': {'column_id': Team.__name__}, 'textAlign': 'left'}],
+                style_cell={'textAlign': 'left'},
                 page_size=5,
                 page_current=0,
             )
@@ -36,17 +76,17 @@ def create_team_analysis_layout() -> html.Div:
     )
 
     results_columns = [
-        dict(name=column, id=column) for column in [datetime.date.__name__,
-                                                    Venue.__name__,
-                                                    Team.__name__,
-                                                    Half.first.name,
-                                                    Half.second.name,
-                                                    Half.full.name]
+        dict(name=column, id=column) for column in [tables.COL_DATE.display,
+                                                    tables.COL_VENUE.display,
+                                                    tables.COL_TEAM.display,
+                                                    tables.COL_FIRST_HALF.display,
+                                                    tables.COL_SECOND_HALF.display,
+                                                    tables.COL_FULL_TIME.display]
     ]
     results_card = Card(
         [
             CardHeader(
-                id=ids.Components.TEAM_FIXTURES_CARD.name,
+                id=ids.Components.TEAM_RESULTS_CARD.name,
                 style={'text-align': 'center', 'margin-bottom': '20px'}
             ),
 
@@ -56,10 +96,14 @@ def create_team_analysis_layout() -> html.Div:
                 sort_action='native',
                 filter_action='native',
                 style_header={'border': '3px solid black'},
-                style_cell={'textAlign': 'center'},
-                style_cell_conditional=[{'if': {'column_id': Team.__name__}, 'textAlign': 'left'}],
+                style_cell={'textAlign': 'left'},
+                style_cell_conditional=[
+                    {'if': {'column_id': tables.COL_FIRST_HALF.display}, 'textAlign': 'center'},
+                    {'if': {'column_id': tables.COL_SECOND_HALF.display}, 'textAlign': 'center'},
+                    {'if': {'column_id': tables.COL_FULL_TIME.display}, 'textAlign': 'center'}
+                ],
                 page_size=20,
-                page_current=0,
+                page_current=0
             )
         ],
         body=True
@@ -88,7 +132,8 @@ def create_team_analysis_layout() -> html.Div:
 
     bts_graph_card = Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_SCORED_AND_CONCEDED_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Components.TEAM_SCORED_AND_CONCEDED_GRAPH.name, config={'displayModeBar': False},
+                      figure={})
         ],
         body=True
     )
@@ -148,10 +193,10 @@ def create_team_analysis_layout() -> html.Div:
     return div
 
 
-def create_league_analysis_layout() -> html.Div:
+def create_league_overview_layout() -> html.Div:
     league_columns = []
     league_tooltips = {}
-    for column in tables.table_columns:
+    for column in tables.league_table_columns:
         league_tooltips[column.display] = column.tooltip
         json = dict(name=column.display, id=column.display)
 
@@ -195,12 +240,12 @@ def create_league_analysis_layout() -> html.Div:
     )
 
     results_columns = [
-        dict(name=column, id=column) for column in [datetime.date.__name__,
-                                                    Venue.home.name,
-                                                    Venue.away.name,
-                                                    Half.first.name,
-                                                    Half.second.name,
-                                                    Half.full.name]
+        dict(name=column, id=column) for column in [tables.COL_DATE.display,
+                                                    tables.COL_HOME.display,
+                                                    tables.COL_AWAY.display,
+                                                    tables.COL_FIRST_HALF.display,
+                                                    tables.COL_SECOND_HALF.display,
+                                                    tables.COL_FULL_TIME.display]
     ]
     results_card = Card(
         [
@@ -212,9 +257,12 @@ def create_league_analysis_layout() -> html.Div:
                 sort_action='native',
                 filter_action='native',
                 style_header={'border': '3px solid black'},
-                style_cell={'textAlign': 'center'},
-                style_cell_conditional=[{'if': {'column_id': Venue.home.name}, 'textAlign': 'left'},
-                                        {'if': {'column_id': Venue.away.name}, 'textAlign': 'left'}],
+                style_cell={'textAlign': 'left'},
+                style_cell_conditional=[
+                    {'if': {'column_id': tables.COL_FIRST_HALF.display}, 'textAlign': 'center'},
+                    {'if': {'column_id': tables.COL_SECOND_HALF.display}, 'textAlign': 'center'},
+                    {'if': {'column_id': tables.COL_FULL_TIME.display}, 'textAlign': 'center'}
+                ],
                 page_size=20,
                 page_current=0,
             )
@@ -323,28 +371,35 @@ def create_layout() -> Container:
     tabs = dcc.Tabs(
         [
             dcc.Tab(
-                create_league_analysis_layout(),
-                id=ids.Components.LEAGUE_TAB.name,
-                label='League Analysis',
+                create_league_overview_layout(),
+                id=ids.Components.LEAGUE_OVERVIEW_TAB.name,
                 style=tab_style_when_silent,
                 selected_style=tab_style_when_selected
             ),
 
             dcc.Tab(
-                create_team_analysis_layout(),
-                id=ids.Components.TEAM_TAB.name,
-                label='Team Analysis',
+                create_team_overview_layout(),
+                id=ids.Components.TEAM_OVERVIEW_TAB.name,
+                style=tab_style_when_silent,
+                selected_style=tab_style_when_selected
+            ),
+
+            dcc.Tab(
+                create_team_now_layout(),
+                id=ids.Components.TEAM_NOW_TAB.name,
                 style=tab_style_when_silent,
                 selected_style=tab_style_when_selected
             )
         ]
     )
 
+    spinner_types = ['cube', 'graph', 'circle', 'dot']
+    (spinner_type,) = sample(spinner_types, 1)
     loader = dcc.Loading(
         html.Div(tabs),
         id=ids.Components.LOADER.name,
         fullscreen=True,
-        type='cube'
+        type=spinner_type
     )
 
     country_options = [{'label': prettify(country), 'value': country} for country in country_whitelist]
@@ -367,16 +422,16 @@ def create_layout() -> Container:
 
     venue_radio = RadioItems(
         id=ids.Components.VENUE_RADIO.name,
-        options=[{'label': Venue.to_string([venue]), 'value': venue.name} for venue in Venue],
-        value=Venue.anywhere.name,
+        options=[{'label': venue, 'value': venue} for venue in Venue],
+        value=Venue.SOMEWHERE,
         inline=True,
         style=radio_style
     )
 
     period_radio = RadioItems(
         id=ids.Components.HALF_RADIO.name,
-        options=[{'label': Half.to_string([half]), 'value': half.name} for half in Half],
-        value=Half.full.name,
+        options=[{'label': period.value, 'value': period} for period in Period],
+        value=Period.FULL,
         inline=True,
         style=radio_style
     )

@@ -1,40 +1,4 @@
-ugly_separator = '-'
-pretty_separator = ' '
-
-
-def prettify(country_name: str) -> str:
-    if ugly_separator in country_name:
-        lexemes = country_name.split(ugly_separator)
-        return pretty_separator.join(lex.capitalize() for lex in lexemes)
-    else:
-        return country_name
-
-
-def uglify(country_name: str) -> str:
-    if pretty_separator in country_name:
-        lexemes = country_name.split(pretty_separator)
-        return ugly_separator.join(lex.capitalize() for lex in lexemes)
-    else:
-        return country_name
-
-
-class League:
-    def __init__(self, country: str, name: str, code: str):
-        self.country = country
-        self.name = name
-        self.code = code
-
-    def __eq__(self, other):
-        if type(other) == type(self):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
-
-    def __hash__(self):
-        return self.country.__hash__() + self.name.__hash__()
-
-    def __str__(self):
-        return '{} {}'.format(prettify(self.country), self.name)
-
+from dataclasses import dataclass
 
 country_register = [
     'Albania',
@@ -229,6 +193,37 @@ country_whitelist = [
     'Wales'
 ]
 
+
+ugly_separator = '-'
+pretty_separator = ' '
+
+
+def prettify(country_name: str) -> str:
+    if ugly_separator in country_name:
+        lexemes = country_name.split(ugly_separator)
+        return pretty_separator.join(lex.capitalize() for lex in lexemes)
+    else:
+        return country_name
+
+
+def uglify(country_name: str) -> str:
+    if pretty_separator in country_name:
+        lexemes = country_name.split(pretty_separator)
+        return ugly_separator.join(lex.capitalize() for lex in lexemes)
+    else:
+        return country_name
+
+
+@dataclass(slots=True)
+class League:
+    country: str
+    name: str
+    code: str
+
+    def __str__(self):
+        return f'{self.country}: {self.name}'
+
+
 leagues = [League('Algeria', 'Ligue 1', 'ALG1'),
            League('Algeria', 'U21 League 1', 'ALG1U'),
            League('Argentina', 'Liga Profesional Argentina', 'ARG1'),
@@ -418,13 +413,11 @@ leagues = [League('Algeria', 'Ligue 1', 'ALG1'),
            League('Turkey', '1. Lig', 'TUR2'),
            # League('Turkey', '2. Lig', 'TUR3'),
            League('United-Arab-Emirates', 'Pro League', 'UAE1'),
-           # League('Uganda', 'Premier League', 'UGA1'),
            League('Ukraine', 'Premier League', 'UKR1'),
            League('Uruguay', 'Primera División - Apertura', 'URU1'),
            League('Uruguay', 'Primera División - Clausura', 'URU2'),
            League('USA', 'Major League Soccer', 'USA1'),
            League('USA', 'USL Championship', 'USA2'),
-           # League('USA', 'USL League One', 'USA3'),
            League('USA', 'NWSL Women', 'USA1W'),
            League('Venezuela', 'Primera División', 'VEN1'),
            League('Vietnam', 'V.League 1', 'VIE1'),

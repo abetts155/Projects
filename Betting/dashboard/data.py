@@ -1,279 +1,301 @@
-import datetime
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import date
-from enum import Enum, auto
-from typing import Dict
+from datetime import datetime
+from typing import Dict, List
 
-from model.fixtures import Half, Venue
-from model.leagues import country_to_leagues
-from model.seasons import Season
-from model.teams import Team
-from sql.sql import load_league, load_teams
+from pandas import read_sql_query, DataFrame
 
-
-TODAY = datetime.datetime.today()
-UNKNOWN_SCORELINE = '?-?'
-DATABASE = 'football.db'
-load_teams(DATABASE)
-
-
-class StoreKeys(Enum):
-    SEASONS = auto()
-    TEAMS = auto()
-    FIXTURES = auto()
-    START_YEAR = auto()
-    END_YEAR = auto()
+from dashboard.fixtures import (
+    Period,
+    Venue,
+    Fixture,
+    Scoreline,
+    create_scoreline_from_string,
+    reverse_scoreline,
+    UNKNOWN_SCORELINE
+)
+from sql.sql import Database
+from sql.sql_language import Keywords
 
 
-def update_data(country_name: str, league_name: str) -> Dict:
-    (chosen_league,) = [league for league in country_to_leagues[country_name] if league.name == league_name]
-    load_league(DATABASE, chosen_league)
+def update_data(database: str, country_name: str, league_name: str) -> Dict:
+    sql_statement_find_teams = f"""
+            {Keywords.SELECT.name} ID, Name, Logo 
+            {Keywords.FROM.name} Team
+            """
 
-    seasons = Season.seasons(chosen_league)
-    data_dict = {StoreKeys.SEASONS.name: []}
-    for season in seasons:
-        season_id = str(season.id)
-        teams = [team.name for team in season.teams()]
-        fixtures = []
+    sql_statement_find_seasons = f"""
+    {Keywords.SELECT.name} ID, Current 
+    {Keywords.FROM.name} Season 
+    {Keywords.WHERE.name} (Country='{country_name}') {Keywords.AND.name} (Code='{league_name}') 
+    {Keywords.COLLATE.name} {Keywords.NOCASE.name}
+    """
 
-        start_date = min((fixture.date for fixture in season.fixtures()), default=None)
-        end_date = max((fixture.date for fixture in season.fixtures()), default=None)
+    data_dict = {}
+    with Database(database) as db:
+        teams_df = read_sql_query(sql_statement_find_teams, db.connection)
+        data_dict['Teams'] = teams_df.to_dict()
+        data_dict['Seasons'] = {}
 
-        for fixture in season.fixtures():
-            full_time = fixture.result(Half.full)
-            first_half = fixture.result(Half.first)
-            second_half = fixture.result(Half.second)
+        season_df = read_sql_query(sql_statement_find_seasons, db.connection)
+        for _, season_row in season_df.iterrows():
+            season_id = str(season_row['ID'])
 
-            fixture_dict = {
-                Venue.home.name: fixture.home_team.name,
-                Venue.away.name: fixture.away_team.name,
-                Half.full.name: f'{full_time.left}-{full_time.right}' if full_time else UNKNOWN_SCORELINE,
-                Half.first.name: f'{first_half.left}-{first_half.right}' if first_half else UNKNOWN_SCORELINE,
-                Half.second.name: f'{second_half.left}-{second_half.right}' if second_half else UNKNOWN_SCORELINE,
-                date.__name__: fixture.date.strftime('%d-%m-%y')
+            sql_statement_find_fixtures = f"""
+            {Keywords.SELECT.name} Date, Home_ID, Away_ID, Half_Time, Full_Time, Finished 
+            {Keywords.FROM.name} Fixture 
+            {Keywords.WHERE.name} (Season_ID='{season_id}')
+            """
+
+            fixtures_df = read_sql_query(sql_statement_find_fixtures, db.connection)
+            data_dict['Seasons'][season_id] = {
+                'Current': season_row['Current'],
+                'Fixtures': fixtures_df.to_dict()
             }
-            fixtures.append(fixture_dict)
-
-        data_dict[season_id] = {
-            StoreKeys.TEAMS.name: teams,
-            StoreKeys.FIXTURES.name: fixtures,
-            StoreKeys.START_YEAR.name: start_date.year if start_date else None,
-            StoreKeys.END_YEAR.name: end_date.year if end_date else None
-        }
-        data_dict[StoreKeys.SEASONS.name].append(season_id)
 
     return data_dict
 
 
-def create_team_data(data_dict: Dict, venue: Venue, team: str) -> Dict:
-    team_dict = {StoreKeys.SEASONS.name: []}
-    for season in data_dict[StoreKeys.SEASONS.name]:
-        teams = data_dict[season][StoreKeys.TEAMS.name]
-        if team in teams:
-            team_dict[StoreKeys.SEASONS.name].append(season)
-            season_dict = {
-                StoreKeys.FIXTURES.name: [],
-                StoreKeys.START_YEAR.name: data_dict[season][StoreKeys.START_YEAR.name],
-                StoreKeys.END_YEAR.name: data_dict[season][StoreKeys.END_YEAR.name]
-            }
-            team_dict[season] = season_dict
-
-            for fixture_dict in data_dict[season][StoreKeys.FIXTURES.name]:
-                create = ((venue == Venue.home and team == fixture_dict[Venue.home.name]) or
-                          (venue == Venue.away and team == fixture_dict[Venue.away.name]) or
-                          venue == Venue.anywhere and team in [fixture_dict[Venue.home.name], fixture_dict[Venue.away.name]])
-
-                if create:
-                    team_fixture_dict = {
-                        Venue.home.name: fixture_dict[Venue.home.name],
-                        Venue.away.name: fixture_dict[Venue.away.name],
-                        date.__name__: fixture_dict[date.__name__],
-                    }
-
-                    for half in Half:
-                        team_fixture_dict[half.name] = fixture_dict[half.name]
-
-                    season_dict[StoreKeys.FIXTURES.name].append(team_fixture_dict)
-
-    return team_dict
+def get_season_ids(data_dict: Dict) -> List[int]:
+    return list(data_dict['Seasons'].keys())
 
 
-def get_latest_season(data_dict: Dict):
-    last_season = data_dict[StoreKeys.SEASONS.name][-1]
-    return data_dict[last_season]
+def get_fixtures_data_frame(data_dict: Dict, season_id: int) -> DataFrame:
+    return DataFrame.from_dict(data_dict['Seasons'][season_id]['Fixtures'])
 
 
-def collect_fixtures(data_dict: Dict, venue: Venue, history: int):
-    season_dict = get_latest_season(data_dict)
-    completed_fixtures = {}
-    for team in season_dict[StoreKeys.TEAMS.name]:
-        completed_fixtures[team] = []
+def get_teams_data_frame(data_dict: Dict) -> DataFrame:
+    teams_df = DataFrame.from_dict(data_dict['Teams'])
+    teams_df.set_index('ID', inplace=True)
+    return teams_df
 
-    for fixture_dict in season_dict[StoreKeys.FIXTURES.name]:
-        home_team = fixture_dict[Venue.home.name]
-        away_team = fixture_dict[Venue.away.name]
 
-        if fixture_dict[Half.full.name] != UNKNOWN_SCORELINE:
-            completed_fixtures[home_team].append(fixture_dict)
-            completed_fixtures[away_team].append(fixture_dict)
+def get_current_season_id(data_dict: Dict) -> int:
+    season_ids = [season_id for season_id in data_dict['Seasons'].keys() if data_dict['Seasons'][season_id]['Current']]
+    (season_id,) = season_ids
+    return season_id
 
-    filtered_fixtures = {}
-    for team, fixtures in completed_fixtures.items():
-        completed = fixtures
-        if venue == Venue.home:
-            completed = [fixture_dict for fixture_dict in completed if fixture_dict[Venue.home.name] == team]
-        elif venue == Venue.away:
-            completed = [fixture_dict for fixture_dict in completed if fixture_dict[Venue.away.name] == team]
 
+def get_team_name(teams_df: DataFrame, team_id: int) -> str | None:
+    if team_id in teams_df.index:
+        return teams_df.at[team_id, 'Name']
+    else:
+        return None
+
+
+def get_team_id(teams_df: DataFrame, team_name: str) -> int | None:
+    return teams_df.loc[teams_df['Name'] == team_name].index[0]
+
+
+def get_current_season_teams(data_dict: Dict) -> List[str]:
+    teams_df = get_teams_data_frame(data_dict)
+    season_id = get_current_season_id(data_dict)
+    fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+    teams_ids = fixtures_df['Home_ID'].tolist()
+    team_names = set()
+    for team_id in teams_ids:
+        team_name = get_team_name(teams_df, team_id)
+        team_names.add(team_name)
+    team_names = list(sorted(team_names))
+    return team_names
+
+
+def filter_fixtures_for_a_particular_team(fixtures_df: DataFrame, venue: Venue, team_id: int) -> DataFrame:
+    if venue == Venue.SOMEWHERE:
+        return fixtures_df[(fixtures_df['Home_ID'] == team_id) | (fixtures_df['Away_ID'] == team_id)]
+    elif venue == Venue.HOME:
+        return fixtures_df[(fixtures_df['Home_ID'] == team_id)]
+    else:
+        return fixtures_df[(fixtures_df['Away_ID'] == team_id)]
+
+
+def create_fixture_from_row(teams_df: DataFrame, fixture_row: Dict) -> Fixture:
+    return Fixture(
+        date=datetime.fromisoformat(fixture_row['Date']),
+        home_name=get_team_name(teams_df, fixture_row['Home_ID']),
+        away_name=get_team_name(teams_df, fixture_row['Away_ID']),
+        finished=fixture_row['Finished'],
+        first_half=create_scoreline_from_string(fixture_row['Half_Time']),
+        full_time=create_scoreline_from_string(fixture_row['Full_Time'])
+    )
+
+
+def get_current_season_results(data_dict: Dict, team_name: str = '') -> List[Fixture]:
+    teams_df = get_teams_data_frame(data_dict)
+    season_id = get_current_season_id(data_dict)
+    fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+
+    fixtures = []
+    for _, fixture_row in fixtures_df.iterrows():
+        fixture = create_fixture_from_row(teams_df, fixture_row)
+        if fixture.finished:
+            if not team_name:
+                fixtures.append(fixture)
+            elif team_name in [fixture.home_name, fixture.away_name]:
+                fixtures.append(fixture)
+
+    fixtures.sort(key=lambda fixture: fixture.date, reverse=True)
+    return fixtures
+
+
+def get_fixtures_per_team_within_venue_and_window(data_dict: Dict, venue: Venue, history: int) -> Dict[str, List[Fixture]]:
+    team_names = get_current_season_teams(data_dict)
+    fixtures = get_current_season_results(data_dict)
+
+    team_fixtures = {team_name: [] for team_name in team_names}
+    for fixture in fixtures:
+        team_fixtures[fixture.home_name].append(fixture)
+        team_fixtures[fixture.away_name].append(fixture)
+
+    filtered_team_fixtures = {}
+    for team_name, results in team_fixtures.items():
+        if venue == Venue.HOME:
+            completed = [result for result in results if result.home_name == team_name]
+        elif venue == Venue.AWAY:
+            completed = [result for result in results if result.away_name == team_name]
+        else:
+            completed = results
+
+        filtered_team_fixtures[team_name] = completed
         if history:
             limit = min(history, len(completed))
-            completed = list(reversed(completed))
-            filtered_fixtures[team] = [completed[i] for i in range(limit)]
-        else:
-            filtered_fixtures[team] = completed
+            filtered_team_fixtures[team_name] = [completed[i] for i in range(limit)]
 
-    return filtered_fixtures
+    return filtered_team_fixtures
 
 
-def get_unplayed_fixtures(data_dict: Dict, venue: Venue, team: str):
-    season_dict = get_latest_season(data_dict)
-    rows = []
-    for fixture_dict in season_dict[StoreKeys.FIXTURES.name]:
-        home_team = fixture_dict[Venue.home.name]
-        away_team = fixture_dict[Venue.away.name]
+def get_upcoming_fixtures(data_dict: Dict, venue: Venue, team_name: str) -> List[Fixture]:
+    teams_df = get_teams_data_frame(data_dict)
+    season_id = get_current_season_id(data_dict)
+    fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+    team_id = get_team_id(teams_df, team_name)
+    filtered_df = filter_fixtures_for_a_particular_team(fixtures_df, venue, team_id)
 
-        if fixture_dict[Half.full.name] == UNKNOWN_SCORELINE:
-            team_involved = (
-                    (venue == Venue.home and team == fixture_dict[Venue.home.name]) or
-                    (venue == Venue.away and team == fixture_dict[Venue.away.name]) or
-                    venue == Venue.anywhere and team in [fixture_dict[Venue.home.name], fixture_dict[Venue.away.name]]
-            )
-            if team_involved:
-                unplayed_fixture = {date.__name__: fixture_dict[date.__name__]}
+    fixtures = []
+    for _, fixture_row in filtered_df.iterrows():
+        fixture = create_fixture_from_row(teams_df, fixture_row)
+        if not fixture.finished:
+            fixtures.append(fixture)
 
-                if team == fixture_dict[Venue.home.name]:
-                    unplayed_fixture[Venue.__name__] = Venue.home.value
-                    unplayed_fixture[Team.__name__] = fixture_dict[Venue.away.name]
-                else:
-                    unplayed_fixture[Venue.__name__] = Venue.away.value
-                    unplayed_fixture[Team.__name__] = fixture_dict[Venue.home.name]
-
-                rows.append(unplayed_fixture)
-    return rows
+    fixtures.sort(key=lambda fixture: fixture.date)
+    return fixtures
 
 
-def collect_results(data_dict: Dict):
-    results = []
-    for season in reversed(data_dict[StoreKeys.SEASONS.name]):
-        season_dict = data_dict[season]
-        for fixture_dict in reversed(season_dict[StoreKeys.FIXTURES.name]):
-            if fixture_dict[Half.full.name] != UNKNOWN_SCORELINE:
-                result = {
-                    date.__name__: fixture_dict[date.__name__],
-                    Venue.home.name: fixture_dict[Venue.home.name],
-                    Venue.away.name: fixture_dict[Venue.away.name],
-                    Half.full.name: fixture_dict[Half.full.name],
-                    Half.first.name: fixture_dict[Half.first.name],
-                    Half.second.name: fixture_dict[Half.second.name]
-                }
-                results.append(result)
-    return results
+def get_completed_fixtures(data_dict: Dict) -> List[Fixture]:
+    teams_df = get_teams_data_frame(data_dict)
+    fixtures = []
+    for season_id in get_season_ids(data_dict):
+        fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+        for _, fixture_row in fixtures_df.iterrows():
+            fixture = create_fixture_from_row(teams_df, fixture_row)
+            if fixture.finished:
+                fixtures.append(fixture)
+
+    fixtures.sort(key=lambda fixture: fixture.date, reverse=True)
+    return fixtures
 
 
-def create_team_results_table(data_dict: Dict, venue: Venue, team: str):
-    results = collect_results(data_dict)
-    rows = []
-    formatter = []
-    for result in results:
-        team_involved = (
-                (venue == Venue.home and team == result[Venue.home.name]) or
-                (venue == Venue.away and team == result[Venue.away.name]) or
-                venue == Venue.anywhere and team in [result[Venue.home.name], result[Venue.away.name]]
-        )
-        if team_involved and result[Half.full.name] != UNKNOWN_SCORELINE:
-            team_result = {
-                date.__name__: result[date.__name__],
-                Half.first.name: result[Half.first.name],
-                Half.second.name: result[Half.second.name],
-                Half.full.name: result[Half.full.name]
-            }
+def get_completed_fixtures_for_team(data_dict: Dict, venue: Venue, team_name: str) -> List[Fixture]:
+    teams_df = get_teams_data_frame(data_dict)
+    fixtures = []
+    for season_id in get_season_ids(data_dict):
+        fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+        team_id = get_team_id(teams_df, team_name)
+        filtered_df = filter_fixtures_for_a_particular_team(fixtures_df, venue, team_id)
 
-            if team == result[Venue.home.name]:
-                team_result[Venue.__name__] = Venue.home.value
-                team_result[Team.__name__] = result[Venue.away.name]
-            else:
-                team_result[Venue.__name__] = Venue.away.value
-                team_result[Team.__name__] = result[Venue.home.name]
+        for _, fixture_row in filtered_df.iterrows():
+            fixture = create_fixture_from_row(teams_df, fixture_row)
+            if fixture.finished:
+                fixtures.append(fixture)
 
-            rows.append(team_result)
-
-            for half in Half:
-                if result[half.name] != '?-?':
-                    x, y = result[half.name].split('-')
-                    x, y = int(x), int(y)
-
-                    if team == result[Venue.away.name]:
-                        x, y = y, x
-
-                    if x > y:
-                        cell_formatter = {
-                            'if': {'filter_query': f'{{{date.__name__}}} = {result[date.__name__]}', 'column_id': half.name},
-                            'backgroundColor': '#ffa600',
-                            'color': '#003f5c'
-                        }
-                        formatter.append(cell_formatter)
-
-                    elif x < y:
-                        cell_formatter = {
-                            'if': {'filter_query': f'{{{date.__name__}}} = {result[date.__name__]}', 'column_id': half.name},
-                            'backgroundColor': '#000000',
-                            'color': '#FFFFFF'
-                        }
-                        formatter.append(cell_formatter)
-
-    return rows, formatter
+    fixtures.sort(key=lambda fixture: fixture.date, reverse=True)
+    return fixtures
 
 
-def get_teams(data_dict: Dict):
-    last_season = data_dict[StoreKeys.SEASONS.name][-1]
-    return sorted([team for team in data_dict[last_season][StoreKeys.TEAMS.name]])
-
-
-@dataclass
+@dataclass(slots=True)
 class DataBin:
-    goal_counts: Counter = field(default_factory=Counter)
-    results: Counter = field(default_factory=Counter)
+    season_id: int
     home_wins: int = 0
     away_wins: int = 0
     draws: int = 0
     bts: int = 0
-    start_year: int = 0
-    end_year: int = 0
+    earliest_date: datetime = None
+    latest_date: datetime = None
+    goal_counts: Counter = field(default_factory=Counter)
+    results: Counter = field(default_factory=Counter)
 
     def total_games(self) -> int:
         return self.home_wins + self.draws + self.away_wins
 
-    def update(self, scoreline: str):
-        if scoreline != '?-?':
-            left, right = scoreline.split('-')
-            left, right = int(left), int(right)
+    def get_season_string(self) -> str:
+        start_year, end_year = self.earliest_date.year - 2000, self.latest_date.year - 2000
+        if start_year == end_year:
+            return f'{start_year}'
+        else:
+            return f'{start_year}/{end_year}'
 
-            self.goal_counts[left + right] += 1
-            self.results[(left, right)] += 1
+    def update(self, scoreline: Scoreline, date: datetime):
+        self.goal_counts[scoreline.home_goals + scoreline.away_goals] += 1
+        self.results[(scoreline.home_goals, scoreline.away_goals)] += 1
 
-            if left > right:
-                self.home_wins += 1
-            elif left == right:
-                self.draws += 1
-            else:
-                self.away_wins += 1
+        if scoreline.home_goals > scoreline.away_goals:
+            self.home_wins += 1
+        elif scoreline.home_goals == scoreline.away_goals:
+            self.draws += 1
+        else:
+            self.away_wins += 1
 
-            if left and right:
-                self.bts += 1
+        if scoreline.home_goals and scoreline.away_goals:
+            self.bts += 1
+
+        if self.earliest_date is None:
+            self.earliest_date = date
+        else:
+            self.earliest_date = min(self.earliest_date, date)
+
+        if self.latest_date is None:
+            self.latest_date = date
+        else:
+            self.latest_date = max(self.latest_date, date)
 
 
-@dataclass
+def get_scoreline(fixture: Fixture, period: Period) -> Scoreline:
+    if period == Period.FULL:
+        return fixture.full_time
+    elif period == Period.FIRST:
+        return fixture.first_half
+    else:
+        return fixture.second_half
+
+
+def tidy_bins(data_dict: Dict, bins: List[DataBin]) -> List[DataBin]:
+    threshold = 20
+    cleaned = []
+    for data_bin in bins:
+        if data_bin.total_games() >= threshold or data_bin.season_id == get_current_season_id(data_dict):
+            cleaned.append(data_bin)
+
+    return sorted(cleaned, key=lambda data_bin: data_bin.earliest_date)
+
+
+def aggregate_seasons(data_dict: Dict, period: Period) -> List[DataBin]:
+    teams_df = get_teams_data_frame(data_dict)
+    bins: List[DataBin] = []
+    for season_id in get_season_ids(data_dict):
+        fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+        data_bin = DataBin(season_id)
+        bins.append(data_bin)
+
+        for _, fixture_row in fixtures_df.iterrows():
+            fixture = create_fixture_from_row(teams_df, fixture_row)
+            if fixture.finished:
+                scoreline = get_scoreline(fixture, period)
+                if scoreline != UNKNOWN_SCORELINE:
+                    data_bin.update(scoreline, fixture.date)
+
+    return tidy_bins(data_dict, bins)
+
+
 class TeamBin(DataBin):
     team_wins: int = 0
     team_losses: int = 0
@@ -281,71 +303,104 @@ class TeamBin(DataBin):
     scored: int = 0
     conceded: int = 0
 
-    def update(self, scoreline: str):
-        if scoreline != '?-?':
-            left, right = scoreline.split('-')
-            left, right = int(left), int(right)
+    def update(self, scoreline: Scoreline, date: datetime):
+        if scoreline.home_goals > scoreline.away_goals:
+            self.team_wins += 1
+        elif scoreline.home_goals == scoreline.away_goals:
+            self.team_draws += 1
+        else:
+            self.team_losses += 1
 
-            if left > right:
-                self.team_wins += 1
-            elif left == right:
-                self.team_draws += 1
+        self.scored += scoreline.home_goals
+        self.conceded += scoreline.away_goals
+
+        super().update(scoreline, date)
+
+
+def aggregate_team(data_dict: Dict, period: Period, venue: Venue, team_name: str):
+    teams_df = get_teams_data_frame(data_dict)
+    bins: List[TeamBin] = []
+    for season_id in get_season_ids(data_dict):
+        fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+        team_id = get_team_id(teams_df, team_name)
+        data_bin = TeamBin(season_id)
+        bins.append(data_bin)
+
+        filtered_df = filter_fixtures_for_a_particular_team(fixtures_df, venue, team_id)
+        for _, fixture_row in filtered_df.iterrows():
+            fixture = create_fixture_from_row(teams_df, fixture_row)
+            if fixture.finished:
+                scoreline = get_scoreline(fixture, period)
+                if fixture.away_name == team_name:
+                    scoreline = reverse_scoreline(scoreline)
+
+                if scoreline != UNKNOWN_SCORELINE:
+                    data_bin.update(scoreline, fixture.date)
+
+    return tidy_bins(data_dict, bins)
+
+
+@dataclass
+class SeasonBin:
+    fresh: bool = True
+    scored: List = field(default_factory=list)
+    conceded: List = field(default_factory=list)
+    team_wins: List = field(default_factory=list)
+    team_draws: List = field(default_factory=list)
+    team_losses: List = field(default_factory=list)
+
+    def update(self, scoreline: Scoreline):
+        if self.fresh:
+            self.fresh = False
+            if scoreline.home_goals > scoreline.away_goals:
+                x, y, z = 1, 0, 0
+            elif scoreline.home_goals == scoreline.away_goals:
+                x, y, z = 0, 1, 0
             else:
-                self.team_losses += 1
+                x, y, z = 0, 0, 1
 
-            self.scored += left
-            self.conceded += right
-
-            super().update(scoreline)
-
-
-def aggregate_seasons(data_dict: Dict, half: Half):
-    bins = []
-    for season_id in data_dict[StoreKeys.SEASONS.name]:
-        season_dict = data_dict[season_id]
-        data_bin = DataBin()
-        data_bin.start_year = season_dict[StoreKeys.START_YEAR.name]
-        data_bin.end_year = season_dict[StoreKeys.END_YEAR.name]
-
-        for fixture_dict in season_dict[StoreKeys.FIXTURES.name]:
-            if half == Half.full:
-                result = fixture_dict[Half.full.name]
-            elif half == Half.first:
-                result = fixture_dict[Half.first.name]
+            self.team_wins.append(x)
+            self.team_draws.append(y)
+            self.team_losses.append(z)
+            self.scored.append(scoreline.home_goals)
+            self.conceded.append(scoreline.away_goals)
+        else:
+            if scoreline.home_goals > scoreline.away_goals:
+                x, y, z = self.team_wins[-1] + 1, self.team_draws[-1], self.team_losses[-1]
+            elif scoreline.home_goals == scoreline.away_goals:
+                x, y, z = self.team_wins[-1], self.team_draws[-1] + 1, self.team_losses[-1]
             else:
-                result = fixture_dict[Half.second.name]
+                x, y, z = self.team_wins[-1], self.team_draws[-1], self.team_losses[-1] + 1
 
-            data_bin.update(result)
+            self.team_wins.append(x)
+            self.team_draws.append(y)
+            self.team_losses.append(z)
+            self.scored.append(scoreline.home_goals + self.scored[-1])
+            self.conceded.append(scoreline.away_goals + self.conceded[-1])
 
-        if data_bin.total_games():
-            bins.append(data_bin)
 
-    return bins
+def collect_current_season_data(data_dict: Dict, period: Period, venue: Venue, team_name: str) -> SeasonBin:
+    teams_df = get_teams_data_frame(data_dict)
+    season_id = get_current_season_id(data_dict)
+    fixtures_df = get_fixtures_data_frame(data_dict, season_id)
+    team_id = get_team_id(teams_df, team_name)
+    filtered_df = filter_fixtures_for_a_particular_team(fixtures_df, venue, team_id)
 
+    fixtures = []
+    for _, fixture_row in filtered_df.iterrows():
+        fixture = create_fixture_from_row(teams_df, fixture_row)
+        if fixture.finished:
+            fixtures.append(fixture)
 
-def aggregate_team(data_dict: Dict, half: Half, team):
-    bins = []
-    for season_id in data_dict[StoreKeys.SEASONS.name]:
-        season_dict = data_dict[season_id]
-        data_bin = TeamBin()
-        data_bin.start_year = season_dict[StoreKeys.START_YEAR.name]
-        data_bin.end_year = season_dict[StoreKeys.END_YEAR.name]
+    fixtures.sort(key=lambda fixture: fixture.date)
 
-        for fixture_dict in season_dict[StoreKeys.FIXTURES.name]:
-            if half == Half.full:
-                result = fixture_dict[Half.full.name]
-            elif half == Half.first:
-                result = fixture_dict[Half.first.name]
-            else:
-                result = fixture_dict[Half.second.name]
+    data_bin = SeasonBin()
+    for fixture in fixtures:
+        scoreline = get_scoreline(fixture, period)
+        if fixture.away_name == team_name:
+            scoreline = reverse_scoreline(scoreline)
 
-            if fixture_dict[Venue.away.name] == team:
-                x, y = result.split('-')
-                result = f'{y}-{x}'
+        if scoreline != UNKNOWN_SCORELINE:
+            data_bin.update(scoreline)
 
-            data_bin.update(result)
-
-        if data_bin.total_games():
-            bins.append(data_bin)
-
-    return bins
+    return data_bin

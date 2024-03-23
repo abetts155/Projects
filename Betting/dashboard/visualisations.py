@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
+from itertools import accumulate
 from typing import List
 
 from numpy import argmax
 from plotly import graph_objects
 
-from dashboard.data import DataBin, TeamBin
+from dashboard.data import DataBin, SeasonBin, TeamBin
 from dashboard.colours import BAD_NEWS_COLOR, GOOD_NEWS_COLOR, HOME_COLOR, AWAY_COLOR, NEUTRAL_COLOR
-from model.fixtures import Half, Venue
+from dashboard.fixtures import Period, Venue
 
 
 HOVER_PREFIX = '<b>Season</b>: %{x}<br>'
@@ -14,15 +15,7 @@ HOVER_POSTFIX = '<extra></extra>'
 
 
 def convert_seasons_into_labels(bins: List[DataBin]):
-    labels = []
-    for data_bin in bins:
-        if data_bin.start_year and data_bin.end_year:
-            a, b = data_bin.start_year - 2000, data_bin.end_year - 2000
-            if a == b:
-                labels.append(a)
-            else:
-                labels.append('{}/{}'.format(a, b))
-    return labels
+    return [data_bin.get_season_string() for data_bin in bins]
 
 
 @dataclass
@@ -57,7 +50,7 @@ def create_scatter(lines: List[Line], title_text: str, y_axis_label: str = ''):
     title = dict(
         text=title_text,
         x=0.5,
-        y=0.9,
+        y=0.95,
         xanchor='center',
         yanchor='top'
     )
@@ -71,7 +64,7 @@ def create_average_y_values(line: Line):
     return [sum(line.y_values) / len(line.y_values)] * len(line.y_values)
 
 
-def create_results_scatter_graph(bins: List[DataBin], half: Half):
+def create_results_scatter_graph(bins: List[DataBin], period: Period):
     x_values = convert_seasons_into_labels(bins)
 
     home_line = Line(
@@ -140,12 +133,12 @@ def create_results_scatter_graph(bins: List[DataBin], half: Half):
     )
 
     lines = [home_line, away_line, draw_line, home_average_line, away_average_line , draw_average_line]
-    title_text = f'Results per Season ({half.value})'
+    title_text = f'Results per Season ({period})'
     scatter = create_scatter(lines=lines, title_text=title_text, y_axis_label='%')
     return scatter
 
 
-def create_goals_scatter_graph(bins: List[DataBin], half: Half, venue: Venue = None):
+def create_goals_scatter_graph(bins: List[DataBin], period: Period, venue: Venue = None):
     x_values = convert_seasons_into_labels(bins)
 
     line = Line(
@@ -172,11 +165,11 @@ def create_goals_scatter_graph(bins: List[DataBin], half: Half, venue: Venue = N
 
     prefix = 'Average Goals per Season'
     if venue:
-        title_text = f'{prefix} ({half.value}, {venue.value})'
+        title_text = f'{prefix} ({period}, {venue})'
     else:
-        title_text = f'{prefix} ({half.value})'
+        title_text = f'{prefix} ({period})'
 
-    if half == Half.full:
+    if period == Period.FULL:
         y_axis_label = 'Per Game'
     else:
         y_axis_label = 'Per Half'
@@ -185,7 +178,7 @@ def create_goals_scatter_graph(bins: List[DataBin], half: Half, venue: Venue = N
     return scatter
 
 
-def create_bts_scatter_graph(bins: List[DataBin], half: Half):
+def create_bts_scatter_graph(bins: List[DataBin], period: Period):
     x_values = convert_seasons_into_labels(bins)
 
     line = Line(
@@ -211,12 +204,12 @@ def create_bts_scatter_graph(bins: List[DataBin], half: Half):
         hover_template='<i>Average</i>: %{y:.1f}%' + HOVER_POSTFIX
     )
 
-    title_text = f'Both Teams Scored per Season ({half.value})'
+    title_text = f'Both Teams Scored per Season ({period})'
     scatter = create_scatter(lines=[line, average_line], title_text=title_text, y_axis_label='%')
     return scatter
 
 
-def create_scored_and_conceded_scatter_graph(bins: List[TeamBin], half: Half, venue: Venue):
+def create_scored_and_conceded_scatter_graph(bins: List[TeamBin], period: Period, venue: Venue):
     x_values = convert_seasons_into_labels(bins)
 
     scored_line = Line(
@@ -264,8 +257,8 @@ def create_scored_and_conceded_scatter_graph(bins: List[TeamBin], half: Half, ve
     )
 
     lines = [scored_line, conceded_line, scored_average_line, conceded_average_line]
-    title_text = f'Goals Scored/Conceded Rates per Season ({half.value}, {venue.value})'
-    if half == Half.full:
+    title_text = f'Goals Scored/Conceded Rates per Season ({period}, {venue})'
+    if period == Period.FULL:
         y_axis_label = 'Per Game'
     else:
         y_axis_label = 'Per Half'
@@ -273,7 +266,7 @@ def create_scored_and_conceded_scatter_graph(bins: List[TeamBin], half: Half, ve
     return scatter
 
 
-def create_wins_draw_losses_scatter_graph(bins: List[TeamBin], half: Half, venue: Venue):
+def create_wins_draw_losses_scatter_graph(bins: List[TeamBin], period: Period, venue: Venue):
     x_values = convert_seasons_into_labels(bins)
 
     wins_line = Line(
@@ -342,24 +335,109 @@ def create_wins_draw_losses_scatter_graph(bins: List[TeamBin], half: Half, venue
     )
 
     lines = [wins_line, draws_line, losses_line, wins_average_line, draws_average_line, losses_average_line]
-    title_text = f'Win/Draw/Loss Rates per Season ({half.value}, {venue.value})'
+    title_text = f'Win/Draw/Loss Rates per Season ({period}, {venue})'
     scatter = create_scatter(lines=lines, title_text=title_text, y_axis_label='%')
     return scatter
 
 
-def create_scorelines_heatmap(bins: List[DataBin], half: Half, venue: Venue = None):
-    if half == Half.first:
+def create_team_goals_trend(data_bin: SeasonBin, period: Period, venue: Venue, team_name: str):
+    x_values = []
+    scored_y_values = []
+    conceded_y_values = []
+    for game in range(len(data_bin.scored)):
+        x_values.append(game + 1)
+        scored_y_values.append(data_bin.scored[game] / (game + 1))
+        conceded_y_values.append(data_bin.conceded[game] / (game + 1))
+
+    scored_line = Line(
+        name='Goals For: Trend',
+        mode='lines+markers',
+        marker='circle',
+        shape='spline',
+        x_values=x_values,
+        y_values=scored_y_values,
+        colour=GOOD_NEWS_COLOR,
+        hover_template=HOVER_PREFIX + '<i>Goals For Rate</i>: %{y:.1f}%' + HOVER_POSTFIX
+    )
+
+    conceded_line = Line(
+        name='Goals Against: Trend',
+        mode='lines+markers',
+        marker='x',
+        shape='spline',
+        x_values=x_values,
+        y_values=conceded_y_values,
+        colour=BAD_NEWS_COLOR,
+        hover_template=HOVER_PREFIX + '<i>Goals Against Rate</i>: %{y:.1f}%' + HOVER_POSTFIX
+    )
+
+    title_text = f'Goals Scored/Goals Against Rates over the Season ({period}, {venue})'
+    scatter = create_scatter(lines=[scored_line, conceded_line], title_text=title_text, y_axis_label='%')
+    return scatter
+
+
+def create_team_results_trend(data_bin: SeasonBin, period: Period, venue: Venue, team_name: str):
+    x_values = []
+    win_y_values = []
+    draw_y_values = []
+    loss_y_values = []
+    for game in range(len(data_bin.scored)):
+        x_values.append(game + 1)
+        win_y_values.append(100 * data_bin.team_wins[game] / (game + 1))
+        draw_y_values.append(100 * data_bin.team_draws[game] / (game + 1))
+        loss_y_values.append(100 * data_bin.team_losses[game] / (game + 1))
+
+    win_line = Line(
+        name='Wins: Trend',
+        mode='lines+markers',
+        marker='circle',
+        shape='spline',
+        x_values=x_values,
+        y_values=win_y_values,
+        colour=GOOD_NEWS_COLOR,
+        hover_template=HOVER_PREFIX + '<i>Win Rate</i>: %{y:.1f}%' + HOVER_POSTFIX
+    )
+
+    draw_line = Line(
+        name='Draws: Trend',
+        mode='lines+markers',
+        marker='star-square',
+        shape='spline',
+        x_values=x_values,
+        y_values=draw_y_values,
+        colour=NEUTRAL_COLOR,
+        hover_template=HOVER_PREFIX + '<i>Draw Rate</i>: %{y:.1f}%' + HOVER_POSTFIX
+    )
+
+    loss_line = Line(
+        name='Losses: Trend',
+        mode='lines+markers',
+        marker='x',
+        shape='spline',
+        x_values=x_values,
+        y_values=loss_y_values,
+        colour=BAD_NEWS_COLOR,
+        hover_template=HOVER_PREFIX + '<i>Loss Rate</i>: %{y:.1f}%' + HOVER_POSTFIX
+    )
+
+    title_text = f'Win/Draw/Loss Rates over the Season ({period}, {venue})'
+    scatter = create_scatter(lines=[win_line, draw_line, loss_line], title_text=title_text, y_axis_label='%')
+    return scatter
+
+
+def create_scorelines_heatmap(bins: List[DataBin], period: Period, venue: Venue = None):
+    if period == Period.FIRST:
         scorelines_of_interest = ['0-0', '1-1',
                                   '1-0', '2-0',
                                   '0-1', '0-2',
                                   'other']
         split = [1.5, 3.5, 5.5]
-    elif half == Half.second:
+    elif period == Period.SECOND:
         scorelines_of_interest = ['0-0', '1-1',
                                   '1-0', '2-0', '2-1',
                                   '0-1', '0-2', '1-2',
                                   'other']
-        split = [1.5, 3.5, 5.5]
+        split = [1.5, 4.5, 7.5]
     else:
         scorelines_of_interest = ['0-0', '1-1', '2-2',
                                   '1-0', '2-0', '2-1', '3-0', '3-1', '3-2', '4-0',
@@ -406,14 +484,14 @@ def create_scorelines_heatmap(bins: List[DataBin], half: Half, venue: Venue = No
 
     prefix = 'Scoreline Trends by Season'
     if venue:
-        title_text = f'{prefix} ({half.value}, {venue.value})'
+        title_text = f'{prefix} ({period}, {venue})'
     else:
-        title_text = f'{prefix} ({half.value})'
+        title_text = f'{prefix} ({period})'
 
     title = {
         'text': title_text,
         'x': 0.5,
-        'y': 0.9,
+        'y': 0.95,
         'xanchor': 'center',
         'yanchor': 'top'
     }
@@ -461,7 +539,7 @@ def create_pie(chunks: List[PieChunk], title_text: str):
     title = {
         'text': title_text,
         'x': 0.5,
-        'y': 0.9,
+        'y': 0.95,
         'xanchor': 'center',
         'yanchor': 'top'
     }
@@ -469,8 +547,8 @@ def create_pie(chunks: List[PieChunk], title_text: str):
     return fig
 
 
-def create_goals_pie(bins: List[DataBin], half: Half, venue: Venue = None):
-    if half == Half.full:
+def create_goals_pie(bins: List[DataBin], period: Period, venue: Venue = None):
+    if period == Period.FULL:
         chunks = [
             PieChunk(label='0 goals', colour='#003f5c'),
             PieChunk(label='1 goal', colour='#444e86'),
@@ -500,15 +578,15 @@ def create_goals_pie(bins: List[DataBin], half: Half, venue: Venue = None):
 
     prefix = 'Goal Rate over All Seasons'
     if venue:
-        title_text = f'{prefix} ({half.value}, {venue.value})'
+        title_text = f'{prefix} ({period}, {venue})'
     else:
-        title_text = f'{prefix} ({half.value})'
+        title_text = f'{prefix} ({period})'
 
     pie = create_pie(chunks, title_text=title_text)
     return pie
 
 
-def create_results_pie_for_league(bins: List[DataBin], half: Half):
+def create_results_pie_for_league(bins: List[DataBin], period: Period):
     chunks = [
         PieChunk(
             label='Home Wins',
@@ -529,11 +607,11 @@ def create_results_pie_for_league(bins: List[DataBin], half: Half):
         )
     ]
 
-    pie = create_pie(chunks, title_text=f'Results Breakdown over All Seasons ({Half.to_string([half])})')
+    pie = create_pie(chunks, title_text=f'Results Breakdown over All Seasons ({period})')
     return pie
 
 
-def create_results_pie_for_team(bins: List[TeamBin], half: Half, venue: Venue):
+def create_results_pie_for_team(bins: List[TeamBin], period: Period, venue: Venue):
     win_chunk = PieChunk(
         label='Wins',
         colour=GOOD_NEWS_COLOR,
@@ -552,6 +630,6 @@ def create_results_pie_for_team(bins: List[TeamBin], half: Half, venue: Venue):
         value=sum([data_bin.team_losses for data_bin in bins])
     )
 
-    title_text = f'Results Breakdown over All Seasons ({half.value}, {venue.value})'
+    title_text = f'Results Breakdown over All Seasons ({period}, {venue})'
     pie = create_pie([win_chunk, draw_chunk, loss_chunk], title_text=title_text)
     return pie
