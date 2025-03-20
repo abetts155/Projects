@@ -16,7 +16,7 @@ from lib.messages import error_message
 from matplotlib import pyplot as plt
 from model.events import Event, get_events_for_fixture, is_goal
 from model.fixtures import Venue
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.teams import Team
 from numpy import arange

@@ -4,7 +4,7 @@ from cli.cli import (add_database_option,
                      add_logging_options,
                      set_logging_options)
 from model.fixtures import Event, Half
-from model.leagues import League, league_register
+from model.competitions import League, league_register
 from model.predictions import Prediction
 from sql.sql import Database, load_teams, get_current_season, get_fixtures
 from sql.sql_columns import ColumnNames

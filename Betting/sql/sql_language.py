@@ -10,6 +10,7 @@ class Characters(Enum):
 
 class Keywords(Enum):
     AND = auto()
+    BETWEEN = auto()
     COLLATE = auto()
     COUNT = auto()
     CREATE = auto()

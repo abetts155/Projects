@@ -9,7 +9,7 @@ from cli.cli import (add_database_option,
                      set_logging_options,
                      get_unique_event)
 from model.fixtures import Event, Fixture, Half, Scoreline, win, loss, draw, canonicalise_scoreline
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team

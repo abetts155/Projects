@@ -6,7 +6,7 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from lib import messages
 from model.fixtures import Half
-from model.leagues import league_register, League
+from model.competitions import league_register, League
 from model.seasons import Season
 from model.tables import LeagueTable
 from sql.sql import load_league, load_teams

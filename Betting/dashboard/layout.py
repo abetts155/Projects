@@ -1,41 +1,169 @@
+import random
+import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
-from dash_bootstrap_components import Row, Col, RadioItems, Card, Container, CardHeader
-from random import sample
 
-from dashboard import ids, tables
-from dashboard.fixtures import Period, Venue
-from model.leagues import country_whitelist, prettify
+import football_api.helpers
+import model.competitions
+import model.fixtures
+from dashboard import analysis, ids, tables
+
+
+BOXED_STYLE = {'border': '2px solid #000000', 'padding': '3px', 'border-radius': '5px'}
 
 
 def create_team_now_layout() -> html.Div:
-    goals_trend_card = Card(
+    results_radio = dbc.RadioItems(
+        id=ids.Radio.RESULTS_RADIO.value,
+        options=[{'value': i, 'label': analysis.prettify(opt)} for i, opt in enumerate(analysis.result_predicates)],
+        value=random.randint(0, len(analysis.result_predicates) - 1),
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    win_draw_loss_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_GOALS_TREND.name, config={'displayModeBar': False}, figure={})
+            dbc.CardHeader(
+                'Results Sequence Analysis',
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            results_radio
+                        ]
+                    ),
+
+                    dbc.Col(
+                        [
+                            dbc.Checklist(
+                                id=ids.Switch.RESULTS_SWITCH.value,
+                                options=['Negate'],
+                                style=BOXED_STYLE
+                            )
+                        ]
+                    )
+                ],
+                justify='center',
+                align='start'
+            ),
+
+            dcc.Graph(id=ids.Bar.RESULTS_BAR.value, config={'displayModeBar': False}),
         ],
         body=True
     )
 
-    results_trend_card = Card(
+    goals_radio = dbc.RadioItems(
+        id=ids.Radio.GOALS_RADIO.value,
+        options=[{'value': i, 'label': analysis.prettify(opt)} for i, opt in enumerate(analysis.goals_predicates)],
+        value=random.randint(0, len(analysis.goals_predicates) - 1),
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    goals_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_RESULTS_TREND.name, config={'displayModeBar': False}, figure={})
+            dbc.CardHeader(
+                'Goals Sequence Analysis',
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            goals_radio
+                        ]
+                    ),
+
+                    dbc.Col(
+                        [
+                            dbc.Checklist(
+                                id=ids.Switch.GOALS_SWITCH.value,
+                                options=['Negate'],
+                                style=BOXED_STYLE
+                            )
+                        ]
+                    )
+                ],
+                justify='center',
+                align='start'
+            ),
+
+            dcc.Graph(id=ids.Bar.GOALS_BAR.value, config={'displayModeBar': False}),
+        ],
+        body=True
+    )
+
+    relations_radio = dbc.RadioItems(
+        id=ids.Radio.TOTAL_GOALS_RELATIONS_RADIO.value,
+        options=[{'value': key, 'label': value} for key, value in analysis.goal_relations.items()],
+        value='eq',
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    total_goals = [0, 1, 2, 3]
+    total_goals_radio = dbc.RadioItems(
+        id=ids.Radio.TOTAL_GOALS_RADIO.value,
+        options=[{'value': i, 'label': opt} for i, opt in enumerate(total_goals)],
+        value=random.randint(0, len(total_goals) - 1),
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    total_goals_card = dbc.Card(
+        [
+            dbc.CardHeader(
+                'Total Goals Sequence Analysis',
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            relations_radio
+                        ]
+                    ),
+
+                    dbc.Col(
+                        [
+                            total_goals_radio
+                        ]
+                    )
+                ],
+                justify='center',
+                align='start'
+            ),
+
+            dcc.Graph(id=ids.Bar.TOTAL_GOALS_BAR.value, config={'displayModeBar': False}),
         ],
         body=True
     )
 
     div = html.Div(
         [
-            Row(
+            dbc.Row(
                 [
-                    Col(
+                    dbc.Col(
                         [
-                            goals_trend_card
+                            win_draw_loss_card
                         ],
                         width={'size': 4}
                     ),
 
-                    Col(
+                    dbc.Col(
                         [
-                            results_trend_card
+                            goals_card
+                        ],
+                        width={'size': 4}
+                    ),
+
+                    dbc.Col(
+                        [
+                            total_goals_card
                         ],
                         width={'size': 4}
                     )
@@ -54,22 +182,27 @@ def create_team_overview_layout() -> html.Div:
                                                     tables.COL_VENUE.display,
                                                     tables.COL_TEAM.display]
     ]
-    upcoming_card = Card(
+    fixtures_table_card = dbc.Card(
         [
-            CardHeader(
-                id=ids.Components.TEAM_FIXTURES_CARD.name,
+            dbc.CardHeader(
+                id=ids.Miscellaneous.TEAM_FIXTURES_CARD.value,
                 style={'text-align': 'center', 'margin-bottom': '20px'}
             ),
 
-            dash_table.DataTable(
-                id=ids.Components.TEAM_FIXTURES_TABLE.name,
-                columns=upcoming_columns,
-                sort_action='native',
-                filter_action='native',
-                style_header={'border': '3px solid black'},
-                style_cell={'textAlign': 'left'},
-                page_size=5,
-                page_current=0,
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id=ids.Table.TEAM_FIXTURES_TABLE.value,
+                        columns=upcoming_columns,
+                        sort_action='native',
+                        filter_action='native',
+                        style_header={'border': '3px solid black'},
+                        style_cell={'textAlign': 'left'},
+                        page_size=20,
+                        page_current=0
+                    )
+                ],
+                className="dbc"
             )
         ],
         body=True
@@ -83,71 +216,75 @@ def create_team_overview_layout() -> html.Div:
                                                     tables.COL_SECOND_HALF.display,
                                                     tables.COL_FULL_TIME.display]
     ]
-    results_card = Card(
+    results_table_card = dbc.Card(
         [
-            CardHeader(
-                id=ids.Components.TEAM_RESULTS_CARD.name,
+            dbc.CardHeader(
+                id=ids.Miscellaneous.TEAM_RESULTS_CARD.value,
                 style={'text-align': 'center', 'margin-bottom': '20px'}
             ),
 
-            dash_table.DataTable(
-                id=ids.Components.TEAM_RESULTS_TABLE.name,
-                columns=results_columns,
-                sort_action='native',
-                filter_action='native',
-                style_header={'border': '3px solid black'},
-                style_cell={'textAlign': 'left'},
-                style_cell_conditional=[
-                    {'if': {'column_id': tables.COL_FIRST_HALF.display}, 'textAlign': 'center'},
-                    {'if': {'column_id': tables.COL_SECOND_HALF.display}, 'textAlign': 'center'},
-                    {'if': {'column_id': tables.COL_FULL_TIME.display}, 'textAlign': 'center'}
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id=ids.Table.TEAM_RESULTS_TABLE.value,
+                        columns=results_columns,
+                        sort_action='native',
+                        filter_action='native',
+                        style_header={'border': '3px solid black'},
+                        style_cell={'textAlign': 'left'},
+                        style_cell_conditional=[
+                            {'if': {'column_id': tables.COL_FIRST_HALF.display}, 'textAlign': 'center'},
+                            {'if': {'column_id': tables.COL_SECOND_HALF.display}, 'textAlign': 'center'},
+                            {'if': {'column_id': tables.COL_FULL_TIME.display}, 'textAlign': 'center'}
+                        ],
+                        page_size=20,
+                        page_current=0
+                    )
                 ],
-                page_size=20,
-                page_current=0
+                className="dbc"
             )
         ],
         body=True
     )
 
-    goals_pie_card = Card(
+    goals_pie_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_GOALS_PIE.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Pie.TEAM_GOALS_PIE.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    goals_graph_card = Card(
+    goals_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_GOALS_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.TEAM_GOALS_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    scores_heatmap_card = Card(
+    scores_heatmap_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_SCORES_HEATMAP.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.TEAM_SCORES_HEATMAP.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    bts_graph_card = Card(
+    bts_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_SCORED_AND_CONCEDED_GRAPH.name, config={'displayModeBar': False},
-                      figure={})
+            dcc.Graph(id=ids.Graph.TEAM_SCORED_AND_CONCEDED_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    results_pie_card = Card(
+    results_pie_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_RESULTS_PIE.name, config={'displayModeBar': False}, figure={}),
+            dcc.Graph(id=ids.Pie.TEAM_RESULTS_PIE.value, config={'displayModeBar': False}),
         ],
         body=True
     )
 
-    results_graph_card = Card(
+    results_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.TEAM_RESULTS_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.TEAM_RESULTS_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True,
     )
@@ -156,31 +293,30 @@ def create_team_overview_layout() -> html.Div:
         [
             html.Hr(),
 
-            Row(
+            dbc.Row(
                 [
-                    Col(
-                        [
-                            upcoming_card,
-                            results_card
-                        ],
-                        width={'size': 4},
-                        style={'font-weight': 'bold', 'text-align': 'left'}
-                    ),
-
-                    Col(
+                    dbc.Col(
                         [
                             goals_pie_card,
-                            bts_graph_card,
-                            results_pie_card
+                            goals_graph_card,
+                            fixtures_table_card
                         ],
                         width={'size': 4}
                     ),
 
-                    Col(
+                    dbc.Col(
                         [
-                            goals_graph_card,
                             scores_heatmap_card,
-                            results_graph_card
+                            bts_graph_card,
+                            results_table_card
+                        ],
+                        width={'size': 4}
+                    ),
+
+                    dbc.Col(
+                        [
+                            results_graph_card,
+                            results_pie_card
                         ],
                         width={'size': 4}
                     )
@@ -203,29 +339,54 @@ def create_league_overview_layout() -> html.Div:
         if column != tables.COL_TEAM:
             json['type'] = 'numeric'
 
-        if column in [tables.COL_BTS, tables.COL_SCORED, tables.COL_CONCEDED]:
+        if column in [tables.COL_BTS,
+                      tables.COL_SCORED,
+                      tables.COL_CLEAN_SHEET,
+                      tables.COL_TOTAL_EQ_0,
+                      tables.COL_TOTAL_LE_1]:
             json['format'] = dash_table.Format.Format(precision=2, scheme=dash_table.Format.Scheme.percentage_rounded)
 
         league_columns.append(json)
 
-    radio_style = {'border': '2px solid #000000', 'padding': '3px', 'border-radius': '5px', 'margin-bottom': '20px'}
-    history_radio = RadioItems(
-        id=ids.Components.HISTORY_RADIO.name,
-        options=[{'label': 'Last {}'.format(i) if i > 0 else 'No Filter', 'value': i} for i in [0, 5, 6, 7, 8, 9, 10]],
-        value=0,
-        inline=True,
-        style=radio_style
+    season_div = html.Div(
+        [
+            html.Label('Season'),
+            dcc.Dropdown(
+                id=ids.Dropdown.SEASON_DROPDOWN.value,
+                clearable=False,
+            )
+        ],
+        style={
+            'padding': '3px',
+            'border-radius': '5px',
+            'margin-bottom': '10px'
+        }
     )
 
-    league_card = Card(
+    history_div = html.Div(
         [
-            CardHeader('League Table', style={'text-align': 'center', 'margin-bottom': '20px'}),
-
             html.Label('History'),
-            history_radio,
+            dcc.RangeSlider(
+                id=ids.Slider.HISTORY_SLIDER.value,
+                min=0,
+                max=0,
+                value=[0, 0],
+                step=1,
+                allowCross=False
+            )
+        ],
+        style={
+            'border': '2px solid #000000',
+            'padding': '3px',
+            'border-radius': '5px',
+            'margin-bottom': '20px'
+        }
+    )
 
+    league_table_div = html.Div(
+        [
             dash_table.DataTable(
-                id=ids.Components.LEAGUE_TABLE.name,
+                id=ids.Table.LEAGUE_TABLE,
                 columns=league_columns,
                 tooltip_header=league_tooltips,
                 tooltip_duration=None,
@@ -236,24 +397,30 @@ def create_league_overview_layout() -> html.Div:
                 style_cell_conditional=[{'if': {'column_id': 'Team'}, 'textAlign': 'left'}],
             )
         ],
-        body=True
+        className="dbc"
     )
 
-    results_columns = [
-        dict(name=column, id=column) for column in [tables.COL_DATE.display,
-                                                    tables.COL_HOME.display,
-                                                    tables.COL_AWAY.display,
-                                                    tables.COL_FIRST_HALF.display,
-                                                    tables.COL_SECOND_HALF.display,
-                                                    tables.COL_FULL_TIME.display]
-    ]
-    results_card = Card(
+    fixtures_table = html.Div(
         [
-            CardHeader('Results', style={'text-align': 'center', 'margin-bottom': '20px'}),
-
             dash_table.DataTable(
-                id=ids.Components.RESULTS_TABLE.name,
-                columns=results_columns,
+                id=ids.Table.LEAGUE_FIXTURES_TABLE.value,
+                columns=[dict(name=column.display, id=column.display) for column in tables.fixtures_table_columns],
+                sort_action='native',
+                filter_action='native',
+                style_header={'border': '3px solid black'},
+                style_cell={'textAlign': 'left'},
+                page_size=30,
+                page_current=0
+            )
+        ],
+        className="dbc"
+    )
+
+    results_table = html.Div(
+        [
+            dash_table.DataTable(
+                id=ids.Table.LEAGUE_RESULTS_TABLE.value,
+                columns=[dict(name=column.display, id=column.display) for column in tables.results_table_columns],
                 sort_action='native',
                 filter_action='native',
                 style_header={'border': '3px solid black'},
@@ -263,82 +430,152 @@ def create_league_overview_layout() -> html.Div:
                     {'if': {'column_id': tables.COL_SECOND_HALF.display}, 'textAlign': 'center'},
                     {'if': {'column_id': tables.COL_FULL_TIME.display}, 'textAlign': 'center'}
                 ],
-                page_size=20,
-                page_current=0,
+                page_size=30,
+                page_current=0
             )
         ],
-        body=True
+        className="dbc"
     )
 
-    goals_pie_card = Card(
+    goals_pie_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.GOALS_PIE.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Pie.GOALS_PIE.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    goals_graph_card = Card(
+    goals_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.GOALS_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.GOALS_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    scores_heatmap_card = Card(
+    scores_heatmap_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.SCORES_HEATMAP.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.SCORES_HEATMAP.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    bts_graph_card = Card(
+    bts_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.BTS_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.BTS_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True
     )
 
-    results_pie_card = Card(
+    results_pie_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.RESULTS_PIE.name, config={'displayModeBar': False}, figure={}),
+            dcc.Graph(id=ids.Pie.RESULTS_PIE.value, config={'displayModeBar': False}),
         ],
         body=True
     )
 
-    results_graph_card = Card(
+    results_graph_card = dbc.Card(
         [
-            dcc.Graph(id=ids.Components.RESULTS_GRAPH.name, config={'displayModeBar': False}, figure={})
+            dcc.Graph(id=ids.Graph.RESULTS_GRAPH.value, config={'displayModeBar': False})
         ],
         body=True,
     )
 
+    league_table_card = dbc.Card(
+        [
+            dbc.CardHeader(
+                html.H3('Table', className="card-title"),
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.CardBody(
+                [
+                    season_div,
+                    history_div,
+                    league_table_div
+                ]
+            )
+        ]
+    )
+
+    fixtures_table_card = dbc.Card(
+        [
+            dbc.CardHeader(
+                html.H3('Fixtures', className="card-title"),
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.CardBody(fixtures_table)
+        ]
+    )
+
+    results_table_card = dbc.Card(
+        [
+            dbc.CardHeader(
+                html.H3('Results', className="card-title"),
+                style={'text-align': 'center', 'margin-bottom': '20px'}
+            ),
+
+            dbc.CardBody(results_table)
+        ]
+    )
+
+    #
+    # league_table_accordion = dbc.Accordion(
+    #     [
+    #         dbc.AccordionItem(
+    #             [
+    #
+    #             ],
+    #             title='League Table',
+    #             item_id='1'
+    #         ),
+    #         dbc.AccordionItem(
+    #             [
+    #                 fixtures_table
+    #             ],
+    #             title='Fixtures',
+    #             item_id='2'
+    #         ),
+    #         dbc.AccordionItem(
+    #             [
+    #                 results_table
+    #             ],
+    #
+    #             item_id='3'
+    #         )
+    #     ],
+    #     flush=True,
+    #     always_open=True,
+    #     active_item=['1', '2', '3'],
+    #     id=ids.Miscellaneous.LEAGUE_ACCORDION.value
+    # )
+
     div = html.Div(
         [
-            Row(
+            dbc.Row(
                 [
-                    Col(
-                        [
-                            league_card,
-                            results_card
-                        ],
-                        width={'size': 4},
-                        style={'font-weight': 'bold', 'text-align': 'left'}
-                    ),
-
-                    Col(
+                    dbc.Col(
                         [
                             goals_pie_card,
-                            bts_graph_card,
-                            results_pie_card
+                            goals_graph_card,
+                            league_table_card
                         ],
                         width={'size': 4}
                     ),
 
-                    Col(
+                    dbc.Col(
                         [
-                            goals_graph_card,
                             scores_heatmap_card,
-                            results_graph_card
+                            bts_graph_card,
+                            fixtures_table_card,
+                        ],
+                        width={'size': 4}
+                    ),
+
+                    dbc.Col(
+                        [
+                            results_graph_card,
+                            results_pie_card,
+                            results_table_card
                         ],
                         width={'size': 4}
                     )
@@ -352,112 +589,101 @@ def create_league_overview_layout() -> html.Div:
     return div
 
 
-def create_layout() -> Container:
-    tab_style_when_selected = {
-        'backgroundColor': '#007bff',
-        'color': 'white',
-        'border': '5px solid black',
-        'padding': '10px'
-    }
-
-    tab_style_when_silent = {
-        'backgroundColor': '#f8f9fa',
-        'color': '#6c757d',
-        'borderTop': '2px solid #dee2e6',
-        'borderBottom': '2px solid #dee2e6',
-        'padding': '10px'
-    }
-
-    tabs = dcc.Tabs(
+def create_layout() -> dbc.Container:
+    tabs = dbc.Tabs(
         [
-            dcc.Tab(
+            dbc.Tab(
                 create_league_overview_layout(),
-                id=ids.Components.LEAGUE_OVERVIEW_TAB.name,
-                style=tab_style_when_silent,
-                selected_style=tab_style_when_selected
+                id=ids.Tab.LEAGUE_OVERVIEW_TAB.value
             ),
 
-            dcc.Tab(
+            dbc.Tab(
                 create_team_overview_layout(),
-                id=ids.Components.TEAM_OVERVIEW_TAB.name,
-                style=tab_style_when_silent,
-                selected_style=tab_style_when_selected
+                id=ids.Tab.TEAM_OVERVIEW_TAB.value
             ),
 
-            dcc.Tab(
+            dbc.Tab(
                 create_team_now_layout(),
-                id=ids.Components.TEAM_NOW_TAB.name,
-                style=tab_style_when_silent,
-                selected_style=tab_style_when_selected
+                id=ids.Tab.TEAM_NOW_TAB.value
             )
         ]
     )
 
-    spinner_types = ['cube', 'graph', 'circle', 'dot']
-    (spinner_type,) = sample(spinner_types, 1)
-    loader = dcc.Loading(
+    loader = dbc.Spinner(
         html.Div(tabs),
-        id=ids.Components.LOADER.name,
+        id=ids.Miscellaneous.LOADER.value,
         fullscreen=True,
-        type=spinner_type
+        type='grow',
+        size='md',
+        color='success'
     )
 
-    country_options = [{'label': prettify(country), 'value': country} for country in country_whitelist]
+    country_options = []
+    for country in football_api.helpers.get_countries():
+        country_options.append({'label': model.competitions.prettify(country), 'value': country})
+
     default_country = 'England'
-    country_dropdown = dcc.Dropdown(id=ids.Components.COUNTRY_DROPDOWN.name,
-                                    options=country_options,
-                                    value=default_country,
-                                    clearable=False,
-                                    style={'text-align': 'left'})
-
-    league_dropdown = dcc.Dropdown(id=ids.Components.LEAGUE_DROPDOWN.name,
-                                   clearable=False,
-                                   style={'text-align': 'left'})
-
-    team_dropdown = dcc.Dropdown(id=ids.Components.TEAM_DROPDOWN.name,
-                                 clearable=False,
-                                 style={'text-align': 'left'})
-
-    radio_style = {'border': '2px solid #000000', 'padding': '3px', 'border-radius': '5px'}
-
-    venue_radio = RadioItems(
-        id=ids.Components.VENUE_RADIO.name,
-        options=[{'label': venue, 'value': venue} for venue in Venue],
-        value=Venue.SOMEWHERE,
-        inline=True,
-        style=radio_style
+    country_dropdown = dcc.Dropdown(
+        id=ids.Dropdown.COUNTRY_DROPDOWN.value,
+        options=country_options,
+        value=default_country,
+        clearable=False,
+        style={'text-align': 'left'}
     )
 
-    period_radio = RadioItems(
-        id=ids.Components.HALF_RADIO.name,
-        options=[{'label': period.value, 'value': period} for period in Period],
-        value=Period.FULL,
-        inline=True,
-        style=radio_style
+    league_dropdown = dcc.Dropdown(
+        id=ids.Dropdown.LEAGUE_DROPDOWN.value,
+        clearable=False,
+        style={'text-align': 'left'}
     )
 
-    container = Container(
+    team_dropdown = dcc.Dropdown(
+        id=ids.Dropdown.TEAM_DROPDOWN.value,
+        clearable=False,
+        style={'text-align': 'left'}
+    )
+
+    venue_radio = dbc.RadioItems(
+        id=ids.Radio.VENUE_RADIO.value,
+        options=[{'label': venue.value, 'value': venue} for venue in model.fixtures.Venue],
+        value=model.fixtures.Venue.ANYWHERE,
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    period_radio = dbc.RadioItems(
+        id=ids.Radio.HALF_RADIO.value,
+        options=[
+            {'label': period.value, 'value': period}
+            for period in [model.fixtures.Period.FULL, model.fixtures.Period.FIRST, model.fixtures.Period.SECOND]
+        ],
+        value=model.fixtures.Period.FULL,
+        inline=True,
+        style=BOXED_STYLE
+    )
+
+    container = dbc.Container(
         [
-            dcc.Store(id=ids.Components.DATA_STORE.name),
-            Row(
+            dcc.Store(id=ids.Miscellaneous.DATA_STORE),
+            dbc.Row(
                 [
-                    Col(html.Label('Country'), width=2),
-                    Col(html.Label('League'), width=2),
-                    Col(html.Label('Team'), width=2),
-                    Col(html.Label('Venue'), width=2),
-                    Col(html.Label('Period'), width=2)
+                    dbc.Col(html.Label('Country'), width=2),
+                    dbc.Col(html.Label('League'), width=2),
+                    dbc.Col(html.Label('Team'), width=2),
+                    dbc.Col(html.Label('Venue'), width=2),
+                    dbc.Col(html.Label('Period'), width=2)
                 ],
                 justify='center',
                 align='start'
             ),
 
-            Row(
+            dbc.Row(
                 [
-                    Col(country_dropdown, width=2),
-                    Col(league_dropdown, width=2),
-                    Col(team_dropdown, width=2),
-                    Col(venue_radio, width=2),
-                    Col(period_radio, width=2)
+                    dbc.Col(country_dropdown, width=2),
+                    dbc.Col(league_dropdown, width=2),
+                    dbc.Col(team_dropdown, width=2),
+                    dbc.Col(venue_radio, width=2),
+                    dbc.Col(period_radio, width=2)
                 ],
                 justify='center',
                 align='start'
@@ -467,7 +693,7 @@ def create_layout() -> Container:
 
             loader
         ],
-        id=ids.Components.CONTAINER.name,
+        id=ids.Miscellaneous.CONTAINER.value,
         fluid=True
     )
 

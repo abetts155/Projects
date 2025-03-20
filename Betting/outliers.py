@@ -9,7 +9,7 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from colorama import Fore, Style
 from model.fixtures import ContextualEvent, Event, Fixture, Half, Venue
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.teams import Team
 from sql.sql import extract_picked_team, load_league, load_teams

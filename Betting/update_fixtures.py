@@ -1,157 +1,205 @@
-from argparse import ArgumentParser, Namespace
-from cli.cli import (add_database_option,
-                     add_logging_options,
-                     add_league_option,
-                     set_logging_options,
-                     add_past_option,
-                     add_force_option)
-from datetime import datetime, timedelta
-from football_api.football_api import get_fixtures, get_timezone
-from football_api.structure import get_fixtures_json, get_timezone_json, store
-from json import load
-from lib import messages
-from model.fixtures import (Fixture,
-                            create_fixture_from_json,
-                            create_fixture_from_row,
-                            get_home_team_data,
-                            get_away_team_data)
-from model.leagues import League, league_register
-from model.seasons import Season, create_season_from_row
-from model.teams import Team, create_team_from_row
-from os import EX_OK
+import argparse
+import json
+import os
+import typing
+
+import cli.cli
+import cli.user_input
+import football_api.football_api
+import football_api.structure
+import lib.messages
+import model.competitions
+import model.fixtures
+import model.seasons
+import model.teams
+import sql.sql
+import sql.sql_columns
+import sql.sql_language
 from sql.sql_columns import ColumnNames
-from sql.sql_language import Characters, Keywords
-from sql.sql import Database, check_database_exists
-from sys import exit
-from typing import List
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Update football results database with fixture information')
-    add_database_option(parser)
-    add_logging_options(parser)
-    add_league_option(parser, False)
-    add_past_option(parser)
-    add_force_option(parser)
+    parser = argparse.ArgumentParser(description='Update database with fixture information')
+    cli.cli.add_logging_options(parser)
+    cli.cli.add_country_option(parser, False)
+    cli.cli.add_past_option(parser)
+    cli.cli.add_force_option(parser)
+    cli.cli.add_competition_option(parser, True)
+
+    parser.add_argument('-M',
+                        '--missing-teams',
+                        action='store_true',
+                        help='add missing teams to the database',
+                        default=False)
+
     return parser.parse_args()
 
 
-def create_fixtures_json(season: int, force: bool):
-    fixtures_json = get_fixtures_json(season)
+def create_fixtures_json(competition: model.competitions.Competition, season: model.seasons.Season, force: bool):
+    fixtures_json = football_api.structure.get_fixtures_json(competition.id, season.year)
     if not fixtures_json.exists() or force:
-        messages.vanilla_message("Extracting fixtures JSON for '{}'".format(season))
-        store(fixtures_json, get_fixtures(season))
+        lib.messages.vanilla_message(f"Updating '{fixtures_json}'")
+        response = football_api.football_api.get_fixtures(competition.id, season.year)
+        football_api.structure.store(fixtures_json, response)
 
 
-def create_team_row(league: League, id_: int, name: str):
-    url = 'https://media.api-sports.io/football/teams/{}.png'.format(id_)
-    return [id_, name, league.country, url]
+def add_unknown_teams(unknown_teams: dict[int, str], teams: dict[int, model.teams.Team]):
+    print("In the following, 'Y' or 'y' means Yes and anything else means No")
+    new_teams = []
+    for team_id, team_name in unknown_teams.items():
+        answer = input(f"Add '{team_name}' to the database? ")
+        if answer in ['y', 'Y']:
+            country = cli.user_input.pick_country(False)
+            row = [team_id, team_name, country, None]
+            team = model.teams.create_team_from_row(row)
+            new_teams.append(team)
+            teams[team_id] = team
+
+    with sql.sql.Database(football_api.structure.database) as db:
+        table = model.teams.Team.sql_table()
+        db.create_rows(table, new_teams)
 
 
-def load_fixture_data(league: League, season: Season):
-    fixtures_json = get_fixtures_json(season.id)
+def check_team_exists_in_database(team_id: int) -> typing.Optional[model.teams.Team]:
+    with sql.sql.Database(football_api.structure.database) as db:
+        table = model.teams.Team.sql_table()
+        team_constraint = f"{ColumnNames.ID.name}='{team_id}'"
+        team_rows = db.fetch_all_rows(table, [team_constraint])
+        if team_rows:
+            (row,) = team_rows
+            return model.teams.create_team_from_row(row)
+
+
+def load_fixture_data(
+        competition: model.competitions.Competition,
+        season: model.seasons.Season,
+        add_missing_teams: bool
+) -> list[model.fixtures.Fixture]:
+    fixtures = []
+    unknown_teams = {}
+
+    fixtures_json = football_api.structure.get_fixtures_json(competition.id, season.year)
     if not fixtures_json.exists():
-        messages.warning_message("No fixtures available for season {}".format(season.id))
+        lib.messages.warning_message(f"No fixtures available for competition {competition} in season {season.year}")
     else:
-        messages.verbose_message('Season {}'.format(season.year))
+        team_ids = set()
         with fixtures_json.open() as in_file:
-            json_text = load(in_file)
-            for data in json_text['api']['fixtures']:
-                home_id, home_name = get_home_team_data(data)
-                if not Team.has_team(home_id):
-                    team_row = create_team_row(league, home_id, home_name)
-                    create_team_from_row(team_row)
+            json_text = json.load(in_file)
 
-                away_id, away_name = get_away_team_data(data)
-                if not Team.has_team(away_id):
-                    team_row = create_team_row(league, away_id, away_name)
-                    create_team_from_row(team_row)
+            for fixture_json in json_text['response']:
+                home_id = int(fixture_json['teams']['home']['id'])
+                away_id = int(fixture_json['teams']['away']['id'])
+                team_ids.add(home_id)
+                team_ids.add(away_id)
 
-                create_fixture_from_json(data)
+        teams = model.teams.load_teams(team_ids)
+        with fixtures_json.open() as in_file:
+            json_text = json.load(in_file)
+            for fixture_json in json_text['response']:
+                home_id = int(fixture_json['teams']['home']['id'])
+                away_id = int(fixture_json['teams']['away']['id'])
+
+                if home_id not in teams:
+                    home_team = check_team_exists_in_database(home_id)
+                    if home_team is None:
+                        name = fixture_json['teams']['home']['name']
+                        lib.messages.warning_message(f"Do not know the team whose ID is {home_id} called '{name}'")
+                        unknown_teams[home_id] = name
+                else:
+                    home_team = teams[home_id]
+
+                if away_id not in teams:
+                    away_team = check_team_exists_in_database(away_id)
+                    if away_team is None:
+                        name = fixture_json['teams']['away']['name']
+                        lib.messages.warning_message(f"Do not know the team whose ID is {away_id} called '{name}'")
+                        unknown_teams[away_id] = name
+                else:
+                    away_team = teams[away_id]
+
+                if home_team is not None and away_team is not None:
+                    if competition.type == model.competitions.CompetitionType.LEAGUE:
+                        fixture = model.fixtures.create_fixture_from_json(
+                            competition.id,
+                            season.year,
+                            home_team,
+                            away_team,
+                            fixture_json
+                        )
+                    else:
+                        fixture = model.fixtures.create_cup_fixture_from_json(
+                            competition.id,
+                            season.year,
+                            home_team,
+                            away_team,
+                            fixture_json
+                        )
+
+                    if fixture is not None:
+                        fixtures.append(fixture)
+
+    if unknown_teams and add_missing_teams:
+        add_unknown_teams(unknown_teams, teams)
+
+    return fixtures
 
 
-def update_leagues(database: str, leagues: List[str], past: bool, force: bool):
-    with Database(database) as db:
-        team_rows = db.fetch_all_rows(Team.sql_table())
-        for row in team_rows:
-            create_team_from_row(row)
+def update(past: bool, force: bool, competitions: list[model.competitions.Competition], add_missing_teams: bool):
+    from sql.sql_columns import ColumnNames
+    from sql.sql_language import Characters
 
-        for league_code in leagues:
-            messages.vanilla_message('Updating {}...'.format(league_code))
-            league = league_register[league_code]
+    with sql.sql.Database(football_api.structure.database) as db:
+        fixtures_table = model.fixtures.Fixture.sql_table()
+        cup_fixtures_table = model.fixtures.CupFixture.sql_table()
 
-            name_constraint = "{}='{}' {} {}".format(ColumnNames.Code.name,
-                                                     league.name,
-                                                     Keywords.COLLATE.name,
-                                                     Keywords.NOCASE.name)
+        competitions.sort(key=lambda league: league.country)
+        for competition in competitions:
+            lib.messages.vanilla_message(f"{'>' * 10}  Updating {competition}  {'<' * 10}")
 
-            country_constraint = "{}='{}' {} {}".format(ColumnNames.Country.name,
-                                                        league.country,
-                                                        Keywords.COLLATE.name,
-                                                        Keywords.NOCASE.name)
+            competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
+            if past:
+                current_constraint = f"{ColumnNames.Current.name}={Characters.FALSE.value}"
+            else:
+                current_constraint = f"{ColumnNames.Current.name}={Characters.TRUE.value}"
 
-            current_constraint = "{}={}".format(ColumnNames.Current.name,
-                                                Characters.FALSE.value if past else Characters.TRUE.value)
-            constraints = [name_constraint, country_constraint, current_constraint]
-            season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
+            season_rows = db.fetch_all_rows(
+                model.seasons.Season.sql_table(),
+                [competition_constraint, current_constraint]
+            )
             assert season_rows
+
             for row in season_rows:
-                season = create_season_from_row(row)
-                create_fixtures_json(season.id, force)
-                load_fixture_data(league, season)
-                db.create_table(Fixture)
-                db.create_rows(Fixture)
-                db.create_table(Team)
-                db.create_rows(Team)
+                season = model.seasons.create_season_from_row(row)
+                lib.messages.vanilla_message(f'Updating season {season.year}')
+                create_fixtures_json(competition, season, force)
+                season_fixtures = load_fixture_data(competition, season, add_missing_teams)
+
+                if competition.type == model.competitions.CompetitionType.LEAGUE:
+                    db.create_rows(fixtures_table, season_fixtures)
+                else:
+                    db.create_rows(cup_fixtures_table, season_fixtures)
 
 
-def fixtures_played(database: str, season: Season) -> bool:
-    played = False
-    with Database(database) as db:
-        constraints = ["{}='{}'".format(ColumnNames.Season_ID.name, season.id)]
-        fixture_rows = db.fetch_all_rows(Fixture.sql_table(), constraints)
-        for row in fixture_rows:
-            fixture = create_fixture_from_row(row)
-            if fixture.home_team is not None and fixture.away_team is not None and not fixture.finished:
-                lower_bound = datetime.today() + timedelta(days=-3)
-                upper_bound = datetime.today()
-                match_date = fixture.date.replace(tzinfo=None)
-                if lower_bound <= match_date <= upper_bound:
-                    played = True
-    return played
+def main(past: bool, force: bool, competitions: list[int], countries: list[str], add_missing_teams: bool):
+    league_competitions = model.competitions.get_competition_whitelist(model.competitions.CompetitionType.LEAGUE)
+    cup_competitions = model.competitions.get_competition_whitelist(model.competitions.CompetitionType.CUP)
 
-
-def update_all(database: str, past: bool, force: bool):
-    codes = []
-    with Database(database) as db:
-        team_rows = db.fetch_all_rows(Team.sql_table())
-        for row in team_rows:
-            create_team_from_row(row)
-
-        for code, league in league_register.items():
-            constraints = ["{}='{}'".format(ColumnNames.Country.name, league.country),
-                           "{}='{}'".format(ColumnNames.Code.name, league.name)]
-            season_rows = db.fetch_all_rows(Season.sql_table(), constraints)
-            if season_rows:
-                for season_row in season_rows:
-                    season = create_season_from_row(season_row)
-                    if season.current:
-                        if force or fixtures_played(database, season):
-                            codes.append(code)
-
-    update_leagues(database, codes, past, force or codes)
-
-
-def main(args: Namespace):
-    if args.league:
-        update_leagues(args.database, args.league, args.past, args.force)
+    if competitions:
+        competitions = [
+            competition for competition in league_competitions + cup_competitions if competition.id in competitions
+        ]
     else:
-        update_all(args.database, args.past, args.force)
+        competitions = league_competitions
+        if countries:
+            competitions = [
+                competition for competition in league_competitions if competition.country.casefold() in countries
+            ]
+
+    update(past, force, competitions, add_missing_teams)
 
 
 if __name__ == '__main__':
     args = parse_command_line()
-    set_logging_options(args)
-    check_database_exists(args.database)
-    main(args)
-    exit(EX_OK)
+    cli.cli.set_logging_options(args)
+    main(args.past, args.force, args.competition, args.country, args.missing_teams)
+    exit(os.EX_OK)

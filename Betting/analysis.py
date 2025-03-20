@@ -1,38 +1,26 @@
-from argparse import ArgumentParser, Namespace
-from cli.cli import (add_database_option,
-                     add_half_option,
-                     add_history_option,
-                     add_league_option,
-                     add_country_option,
-                     add_minimum_option,
-                     add_logging_options,
-                     add_venue_option,
-                     add_events_option,
-                     set_logging_options)
-from collections import Counter
-from colorama import Fore, Style
-from datetime import datetime, timedelta
-from lib import messages
-from model.fixtures import ContextualEvent, Event, Half, Fixture, Venue
-from model.leagues import League, league_register
-from model.seasons import Season
-from model.sequences import count_events, DataUnit
-from model.teams import Team
-from sql.sql import load_league, load_teams
-from typing import Callable, Dict, List
+import argparse
+import collections
+import colorama
+import dataclasses
+import datetime
+
+import cli.cli
+import lib.messages
+import model.competitions
+import model.fixtures
+import model.seasons
+import model.sequences
+import model.teams
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Analyse events')
-    add_database_option(parser)
-    add_half_option(parser)
-    add_history_option(parser)
-    add_league_option(parser, False)
-    add_country_option(parser, False)
-    add_minimum_option(parser, False)
-    add_venue_option(parser)
-    add_events_option(parser, False)
-    add_logging_options(parser)
+    parser = argparse.ArgumentParser(description='Analyse events')
+    cli.cli.add_half_option(parser)
+    cli.cli.add_country_option(parser, False)
+    cli.cli.add_minimum_option(parser, False)
+    cli.cli.add_venue_option(parser)
+    cli.cli.add_events_option(parser, False)
+    cli.cli.add_logging_options(parser)
 
     parser.add_argument('-l',
                         '--lower',
@@ -53,67 +41,68 @@ def parse_command_line():
                         action='store_true',
                         help='also consider the classical betting signals')
 
-    parser.add_argument('-T',
-                        '--time',
-                        action='store_true',
-                        help='sort by time rather than by league')
-
     return parser.parse_args()
 
 
-class BettingEvent(ContextualEvent):
+class BettingEvent(model.fixtures.ContextualEvent):
     elsewhere = ''
 
-    def __init__(self, func: Callable, negate: bool, venue: Venue, halves: List[Half], minimums: Dict[str, int]):
-        ContextualEvent.__init__(self, func, negate, venue, halves)
+    def __init__(
+            self,
+            func: collections.abc.Callable,
+            negate: bool,
+            venue: model.fixtures.Venue,
+            periods: list[model.fixtures.Period],
+            minimums: dict[str, int]
+    ):
+        model.sequences.ContextualEvent.__init__(self, func, negate, venue, periods)
         assert BettingEvent.elsewhere in minimums
         self.minimums = minimums
 
 
-def satisfies_venue_constraint(team: Team,
-                               fixture: Fixture,
-                               bet: BettingEvent):
-    return ((bet.venue == Venue.anywhere) or
-            (bet.venue == Venue.home and fixture.home_team == team) or
-            (bet.venue == Venue.away and fixture.away_team == team))
+def satisfies_venue_constraint(team: model.teams.Team, fixture: model.fixtures.Fixture, bet: BettingEvent):
+    return ((bet.venue == model.fixtures.Venue.ANYWHERE) or
+            (bet.venue == model.fixtures.Venue.HOME and fixture.home_team == team) or
+            (bet.venue == model.fixtures.Venue.AWAY and fixture.away_team == team))
 
 
+@dataclasses.dataclass(slots=True)
 class Prediction:
-    def __init__(self, league: League, team: Team, fixture: Fixture, bet: BettingEvent, run: int):
-        self.league = league
-        self.team = team
-        self.fixture = fixture
-        self.bet = bet
-        self.run = run
+    league: model.competitions.Competition
+    team: model.teams.Team
+    fixture: model.fixtures.Fixture
+    bet: BettingEvent
+    run: int
 
 
-def analyse_teams(league: League,
-                  season: Season,
-                  bets: List[BettingEvent],
-                  left_window: datetime,
-                  right_window: datetime):
+def analyse_teams(
+        league: model.competitions.Competition,
+        season: model.seasons.Season,
+        fixtures: list[model.fixtures.Fixture],
+        bets: list[BettingEvent],
+        left_window: datetime.date,
+        right_window: datetime.date
+):
     fixture_predictions = {}
-    for team, fixtures in season.fixtures_per_team().items():
+    fixtures_per_team = model.fixtures.fixtures_per_team(fixtures)
+    for team, fixtures in fixtures_per_team.items():
         filtered = []
         for fixture in fixtures:
             if not fixture.finished:
-                fixture_datetime = datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
+                fixture_datetime = datetime.datetime.fromisoformat(str(fixture.date)).replace(tzinfo=None)
                 if left_window <= fixture_datetime and (right_window is None or fixture_datetime <= right_window):
                     filtered.append(fixture)
 
         if filtered:
             next_match = filtered[0]
-            data = [DataUnit(Counter(), [season], team=team) for _ in bets]
-            count_events(team,
-                         fixtures,
-                         bets,
-                         data)
+            data = [model.sequences.DataUnit(collections.Counter(), [season], team=team) for _ in bets]
+            model.sequences.count_events(team, fixtures, bets, data)
 
             for bet, datum in zip(bets, data):
                 if league.country in bet.minimums:
                     minimum = bet.minimums[league.country]
-                elif league.code in bet.minimums:
-                    minimum = bet.minimums[league.code]
+                elif league.id in bet.minimums:
+                    minimum = bet.minimums[league.id]
                 else:
                     minimum = bet.minimums[BettingEvent.elsewhere]
 
@@ -123,20 +112,20 @@ def analyse_teams(league: League,
     return fixture_predictions
 
 
-def create_fixture_header(fixture: Fixture, home_color, away_color):
-    return '[{}] {}{}{} vs. {}{}{}'.format(fixture.date.strftime('%H.%M: %d %b %Y'),
-                                           home_color, fixture.home_team.name, Style.RESET_ALL,
-                                           away_color, fixture.away_team.name, Style.RESET_ALL)
+def create_fixture_header(fixture: model.fixtures.Fixture, home_color, away_color):
+    return (f'[{fixture.date.strftime('%H.%M: %d %b %Y')}] '
+            f'{home_color}{fixture.home_team.name}{colorama.Style.RESET_ALL} vs. '
+            f'{away_color}{fixture.away_team.name}{colorama.Style.RESET_ALL}')
 
 
-def create_league_header(league: League):
+def create_league_header(league: model.competitions.Competition):
     delimiter = '*' * (len(str(league)) + 2)
-    return "{}\n {} \n{}".format(delimiter, league, delimiter)
+    return f"{delimiter}\n {league} \n{delimiter}"
 
 
 def create_date_header(date: datetime):
     delimiter = '-' * 80
-    return '{}\n{} on {}\n{}'.format(delimiter, date.strftime('%-I %p'), date.strftime('%d %B %Y'), delimiter)
+    return f"{delimiter}\n{date.strftime('%-I %p')} on {date.strftime('%d %B %Y')}\n{delimiter}"
 
 
 def create_prediction(prediction: Prediction, home_color, away_color):
@@ -144,346 +133,316 @@ def create_prediction(prediction: Prediction, home_color, away_color):
         color = home_color
     else:
         color = away_color
-    return '> {}{}{}: {} in the last {} ({}) ({})'.format(color,
-                                                          prediction.team.name,
-                                                          Style.RESET_ALL,
-                                                          Event.name(prediction.bet.func, prediction.bet.negate),
-                                                          prediction.run,
-                                                          prediction.bet.venue.name,
-                                                          Half.to_string(prediction.bet.halves))
+    event_info = model.fixtures.Event.name(prediction.bet.func, prediction.bet.negate)
+    period_info = ', '.join(period.value for period in prediction.bet.periods)
+    return (
+        f"> {color}{prediction.team.name}{colorama.Style.RESET_ALL}: "
+        f"{event_info} in the last {prediction.run} ({prediction.bet.venue}) ({period_info})"
+    )
 
 
-def main(args: Namespace):
-    load_teams(args.database)
-
-    leagues = []
-    if args.country:
-        for country in args.country:
-            leagues.extend([code for code, league in league_register.items() if league.country == country.capitalize()])
-
-    if args.league:
-        leagues.extend(list(args.league))
-
-    if not args.country and not args.league:
-        leagues.extend(list(league_register.keys()))
-
+def gather_betting_events(args: argparse.Namespace):
     bets = []
     if args.event:
         for event in args.event:
-            bets.append(BettingEvent(Event.get(event),
-                                     args.negate,
-                                     args.venue,
-                                     args.half,
-                                     {BettingEvent.elsewhere: args.minimum}))
+            bets.append(
+                BettingEvent(model.fixtures.Event.get(event),
+                             args.negate,
+                             args.venue,
+                             args.half,
+                             {BettingEvent.elsewhere: args.minimum})
+            )
 
     if args.classics:
-        classic_bets = [BettingEvent(Event.get('draw'),
-                                     True,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 10,
-                                      'ZAF1': 6}),
+        classic_bets = [
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         True,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 10,
+                          'ZAF1': 6}),
 
-                        BettingEvent(Event.get('draw'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('gf_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gf_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('ga_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('ga_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('gfa_le_1'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gfa_le_1'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('gfa_le_2'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 7,
-                                      'Argentina': 10,
-                                      'Brazil': 8}),
+            BettingEvent(model.fixtures.Event.get('gfa_le_2'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 7,
+                          'Argentina': 10,
+                          'Brazil': 8}),
 
-                        BettingEvent(Event.get('win'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 8}),
+            BettingEvent(model.fixtures.Event.get('win'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 8}),
 
-                        BettingEvent(Event.get('bts'),
-                                     True,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 7}),
+            BettingEvent(model.fixtures.Event.get('bts'),
+                         True,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 7}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 1}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 1}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.home,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.HOME,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.away,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.AWAY,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 5}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.home,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.HOME,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 5}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.away,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.AWAY,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 5}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.home,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.HOME,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('gfa_eq_0'),
-                                     False,
-                                     Venue.away,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('gfa_eq_0'),
+                         False,
+                         model.fixtures.Venue.AWAY,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('ga_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 8}),
+            BettingEvent(model.fixtures.Event.get('ga_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 8}),
 
-                        BettingEvent(Event.get('ga_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 7}),
+            BettingEvent(model.fixtures.Event.get('ga_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 8}),
 
-                        BettingEvent(Event.get('gf_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 8}),
+            BettingEvent(model.fixtures.Event.get('gf_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 10}),
 
-                        BettingEvent(Event.get('gf_eq_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 7}),
+            BettingEvent(model.fixtures.Event.get('gf_eq_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 10}),
 
-                        BettingEvent(Event.get('gf_eq_0'),
-                                     False,
-                                     Venue.home,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 2}),
+            BettingEvent(model.fixtures.Event.get('gf_eq_0'),
+                         False,
+                         model.fixtures.Venue.HOME,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 3}),
 
-                        BettingEvent(Event.get('gf_eq_0'),
-                                     False,
-                                     Venue.away,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 3}),
+            BettingEvent(model.fixtures.Event.get('gf_eq_0'),
+                         False,
+                         model.fixtures.Venue.AWAY,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 4}),
 
-                        BettingEvent(Event.get('draw'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 5}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 6}),
 
-                        BettingEvent(Event.get('draw'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.second],
-                                     {BettingEvent.elsewhere: 4}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 6}),
 
-                        BettingEvent(Event.get('draw'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 5}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 5}),
 
-                        BettingEvent(Event.get('win'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 6}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         True,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 7}),
 
-                        BettingEvent(Event.get('loss'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 5}),
+            BettingEvent(model.fixtures.Event.get('draw'),
+                         True,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 12}),
 
-                        BettingEvent(Event.get('draw'),
-                                     True,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 7}),
+            BettingEvent(model.fixtures.Event.get('gfa_ne_0'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST],
+                         {BettingEvent.elsewhere: 12}),
 
-                        BettingEvent(Event.get('draw'),
-                                     True,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 12}),
+            BettingEvent(model.fixtures.Event.get('bts'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 8,
+                          'Argentina': 10}),
 
-                        BettingEvent(Event.get('gfa_ne_0'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first],
-                                     {BettingEvent.elsewhere: 12}),
+            BettingEvent(model.fixtures.Event.get('gfa_le_1'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 14}),
 
-                        BettingEvent(Event.get('bts'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 6,
-                                      'Argentina': 8}),
+            BettingEvent(model.fixtures.Event.get('gfa_le_1'),
+                         True,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND],
+                         {BettingEvent.elsewhere: 6}),
 
-                        BettingEvent(Event.get('gfa_le_1'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 12}),
-
-                        BettingEvent(Event.get('gfa_le_1'),
-                                     True,
-                                     Venue.anywhere,
-                                     [Half.first, Half.second],
-                                     {BettingEvent.elsewhere: 5}),
-
-                        BettingEvent(Event.get('gfa_gt_2'),
-                                     False,
-                                     Venue.anywhere,
-                                     [Half.full],
-                                     {BettingEvent.elsewhere: 7})]
+            BettingEvent(model.fixtures.Event.get('gfa_gt_2'),
+                         False,
+                         model.fixtures.Venue.ANYWHERE,
+                         [model.fixtures.Period.FULL],
+                         {BettingEvent.elsewhere: 7})
+        ]
         bets.extend(classic_bets)
 
-    left_window = datetime.now() + timedelta(hours=args.lower)
+    return bets
+
+
+def output_predictions(all_predictions: list[Prediction]):
+    home_color = colorama.Fore.BLUE
+    away_color = colorama.Fore.RED
+    all_predictions.sort(
+        key=lambda prediction: (
+        prediction.fixture.date,
+        prediction.league.country,
+        prediction.league.id,
+        prediction.fixture.id,
+        prediction.team == prediction.fixture.away_team
+        )
+    )
+
+    last_prediction = None
+    for prediction in all_predictions:
+        date_emitted = False
+        if last_prediction is None:
+            print(create_date_header(prediction.fixture.date))
+            date_emitted = True
+        elif (
+                (last_prediction.fixture.date.day != prediction.fixture.date.day) or
+                (last_prediction.fixture.date.hour != prediction.fixture.date.hour)
+        ):
+            print()
+            print(create_date_header(prediction.fixture.date))
+            date_emitted = True
+
+        league_header_emitted = False
+        if last_prediction is None:
+            print(create_league_header(prediction.league))
+            league_header_emitted = True
+        elif last_prediction.league != prediction.league or date_emitted:
+            if not date_emitted:
+                print()
+            print(create_league_header(prediction.league))
+            league_header_emitted = True
+
+        if last_prediction is None:
+            print(create_fixture_header(prediction.fixture, home_color, away_color))
+        elif last_prediction.fixture != prediction.fixture:
+            if not league_header_emitted:
+                print()
+            print(create_fixture_header(prediction.fixture, home_color, away_color))
+
+        print(create_prediction(prediction, home_color, away_color))
+        last_prediction = prediction
+    print()
+
+
+def main(args: argparse.Namespace):
+    bets = gather_betting_events(args)
+
+    left_window = datetime.datetime.now() + datetime.timedelta(hours=args.lower)
     if args.upper:
-        right_window = datetime.now() + timedelta(hours=args.upper)
+        right_window = datetime.datetime.now() + datetime.timedelta(hours=args.upper)
     else:
         right_window = None
 
-    league_predictions = {}
-    flat_predictions = []
-    for league_code in leagues:
-        league = league_register[league_code]
-        load_league(args.database, league)
-
-        seasons = Season.seasons(league)
-        if not seasons:
-            messages.warning_message('No season data found for {}'.format(league))
+    all_predictions = []
+    for league in model.competitions.get_competition_whitelist(model.competitions.CompetitionType.LEAGUE):
+        this_season = model.seasons.load_current_season(league)
+        if not this_season:
+            lib.messages.warning_message('No season data found for {}'.format(league))
         else:
-            if args.history:
-                seasons = seasons[-args.history:]
+            lib.messages.verbose_message(f"Analsying {league}")
+            fixtures = model.seasons.load_fixtures(league, this_season)
+            fixture_predictions = analyse_teams(league, this_season, fixtures, bets, left_window, right_window)
+            if fixture_predictions:
+                for predictions in fixture_predictions.values():
+                    all_predictions.extend(predictions)
 
-            if seasons[-1].current:
-                this_season = seasons.pop()
-                fixture_predictions = analyse_teams(league, this_season, bets, left_window, right_window)
-                if fixture_predictions:
-                    if args.time:
-                        for predictions in fixture_predictions.values():
-                            flat_predictions.extend(predictions)
-                    else:
-                        league_predictions[league] = fixture_predictions
-            else:
-                messages.warning_message('The current season for {} has not yet started'.format(league.name))
-
-    home_color = Fore.BLUE
-    away_color = Fore.RED
-    if args.time:
-        flat_predictions.sort(key=lambda prediction: (prediction.fixture.date,
-                                                      prediction.league.country,
-                                                      prediction.league.code,
-                                                      prediction.fixture.id,
-                                                      prediction.team == prediction.fixture.away_team))
-        last_prediction = None
-        for prediction in flat_predictions:
-            date_emitted = False
-            if last_prediction is None:
-                print(create_date_header(prediction.fixture.date))
-                date_emitted = True
-            elif ((last_prediction.fixture.date.day != prediction.fixture.date.day) or
-                  (last_prediction.fixture.date.hour != prediction.fixture.date.hour)):
-                print()
-                print(create_date_header(prediction.fixture.date))
-                date_emitted = True
-
-            league_header_emitted = False
-            if last_prediction is None:
-                print(create_league_header(prediction.league))
-                league_header_emitted = True
-            elif last_prediction.league != prediction.league or date_emitted:
-                if not date_emitted:
-                    print()
-                print(create_league_header(prediction.league))
-                league_header_emitted = True
-
-            if last_prediction is None:
-                print(create_fixture_header(prediction.fixture, home_color, away_color))
-            elif last_prediction.fixture != prediction.fixture:
-                if not league_header_emitted:
-                    print()
-                print(create_fixture_header(prediction.fixture, home_color, away_color))
-
-            print(create_prediction(prediction, home_color, away_color))
-            last_prediction = prediction
-        print()
-    else:
-        for league, fixture_predictions in league_predictions.items():
-            print(create_league_header(league))
-
-            fixtures = list(fixture_predictions.keys())
-            fixtures.sort(key=lambda fixture: fixture.date)
-
-            for fixture in fixtures:
-                print(create_fixture_header(fixture, home_color, away_color))
-                for prediction in fixture_predictions[fixture]:
-                    print(create_prediction(prediction, home_color, away_color))
-                print()
+    output_predictions(all_predictions)
 
 
 if __name__ == '__main__':
     args = parse_command_line()
-    set_logging_options(args)
+    cli.cli.set_logging_options(args)
     main(args)

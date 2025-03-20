@@ -7,7 +7,7 @@ from cli.cli import (add_database_option,
 from colorama import Fore, Style
 from datetime import datetime, timedelta
 from model.fixtures import Half, Fixture, Venue
-from model.leagues import league_register, League, prettify
+from model.competitions import league_register, League, prettify
 from model.teams import create_team_from_row, Team
 from sql.sql import Database, get_fixtures, get_current_season
 from sql.sql_columns import ColumnNames

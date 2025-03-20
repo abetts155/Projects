@@ -18,7 +18,7 @@ from cli.cli import (add_database_option,
 from lib.helpful import set_matplotlib_defaults
 from lib.messages import error_message
 from model.fixtures import Event, Fixture, Half, bts, Team, Venue
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from sql.sql import load_league, load_teams, extract_picked_team
 

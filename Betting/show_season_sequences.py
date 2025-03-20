@@ -17,7 +17,7 @@ from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from model.fixtures import ContextualEvent, Event, Half, Venue
-from model.leagues import league_register, League
+from model.competitions import league_register, League
 from model.seasons import Season
 from model.sequences import count_events, DataUnit
 from model.teams import Team

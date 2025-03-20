@@ -1,83 +1,59 @@
-from lib import messages
+import sqlite3
+
+import lib.messages
+
 from sql.sql_columns import Column
 from sql.sql_language import Keywords
-from sqlite3 import Cursor
-from typing import List
 
 
 class Table:
-    def __init__(self, name: str, primary_key: Column, columns: List[Column]):
-        self._name = name
-        self._primary_key = primary_key
-        self._columns = columns
-        self._rows = []
-        self._foreign_keys = {}
+    def __init__(self, name: str, primary_key: list[Column], columns: list[Column]):
+        self.name = name
+        self.primary_key = primary_key
+        self.columns = columns
+        self.rows = []
+        self.foreign_keys = {}
 
-    @property
-    def columns(self) -> List[Column]:
-        return self._columns
+    def add_row(self, row: list):
+        assert len(self.columns) == len(row)
+        self.rows.append(row)
 
-    @property
-    def name(self) -> str:
-        return self._name
+    def add_foreign_key(self, column: Column, foreign_table: "Table", foreign_column: Column):
+        assert column in self.columns and self.primary_key != column and column not in self.foreign_keys
+        self.foreign_keys[column] = foreign_table
 
-    @property
-    def primary_key(self) -> Column:
-        return self._primary_key
-
-    @property
-    def rows(self) -> List:
-        return self._rows
-
-    def add_row(self, row: List):
-        assert len(self._columns) == len(row)
-        self._rows.append(row)
-
-    def add_foreign_key(self, column: Column, foreign_table: "Table"):
-        assert column in self.columns and self.primary_key != column and column not in self._foreign_keys
-        self._foreign_keys[column] = foreign_table
-
-    def drop(self, cursor: Cursor):
-        statement = '{} {} {} {} {}'.format(Keywords.DROP.name,
-                                            Keywords.TABLE.name,
-                                            Keywords.IF.name,
-                                            Keywords.EXISTS.name,
-                                            self.name)
-        messages.debug_message(statement)
+    def drop(self, cursor: sqlite3.Cursor):
+        statement = f"{Keywords.DROP.name} {Keywords.TABLE.name} {Keywords.IF.name} {Keywords.EXISTS.name} {self.name}"
+        lib.messages.debug_message(statement)
         cursor.execute(statement)
 
-    def create(self, cursor: Cursor):
+    def create(self, cursor: sqlite3.Cursor):
         columns_text = []
         for column in self.columns:
-            columns_text.append('{} {}'.format(column.name, column.affinity.name))
-            if column == self._primary_key:
-                columns_text[-1] += ' {} {}'.format(Keywords.PRIMARY.name, Keywords.KEY.name)
+            columns_text.append(f'{column.name} {column.affinity.name}')
 
-        for column, foreign_table in self._foreign_keys.items():
-            columns_text.append('{} {}({}) {} {}({})'.format(Keywords.FOREIGN.name,
-                                                             Keywords.KEY.name,
-                                                             column.name,
-                                                             Keywords.REFERENCES.name,
-                                                             foreign_table.name,
-                                                             foreign_table.primary_key.name))
+        if self.primary_key:
+            primary_columns =  ', '.join(column.name for column in self.primary_key)
+            columns_text.append(f"{Keywords.PRIMARY.name} {Keywords.KEY.name} ({primary_columns})")
 
-        statement = '{} {} {} {} {} {} ({})'.format(Keywords.CREATE.name,
-                                                    Keywords.TABLE.name,
-                                                    Keywords.IF.name,
-                                                    Keywords.NOT.name,
-                                                    Keywords.EXISTS.name,
-                                                    self.name,
-                                                    ', '.join(columns_text))
-        messages.debug_message(statement)
+        for column, (foreign_table, foreign_column) in self.foreign_keys.items():
+            columns_text.append(
+                f"{Keywords.FOREIGN.name} {Keywords.KEY.name}({column.name}) {Keywords.REFERENCES.name} "
+                f"{foreign_table.name}({foreign_column.name})"
+            )
+
+        statement = f"""
+{Keywords.CREATE.name} {Keywords.TABLE.name} {Keywords.IF.name} {Keywords.NOT.name} {Keywords.EXISTS.name} 
+{self.name} ({', '.join(columns_text)})
+        """
+
+        lib.messages.debug_message(statement)
         cursor.execute(statement)
 
-    def insert_rows(self, cursor: Cursor):
-        statement = '{} {} {} {} {} {} ({})'.format(Keywords.INSERT.name,
-                                                    Keywords.OR.name,
-                                                    Keywords.REPLACE.name,
-                                                    Keywords.INTO.name,
-                                                    self.name,
-                                                    Keywords.VALUES.name,
-                                                    ','.join('?' for _ in self.columns))
-        messages.debug_message(statement)
+    def insert_rows(self, cursor: sqlite3.Cursor):
+        statement = f"""
+{Keywords.INSERT.name} {Keywords.OR.name} {Keywords.REPLACE.name} {Keywords.INTO.name} {self.name} 
+{Keywords.VALUES.name} ({','.join('?' for _ in self.columns)})
+"""
+        lib.messages.debug_message(statement)
         cursor.executemany(statement, self.rows)

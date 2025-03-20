@@ -10,7 +10,7 @@ from PySimpleGUI import (Button,
                          Window)
 
 from model.fixtures import Venue
-from model.leagues import league_register, prettify
+from model.competitions import league_register, prettify
 from model.tables import Position
 from show_heatmap import Analysis
 

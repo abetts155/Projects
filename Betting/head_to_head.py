@@ -16,7 +16,7 @@ from cli.cli import (add_database_option,
 from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
 from model.fixtures import Half, Fixture, Scoreline, Venue, create_fixture_from_row, win, loss
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team

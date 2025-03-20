@@ -20,7 +20,7 @@ from cli.cli import (add_database_option,
 from lib import messages
 from lib.helpful import set_matplotlib_defaults
 from model.fixtures import Half, Scoreline, Venue, win, loss, draw, bts
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.teams import Team
 from sql.sql import extract_picked_team, load_league, load_teams

@@ -1,81 +1,103 @@
-from enum import auto, Enum
+import enum
 
 
-class Affinity(Enum):
-    BLOB = auto()
-    INTEGER = auto()
-    NUMERIC = auto()
-    REAL = auto()
-    TEXT = auto()
+class Affinity(enum.Enum):
+    BLOB = enum.auto()
+    INTEGER = enum.auto()
+    NUMERIC = enum.auto()
+    REAL = enum.auto()
+    TEXT = enum.auto()
 
 
-class ColumnNames(Enum):
-    Away_Bench = auto()
-    Away_ID = auto()
-    Away_Lineup = auto()
-    Away_Score_HT = auto()
-    Away_Score_FT = auto()
-    Away_Substitutions = auto()
-    Code = auto()
-    Country = auto()
-    Country_Code = auto()
-    Competition_ID = auto()
-    Current = auto()
-    Date = auto()
-    Date_Of_Birth = auto()
-    Detail = auto()
-    Extra_Time = auto()
-    Event = auto()
-    Event_ID = auto()
-    Event_IDs = auto()
-    Finished = auto()
-    Fixture_ID = auto()
-    Flag = auto()
-    Foot = auto()
-    From_Position = auto()
-    Full_Time = auto()
-    Half = auto()
-    Half_Time = auto()
-    Home_Bench = auto()
-    Home_ID = auto()
-    Home_Lineup = auto()
-    Home_Score_HT = auto()
-    Home_Score_FT = auto()
-    Home_Substitutions = auto()
-    ID = auto()
-    Left_ID = auto()
-    Logo = auto()
-    Match_Date = auto()
-    Match_ID = auto()
-    Name = auto()
-    Odds = auto()
-    Period = auto()
-    Player_ID = auto()
-    Position = auto()
-    Right_ID = auto()
-    Season_ID = auto()
-    Sub_Event_ID = auto()
-    Tags = auto()
-    Team_ID = auto()
-    Time = auto()
-    Timestamp = auto()
-    To_Position = auto()
-    Updated = auto()
-    Year = auto()
+class ColumnNames(enum.Enum):
+    Accurate_Passes = enum.auto()
+    Away_Bench = enum.auto()
+    Away_ID = enum.auto()
+    Away_Lineup = enum.auto()
+    Away_Score_HT = enum.auto()
+    Away_Score_FT = enum.auto()
+    Away_Substitutions = enum.auto()
+    Blocked_Shots = enum.auto()
+    Code = enum.auto()
+    Corner_Kicks = enum.auto()
+    Country = enum.auto()
+    Country_Code = enum.auto()
+    Competition_ID = enum.auto()
+    Competition_Type = enum.auto()
+    Current = enum.auto()
+    Date = enum.auto()
+    Date_Of_Birth = enum.auto()
+    Detail = enum.auto()
+    End_Date = enum.auto()
+    Expected_Goals = enum.auto()
+    Extra_Time = enum.auto()
+    Event = enum.auto()
+    Events = enum.auto()
+    Event_ID = enum.auto()
+    Event_IDs = enum.auto()
+    Finished = enum.auto()
+    First_Name = enum.auto()
+    Fixture_ID = enum.auto()
+    Flag = enum.auto()
+    Foot = enum.auto()
+    Fouls = enum.auto()
+    From_Position = enum.auto()
+    Full_Time = enum.auto()
+    Half = enum.auto()
+    Half_Time = enum.auto()
+    Home_Bench = enum.auto()
+    Home_ID = enum.auto()
+    Home_Lineup = enum.auto()
+    Home_Score_HT = enum.auto()
+    Home_Score_FT = enum.auto()
+    Home_Substitutions = enum.auto()
+    ID = enum.auto()
+    Last_Name = enum.auto()
+    League_ID = enum.auto()
+    Left_Player_ID = enum.auto()
+    Lineups = enum.auto()
+    Logo = enum.auto()
+    Match_Date = enum.auto()
+    Match_ID = enum.auto()
+    Name = enum.auto()
+    Odds = enum.auto()
+    Offsides = enum.auto()
+    Passes = enum.auto()
+    Penalties = enum.auto()
+    Period = enum.auto()
+    Player_ID = enum.auto()
+    Position = enum.auto()
+    Red_Cards = enum.auto()
+    Referee = enum.auto()
+    Right_Player_ID = enum.auto()
+    Round = enum.auto()
+    Saves = enum.auto()
+    Season_ID = enum.auto()
+    Shots_Inside_Box = enum.auto()
+    Shots_Outside_Box = enum.auto()
+    Shots_On_Goal = enum.auto()
+    Shots_Off_Goal = enum.auto()
+    Start_Date = enum.auto()
+    Statistics_Fixtures = enum.auto()
+    Statistics_Players = enum.auto()
+    Sub_Event_ID = enum.auto()
+    Tags = enum.auto()
+    Team_ID = enum.auto()
+    Time = enum.auto()
+    Timestamp = enum.auto()
+    Total_Shots = enum.auto()
+    To_Position = enum.auto()
+    Updated = enum.auto()
+    VAR_Intervention = enum.auto()
+    Venue_Name = enum.auto()
+    Year = enum.auto()
+    Yellow_Cards = enum.auto()
 
 
 class Column:
     def __init__(self, name: str, affinity: Affinity):
-        self._name = name
-        self._affinity = affinity
-
-    @property
-    def affinity(self):
-        return self._affinity
-
-    @property
-    def name(self) -> str:
-        return self._name
+        self.name = name
+        self.affinity = affinity
 
     def __hash__(self):
         return hash(self.name)
@@ -84,11 +106,3 @@ class Column:
         if type(other) == type(self):
             return self.__dict__ == other.__dict__
         return NotImplemented
-
-
-def id_column() -> Column:
-    return Column(ColumnNames.ID.name, Affinity.INTEGER)
-
-
-def name_column() -> Column:
-    return Column(ColumnNames.Name.name, Affinity.TEXT)

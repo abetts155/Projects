@@ -8,7 +8,7 @@ from cli.cli import (add_database_option,
                      set_logging_options)
 from lib import messages
 from model.fixtures import Event, bts
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from sql.sql import load_league, load_teams
 

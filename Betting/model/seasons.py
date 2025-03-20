@@ -1,119 +1,79 @@
 import datetime
+import typing
 
-from model.fixtures import Fixture
-from model.leagues import League
-from model.teams import Team
-from sql import sql_columns, sql_tables
+import football_api.structure
+import model.fixtures
+import model.competitions
+import model.teams
+import sql.sql
+import sql.sql_columns
+import sql.sql_tables
+
 from sql.sql_columns import Affinity, Column, ColumnNames
-from typing import Dict, List, Set, Tuple
+from sql.sql_language import Characters
 
 
 class Season:
-    table = None
-    inventory = {}
-
-    def __init__(self, id_: int, year: int, name: str, country: str, country_code: str, flag: str, current: bool):
-        self._id = id_
-        self._year = year
-        self._name = name
-        self._country = country
-        self._country_code = country_code
-        self._flag = flag
-        self._current = current
-        self._fixtures = []
-        self._team_fixtures = {}
-
-    @property
-    def id(self) -> int:
-        return self._id
-
-    @property
-    def year(self) -> int:
-        return self._year
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def country(self) -> str:
-        return self._country
-
-    @property
-    def country_code(self) -> str:
-        return self._country_code
-
-    @property
-    def flag(self) -> str:
-        return self._flag
-
-    @property
-    def current(self) -> bool:
-        return self._current
-
-    def add_fixture(self, fixture: Fixture):
-        self._fixtures.append(fixture)
-
-    def teams(self) -> Set[Team]:
-        teams = set()
-        for fixture in self.fixtures():
-            teams.add(fixture.home_team)
-            teams.add(fixture.away_team)
-        return teams
-
-    def sort_fixtures(self):
-        self._fixtures.sort(key=lambda fixture: fixture.date)
-
-    def fixtures(self) -> List[Fixture]:
-        return self._fixtures
-
-    def fixtures_per_team(self) -> Dict[Team, List[Fixture]]:
-        if not self._team_fixtures:
-            self.sort_fixtures()
-            for fixture in self._fixtures:
-                self._team_fixtures.setdefault(fixture.home_team, []).append(fixture)
-                self._team_fixtures.setdefault(fixture.away_team, []).append(fixture)
-        return self._team_fixtures
-
-    def years(self) -> Tuple[datetime.datetime, datetime.datetime]:
-        x = y = None
-        for fixture in self.fixtures():
-            if x is None and y is None:
-                x = y = fixture.date
-            else:
-                if fixture.date < x:
-                    x = fixture.date
-                if fixture.date > y:
-                    y = fixture.date
-        return x, y
+    def __init__(
+            self,
+            competition_id: int,
+            year: int,
+            start_date: datetime.date,
+            end_date: datetime.date,
+            current: bool,
+            lineups: bool,
+            events: bool,
+            statistics_fixtures: bool,
+            statistics_players: bool
+    ):
+        self.competition_id = competition_id
+        self.year = year
+        self.start_date = start_date
+        self.end_date = end_date
+        self.current = current
+        self.lineups = lineups
+        self.events = events
+        self.statistics_fixtures = statistics_fixtures
+        self.statistics_players = statistics_players
 
     def sql_values(self):
-        values = [self.id, self.year, self.name, self.country, self.country_code, self.flag, self.current]
+        values = [
+            self.competition_id,
+            self.year,
+            self.start_date,
+            self.end_date,
+            self.current,
+            self.lineups,
+            self.events,
+            self.statistics_fixtures,
+            self.statistics_players,
+        ]
         assert len(values) == len(self.__class__.sql_table().columns)
         return values
 
     @classmethod
-    def sql_table(cls) -> sql_tables.Table:
-        if cls.table is None:
-            cls.table = sql_tables.Table(cls.__name__,
-                                         sql_columns.id_column(),
-                                         [sql_columns.id_column(),
-                                          Column(ColumnNames.Year.name, Affinity.INTEGER),
-                                          Column(ColumnNames.Code.name, Affinity.TEXT),
-                                          Column(ColumnNames.Country.name, Affinity.TEXT),
-                                          Column(ColumnNames.Country_Code.name, Affinity.TEXT),
-                                          Column(ColumnNames.Flag.name, Affinity.TEXT),
-                                          Column(ColumnNames.Current.name, Affinity.INTEGER)])
-        return cls.table
+    def sql_table(cls) -> sql.sql_tables.Table:
+        competition_id_col = Column(ColumnNames.Competition_ID.name, Affinity.INTEGER)
+        year_col = Column(ColumnNames.Year.name, Affinity.INTEGER)
 
-    @classmethod
-    def seasons(cls, league: League, ordered: bool = True):
-        massaged_league_name = league.name.replace("''", "'").lower()
-        seasons = [season for season in Season.inventory.values()
-                   if season.country == league.country and season.name.lower() == massaged_league_name]
-        if ordered:
-            seasons.sort(key=lambda season: season.year)
-        return seasons
+        return sql.sql_tables.Table(
+            cls.__name__,
+            [
+                competition_id_col,
+                year_col
+            ],
+            [
+                competition_id_col,
+                year_col,
+                Column(ColumnNames.Start_Date.name, Affinity.TEXT),
+                Column(ColumnNames.End_Date.name, Affinity.TEXT),
+                Column(ColumnNames.Current.name, Affinity.INTEGER),
+                Column(ColumnNames.Lineups.name, Affinity.INTEGER),
+                Column(ColumnNames.Events.name, Affinity.INTEGER),
+                Column(ColumnNames.Statistics_Fixtures.name, Affinity.INTEGER),
+                Column(ColumnNames.Statistics_Players.name, Affinity.INTEGER)
+            ]
+        )
 
     def __eq__(self, other):
         if type(other) == type(self):
@@ -121,7 +81,7 @@ class Season:
         return NotImplemented
 
     def __hash__(self):
-        return self.id
+        return hash(self.competition_id + self.year)
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -133,27 +93,110 @@ class Season:
             return self.year <= other.year
         return NotImplemented
 
-    def __str__(self):
-        return '{} ({})'.format(self.name, self.year)
+
+def create_season_from_json(competition: model.competitions.Competition, json_data: dict) -> Season:
+    year = int(json_data['year'])
+    start_date = datetime.datetime.fromisoformat(json_data['start'])
+    end_date = datetime.datetime.fromisoformat(json_data['end'])
+    current = bool(json_data['current'])
+    lineups = bool(json_data['coverage']['fixtures']['lineups'])
+    events = bool(json_data['coverage']['fixtures']['events'])
+    statistics_fixtures = bool(json_data['coverage']['fixtures']['statistics_fixtures'])
+    statistics_players = bool(json_data['coverage']['fixtures']['statistics_players'])
+
+    return Season(
+        competition.id,
+        year,
+        start_date,
+        end_date,
+        current,
+        lineups,
+        events,
+        statistics_fixtures,
+        statistics_players
+    )
 
 
-def create_season_from_json(data: Dict):
-    if data['type'] == 'League':
-        id_ = int(data['league_id'])
-        year = int(data['season'])
-        current = bool(data['is_current'])
-        season = Season(id_, year, data['name'], data['country'], data['country_code'], data['flag'], current)
-        Season.inventory[season.id] = season
-
-
-def create_season_from_row(row: List):
-    id_ = int(row[0])
+def create_season_from_row(row: list) -> Season:
+    competition_id = int(row[0])
     year = int(row[1])
-    name = row[2]
-    country = row[3]
-    country_code = row[4]
-    flag = row[5]
-    current = bool(row[6])
-    season = Season(id_, year, name, country, country_code, flag, current)
-    Season.inventory[season.id] = season
-    return season
+    start_date = datetime.datetime.fromisoformat(row[2])
+    end_date = datetime.datetime.fromisoformat(row[3])
+    current = bool(row[4])
+    lineups = bool(row[5])
+    events = bool(row[6])
+    statistics_fixtures = bool(row[7])
+    statistics_players = bool(row[8])
+
+    return Season(
+        competition_id,
+        year,
+        start_date,
+        end_date,
+        current,
+        lineups,
+        events,
+        statistics_fixtures,
+        statistics_players
+    )
+
+
+def load_fixtures(competition: model.competitions.Competition, season: Season) -> list[model.fixtures.Fixture]:
+    if competition.type == model.competitions.CompetitionType.LEAGUE:
+        table = model.fixtures.Fixture.sql_table()
+    else:
+        table = model.fixtures.CupFixture.sql_table()
+
+    fixtures = []
+    with sql.sql.Database(football_api.structure.database) as db:
+        competition_constraint = f'{ColumnNames.Competition_ID.name}={competition.id}'
+        season_constraint = f'{ColumnNames.Season_ID.name}={season.year}'
+        fixture_rows = db.fetch_all_rows(table, [competition_constraint, season_constraint])
+
+        team_ids = model.fixtures.get_team_ids(fixture_rows)
+        teams = model.teams.load_teams(team_ids)
+
+        for fixture_row in fixture_rows:
+            if competition.type == model.competitions.CompetitionType.LEAGUE:
+                fixture = model.fixtures.create_fixture_from_row(fixture_row, teams)
+            else:
+                fixture = model.fixtures.create_cup_fixture_from_row(fixture_row, teams)
+
+            assert fixture is not None
+            fixtures.append(fixture)
+
+    model.fixtures.sort_fixtures(fixtures)
+    return fixtures
+
+
+def load_current_season(competition: model.competitions.Competition) -> Season:
+    with sql.sql.Database(football_api.structure.database) as db:
+        competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
+        current_constraint = f"{ColumnNames.Current.name}={Characters.TRUE.value}"
+        season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint, current_constraint])
+        assert season_rows
+        (season_row,) = season_rows
+        return create_season_from_row(season_row)
+
+
+def load_season(competition: model.competitions.Competition, year: int) -> typing.Optional[Season]:
+    with sql.sql.Database(football_api.structure.database) as db:
+        competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
+        year_constraint = f"{ColumnNames.Year.name}={year}"
+        season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint, year_constraint])
+        if season_rows:
+            (row,) = season_rows
+            return create_season_from_row(row)
+
+
+def load_seasons(competition: model.competitions.Competition) -> list[Season]:
+    seasons = []
+    with sql.sql.Database(football_api.structure.database) as db:
+        competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
+        season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint])
+        for season_row in season_rows:
+            season = create_season_from_row(season_row)
+            seasons.append(season)
+
+    seasons.sort(key=lambda season: season.year)
+    return seasons

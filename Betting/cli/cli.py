@@ -1,15 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from lib import messages
-from model.fixtures import Half, Venue, Event
-from model.leagues import country_register, league_register
+from model.fixtures import Period, Venue, Event
 from typing import List
-
-
-def add_database_option(parser: ArgumentParser):
-    parser.add_argument('--database',
-                        help='read from this database',
-                        metavar='<DATABASE>',
-                        required=True)
 
 
 def add_venue_option(parser: ArgumentParser):
@@ -17,30 +9,45 @@ def add_venue_option(parser: ArgumentParser):
                         '--venue',
                         choices=Venue,
                         type=Venue.from_string,
-                        metavar='{{{}}}'.format(','.join(venue.name for venue in Venue)),
+                        metavar='{{{}}}'.format(','.join(venue.name.lower() for venue in Venue)),
                         help='filter fixtures according to the venue',
-                        default=Venue.anywhere)
+                        default=Venue.ANYWHERE.name)
 
 
 def add_half_option(parser: ArgumentParser):
-    parser.add_argument('--half',
-                        choices=Half,
-                        type=Half.from_string,
+    parser.add_argument('--period',
+                        choices=Period,
+                        type=Period.from_string,
                         nargs='+',
-                        metavar='{{{}}}'.format(','.join(half.name for half in Half)),
+                        metavar='{{{}}}'.format(','.join(period.name.lower() for period in Period)),
                         help='filter fixtures according to the half',
-                        default=[Half.full])
+                        default=[Period.FULL.name])
 
 
-def add_league_option(parser: ArgumentParser, required: bool = True):
-    parser.add_argument('-L',
-                        '--league',
-                        help='choose the league to analyse',
-                        metavar='<NAME>',
-                        nargs='+',
-                        choices=league_register.keys(),
-                        type=str.upper,
-                        required=required)
+def add_competition_option(parser: ArgumentParser, multiple: bool = False):
+    short_flag = '-c'
+    long_flag = '--competition'
+    if multiple:
+        parser.add_argument(short_flag,
+                            long_flag,
+                            help='choose the competition(s) to analyse',
+                            metavar='<INT>',
+                            nargs='+',
+                            type=int)
+    else:
+        parser.add_argument(short_flag,
+                            long_flag,
+                            help='choose the competition to analyse',
+                            metavar='<INT>',
+                            type=int)
+
+
+def add_season_option(parser: ArgumentParser):
+    parser.add_argument('-s',
+                        '--season',
+                        help='choose the season to analyse',
+                        metavar='<INT>',
+                        type=int)
 
 
 def get_country(value: str):
@@ -55,7 +62,6 @@ def add_country_option(parser: ArgumentParser, required: bool = True):
                         help='choose the country to analyse',
                         metavar='<NAME>',
                         nargs='+',
-                        choices=list(map(str.lower, country_register)),
                         type=get_country,
                         required=required)
 

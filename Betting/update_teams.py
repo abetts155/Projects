@@ -1,20 +1,19 @@
-from argparse import ArgumentParser, Namespace
-from cli.cli import add_database_option, add_logging_options, add_country_option, set_logging_options
-from football_api.football_api import get_teams
-from football_api.structure import get_teams_json, store
-from json import load
-from lib import messages
-from model.teams import Team, create_team_from_json
-from os import EX_OK
-from sql.sql import Database
-from sys import exit
+import argparse
+import json
+import os
+import sys
+
+import cli.cli
+import football_api.football_api
+import football_api.structure
+import lib.messages
+import model.teams
+import sql.sql
 
 
 def parse_command_line():
-    parser = ArgumentParser(description='Update football results database with team information')
-    add_database_option(parser)
-    add_logging_options(parser)
-    add_country_option(parser)
+    parser = argparse.ArgumentParser(description='Update database with team information')
+    cli.cli.add_logging_options(parser)
 
     parser.add_argument('-f',
                         '--force',
@@ -26,32 +25,40 @@ def parse_command_line():
 
 
 def create_teams_json(country: str, force: bool):
-    teams_json = get_teams_json(country)
+    teams_json = football_api.structure.get_teams_json(country)
     if not teams_json.exists() or force:
-        messages.verbose_message("Extracting teams JSON for '{}'".format(country))
-        store(teams_json, get_teams(country))
+        lib.messages.verbose_message(f"Extracting teams JSON for '{country}'")
+        response = football_api.football_api.get_teams(country)
+        football_api.structure.store(teams_json, response)
 
 
-def load_team_data(country: str):
-    teams_json = get_teams_json(country)
+def load_team_data(country: str) -> list[model.teams.Team]:
+    teams_json = football_api.structure.get_teams_json(country)
+    teams = []
     with teams_json.open() as in_file:
-        json_text = load(in_file)
-        for data in json_text['api']['teams']:
-            create_team_from_json(data)
+        json_text = json.load(in_file)
+        for team_json in json_text['api']['teams']:
+            team = model.teams.create_team_from_json(team_json)
+            teams.append(team)
+    return teams
 
 
-def main(args: Namespace):
-    for country in args.country:
-        create_teams_json(country, args.force)
-        load_team_data(country)
+def main(force: bool):
+    teams = []
+    with open(football_api.structure.get_countries_whitelist(), 'r') as in_file:
+        for line in in_file:
+            country = line.strip()
+            create_teams_json(country, force)
+            country_teams = load_team_data(country)
+            teams.extend(country_teams)
 
-    with Database(args.database) as db:
-        db.create_table(Team)
-        db.create_rows(Team)
+    with sql.sql.Database(football_api.structure.database) as db:
+        table = model.teams.Team.sql_table()
+        db.create_rows(table, teams)
 
 
 if __name__ == '__main__':
     args = parse_command_line()
-    set_logging_options(args)
-    main(args)
-    exit(EX_OK)
+    cli.cli.set_logging_options(args)
+    main(args.force)
+    sys.exit(os.EX_OK)

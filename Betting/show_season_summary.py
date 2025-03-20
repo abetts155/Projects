@@ -14,7 +14,7 @@ from lib import messages
 from lib.helpful import DisplayGrid, set_matplotlib_defaults
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Venue
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.teams import Team
 from sql.sql import extract_picked_team, load_league, load_teams

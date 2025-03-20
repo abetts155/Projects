@@ -15,7 +15,7 @@ from lib.helpful import split_into_contiguous_groups, to_string, DisplayGrid
 from lib.messages import verbose_message
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Event
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap

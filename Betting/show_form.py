@@ -13,7 +13,7 @@ from lib.helpful import set_matplotlib_defaults
 from lib.messages import warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Fixture, Half, Scoreline, Venue, create_fixture_from_row, win, loss, canonicalise_scoreline
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from model.teams import Team

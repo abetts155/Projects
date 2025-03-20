@@ -10,7 +10,7 @@ from cli.cli import (add_database_option,
                      get_unique_league)
 from collections import Counter
 from model.fixtures import Event, Fixture, Half, Scoreline, Venue, draw, win, bts, canonicalise_scoreline
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable
 from sql.sql import load_database

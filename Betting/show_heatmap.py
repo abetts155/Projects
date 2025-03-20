@@ -14,7 +14,7 @@ from lib.helpful import split_into_contiguous_groups, to_string
 from lib.messages import error_message, warning_message
 from matplotlib import pyplot as plt
 from model.fixtures import Half, Event, win, loss, draw, bts, canonicalise_scoreline
-from model.leagues import league_register
+from model.competitions import league_register
 from model.seasons import Season
 from model.tables import LeagueTable, TableMap
 from seaborn import heatmap

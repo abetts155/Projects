@@ -1,155 +1,252 @@
-from enum import auto, Enum
-from football_api.football_api import get_events
-from football_api.structure import get_events_json, store
-from json import load
-from model.fixtures import Fixture
-from model.teams import Team
-from typing import Dict, List
+import dataclasses
+import enum
+
+import football_api.structure
+import model.fixtures
+import model.teams
+import sql.sql_tables
+from sql.sql_columns import Affinity, Column, ColumnNames
 
 
-class EventDetail(Enum):
-    normal_goal = auto()
-    own_goal = auto()
-    penalty = auto()
-    missed_penalty = auto()
-    yellow_card = auto()
-    red_card = auto()
-    substitution = auto()
-    var = auto()
-
-
-def to_string(detail: EventDetail):
-    return ' '.join(lex.capitalize() for lex in detail.name.split('_'))
+class EventDetail(enum.StrEnum):
+    GOAL = "Goal"
+    OWN_GOAL = "Own Goal"
+    PENALTY = "Penalty"
+    MISSED_PENALTY = "Missed Penalty"
+    YELLOW_CARD = "Yellow Card"
+    RED_CARD = "Red Card"
+    SUBSTITUTION = "Sub"
+    GOAL_CANCELLED = "Goal cancelled"
+    GOAL_DISALLOWED = "Goal Disallowed"
+    PENALTY_CANCELLED = "Penalty cancelled"
+    PENALTY_CONFIRMED = "Penalty confirmed"
+    CARD_UPGRADE = "Card upgrade"
+    RED_CARD_CANCELLED = "Red card cancelled"
+    CARD_REVIEWED = "Card reviewed"
+    GOAL_CONFIRMED = "Goal confirmed"
+    UNKNOWN = "Unknown"
 
 
 def is_goal(detail: EventDetail):
-    return detail in [EventDetail.normal_goal, EventDetail.own_goal, EventDetail.penalty]
-
-
-def create_events_json(fixture_id: int):
-    events_json = get_events_json(fixture_id)
-    if not events_json.exists():
-        store(events_json, get_events(fixture_id))
-    else:
-        restore = False
-        with events_json.open() as in_file:
-            json_text = load(in_file)
-            events = json_text['api']['events']
-            restore = not events
-
-        if restore:
-            store(events_json, get_events(fixture_id))
-
-
-def get_events_for_fixture(fixture):
-    create_events_json(fixture.id)
-    events = []
-    events_json = get_events_json(fixture.id)
-    with events_json.open() as in_file:
-        json_text = load(in_file)
-        for data in json_text['api']['events']:
-            event = create_event_from_json(data, fixture)
-            events.append(event)
-    return events
+    return detail in [EventDetail.GOAL, EventDetail.OWN_GOAL, EventDetail.PENALTY]
 
 
 class Event:
-    def __init__(self,
-                 fixture: Fixture,
-                 time: int,
-                 extra_time: int,
-                 team: Team,
-                 left_id: int,
-                 right_id: int,
-                 detail: EventDetail):
-        self._fixture = fixture
-        self._time = time
-        self._extra_time = extra_time
-        self._team = team
-        self._left_id = left_id
-        self._right_id = right_id
-        self._detail = detail
+    def __init__(
+            self,
+            id_: int,
+            fixture: model.fixtures.Fixture,
+            team: model.teams.Team,
+            time: int,
+            extra_time: int,
+            left_player_id: int,
+            right_player_id: int,
+            detail: EventDetail,
+            var_intervention: bool
+    ):
+        self.id = id_
+        self.fixture = fixture
+        self.team = team
+        self.time = time
+        self.extra_time = extra_time
+        self.left_player_id = left_player_id
+        self.right_player_id = right_player_id
+        self.detail = detail
+        self.var_intervention = var_intervention
 
-    @property
-    def fixture(self) -> Fixture:
-        return self._fixture
+    def sql_values(self):
+        values = [
+            self.id,
+            self.fixture.id,
+            self.team.id,
+            self.time,
+            self.extra_time,
+            self.left_player_id,
+            self.right_player_id,
+            self.detail.name,
+            self.var_intervention
+        ]
+        assert len(values) == len(self.__class__.sql_table().columns)
+        return values
 
-    @property
-    def time(self) -> int:
-        return self._time
+    @classmethod
+    def sql_table(cls) -> sql.sql_tables.Table:
+        id_col = Column(ColumnNames.ID.name, Affinity.INTEGER)
+        fixture_id_col = Column(ColumnNames.Fixture_ID.name, Affinity.INTEGER)
 
-    @property
-    def extra_time(self) -> int:
-        return self._extra_time
+        return sql.sql_tables.Table(
+            cls.__name__,
+            [
+                id_col,
+                fixture_id_col
+            ],
+            [
+                id_col,
+                fixture_id_col,
+                Column(ColumnNames.Team_ID.name, Affinity.INTEGER),
+                Column(ColumnNames.Time.name, Affinity.INTEGER),
+                Column(ColumnNames.Extra_Time.name, Affinity.INTEGER),
+                Column(ColumnNames.Left_Player_ID.name, Affinity.INTEGER),
+                Column(ColumnNames.Right_Player_ID.name, Affinity.INTEGER),
+                Column(ColumnNames.Detail.name, Affinity.TEXT),
+                Column(ColumnNames.VAR_Intervention.name, Affinity.INTEGER)
+            ]
+        )
 
-    @property
-    def team(self) -> Team:
-        return self._team
+    def __eq__(self, other):
+        if type(other) == type(self):
+            return self.id == other.id
+        return NotImplemented
 
-    @property
-    def left_id(self) -> int:
-        return self._left_id
+    def __hash__(self):
+        return hash(self.id)
 
-    @property
-    def right_id(self) -> int:
-        return self._right_id
+    def __lt__(self, other):
+        if type(other) == type(self):
+            return self.id < other.id
+        return NotImplemented
 
-    @property
-    def detail(self) -> EventDetail:
-        return self._detail
+    def __le__(self, other):
+        if type(other) == type(self):
+            return self.id <= other.id
+        return NotImplemented
 
     def __str__(self):
-        return '{:>2}+{}: {} {}'.format(self.time,
-                                        self.extra_time,
-                                        self.team.name,
-                                        to_string(self.detail))
+        return f'{self.time:>2}+{self.extra_time}: {self.team.name} {self.detail}'
 
 
-def create_event_from_json(data: Dict, fixture: Fixture):
-    time = int(data['elapsed'])
+def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtures.Fixture):
+    time = int(json_data['time']['elapsed'])
 
-    if data['elapsed_plus']:
-        extra_time = int(data['elapsed_plus'])
+    if json_data['time']['extra']:
+        extra_time = int(json_data['time']['extra'])
     else:
         extra_time = 0
 
-    team_id = int(data['team_id'])
-    team_name = data['teamName']
-    team = Team.find_team(team_id, team_name)
-
-    if data['assist_id']:
-        left_id = int(data['assist_id'])
+    team_id = int(json_data['team']['id'])
+    if team_id == fixture.home_team.id:
+        team = fixture.home_team
     else:
-        left_id = 0
+        team = fixture.away_team
 
-    if data['player_id']:
-        right_id = int(data['player_id'])
-    else:
-        right_id = 0
+    left_player_id = int(json_data['player']['id']) if json_data['player']['id'] else None
+    right_player_id = int(json_data['assist']['id']) if json_data['assist']['id'] else None
 
-    if data['type'] == 'Goal':
-        if data['detail'] == 'Normal Goal':
-            detail = EventDetail.normal_goal
-        elif data['detail'] == 'Own Goal':
-            detail = EventDetail.own_goal
-        elif data['detail'] == 'Penalty':
-            detail = EventDetail.penalty
-        elif data['detail'] == 'Missed Penalty':
-            detail = EventDetail.missed_penalty
+    var_intervention = False
+    if json_data['type'] == 'Goal':
+        if json_data['detail'] == 'Normal Goal':
+            detail = EventDetail.GOAL
+        elif json_data['detail'] == 'Own Goal':
+            detail = EventDetail.OWN_GOAL
+        elif json_data['detail'] == 'Penalty':
+            detail = EventDetail.PENALTY
+        elif json_data['detail'] == 'Missed Penalty':
+            detail = EventDetail.MISSED_PENALTY
         else:
             assert False
-    elif data['type'] == 'subst':
-        detail = EventDetail.substitution
-    elif data['type'] == 'Var':
-        detail = EventDetail.var
-    elif data['type'] == 'Card':
-        if data['detail'] == 'Yellow Card':
-            detail = EventDetail.yellow_card
-        elif data['detail'] == 'Red Card':
-            detail = EventDetail.red_card
+    elif json_data['type'] == 'subst':
+        detail = EventDetail.SUBSTITUTION
+    elif json_data['type'] == 'Var':
+        var_intervention = True
+        if json_data['detail'] == EventDetail.GOAL_CANCELLED:
+            detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_DISALLOWED:
+            detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.PENALTY_CANCELLED:
+            detail = EventDetail.PENALTY_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_CONFIRMED:
+            detail = EventDetail.GOAL
+        elif json_data['detail'] == EventDetail.PENALTY_CONFIRMED:
+            detail = EventDetail.PENALTY_CONFIRMED
+        elif json_data['detail'] == EventDetail.CARD_UPGRADE:
+            detail = EventDetail.CARD_UPGRADE
+        elif json_data['detail'] == EventDetail.RED_CARD_CANCELLED:
+            detail = EventDetail.RED_CARD_CANCELLED
+        elif json_data['detail'] == EventDetail.CARD_REVIEWED:
+            detail = EventDetail.CARD_REVIEWED
+        elif json_data['detail'] is None:
+            detail = EventDetail.UNKNOWN
         else:
-            detail = None
+            assert False, json_data['detail']
+    elif json_data['type'] == 'Card':
+        if json_data['detail'] == 'Yellow Card':
+            detail = EventDetail.YELLOW_CARD
+        elif json_data['detail'] == 'Red Card':
+            detail = EventDetail.RED_CARD
+        else:
+            assert False
     else:
         assert False
 
-    return Event(fixture, time, extra_time, team, left_id, right_id, detail)
+    return Event(event_id, fixture, team, time, extra_time, left_player_id, right_player_id, detail, var_intervention)
+
+
+
+def create_event_from_row(row: list, fixture: model.fixtures.Fixture) -> Event:
+    id_ = int(row[0])
+    fixture_id = int(row[1])
+    team_id = int(row[2])
+
+    if team_id == fixture.home_team.id:
+        team = fixture.home_team
+    else:
+        team = fixture.away_team
+
+    time = int(row[3])
+    if time == 0:
+        time += 1
+
+    extra_time = int(row[4])
+    left_player_id = int(row[5]) if row[5] is not None else None
+    right_player_id = int(row[6]) if row[6] is not None else None
+    detail = EventDetail[row[7]]
+    var_intervention = bool(row[8])
+    event = Event(id_, fixture, team, time, extra_time, left_player_id, right_player_id, detail, var_intervention)
+    return event
+
+
+def load_events(fixture: model.fixtures.Fixture):
+    events = []
+    goals = 0
+    with sql.sql.Database(football_api.structure.database) as db:
+        fixture_id_constraint = f"{ColumnNames.Fixture_ID.name}={fixture.id}"
+        event_rows = db.fetch_all_rows(Event.sql_table(), [fixture_id_constraint])
+        for row in event_rows:
+            event = create_event_from_row(row, fixture)
+            events.append(event)
+
+            if is_goal(event.detail):
+                goals += 1
+
+    result = fixture.result(model.fixtures.Period.FULL)
+    #assert goals == result.left + result.right, fixture
+
+    events.sort(key=lambda event: event.id)
+    return events
+
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class TimeKey:
+    time: int
+    extra_time: int
+
+
+@dataclasses.dataclass(slots=True)
+class Interval:
+    left: int
+    right: int
+    total: int = 0
+
+    def belongs(self, time: int, goals: int) -> bool:
+        if self.left <= time <= self.right:
+            self.total += goals
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        if self.right in [45, 90]:
+            return f"{self.left}-{self.right}+"
+        else:
+            return f"{self.left}-{self.right}"

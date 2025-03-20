@@ -1,14 +1,18 @@
-from abc import ABC
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Dict, List
+import abc
+import dataclasses
+import datetime
+import typing
 
-from dashboard.colours import BAD_NEWS_COLOR, GOOD_NEWS_COLOR, HOT_COLOR, COOL_COLOR
-from dashboard.fixtures import Fixture, Period, Venue, reverse_scoreline, UNKNOWN_SCORELINE
+import pandas as pd
+
+import model.fixtures
+import dashboard.data
+from dashboard import colours
+from dashboard.fixtures import Fixture, reverse_scoreline, UNKNOWN_SCORELINE
 
 
-@dataclass
-class TableColumn(ABC):
+@dataclasses.dataclass
+class TableColumn(abc.ABC):
     display: str
     tooltip: str
 
@@ -34,16 +38,18 @@ COL_GOALS_AGAINST = IntegerTableColumn('GA', 'Goals Against')
 COL_GOAL_DIFFERENCE = IntegerTableColumn('GD', 'Goal Difference')
 COL_GOAL_RATE = IntegerTableColumn('GR', 'Goal Rate (Goals per Game or Half)')
 COL_SCORED = IntegerTableColumn('S', 'Scored (%Games or %Halves)')
-COL_CONCEDED = IntegerTableColumn('C', 'Conceded (%Games or %Halves)')
+COL_CLEAN_SHEET = IntegerTableColumn('C', 'Clean Sheets (%Games or %Halves)')
 COL_BTS = IntegerTableColumn('BTS', 'Both Teams Scored (%Games or %Halves)')
+COL_TOTAL_EQ_0 = IntegerTableColumn('T = 0', 'Total Goals = 0 (%Games or %Halves)')
+COL_TOTAL_LE_1 = IntegerTableColumn('T ≤ 1', 'Total Goals ≤ 1 (%Games or %Halves)')
 COL_POINTS = IntegerTableColumn('PTS', 'Points')
 COL_DATE = StringTableColumn('Date', 'Date')
 COL_VENUE = StringTableColumn('Venue', 'Venue')
 COL_HOME = StringTableColumn('Home', 'Home Team')
 COL_AWAY = StringTableColumn('Away', 'Away Team')
-COL_FIRST_HALF = StringTableColumn(Period.FIRST.name, Period.FIRST.value)
-COL_SECOND_HALF = StringTableColumn(Period.SECOND.name, Period.SECOND.value)
-COL_FULL_TIME = StringTableColumn(Period.FULL.name, Period.FULL.value)
+COL_FIRST_HALF = StringTableColumn('1st', '1st Half')
+COL_SECOND_HALF = StringTableColumn('2nd', '2nd Half')
+COL_FULL_TIME = StringTableColumn('FT', 'Full Time')
 
 league_table_columns = [
     COL_TEAM,
@@ -56,9 +62,26 @@ league_table_columns = [
     COL_GOAL_DIFFERENCE,
     COL_GOAL_RATE,
     COL_SCORED,
-    COL_CONCEDED,
+    COL_CLEAN_SHEET,
     COL_BTS,
+    COL_TOTAL_EQ_0,
+    COL_TOTAL_LE_1,
     COL_POINTS
+]
+
+fixtures_table_columns = [
+    COL_DATE,
+    COL_HOME,
+    COL_AWAY
+]
+
+results_table_columns = [
+    COL_DATE,
+    COL_HOME,
+    COL_AWAY,
+    COL_FIRST_HALF,
+    COL_SECOND_HALF,
+    COL_FULL_TIME
 ]
 
 
@@ -80,46 +103,58 @@ class LeagueTableRow:
         return ' '.join(f'{column.display} {self.get(column)}' for column in league_table_columns)
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class LeagueTable:
-    rows: List = field(default_factory=list)
+    rows: list = dataclasses.field(default_factory=list)
 
-    def fill_with_collected_information(self, team_results: Dict[str, List[Fixture]], period: Period):
-        for team_name, results in team_results.items():
+    def fill_with_collected_information(
+            self,
+            teams_df: pd.DataFrame,
+            team_results: dict[int, list[Fixture]],
+            period: model.fixtures.Period
+    ):
+        for team_id, results in team_results.items():
+            team_name = dashboard.data.get_team_name(teams_df, team_id)
             row = LeagueTableRow()
             row.set(COL_TEAM, team_name)
             self.rows.append(row)
 
             for result in results:
-                if period == Period.FIRST:
+                if period == model.fixtures.Period.FIRST:
                     scoreline = result.first_half
-                elif period == Period.SECOND:
+                elif period == model.fixtures.Period.SECOND:
                     scoreline = result.second_half
                 else:
                     scoreline = result.full_time
 
                 if scoreline != UNKNOWN_SCORELINE:
-                    if result.away_name == team_name:
+                    if result.away_id == team_id:
                         scoreline = reverse_scoreline(scoreline)
 
-                    if scoreline.home_goals > scoreline.away_goals:
+                    if scoreline.left > scoreline.right:
                         row.increase(COL_WON, 1)
-                    elif scoreline.away_goals > scoreline.home_goals:
+                    elif scoreline.right > scoreline.left:
                         row.increase(COL_LOST, 1)
                     else:
                         row.increase(COL_DRAWN, 1)
 
-                    row.increase(COL_GOALS_FOR, scoreline.home_goals)
-                    row.increase(COL_GOALS_AGAINST, scoreline.away_goals)
+                    row.increase(COL_GOALS_FOR, scoreline.left)
+                    row.increase(COL_GOALS_AGAINST, scoreline.right)
 
-                    if scoreline.home_goals:
+                    if scoreline.left:
                         row.increase(COL_SCORED, 1)
 
-                    if scoreline.away_goals:
-                        row.increase(COL_CONCEDED, 1)
+                    if scoreline.right == 0:
+                        row.increase(COL_CLEAN_SHEET, 1)
 
-                    if scoreline.home_goals and scoreline.away_goals:
+                    if scoreline.left and scoreline.right:
                         row.increase(COL_BTS, 1)
+
+                    if scoreline.left + scoreline.right == 0:
+                        row.increase(COL_TOTAL_EQ_0, 1)
+
+                    if scoreline.left + scoreline.right <= 1:
+                        row.increase(COL_TOTAL_LE_1, 1)
 
     def fill_with_computed_values(self):
         for row in self.rows:
@@ -133,7 +168,7 @@ class LeagueTable:
                     if row.P:
                         value = round((row.GF + row.GA) / row.P, 1)
                     setattr(row, column.display, value)
-                elif column.display in [COL_SCORED.display, COL_CONCEDED.display, COL_BTS.display]:
+                elif column in [COL_SCORED, COL_CLEAN_SHEET, COL_BTS, COL_TOTAL_EQ_0, COL_TOTAL_LE_1]:
                     value = 0
                     if row.P:
                         value = getattr(row, column.display) / row.P
@@ -144,154 +179,230 @@ class LeagueTable:
     def to_display_list(self):
         return [{column.display: row.get(column) for column in league_table_columns} for row in self.rows]
 
+    def __str__(self):
+        return '\n'.join(f'{position} {row.Team} {row.PTS}' for position, row in enumerate(self.rows, start=1))
 
-def create_league_table(team_results: Dict[str, List[Fixture]], period: Period) -> LeagueTable:
+
+def create_league_table(
+        teams_df: pd.DataFrame,
+        team_results: dict[int, list[Fixture]],
+        period: model.fixtures.Period
+) -> LeagueTable:
     league_table = LeagueTable()
-    league_table.fill_with_collected_information(team_results, period)
+    league_table.fill_with_collected_information(teams_df, team_results, period)
     league_table.fill_with_computed_values()
     league_table.rows.sort(key=lambda row: (row.PTS, row.GD, row.GF), reverse=True)
     return league_table
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class FilterConstraint:
     column: TableColumn
     value: str
 
 
-def create_filter_text(constraints: List[FilterConstraint]):
+def create_filter_text(constraints: list[FilterConstraint]):
     return ' && '.join(f'{{{c.column.display}}} = "{c.value}"' for c in constraints)
 
 
-def create_league_table_formatter(league_table: LeagueTable, team_name: str):
+def create_league_table_formatter(
+        teams_df: pd.DataFrame,
+        league_table: LeagueTable,
+        team_id: int,
+        fixture: typing.Optional[Fixture]
+):
     blacklist = [COL_TEAM, COL_PLAYED]
     max_values = {column: 0 for column in league_table_columns if column not in blacklist}
     min_values = {column: 2 ** 10 for column in league_table_columns if column not in blacklist}
 
+    team_name = dashboard.data.get_team_name(teams_df, team_id)
     constraints = [FilterConstraint(COL_TEAM, team_name)]
-    cell_formatter = {
+    team_cell_formatter = {
         'if': {
             'filter_query': create_filter_text(constraints),
             'column_id': COL_TEAM.display,
         },
-        'backgroundColor': GOOD_NEWS_COLOR
+        'backgroundColor': colours.GOOD_NEWS_BACKGROUND_COLOR
     }
 
-    table_formatter = [cell_formatter]
+    table_formatter = [team_cell_formatter]
+
+    if fixture:
+        if fixture.home_id == team_id:
+            opponent_name = dashboard.data.get_team_name(teams_df, fixture.away_id)
+        else:
+            opponent_name = dashboard.data.get_team_name(teams_df, fixture.home_id)
+
+        constraints = [FilterConstraint(COL_TEAM, opponent_name)]
+        opponent_cell_formatter = {
+            'if': {
+                'filter_query': create_filter_text(constraints),
+                'column_id': COL_TEAM.display,
+            },
+            'backgroundColor': colours.BAD_NEWS_BACKGROUND_COLOR,
+            'color':  colours.BAD_NEWS_TEXT_COLOR
+        }
+
+        table_formatter.append(opponent_cell_formatter)
+
+    games_played = 0
     for row in league_table.rows:
         for column in league_table_columns:
+            if column == COL_PLAYED:
+                games_played += row.get(column)
+
             if column not in blacklist:
                 max_values[column] = max(max_values[column], row.get(column))
                 min_values[column] = min(min_values[column], row.get(column))
 
-    for column in league_table_columns:
-        if column not in blacklist:
-            constraints = [FilterConstraint(column, min_values[column])]
-            cell_formatter = {
-                'if': {
-                    'filter_query': create_filter_text(constraints),
-                    'column_id': column.display
-                },
-                'backgroundColor': COOL_COLOR
-            }
-            table_formatter.append(cell_formatter)
+    if games_played:
+        for column in league_table_columns:
+            if column not in blacklist:
+                constraints = [FilterConstraint(column, min_values[column])]
+                cell_formatter = {
+                    'if': {
+                        'filter_query': create_filter_text(constraints),
+                        'column_id': column.display
+                    },
+                    'backgroundColor': colours.COOL_COLOR
+                }
+                table_formatter.append(cell_formatter)
 
-            constraints = [FilterConstraint(column, max_values[column])]
-            cell_formatter = {
-                'if': {
-                    'filter_query': create_filter_text(constraints),
-                    'column_id': column.display
-                },
-                'backgroundColor': HOT_COLOR
-            }
-            table_formatter.append(cell_formatter)
+                constraints = [FilterConstraint(column, max_values[column])]
+                cell_formatter = {
+                    'if': {
+                        'filter_query': create_filter_text(constraints),
+                        'column_id': column.display
+                    },
+                    'backgroundColor': colours.HOT_COLOR
+                }
+                table_formatter.append(cell_formatter)
 
     return table_formatter
 
 
-def create_date_string(fixture_date: datetime):
+def create_date_string(fixture_date: datetime.datetime):
     return fixture_date.strftime('%d-%m-%y')
 
 
-def create_remaining_fixtures_table(fixtures: List[Fixture], team_name: str):
+def create_remaining_fixtures_table(teams_df: pd.DataFrame, fixtures: list[Fixture], team_id: int):
     table_rows = []
     for fixture in fixtures:
-        today = datetime.today()
+        today = datetime.datetime.today()
         if (fixture.date.year, fixture.date.month, fixture.date.day) < (today.year, today.month, today.day):
             row = {COL_DATE.display: '??-??-??'}
         else:
             row = {COL_DATE.display: create_date_string(fixture.date)}
 
-        if team_name == fixture.home_name:
-            row[COL_VENUE.display] = Venue.HOME.value
-            row[COL_TEAM.display] = fixture.away_name
+        if team_id == fixture.home_id:
+            row[COL_VENUE.display] = model.fixtures.Venue.HOME.value
+            row[COL_TEAM.display] = dashboard.data.get_team_name(teams_df, fixture.away_id)
         else:
-            row[COL_VENUE.display] = Venue.AWAY.value
-            row[COL_TEAM.display] = fixture.home_name
+            row[COL_VENUE.display] = model.fixtures.Venue.AWAY.value
+            row[COL_TEAM.display] = dashboard.data.get_team_name(teams_df, fixture.home_id)
 
         table_rows.append(row)
 
     return table_rows
 
 
-def create_scoreline_formatter(fixture: Fixture, period: Period, team_name: str, constraints: List[FilterConstraint]):
+def create_scoreline_formatter(
+        fixture: Fixture,
+        period: model.fixtures.Period,
+        team_id: int,
+        constraints: list[FilterConstraint]
+):
     match period:
-        case Period.FULL:
+        case model.fixtures.Period.FULL:
             scoreline = fixture.full_time
             highlighted_column = COL_FULL_TIME
-        case Period.FIRST:
+        case model.fixtures.Period.FIRST:
             scoreline = fixture.first_half
             highlighted_column = COL_FIRST_HALF
-        case Period.SECOND:
+        case model.fixtures.Period.SECOND:
             scoreline = fixture.second_half
             highlighted_column = COL_SECOND_HALF
 
-    if team_name == fixture.away_name:
+    if team_id == fixture.away_id:
         scoreline = reverse_scoreline(scoreline)
 
     if scoreline != UNKNOWN_SCORELINE:
-        if scoreline.home_goals > scoreline.away_goals:
+        if scoreline.left > scoreline.right:
             return {
                 'if': {
                     'filter_query': create_filter_text(constraints),
                     'column_id': highlighted_column.display
                 },
-                'backgroundColor': GOOD_NEWS_COLOR
+                'backgroundColor': colours.GOOD_NEWS_BACKGROUND_COLOR
             }
 
-        elif scoreline.home_goals < scoreline.away_goals:
+        elif scoreline.left < scoreline.right:
             return {
                 'if': {
                     'filter_query': create_filter_text(constraints),
                     'column_id': highlighted_column.display
                 },
-                'backgroundColor': BAD_NEWS_COLOR
+                'backgroundColor': colours.BAD_NEWS_BACKGROUND_COLOR,
+                'color': colours.BAD_NEWS_TEXT_COLOR
             }
 
 
-def create_finished_fixtures_table(fixtures: List[Fixture], team_name: str):
+def create_scheduled_fixtures_table(teams_df: pd.DataFrame, fixtures: list[Fixture], team_id: int):
+    table_rows = []
+    table_formatter = []
+    unknown_scheduling_rows = []
+    for fixture in fixtures:
+        today = datetime.datetime.today()
+        if (fixture.date.year, fixture.date.month, fixture.date.day) < (today.year, today.month, today.day):
+            row = {COL_DATE.display: '??-??-??'}
+            unknown_scheduling_rows.append(row)
+        else:
+            row = {COL_DATE.display: create_date_string(fixture.date)}
+            table_rows.append(row)
+
+        row[COL_HOME.display] = dashboard.data.get_team_name(teams_df, fixture.home_id)
+        row[COL_AWAY.display] = dashboard.data.get_team_name(teams_df, fixture.away_id)
+
+    table_rows.extend(unknown_scheduling_rows)
+
+    team_name = dashboard.data.get_team_name(teams_df, team_id)
+    for column in [COL_HOME, COL_AWAY]:
+        cell_formatter = {
+            'if': {
+                'column_id': column.display,
+                'filter_query': f'{{{column.display}}} = "{team_name}"'
+            },
+            'backgroundColor': colours.GOOD_NEWS_BACKGROUND_COLOR
+        }
+        table_formatter.append(cell_formatter)
+
+    return table_rows, table_formatter
+
+
+def create_finished_fixtures_table(teams_df: pd.DataFrame, fixtures: list[Fixture], team_id: int):
+    team_name = dashboard.data.get_team_name(teams_df, team_id)
     table_rows = []
     table_formatter = []
     for fixture in fixtures:
         row = {
             COL_DATE.display: create_date_string(fixture.date),
-            COL_HOME.display: fixture.home_name,
-            COL_AWAY.display: fixture.away_name,
+            COL_HOME.display: dashboard.data.get_team_name(teams_df, fixture.home_id),
+            COL_AWAY.display: dashboard.data.get_team_name(teams_df, fixture.away_id),
             COL_FIRST_HALF.display: str(fixture.first_half),
             COL_SECOND_HALF.display: str(fixture.second_half),
             COL_FULL_TIME.display: str(fixture.full_time)
         }
         table_rows.append(row)
 
-        if team_name in [fixture.home_name, fixture.away_name]:
+        if team_id in [fixture.home_id, fixture.away_id]:
             constraints = [FilterConstraint(COL_DATE, create_date_string(fixture.date))]
-            if team_name == fixture.home_name:
+            if team_id == fixture.home_id:
                 constraints.append(FilterConstraint(COL_HOME, team_name))
             else:
                 constraints.append(FilterConstraint(COL_AWAY, team_name))
 
-            for period in Period:
-                cell_formatter = create_scoreline_formatter(fixture, period, team_name, constraints)
+            for period in [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND, model.fixtures.Period.FULL]:
+                cell_formatter = create_scoreline_formatter(fixture, period, team_id, constraints)
                 if cell_formatter is not None:
                     table_formatter.append(cell_formatter)
 
@@ -301,14 +412,14 @@ def create_finished_fixtures_table(fixtures: List[Fixture], team_name: str):
                 'column_id': column.display,
                 'filter_query': f'{{{column.display}}} = "{team_name}"'
             },
-            'backgroundColor': GOOD_NEWS_COLOR
+            'backgroundColor': colours.GOOD_NEWS_BACKGROUND_COLOR
         }
         table_formatter.append(cell_formatter)
 
     return table_rows, table_formatter
 
 
-def create_finished_fixtures_table_for_team(fixtures: List[Fixture], team_name: str):
+def create_finished_fixtures_table_for_team(teams_df: pd.DataFrame, fixtures: list[Fixture], team_id: int):
     table_rows = []
     table_formatter = []
     for fixture in fixtures:
@@ -319,16 +430,18 @@ def create_finished_fixtures_table_for_team(fixtures: List[Fixture], team_name: 
             COL_FULL_TIME.display: str(fixture.full_time)
         }
 
-        if fixture.home_name == team_name:
-            row = row | {COL_VENUE.display: Venue.HOME.value, COL_TEAM.display: fixture.away_name}
+        if fixture.home_id == team_id:
+            away_name = dashboard.data.get_team_name(teams_df, fixture.away_id)
+            row = row | {COL_VENUE.display: model.fixtures.Venue.HOME.value, COL_TEAM.display: away_name}
         else:
-            row = row | {COL_VENUE.display: Venue.AWAY.value, COL_TEAM.display: fixture.home_name}
+            home_name = dashboard.data.get_team_name(teams_df, fixture.home_id)
+            row = row | {COL_VENUE.display: model.fixtures.Venue.AWAY.value, COL_TEAM.display: home_name}
 
         table_rows.append(row)
 
         constraints = [FilterConstraint(COL_DATE, create_date_string(fixture.date))]
-        for period in Period:
-            cell_formatter = create_scoreline_formatter(fixture, period, team_name, constraints)
+        for period in [model.fixtures.Period.FIRST, model.fixtures.Period.SECOND, model.fixtures.Period.FULL]:
+            cell_formatter = create_scoreline_formatter(fixture, period, team_id, constraints)
             if cell_formatter is not None:
                 table_formatter.append(cell_formatter)
 
