@@ -1,3 +1,4 @@
+import pathlib
 import sqlite3
 
 import lib.messages
@@ -7,11 +8,11 @@ from sql.sql_language import Characters, Keywords
 
 
 class Database:
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, path: pathlib.Path):
+        self.path = path
 
     def __enter__(self):
-        self.connection = sqlite3.connect(self.name)
+        self.connection = sqlite3.connect(self.path)
         self.cursor = self.connection.cursor()
         return self
 

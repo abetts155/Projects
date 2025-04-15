@@ -9,12 +9,12 @@ import typing
 import cli.cli
 import cli.user_input
 import lib.messages
+import lib.structure
 import model.fixtures
 import model.competitions
 import model.seasons
 import model.statistics
 import model.teams
-import update_statistics
 
 
 def parse_command_line():
@@ -107,7 +107,7 @@ def show_data(
     for team, team_data in data.items():
         fig.add_layout_image(
             dict(
-                source=team.get_team_logo() if team in highlighted else '',
+                source=team.get_logo() if team in highlighted else '',
                 x=team_data.get_x(), y=team_data.get_y(),
                 xref="x", yref="y",
                 sizex=logo_size_x, sizey=logo_size_y,
@@ -217,15 +217,17 @@ def show_data(
 
 def gather_data(
         stat: str,
+        competition: model.competitions.Competition,
         fixtures: list[model.fixtures.Fixture],
         teams: set[model.teams.Team],
         venue: model.fixtures.Venue
 ) -> dict[model.teams.Team, TeamData]:
+    database = lib.structure.get_database(competition.country)
     data = {team: TeamData(team) for team in teams}
     for fixture in fixtures:
         if fixture.finished:
-            home_stats: model.statistics.TeamStats = model.statistics.load_stats(fixture, fixture.home_team)
-            away_stats: model.statistics.TeamStats = model.statistics.load_stats(fixture, fixture.away_team)
+            home_stats = model.statistics.load_team_stats(database, fixture, fixture.home_team)
+            away_stats = model.statistics.load_team_stats(database, fixture, fixture.away_team)
 
             if home_stats is not None and away_stats is not None:
                 home_value = getattr(home_stats, stat)
@@ -251,23 +253,45 @@ def select_rounds(
 ) -> list[str]:
     selected = []
     print("In the following, 'N' or 'n' means No and anything else means Yes")
-    for round in sorted(rounds):
-        answer = input(f"Include '{round}'? ")
+    for fixture_round in sorted(rounds):
+        answer = input(f"Include '{fixture_round}'? ")
         if answer not in ['n', 'N']:
-            selected.append(round)
+            selected.append(fixture_round)
     return selected
 
 
-def main(
+def set_season(
         competition: model.competitions.Competition,
-        season: model.seasons.Season,
+        selected_season: typing.Optional[int]
+) -> model.seasons.Season:
+    database = lib.structure.get_database(competition.country)
+    if selected_season is not None:
+        return model.seasons.load_season(database, competition, selected_season)
+    else:
+        return model.seasons.load_current_season(database, competition)
+
+
+def set_competition(selected_competition: typing.Optional[int]) -> model.competitions.Competition:
+    if selected_competition is not None:
+        return model.competitions.load_competition(selected_competition)
+    else:
+        country = cli.user_input.pick_country()
+        return cli.user_input.pick_competition(country)
+
+
+def main(
+        competition_id: typing.Optional[int],
+        season_id: typing.Optional[int],
         venue: model.fixtures.Venue,
         stat: str,
-        today: bool
+        highlight_today: bool
 ):
+    competition = set_competition(competition_id)
+    season = set_season(competition, season_id)
     lib.messages.vanilla_message(f"Analysing {competition} (id={competition.id})")
+    database = lib.structure.get_database(competition.country)
     if season.statistics_fixtures:
-        fixtures = model.seasons.load_fixtures(competition, season)
+        fixtures = model.seasons.load_fixtures(database, competition, season)
         if competition.type == model.competitions.CompetitionType.CUP:
             fixture: model.fixtures.CupFixture
             rounds = set()
@@ -277,14 +301,13 @@ def main(
             fixtures = [fixture for fixture in fixtures if fixture.round in filtered_rounds]
 
         teams = model.fixtures.teams(fixtures)
-        update_statistics.main(competition, season, teams)
-        data = gather_data(stat, fixtures, teams, venue)
+        data = gather_data(stat, competition, fixtures, teams, venue)
 
-        if today:
+        if highlight_today:
             highlighted = set()
-            todays_date = datetime.datetime.today()
+            today = datetime.datetime.today()
             for fixture in fixtures:
-                if todays_date.date() == fixture.date.date():
+                if today.date() == fixture.date.date():
                     if venue in [model.fixtures.Venue.ANYWHERE, model.fixtures.Venue.HOME]:
                         highlighted.add(fixture.home_team)
 
@@ -296,28 +319,8 @@ def main(
         show_data(stat, competition, highlighted, data, venue)
 
 
-def set_season(
-        competition: model.competitions.Competition,
-        selected_season: typing.Optional[int]
-) -> model.seasons.Season:
-    if selected_season is not None:
-        return model.seasons.load_season(competition, selected_season)
-    else:
-        return model.seasons.load_current_season(competition)
-
-
-def set_competition(selected_competition: typing.Optional[int]) -> model.competitions.Competition:
-    if selected_competition is not None:
-        return model.competitions.load_competition(selected_competition)
-    else:
-        country = cli.user_input.pick_country()
-        return cli.user_input.pick_competition(country)
-
-
 if __name__ == '__main__':
     args = parse_command_line()
     cli.cli.set_logging_options(args)
-    competition = set_competition(args.competition)
-    season = set_season(competition, args.season)
-    main(competition, season, args.venue, args.stat, args.today)
+    main(args.competition, args.season, args.venue, args.stat, args.today)
     sys.exit(os.EX_OK)

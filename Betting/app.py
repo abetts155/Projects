@@ -44,7 +44,7 @@ def update_league_dropdown(country: str):
     options = []
     default = None
     if country:
-        leagues = model.competitions.get_competition_whitelist(model.competitions.CompetitionType.LEAGUE)
+        leagues = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
         leagues.sort(key=lambda league: league.id)
         options = [league.name for league in leagues if league.country == country]
         if options:

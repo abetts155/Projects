@@ -1,9 +1,10 @@
 import dataclasses
 import enum
+import pathlib
 
-import football_api.structure
 import model.fixtures
 import model.teams
+import sql.sql
 import sql.sql_tables
 from sql.sql_columns import Affinity, Column, ColumnNames
 
@@ -18,6 +19,9 @@ class EventDetail(enum.StrEnum):
     SUBSTITUTION = "Sub"
     GOAL_CANCELLED = "Goal cancelled"
     GOAL_DISALLOWED = "Goal Disallowed"
+    GOAL_DISALLOWED_HANDBALL = "Goal Disallowed - handball"
+    GOAL_DISALLOWED_OFFSIDE = "Goal Disallowed - offside"
+    GOAL_DISALLOWED_FOUL = "Goal Disallowed - Foul"
     PENALTY_CANCELLED = "Penalty cancelled"
     PENALTY_CONFIRMED = "Penalty confirmed"
     CARD_UPGRADE = "Card upgrade"
@@ -152,6 +156,12 @@ def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtur
             detail = EventDetail.GOAL_CANCELLED
         elif json_data['detail'] == EventDetail.GOAL_DISALLOWED:
             detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_HANDBALL:
+            detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_OFFSIDE:
+            detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_FOUL:
+            detail = EventDetail.GOAL_CANCELLED
         elif json_data['detail'] == EventDetail.PENALTY_CANCELLED:
             detail = EventDetail.PENALTY_CANCELLED
         elif json_data['detail'] == EventDetail.GOAL_CONFIRMED:
@@ -205,10 +215,10 @@ def create_event_from_row(row: list, fixture: model.fixtures.Fixture) -> Event:
     return event
 
 
-def load_events(fixture: model.fixtures.Fixture):
+def load_events(database: pathlib.Path, fixture: model.fixtures.Fixture):
     events = []
     goals = 0
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(database) as db:
         fixture_id_constraint = f"{ColumnNames.Fixture_ID.name}={fixture.id}"
         event_rows = db.fetch_all_rows(Event.sql_table(), [fixture_id_constraint])
         for row in event_rows:

@@ -3,7 +3,7 @@ import dataclasses
 import datetime
 import pandas as pd
 
-import football_api.structure
+import lib.structure
 import model.competitions
 import model.fixtures
 import model.seasons
@@ -55,7 +55,7 @@ def update_data(league: model.competitions.Competition) -> dict:
 
     team_ids = set()
     data_dict = {'Country': league.country, 'League': league.name}
-    with Database(football_api.structure.database) as db:
+    with Database(lib.structure.get_database(league.country)) as db:
         data_dict['Seasons'] = {}
         season_df = pd.read_sql_query(sql_statement_find_seasons, db.connection)
         for _, season_row in season_df.iterrows():
@@ -104,6 +104,7 @@ def update_data(league: model.competitions.Competition) -> dict:
         """
         teams_df = pd.read_sql_query(sql_statement_find_teams, db.connection)
         data_dict['Teams'] = teams_df.to_dict()
+
     return data_dict
 
 

@@ -1,4 +1,6 @@
-import football_api.structure
+import pathlib
+
+import lib.structure
 import sql.sql
 import sql.sql_columns
 import sql.sql_tables
@@ -19,7 +21,7 @@ class Team:
         assert len(values) == len(self.__class__.sql_table().columns)
         return values
 
-    def get_team_logo(self) -> str:
+    def get_logo(self) -> str:
         return f"https://media.api-sports.io/football/teams/{self.id}.png"
 
     @classmethod
@@ -67,27 +69,12 @@ def create_team_from_row(row: list) -> Team:
     return team
 
 
-def load_teams(team_name: str) -> list[Team]:
-    teams = []
-    with sql.sql.Database(football_api.structure.database) as db:
-        name_constraint = f"{ColumnNames.Name.name} {Keywords.LIKE.name} {team_name}"
-        team_rows = db.fetch_all_rows(Team.sql_table(), [name_constraint])
-        if team_rows:
-            for row in team_rows:
-                team = create_team_from_row(row)
-                teams.append(team)
-    return teams
-
-
-def load_teams(team_ids: set[int]) -> dict[int, Team]:
+def load_teams(database: pathlib.Path, team_ids: set[int]) -> dict[int, Team]:
     teams = {}
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(database) as db:
         id_constraint = f"{ColumnNames.ID.name} {Keywords.IN.name} ({', '.join(map(str, team_ids))})"
         team_rows = db.fetch_all_rows(Team.sql_table(), [id_constraint])
         for row in team_rows:
             team = create_team_from_row(row)
             teams[team.id] = team
     return teams
-
-
-

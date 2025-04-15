@@ -1,7 +1,9 @@
+import reportlab.lib.colors
 import reportlab.lib.enums
 import reportlab.lib.styles
 import reportlab.lib.units
 import reportlab.platypus
+import reportlab.platypus.tableofcontents
 
 import model.competitions
 import model.fixtures
@@ -30,19 +32,19 @@ def create_title_page(competition: model.competitions.Competition, fixture: mode
     logo_side_length = 1.2 * reportlab.lib.units.inch
 
     competition_logo = reportlab.platypus.Image(
-        competition.get_competition_logo(),
+        competition.get_logo(),
         width=logo_side_length,
         height=logo_side_length
     )
 
     home_logo = reportlab.platypus.Image(
-        fixture.home_team.get_team_logo(),
+        fixture.home_team.get_logo(),
         width=logo_side_length,
         height=logo_side_length
     )
 
     away_logo = reportlab.platypus.Image(
-        fixture.away_team.get_team_logo(),
+        fixture.away_team.get_logo(),
         width=logo_side_length,
         height=logo_side_length
     )
@@ -86,6 +88,31 @@ def create_title_page(competition: model.competitions.Competition, fixture: mode
             f"Match Analysis",
             title_style
         ),
+        reportlab.platypus.PageBreak()
+    ]
+
+    return elements
+
+
+def create_table_of_contents():
+    styles = reportlab.lib.styles.getSampleStyleSheet()
+
+    toc_style = reportlab.lib.styles.ParagraphStyle(
+        name='TOCEntry',
+        fontSize=12,
+        leftIndent=20,
+        firstLineIndent=-20,
+        spaceAfter=6,
+        textColor=reportlab.lib.colors.HexColor("#2C3E50")
+    )
+
+    toc = reportlab.platypus.tableofcontents.TableOfContents()
+    toc.levelStyles = [toc_style]
+
+    elements = [
+        reportlab.platypus.Paragraph("Table of Contents", styles['Title']),
+        reportlab.platypus.Spacer(1, 0.2 * reportlab.lib.units.inch),
+        toc,
         reportlab.platypus.PageBreak()
     ]
 

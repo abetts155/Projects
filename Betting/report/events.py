@@ -98,7 +98,6 @@ def draw_multi_match_timeline(match_segments_list, match_labels, output_path):
     ax.set_ylim(0, num_matches)
     ax.invert_yaxis()
 
-    # Clean visuals
     ax.tick_params(axis='x', labelsize=8)
     ax.spines[['top', 'left', 'right']].set_visible(False)
     ax.spines['bottom'].set_position(('outward', 5))

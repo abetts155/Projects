@@ -10,13 +10,13 @@ import typing
 import cli.cli
 import cli.user_input
 import lib.messages
+import lib.structure
 import model.fixtures
 import model.competitions
 import model.events
 import model.seasons
 import model.tables
 import model.teams
-import update_events
 
 
 def parse_command_line():
@@ -65,6 +65,7 @@ def get_intervals() -> list[model.events.Interval]:
 
 
 def show_data(
+        competition: model.competitions.Competition,
         league_table: model.tables.LeagueTable,
         venue: model.fixtures.Venue,
         highlighted: set[model.teams.Team],
@@ -73,16 +74,19 @@ def show_data(
 ):
     max_y = 0
     subplot_titles = []
-    for i, table_row in enumerate(league_table, start=1):
-        for interval in goals_for_intervals[table_row.TEAM]:
+    for i, (_, table_row) in enumerate(league_table.df.iterrows(), start=1):
+        team = table_row[model.tables.TEAM_COL]
+        for interval in goals_for_intervals[team]:
             max_y = max(max_y, interval.total)
 
-        if table_row.TEAM in highlighted:
-            subplot_titles.append(f"<b>{table_row.TEAM.name} ({place(i)})</b>")
+        subtitle = f"{place(i)}<br>"
+        if team in highlighted:
+            subtitle += f"<b>{team.name}</b>"
         else:
-            subplot_titles.append(f"{table_row.TEAM.name} ({place(i)})")
+            subtitle += f"{team.name}"
+        subplot_titles.append(subtitle)
 
-        for interval in goals_against_intervals[table_row.TEAM]:
+        for interval in goals_against_intervals[team]:
             max_y = max(max_y, interval.total)
 
     rows = 4
@@ -102,13 +106,14 @@ def show_data(
     col = 1
     for_colour = "#3498db"
     against_colour = "#c0392b"
-    for table_row in league_table:
-        goals_for = [interval.total for interval in goals_for_intervals[table_row.TEAM]]
+    for _, table_row in league_table.df.iterrows():
+        team = table_row[model.tables.TEAM_COL]
+        goals_for = [interval.total for interval in goals_for_intervals[team]]
         fig.add_trace(
             go.Bar(
                 x=interval_labels,
                 y=goals_for,
-                name=f'{table_row.TEAM.name} Goals For',
+                name=f'{team.name} Goals For',
                 marker_color=for_colour,
                 opacity=0.9,
                 hoverinfo='x+y'
@@ -116,12 +121,12 @@ def show_data(
             row=row, col=col
         )
 
-        goals_against = [interval.total for interval in goals_against_intervals[table_row.TEAM]]
+        goals_against = [interval.total for interval in goals_against_intervals[team]]
         fig.add_trace(
             go.Bar(
                 x=interval_labels,
                 y=goals_against,
-                name=f'{table_row.TEAM.name} Goals Against',
+                name=f'{team.name} Goals Against',
                 marker_color=against_colour,
                 opacity=0.9,
                 hoverinfo='x+y'
@@ -131,7 +136,7 @@ def show_data(
 
         fig.add_layout_image(
             dict(
-                source=table_row.TEAM.get_team_logo(),
+                source=team.get_logo(),
                 x=0.05, y=1.1,
                 xref="x domain", yref="y domain",
                 sizex=0.15, sizey=0.15,
@@ -188,10 +193,12 @@ def categorise_goal_times(goals: collections.Counter[model.events.TimeKey, int])
 
 
 def gather_data(
+        competition: model.competitions.Competition,
         fixtures: list[model.fixtures.Fixture],
         teams: set[model.teams.Team],
         venue: model.fixtures.Venue
 ) -> tuple[dict[model.teams.Team, collections.Counter], dict[model.teams.Team, collections.Counter]]:
+    database = lib.structure.get_database(competition.country)
     goals_for = {}
     goals_against = {}
     for team in teams:
@@ -200,7 +207,7 @@ def gather_data(
 
     for fixture in fixtures:
         if fixture.finished:
-            events = model.events.load_events(fixture)
+            events = model.events.load_events(database, fixture)
             for event in events:
                 if model.events.is_goal(event.detail):
                     time_key = model.events.TimeKey(event.time, event.extra_time)
@@ -228,16 +235,38 @@ def gather_data(
     return goals_for, goals_against
 
 
-def main(
+def set_season(
         competition: model.competitions.Competition,
-        season: model.seasons.Season,
+        selected_season: typing.Optional[int]
+) -> model.seasons.Season:
+    database = lib.structure.get_database(competition.country)
+    if selected_season is not None:
+        return model.seasons.load_season(database, competition, selected_season)
+    else:
+        return model.seasons.load_current_season(database, competition)
+
+
+def set_competition(selected_competition: typing.Optional[int]) -> model.competitions.Competition:
+    if selected_competition is not None:
+        return model.competitions.load_competition(selected_competition)
+    else:
+        country = cli.user_input.pick_country()
+        return cli.user_input.pick_competition(country)
+
+
+def main(
+        selected_competition_id: typing.Optional[int],
+        selected_season_id: typing.Optional[int],
         venue: model.fixtures.Venue
 ):
+    competition = set_competition(selected_competition_id)
+    season = set_season(competition, selected_season_id)
+
     lib.messages.vanilla_message(f"Analysing {competition} in {season.year} (id={competition.id})")
-    fixtures = model.seasons.load_fixtures(competition, season)
+    database = lib.structure.get_database(competition.country)
+    fixtures = model.seasons.load_fixtures(database, competition, season)
     teams = model.fixtures.teams(fixtures)
-    update_events.main(competition, season)
-    goals_for, goals_against = gather_data(fixtures, teams, venue)
+    goals_for, goals_against = gather_data(competition, fixtures, teams, venue)
 
     goals_for_intervals = {}
     for team, goals in goals_for.items():
@@ -259,31 +288,11 @@ def main(
             if venue in [model.fixtures.Venue.ANYWHERE, model.fixtures.Venue.AWAY]:
                 highlighted.add(fixture.away_team)
 
-    show_data(league_table, venue, highlighted, goals_for_intervals, goals_against_intervals)
-
-
-def set_season(
-        competition: model.competitions.Competition,
-        selected_season: typing.Optional[int]
-) -> model.seasons.Season:
-    if selected_season is not None:
-        return model.seasons.load_season(competition, selected_season)
-    else:
-        return model.seasons.load_current_season(competition)
-
-
-def set_competition(selected_competition: typing.Optional[int]) -> model.competitions.Competition:
-    if selected_competition is not None:
-        return model.competitions.load_competition(selected_competition)
-    else:
-        country = cli.user_input.pick_country()
-        return cli.user_input.pick_competition(country)
+    show_data(competition, league_table, venue, highlighted, goals_for_intervals, goals_against_intervals)
 
 
 if __name__ == '__main__':
     args = parse_command_line()
     cli.cli.set_logging_options(args)
-    competition = set_competition(args.competition)
-    season = set_season(competition, args.season)
-    main(competition, season, args.venue)
+    main(args.competition, args.season, args.venue)
     sys.exit(os.EX_OK)

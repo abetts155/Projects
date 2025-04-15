@@ -2,7 +2,6 @@ import random
 import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
 
-import football_api.helpers
 import model.competitions
 import model.fixtures
 from dashboard import analysis, ids, tables
@@ -619,7 +618,9 @@ def create_layout() -> dbc.Container:
     )
 
     country_options = []
-    for country in football_api.helpers.get_countries():
+    competitions = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
+    countries = set(competition.country for competition in competitions)
+    for country in sorted(countries):
         country_options.append({'label': model.competitions.prettify(country), 'value': country})
 
     default_country = 'England'

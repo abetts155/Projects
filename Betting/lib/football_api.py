@@ -1,10 +1,10 @@
 import requests
 
-import football_api.structure
+import lib.structure
 
 
 headers = {'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'}
-api_key = football_api.structure.hidden_directory.joinpath('api_key.txt')
+api_key = lib.structure.hidden_directory.joinpath('api_key.txt')
 with api_key.open() as file:
     (line,) = file.readlines()
     headers['x-rapidapi-key'] = line.strip()
@@ -43,8 +43,14 @@ def get_stats(fixture_id: int):
     return response
 
 
-def get_logo(team_id: int):
-    url = f'https://media.api-sports.io/football/teams/{team_id}.png'
+def get_lineups(fixture_id: int):
+    url = f'{base_url}/v3/fixtures/lineups?fixture={fixture_id}'
+    response = requests.request('GET', url, headers=headers)
+    return response
+
+
+def get_player_stats(fixture_id: int):
+    url = f'{base_url}/v3/fixtures/players?fixture={fixture_id}'
     response = requests.request('GET', url, headers=headers)
     return response
 

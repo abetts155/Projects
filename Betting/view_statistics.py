@@ -12,7 +12,6 @@ import model.seasons
 import model.statistics
 import model.teams
 import sql.sql
-import update_statistics
 
 
 def parse_command_line():
@@ -133,7 +132,6 @@ def main(database: str, venue: model.fixtures.Venue):
     league = cli.user_input.pick_league(database, country)
     season = model.seasons.load_current_season(database, league)
     team = cli.user_input.pick_team(season)
-    update_statistics.main(database, season, {team})
 
     g_for, g_against, xg_for, xg_against = gather_data(database, season, team, venue)
     show_data(team, venue, g_for, g_against, xg_for, xg_against)

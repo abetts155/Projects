@@ -1,11 +1,10 @@
 import argparse
-import datetime
+import concurrent.futures
 import os
 import pathlib
+import re
 import sys
 
-import prompt_toolkit
-import prompt_toolkit.completion
 import reportlab.lib
 import reportlab.lib.colors
 import reportlab.lib.enums
@@ -17,8 +16,7 @@ import reportlab.pdfbase.ttfonts
 import reportlab.platypus
 
 import cli.cli
-import cli.user_input
-import football_api.structure
+import lib.structure
 import lib.messages
 import model.competitions
 import model.fixtures
@@ -26,8 +24,8 @@ import model.seasons
 import model.teams
 import report.data
 import report.events
+import report.frontmatter
 import report.history
-import report.title
 import report.table
 
 
@@ -35,21 +33,26 @@ def parse_command_line():
     parser = argparse.ArgumentParser(description='Generate a report')
     cli.cli.add_logging_options(parser)
     cli.cli.add_venue_option(parser)
-    cli.cli.add_competition_option(parser, True)
 
-    parser.add_argument('-D',
-                        '--days',
+    parser.add_argument('-C',
+                        '--countries',
+                        nargs='+',
+                        type=str,
+                        help='pick out countries that start with this sequence')
+
+    parser.add_argument('-H',
+                        '--hours',
                         type=int,
-                        help="generate reports this many days ahead",
-                        default=0)
+                        help='the number of hours to look forward',
+                        default=3)
+
+    parser.add_argument('-A',
+                        '--all-competitions',
+                        action='store_true',
+                        help='analyse all competitions that satisfy the given constraints',
+                        default=False)
 
     return parser.parse_args()
-
-
-def cleanup(output_dir: pathlib.Path):
-    for file in output_dir.iterdir():
-        if file.is_file() and file.suffix.lower() in {'.png', '.pdf'}:
-            file.unlink()
 
 
 def setup_fonts():
@@ -146,11 +149,13 @@ def on_report_pages(color: reportlab.lib.colors.HexColor, fixture: model.fixture
 
 
 def create_league_tables_per_period(
+        competition: model.competitions.Competition,
         fixtures: list[model.fixtures.Fixture],
         team: model.teams.Team,
         venue: model.fixtures.Venue
 ):
     table_first_half = report.table.create_league_table(
+        competition,
         fixtures,
         model.fixtures.Period.FIRST,
         venue,
@@ -158,6 +163,7 @@ def create_league_tables_per_period(
     )
 
     table_second_half = report.table.create_league_table(
+        competition,
         fixtures,
         model.fixtures.Period.SECOND,
         venue,
@@ -165,6 +171,7 @@ def create_league_tables_per_period(
     )
 
     table_full_time = report.table.create_league_table(
+        competition,
         fixtures,
         model.fixtures.Period.FULL,
         venue,
@@ -175,6 +182,7 @@ def create_league_tables_per_period(
 
 
 def create_this_season_form(
+        competition: model.competitions.Competition,
         fixtures: list[model.fixtures.Fixture],
         team: model.teams.Team,
         venue: model.fixtures.Venue
@@ -249,212 +257,177 @@ def create_this_season_form(
     return elements
 
 
+def sanitize_name(name: str) -> str:
+    return re.sub(r'[\\/:"*?<>|]+', '-', name)
+
+
 def create_report(
         competition: model.competitions.Competition,
         fixtures_this_season: list[model.fixtures.Fixture],
-        fixture: model.fixtures.Fixture,
         seasons: list[model.seasons.Season],
-        historical_data: dict[model.teams.Team, report.data.TeamData]
+        historical_data: dict[model.teams.Team, report.data.TeamData],
+        fixture: model.fixtures.Fixture
 ):
-    lib.messages.vanilla_message(f"Creating report for {fixture.home_team.name} vs {fixture.away_team.name}")
-    title_page = report.title.create_title_page(competition, fixture)
+    country_pdf_report_dir = lib.structure.get_pdf_report_dir(competition.country, competition.name)
+    fixture_name = f"{sanitize_name(fixture.home_team.name)} versus {sanitize_name(fixture.away_team.name)}"
+    filename = country_pdf_report_dir.joinpath(f"{fixture_name}.pdf")
+    if not filename.exists():
+        lib.messages.vanilla_message(f"Creating report for {fixture.home_team.name} vs {fixture.away_team.name}")
+        setup_fonts()
 
-    home_tables = create_league_tables_per_period(fixtures_this_season, fixture.home_team, model.fixtures.Venue.HOME)
-    home_data = historical_data[fixture.home_team]
-    home_history = report.history.create_history(
-        competition,
-        fixture.home_team,
-        model.fixtures.Venue.HOME,
-        seasons,
-        home_data
-    )
-    home_this_season = create_this_season_form(
-        fixtures_this_season,
-        fixture.home_team,
-        model.fixtures.Venue.HOME
-    )
-    home_this_season_anywhere = create_this_season_form(
-        fixtures_this_season,
-        fixture.home_team,
-        model.fixtures.Venue.ANYWHERE
-    )
+        title_page = report.frontmatter.create_title_page(competition, fixture)
 
-    away_tables = create_league_tables_per_period(fixtures_this_season, fixture.away_team, model.fixtures.Venue.AWAY)
-    away_data = historical_data[fixture.away_team]
-    away_history = report.history.create_history(
-        competition,
-        fixture.away_team,
-        model.fixtures.Venue.AWAY,
-        seasons,
-        away_data
-    )
-    away_this_season = create_this_season_form(
-        fixtures_this_season,
-        fixture.away_team,
-        model.fixtures.Venue.AWAY
-    )
-    away_this_season_anywhere = create_this_season_form(
-        fixtures_this_season,
-        fixture.away_team,
-        model.fixtures.Venue.ANYWHERE
-    )
+        home_tables = create_league_tables_per_period(
+            competition,
+            fixtures_this_season,
+            fixture.home_team,
+            model.fixtures.Venue.HOME
+        )
+        home_data = historical_data[fixture.home_team]
+        home_history = report.history.create_history(
+            competition,
+            fixture.home_team,
+            model.fixtures.Venue.HOME,
+            seasons,
+            home_data
+        )
+        home_this_season = create_this_season_form(
+            competition,
+            fixtures_this_season,
+            fixture.home_team,
+            model.fixtures.Venue.HOME
+        )
+        home_this_season_anywhere = create_this_season_form(
+            competition,
+            fixtures_this_season,
+            fixture.home_team,
+            model.fixtures.Venue.ANYWHERE
+        )
 
-    head_to_head = report.history.create_head_to_head(competition, fixture.home_team, fixture.away_team)
+        home_player_summary = report.history.create_player_summary(competition, home_data, model.fixtures.Venue.HOME)
 
-    complete_table = report.table.create_league_table(
-        fixtures_this_season,
-        model.fixtures.Period.FULL,
-        model.fixtures.Venue.ANYWHERE,
-        [fixture.home_team, fixture.away_team]
-    )
+        away_tables = create_league_tables_per_period(
+            competition,
+            fixtures_this_season,
+            fixture.away_team,
+            model.fixtures.Venue.AWAY
+        )
+        away_data = historical_data[fixture.away_team]
+        away_history = report.history.create_history(
+            competition,
+            fixture.away_team,
+            model.fixtures.Venue.AWAY,
+            seasons,
+            away_data
+        )
+        away_this_season = create_this_season_form(
+            competition,
+            fixtures_this_season,
+            fixture.away_team,
+            model.fixtures.Venue.AWAY
+        )
+        away_this_season_anywhere = create_this_season_form(
+            competition,
+            fixtures_this_season,
+            fixture.away_team,
+            model.fixtures.Venue.ANYWHERE
+        )
 
-    story = (
-            title_page +
-            home_tables +
-            home_history +
-            home_this_season +
-            home_this_season_anywhere +
-            away_tables +
-            away_history +
-            away_this_season +
-            away_this_season_anywhere +
-            head_to_head +
-            complete_table
-    )
+        away_player_summary = report.history.create_player_summary(competition, away_data, model.fixtures.Venue.AWAY)
 
-    country_pdf_report_dir = football_api.structure.get_pdf_report_dir(competition.country, competition.name)
-    filename = country_pdf_report_dir.joinpath(f"{fixture.home_team.name} versus {fixture.away_team.name}.pdf")
-    doc = reportlab.platypus.SimpleDocTemplate(str(filename), pagesize=reportlab.lib.pagesizes.A4)
-    color = reportlab.lib.colors.HexColor("#F9F9F9")
-    doc.build(story, onFirstPage=on_title_page(color), onLaterPages=on_report_pages(color, fixture))
+        head_to_head = report.history.create_head_to_head(competition, fixture.home_team, fixture.away_team)
 
+        complete_table = report.table.create_league_table(
+            competition,
+            fixtures_this_season,
+            model.fixtures.Period.FULL,
+            model.fixtures.Venue.ANYWHERE,
+            [fixture.home_team, fixture.away_team]
+        )
 
-def main(competition: model.competitions.Competition, fixtures_under_analysis: list[model.fixtures.Fixture]):
-    lib.messages.vanilla_message(f"{'*' * 10} Analysing {competition} (id={competition.id}) {'*' * 10}")
-    setup_fonts()
-    country_pdf_report_dir = football_api.structure.get_pdf_report_dir(competition.country, competition.name)
-    cleanup(country_pdf_report_dir)
-    matplolib_output_dir = football_api.structure.get_matplotlib_dir(competition.country)
-    cleanup(matplolib_output_dir)
+        story = (
+                title_page +
+                home_tables +
+                home_history +
+                home_this_season +
+                home_this_season_anywhere +
+                home_player_summary +
+                away_tables +
+                away_history +
+                away_this_season +
+                away_this_season_anywhere +
+                away_player_summary +
+                head_to_head +
+                complete_table
+        )
 
-    season = model.seasons.load_current_season(competition)
-    fixtures_this_season = model.seasons.load_fixtures(competition, season)
-
-    team_venues = dict()
-    for fixture in fixtures_under_analysis:
-        team_venues[fixture.home_team] = model.fixtures.Venue.HOME
-        team_venues[fixture.away_team] = model.fixtures.Venue.AWAY
-
-    seasons = model.seasons.load_seasons(competition)
-    historical_data = report.history.collect_historical_data(competition, seasons, team_venues)
-
-    for fixture in fixtures_under_analysis:
-        create_report(competition, fixtures_this_season, fixture, seasons, historical_data)
-
-
-def pick_fixtures(
-        fixtures: list[model.fixtures.Fixture],
-        teams: set[model.teams.Team]
-) -> list[model.fixtures.Fixture]:
-    unpicked_teams = set(teams)
-    candidate_fixtures = set()
-    for fixture in fixtures:
-        if not fixture.finished:
-            if fixture.home_team in unpicked_teams:
-                candidate_fixtures.add(fixture)
-                unpicked_teams.remove(fixture.home_team)
-
-            if fixture.away_team in unpicked_teams:
-                candidate_fixtures.add(fixture)
-                unpicked_teams.remove(fixture.away_team)
-
-        if not unpicked_teams:
-            break
-
-    print("Upcoming Fixtures")
-    sorted_fixtures = sorted(candidate_fixtures, key=lambda fixture: fixture.date)
-    choices = []
-    for i, fixture in enumerate(sorted_fixtures, start=1):
-        print(f"({i}) {fixture.date.strftime('%d-%m-%y')} - {fixture.home_team.name} vs {fixture.away_team.name}")
-        choices.append(str(i))
-
-    sentinel = 'q'
-    choices.append(sentinel)
-
-    completer = prompt_toolkit.completion.WordCompleter(choices, ignore_case=True)
-    done = False
-    selected_fixtures = []
-    while not done and len(selected_fixtures) < len(choices):
-        selection = prompt_toolkit.prompt(f"Select a fixture or {sentinel} to quit: ", completer=completer)
-        if selection in choices:
-            if selection == sentinel:
-                done = True
-            else:
-                index = int(selection) - 1
-                selected_fixtures.append(sorted_fixtures[index])
-        else:
-            print("Invalid selection. Please choose a number from the list.")
-
-    return selected_fixtures
+        doc = reportlab.platypus.SimpleDocTemplate(str(filename), pagesize=reportlab.lib.pagesizes.A4)
+        color = reportlab.lib.colors.HexColor("#F9F9F9")
+        doc.build(story, onFirstPage=on_title_page(color), onLaterPages=on_report_pages(color, fixture))
 
 
 def gather_competition_fixtures(
-        selected_competition_ids: list[int],
-        days: int
+        hours: int,
+        countries_prefixes: list[str],
+        analyse_all_competitions: bool
 ) -> dict[model.competitions.Competition, list[model.fixtures.Fixture]]:
     competition_to_fixtures = {}
-    if days > 0:
-        whitelisted = []
-        if selected_competition_ids is not None:
-            for competition_id in selected_competition_ids:
-                competition = model.competitions.load_competition(competition_id)
-                if competition not in whitelisted:
-                    whitelisted.append(competition)
-        else:
-            with open(football_api.structure.get_leagues_whitelist(), 'r') as in_file:
-                for line in in_file:
-                    competition_id = int(line.strip())
-                    competition = model.competitions.load_competition(competition_id)
-                    whitelisted.append(competition)
+    whitelisted = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
 
-        whitelisted.sort(key=lambda competition: (competition.country, competition.id))
-        for competition in whitelisted:
-            fixtures = model.fixtures.load_fixtures_within_window(competition, days)
-            if fixtures:
-                analyse = True
-                if selected_competition_ids is None:
-                    answer = input(f"Analyse {competition}? (Enter = Yes, 'N' or 'n' = No) ")
-                    answer = answer.strip()
-                    if answer in ['n', 'N']:
-                        analyse = False
+    if countries_prefixes:
+        whitelisted = [
+            c for c in whitelisted for prefix in countries_prefixes if c.country.casefold().startswith(prefix.casefold())
+        ]
 
-                if analyse:
+    if not analyse_all_competitions:
+        print("Pick competitions to analyse. Only 'N' or 'n' means No.")
+
+    for competition in whitelisted:
+        database = lib.structure.get_database(competition.country)
+        fixtures = model.fixtures.load_fixtures_within_window(database, competition, hours)
+        if fixtures:
+            if analyse_all_competitions:
+                competition_to_fixtures[competition] = fixtures
+            else:
+                answer = input(f"{competition}? ")
+                answer = answer.strip()
+                if answer not in ['n', 'N']:
                     competition_to_fixtures[competition] = fixtures
 
-    if not competition_to_fixtures:
-        competitions = []
-        if selected_competition_ids is None:
-            country = cli.user_input.pick_country()
-            competition = cli.user_input.pick_competition(country, model.competitions.CompetitionType.LEAGUE)
-            competitions.append(competition)
-        else:
-            for competition_id in selected_competition_ids:
-                competition = model.competitions.load_competition(competition_id)
-                competitions.append(competition)
-
-        for competition in competitions:
-            season = model.seasons.load_current_season(competition)
-            fixtures = model.seasons.load_fixtures(competition, season)
-            teams = model.fixtures.teams(fixtures)
-            competition_to_fixtures[competition] = pick_fixtures(fixtures, teams)
-
     return competition_to_fixtures
+
+
+def main(hours: int, country_prefixes: list[str], analyse_all_competitions: bool):
+    competition_to_fixtures = gather_competition_fixtures(hours, country_prefixes, analyse_all_competitions)
+    for competition, fixtures in competition_to_fixtures.items():
+        lib.messages.vanilla_message(f"{'*' * 10} Analysing {competition} (id={competition.id}) {'*' * 10}")
+        path = lib.structure.get_matplotlib_dir(competition.country)
+        lib.structure.purge_png_files(path)
+
+        database = lib.structure.get_database(competition.country)
+        season = model.seasons.load_current_season(database, competition)
+        fixtures_this_season = model.seasons.load_fixtures(database, competition, season)
+
+        team_venues = dict()
+        for fixture in fixtures:
+            team_venues[fixture.home_team] = model.fixtures.Venue.HOME
+            team_venues[fixture.away_team] = model.fixtures.Venue.AWAY
+
+        seasons = model.seasons.load_seasons(database, competition)
+        historical_data = report.history.collect_historical_data(competition, seasons, team_venues)
+
+        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
+            futures = [
+                executor.submit(create_report, competition, fixtures_this_season, seasons, historical_data, fixture)
+                for fixture in fixtures
+            ]
+
+            for future in futures:
+                future.result()
 
 
 if __name__ == '__main__':
     args = parse_command_line()
     cli.cli.set_logging_options(args)
-    competition_to_fixtures = gather_competition_fixtures(args.competition, args.days)
-    for competition, fixtures in competition_to_fixtures.items():
-        main(competition, fixtures)
+    main(args.hours, args.countries, args.all_competitions)
     sys.exit(os.EX_OK)

@@ -1,7 +1,8 @@
 import datetime
+import pathlib
 import typing
 
-import football_api.structure
+import lib.structure
 import model.fixtures
 import model.competitions
 import model.teams
@@ -141,20 +142,24 @@ def create_season_from_row(row: list) -> Season:
     )
 
 
-def load_fixtures(competition: model.competitions.Competition, season: Season) -> list[model.fixtures.Fixture]:
+def load_fixtures(
+        database: pathlib.Path,
+        competition: model.competitions.Competition,
+        season: Season
+) -> list[model.fixtures.Fixture]:
     if competition.type == model.competitions.CompetitionType.LEAGUE:
         table = model.fixtures.Fixture.sql_table()
     else:
         table = model.fixtures.CupFixture.sql_table()
 
     fixtures = []
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(database) as db:
         competition_constraint = f'{ColumnNames.Competition_ID.name}={competition.id}'
         season_constraint = f'{ColumnNames.Season_ID.name}={season.year}'
         fixture_rows = db.fetch_all_rows(table, [competition_constraint, season_constraint])
 
         team_ids = model.fixtures.get_team_ids(fixture_rows)
-        teams = model.teams.load_teams(team_ids)
+        teams = model.teams.load_teams(database, team_ids)
 
         for fixture_row in fixture_rows:
             if competition.type == model.competitions.CompetitionType.LEAGUE:
@@ -169,8 +174,8 @@ def load_fixtures(competition: model.competitions.Competition, season: Season) -
     return fixtures
 
 
-def load_current_season(competition: model.competitions.Competition) -> Season:
-    with sql.sql.Database(football_api.structure.database) as db:
+def load_current_season(database: pathlib.Path, competition: model.competitions.Competition) -> Season:
+    with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
         current_constraint = f"{ColumnNames.Current.name}={Characters.TRUE.value}"
         season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint, current_constraint])
@@ -179,8 +184,12 @@ def load_current_season(competition: model.competitions.Competition) -> Season:
         return create_season_from_row(season_row)
 
 
-def load_season(competition: model.competitions.Competition, year: int) -> typing.Optional[Season]:
-    with sql.sql.Database(football_api.structure.database) as db:
+def load_season(
+        database: pathlib.Path,
+        competition: model.competitions.Competition,
+        year: int
+) -> typing.Optional[Season]:
+    with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
         year_constraint = f"{ColumnNames.Year.name}={year}"
         season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint, year_constraint])
@@ -189,9 +198,12 @@ def load_season(competition: model.competitions.Competition, year: int) -> typin
             return create_season_from_row(row)
 
 
-def load_seasons(competition: model.competitions.Competition) -> list[Season]:
+def load_seasons(
+        database: pathlib.Path,
+        competition: model.competitions.Competition
+) -> list[Season]:
     seasons = []
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
         season_rows = db.fetch_all_rows(Season.sql_table(), [competition_constraint])
         for season_row in season_rows:

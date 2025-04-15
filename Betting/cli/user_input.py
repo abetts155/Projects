@@ -1,8 +1,7 @@
 import prompt_toolkit
 import prompt_toolkit.completion
 
-import football_api.structure
-import football_api.helpers
+import lib.structure
 import model.competitions
 import model.fixtures
 import model.seasons
@@ -39,16 +38,17 @@ class AutoSelectCompleter(prompt_toolkit.completion.Completer):
 
 def pick_country(whitelisted: bool = True) -> str:
     if whitelisted:
-        choices = football_api.helpers.get_countries()
+        competitions = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
+        countries = {competition.country for competition in competitions}
     else:
         countries = set()
-        with sql.sql.Database(football_api.structure.database) as db:
+        with sql.sql.Database(lib.structure.get_base_database()) as db:
             competition_rows = db.fetch_all_rows(model.competitions.Competition.sql_table())
             for row in competition_rows:
                 competition = model.competitions.create_competition_from_row(row)
                 countries.add(competition.country)
-        choices = sorted(countries)
 
+    choices = sorted(countries)
     country_completer = AutoSelectCompleter(choices, 'Select a country')
     return country_completer.choose()
 
@@ -57,7 +57,8 @@ def pick_competition(
         selected_country: str,
         competition_type: model.competitions.CompetitionType = None
 ) -> model.competitions.Competition:
-    competitions = model.competitions.load_competitions(country=selected_country, competition_type=competition_type)
+    database = lib.structure.get_database(selected_country)
+    competitions = model.competitions.load_competitions(database, competition_type)
 
     if len(competitions) == 1:
         return competitions[0]
@@ -68,8 +69,9 @@ def pick_competition(
         return competition_choices[selected_competition]
 
 
-def pick_season(league: model.competitions.Competition) -> model.seasons.Season:
-    seasons = model.seasons.load_seasons(league)
+def pick_season(competition: model.competitions.Competition) -> model.seasons.Season:
+    database = lib.structure.get_database(competition.country)
+    seasons = model.seasons.load_seasons(database, competition)
     season_choices = {}
     for season in seasons:
         season_choices[str(season.year)] = season
@@ -81,7 +83,8 @@ def pick_season(league: model.competitions.Competition) -> model.seasons.Season:
 
 def pick_team(competition: model.competitions.Competition, season: model.seasons.Season) -> model.teams.Team:
     team_choices = {}
-    fixtures = model.seasons.load_fixtures(competition, season)
+    database = lib.structure.get_database(competition.country)
+    fixtures = model.seasons.load_fixtures(database, competition, season)
     for team in model.fixtures.teams(fixtures):
         team_choices[team.name] = team
 

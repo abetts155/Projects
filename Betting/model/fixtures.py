@@ -1,13 +1,15 @@
 import collections
+import dataclasses
 import datetime
 import enum
 import functools
 import operator
+import pathlib
 import re
 import time
 import typing
 
-import football_api.structure
+import lib.structure
 import lib.messages
 import model.competitions
 import model.teams
@@ -37,6 +39,10 @@ class Period(enum.StrEnum):
     SECOND = '2nd Half'
     EXTRA = 'ET'
     PENALTIES = 'Pens'
+
+    @staticmethod
+    def regular():
+        return [Period.FULL, Period.FIRST, Period.SECOND]
 
     @staticmethod
     def from_string(value: str) -> "Period":
@@ -107,36 +113,42 @@ class Event:
     inventory = {func.__name__: func for func in {win, draw, loss, bts}}
     stems = {func.__name__: func for func in {gf, ga, gfa, gd}}
 
-    op_table = {(operator.eq, True): '!=',
-                (operator.eq, False): '=',
-                (operator.ne, True): '=',
-                (operator.ne, False): '!=',
-                (operator.gt, True): '<=',
-                (operator.gt, False): '>',
-                (operator.ge, True): '<',
-                (operator.ge, False): '>=',
-                (operator.lt, True): '>=',
-                (operator.lt, False): '<',
-                (operator.le, True): '>',
-                (operator.le, False): '<='}
+    op_table = {
+        (operator.eq, True): '!=',
+        (operator.eq, False): '=',
+        (operator.ne, True): '=',
+        (operator.ne, False): '!=',
+        (operator.gt, True): '<=',
+        (operator.gt, False): '>',
+        (operator.ge, True): '<',
+        (operator.ge, False): '>=',
+        (operator.lt, True): '>=',
+        (operator.lt, False): '<',
+        (operator.le, True): '>',
+        (operator.le, False): '<='
+    }
 
-    long_table = {gf: 'Goals for',
-                  ga: 'Goals against',
-                  gfa: 'Goals scored',
-                  gd: 'Goal difference',
-                  win: 'Win',
-                  draw: 'Draw',
-                  loss: 'Loss',
-                  bts: 'BTS'}
+    long_table = {
+        gf: 'Goals for',
+        ga: 'Goals against',
+        gfa: 'Goals scored',
+        gd: 'Goal difference',
+        win: 'Win',
+        draw: 'Draw',
+        loss: 'Loss',
+        bts: 'BTS'
+    }
 
-    short_table = {gf: 'GF',
-                   ga: 'GA',
-                   gfa: 'GFA',
-                   gd: 'GD',
-                   win: 'W',
-                   draw: 'D',
-                   loss: 'L',
-                   bts: 'BTS'}
+    short_table = {
+        gf: 'GF',
+        ga: 'GA',
+        gfa: 'GFA',
+        gd: 'GD',
+        win: 'W',
+        draw: 'D',
+        loss: 'L',
+        bts: 'BTS'
+    }
 
     @classmethod
     def encode(cls, event):
@@ -188,14 +200,6 @@ class Event:
                 return 'No {}'.format(func_name)
             else:
                 return func_name
-
-
-class ContextualEvent:
-    def __init__(self, func: collections.abc.Callable, negate: bool, venue: Venue, periods: list[Period]):
-        self.func = func
-        self.negate = negate
-        self.venue = venue
-        self.periods = periods
 
 
 class Fixture:
@@ -634,9 +638,13 @@ def get_team_ids(fixture_rows: list[list]) -> set[int]:
     return team_ids
 
 
-def create_fixtures(competition: model.competitions.Competition, fixture_rows: list[list]) -> list[Fixture]:
+def create_fixtures(
+        database: pathlib.Path,
+        competition: model.competitions.Competition,
+        fixture_rows: list[list]
+) -> list[Fixture]:
     team_ids = get_team_ids(fixture_rows)
-    teams = model.teams.load_teams(team_ids)
+    teams = model.teams.load_teams(database, team_ids)
 
     fixtures = []
     for fixture_row in fixture_rows:
@@ -661,10 +669,17 @@ def fixtures_per_team(fixtures: list[Fixture]) -> dict[model.teams.Team, list[Fi
     return team_fixtures
 
 
-def load_fixtures_within_window(competition: model.competitions.Competition, days: int) -> list[Fixture]:
-    with sql.sql.Database(football_api.structure.database) as db:
+def load_fixtures_within_window(
+        database: pathlib.Path,
+        competition: model.competitions.Competition,
+        hours: int
+) -> list[Fixture]:
+    with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
-        window_constraint = f"{ColumnNames.Date.name} {Keywords.BETWEEN.name} datetime('now') {Keywords.AND.name} datetime('now', '+{days} day')"
+        window_constraint = (
+            f"{ColumnNames.Date.name} {Keywords.BETWEEN.name} "
+            f"datetime('now') {Keywords.AND.name} datetime('now', '+{hours} hours')"
+        )
 
         if competition.type == model.competitions.CompetitionType.LEAGUE:
             table = Fixture.sql_table()
@@ -672,15 +687,35 @@ def load_fixtures_within_window(competition: model.competitions.Competition, day
             table = CupFixture.sql_table()
 
         fixture_rows = db.fetch_all_rows(table, [competition_constraint, window_constraint])
-        return create_fixtures(competition, fixture_rows)
+        return create_fixtures(database, competition, fixture_rows)
+
+
+def load_fixtures_on_date(
+        database: pathlib.Path,
+        competition: model.competitions.Competition,
+        target_date: datetime.date
+) -> list[Fixture]:
+    with sql.sql.Database(database) as db:
+        competition_constraint = f"{ColumnNames.Competition_ID.name} = {competition.id}"
+        date_constraint = f"DATE({ColumnNames.Date.name}) = DATE('{target_date.strftime("%Y-%m-%d")}')"
+
+        if competition.type == model.competitions.CompetitionType.LEAGUE:
+            table = Fixture.sql_table()
+        else:
+            table = CupFixture.sql_table()
+
+        fixture_rows = db.fetch_all_rows(table, [competition_constraint, date_constraint])
+        return create_fixtures(database, competition, fixture_rows)
+
 
 
 def load_head_to_head_fixtures(
+        database: pathlib.Path,
         competition: model.competitions.Competition,
         home_team: model.teams.Team,
         away_team: model.teams.Team
 ) -> list[Fixture]:
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
 
         home_vs_away = (
@@ -703,4 +738,4 @@ def load_head_to_head_fixtures(
             table = CupFixture.sql_table()
 
         fixture_rows = db.fetch_all_rows(table, constraints)
-        return create_fixtures(competition, fixture_rows)
+        return create_fixtures(database, competition, fixture_rows)

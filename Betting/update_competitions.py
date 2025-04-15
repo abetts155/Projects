@@ -2,8 +2,8 @@ import argparse
 import json
 
 import cli.cli
-import football_api.football_api
-import football_api.structure
+from lib import football_api
+import lib.structure
 import lib.messages
 import model.competitions
 import model.seasons
@@ -17,16 +17,15 @@ def parse_command_line():
 
 
 def create_leagues_json():
-    leagues_json = football_api.structure.get_leagues_json()
-    if not leagues_json.exists():
-        lib.messages.verbose_message("Extracting leagues JSON")
-        response = football_api.football_api.get_leagues()
-        football_api.structure.store(leagues_json, response)
+    leagues_json = lib.structure.get_leagues_json()
+    lib.messages.verbose_message("Extracting leagues JSON")
+    response = lib.football_api.get_leagues()
+    lib.structure.store(leagues_json, response)
 
 
 def main():
     create_leagues_json()
-    leagues_json = football_api.structure.get_leagues_json()
+    leagues_json = lib.structure.get_leagues_json()
 
     competitions = []
     seasons = []
@@ -39,7 +38,7 @@ def main():
                 season = model.seasons.create_season_from_json(competition, season_json)
                 seasons.append(season)
 
-    with sql.sql.Database(football_api.structure.database) as db:
+    with sql.sql.Database(lib.structure.database) as db:
         db.drop_table(model.competitions.Competition.sql_table())
         db.drop_table(model.seasons.Season.sql_table())
         db.create_table(model.competitions.Competition.sql_table())

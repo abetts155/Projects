@@ -7,9 +7,9 @@ import typing
 
 import cli.cli
 import cli.user_input
-import football_api.football_api
+from lib import football_api
 import football_api.helpers
-import football_api.structure
+import lib.structure
 import lib.messages
 import model.fixtures
 import model.competitions
@@ -28,13 +28,13 @@ def parse_command_line():
 
 
 def create_statistics_json(fixture: model.fixtures.Fixture) -> bool:
-    stats_json = football_api.structure.get_stats_json(fixture.id)
+    stats_json = lib.structure.get_stats_json(fixture.id)
     created = False
     if not stats_json.exists():
         created = True
         lib.messages.vanilla_message(f"Extracting stats JSON for '{fixture.id}'")
-        response = football_api.football_api.get_stats(fixture.id)
-        football_api.structure.store(stats_json, response)
+        response = lib.football_api.get_stats(fixture.id)
+        lib.structure.store(stats_json, response)
     return created
 
 
@@ -42,13 +42,13 @@ def load_stats_data(
         fixture: model.fixtures.Fixture,
         team: model.teams.Team
 ) -> typing.Optional[model.statistics.TeamStats]:
-    stats_json = football_api.structure.get_stats_json(fixture.id)
+    stats_json = lib.structure.get_stats_json(fixture.id)
     with stats_json.open() as in_file:
         json_text = json.load(in_file)
         if json_text['response']:
             for team_json in json_text['response']:
                 if team_json['team']['id'] == team.id:
-                    return model.statistics.create_stats_from_json(fixture, team, team_json)
+                    return model.statistics.create_team_stats_from_json(fixture, team, team_json)
 
 
 def main(
@@ -58,7 +58,7 @@ def main(
 ):
     if season.statistics_fixtures:
         fixtures = model.seasons.load_fixtures(competition, season)
-        with sql.sql.Database(football_api.structure.database) as db:
+        with sql.sql.Database(lib.structure.database) as db:
             fixture_statistics = []
             for fixture in fixtures:
                 if fixture.finished:

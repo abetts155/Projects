@@ -1,6 +1,10 @@
 import dataclasses
+import pathlib
 
 import model.fixtures
+import model.lineups
+import model.players
+import model.statistics
 import model.teams
 
 
@@ -62,6 +66,25 @@ class GoalData:
 
 
 @dataclasses.dataclass(slots=True)
+class GoalContributions:
+    goals: int = 0
+    assists: int = 0
+
+
+@dataclasses.dataclass(slots=True)
+class PlayerData:
+    contributions: dict[model.players.Player, GoalContributions] = dataclasses.field(default_factory=dict)
+
+    def collect(self, player: model.players.Player, player_stats: model.statistics.PlayerStats):
+        if player not in self.contributions:
+            self.contributions[player] = GoalContributions()
+
+        contributions = self.contributions[player]
+        contributions.goals += player_stats.goals
+        contributions.assists += player_stats.assists
+
+
+@dataclasses.dataclass(slots=True)
 class TeamData:
     team: model.teams.Team
     unknown_scores: int = 0
@@ -79,6 +102,7 @@ class TeamData:
     half_time_0_goals: GoalData = dataclasses.field(default_factory=GoalData)
     half_time_1_goal: GoalData = dataclasses.field(default_factory=GoalData)
     half_time_2_goals: GoalData = dataclasses.field(default_factory=GoalData)
+    player_data: PlayerData = dataclasses.field(default_factory=PlayerData)
 
     def played(self) -> int:
         return len(self.won) + len(self.drawn) + len(self.lost)
@@ -89,7 +113,78 @@ class TeamData:
     def goal_rate(self) -> float:
         return (self.goals_for.total + self.goals_against.total) / self.played()
 
-    def collect(self, fixture: model.fixtures.Fixture, period: model.fixtures.Period, venue: model.fixtures.Venue):
+    def categorise_ht_ft_transitions(self, fixture: model.fixtures.Fixture, opposition: model.teams.Team):
+        half_time_score = fixture.result(model.fixtures.Period.FIRST)
+        full_time_score = fixture.result(model.fixtures.Period.FULL)
+        if half_time_score is not None and full_time_score is not None:
+            half_time_score = model.fixtures.canonicalise_scoreline(fixture, self.team, half_time_score)
+            full_time_score = model.fixtures.canonicalise_scoreline(fixture, self.team, full_time_score)
+
+            if model.fixtures.win(half_time_score):
+                self.half_time_winning.collect(full_time_score, opposition)
+            elif model.fixtures.draw(half_time_score):
+                self.half_time_drawing.collect(full_time_score, opposition)
+            else:
+                self.half_time_losing.collect(full_time_score, opposition)
+
+            half_time_goals = half_time_score.left + half_time_score.right
+            full_time_goals = full_time_score.left + full_time_score.right
+            if half_time_goals == 0:
+                self.half_time_0_goals.collect(full_time_goals, opposition)
+            elif half_time_goals == 1:
+                self.half_time_1_goal.collect(full_time_goals - half_time_goals, opposition)
+            else:
+                self.half_time_2_goals.collect(full_time_goals - half_time_goals, opposition)
+
+    def tally_individual_contributions(
+            self,
+            database: pathlib.Path,
+            fixture: model.fixtures.Fixture
+    ):
+        lineup = model.lineups.load_lineup(database, fixture, self.team)
+        if lineup is not None:
+            for player_id in lineup.starting_11 + lineup.substitutes:
+                player = model.players.load_player(player_id)
+                if player:
+                    player_stats = model.statistics.load_player_stats(database, fixture, player)
+                    if player_stats:
+                        self.player_data.collect(player, player_stats)
+
+    def summarise_period_outcome(
+            self,
+            fixture: model.fixtures.Fixture,
+            period: model.fixtures.Period,
+            opposition: model.teams.Team
+    ):
+        score = fixture.result(period)
+        if score is None:
+            self.unknown_scores += 1
+        else:
+            score = model.fixtures.canonicalise_scoreline(fixture, self.team, score)
+            if model.fixtures.win(score):
+                self.won.append(opposition)
+            elif model.fixtures.draw(score):
+                self.drawn.append(opposition)
+            else:
+                self.lost.append(opposition)
+
+            if score.left > 0 and score.right > 0:
+                self.bts.append(opposition)
+
+            if score.left == 0 and score.right == 0:
+                self.nts.append(opposition)
+
+            self.goals_for.collect(score.left, opposition)
+            self.goals_against.collect(score.right, opposition)
+            self.total_goals.collect(score.left + score.right, opposition)
+
+    def collect(
+            self,
+            database: pathlib.Path,
+            fixture: model.fixtures.Fixture,
+            period: model.fixtures.Period,
+            venue: model.fixtures.Venue
+    ):
         if venue == model.fixtures.Venue.ANYWHERE:
             right_venue = True
         elif venue == model.fixtures.Venue.HOME and fixture.home_team == self.team:
@@ -105,49 +200,9 @@ class TeamData:
             else:
                 opposition = fixture.home_team
 
-            half_time_score = fixture.result(model.fixtures.Period.FIRST)
-            full_time_score = fixture.result(model.fixtures.Period.FULL)
-            if half_time_score is not None and full_time_score is not None:
-                half_time_score = model.fixtures.canonicalise_scoreline(fixture, self.team, half_time_score)
-                full_time_score = model.fixtures.canonicalise_scoreline(fixture, self.team, full_time_score)
-
-                if model.fixtures.win(half_time_score):
-                    self.half_time_winning.collect(full_time_score, opposition)
-                elif model.fixtures.draw(half_time_score):
-                    self.half_time_drawing.collect(full_time_score, opposition)
-                else:
-                    self.half_time_losing.collect(full_time_score, opposition)
-
-                half_time_goals = half_time_score.left + half_time_score.right
-                full_time_goals = full_time_score.left + full_time_score.right
-                if half_time_goals == 0:
-                    self.half_time_0_goals.collect(full_time_goals, opposition)
-                elif half_time_goals == 1:
-                    self.half_time_1_goal.collect(full_time_goals - half_time_goals, opposition)
-                else:
-                    self.half_time_2_goals.collect(full_time_goals - half_time_goals, opposition)
-
-            score = fixture.result(period)
-            if score is None:
-                self.unknown_scores += 1
-            else:
-                score = model.fixtures.canonicalise_scoreline(fixture, self.team, score)
-                if model.fixtures.win(score):
-                    self.won.append(opposition)
-                elif model.fixtures.draw(score):
-                    self.drawn.append(opposition)
-                else:
-                    self.lost.append(opposition)
-
-                if score.left > 0 and score.right > 0:
-                    self.bts.append(opposition)
-
-                if score.left == 0 and score.right == 0:
-                    self.nts.append(opposition)
-
-                self.goals_for.collect(score.left, opposition)
-                self.goals_against.collect(score.right, opposition)
-                self.total_goals.collect(score.left + score.right, opposition)
+            self.categorise_ht_ft_transitions(fixture, opposition)
+            self.tally_individual_contributions(database, fixture)
+            self.summarise_period_outcome(fixture, period, opposition)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

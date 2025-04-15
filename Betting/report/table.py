@@ -1,3 +1,5 @@
+import pathlib
+
 import reportlab.lib
 import reportlab.lib.colors
 import reportlab.lib.enums
@@ -5,6 +7,8 @@ import reportlab.lib.styles
 import reportlab.lib.units
 import reportlab.platypus
 
+import lib.structure
+import model.competitions
 import model.fixtures
 import model.teams
 import report.data
@@ -118,6 +122,7 @@ def get_percentage(left: int, right: int) -> float:
 
 
 def compute_teams_data(
+        database: pathlib.Path,
         fixtures: list[model.fixtures.Fixture],
         period: model.fixtures.Period,
         venue: model.fixtures.Venue
@@ -127,9 +132,9 @@ def compute_teams_data(
     for fixture in fixtures:
         if fixture.finished:
             home_data = teams_data[fixture.home_team]
-            home_data.collect(fixture, period, venue)
+            home_data.collect(database, fixture, period, venue)
             away_data = teams_data[fixture.away_team]
-            away_data.collect(fixture, period, venue)
+            away_data.collect(database, fixture, period, venue)
 
     teams_data_list = list(teams_data.values())
     teams_data_list.sort(
@@ -141,6 +146,7 @@ def compute_teams_data(
 
 
 def create_league_table_rows(
+        database: pathlib.Path,
         fixtures: list[model.fixtures.Fixture],
         period: model.fixtures.Period,
         venue: model.fixtures.Venue
@@ -152,7 +158,7 @@ def create_league_table_rows(
 
     unknown_scores = 0
     rows = []
-    teams_data: list[report.data.TeamData] = compute_teams_data(fixtures, period, venue)
+    teams_data: list[report.data.TeamData] = compute_teams_data(database, fixtures, period, venue)
     for i, team_data in enumerate(teams_data):
         row = [
             team_data.team.name,
@@ -185,6 +191,7 @@ def create_league_table_rows(
 
 
 def create_league_table(
+        competition: model.competitions.Competition,
         fixtures: list[model.fixtures.Fixture],
         period: model.fixtures.Period,
         venue: model.fixtures.Venue,
@@ -195,7 +202,8 @@ def create_league_table(
     else:
         league_table = report.data.LeagueTable('F 1+', 'A 1+')
 
-    rows, unknown_scores = create_league_table_rows(fixtures, period, venue)
+    database = lib.structure.get_database(competition.country)
+    rows, unknown_scores = create_league_table_rows(database, fixtures, period, venue)
     min_columns = {}
     max_columns = {}
     for j, col in enumerate(league_table.columns()):
@@ -313,7 +321,7 @@ def create_league_table(
             footnote_style,
         )
         elements = [
-            reportlab.platypus.Paragraph(title_text, title_style),
+            reportlab.platypus.Paragraph(f'{title_text}', title_style),
             reportlab.platypus.Spacer(1, 0.1 * reportlab.lib.units.inch),
             footnote_para,
             reportlab.platypus.Spacer(1, 0.2 * reportlab.lib.units.inch)
@@ -321,7 +329,7 @@ def create_league_table(
     else:
         title_text = f"{venue.value} League Table ({period.value})"
         elements = [
-            reportlab.platypus.Paragraph(title_text, title_style),
+            reportlab.platypus.Paragraph(f'{title_text}', title_style),
             reportlab.platypus.Spacer(1, 0.2 * reportlab.lib.units.inch)
         ]
 
