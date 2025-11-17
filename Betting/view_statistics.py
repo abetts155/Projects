@@ -16,13 +16,19 @@ import sql.sql
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description='View statistics')
-    cli.cli.add_database_option(parser)
     cli.cli.add_logging_options(parser)
     cli.cli.add_venue_option(parser)
     return parser.parse_args()
 
 
-def show_data(team: model.teams.Team, venue: model.fixtures.Venue, g_for: list[float], g_against: list[float], xg_for: list[float], xg_against: list[float]):
+def show_data(
+        team: model.teams.Team,
+        venue: model.fixtures.Venue,
+        g_for: list[float],
+        g_against: list[float],
+        xg_for: list[float],
+        xg_against: list[float]
+):
     x_values = list(range(1, len(xg_for) + 1))
 
     fig = go.Figure()

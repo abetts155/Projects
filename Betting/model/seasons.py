@@ -2,7 +2,6 @@ import datetime
 import pathlib
 import typing
 
-import lib.structure
 import model.fixtures
 import model.competitions
 import model.teams
@@ -97,8 +96,8 @@ class Season:
 
 def create_season_from_json(competition: model.competitions.Competition, json_data: dict) -> Season:
     year = int(json_data['year'])
-    start_date = datetime.datetime.fromisoformat(json_data['start'])
-    end_date = datetime.datetime.fromisoformat(json_data['end'])
+    start_date = datetime.datetime.fromisoformat(json_data['start']) if json_data['start'] else None
+    end_date = datetime.datetime.fromisoformat(json_data['end']) if json_data['end'] else None
     current = bool(json_data['current'])
     lineups = bool(json_data['coverage']['fixtures']['lineups'])
     events = bool(json_data['coverage']['fixtures']['events'])

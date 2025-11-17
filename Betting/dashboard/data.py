@@ -1,6 +1,8 @@
 import collections
 import dataclasses
 import datetime
+import typing
+
 import pandas as pd
 
 import lib.structure
@@ -40,10 +42,11 @@ def get_season_fixtures(fixtures_df: pd.DataFrame) -> list[Fixture]:
     return fixtures
 
 
-def get_current_season_id(data_dict: dict) -> int:
+def get_current_season_id(data_dict: dict) -> typing.Optional[int]:
     season_ids = [season_id for season_id in data_dict['Seasons'].keys() if data_dict['Seasons'][season_id]['Current']]
-    (season_id,) = season_ids
-    return season_id
+    if season_ids:
+        (season_id,) = season_ids
+        return season_id
 
 
 def update_data(league: model.competitions.Competition) -> dict:
@@ -167,7 +170,7 @@ def get_result_per_team(
         data_dict: dict,
         season_id: int,
         venue: model.fixtures.Venue,
-        history: list[int]
+        history: typing.Optional[list[int]]
 ) -> dict[int, list[Fixture]]:
     team_ids = get_season_teams(data_dict, season_id)
     fixtures_df = get_fixtures_data_frame(data_dict, season_id)
@@ -188,10 +191,11 @@ def get_result_per_team(
                 team_results[fixture.away_id][i] = fixture
                 team_indices[fixture.away_id] = i
 
-    min_history, max_history = history
-    if history == [0, 0]:
+    if history is None:
         min_history = 1
         max_history = max(len(fixtures) for fixtures in team_results.values())
+    else:
+        min_history, max_history = history
 
     filtered_team_results = {team_id: [] for team_id in team_ids}
     for team_id in team_ids:
@@ -269,7 +273,7 @@ def get_completed_fixtures_for_team(data_dict: dict, venue: model.fixtures.Venue
     return fixtures
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass()
 class DataBin:
     season_id: int
     dates: list[datetime.datetime] = dataclasses.field(default_factory=list)
@@ -297,6 +301,7 @@ class DataBin:
             self.bts += 1
 
 
+@dataclasses.dataclass()
 class SeasonBin(DataBin):
     home_wins: int = 0
     draws: int = 0
@@ -313,25 +318,35 @@ class SeasonBin(DataBin):
         super().update(scoreline, date)
 
 
+@dataclasses.dataclass()
 class TeamBin(DataBin):
-    wins: int = 0
-    draws: int = 0
-    losses: int = 0
-    scored: int = 0
-    conceded: int = 0
+    scorelines: list[Scoreline] = dataclasses.field(default_factory=list)
 
     def update(self, scoreline: Scoreline, date: datetime.datetime):
-        if scoreline.left > scoreline.right:
-            self.wins += 1
-        elif scoreline.left == scoreline.right:
-            self.draws += 1
-        else:
-            self.losses += 1
-
-        self.scored += scoreline.left
-        self.conceded += scoreline.right
-
+        assert scoreline.left >= 0 and scoreline.right >= 0
+        self.scorelines.append(scoreline)
         super().update(scoreline, date)
+
+    def wins(self) -> list[bool]:
+        return [True if scoreline.left > scoreline.right else False for scoreline in self.scorelines]
+
+    def draws(self) -> list[bool]:
+        return [True if scoreline.left == scoreline.right else False for scoreline in self.scorelines]
+
+    def losses(self) -> list[bool]:
+        return [True if scoreline.left < scoreline.right else False for scoreline in self.scorelines]
+
+    def goals_for(self) -> list[int]:
+        return [scoreline.left for scoreline in self.scorelines]
+
+    def goals_against(self) -> list[int]:
+        return [scoreline.right for scoreline in self.scorelines]
+
+    def goals_total(self) -> list[int]:
+        return [scoreline.left + scoreline.right for scoreline in self.scorelines]
+
+    def __len__(self):
+        return len(self.scorelines)
 
 
 def get_scoreline(fixture: Fixture, period: model.fixtures.Period) -> Scoreline:
@@ -376,11 +391,14 @@ def aggregate_team(
         team_id: int
 ) -> list[TeamBin]:
     bins: list[TeamBin] = []
+    teams_df = get_teams_data_frame(data_dict)
+    team_name = get_team_name(teams_df, team_id)
     for season_id in get_season_ids(data_dict):
         fixtures_df = get_fixtures_data_frame(data_dict, season_id)
         data_bin = TeamBin(season_id)
         bins.append(data_bin)
         filtered_df = filter_fixtures_for_a_particular_team(fixtures_df, venue, team_id)
+        filtered_df = filtered_df.sort_values(by='Date').reset_index(drop=True)
 
         for _, fixture_row in filtered_df.iterrows():
             fixture = create_fixture_from_row(fixture_row)
@@ -428,7 +446,7 @@ def collect_fixture_sequences(
 
                     if season.the_id == get_current_season_id(data_dict):
                         if index is None and other_team_id == team_id:
-                            index = len(teams_scorelines[other_team_id])
+                            index = len(teams_scorelines[team_id])
 
                     teams_scorelines[other_team_id].append(scoreline)
 

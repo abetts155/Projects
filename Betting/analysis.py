@@ -14,6 +14,7 @@ import matplotlib.ticker
 import zoneinfo
 
 import cli.cli
+import lib.helpful
 import lib.messages
 import lib.structure
 import model.competitions
@@ -366,10 +367,6 @@ def aggregate(bet: Bet, data: list[Scorelines]) -> collections.Counter:
     return counter
 
 
-def country_flag(code: str) -> str:
-    return ''.join(chr(0x1F1E6 + ord(c.upper()) - ord('A')) for c in code)
-
-
 @dataclasses.dataclass(slots=True, frozen=True)
 class Prediction:
     bet: Bet
@@ -458,7 +455,7 @@ def output_the_predictions(predictions: list[Prediction]):
         league_change = last_prediction is None or last_prediction.league != prediction.league
         if time_change or league_change:
             print()
-            flag = country_flag(prediction.league.get_2_letter_iso_code())
+            flag = model.competitions.country_flag(prediction.league.get_2_letter_iso_code())
             league_str = f" {flag} {prediction.league} "
             print('*' * len(league_str))
             print(league_str)
@@ -497,10 +494,10 @@ def tweet_prediction(prediction: Prediction) -> str:
 
     def get_over_under_label(op: typing.Callable, negate: bool):
         if op in [operator.gt, operator.ge, operator.ne]:
-            return "OVER" if negate else "UNDER"
+            return "over" if negate else "under"
         else:
             assert op in [operator.lt, operator.le, operator.eq]
-            return "UNDER" if negate else "OVER"
+            return "under" if negate else "over"
 
     if isinstance(prediction.bet.func, functools.partial):
         op, arg = prediction.bet.func.args
@@ -509,12 +506,12 @@ def tweet_prediction(prediction: Prediction) -> str:
         frac = float(fractions.Fraction(numerator / 2))
 
         if prediction.bet.func.func == model.fixtures.gfa:
-            return f"{over_under_str} {frac} {period_str}"
+            return f"{over_under_str.capitalize()} {frac} ⚽️ {period_str}"
         elif prediction.bet.func.func == model.fixtures.gf:
-            return f"{prediction.team.name} to score {over_under_str} {frac} {period_str}"
+            return f"{prediction.team.name} to score {over_under_str} ⚽️ {frac} {period_str}"
         else:
             assert prediction.bet.func.func == model.fixtures.ga
-            return f"{prediction.team.name} to concede {over_under_str} {frac} {period_str}"
+            return f"{prediction.team.name} to concede {over_under_str} ⚽️ {frac} {period_str}"
     else:
         if prediction.bet.func == model.fixtures.draw:
             if prediction.bet.negate:
@@ -534,9 +531,9 @@ def tweet_prediction(prediction: Prediction) -> str:
         else:
             assert prediction.bet.func == model.fixtures.bts
             if prediction.bet.negate:
-                return f"BOTH teams to score {period_str}"
+                return f"Both teams to score ⚽️{period_str}"
             else:
-                return f"NO or just ONE team to score {period_str}"
+                return f"No or just one team to score ⚽️ {period_str}"
 
 
 def tweet_rationale(prediction: Prediction) -> str:
@@ -548,10 +545,10 @@ def tweet_rationale(prediction: Prediction) -> str:
 
     def get_over_under_label(op: typing.Callable, negate: bool):
         if op in [operator.gt, operator.ge, operator.ne]:
-            return "UNDER" if negate else "OVER"
+            return "under" if negate else "over"
         else:
             assert op in [operator.lt, operator.le, operator.eq]
-            return "OVER" if negate else "UNDER"
+            return "over" if negate else "under"
 
     if isinstance(prediction.bet.func, functools.partial):
         op, arg = prediction.bet.func.args
@@ -560,12 +557,12 @@ def tweet_rationale(prediction: Prediction) -> str:
         frac = float(fractions.Fraction(numerator / 2))
 
         if prediction.bet.func.func == model.fixtures.gfa:
-            event_str = f"have had {over_under_str} {frac} in"
+            event_str = f"have had {over_under_str} {frac} ⚽️ in"
         elif prediction.bet.func.func == model.fixtures.gf:
-            event_str = f"have scored {over_under_str} {frac} in"
+            event_str = f"have scored {over_under_str} {frac} ⚽️ in"
         else:
             assert prediction.bet.func.func == model.fixtures.ga
-            event_str = f"have conceded {over_under_str} {frac} in"
+            event_str = f"have conceded {over_under_str} {frac} ⚽️ in"
     else:
         if prediction.bet.func == model.fixtures.draw:
             if prediction.bet.negate:
@@ -612,7 +609,7 @@ def tweet_rationale(prediction: Prediction) -> str:
             freq_str = f"This is THE longest run and has occurred {pluralise(beyond[longest])}"
 
     longest_str = f"{freq_str} in the past {prediction.history} seasons"
-    return f"\u27A4 {team_str}. {longest_str}."
+    return f"\u27A4 {team_str}.\n\u27A4 {longest_str}."
 
 
 def create_tweet_bar_chart(
@@ -620,15 +617,15 @@ def create_tweet_bar_chart(
         file: pathlib.Path
 ):
     labels, values = zip(*prediction.counter.most_common())
-    highlight_color = '#E76F51'
-    default_color = '#4B9CD3'
+    highlight_color = '#FFB347'
+    default_color = '#6EC1E4'
     bar_colors = [highlight_color if label == prediction.run else default_color for label in labels]
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.barh(labels, values, color=bar_colors, edgecolor="black", linewidth=0.5)
+    fig, ax = plt.subplots()
+    bars = ax.barh(labels, values, color=bar_colors, edgecolor="white", linewidth=0.5)
 
-    ax.set_ylabel('Streak', fontsize=12)
-    ax.set_xlabel('#', fontsize=12)
+    ax.set_ylabel('Streak')
+    ax.set_xlabel('#')
     ax.invert_yaxis()
     ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
@@ -645,9 +642,7 @@ def create_tweet_bar_chart(
         ax.text(
             count + 0.5, bar.get_y() + bar.get_height() / 2,
             annotation,
-            va='center',
-            fontsize=10,
-            fontproperties=lib.structure.noto_regular_font
+            va='center'
         )
 
     def get_over_under(op: typing.Callable, negate: bool):
@@ -694,9 +689,9 @@ def create_tweet_bar_chart(
                 title_prefix = f"Both teams keep scoring"
 
     title = f"{title_prefix} in the {prediction.league} ({prediction.bet.period.value}, {prediction.bet.venue.value})"
-    fig.suptitle(title, fontsize=12, fontproperties=lib.structure.noto_bold_font)
+    fig.suptitle(title, color="#FFD700")
     sub_title = f"Data from the last {prediction.history} seasons"
-    ax.set_title(sub_title, fontsize=8, fontproperties=lib.structure.noto_regular_font, pad=10)
+    ax.set_title(sub_title, pad=10, color="#B0B0B0")
 
     plt.tight_layout()
     plt.savefig(file, dpi=300)
@@ -713,7 +708,7 @@ def tweet_the_predictions(predictions: list[Prediction]):
         time_str = localized.strftime('%H:%M %Z')
         print(f"{colorama.Style.BRIGHT}{colorama.Fore.BLUE}{time_str} {fixture.id}{colorama.Style.RESET_ALL}")
         first_prediction = fixture_predictions[0]
-        flag = country_flag(first_prediction.league.get_2_letter_iso_code())
+        flag = model.competitions.country_flag(first_prediction.league.get_2_letter_iso_code())
         print(f"{flag} {time_str}: {fixture.home_team.name} vs {fixture.away_team.name} ({first_prediction.league})")
         print()
         tweet_png_dir = lib.structure.get_tweet_dir(first_prediction.league.country, first_prediction.league.name)
@@ -729,31 +724,6 @@ def tweet_the_predictions(predictions: list[Prediction]):
         print()
 
 
-def output_best_and_worst(
-        table: model.tables.LeagueTable,
-        team: model.teams.Team,
-        venue: model.fixtures.Venue,
-        columns: list[str],
-        top_2: dict[model.fixtures.Venue, dict[str, float|int]],
-        bottom_2: dict[model.fixtures.Venue, dict[str, float|int]]
-):
-    print(f"➤ {team.name} ({venue.value})")
-    for col in columns:
-        value = table.df.loc[table.df[model.tables.TEAM_COL] == team, col].values[0]
-        first_top, second_top = top_2[venue][col]
-
-        emoji = None
-        if value == first_top:
-            emoji = '🥇'
-        elif value == second_top:
-            emoji = '🥈'
-        elif value in bottom_2[venue][col]:
-            emoji = '❌'
-
-        if emoji is not None:
-            print(f"{emoji} {model.tables.translate(col)}: {value}{'%' if col in model.tables.PERCENTAGE_COLS else ''}")
-
-
 def create_tweet_histogram(
         df,
         columns: list[str],
@@ -764,44 +734,33 @@ def create_tweet_histogram(
 ):
     stats_df = df[df[model.tables.TEAM_COL] == team].squeeze()
 
-    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 9))
+    fig, axes = plt.subplots(nrows=3, ncols=3)
     axes = axes.flatten()
 
-    bar_color = '#90CAF9'
-    highlight_color = '#F44336'
+    highlight_color = '#FFB347'
+    default_color = '#6EC1E4'
 
     for i, col in enumerate(columns):
         ax = axes[i]
         values = df[col].dropna()
         team_val = stats_df[col]
 
-        counts, bins, patches = ax.hist(values, bins=15, edgecolor='black')
+        counts, bins, patches = ax.hist(values, bins=15, edgecolor='white')
 
-        bin_index = None
-        for j in range(len(bins) - 1):
-            if bins[j] <= team_val < bins[j + 1]:
-                bin_index = j
-                break
-
+        bin_index = next((j for j in range(len(bins) - 1) if bins[j] <= team_val < bins[j + 1]), None)
         if team_val == bins[-1]:
             bin_index = len(bins) - 2
 
         for j, patch in enumerate(patches):
-            patch.set_facecolor(bar_color)
-            if j == bin_index:
-                patch.set_facecolor(highlight_color)
+            patch.set_facecolor(highlight_color if j == bin_index else default_color)
 
-        ax.set_title(model.tables.translate(col), fontsize=8, fontproperties=lib.structure.noto_regular_font)
-        ax.set_ylabel("#Teams", fontsize=6, fontproperties=lib.structure.noto_regular_font)
-        if col in model.tables.PERCENTAGE_COLS:
-            ax.set_xlabel('% of Games', fontsize=6, fontproperties=lib.structure.noto_regular_font)
-        else:
-            ax.set_xlabel('per Game', fontsize=6, fontproperties=lib.structure.noto_regular_font)
-
+        ax.set_title(model.tables.translate(col))
+        ax.set_ylabel("#Teams")
+        ax.set_xlabel('% of Games' if col in model.tables.PERCENTAGE_COLS else 'per Game')
         for spine in ax.spines.values():
             spine.set_visible(False)
 
-    plt.suptitle(f"{team.name} {venue.value}", fontsize=12, fontproperties=lib.structure.noto_bold_font)
+    plt.suptitle(f"{team.name} {venue.value}", color="#FFD700")
     tweet_png_dir = lib.structure.get_tweet_dir(league.country, league.name)
     file = lib.structure.get_tweet_png_file(tweet_png_dir, fixture.id)
     fig.tight_layout(pad=3.0, w_pad=2.0, h_pad=1.0)
@@ -809,127 +768,101 @@ def create_tweet_histogram(
     plt.close()
 
 
-def output_features(
-        team: model.teams.Team,
-        table: model.tables.LeagueTable,
-        venue: model.fixtures.Venue,
-        columns: list[str],
-        top_2: dict[model.fixtures.Venue, dict[str, float|int]],
-        bottom_2: dict[model.fixtures.Venue, dict[str, float|int]]
-):
-    print(f"➤ {team.name} ({venue.value})")
-    for col in columns:
-        value = table.df.loc[table.df[model.tables.TEAM_COL] == team, col].values[0]
-        first_top, second_top = top_2[venue][col]
-        first_bot, second_bot = bottom_2[venue][col]
+@dataclasses.dataclass(frozen=True)
+class PerformanceMarker:
+    col: str
+    emoji: str
+    value: int | float
 
-        if value == first_top:
-            emoji = '🥇'
-        elif value == second_top:
-            emoji = '🥈'
-        else:
-            assert value == first_bot or value == second_bot
-            emoji = '❌'
-
-        print(f"{emoji} {model.tables.translate(col)}: {value}{'%' if col in model.tables.PERCENTAGE_COLS else ''}")
+    def __str__(self):
+        suffix = '%' if self.col in model.tables.PERCENTAGE_COLS else ''
+        return f"{self.emoji} {model.tables.translate(self.col)}: {self.value}{suffix}"
 
 
-def analyse_best_and_worst(
+@dataclasses.dataclass(slots=True)
+class FormPrediction:
+    league: model.competitions.Competition
+    fixture: model.fixtures.Fixture
+    home_performance: list[PerformanceMarker]
+    away_performance: list[PerformanceMarker]
+
+    def __str__(self):
+        localized = self.fixture.date.replace(tzinfo=zoneinfo.ZoneInfo("Europe/London"))
+        time_str = localized.strftime('%H:%M %Z')
+        flag = model.competitions.country_flag(self.league.get_2_letter_iso_code())
+        header = f"{flag} {time_str}: {self.fixture.home_team.name} vs {self.fixture.away_team.name} ({self.league})"
+
+        home_header = f"\u27a4 {self.fixture.home_team.name} ({model.fixtures.Venue.HOME.value})"
+        home_performance = '\n'.join(str(attr) for attr in self.home_performance)
+
+        away_header = f"\u27a4 {self.fixture.away_team.name} ({model.fixtures.Venue.AWAY.value})"
+        away_performance = '\n'.join(str(attr) for attr in self.away_performance)
+
+        return f"{header}\n\n{home_header}\n{home_performance}\n\n{away_header}\n{away_performance}\n"
+
+
+def analyse_form(
         fixtures_to_analyse: list[model.fixtures.Fixture],
         league: model.competitions.Competition,
         season: model.seasons.Season
-):
+) -> list[FormPrediction]:
     columns = [
-        model.tables.S_COL,
-        model.tables.C_COL,
-        model.tables.BTS_COL,
-        model.tables.OTS_COL,
-        model.tables.OVER_1_5_COL,
-        model.tables.OVER_2_5_COL,
-        model.tables.F_COL,
-        model.tables.A_COL,
-        model.tables.GR_COL
+        model.tables.S_COL, model.tables.C_COL, model.tables.BTS_COL,
+        model.tables.OTS_COL, model.tables.OVER_1_5_COL, model.tables.OVER_2_5_COL,
+        model.tables.F_COL, model.tables.A_COL, model.tables.GR_COL
     ]
 
-    tables = {}
-    top_2 = {}
-    bottom_2 = {}
-    for venue in model.fixtures.Venue:
-        table = model.tables.LeagueTable(league, season, model.fixtures.Period.FULL, venue)
-        tables[venue] = table
+    tables = {
+        venue: model.tables.LeagueTable(league, season, model.fixtures.Period.FULL, venue)
+        for venue in model.fixtures.Venue
+    }
 
-        top_2[venue] = {}
-        bottom_2[venue] = {}
+    top_2 = {
+        venue: {col: table.df[col].sort_values(ascending=False).head(2).values for col in columns}
+        for venue, table in tables.items()
+    }
+
+    bottom_2 = {
+        venue: {col: table.df[col].sort_values(ascending=False).tail(2).values for col in columns}
+        for venue, table in tables.items()
+    }
+
+    def collect_attributes(team: model.teams.Team, venue: model.fixtures.Venue):
+        table = tables[venue]
+        best, weak = [], []
         for col in columns:
-            sorted_values = table.df[col].sort_values(ascending=False)
-            top_2[venue][col] = sorted_values.head(2).values
-            bottom_2[venue][col] = sorted_values.tail(2).values
+            value = table.df.loc[table.df[model.tables.TEAM_COL] == team, col].values[0]
+            if value == top_2[venue][col][0]:
+                best.append(PerformanceMarker(col, '🥇', value))
+            elif value == top_2[venue][col][1]:
+                best.append(PerformanceMarker(col, '🥈', value))
+            elif value in bottom_2[venue][col]:
+                weak.append(PerformanceMarker(col, '❌', value))
+        return best, weak
 
+    predictions = []
     for fixture in fixtures_to_analyse:
-        venue = model.fixtures.Venue.HOME
-        table = tables[venue]
-        home_strong = []
-        home_weak = []
-        for col in columns:
-            value = table.df.loc[table.df[model.tables.TEAM_COL] == fixture.home_team, col].values[0]
-            if value > 0:
-                if value in top_2[venue][col]:
-                    home_strong.append(col)
+        home_best, home_weak = collect_attributes(fixture.home_team, model.fixtures.Venue.HOME)
+        away_best, away_weak = collect_attributes(fixture.away_team, model.fixtures.Venue.AWAY)
+        home_table = tables[model.fixtures.Venue.HOME]
+        away_table = tables[model.fixtures.Venue.AWAY]
 
-                if value in bottom_2[venue][col]:
-                    home_weak.append(col)
+        if len(home_best) + len(away_best) >= 5 and home_best and away_best:
+            create_tweet_histogram(home_table.df, columns, league, fixture.home_team, fixture, model.fixtures.Venue.HOME)
+            create_tweet_histogram(away_table.df, columns, league, fixture.away_team, fixture, model.fixtures.Venue.AWAY)
+            prediction = FormPrediction(league, fixture, home_best, away_best)
+            predictions.append(prediction)
+        elif len(home_weak) + len(away_weak) >= 5 and home_weak and away_weak:
+            create_tweet_histogram(home_table.df, columns, league, fixture.home_team, fixture, model.fixtures.Venue.HOME)
+            create_tweet_histogram(away_table.df, columns, league, fixture.away_team, fixture, model.fixtures.Venue.AWAY)
+            prediction = FormPrediction(league, fixture, home_weak, away_weak)
+            predictions.append(prediction)
 
-        venue = model.fixtures.Venue.AWAY
-        table = tables[venue]
-        away_strong = []
-        away_weak = []
-        for col in columns:
-            value = table.df.loc[table.df[model.tables.TEAM_COL] == fixture.away_team, col].values[0]
-            if value > 0:
-                if value in top_2[venue][col]:
-                    away_strong.append(col)
-
-                if value in bottom_2[venue][col]:
-                    away_weak.append(col)
-
-        if len(home_strong) + len(away_strong) >= 5:
-            localized = fixture.date.replace(tzinfo=zoneinfo.ZoneInfo("Europe/London"))
-            time_str = localized.strftime('%H:%M %Z')
-            flag = country_flag(league.get_2_letter_iso_code())
-            print(f"{flag} {time_str}: {fixture.home_team.name} vs {fixture.away_team.name} ({league})")
-
-            venue = model.fixtures.Venue.HOME
-            table = tables[venue]
-            output_features(fixture.home_team, table, venue, home_strong, top_2, bottom_2)
-            create_tweet_histogram(table.df, columns, league, fixture.home_team, fixture, venue)
-
-            venue = model.fixtures.Venue.AWAY
-            table = tables[venue]
-            output_features(fixture.away_team, table, venue, away_strong, top_2, bottom_2)
-            create_tweet_histogram(table.df, columns, league, fixture.away_team, fixture, venue)
-
-            print()
-
-        if len(home_weak) + len(away_weak) >= 5:
-            localized = fixture.date.replace(tzinfo=zoneinfo.ZoneInfo("Europe/London"))
-            time_str = localized.strftime('%H:%M %Z')
-            flag = country_flag(league.get_2_letter_iso_code())
-            print(f"{flag} {time_str}: {fixture.home_team.name} vs {fixture.away_team.name} ({league})")
-
-            venue = model.fixtures.Venue.HOME
-            table = tables[venue]
-            output_features(fixture.home_team, table, venue, home_weak, top_2, bottom_2)
-            create_tweet_histogram(table.df, columns, league, fixture.home_team, fixture, venue)
-
-            venue = model.fixtures.Venue.AWAY
-            table = tables[venue]
-            output_features(fixture.away_team, table, venue, away_weak, top_2, bottom_2)
-            create_tweet_histogram(table.df, columns, league, fixture.away_team, fixture, venue)
-
-            print()
+    return predictions
 
 
 def main(country_prefixes: list[str], hours_before: int, hours_after: int, tolerance: float, tweet: bool):
+    lib.helpful.set_matplotlib_defaults()
     lib.structure.purge_png_files(lib.structure.tweet_png_directory)
 
     left_window = datetime.datetime.now() + datetime.timedelta(hours=hours_before)
@@ -941,7 +874,8 @@ def main(country_prefixes: list[str], hours_before: int, hours_after: int, toler
             c for c in whitelisted for prefix in country_prefixes if c.country.casefold().startswith(prefix.casefold())
         ]
 
-    predictions: list[Prediction] = []
+    run_predictions: list[Prediction] = []
+    form_predictions: list[FormPrediction] = []
     for league in whitelisted:
         database = lib.structure.get_database(league.country)
         season = model.seasons.load_current_season(database, league)
@@ -961,25 +895,31 @@ def main(country_prefixes: list[str], hours_before: int, hours_after: int, toler
             this_season_data: dict[model.teams.Team, Scorelines] = {}
             collect_data(league, this_season, this_season_data)
 
-            league_predictions = gather_predictions(
+            predictions = gather_predictions(
                 league,
                 fixtures_to_analyse,
                 historical_data,
                 this_season_data,
                 tolerance
             )
-            predictions.extend(league_predictions)
+            run_predictions.extend(predictions)
 
-            analyse_best_and_worst(fixtures_to_analyse, league, season)
+            predictions = analyse_form(fixtures_to_analyse, league, season)
+            form_predictions.extend(predictions)
 
-    predictions.sort(
+    form_predictions.sort(key=lambda p: (p.fixture.date, p.league.country, p.league.id))
+
+    for prediction in form_predictions:
+        print(prediction)
+
+    run_predictions.sort(
         key=lambda p: (p.fixture.date, p.league.country, p.league.id, p.fixture.id, p.team == p.fixture.away_team)
     )
 
     if tweet:
-        tweet_the_predictions(predictions)
+        tweet_the_predictions(run_predictions)
     else:
-        output_the_predictions(predictions)
+        output_the_predictions(run_predictions)
 
 
 if __name__ == '__main__':

@@ -26,6 +26,7 @@ import sql.sql_columns
 def parse_command_line():
     parser = argparse.ArgumentParser(description="Update each country's database")
     cli.cli.add_logging_options(parser)
+    cli.cli.add_season_option(parser)
 
     parser.add_argument('-C',
                         '--countries',
@@ -212,7 +213,8 @@ def create_events(
             if json_text['response']:
                 for event_id, event_json in enumerate(json_text['response'], start=1):
                     event = model.events.create_event_from_json(event_json, event_id, fixture)
-                    events.append(event)
+                    if event is not None:
+                        events.append(event)
     return events
 
 
@@ -277,7 +279,7 @@ def create_player_stats(
                             players_stats.append(stats)
                         else:
                             player_name = player_json['player']['name']
-                            lib.messages.vanilla_message(f"Do not know the player {player_name} with id={player_id}")
+			    #lib.messages.vanilla_message(f"Do not know the player {player_name} with id={player_id}")
     return players_stats
 
 
@@ -287,7 +289,8 @@ def update_country_databases(
         update_events: bool,
         update_lineups: bool,
         update_player_stats: bool,
-        update_team_stats: bool
+        update_team_stats: bool,
+        season_year: typing.Optional[int]
 ):
     lib.messages.vanilla_message("Updating country databases")
 
@@ -319,6 +322,8 @@ def update_country_databases(
                     fixtures = model.seasons.load_fixtures(database, competition, season)
                     if not fixtures:
                         fixtures_per_season[season] = read_fixtures_from_json_files(competition, season, True)
+                    else:
+                        fixtures_per_season[season] = fixtures
 
             with sql.sql.Database(database) as db:
                 for fixtures in fixtures_per_season.values():
@@ -329,38 +334,42 @@ def update_country_databases(
 
             update_others = update_events or update_lineups or update_team_stats or update_player_stats
             if update_others:
-                season = seasons[-1]
-                assert season.current
-                print(f"{'>' * 10} In {competition}, {season.year}...")
-                events = []
-                lineups = []
-                team_stats = []
-                player_stats = []
-                for fixture in fixtures_per_season[season]:
-                    if fixture.finished:
-                        if update_events and season.events:
-                            if not model.events.load_events(database, fixture):
-                                events.extend(create_events(fixture))
+                if season_year is not None:
+                    season = next((season for season in seasons if season.year == season_year), None)
+                else:
+                    season = seasons[-1]
 
-                        if update_lineups and season.lineups:
-                            if not model.lineups.load_lineup(database, fixture, fixture.home_team):
-                                lineups.extend(create_lineups(fixture))
+                if season is not None:
+                    print(f"{'>' * 10} In {competition}, {season.year}...")
+                    events = []
+                    lineups = []
+                    team_stats = []
+                    player_stats = []
+                    for fixture in fixtures_per_season[season]:
+                        if fixture.finished:
+                            if update_events and season.events:
+                                if not model.events.load_events(database, fixture):
+                                    events.extend(create_events(fixture))
 
-                        if update_team_stats and season.statistics_fixtures:
-                            if not model.statistics.load_team_stats(database, fixture, fixture.home_team):
-                                team_stats.extend(create_fixture_stats(fixture))
+                            if update_lineups and season.lineups:
+                                if not model.lineups.load_lineup(database, fixture, fixture.home_team):
+                                    lineups.extend(create_lineups(fixture))
 
-                        if update_player_stats and season.statistics_players:
-                            player_stats.extend(create_player_stats(fixture))
+                            if update_team_stats and season.statistics_fixtures:
+                                if not model.statistics.load_team_stats(database, fixture, fixture.home_team):
+                                    team_stats.extend(create_fixture_stats(fixture))
 
-                with sql.sql.Database(database) as db:
-                    db.create_rows(model.events.Event.sql_table(), events)
-                    db.create_rows(model.lineups.Lineup.sql_table(), lineups)
-                    db.create_rows(model.statistics.TeamStats.sql_table(), team_stats)
-                    db.create_rows(model.statistics.PlayerStats.sql_table(), player_stats)
+                            if update_player_stats and season.statistics_players:
+                                player_stats.extend(create_player_stats(fixture))
+
+                    with sql.sql.Database(database) as db:
+                        db.create_rows(model.events.Event.sql_table(), events)
+                        db.create_rows(model.lineups.Lineup.sql_table(), lineups)
+                        db.create_rows(model.statistics.TeamStats.sql_table(), team_stats)
+                        db.create_rows(model.statistics.PlayerStats.sql_table(), player_stats)
 
 
-def main():
+def main(args: argparse.Namespace):
     competitions, seasons, teams = update_base_database.gather_competitions_and_seasons_and_teams()
     create_country_databases(competitions, seasons, teams)
     if lib.json_manager.capacity_exists():
@@ -370,7 +379,8 @@ def main():
             args.update_events,
             args.update_lineups,
             args.update_player_stats,
-            args.update_team_stats
+            args.update_team_stats,
+            args.season
         )
     else:
         lib.messages.vanilla_message(f"Out of capacity in requesting {lib.football_api.base_url}")
@@ -379,5 +389,5 @@ def main():
 if __name__ == '__main__':
     args = parse_command_line()
     cli.cli.set_logging_options(args)
-    main()
+    main(args)
     sys.exit(os.EX_OK)

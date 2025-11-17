@@ -1,5 +1,5 @@
+import collections
 import concurrent.futures
-import dataclasses
 import dash
 import dash.dependencies
 import dash_bootstrap_components
@@ -7,6 +7,7 @@ import dash_bootstrap_templates
 import functools
 import logging
 import random
+import zoneinfo
 
 import dashboard.analysis
 import dashboard.data
@@ -15,8 +16,19 @@ import dashboard.ids
 import dashboard.layout
 import dashboard.tables
 import dashboard.visualisations
-import model.fixtures
+import lib.structure
 import model.competitions
+import model.fixtures
+import model.seasons
+import model.teams
+
+
+def update_league_dropdown(country: str):
+    logging.debug("Updating league dropdown")
+    leagues = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
+    leagues.sort(key=lambda league: league.id)
+    options = [league.name for league in leagues if league.country == country]
+    return options, options[0]
 
 
 def update_data(country: str, league_name: str):
@@ -26,30 +38,16 @@ def update_data(country: str, league_name: str):
     data_dict = dashboard.data.update_data(league)
     seasons = dashboard.data.get_seasons(data_dict, True)
     tab_name = f"{country} {league_name}: {len(seasons)} seasons of data"
-    options = [str(season) for season in seasons]
-    default = options[0]
+    season_options = [str(season) for season in seasons]
 
     outputs = [
         tab_name,
-        options,
-        default,
-        data_dict
+        season_options,
+        season_options[0],
+        data_dict,
+
     ]
     return outputs
-
-
-def update_league_dropdown(country: str):
-    logging.debug("Updating league dropdown")
-
-    options = []
-    default = None
-    if country:
-        leagues = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
-        leagues.sort(key=lambda league: league.id)
-        options = [league.name for league in leagues if league.country == country]
-        if options:
-            default = options[0]
-    return options, default
 
 
 def update_league(data_dict: dict, period_name: str):
@@ -81,64 +79,47 @@ def update_league(data_dict: dict, period_name: str):
     return figures
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class SelectionHistory:
-    country_name: str = None
-    league_name: str = None
-    season_id: int = None
-    period: model.fixtures.Period = None
-    venue: model.fixtures.Venue = None
-
-
-last_selection: SelectionHistory = SelectionHistory()
-
-
 def update_league_table(
         data_dict: dict,
         period_name: str,
         venue_name: str,
-        team_name: str,
         season_years: str,
         max_input: int,
         history_input: list[int]
 ):
-    global last_selection
     logging.debug("Updating league table")
 
-    venue = model.fixtures.Venue(venue_name)
-    period = model.fixtures.Period(period_name)
     start_year, end_year = dashboard.fixtures.get_start_and_end_years(season_years)
     season_id = dashboard.data.get_season_id(data_dict, start_year, end_year)
+    venue = model.fixtures.Venue(venue_name)
 
-    this_selection = SelectionHistory(data_dict['Country'], data_dict['League'], season_id, period, venue)
-    if last_selection != this_selection:
-        filtered_team_fixtures = dashboard.data.get_result_per_team(data_dict, season_id, venue, [0, 0])
+    if history_input == [0, 0]:
+       filtered_team_fixtures = dashboard.data.get_result_per_team(data_dict, season_id, venue, None)
     else:
         filtered_team_fixtures = dashboard.data.get_result_per_team(data_dict, season_id, venue, history_input)
 
     teams_df = dashboard.data.get_teams_data_frame(data_dict)
+    period = model.fixtures.Period(period_name)
     league_table = dashboard.tables.create_league_table(teams_df, filtered_team_fixtures, period)
-    fixture = dashboard.data.get_next_fixture(data_dict, team_name)
-    team_id = dashboard.data.get_team_id(teams_df, team_name)
-    formatter = dashboard.tables.create_league_table_formatter(teams_df, league_table, team_id, fixture)
+    fixtures = dashboard.data.get_scheduled_fixtures(data_dict)
+    formatter, tooltips = dashboard.tables.create_league_table_formatter(teams_df, league_table, fixtures)
 
-    if last_selection != this_selection:
-        max_output = 0
-        for row in league_table.rows:
-            max_output = max(max_output, getattr(row, dashboard.tables.COL_PLAYED.display))
-        history_output = [1, max_output]
-    else:
-        history_output = history_input
-        max_output = max_input
+    min_output = max_output = 0
+    for row in league_table.rows:
+        played = getattr(row, dashboard.tables.COL_PLAYED.name)
+        max_output = max(max_output, played)
+        if min_output == 0 and played > 0:
+            min_output = 1
 
-    if max_output:
-        min_output = 1
-    else:
-        min_output = 0
+    history_output = [0, 0]
 
-    last_selection = this_selection
+    active_cell = {
+        'row': random.randint(0, len(league_table) - 1),
+        'column': 0,
+        'column_id': dashboard.tables.COL_TEAM.name
+    }
 
-    return league_table.to_display_list(), formatter, min_output, max_output, history_output
+    return league_table.to_display_list(), formatter, tooltips, active_cell, min_output, max_output, history_output
 
 
 def update_league_scheduled_and_completed_tables(data_dict: dict, team_name: str):
@@ -153,43 +134,18 @@ def update_league_scheduled_and_completed_tables(data_dict: dict, team_name: str
     return upcoming_table_rows, upcoming_formatter, completed_table_rows, completed_formatter
 
 
-def update_team_dropdown(data_dict: dict):
-    logging.debug("Updating team dropdown")
+def update_team_tab(data_dict: dict, period_name: str, venue_name: str, active_cell: dict, table_data: list):
+    if not active_cell or active_cell['column_id'] != dashboard.tables.COL_TEAM.name:
+        raise dash.exceptions.PreventUpdate
 
-    teams_df = dashboard.data.get_teams_data_frame(data_dict)
-    season_id = dashboard.data.get_current_season_id(data_dict)
-    team_ids = dashboard.data.get_season_teams(data_dict, season_id)
-    team_names = []
-    for team_id in team_ids:
-        team_name = dashboard.data.get_team_name(teams_df, team_id)
-        team_names.append(team_name)
-    team_names.sort()
-
-    if team_names:
-        (default,) = random.sample(team_names, 1)
-    else:
-        default = None
-    return team_names, default
-
-
-def update_team_tabs_names(period_name: str, venue_name: str, team_name: str):
+    logging.debug("Updating team tab")
+    team_name = table_data[active_cell['row']][dashboard.tables.COL_TEAM.name]
     period = model.fixtures.Period(period_name)
     venue = model.fixtures.Venue(venue_name)
 
+    tab_title = f'{team_name} ({period}, {venue})'
     outputs = [
-        f'Overview: {team_name} ({period}, {venue})',
-        f'This Season: {team_name} ({period}, {venue})'
-    ]
-
-    return outputs
-
-
-def update_team_overview(data_dict: dict, period_name: str, venue_name: str, team_name: str):
-    logging.debug("Updating team overview")
-
-    period = model.fixtures.Period(period_name)
-    venue = model.fixtures.Venue(venue_name)
-    outputs = [
+        tab_title,
         dash.html.H3(f'Fixtures ({venue})', className="card-title"),
         dash.html.H3(f'Results ({venue})', className="card-title"),
     ]
@@ -206,69 +162,126 @@ def update_team_overview(data_dict: dict, period_name: str, venue_name: str, tea
         results_table_formatter
     ])
 
+    outputs = [tab_title]
+
     functions = [
-        dashboard.visualisations.create_goals_pie,
         dashboard.visualisations.create_goals_scatter_graph,
-        dashboard.visualisations.create_scorelines_heatmap,
         dashboard.visualisations.create_scored_and_conceded_scatter_graph,
-        dashboard.visualisations.create_results_pie_for_team,
-        dashboard.visualisations.create_wins_draw_losses_scatter_graph
+        dashboard.visualisations.create_wins_draw_losses_scatter_graph,
+        dashboard.visualisations.create_scorelines_heatmap,
+        dashboard.visualisations.create_team_scoring_patterns,
     ]
 
     bins = dashboard.data.aggregate_team(data_dict, period, venue, team_id)
     partial_function = functools.partial(
-        lambda func, bins, period, venue: func(bins, period, venue),
+        lambda func, bins, period, venue, team_name: func(bins, period, venue, team_name),
         bins=bins,
         period=period,
-        venue=venue
+        venue=venue,
+        team_name=team_name
     )
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(partial_function, func) for func in functions]
         concurrent.futures.wait(futures)
 
-    figures = [future.result() for future in futures]
-    outputs.extend(figures)
-    return outputs
+    figs = [future.result() for future in futures]
+    outputs.extend(figs)
 
-
-def update_team_sequences(data_dict: dict,
-                          period_name: str,
-                          venue_name: str,
-                          team_name: str,
-                          result_index: int,
-                          result_negate: list,
-                          goal_index: int,
-                          goal_negate: list,
-                          total_goals_relation: str,
-                          total_goals: int):
-    logging.debug("Updating team this season")
-
-    period = model.fixtures.Period(period_name)
-    venue = model.fixtures.Venue(venue_name)
-    teams_df = dashboard.data.get_teams_data_frame(data_dict)
-    team_id = dashboard.data.get_team_id(teams_df, team_name)
     teams_scorelines, index = dashboard.data.collect_fixture_sequences(data_dict, period, venue, team_id)
-
-    total_goals_predicate = dashboard.analysis.create_total_goals_predicate(total_goals_relation, total_goals)
-
-    events = [
-        dashboard.analysis.Event(dashboard.analysis.result_predicates[result_index], True if result_negate else False),
-        dashboard.analysis.Event(dashboard.analysis.goals_predicates[goal_index], True if goal_negate else False),
-        dashboard.analysis.Event(total_goals_predicate, False)
-    ]
-
-    dashboard.analysis.analyse(teams_df, teams_scorelines, index, team_name, events)
-    outputs = []
-    for event in events:
-        bar = dashboard.visualisations.create_bar(event, team_name)
-        outputs.append(bar)
+    trends = dashboard.analysis.analyse(period, teams_scorelines, index, team_id)
+    fig = dashboard.visualisations.create_trends(trends, period, venue, team_name)
+    outputs.append(fig)
 
     return outputs
+
+
+def update_fixture_list(n_intervals: int):
+    print(f"Refresh triggered: {n_intervals}")
+    LOWER = 1
+    UPPER = 12
+
+    whitelisted = model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)
+    grouped = collections.defaultdict(lambda: collections.defaultdict(list))  # hour -> league -> list of fixtures
+
+    league_data = {}
+    for league in whitelisted:
+        database = lib.structure.get_database(league.country)
+        season = model.seasons.load_current_season(database, league)
+        fixtures = model.seasons.load_fixtures(database, league, season)
+        fixtures = [f for f in fixtures if f.finished]
+
+        if len(fixtures) >= 30:
+            upcoming = model.fixtures.load_fixtures_within_window(database, league, LOWER, UPPER)
+
+            for f in upcoming:
+                minute_block = (f.date.minute // 15) * 15
+                quarter_block = f.date.replace(minute=minute_block, second=0, microsecond=0)
+                grouped[quarter_block][league].append(f)
+
+            if upcoming:
+                league_data[league] = dashboard.data.update_data(league)
+
+    interval_items = []
+    for interval in sorted(grouped):
+        league_items = []
+
+        for league, upcoming in sorted(grouped[interval].items(), key=lambda x: (x[0].country, x[0].id)):
+            logging.info(f"Analysing {league} at {interval}")
+            fixture_list = []
+            upcoming.sort(key=lambda f: f.date)
+            for f in upcoming:
+                data_dict = league_data[league]
+                if dashboard.data.get_current_season_id(data_dict):
+                    fixture_str = f"{f.home_team.name} vs {f.away_team.name}"
+                    fixture_list.append(dash.html.H6(fixture_str))
+
+            league_content = dash.html.Ul(fixture_list)
+            flag = model.competitions.country_flag(league.get_2_letter_iso_code())
+            league_title = f"{flag} {str(league)}"
+
+            league_items.append(
+                dash_bootstrap_components.AccordionItem(
+                    children=league_content,
+                    title=league_title,
+                )
+            )
+
+        interval_title = f"{interval.strftime('%H:%M')}"
+        interval_items.append(
+            dash_bootstrap_components.AccordionItem(
+                title=interval_title,
+                children=dash_bootstrap_components.Accordion(
+                    league_items,
+                    start_collapsed=False,
+                    always_open=True,
+                    flush=True
+                )
+            )
+        )
+
+    accordion = dash_bootstrap_components.Accordion(
+        interval_items,
+        start_collapsed=False,
+        always_open=True,
+        flush=True
+    )
+
+    return [accordion]
 
 
 def register_callbacks(app: dash.Dash):
     logging.info("Registering callbacks")
+
+    app.callback(
+        [
+            dash.dependencies.Output(dashboard.ids.Dropdown.LEAGUE_DROPDOWN, 'options'),
+            dash.dependencies.Output(dashboard.ids.Dropdown.LEAGUE_DROPDOWN, 'value')
+        ],
+        [
+            dash.dependencies.Input(dashboard.ids.Dropdown.COUNTRY_DROPDOWN, 'value')
+        ]
+    )(update_league_dropdown)
 
     app.callback(
         [
@@ -282,16 +295,6 @@ def register_callbacks(app: dash.Dash):
             dash.dependencies.Input(dashboard.ids.Dropdown.LEAGUE_DROPDOWN, 'value')
         ]
     )(update_data)
-
-    app.callback(
-        [
-            dash.dependencies.Output(dashboard.ids.Dropdown.LEAGUE_DROPDOWN, 'options'),
-            dash.dependencies.Output(dashboard.ids.Dropdown.LEAGUE_DROPDOWN, 'value')
-        ],
-        [
-            dash.dependencies.Input(dashboard.ids.Dropdown.COUNTRY_DROPDOWN, 'value')
-        ]
-    )(update_league_dropdown)
 
     app.callback(
         [
@@ -312,6 +315,8 @@ def register_callbacks(app: dash.Dash):
         [
             dash.dependencies.Output(dashboard.ids.Table.LEAGUE_TABLE, 'data'),
             dash.dependencies.Output(dashboard.ids.Table.LEAGUE_TABLE, 'style_data_conditional'),
+            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_TABLE, 'tooltip_data'),
+            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_TABLE, 'active_cell'),
             dash.dependencies.Output(dashboard.ids.Slider.HISTORY_SLIDER, 'min'),
             dash.dependencies.Output(dashboard.ids.Slider.HISTORY_SLIDER, 'max'),
             dash.dependencies.Output(dashboard.ids.Slider.HISTORY_SLIDER, 'value')
@@ -320,7 +325,6 @@ def register_callbacks(app: dash.Dash):
             dash.dependencies.Input(dashboard.ids.Miscellaneous.DATA_STORE, 'data'),
             dash.dependencies.Input(dashboard.ids.Radio.HALF_RADIO, 'value'),
             dash.dependencies.Input(dashboard.ids.Radio.VENUE_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value'),
             dash.dependencies.Input(dashboard.ids.Dropdown.SEASON_DROPDOWN, 'value'),
             dash.dependencies.Input(dashboard.ids.Slider.HISTORY_SLIDER, 'max'),
             dash.dependencies.Input(dashboard.ids.Slider.HISTORY_SLIDER, 'value')
@@ -329,78 +333,38 @@ def register_callbacks(app: dash.Dash):
 
     app.callback(
         [
-            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_FIXTURES_TABLE, 'data'),
-            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_FIXTURES_TABLE, 'style_data_conditional'),
-            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_RESULTS_TABLE, 'data'),
-            dash.dependencies.Output(dashboard.ids.Table.LEAGUE_RESULTS_TABLE, 'style_data_conditional')
-        ],
-        [
-            dash.dependencies.Input(dashboard.ids.Miscellaneous.DATA_STORE, 'data'),
-            dash.dependencies.Input(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value')
-        ]
-    )(update_league_scheduled_and_completed_tables)
-
-    app.callback(
-        [
-            dash.dependencies.Output(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'options'),
-            dash.dependencies.Output(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value')
-        ],
-        dash.dependencies.Input(dashboard.ids.Miscellaneous.DATA_STORE, 'data')
-    )(update_team_dropdown)
-
-    app.callback(
-        [
-            dash.dependencies.Output(dashboard.ids.Miscellaneous.TEAM_FIXTURES_CARD, 'children'),
-            dash.dependencies.Output(dashboard.ids.Miscellaneous.TEAM_RESULTS_CARD, 'children'),
-            dash.dependencies.Output(dashboard.ids.Table.TEAM_FIXTURES_TABLE, 'data'),
-            dash.dependencies.Output(dashboard.ids.Table.TEAM_RESULTS_TABLE, 'data'),
-            dash.dependencies.Output(dashboard.ids.Table.TEAM_RESULTS_TABLE, 'style_data_conditional'),
-            dash.dependencies.Output(dashboard.ids.Pie.TEAM_GOALS_PIE, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Graph.TEAM_GOALS_GRAPH, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Graph.TEAM_SCORES_HEATMAP, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Graph.TEAM_SCORED_AND_CONCEDED_GRAPH, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Pie.TEAM_RESULTS_PIE, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Graph.TEAM_RESULTS_GRAPH, 'figure')
-        ],
-        [
-            dash.dependencies.Input(dashboard.ids.Miscellaneous.DATA_STORE, 'data'),
-            dash.dependencies.Input(dashboard.ids.Radio.HALF_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.VENUE_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value')
-        ]
-    )(update_team_overview)
-
-    app.callback(
-        [
             dash.dependencies.Output(dashboard.ids.Tab.TEAM_OVERVIEW_TAB, 'label'),
-            dash.dependencies.Output(dashboard.ids.Tab.TEAM_NOW_TAB, 'label'),
-        ],
-        [
-            dash.dependencies.Input(dashboard.ids.Radio.HALF_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.VENUE_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value')
-        ]
-    )(update_team_tabs_names)
-
-    app.callback(
-        [
-            dash.dependencies.Output(dashboard.ids.Bar.RESULTS_BAR, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Bar.GOALS_BAR, 'figure'),
-            dash.dependencies.Output(dashboard.ids.Bar.TOTAL_GOALS_BAR, 'figure')
+            #dash.dependencies.Output(dashboard.ids.Miscellaneous.TEAM_FIXTURES_CARD, 'children'),
+            #dash.dependencies.Output(dashboard.ids.Miscellaneous.TEAM_RESULTS_CARD, 'children'),
+            #dash.dependencies.Output(dashboard.ids.Table.TEAM_FIXTURES_TABLE, 'data'),
+            #dash.dependencies.Output(dashboard.ids.Table.TEAM_RESULTS_TABLE, 'data'),
+            #dash.dependencies.Output(dashboard.ids.Table.TEAM_RESULTS_TABLE, 'style_data_conditional'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_1_COL_1, 'figure'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_1_COL_2, 'figure'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_1_COL_3, 'figure'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_2_COL_1, 'figure'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_2_COL_2, 'figure'),
+            dash.dependencies.Output(dashboard.ids.Team.ROW_2_COL_3, 'figure')
         ],
         [
             dash.dependencies.Input(dashboard.ids.Miscellaneous.DATA_STORE, 'data'),
             dash.dependencies.Input(dashboard.ids.Radio.HALF_RADIO, 'value'),
             dash.dependencies.Input(dashboard.ids.Radio.VENUE_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Dropdown.TEAM_DROPDOWN, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.RESULTS_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Switch.RESULTS_SWITCH, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.GOALS_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Switch.GOALS_SWITCH, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.TOTAL_GOALS_RELATIONS_RADIO, 'value'),
-            dash.dependencies.Input(dashboard.ids.Radio.TOTAL_GOALS_RADIO, 'value'),
+            dash.dependencies.Input(dashboard.ids.Table.LEAGUE_TABLE, 'active_cell')
+        ],
+        [
+            dash.dependencies.State(dashboard.ids.Table.LEAGUE_TABLE, 'data')
         ]
-    )(update_team_sequences)
+    )(update_team_tab)
+
+    app.callback(
+        [
+            dash.dependencies.Output(dashboard.ids.Miscellaneous.FIXTURE_LIST, 'children')
+        ],
+        [
+            dash.dependencies.Input(dashboard.ids.Miscellaneous.FIXTURE_INTERVAL, 'n_intervals')
+        ]
+    )(update_fixture_list)
 
 
 def create_app() -> dash.Dash:

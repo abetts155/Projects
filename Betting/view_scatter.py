@@ -185,7 +185,6 @@ def show_data(
         showarrow=False, font=dict(size=size, color=color)
     )
 
-
     stat_description = stat.replace("_", " ").title()
 
     fig.update_layout(

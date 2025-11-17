@@ -67,7 +67,7 @@ def create_events_json(fixture: model.fixtures.Fixture):
 
         if created:
             increment_api_call_count()
-            time.sleep(5)
+            time.sleep(3)
 
 
 def create_lineups_json(fixture: model.fixtures.Fixture):
@@ -82,7 +82,7 @@ def create_lineups_json(fixture: model.fixtures.Fixture):
 
         if created:
             increment_api_call_count()
-            time.sleep(5)
+            time.sleep(3)
 
 
 def create_fixture_stats_json(fixture: model.fixtures.Fixture):
@@ -97,8 +97,7 @@ def create_fixture_stats_json(fixture: model.fixtures.Fixture):
 
         if created:
             increment_api_call_count()
-            time.sleep(5)
-
+            time.sleep(3)
 
 def create_player_stats_json(fixture: model.fixtures.Fixture):
     player_stats_json = lib.structure.get_player_stats_json(fixture.id)
@@ -112,7 +111,7 @@ def create_player_stats_json(fixture: model.fixtures.Fixture):
 
         if created:
             increment_api_call_count()
-            time.sleep(5)
+            time.sleep(3)
 
 
 def create_players_json(page_id: int):

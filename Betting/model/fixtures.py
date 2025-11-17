@@ -455,7 +455,7 @@ round_regexes = [
 
 def is_regular_fixture(data: str):
     for regex in round_regexes:
-        if regex.match(data):
+        if data is not None and regex.match(data):
             return True
     return False
 
@@ -672,13 +672,14 @@ def fixtures_per_team(fixtures: list[Fixture]) -> dict[model.teams.Team, list[Fi
 def load_fixtures_within_window(
         database: pathlib.Path,
         competition: model.competitions.Competition,
-        hours: int
+        hours_before: int,
+        hours_after: int
 ) -> list[Fixture]:
     with sql.sql.Database(database) as db:
         competition_constraint = f"{ColumnNames.Competition_ID.name}={competition.id}"
         window_constraint = (
             f"{ColumnNames.Date.name} {Keywords.BETWEEN.name} "
-            f"datetime('now') {Keywords.AND.name} datetime('now', '+{hours} hours')"
+            f"datetime('now', '-{hours_before} hours') {Keywords.AND.name} datetime('now', '+{hours_after} hours')"
         )
 
         if competition.type == model.competitions.CompetitionType.LEAGUE:

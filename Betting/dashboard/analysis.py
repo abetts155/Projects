@@ -2,117 +2,191 @@ import collections
 import dataclasses
 import functools
 import operator
-import pandas as pd
 import typing
 
-import dashboard.data
+import model.fixtures
 from dashboard.fixtures import Scoreline
 
 
 def prettify(func: typing.Callable):
-    return ' '.join(func.__name__.split('_'))
+    return ' '.join([l.capitalize() for l in func.__name__.split('_')])
 
 
-def Drawn(scoreline: Scoreline):
-    return scoreline.left == scoreline.right
+def create_total_predicate(op, bound: int) -> typing.Callable[[Scoreline], bool]:
+    def total(op: typing.Callable, bound: int, scoreline: Scoreline):
+        return op(scoreline.left + scoreline.right, bound)
+    return functools.partial(total, getattr(operator, op), bound)
 
 
-def Won(scoreline: Scoreline):
+def create_scored_predicate(op, bound: int) -> typing.Callable[[Scoreline], bool]:
+    def scored(op: typing.Callable, bound: int, scoreline: Scoreline):
+        return op(scoreline.left, bound)
+    return functools.partial(scored, getattr(operator, op), bound)
+
+
+def create_conceded_predicate(op, bound: int) -> typing.Callable[[Scoreline], bool]:
+    def conceded(op: typing.Callable, bound: int, scoreline: Scoreline):
+        return op(scoreline.right, bound)
+    return functools.partial(conceded, getattr(operator, op), bound)
+
+
+def create_both_scored_predicate(op, bound: int) -> typing.Callable[[Scoreline], bool]:
+    def both_scored(op: typing.Callable, bound: int, scoreline: Scoreline):
+        return op(scoreline.left, bound) and op(scoreline.right, bound)
+    return functools.partial(both_scored, getattr(operator, op), bound)
+
+
+def won(scoreline: Scoreline) -> bool:
     return scoreline.left > scoreline.right
 
 
-def Lost(scoreline: Scoreline):
+def drawn(scoreline: Scoreline) -> bool:
+    return scoreline.left == scoreline.right
+
+
+def lost(scoreline: Scoreline) -> bool:
     return scoreline.left < scoreline.right
-
-
-result_predicates = [Won, Drawn, Lost]
-
-
-def Both_Teams_Scored(scoreline: Scoreline):
-    return scoreline.left > 0 and scoreline.right > 0
-
-
-def Scored(scoreline: Scoreline):
-    return scoreline.left > 0
-
-
-def Conceded(scoreline: Scoreline):
-    return scoreline.right > 0
-
-
-goals_predicates = [Both_Teams_Scored, Scored, Conceded]
-
-
-goal_relations = {
-    'eq': '=',
-    'ne': '≠',
-    'lt': '<',
-    'gt': '>',
-    'le': '≤',
-    'ge': '≥'
-}
-
-
-def total_goals(op: typing.Callable, bound: int, scoreline: Scoreline):
-    return op(scoreline.left + scoreline.right, bound)
-
-
-def create_total_goals_predicate(op, bound: int) -> typing.Callable[[Scoreline], bool]:
-    return functools.partial(total_goals, getattr(operator, op), bound)
 
 
 @dataclasses.dataclass(slots=True)
 class Event:
     func: typing.Callable[[Scoreline], bool]
-    negate: bool
-    reverse: bool = False
-    counter: collections.Counter = dataclasses.field(default_factory=collections.Counter)
-    current_team_value: int = 0
+    negate: bool = False
 
-    def analyse(self, scorelines: list[Scoreline], team_name: str = ''):
-        truthy = []
-        for scoreline in scorelines:
-            if self.func(scoreline):
-                truthy.append(False if self.negate else True)
-            else:
-                truthy.append(True if self.negate else False)
-
-        count = 0
-        for value in truthy:
-            if value:
-                count += 1
-            else:
-                self.counter[count] += 1
-                count = 0
-
-        if team_name:
-            self.current_team_value = count
-        else:
-            self.counter[count] += 1
+    def __hash__(self):
+        return hash((self.func, self.negate))
 
     def __str__(self):
-        if self.func in [Won, Drawn, Lost, Both_Teams_Scored, Scored, Conceded]:
-            if self.negate:
-                return f'Not {prettify(self.func)}'
-            else:
-                return prettify(self.func)
-        else:
+        if isinstance(self.func, functools.partial):
+            func = self.func.func
             op, bound = self.func.args
-            return f'Total goals {goal_relations[op.__name__]} {bound}'
+
+            goal_relations = {
+                'eq': '=',
+                'ne': '≠',
+                'lt': '<',
+                'gt': '>',
+                'le': '≤',
+                'ge': '≥'
+            }
+            relation = goal_relations[op.__name__]
+
+            return f"{prettify(func)} {relation} {bound}"
+        else:
+            return f"{'Not ' if self.negate else ''}{prettify(self.func)}"
+
+
+def analyse_event(event: Event, scorelines: list[Scoreline]):
+    counter: collections.Counter = collections.Counter()
+    count = 0
+    for s in scorelines:
+        outcome = event.func(s)
+        if event.negate:
+            outcome = not outcome
+
+        if outcome:
+            count += 1
+        else:
+            counter[count] += 1
+            count = 0
+
+    counter[count] += 1
+    return counter
+
+
+def current_streak(event: Event, scorelines: list[Scoreline]):
+    count = 0
+    for s in scorelines:
+        outcome = event.func(s)
+        if event.negate:
+            outcome = not outcome
+
+        if outcome:
+            count += 1
+        else:
+            count = 0
+
+    return count
+
+
+@dataclasses.dataclass(slots=True)
+class Trend:
+    event: str
+    current: int
+    max_team: int
+    max_history: int
 
 
 def analyse(
-        teams_df: pd.DataFrame,
+        period: model.fixtures.Period,
         teams_scorelines: dict[int, list[Scoreline]],
         index: int,
-        team_name: str,
-        events: list[Event]
-):
-    for scorelines in teams_scorelines.values():
-        for event in events:
-            event.analyse(scorelines)
+        chosen_team_id: int
+) -> list[Trend]:
+    if period == model.fixtures.Period.FULL:
+        events = [
+            Event(create_total_predicate("eq", 0)),
+            Event(create_total_predicate("le", 1)),
+            Event(create_total_predicate("le", 2)),
+            Event(create_total_predicate("ge", 3)),
+            Event(create_scored_predicate("eq", 0)),
+            Event(create_scored_predicate("le", 1)),
+            Event(create_scored_predicate("gt", 2)),
+            Event(create_conceded_predicate("eq", 0)),
+            Event(create_both_scored_predicate("gt", 0)),
+            Event(create_both_scored_predicate("gt", 0), True),
+            Event(won),
+            Event(drawn),
+            Event(lost),
+            Event(won, True),
+            Event(drawn, True),
+            Event(lost, True)
+        ]
+    elif period == model.fixtures.Period.FIRST:
+        events = [
+            Event(create_total_predicate("eq", 0)),
+            Event(create_total_predicate("ne", 0)),
+            Event(create_total_predicate("le", 1)),
+            Event(create_total_predicate("ge", 2)),
+            Event(create_scored_predicate("eq", 0)),
+            Event(create_conceded_predicate("eq", 0)),
+            Event(drawn),
+            Event(drawn, True)
+        ]
+    elif period == model.fixtures.Period.SECOND:
+        events = [
+            Event(create_total_predicate("eq", 0)),
+            Event(create_total_predicate("ne", 0)),
+            Event(create_total_predicate("le", 1)),
+            Event(create_total_predicate("ge", 2)),
+            Event(create_scored_predicate("eq", 0)),
+            Event(create_conceded_predicate("eq", 0)),
+            Event(drawn),
+            Event(drawn, True)
+        ]
 
-    team_id = dashboard.data.get_team_id(teams_df, team_name)
-    scorelines = teams_scorelines[team_id][index:]
-    for event in events:
-        event.analyse(scorelines, team_name)
+    counters = {e: [] for e in events}
+    for team_id, scorelines in teams_scorelines.items():
+        for e in events:
+            counter = analyse_event(e, scorelines)
+            counters[e].append(counter)
+
+    max_counters = {e: None for e in events}
+    for e in events:
+        for c in counters[e]:
+            if max_counters[e] is None:
+                max_counters[e] = c
+            else:
+                if max(c) > max(max_counters[e]):
+                    max_counters[e] = c
+
+    historical_scorelines = teams_scorelines[chosen_team_id]
+    this_season_scorelines = teams_scorelines[chosen_team_id][index:]
+    trends = []
+    for e in events:
+        historical_counter = analyse_event(e, historical_scorelines)
+        current = current_streak(e, this_season_scorelines)
+        t = Trend(str(e), current, max(historical_counter), max(max_counters[e]))
+        trends.append(t)
+
+    return trends

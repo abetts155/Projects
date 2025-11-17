@@ -47,7 +47,7 @@ def parse_command_line():
         '--upper',
         type=int,
         help='the most number of fixtures to consider on a certain date',
-        default=3
+        default=10
     )
 
     parser.add_argument(
@@ -179,7 +179,11 @@ def create_line_chart(
     title = f"{competition}: {condition_str} ({condition.period.value})."
     fig.suptitle(title, fontsize=10, fontproperties=lib.structure.noto_bold_font)
 
-    sentence_1 = f"Only considers match days with between {lower_threshold} and {upper_threshold} games"
+    if lower_threshold == upper_threshold:
+        sentence_1 = f"Only considers match days with exactly {lower_threshold} games"
+    else:
+        sentence_1 = f"Only considers match days with between {lower_threshold} and {upper_threshold} games"
+    
     sentence_2 = "Each marker includes #games on that date"
     match_days_100_per_cent = sum([t == m for t, m in zip(totals, matches)])
     sentence_3 = f"100% was achieved in {match_days_100_per_cent} of {len(data)} match days"

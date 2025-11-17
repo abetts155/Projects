@@ -1,6 +1,7 @@
 import dataclasses
 import enum
 import pathlib
+import typing
 
 import model.fixtures
 import model.teams
@@ -24,12 +25,13 @@ class EventDetail(enum.StrEnum):
     GOAL_DISALLOWED_FOUL = "Goal Disallowed - Foul"
     PENALTY_CANCELLED = "Penalty cancelled"
     PENALTY_CONFIRMED = "Penalty confirmed"
+    PENALTY_AWARDED = "Penalty awarded"
     CARD_UPGRADE = "Card upgrade"
     RED_CARD_CANCELLED = "Red card cancelled"
     CARD_REVIEWED = "Card reviewed"
     GOAL_CONFIRMED = "Goal confirmed"
+    GOAL_UNDER_REVIEW = "Goal Under Review"
     UNKNOWN = "Unknown"
-
 
 def is_goal(detail: EventDetail):
     return detail in [EventDetail.GOAL, EventDetail.OWN_GOAL, EventDetail.PENALTY]
@@ -119,19 +121,22 @@ class Event:
         return f'{self.time:>2}+{self.extra_time}: {self.team.name} {self.detail}'
 
 
-def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtures.Fixture):
-    time = int(json_data['time']['elapsed'])
+def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtures.Fixture) -> typing.Optional[Event]:
+    team = None
+    detail = None
 
+    time = int(json_data['time']['elapsed'])
     if json_data['time']['extra']:
         extra_time = int(json_data['time']['extra'])
     else:
         extra_time = 0
 
-    team_id = int(json_data['team']['id'])
-    if team_id == fixture.home_team.id:
-        team = fixture.home_team
-    else:
-        team = fixture.away_team
+    if json_data['team']['id'] is not None:
+        team_id = int(json_data['team']['id'])
+        if team_id == fixture.home_team.id:
+            team = fixture.home_team
+        else:
+            team = fixture.away_team
 
     left_player_id = int(json_data['player']['id']) if json_data['player']['id'] else None
     right_player_id = int(json_data['assist']['id']) if json_data['assist']['id'] else None
@@ -147,7 +152,7 @@ def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtur
         elif json_data['detail'] == 'Missed Penalty':
             detail = EventDetail.MISSED_PENALTY
         else:
-            assert False
+            detail = EventDetail.GOAL
     elif json_data['type'] == 'subst':
         detail = EventDetail.SUBSTITUTION
     elif json_data['type'] == 'Var':
@@ -168,12 +173,16 @@ def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtur
             detail = EventDetail.GOAL
         elif json_data['detail'] == EventDetail.PENALTY_CONFIRMED:
             detail = EventDetail.PENALTY_CONFIRMED
+        elif json_data['detail'] == EventDetail.PENALTY_AWARDED:
+            detail = EventDetail.PENALTY_AWARDED
         elif json_data['detail'] == EventDetail.CARD_UPGRADE:
             detail = EventDetail.CARD_UPGRADE
         elif json_data['detail'] == EventDetail.RED_CARD_CANCELLED:
             detail = EventDetail.RED_CARD_CANCELLED
         elif json_data['detail'] == EventDetail.CARD_REVIEWED:
             detail = EventDetail.CARD_REVIEWED
+        elif json_data['detail'] == EventDetail.GOAL_UNDER_REVIEW:
+            detail = EventDetail.GOAL_UNDER_REVIEW
         elif json_data['detail'] is None:
             detail = EventDetail.UNKNOWN
         else:
@@ -183,13 +192,9 @@ def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtur
             detail = EventDetail.YELLOW_CARD
         elif json_data['detail'] == 'Red Card':
             detail = EventDetail.RED_CARD
-        else:
-            assert False
-    else:
-        assert False
 
-    return Event(event_id, fixture, team, time, extra_time, left_player_id, right_player_id, detail, var_intervention)
-
+    if team is not None and detail is not None:
+        return Event(event_id, fixture, team, time, extra_time, left_player_id, right_player_id, detail, var_intervention)
 
 
 def create_event_from_row(row: list, fixture: model.fixtures.Fixture) -> Event:

@@ -150,6 +150,9 @@ def main(cfg_file: pathlib.Path, calls_file: pathlib.Path, budget: float):
         if allocated_number > 0:
             profile = instrument(cfg, call_graph, allocated_number)
             profiles[cfg] = profile
+            augmented_cfg = graphs.graphs.AugmentedControlFlowGraph(cfg, profile)
+            sites = call_graph.get_call_sites(call_graph.get_vertex(cfg.name))
+            ipg = graphs.graphs.InstrumentationPointGraph(augmented_cfg, sites)
 
     store(cfg_file.parent, profiles)
 

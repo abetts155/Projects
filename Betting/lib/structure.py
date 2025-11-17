@@ -48,8 +48,11 @@ temp_matplotlib_directory.mkdir(parents=True, exist_ok=True)
 pdf_report_directory = pathlib.Path.home().joinpath('Reports')
 pdf_report_directory.mkdir(parents=True, exist_ok=True)
 
-tweet_png_directory =  pathlib.Path.home().joinpath('Tweets')
+tweet_png_directory = pathlib.Path.home().joinpath('Tweets')
 tweet_png_directory.mkdir(parents=True, exist_ok=True)
+
+animation_directory = pathlib.Path.home().joinpath('Animations')
+animation_directory.mkdir(parents=True, exist_ok=True)
 
 accumulators_directory = pathlib.Path.home().joinpath('Accumulators')
 accumulators_directory.mkdir(parents=True, exist_ok=True)
@@ -174,6 +177,14 @@ def get_pdf_report_dir(country: str, competition_name: str) -> pathlib.Path:
     return competition_directory
 
 
+def get_animation_dir(country: str, competition_name: str) -> pathlib.Path:
+    country_dir = animation_directory.joinpath(f"{country}")
+    country_dir.mkdir(parents=True, exist_ok=True)
+    competition_dir = country_dir.joinpath(f"{competition_name}")
+    competition_dir.mkdir(parents=True, exist_ok=True)
+    return competition_dir
+
+
 def store(path: pathlib.Path, response):
     with path.open('w') as out_file:
         out_file.write(response.text)
@@ -192,5 +203,12 @@ def get_whitelisted_countries() -> list[str]:
 def purge_png_files(path: pathlib.Path):
     assert path.is_dir()
     for file in path.rglob("*.png"):
+        if file.is_file():
+            file.unlink()
+
+
+def purge_mp4_files(path: pathlib.Path):
+    assert path.is_dir()
+    for file in path.rglob("*.mp4"):
         if file.is_file():
             file.unlink()

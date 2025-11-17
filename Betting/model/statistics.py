@@ -89,6 +89,15 @@ def create_players_stats_from_json(
         player: model.players.Player,
         json_data: dict
 ) -> PlayerStats:
+    if json_data['passes']['accuracy'] is None:
+        accuracy = 0
+    else:
+        the_string = json_data['passes']['accuracy'].strip()
+        if the_string.endswith('%'):
+            accuracy = float(the_string.strip('%'))
+        else:
+            accuracy = int(the_string)
+
     values = [
         int(json_data['games']['minutes']) if json_data['games']['minutes'] is not None else 0,
         int(json_data['offsides']) if json_data['offsides'] is not None else 0,
@@ -97,7 +106,7 @@ def create_players_stats_from_json(
         int(json_data['goals']['total']) if json_data['goals']['total'] is not None else 0,
         int(json_data['goals']['assists']) if json_data['goals']['assists'] is not None else 0,
         int(json_data['passes']['total']) if json_data['passes']['total'] is not None else 0,
-        int(json_data['passes']['accuracy']) if json_data['passes']['accuracy'] is not None else 0,
+        accuracy,
         int(json_data['duels']['total']) if json_data['duels']['total'] is not None else 0,
         int(json_data['duels']['won']) if json_data['duels']['won'] is not None else 0,
         int(json_data['fouls']['drawn']) if json_data['fouls']['drawn'] is not None else 0,

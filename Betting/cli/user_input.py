@@ -64,6 +64,10 @@ def pick_competition(
         return competitions[0]
     else:
         competition_choices = {competition.name: competition for competition in competitions}
+        names = [name for name in competition_choices.keys()]
+        names.sort()
+        print("Competitions:")
+        print("\n".join(names))
         competition_completer = AutoSelectCompleter(list(competition_choices.keys()), 'Select a competition')
         selected_competition = competition_completer.choose()
         return competition_choices[selected_competition]

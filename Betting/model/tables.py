@@ -93,6 +93,7 @@ class LeagueTable(list):
         self.competition = competition
         self.season = season
         self.__fill(period, venue)
+        self.sort(key=lambda row: (row[PTS_COL], row[F_COL] - row[A_COL], row[F_COL]), reverse=True)
         self.df = pd.DataFrame(self, columns=COLS)
         self.df.sort_values(
             by=[PTS_COL, F_COL, A_COL],

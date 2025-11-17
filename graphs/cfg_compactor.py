@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 def reduce(cfg: graphs.graphs.ControlFlowGraph, call_sites: list[graphs.vertices.Vertex]):
     logger.info(f"Compacting CFG '{cfg.name}'")
+    old_vertex_set_size = len(cfg.its_vertices)
+    old_edge_set_size = len(cfg.its_edges)
+
     visited = set()
     queue = collections.deque([cfg.entry_vertex])
     linear_sequences = {}
@@ -64,6 +67,15 @@ def reduce(cfg: graphs.graphs.ControlFlowGraph, call_sites: list[graphs.vertices
 
             for dead in sequence[1:]:
                 cfg.remove_vertex(dead)
+
+    new_vertex_set_size = len(cfg.its_vertices)
+    new_edge_set_size = len(cfg.its_edges)
+
+    logger.debug(
+        f"Reduced CFG "
+        f"from {old_vertex_set_size} to {new_vertex_set_size} vertices and "
+        f"from {old_edge_set_size} to {new_edge_set_size} edges"
+    )
 
 
 def parse_the_command_line() -> argparse.Namespace:

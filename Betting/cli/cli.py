@@ -74,12 +74,13 @@ def add_history_option(parser: ArgumentParser):
                         type=int)
 
 
-def add_team_option(parser: ArgumentParser, required: bool = False):
+def add_team_option(parser: ArgumentParser, required: bool = False, multiple: bool = False):
     parser.add_argument('-T',
                         '--team',
                         help='choose the team to analyse',
                         metavar='<NAME>',
                         type=str,
+                        nargs='+' if multiple else 1,
                         required=required)
 
 

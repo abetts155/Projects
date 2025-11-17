@@ -3,8 +3,6 @@ import enum
 
 class Table(enum.StrEnum):
     LEAGUE_TABLE = enum.auto()
-    LEAGUE_RESULTS_TABLE = enum.auto()
-    LEAGUE_FIXTURES_TABLE = enum.auto()
     TEAM_RESULTS_TABLE = enum.auto()
     TEAM_FIXTURES_TABLE = enum.auto()
 
@@ -43,9 +41,10 @@ class Slider(enum.StrEnum):
 
 
 class Tab(enum.StrEnum):
+    TAB_CONTAINER = enum.auto()
+    FIXTURES_TAB = enum.auto()
     LEAGUE_OVERVIEW_TAB = enum.auto()
     TEAM_OVERVIEW_TAB = enum.auto()
-    TEAM_NOW_TAB = enum.auto()
 
 
 class Graph(enum.StrEnum):
@@ -72,5 +71,17 @@ class Miscellaneous(enum.StrEnum):
     CONTAINER = enum.auto()
     LOADER = enum.auto()
     DATA_STORE = enum.auto()
+    HISTORY = enum.auto()
     TEAM_FIXTURES_CARD = enum.auto()
     TEAM_RESULTS_CARD = enum.auto()
+    FIXTURE_INTERVAL = enum.auto()
+    FIXTURE_LIST = enum.auto()
+
+
+class Team(enum.StrEnum):
+    ROW_1_COL_1 = enum.auto()
+    ROW_1_COL_2 = enum.auto()
+    ROW_1_COL_3 = enum.auto()
+    ROW_2_COL_1 = enum.auto()
+    ROW_2_COL_2 = enum.auto()
+    ROW_2_COL_3 = enum.auto()

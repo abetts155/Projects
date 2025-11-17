@@ -31,6 +31,12 @@ def parse_command_line():
                         help='update players',
                         default=False)
 
+    parser.add_argument('-S',
+                       '--update-seasons',
+                       action='store_true',
+                       help='update seasons',
+                       default=False)
+
     parser.add_argument('-T',
                         '--update-teams',
                         action='store_true',
@@ -64,13 +70,12 @@ def create_teams(country: str) -> list[model.teams.Team]:
 
 
 def create_players() -> list[model.players.Player]:
-    page_id = 2063
+    page_id = 2472
     pages = True
     players = []
 
     with sql.sql.Database(lib.structure.get_base_database()) as db:
         rows = db.count_rows(model.players.Player.sql_table())
-        print(rows, page_id)
 
     while pages:
         lib.messages.verbose_message(f"Loading players from page {page_id}")
@@ -98,50 +103,66 @@ def gather_competitions_and_seasons_and_teams() -> tuple[
     dict[model.competitions.Competition, list[model.seasons.Season]],
     dict[str, list[model.teams.Team]]
 ]:
+    whitelist = (
+            {c.id for c in model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.LEAGUE)} or
+            {c.id for c in model.competitions.get_whitelisted_competitions(model.competitions.CompetitionType.CUP)}
+    )
+
     competitions = {}
     seasons = {}
     teams = {}
-    lib.json_manager.create_leagues_json()
+
+    lib.json_manager.create_leagues_json(True)
     leagues_json = lib.structure.get_leagues_json()
     with leagues_json.open() as in_file:
         json_text = json.load(in_file)
         for league_json in json_text['response']:
-            competition = model.competitions.create_competition_from_json(league_json)
+            c = model.competitions.create_competition_from_json(league_json)
+            c.whitelisted = c.id in whitelist
 
-            if competition.country not in competitions:
-                competitions[competition.country] = [competition]
-                teams[competition.country] = create_teams(competition.country)
+            if c.country not in competitions:
+                competitions[c.country] = [c]
+                teams[c.country] = create_teams(c.country)
             else:
-                competitions[competition.country].append(competition)
+                competitions[c.country].append(c)
 
             for season_json in league_json['seasons']:
-                season = model.seasons.create_season_from_json(competition, season_json)
-                if competition not in seasons:
-                    seasons[competition] = [season]
+                season = model.seasons.create_season_from_json(c, season_json)
+                if c not in seasons:
+                    seasons[c] = [season]
                 else:
-                    seasons[competition].append(season)
+                    seasons[c].append(season)
 
     return competitions, seasons, teams
 
 
-def main(update_competitions: bool, update_players: bool, update_teams: bool):
-    competitions, _, teams = gather_competitions_and_seasons_and_teams()
+def main(update_competitions: bool, update_seasons: bool, update_players: bool, update_teams: bool):
+    competitions, seasons, teams = gather_competitions_and_seasons_and_teams()
 
-    database = lib.structure.get_base_database()
-    with sql.sql.Database(database) as db:
-        if update_players:
-            db.create_rows(model.players.Player.sql_table(), create_players())
-
-        for country in competitions.keys():
-            if update_competitions:
+    if update_competitions:
+        with sql.sql.Database(lib.structure.get_base_database()) as db:
+            for country in sorted(competitions.keys()):
                 db.create_rows(model.competitions.Competition.sql_table(), competitions[country])
 
-            if update_teams:
+    if update_seasons:
+        for country in sorted(competitions.keys()):
+            with sql.sql.Database(lib.structure.get_database(country)) as db:
+                for c in competitions[country]:
+                    if c.whitelisted:
+                        db.create_rows(model.seasons.Season.sql_table(), seasons[c])
+
+    if update_players:
+        with sql.sql.Database(lib.structure.get_base_database()) as db:
+            db.create_rows(model.players.Player.sql_table(), create_players())
+
+    if update_teams:
+        with sql.sql.Database(lib.structure.get_base_database()) as db:
+            for country in sorted(competitions.keys()):
                 db.create_rows(model.teams.Team.sql_table(), teams[country])
 
 
 if __name__ == '__main__':
     args = parse_command_line()
     cli.cli.set_logging_options(args)
-    main(args.update_competitions, args.update_players, args.update_teams)
+    main(args.update_competitions, args.update_seasons, args.update_players, args.update_teams)
     sys.exit(os.EX_OK)
