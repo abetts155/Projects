@@ -29,6 +29,7 @@ country_to_2_letter_iso_code = {
     "Bosnia": "BA",
     "Brazil": "BR",
     "Bulgaria": "BG",
+    "Cambodia": "KH",
     "Canada": "CA",
     "Chile": "CL",
     "China": "CN",
@@ -66,18 +67,23 @@ country_to_2_letter_iso_code = {
     "Ivory-Coast": "CI",
     "Jamaica": "JM",
     "Japan": "JP",
+    "Jordan": "JO",
     "Kazakhstan": "KZ",
     "Kenya": "KE",
+    "Kosovo": "XK",
     "Kuwait": "KW",
     "Latvia": "LV",
+    "Lebanon": "LB",
     "Lithuania": "LT",
     "Luxembourg": "LU",
     "Macedonia": "MK",
     "Malaysia": "MY",
     "Malta": "MT",
     "Mexico": "MX",
+    "Moldova": "MD",
     "Montenegro": "ME",
     "Morocco": "MA",
+    "Myanmar": "MM",
     "Netherlands": "NL",
     "New-Zealand": "NZ",
     "Nicaragua": "NI",
@@ -95,8 +101,10 @@ country_to_2_letter_iso_code = {
     "Qatar": "QA",
     "Romania": "RO",
     "Russia": "RU",
+    "Rwanda": "RW",
     "Saudi-Arabia": "SA",
     "Scotland": "GB",
+    "Senegal": "SN",
     "Serbia": "RS",
     "Singapore": "SG",
     "Slovakia": "SK",
@@ -460,6 +468,28 @@ def get_league(country: str, league_name: str) -> Competition:
         name_constraint = f"{ColumnNames.Name.name}='{league_name}'"
         league_rows = db.fetch_all_rows(Competition.sql_table(), [country_constraint, name_constraint])
         (row,) = league_rows
+        return create_competition_from_row(row)
+
+
+def get_competition(
+    country: str,
+    competition_name: str,
+    competition_type: CompetitionType | None = None,
+) -> Competition:
+    with sql.sql.Database(lib.structure.get_base_database()) as db:
+        constraints = [
+            f"{ColumnNames.Country.name}='{country}'",
+            f"{ColumnNames.Name.name}='{competition_name}'",
+        ]
+        if competition_type is not None:
+            constraints.append(f"{ColumnNames.Competition_Type.name}='{competition_type.name}'")
+        competition_rows = db.fetch_all_rows(Competition.sql_table(), constraints)
+        if not competition_rows:
+            lib.messages.warning_message(
+                f"There is no competition with name {competition_name} in {country}."
+            )
+            return None
+        (row,) = competition_rows
         return create_competition_from_row(row)
 
 

@@ -23,6 +23,7 @@ class EventDetail(enum.StrEnum):
     GOAL_DISALLOWED_HANDBALL = "Goal Disallowed - handball"
     GOAL_DISALLOWED_OFFSIDE = "Goal Disallowed - offside"
     GOAL_DISALLOWED_FOUL = "Goal Disallowed - Foul"
+    GOAL_DISALLOWED_VIDEO = "Goal Disallowed - video review"
     PENALTY_CANCELLED = "Penalty cancelled"
     PENALTY_CONFIRMED = "Penalty confirmed"
     PENALTY_AWARDED = "Penalty awarded"
@@ -166,6 +167,8 @@ def create_event_from_json(json_data: dict, event_id: int, fixture: model.fixtur
         elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_OFFSIDE:
             detail = EventDetail.GOAL_CANCELLED
         elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_FOUL:
+            detail = EventDetail.GOAL_CANCELLED
+        elif json_data['detail'] == EventDetail.GOAL_DISALLOWED_VIDEO:
             detail = EventDetail.GOAL_CANCELLED
         elif json_data['detail'] == EventDetail.PENALTY_CANCELLED:
             detail = EventDetail.PENALTY_CANCELLED

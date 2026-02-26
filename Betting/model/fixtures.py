@@ -1,5 +1,4 @@
 import collections
-import dataclasses
 import datetime
 import enum
 import functools
@@ -441,7 +440,7 @@ round_regexes = [
                r'Primera Division Women|'
                r'W-League) - Round \d+'),
     re.compile(r'FA WSL \(Women Super League\) - Round \d+'),
-    re.compile(r'Promotion Group - \d+'),
+    re.compile(r'(Promotion Group|Championship Group|Relegation Group|Losers Stage) - \d+'),
     re.compile(r'Group Stage - \d+'),
     re.compile(r'1st Group Stage - \d+'),
     re.compile(r'2nd Group Stage (A|B) - \d+'),
@@ -522,8 +521,9 @@ cup_regexes = [
     re.compile(r'(League|Group) Stage - \d+'),
     re.compile(r'(Qualifying|Elite) Round - \d+'),
     re.compile(r'Knockout Round Play-offs'),
-    re.compile(r'Round of 16'),
-    re.compile(r'Quarter-finals')
+    re.compile(r'(1st|2nd|3rd) Qualifying Round'),
+    re.compile(r'Round of \d+'),
+    re.compile(r'Play-offs|Quarter-finals|Semi-finals')
 ]
 
 
@@ -531,6 +531,9 @@ def is_accepted_cup_fixture(data: str):
     for regex in cup_regexes:
         if regex.match(data):
             return True
+
+    print(data)
+    assert False
     return False
 
 
